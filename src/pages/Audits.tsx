@@ -255,6 +255,24 @@ export default function Audits() {
               </DialogContent>
             </Dialog>
           )}
+          {activeTab === "schedules" && (
+            <Dialog>
+              <DialogTrigger asChild>
+                <Button className="bg-[hsl(188_74%_51%)] hover:bg-[hsl(188_74%_51%)]/90 gap-2">
+                  <Plus className="h-4 w-4" />
+                  Add Schedule
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Create New Schedule</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4">
+                  <p className="text-muted-foreground text-sm">Schedule configuration coming soon.</p>
+                </div>
+              </DialogContent>
+            </Dialog>
+          )}
         </div>
 
         {/* Navigation Cards */}
