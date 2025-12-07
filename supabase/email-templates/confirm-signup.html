@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Confirm Your Signup • Vivacity</title>
+  <style>
+    body{margin:0;padding:0;background:#f6f8fb;font-family:Arial,Helvetica,sans-serif;color:#111}
+    .container{max-width:560px;margin:0 auto;background:#ffffff}
+    .header{background:#6b21a8;padding:24px;color:#fff;text-align:center}
+    .content{padding:24px}
+    .btn{display:inline-block;background:#0ea5e9;color:#fff;text-decoration:none;padding:12px 18px;border-radius:8px}
+    .muted{color:#666;font-size:12px}
+    .footer{padding:16px;text-align:center;color:#666;font-size:12px}
+    a{color:#0ea5e9}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1 style="margin:0">Welcome to Vivacity</h1>
+    </div>
+    <div class="content">
+      <h2>Confirm your signup</h2>
+      <p>Hi there,</p>
+      <p>Please confirm your email to activate your Vivacity account.</p>
+      <p>
+        <a class="btn" href="{{ .ConfirmationURL }}">Confirm your email</a>
+      </p>
+      <p class="muted">If the button doesn't work, copy and paste this link into your browser:<br/>
+        <a href="{{ .ConfirmationURL }}">{{ .ConfirmationURL }}</a>
+      </p>
+      <p class="muted">If you didn't sign up, you can safely ignore this email.</p>
+    </div>
+    <div class="footer">
+      Vivacity • <a href="{{ .SiteURL }}">{{ .SiteURL }}</a>
+    </div>
+  </div>
+</body>
+</html>

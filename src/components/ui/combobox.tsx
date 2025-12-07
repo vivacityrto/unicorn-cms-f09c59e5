@@ -1,0 +1,123 @@
+import * as React from "react"
+import { Check, ArrowUpDown } from "lucide-react"
+import { cn } from "@/lib/utils"
+import { Button } from "@/components/ui/button"
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+  CommandSeparator,
+} from "@/components/ui/command"
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover"
+
+export interface ComboboxOption {
+  value: string
+  label: string
+  secondaryLabel?: string
+  group?: string
+}
+
+interface ComboboxProps {
+  options: ComboboxOption[]
+  value?: string
+  onValueChange: (value: string) => void
+  placeholder?: string
+  emptyText?: string
+  searchPlaceholder?: string
+  className?: string
+  disabled?: boolean
+}
+
+export function Combobox({
+  options,
+  value,
+  onValueChange,
+  placeholder = "Select option...",
+  emptyText = "No option found.",
+  searchPlaceholder = "Search...",
+  className,
+  disabled = false,
+}: ComboboxProps) {
+  const [open, setOpen] = React.useState(false)
+
+  // Group options by their group property
+  const groupedOptions = React.useMemo(() => {
+    const groups: Record<string, ComboboxOption[]> = {}
+    options.forEach(option => {
+      const groupKey = option.group || 'default'
+      if (!groups[groupKey]) {
+        groups[groupKey] = []
+      }
+      groups[groupKey].push(option)
+    })
+    return groups
+  }, [options])
+
+  const groupKeys = Object.keys(groupedOptions)
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          variant="outline"
+          role="combobox"
+          aria-expanded={open}
+          disabled={disabled}
+          className={cn("w-full justify-between hover:!bg-[hsl(196deg_100%_93.53%)] hover:!text-black", className)}
+        >
+          {value
+            ? options.find((option) => option.value === value)?.label
+            : placeholder}
+          <ArrowUpDown className="ml-2 h-4 w-4 shrink-0 text-muted-foreground" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="p-[10px] bg-background z-50" align="start" sideOffset={5} style={{ width: 'var(--radix-popover-trigger-width)' }}>
+        <Command className="bg-background !p-0">
+          <CommandInput placeholder={searchPlaceholder} className="h-9" />
+          <CommandList className="overflow-y-auto !p-0">
+            <CommandEmpty>{emptyText}</CommandEmpty>
+            {groupKeys.map((groupKey, groupIndex) => (
+              <React.Fragment key={groupKey}>
+                {groupIndex > 0 && <CommandSeparator className="my-1" />}
+                <CommandGroup className="!p-0">
+                  {groupKey !== 'default' && (
+                    <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">
+                      {groupKey}
+                    </div>
+                  )}
+                  {groupedOptions[groupKey].map((option) => (
+                    <CommandItem
+                      key={option.value}
+                      value={`${option.label} ${option.secondaryLabel || ''}`}
+                      onSelect={() => {
+                        onValueChange(option.value === value ? "" : option.value);
+                        setOpen(false);
+                      }}
+                      className="rounded-none cursor-pointer hover:!bg-[hsl(196deg_100%_93.53%)] hover:!text-black data-[selected=true]:bg-[hsl(196deg_100%_93.53%)] data-[selected=true]:text-black border-b border-border last:border-b-0"
+                      style={{ lineHeight: '20px', fontSize: '15px' }}
+                    >
+                      <div className="flex flex-col py-1 w-full">
+                        <span className="font-medium">{option.label}</span>
+                        {option.secondaryLabel && (
+                          <span className="text-xs text-muted-foreground mt-0.5">{option.secondaryLabel}</span>
+                        )}
+                      </div>
+                      <Check className={cn("ml-auto h-4 w-4 shrink-0", value === option.value ? "opacity-100" : "opacity-0")} />
+                    </CommandItem>
+                  ))}
+                </CommandGroup>
+              </React.Fragment>
+            ))}
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
+  )
+}

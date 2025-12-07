@@ -1,0 +1,531 @@
+import { useState, useEffect } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/hooks/useAuth';
+import { Upload, Save, Lock, Mail, User, Phone, Briefcase, Clock, Globe } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
+
+export default function Settings() {
+  const { toast } = useToast();
+  const { user, profile, refreshProfile } = useAuth();
+  const [loading, setLoading] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [tenantInfo, setTenantInfo] = useState<any>(null);
+  const [formData, setFormData] = useState({
+    first_name: '',
+    last_name: '',
+    email: '',
+    phone: '',
+    job_title: '',
+    timezone: 'Australia/Sydney',
+    bio: '',
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: '',
+  });
+
+  const TIMEZONES = [
+    { value: 'Australia/Sydney', label: 'Sydney (AEDT/AEST)' },
+    { value: 'Australia/Melbourne', label: 'Melbourne (AEDT/AEST)' },
+    { value: 'Australia/Brisbane', label: 'Brisbane (AEST)' },
+    { value: 'Australia/Perth', label: 'Perth (AWST)' },
+    { value: 'Australia/Adelaide', label: 'Adelaide (ACDT/ACST)' },
+    { value: 'Australia/Darwin', label: 'Darwin (ACST)' },
+  ];
+
+  useEffect(() => {
+    if (user && profile) {
+      fetchUserData();
+    }
+  }, [user, profile]);
+
+  const fetchUserData = async () => {
+    try {
+      const { data: userData, error } = await supabase
+        .from('users')
+        .select('*')
+        .eq('user_uuid', user?.id)
+        .single();
+
+      if (error) throw error;
+
+      setFormData({
+        first_name: userData.first_name || '',
+        last_name: userData.last_name || '',
+        email: userData.email || '',
+        phone: userData.mobile_phone || '',
+        job_title: userData.job_title || '',
+        timezone: userData.timezone || 'Australia/Sydney',
+        bio: userData.bio || '',
+        currentPassword: '',
+        newPassword: '',
+        confirmPassword: '',
+      });
+      setAvatarUrl(userData.avatar_url);
+
+      // Fetch tenant information
+      if (userData.tenant_id) {
+        const { data: tenantData } = await supabase
+          .from('tenants')
+          .select('*, tenant_profiles(*)')
+          .eq('id', userData.tenant_id)
+          .single();
+        
+        if (tenantData) {
+          setTenantInfo(tenantData);
+        }
+      }
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: error.message,
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !user) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      toast({
+        title: 'Invalid file',
+        description: 'Please upload an image file',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    // Validate file size (5MB limit)
+    if (file.size > 5 * 1024 * 1024) {
+      toast({
+        title: 'File too large',
+        description: 'Please upload an image smaller than 5MB',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    try {
+      setUploading(true);
+
+      const fileExt = file.name.split('.').pop();
+      const fileName = `profile.${fileExt}`;
+      const filePath = `${user.id}/${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(filePath, file, { upsert: true });
+
+      if (uploadError) {
+        // Provide clear error messages for common issues
+        const errorMsg = uploadError.message.includes('new row violates row-level security') 
+          ? 'Permission denied: Unable to upload avatar. Please contact support.'
+          : uploadError.message || 'Failed to upload avatar';
+        throw new Error(errorMsg);
+      }
+
+      // Database trigger automatically updates profile and audit log
+      const { data: { publicUrl } } = supabase.storage
+        .from('avatars')
+        .getPublicUrl(filePath);
+
+      setAvatarUrl(publicUrl);
+      toast({
+        title: 'Success',
+        description: 'Profile photo updated successfully',
+      });
+
+      // Refresh auth profile to update avatar across the app
+      await refreshProfile();
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to upload avatar',
+        variant: 'destructive',
+      });
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleSaveProfile = async () => {
+    if (!user) return;
+
+    try {
+      setLoading(true);
+
+      const { error } = await supabase
+        .from('users')
+        .update({
+          first_name: formData.first_name,
+          last_name: formData.last_name,
+          mobile_phone: formData.phone,
+          job_title: formData.job_title,
+          timezone: formData.timezone,
+          bio: formData.bio,
+        })
+        .eq('user_uuid', user.id);
+
+      if (error) throw error;
+
+      toast({
+        title: 'Success',
+        description: 'Profile updated successfully',
+      });
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: error.message,
+        variant: 'destructive',
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleChangePassword = async () => {
+    if (!formData.newPassword || !formData.confirmPassword) {
+      toast({
+        title: 'Error',
+        description: 'Please fill in all password fields',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (formData.newPassword !== formData.confirmPassword) {
+      toast({
+        title: 'Error',
+        description: 'Passwords do not match',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (formData.newPassword.length < 6) {
+      toast({
+        title: 'Error',
+        description: 'Password must be at least 6 characters',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    try {
+      setLoading(true);
+
+      const { error } = await supabase.auth.updateUser({
+        password: formData.newPassword,
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: 'Success',
+        description: 'Password changed successfully',
+      });
+
+      setFormData({
+        ...formData,
+        currentPassword: '',
+        newPassword: '',
+        confirmPassword: '',
+      });
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: error.message,
+        variant: 'destructive',
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const initials = `${formData.first_name?.[0] || ''}${formData.last_name?.[0] || ''}`.toUpperCase() || 'U';
+
+  return (
+    <div className="p-6 space-y-6 animate-fade-in max-w-5xl mx-auto">
+      <div>
+        <h1 className="text-3xl font-bold">Settings</h1>
+        <p className="text-muted-foreground">Manage your account settings and preferences</p>
+      </div>
+
+      {/* Profile Settings */}
+      <Card className="animate-scale-in">
+        <CardHeader>
+          <CardTitle>Profile Information</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {/* Avatar Section */}
+          <div className="flex items-center gap-6">
+            <div className="relative">
+              <Avatar className="h-24 w-24">
+                <AvatarImage src={avatarUrl || undefined} />
+                <AvatarFallback className="text-2xl">{initials}</AvatarFallback>
+              </Avatar>
+              <label htmlFor="avatar-upload" className="absolute bottom-0 right-0 cursor-pointer">
+                <div className="bg-primary text-primary-foreground rounded-full p-2 shadow-lg hover:bg-primary/90 transition-colors">
+                  <Upload className="h-4 w-4" />
+                </div>
+                <input
+                  id="avatar-upload"
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleAvatarUpload}
+                  disabled={uploading}
+                />
+              </label>
+            </div>
+            <div>
+              <h2 className="text-xl font-bold">
+                {formData.first_name} {formData.last_name}
+              </h2>
+              <p className="text-muted-foreground">{formData.email}</p>
+              <p className="text-sm text-muted-foreground mt-1">
+                Click the camera icon to upload a new photo
+              </p>
+            </div>
+          </div>
+
+          {/* Form Fields */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="first_name">
+                <User className="inline h-4 w-4 mr-2" />
+                First Name
+              </Label>
+              <Input
+                id="first_name"
+                value={formData.first_name}
+                onChange={(e) => setFormData({ ...formData, first_name: e.target.value })}
+                placeholder="First name"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="last_name">
+                <User className="inline h-4 w-4 mr-2" />
+                Last Name
+              </Label>
+              <Input
+                id="last_name"
+                value={formData.last_name}
+                onChange={(e) => setFormData({ ...formData, last_name: e.target.value })}
+                placeholder="Last name"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="email">
+                <Mail className="inline h-4 w-4 mr-2" />
+                Email
+              </Label>
+              <Input
+                id="email"
+                type="email"
+                value={formData.email}
+                disabled
+                className="bg-muted"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="phone">
+                <Phone className="inline h-4 w-4 mr-2" />
+                Phone Number
+              </Label>
+              <Input
+                id="phone"
+                value={formData.phone}
+                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                placeholder="e.g., 0412 345 678"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="job_title">
+                <Briefcase className="inline h-4 w-4 mr-2" />
+                Job Title
+              </Label>
+              <Input
+                id="job_title"
+                value={formData.job_title}
+                onChange={(e) => setFormData({ ...formData, job_title: e.target.value })}
+                placeholder="e.g., Compliance Manager"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="timezone">
+                <Clock className="inline h-4 w-4 mr-2" />
+                Timezone
+              </Label>
+              <Select
+                value={formData.timezone}
+                onValueChange={(value) => setFormData({ ...formData, timezone: value })}
+              >
+                <SelectTrigger id="timezone">
+                  <SelectValue placeholder="Select timezone" />
+                </SelectTrigger>
+                <SelectContent>
+                  {TIMEZONES.map((tz) => (
+                    <SelectItem key={tz.value} value={tz.value}>
+                      {tz.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="bio">
+              <Globe className="inline h-4 w-4 mr-2" />
+              Bio
+            </Label>
+            <Textarea
+              id="bio"
+              value={formData.bio}
+              onChange={(e) => setFormData({ ...formData, bio: e.target.value })}
+              placeholder="Tell us about yourself..."
+              rows={4}
+            />
+          </div>
+
+          <div className="flex justify-end">
+            <Button onClick={handleSaveProfile} disabled={loading}>
+              <Save className="mr-2 h-4 w-4" />
+              {loading ? 'Saving...' : 'Save Changes'}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Tenant Information */}
+      {tenantInfo && (
+        <Card className="animate-scale-in" style={{ animationDelay: '100ms' }}>
+          <CardHeader>
+            <CardTitle>Tenant Information</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Tenant Name</Label>
+                <Input value={tenantInfo.name || 'N/A'} disabled className="bg-muted" />
+              </div>
+
+              <div className="space-y-2">
+                <Label>Tenant ID</Label>
+                <Input value={tenantInfo.id || 'N/A'} disabled className="bg-muted" />
+              </div>
+
+              <div className="space-y-2">
+                <Label>Status</Label>
+                <Input value={tenantInfo.status || 'N/A'} disabled className="bg-muted" />
+              </div>
+
+              <div className="space-y-2">
+                <Label>Risk Level</Label>
+                <Input value={tenantInfo.risk_level || 'N/A'} disabled className="bg-muted" />
+              </div>
+
+              {tenantInfo.tenant_profiles?.[0] && (
+                <>
+                  {tenantInfo.tenant_profiles[0].legal_name && (
+                    <div className="space-y-2">
+                      <Label>Legal Name</Label>
+                      <Input value={tenantInfo.tenant_profiles[0].legal_name} disabled className="bg-muted" />
+                    </div>
+                  )}
+
+                  {tenantInfo.tenant_profiles[0].abn && (
+                    <div className="space-y-2">
+                      <Label>ABN</Label>
+                      <Input value={tenantInfo.tenant_profiles[0].abn} disabled className="bg-muted" />
+                    </div>
+                  )}
+
+                  {tenantInfo.tenant_profiles[0].street_address && (
+                    <div className="space-y-2 md:col-span-2">
+                      <Label>Address</Label>
+                      <Input value={tenantInfo.tenant_profiles[0].street_address} disabled className="bg-muted" />
+                    </div>
+                  )}
+
+                  {tenantInfo.tenant_profiles[0].state && (
+                    <div className="space-y-2">
+                      <Label>State</Label>
+                      <Input value={tenantInfo.tenant_profiles[0].state} disabled className="bg-muted" />
+                    </div>
+                  )}
+
+                  {tenantInfo.tenant_profiles[0].website && (
+                    <div className="space-y-2">
+                      <Label>Website</Label>
+                      <Input value={tenantInfo.tenant_profiles[0].website} disabled className="bg-muted" />
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Password Settings */}
+      <Card className="animate-scale-in" style={{ animationDelay: '200ms' }}>
+        <CardHeader>
+          <CardTitle>Change Password</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="newPassword">
+              <Lock className="inline h-4 w-4 mr-2" />
+              New Password
+            </Label>
+            <Input
+              id="newPassword"
+              type="password"
+              value={formData.newPassword}
+              onChange={(e) => setFormData({ ...formData, newPassword: e.target.value })}
+              placeholder="Enter new password"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="confirmPassword">
+              <Lock className="inline h-4 w-4 mr-2" />
+              Confirm Password
+            </Label>
+            <Input
+              id="confirmPassword"
+              type="password"
+              value={formData.confirmPassword}
+              onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
+              placeholder="Confirm new password"
+            />
+          </div>
+
+          <div className="flex justify-end">
+            <Button onClick={handleChangePassword} disabled={loading}>
+              <Lock className="mr-2 h-4 w-4" />
+              {loading ? 'Changing...' : 'Change Password'}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
