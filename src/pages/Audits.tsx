@@ -230,7 +230,7 @@ export default function Audits() {
                 </DialogHeader>
                 <div className="space-y-4">
                   <div className="space-y-2">
-                    <label className="text-sm font-medium"> Client</label>
+                    <label className="text-sm font-medium">Select Client</label>
                     <Select value={selectedClient} onValueChange={setSelectedClient}>
                       <SelectTrigger>
                         <SelectValue placeholder="Choose a client" />
