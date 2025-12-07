@@ -203,7 +203,9 @@ export default function Audits() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-[28px] font-bold">Manage Audits</h1>
-            <p className="text-muted-foreground"></p>
+            <p className="text-muted-foreground">
+              Manage compliance, inspections, schedules, and analytics in one place.
+            </p>
           </div>
           {activeTab === "templates" && (
             <Button
