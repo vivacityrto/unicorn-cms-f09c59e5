@@ -219,8 +219,8 @@ export default function Audits() {
           {activeTab === "inspections" && (
             <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
               <DialogTrigger asChild>
-                <Button>
-                  <Plus className="h-4 w-4 mr-2" />
+                <Button className="bg-[hsl(188_74%_51%)] hover:bg-[hsl(188_74%_51%)]/90 gap-2">
+                  <Plus className="h-4 w-4" />
                   New Audit
                 </Button>
               </DialogTrigger>
