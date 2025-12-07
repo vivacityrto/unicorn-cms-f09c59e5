@@ -47,3 +47,8 @@
   width: 1.5 rem;
   height: 1.5 rem;
 }
+
+.text-xs {
+  font-size: 0.75rem;
+  line-height: 31px;
+}
