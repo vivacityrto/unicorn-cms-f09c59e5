@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent, DragStartEvent, DragOverlay } from '@dnd-kit/core';
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Combobox, ComboboxOption } from '@/components/ui/combobox';
 import { 
   Search, Plus, Pencil, Building2, FileText, Box, 
   Building, Type, Hash, CheckSquare, Calendar, Image, 
@@ -53,88 +53,59 @@ function useDocuments() {
   });
 }
 
-// Clients dropdown preview component with modern styling
+// Clients dropdown preview component with smart search
 function ClientsDropdownPreview() {
   const { data: tenants, isLoading } = useTenants();
+  const [selectedClient, setSelectedClient] = useState<string>('');
   
-  // Group tenants by first letter for section separators
-  const groupedTenants = tenants?.reduce((acc, tenant) => {
-    const firstLetter = (tenant.name || 'Other').charAt(0).toUpperCase();
-    if (!acc[firstLetter]) acc[firstLetter] = [];
-    acc[firstLetter].push(tenant);
-    return acc;
-  }, {} as Record<string, typeof tenants>);
-
-  const sortedLetters = Object.keys(groupedTenants || {}).sort();
+  const clientOptions: ComboboxOption[] = useMemo(() => {
+    if (!tenants) return [];
+    return tenants.map(tenant => ({
+      value: String(tenant.id),
+      label: tenant.name || 'Unnamed Client',
+      group: (tenant.name || 'Other').charAt(0).toUpperCase(),
+    }));
+  }, [tenants]);
   
   return (
-    <Select disabled={isLoading}>
-      <SelectTrigger className="bg-muted/50 border-dashed h-10 transition-all hover:border-primary/50">
-        <SelectValue placeholder={isLoading ? "Loading clients..." : "Select a client..."} />
-      </SelectTrigger>
-      <SelectContent className="max-h-[280px]">
-        {sortedLetters.map((letter, idx) => (
-          <div key={letter}>
-            {idx > 0 && <Separator className="my-1" />}
-            <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground bg-muted/30 sticky top-0">
-              {letter}
-            </div>
-            {groupedTenants?.[letter]?.map((tenant) => (
-              <SelectItem 
-                key={tenant.id} 
-                value={String(tenant.id)}
-                className="pl-4 cursor-pointer transition-colors"
-              >
-                {tenant.name}
-              </SelectItem>
-            ))}
-          </div>
-        ))}
-      </SelectContent>
-    </Select>
+    <Combobox
+      options={clientOptions}
+      value={selectedClient}
+      onValueChange={setSelectedClient}
+      placeholder={isLoading ? "Loading clients..." : "Search clients..."}
+      searchPlaceholder="Type to search clients..."
+      emptyText="No clients found."
+      disabled={isLoading}
+      className="bg-muted/50 border-dashed"
+    />
   );
 }
 
-// Documents dropdown preview component with modern styling
+// Documents dropdown preview component with smart search
 function DocumentsDropdownPreview() {
   const { data: documents, isLoading } = useDocuments();
+  const [selectedDocument, setSelectedDocument] = useState<string>('');
   
-  // Group documents by category for section separators
-  const groupedDocs = documents?.reduce((acc, doc) => {
-    const category = doc.category || 'Uncategorized';
-    if (!acc[category]) acc[category] = [];
-    acc[category].push(doc);
-    return acc;
-  }, {} as Record<string, typeof documents>);
-
-  const sortedCategories = Object.keys(groupedDocs || {}).sort();
+  const documentOptions: ComboboxOption[] = useMemo(() => {
+    if (!documents) return [];
+    return documents.map(doc => ({
+      value: String(doc.id),
+      label: doc.title || 'Untitled Document',
+      group: doc.category || 'Uncategorized',
+    }));
+  }, [documents]);
   
   return (
-    <Select disabled={isLoading}>
-      <SelectTrigger className="bg-muted/50 border-dashed h-10 transition-all hover:border-primary/50">
-        <SelectValue placeholder={isLoading ? "Loading documents..." : "Select a document..."} />
-      </SelectTrigger>
-      <SelectContent className="max-h-[280px]">
-        {sortedCategories.map((category, idx) => (
-          <div key={category}>
-            {idx > 0 && <Separator className="my-1" />}
-            <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground bg-muted/30 sticky top-0 flex items-center gap-2">
-              <FileText className="h-3 w-3" />
-              {category}
-            </div>
-            {groupedDocs?.[category]?.map((doc) => (
-              <SelectItem 
-                key={doc.id} 
-                value={String(doc.id)}
-                className="pl-4 cursor-pointer transition-colors"
-              >
-                {doc.title}
-              </SelectItem>
-            ))}
-          </div>
-        ))}
-      </SelectContent>
-    </Select>
+    <Combobox
+      options={documentOptions}
+      value={selectedDocument}
+      onValueChange={setSelectedDocument}
+      placeholder={isLoading ? "Loading documents..." : "Search documents..."}
+      searchPlaceholder="Type to search documents..."
+      emptyText="No documents found."
+      disabled={isLoading}
+      className="bg-muted/50 border-dashed"
+    />
   );
 }
 
