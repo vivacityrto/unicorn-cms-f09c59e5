@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { 
   Search, Plus, Pencil, Building2, FileText, Box, 
   Building, Type, Hash, CheckSquare, Calendar, Image, 
@@ -19,6 +20,42 @@ import { useAuditTemplates, useAuditTemplateQuestions, AuditTemplateQuestion } f
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
+import { useQuery } from '@tanstack/react-query';
+
+// Hook to fetch tenants/clients
+function useTenants() {
+  return useQuery({
+    queryKey: ['tenants-clients'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('tenants')
+        .select('id, name')
+        .order('name');
+      if (error) throw error;
+      return data || [];
+    },
+  });
+}
+
+// Clients dropdown preview component
+function ClientsDropdownPreview() {
+  const { data: tenants, isLoading } = useTenants();
+  
+  return (
+    <Select disabled={isLoading}>
+      <SelectTrigger className="bg-muted/50 border-dashed">
+        <SelectValue placeholder={isLoading ? "Loading clients..." : "Select a client..."} />
+      </SelectTrigger>
+      <SelectContent>
+        {tenants?.map((tenant) => (
+          <SelectItem key={tenant.id} value={String(tenant.id)}>
+            {tenant.name}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  );
+}
 
 interface ResponseSet {
   id: string;
@@ -57,7 +94,7 @@ const defaultResponseSets: ResponseSet[] = [
 ];
 
 const questionTypes: QuestionType[] = [
-  { id: 'site', label: 'Site', icon: Building2, color: 'text-blue-500', category: 'title_page' },
+  { id: 'clients', label: 'Clients', icon: Building2, color: 'text-blue-500', category: 'title_page' },
   { id: 'document_number', label: 'Document number', icon: FileText, color: 'text-orange-500', category: 'title_page' },
   { id: 'asset', label: 'Asset', icon: Box, color: 'text-cyan-500', category: 'title_page' },
   { id: 'company', label: 'Company', icon: Building, color: 'text-blue-600', category: 'title_page' },
@@ -106,7 +143,7 @@ function SortableQuestionCard({ question, onDelete, onUpdate }: {
     switch (type) {
       case 'text_answer': return 'Enter your answer here...';
       case 'number': return 'Enter a number...';
-      case 'site': return 'Enter site name...';
+      case 'clients': return 'Select a client...';
       case 'company': return 'Enter company name...';
       case 'document_number': return 'Enter document number...';
       case 'asset': return 'Enter asset ID...';
@@ -119,8 +156,11 @@ function SortableQuestionCard({ question, onDelete, onUpdate }: {
 
   const renderInputPreview = () => {
     switch (question.question_type) {
+      case 'clients':
+        return (
+          <ClientsDropdownPreview />
+        );
       case 'text_answer':
-      case 'site':
       case 'company':
       case 'document_number':
       case 'asset':
