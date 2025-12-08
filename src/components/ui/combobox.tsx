@@ -1,6 +1,7 @@
 import * as React from "react"
 import { Check, ArrowUpDown } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
   Command,
@@ -22,6 +23,8 @@ export interface ComboboxOption {
   label: string
   secondaryLabel?: string
   group?: string
+  createdAt?: string
+  status?: string
 }
 
 interface ComboboxProps {
@@ -81,7 +84,7 @@ export function Combobox({
       <PopoverContent className="p-[10px] bg-background z-50" align="start" sideOffset={5} style={{ width: 'var(--radix-popover-trigger-width)' }}>
         <Command className="bg-background !p-0">
           <CommandInput placeholder={searchPlaceholder} className="h-9" />
-          <CommandList className="overflow-y-auto !p-0">
+          <CommandList className="overflow-y-auto !p-0 max-h-[320px]">
             <CommandEmpty>{emptyText}</CommandEmpty>
             {groupKeys.map((groupKey, groupIndex) => (
               <React.Fragment key={groupKey}>
@@ -103,10 +106,29 @@ export function Combobox({
                       className="rounded-none cursor-pointer hover:!bg-[hsl(196deg_100%_93.53%)] hover:!text-black data-[selected=true]:bg-[hsl(196deg_100%_93.53%)] data-[selected=true]:text-black border-b border-border last:border-b-0"
                       style={{ lineHeight: '20px', fontSize: '15px' }}
                     >
-                      <div className="flex flex-col py-1 w-full">
-                        <span className="font-medium">{option.label}</span>
+                      <div className="flex flex-col py-1.5 w-full">
+                        <div className="flex items-center justify-between w-full">
+                          <span className="font-medium">{option.label}</span>
+                          {option.status && (
+                            <Badge 
+                              variant={option.status === 'active' ? 'default' : 'secondary'}
+                              className={cn(
+                                "text-xs capitalize ml-2",
+                                option.status === 'active' && "bg-green-500/20 text-green-700 border-green-500/30",
+                                option.status === 'inactive' && "bg-muted text-muted-foreground"
+                              )}
+                            >
+                              {option.status}
+                            </Badge>
+                          )}
+                        </div>
                         {option.secondaryLabel && (
                           <span className="text-xs text-muted-foreground mt-0.5">{option.secondaryLabel}</span>
+                        )}
+                        {option.createdAt && (
+                          <span className="text-xs text-muted-foreground/70 mt-0.5">
+                            Created: {new Date(option.createdAt).toLocaleDateString()}
+                          </span>
                         )}
                       </div>
                       <Check className={cn("ml-auto h-4 w-4 shrink-0", value === option.value ? "opacity-100" : "opacity-0")} />
