@@ -1,5 +1,5 @@
 import * as React from "react"
-import { Check, ArrowUpDown } from "lucide-react"
+import { Check, ArrowUpDown, Calendar } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -111,11 +111,11 @@ export function Combobox({
                           <span className="font-medium">{option.label}</span>
                           {option.status && (
                             <Badge 
-                              variant={option.status === 'active' ? 'default' : 'secondary'}
+                              variant="outline"
                               className={cn(
-                                "text-xs capitalize ml-2",
-                                option.status === 'active' && "bg-green-500/20 text-green-700 border-green-500/30",
-                                option.status === 'inactive' && "bg-muted text-muted-foreground"
+                                "text-[0.75rem] py-[2px] px-[0.625rem] rounded-[11px] ml-2",
+                                option.status === 'active' && "bg-green-500/10 text-green-600 hover:bg-green-500/20 border border-green-600",
+                                option.status === 'inactive' && "bg-red-500/10 text-red-600 hover:bg-red-500/20 border border-red-600"
                               )}
                             >
                               {option.status}
@@ -126,7 +126,8 @@ export function Combobox({
                           <span className="text-xs text-muted-foreground mt-0.5">{option.secondaryLabel}</span>
                         )}
                         {option.createdAt && (
-                          <span className="text-xs text-muted-foreground/70 mt-0.5">
+                          <span className="text-xs text-muted-foreground/70 pt-[5px] flex items-center gap-1">
+                            <Calendar className="h-3 w-3" />
                             Created: {new Date(option.createdAt).toLocaleDateString()}
                           </span>
                         )}
