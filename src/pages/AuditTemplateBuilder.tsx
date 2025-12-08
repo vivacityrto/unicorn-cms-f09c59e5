@@ -29,7 +29,7 @@ function useTenants() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('tenants')
-        .select('id, name')
+        .select('id, name, created_at, status')
         .order('name');
       if (error) throw error;
       return data || [];
@@ -64,6 +64,8 @@ function ClientsDropdownPreview() {
       value: String(tenant.id),
       label: tenant.name || 'Unnamed Client',
       group: (tenant.name || 'Other').charAt(0).toUpperCase(),
+      createdAt: tenant.created_at || undefined,
+      status: tenant.status || undefined,
     }));
   }, [tenants]);
   
