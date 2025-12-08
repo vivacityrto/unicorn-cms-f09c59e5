@@ -37,20 +37,101 @@ function useTenants() {
   });
 }
 
-// Clients dropdown preview component
+// Hook to fetch documents
+function useDocuments() {
+  return useQuery({
+    queryKey: ['documents-list'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('documents')
+        .select('id, title, category')
+        .order('category')
+        .order('title');
+      if (error) throw error;
+      return data || [];
+    },
+  });
+}
+
+// Clients dropdown preview component with modern styling
 function ClientsDropdownPreview() {
   const { data: tenants, isLoading } = useTenants();
   
+  // Group tenants by first letter for section separators
+  const groupedTenants = tenants?.reduce((acc, tenant) => {
+    const firstLetter = (tenant.name || 'Other').charAt(0).toUpperCase();
+    if (!acc[firstLetter]) acc[firstLetter] = [];
+    acc[firstLetter].push(tenant);
+    return acc;
+  }, {} as Record<string, typeof tenants>);
+
+  const sortedLetters = Object.keys(groupedTenants || {}).sort();
+  
   return (
     <Select disabled={isLoading}>
-      <SelectTrigger className="bg-muted/50 border-dashed">
+      <SelectTrigger className="bg-muted/50 border-dashed h-10 transition-all hover:border-primary/50">
         <SelectValue placeholder={isLoading ? "Loading clients..." : "Select a client..."} />
       </SelectTrigger>
-      <SelectContent>
-        {tenants?.map((tenant) => (
-          <SelectItem key={tenant.id} value={String(tenant.id)}>
-            {tenant.name}
-          </SelectItem>
+      <SelectContent className="max-h-[280px]">
+        {sortedLetters.map((letter, idx) => (
+          <div key={letter}>
+            {idx > 0 && <Separator className="my-1" />}
+            <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground bg-muted/30 sticky top-0">
+              {letter}
+            </div>
+            {groupedTenants?.[letter]?.map((tenant) => (
+              <SelectItem 
+                key={tenant.id} 
+                value={String(tenant.id)}
+                className="pl-4 cursor-pointer transition-colors"
+              >
+                {tenant.name}
+              </SelectItem>
+            ))}
+          </div>
+        ))}
+      </SelectContent>
+    </Select>
+  );
+}
+
+// Documents dropdown preview component with modern styling
+function DocumentsDropdownPreview() {
+  const { data: documents, isLoading } = useDocuments();
+  
+  // Group documents by category for section separators
+  const groupedDocs = documents?.reduce((acc, doc) => {
+    const category = doc.category || 'Uncategorized';
+    if (!acc[category]) acc[category] = [];
+    acc[category].push(doc);
+    return acc;
+  }, {} as Record<string, typeof documents>);
+
+  const sortedCategories = Object.keys(groupedDocs || {}).sort();
+  
+  return (
+    <Select disabled={isLoading}>
+      <SelectTrigger className="bg-muted/50 border-dashed h-10 transition-all hover:border-primary/50">
+        <SelectValue placeholder={isLoading ? "Loading documents..." : "Select a document..."} />
+      </SelectTrigger>
+      <SelectContent className="max-h-[280px]">
+        {sortedCategories.map((category, idx) => (
+          <div key={category}>
+            {idx > 0 && <Separator className="my-1" />}
+            <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground bg-muted/30 sticky top-0 flex items-center gap-2">
+              <FileText className="h-3 w-3" />
+              {category}
+            </div>
+            {groupedDocs?.[category]?.map((doc) => (
+              <SelectItem 
+                key={doc.id} 
+                value={String(doc.id)}
+                className="pl-4 cursor-pointer transition-colors"
+              >
+                {doc.title}
+              </SelectItem>
+            ))}
+          </div>
         ))}
       </SelectContent>
     </Select>
@@ -95,7 +176,7 @@ const defaultResponseSets: ResponseSet[] = [
 
 const questionTypes: QuestionType[] = [
   { id: 'clients', label: 'Clients', icon: Building2, color: 'text-blue-500', category: 'title_page' },
-  { id: 'document_number', label: 'Document number', icon: FileText, color: 'text-orange-500', category: 'title_page' },
+  { id: 'documents', label: 'Documents', icon: FileText, color: 'text-orange-500', category: 'title_page' },
   { id: 'asset', label: 'Asset', icon: Box, color: 'text-cyan-500', category: 'title_page' },
   { id: 'company', label: 'Company', icon: Building, color: 'text-blue-600', category: 'title_page' },
   { id: 'text_answer', label: 'Text answer', icon: Type, color: 'text-red-500', category: 'other_responses' },
@@ -145,7 +226,7 @@ function SortableQuestionCard({ question, onDelete, onUpdate }: {
       case 'number': return 'Enter a number...';
       case 'clients': return 'Select a client...';
       case 'company': return 'Enter company name...';
-      case 'document_number': return 'Enter document number...';
+      case 'documents': return 'Select a document...';
       case 'asset': return 'Enter asset ID...';
       case 'date_time': return 'Select date and time...';
       case 'location': return 'Enter or select location...';
@@ -160,9 +241,12 @@ function SortableQuestionCard({ question, onDelete, onUpdate }: {
         return (
           <ClientsDropdownPreview />
         );
+      case 'documents':
+        return (
+          <DocumentsDropdownPreview />
+        );
       case 'text_answer':
       case 'company':
-      case 'document_number':
       case 'asset':
         return (
           <Input 
