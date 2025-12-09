@@ -731,7 +731,7 @@ export default function AuditTemplateBuilder() {
                               <Trash2 className="h-3.5 w-3.5" />
                             </Button>
                           )}
-                          <Plus className="h-4 w-4 text-primary opacity-0 group-hover:opacity-100 transition-opacity" />
+                          <Pencil className="h-4 w-4 text-primary opacity-0 group-hover:opacity-100 transition-opacity" />
                         </div>
                       </div>
                       {/* Modern Badge Style Options */}
