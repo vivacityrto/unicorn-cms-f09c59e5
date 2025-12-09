@@ -5,11 +5,12 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, ChevronRight, User, Phone, Mail, MapPin, Calendar, Users, FileText, TrendingUp, LogIn, Package as PackageIcon, CheckCircle2, Clock, AlertCircle, Globe, ExternalLink, Facebook, Instagram, Linkedin, ArrowLeft, Timer, Building2 } from "lucide-react";
+import { Plus, ChevronRight, ChevronDown, User, Phone, Mail, MapPin, Calendar, Users, FileText, TrendingUp, LogIn, Package as PackageIcon, CheckCircle2, Clock, AlertCircle, Globe, ExternalLink, Facebook, Instagram, Linkedin, ArrowLeft, Timer, Building2 } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Separator } from "@/components/ui/separator";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card, CardContent } from "@/components/ui/card";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import TenantProgressTable from "@/components/tenant/TenantProgressTable";
 interface ClientData {
   id: string;
@@ -634,23 +635,35 @@ export default function TenantDetail() {
             {/* Package Time Remaining */}
             <Card className="border-0 shadow-lg overflow-hidden">
               <div className="bg-muted/30 px-6 py-3 border-b border-border/50">
-                <div className="flex items-center justify-between mb-3">
-                  <h2 className="font-semibold text-foreground">Package Details</h2>
+                <div className="flex items-center justify-between">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <button className="flex items-center gap-2 font-semibold text-foreground hover:text-primary transition-colors">
+                        <FileText className="h-4 w-4 text-primary" />
+                        {tenantPackages.find(p => p.id === activePackageId)?.name || 'Select Package'}
+                        {tenantPackages.length > 1 && <ChevronDown className="h-4 w-4 text-muted-foreground" />}
+                      </button>
+                    </DropdownMenuTrigger>
+                    {tenantPackages.length > 1 && (
+                      <DropdownMenuContent align="start" className="w-56 bg-background border border-border shadow-lg z-50">
+                        {tenantPackages.map(pkg => (
+                          <DropdownMenuItem
+                            key={pkg.id}
+                            onClick={() => setActivePackageId(pkg.id)}
+                            className={`flex items-center gap-2 cursor-pointer ${pkg.id === activePackageId ? 'bg-primary/10 text-primary' : ''}`}
+                          >
+                            <FileText className="h-4 w-4" />
+                            {pkg.name}
+                            {pkg.id === activePackageId && <CheckCircle2 className="h-4 w-4 ml-auto text-primary" />}
+                          </DropdownMenuItem>
+                        ))}
+                      </DropdownMenuContent>
+                    )}
+                  </DropdownMenu>
                   <span className="text-xs font-medium text-primary cursor-pointer hover:underline" onClick={() => navigate(`/tenant/${tenantId}/notes${activePackageId ? `?packageId=${activePackageId}` : ''}`)}>
                     View Data
                   </span>
                 </div>
-                {/* Package Selector in Header */}
-                {tenantPackages.length > 1 && <div className="flex items-center gap-2 overflow-x-auto pb-1">
-                    {tenantPackages.map(pkg => {
-                  const isActive = pkg.id === activePackageId;
-                  return <button key={pkg.id} onClick={() => setActivePackageId(pkg.id)} className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-sm whitespace-nowrap transition-all duration-200 ${isActive ? 'border-primary/40 bg-primary/10 text-foreground font-medium' : 'border-border/40 bg-background/50 text-muted-foreground hover:border-primary/20 hover:bg-muted/30'}`}>
-                          <FileText className={`h-4 w-4 ${isActive ? 'text-primary' : 'text-muted-foreground'}`} />
-                          {pkg.name}
-                          {isActive && <CheckCircle2 className="h-4 w-4 text-primary" />}
-                        </button>;
-                })}
-                  </div>}
               </div>
 
               <div className="p-6">
