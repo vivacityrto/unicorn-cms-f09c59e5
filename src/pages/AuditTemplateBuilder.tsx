@@ -450,10 +450,22 @@ function SortableQuestionCard({
             </Button>
           </div>;
       case 'multiple_choice':
+        const colorMapPreview: Record<string, string> = {
+          'bg-green-500': 'bg-green-500/15 text-green-600 border-green-500/30',
+          'bg-red-500': 'bg-red-500/15 text-red-600 border-red-500/30',
+          'bg-blue-500': 'bg-blue-500/15 text-blue-600 border-blue-500/30',
+          'bg-yellow-500': 'bg-yellow-500/15 text-yellow-600 border-yellow-500/30',
+          'bg-purple-500': 'bg-purple-500/15 text-purple-600 border-purple-500/30',
+          'bg-orange-500': 'bg-orange-500/15 text-orange-600 border-orange-500/30',
+          'bg-muted': 'bg-muted/80 text-muted-foreground border-border'
+        };
         return <div className="flex flex-wrap gap-2">
-            {question.options?.map((opt: any, idx: number) => <span key={idx} className={cn("px-3 py-1.5 rounded-md text-sm font-medium cursor-pointer transition-all hover:scale-105", opt.color || 'bg-muted', opt.color === 'bg-muted' ? 'text-muted-foreground' : 'text-white')}>
+            {question.options?.map((opt: any, idx: number) => {
+              const badgeClassPreview = colorMapPreview[opt.color || 'bg-muted'] || colorMapPreview['bg-muted'];
+              return <span key={idx} className={cn("px-2.5 py-1 rounded-full text-[13px] font-semibold border backdrop-blur-sm cursor-pointer transition-all hover:scale-105", badgeClassPreview)}>
                 {opt.label}
-              </span>)}
+              </span>;
+            })}
           </div>;
       case 'annotation':
         return <div className="border rounded-lg p-4 bg-muted/30">
