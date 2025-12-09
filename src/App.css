@@ -44,11 +44,6 @@
 .flex-shrink-0,
 .shrink-0 {
   flex-shrink: 0;
-  width: 1.5 rem;
-  height: 1.5 rem;
-}
-
-.text-xs {
-  font-size: 0.75rem;
-  line-height: 31px;
+  width: 1.5rem;
+  height: 1.5rem;
 }
