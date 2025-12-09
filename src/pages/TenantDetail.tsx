@@ -442,7 +442,7 @@ export default function TenantDetail() {
                 <div className="bg-muted/30 px-6 py-3 border-b border-border/50">
                   <div className="flex items-center justify-between">
                     <h2 className="font-semibold text-foreground">Packages</h2>
-                    <span className="text-xs text-muted-foreground">{tenantPackages.length} package{tenantPackages.length > 1 ? 's' : ''}</span>
+                    <span className="text-xs text-muted-foreground">{tenantPackages.find(p => p.id === activePackageId)?.slug || tenantPackages.find(p => p.id === activePackageId)?.name || 'Package'}</span>
                   </div>
                 </div>
                 <div className="p-4">
