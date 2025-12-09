@@ -891,7 +891,7 @@ export default function AuditTemplateBuilder() {
                         'bg-muted': 'bg-muted/80 text-muted-foreground border-border'
                       };
                       const badgeClass = colorMap[option.color || 'bg-muted'] || colorMap['bg-muted'];
-                      return <span key={idx} className={cn("px-2.5 py-1 rounded-full text-[0.65rem] font-semibold border backdrop-blur-sm", badgeClass)}>
+                      return <span key={idx} className={cn("px-2.5 py-1 rounded-full text-[13px] font-semibold border backdrop-blur-sm", badgeClass)}>
                                 {option.label}
                               </span>;
                     })}
