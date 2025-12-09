@@ -135,13 +135,7 @@ export default function AdminPackageTenantDetail() {
                       <Calendar className="h-4 w-4 text-muted-foreground" />
                     </div>
                     <div>
-                      <p className="text-sm font-medium">
-                        {new Date(tenantInfo.created_at).toLocaleDateString('en-AU', {
-                    day: '2-digit',
-                    month: 'short',
-                    year: 'numeric'
-                  })}
-                      </p>
+                      
                       <p className="text-xs text-muted-foreground">Member Since</p>
                     </div>
                   </div>
