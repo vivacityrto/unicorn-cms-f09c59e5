@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { Combobox, ComboboxOption } from '@/components/ui/combobox';
-import { Search, Plus, Pencil, Building2, FileText, Box, Building, Type, Hash, CheckSquare, Calendar as CalendarIcon, Image, SlidersHorizontal, MessageSquare, PenTool, MapPin, GripVertical, Trash2, X, Eye, Shield, ToggleLeft, Star, CircleDot, AlertTriangle, CheckCircle, List, CalendarClock } from 'lucide-react';
+import { Search, Plus, Pencil, Building2, FileText, Box, Building, Type, Hash, CheckSquare, CalendarDays, Image, SlidersHorizontal, MessageSquare, PenTool, MapPin, GripVertical, Trash2, X, Eye, Shield, ToggleLeft, Star, CircleDot, AlertTriangle, CheckCircle, List, CalendarClock } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription, DialogPortal, DialogOverlay } from '@/components/ui/dialog';
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { cn } from '@/lib/utils';
@@ -188,7 +188,7 @@ const questionTypes: QuestionType[] = [{
 }, {
   id: 'date_time',
   label: 'Date & Time',
-  icon: Calendar,
+  icon: CalendarDays,
   color: 'text-green-600',
   category: 'other_responses'
 }, {
