@@ -11,6 +11,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Separator } from "@/components/ui/separator";
 import { Combobox } from "@/components/ui/combobox";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ArrowLeft, Users, CheckCircle2, FileText, Plus, Search, ArrowUpDown, Trash2, Edit, Calendar, Layers, GripVertical } from "lucide-react";
@@ -568,16 +569,16 @@ const PackageDetail = () => {
       </div>;
   }
   return <div className="p-6 space-y-6 animate-fade-in">
-      {/* Header - Back button */}
-      <div className="flex items-center justify-between">
-        <Button variant="ghost" onClick={() => navigate(-1)} className="gap-2 hover:bg-[hsl(196deg_100%_93.53%)] hover:text-black" style={{
-        boxShadow: "var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow)",
-        border: "1px solid #00000052"
-      }}>
-          <ArrowLeft className="h-4 w-4" />
-          Back
-        </Button>
-        {!tenantId && (
+      {/* Header */}
+      {!tenantId ? (
+        <div className="flex items-center justify-between">
+          <Button variant="ghost" onClick={() => navigate(-1)} className="gap-2 hover:bg-[hsl(196deg_100%_93.53%)] hover:text-black" style={{
+            boxShadow: "var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow)",
+            border: "1px solid #00000052"
+          }}>
+            <ArrowLeft className="h-4 w-4" />
+            Back
+          </Button>
           <Button variant="ghost" onClick={() => setIsEditPackageDialogOpen(true)} className="gap-2 hover:bg-[hsl(196deg_100%_93.53%)] hover:text-black" style={{
             boxShadow: "var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow)",
             border: "1px solid #00000052"
@@ -585,8 +586,10 @@ const PackageDetail = () => {
             <Edit className="h-4 w-4" />
             Edit Package
           </Button>
-        )}
-      </div>
+        </div>
+      ) : (
+        <Separator className="bg-border/60" />
+      )}
 
       {/* Package Header */}
       
