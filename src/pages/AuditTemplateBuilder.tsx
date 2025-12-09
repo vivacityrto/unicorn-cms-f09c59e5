@@ -432,7 +432,8 @@ export default function AuditTemplateBuilder() {
   const {
     templates: reusableTemplates,
     isLoading: isLoadingTemplates,
-    createTemplate: createReusableTemplate
+    createTemplate: createReusableTemplate,
+    updateTemplate: updateReusableTemplate
   } = useReusableAuditTemplates();
   const [templateName, setTemplateName] = useState('Untitled template');
   const [searchQuery, setSearchQuery] = useState('');
@@ -445,6 +446,7 @@ export default function AuditTemplateBuilder() {
 
   // Create response set dialog state
   const [isCreateResponseSetOpen, setIsCreateResponseSetOpen] = useState(false);
+  const [editingResponseSet, setEditingResponseSet] = useState<{ id: number; name: string; options: ResponseOption[] } | null>(null);
   const [newResponseSetName, setNewResponseSetName] = useState('');
   const [newResponseSetType, setNewResponseSetType] = useState<'multiple_choice' | 'text_answer' | 'number' | 'checkbox' | 'date_time' | 'slider'>('multiple_choice');
   const [newResponseSetOptions, setNewResponseSetOptions] = useState<ResponseOption[]>([{
@@ -683,7 +685,7 @@ export default function AuditTemplateBuilder() {
                   Responses
                 </Button>
               </div>
-              <div className="space-y-3">
+              <div className="space-y-2">
                 {isLoadingTemplates ? (
                   <div className="text-sm text-muted-foreground text-center py-4">Loading response sets...</div>
                 ) : reusableTemplates && reusableTemplates.length > 0 ? (
@@ -691,10 +693,10 @@ export default function AuditTemplateBuilder() {
                     <div 
                       key={template.id} 
                       className={cn(
-                        "p-3 rounded-lg border cursor-pointer transition-all hover:shadow-md group",
+                        "relative rounded-xl border bg-card/50 backdrop-blur-sm cursor-pointer transition-all duration-200 group overflow-hidden",
                         selectedResponseSets.includes(String(template.id)) 
-                          ? "border-primary/50 bg-primary/5" 
-                          : "border-border hover:border-primary/30 hover:bg-muted/50"
+                          ? "border-primary/50 bg-primary/5 shadow-md shadow-primary/10" 
+                          : "border-border/50 hover:border-primary/40 hover:shadow-lg hover:shadow-primary/5 hover:bg-card"
                       )} 
                       onClick={() => {
                         addQuestionToCanvas({
@@ -710,55 +712,84 @@ export default function AuditTemplateBuilder() {
                         });
                       }}
                     >
-                      {/* Card Title with Delete */}
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-sm font-medium text-foreground">{template.name}</span>
-                        <div className="flex items-center gap-1">
-                          {template.is_global && (
-                            <span className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded">Global</span>
-                          )}
-                          {!template.is_global && (
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive hover:bg-destructive/10"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                // Delete functionality would go here
-                                toast.info('Delete functionality coming soon');
-                              }}
-                            >
-                              <Trash2 className="h-3.5 w-3.5" />
-                            </Button>
-                          )}
-                          <Pencil className="h-4 w-4 text-primary opacity-0 group-hover:opacity-100 transition-opacity" />
+                      {/* Gradient accent line */}
+                      <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-primary/60 via-primary to-primary/60 opacity-0 group-hover:opacity-100 transition-opacity" />
+                      
+                      <div className="p-3">
+                        {/* Card Header */}
+                        <div className="flex items-center justify-between mb-2.5">
+                          <div className="flex items-center gap-2">
+                            <div className="h-7 w-7 rounded-lg bg-primary/10 flex items-center justify-center">
+                              <CheckSquare className="h-3.5 w-3.5 text-primary" />
+                            </div>
+                            <span className="text-sm font-semibold text-foreground">{template.name}</span>
+                          </div>
+                          <div className="flex items-center gap-0.5">
+                            {template.is_global && (
+                              <span className="text-[10px] text-muted-foreground bg-muted/80 px-2 py-0.5 rounded-full font-medium">Global</span>
+                            )}
+                            {!template.is_global && (
+                              <>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-7 w-7 rounded-lg opacity-0 group-hover:opacity-100 transition-all text-muted-foreground hover:text-primary hover:bg-primary/10"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setEditingResponseSet({
+                                      id: template.id,
+                                      name: template.name,
+                                      options: template.options
+                                    });
+                                    setNewResponseSetName(template.name);
+                                    setNewResponseSetOptions(template.options);
+                                    setIsCreateResponseSetOpen(true);
+                                  }}
+                                >
+                                  <Pencil className="h-3.5 w-3.5" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-7 w-7 rounded-lg opacity-0 group-hover:opacity-100 transition-all text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    toast.info('Delete functionality coming soon');
+                                  }}
+                                >
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                </Button>
+                              </>
+                            )}
+                          </div>
                         </div>
-                      </div>
-                      {/* Modern Badge Style Options */}
-                      <div className="flex items-center gap-1.5 flex-wrap">
-                        {template.options.map((option, idx) => {
-                          const colorMap: Record<string, string> = {
-                            'bg-green-500': 'bg-green-500/10 text-green-600 border-green-600',
-                            'bg-red-500': 'bg-red-500/10 text-red-600 border-red-600',
-                            'bg-yellow-500': 'bg-yellow-500/10 text-yellow-600 border-yellow-600',
-                            'bg-blue-500': 'bg-blue-500/10 text-blue-600 border-blue-600',
-                            'bg-purple-500': 'bg-purple-500/10 text-purple-600 border-purple-600',
-                            'bg-orange-500': 'bg-orange-500/10 text-orange-600 border-orange-600',
-                            'bg-muted': 'bg-muted text-muted-foreground border-muted-foreground/30',
-                          };
-                          const badgeClass = colorMap[option.color || 'bg-muted'] || colorMap['bg-muted'];
-                          return (
-                            <span 
-                              key={idx} 
-                              className={cn(
-                                "px-2 py-0.5 rounded-full text-[0.7rem] font-medium border",
-                                badgeClass
-                              )}
-                            >
-                              {option.label}
-                            </span>
-                          );
-                        })}
+                        
+                        {/* Modern Badge Style Options */}
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          {template.options.map((option, idx) => {
+                            const colorMap: Record<string, string> = {
+                              'bg-green-500': 'bg-green-500/15 text-green-600 border-green-500/30',
+                              'bg-red-500': 'bg-red-500/15 text-red-600 border-red-500/30',
+                              'bg-yellow-500': 'bg-yellow-500/15 text-yellow-600 border-yellow-500/30',
+                              'bg-blue-500': 'bg-blue-500/15 text-blue-600 border-blue-500/30',
+                              'bg-purple-500': 'bg-purple-500/15 text-purple-600 border-purple-500/30',
+                              'bg-orange-500': 'bg-orange-500/15 text-orange-600 border-orange-500/30',
+                              'bg-muted': 'bg-muted/80 text-muted-foreground border-border',
+                            };
+                            const badgeClass = colorMap[option.color || 'bg-muted'] || colorMap['bg-muted'];
+                            return (
+                              <span 
+                                key={idx} 
+                                className={cn(
+                                  "px-2.5 py-1 rounded-full text-[0.65rem] font-semibold border backdrop-blur-sm",
+                                  badgeClass
+                                )}
+                              >
+                                {option.label}
+                              </span>
+                            );
+                          })}
+                        </div>
                       </div>
                     </div>
                   ))
@@ -936,18 +967,29 @@ export default function AuditTemplateBuilder() {
         </DialogPortal>
       </Dialog>
 
-      {/* Create Response Set Dialog */}
-      <Dialog open={isCreateResponseSetOpen} onOpenChange={setIsCreateResponseSetOpen}>
+      {/* Create/Edit Response Set Dialog */}
+      <Dialog open={isCreateResponseSetOpen} onOpenChange={(open) => {
+        setIsCreateResponseSetOpen(open);
+        if (!open) {
+          setEditingResponseSet(null);
+          setNewResponseSetName('');
+          setNewResponseSetType('multiple_choice');
+          setNewResponseSetOptions([
+            { label: 'Option 1', color: 'bg-green-500' }, 
+            { label: 'Option 2', color: 'bg-red-500' }
+          ]);
+        }
+      }}>
         <DialogPortal>
           <DialogOverlay className="z-[70] bg-black/70" />
           <DialogPrimitive.Content className={cn("fixed left-[50%] top-[50%] z-[70] flex flex-col w-full sm:max-w-[500px] max-w-[90vw] max-h-[85vh] translate-x-[-50%] translate-y-[-50%] gap-4 overflow-hidden scrollbar-hide border bg-background p-6 shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%] sm:rounded-lg")}>
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2 text-xl">
-                <Plus className="h-5 w-5" />
-                Create Response Set
+                {editingResponseSet ? <Pencil className="h-5 w-5" /> : <Plus className="h-5 w-5" />}
+                {editingResponseSet ? 'Edit Response Set' : 'Create Response Set'}
               </DialogTitle>
               <DialogDescription>
-                Create a reusable response template for your audits.
+                {editingResponseSet ? 'Update your response template.' : 'Create a reusable response template for your audits.'}
               </DialogDescription>
             </DialogHeader>
             
@@ -1073,7 +1115,10 @@ export default function AuditTemplateBuilder() {
             <DialogFooter className="gap-2">
               <Button 
                 variant="outline" 
-                onClick={() => setIsCreateResponseSetOpen(false)}
+                onClick={() => {
+                  setIsCreateResponseSetOpen(false);
+                  setEditingResponseSet(null);
+                }}
                 className="hover:bg-[hsl(196deg_100%_93.53%)] hover:text-black"
               >
                 Cancel
@@ -1093,12 +1138,24 @@ export default function AuditTemplateBuilder() {
                     ? newResponseSetOptions 
                     : [{ label: newResponseSetType, color: 'bg-muted' }];
                   
-                  await createReusableTemplate.mutateAsync({
-                    name: newResponseSetName,
-                    description: `Type: ${newResponseSetType}`,
-                    options: optionsToSave
-                  });
+                  if (editingResponseSet) {
+                    // Update existing response set
+                    await updateReusableTemplate.mutateAsync({
+                      id: editingResponseSet.id,
+                      name: newResponseSetName,
+                      description: `Type: ${newResponseSetType}`,
+                      options: optionsToSave
+                    });
+                  } else {
+                    // Create new response set
+                    await createReusableTemplate.mutateAsync({
+                      name: newResponseSetName,
+                      description: `Type: ${newResponseSetType}`,
+                      options: optionsToSave
+                    });
+                  }
                   setIsCreateResponseSetOpen(false);
+                  setEditingResponseSet(null);
                   setNewResponseSetName('');
                   setNewResponseSetType('multiple_choice');
                   setNewResponseSetOptions([
@@ -1106,9 +1163,11 @@ export default function AuditTemplateBuilder() {
                     { label: 'Option 2', color: 'bg-red-500' }
                   ]);
                 }} 
-                disabled={createReusableTemplate.isPending}
+                disabled={createReusableTemplate.isPending || updateReusableTemplate?.isPending}
               >
-                {createReusableTemplate.isPending ? 'Creating...' : 'Create'}
+                {(createReusableTemplate.isPending || updateReusableTemplate?.isPending) 
+                  ? (editingResponseSet ? 'Updating...' : 'Creating...') 
+                  : (editingResponseSet ? 'Update' : 'Create')}
               </Button>
             </DialogFooter>
           </DialogPrimitive.Content>
