@@ -441,25 +441,7 @@ export default function TenantDetail() {
             {/* Packages Card - matching Package Details header style */}
             {tenantPackages.length > 0 && <Card className="border-0 shadow-lg overflow-hidden">
                 
-                <div className="p-4">
-                  <div className="flex items-center gap-3 overflow-x-auto">
-                    {tenantPackages.map(pkg => {
-                  const isActive = activePackageId === pkg.id;
-                  return <button key={pkg.id} onClick={() => setActivePackageId(pkg.id)} className={`flex-shrink-0 flex items-center gap-3 px-4 py-3 rounded-lg border transition-all duration-200 ${isActive ? 'border-primary/40 bg-primary/10' : 'border-border/40 bg-transparent hover:border-primary/20 hover:bg-muted/20'}`} title={pkg.name}>
-                          <div className={`h-8 w-8 rounded-full flex items-center justify-center ${isActive ? 'bg-primary/20' : 'bg-muted/50'}`}>
-                            <FileText className={`h-4 w-4 ${isActive ? 'text-primary' : 'text-muted-foreground'}`} />
-                          </div>
-                          <div className="text-left">
-                            
-                            <p className="text-xs text-muted-foreground">
-                              {pkg.full_text || 'Package'}
-                            </p>
-                          </div>
-                          {isActive && <CheckCircle2 className="h-4 w-4 text-primary ml-2" />}
-                        </button>;
-                })}
-                  </div>
-                </div>
+                
               </Card>}
           </div>
           <Badge variant={tenantStatus === "active" ? "default" : "secondary"} className={`px-4 py-1.5 text-sm font-semibold ${tenantStatus === "active" ? "bg-green-100 text-green-800 hover:bg-green-100" : "bg-red-100 text-red-800 hover:bg-red-100"}`} style={{
