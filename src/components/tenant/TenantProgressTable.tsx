@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { addYears, parse, format } from "date-fns";
+import { useNavigate } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -27,6 +28,7 @@ interface Stage {
 }
 interface TenantProgressTableProps {
   packageId?: number;
+  tenantId?: number;
   packageName?: string;
   packageDate?: string;
   expiryDate?: string;
@@ -35,12 +37,14 @@ interface TenantProgressTableProps {
 }
 export default function TenantProgressTable({
   packageId,
+  tenantId,
   packageName,
   packageDate,
   expiryDate,
   documentCount = 0,
   memberCount = 0
 }: TenantProgressTableProps) {
+  const navigate = useNavigate();
   const [currentPage, setCurrentPage] = useState(1);
   const [stages, setStages] = useState<Stage[]>([]);
   const [loading, setLoading] = useState(true);
@@ -155,7 +159,19 @@ export default function TenantProgressTable({
           <h2 className="font-semibold text-foreground">{packageName || 'Active Package'}</h2>
           <div className="flex items-center justify-between">
             {packageDate && <p className="text-xs text-muted-foreground flex items-center gap-1"><CalendarDays className="h-3 w-3" />Added on {packageDate}</p>}
-            {(expiryDate || calculatedExpiryDate) && <p className={`text-xs flex items-center gap-1 ${isExpired ? 'text-destructive' : 'text-primary'}`}><CalendarDays className="h-3 w-3" />{isExpired ? 'Expired' : 'Expires on'} {expiryDate || calculatedExpiryDate}</p>}
+            <div className="flex items-center gap-3">
+              {packageId && tenantId && (
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="text-xs h-7"
+                  onClick={() => navigate(`/admin/package/${packageId}/tenant/${tenantId}`)}
+                >
+                  View Data
+                </Button>
+              )}
+              {(expiryDate || calculatedExpiryDate) && <p className={`text-xs flex items-center gap-1 ${isExpired ? 'text-destructive' : 'text-primary'}`}><CalendarDays className="h-3 w-3" />{isExpired ? 'Expired' : 'Expires on'} {expiryDate || calculatedExpiryDate}</p>}
+            </div>
           </div>
         </div>
 
