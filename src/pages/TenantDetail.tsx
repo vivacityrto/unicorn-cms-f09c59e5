@@ -464,13 +464,6 @@ export default function TenantDetail() {
                         </button>;
                 })}
                   </div>
-                  {/* View Package Button - separate row */}
-                  {activePackageId && <div className="mt-3 pt-3 border-t border-border/30">
-                      <Button variant="outline" size="sm" className="text-xs h-8 border-primary/30 text-primary hover:bg-primary hover:text-primary-foreground" onClick={() => navigate(`/admin/package/${activePackageId}/tenant/${tenantId}`)}>
-                        <ExternalLink className="h-3 w-3 mr-1.5" />
-                        View Package Details
-                      </Button>
-                    </div>}
                 </div>
               </Card>}
           </div>
@@ -635,25 +628,24 @@ export default function TenantDetail() {
             {/* Package Time Remaining */}
             <Card className="border-0 shadow-lg overflow-hidden">
               <div className="bg-muted/30 px-6 py-3 border-b border-border/50">
-                <div className="flex items-center justify-between">
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="outline" className="flex items-center gap-2 h-9 px-3 border-border/50 bg-background hover:bg-muted/50">
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" className="w-full flex items-center justify-between gap-2 h-10 px-4 border-border/50 bg-background hover:bg-muted/50">
+                      <div className="flex items-center gap-2">
                         <FileText className="h-4 w-4 text-primary" />
                         <span className="font-medium">{tenantPackages.find(p => p.id === activePackageId)?.name || 'Select Package'}</span>
-                        <ChevronDown className="h-4 w-4 text-muted-foreground ml-1" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="start" className="w-56 bg-background border border-border shadow-lg z-50">
-                      {tenantPackages.map(pkg => <DropdownMenuItem key={pkg.id} onClick={() => setActivePackageId(pkg.id)} className={`flex items-center gap-2 cursor-pointer ${pkg.id === activePackageId ? 'bg-primary/10 text-primary' : ''}`}>
-                          <FileText className="h-4 w-4" />
-                          {pkg.name}
-                          {pkg.id === activePackageId && <CheckCircle2 className="h-4 w-4 ml-auto text-primary" />}
-                        </DropdownMenuItem>)}
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                  
-                </div>
+                      </div>
+                      <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start" className="w-56 bg-background border border-border shadow-lg z-50">
+                    {tenantPackages.map(pkg => <DropdownMenuItem key={pkg.id} onClick={() => setActivePackageId(pkg.id)} className={`flex items-center gap-2 cursor-pointer ${pkg.id === activePackageId ? 'bg-primary/10 text-primary' : ''}`}>
+                        <FileText className="h-4 w-4" />
+                        {pkg.name}
+                        {pkg.id === activePackageId && <CheckCircle2 className="h-4 w-4 ml-auto text-primary" />}
+                      </DropdownMenuItem>)}
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
 
               <div className="p-6">
@@ -715,6 +707,19 @@ export default function TenantDetail() {
                             </p>
                           </div>
                         </div>
+
+                        {/* View Package Details Button */}
+                        {activePackageId && (
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            className="w-full text-xs h-9 border-primary/30 text-primary hover:bg-primary hover:text-primary-foreground mt-2" 
+                            onClick={() => navigate(`/admin/package/${activePackageId}/tenant/${tenantId}`)}
+                          >
+                            <ExternalLink className="h-3 w-3 mr-1.5" />
+                            View Package Details
+                          </Button>
+                        )}
                       </>;
                 })()}
                   
