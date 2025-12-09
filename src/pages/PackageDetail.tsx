@@ -154,7 +154,8 @@ const SortableRow = ({ stage, index, onSelect, onEdit, onDelete }: SortableRowPr
 
 const PackageDetail = () => {
   const {
-    id
+    id,
+    tenantId
   } = useParams();
   const navigate = useNavigate();
   const {
@@ -576,13 +577,15 @@ const PackageDetail = () => {
           <ArrowLeft className="h-4 w-4" />
           Back
         </Button>
-        <Button variant="ghost" onClick={() => setIsEditPackageDialogOpen(true)} className="gap-2 hover:bg-[hsl(196deg_100%_93.53%)] hover:text-black" style={{
-        boxShadow: "var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow)",
-        border: "1px solid #00000052"
-      }}>
-          <Edit className="h-4 w-4" />
-          Edit Package
-        </Button>
+        {!tenantId && (
+          <Button variant="ghost" onClick={() => setIsEditPackageDialogOpen(true)} className="gap-2 hover:bg-[hsl(196deg_100%_93.53%)] hover:text-black" style={{
+            boxShadow: "var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow)",
+            border: "1px solid #00000052"
+          }}>
+            <Edit className="h-4 w-4" />
+            Edit Package
+          </Button>
+        )}
       </div>
 
       {/* Package Header */}
