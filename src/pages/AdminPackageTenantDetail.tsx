@@ -123,10 +123,7 @@ export default function AdminPackageTenantDetail() {
                           {getInitials(tenantContact.name)}
                         </AvatarFallback>
                       </Avatar>
-                      <div>
-                        
-                        <p className="text-xs text-muted-foreground">Primary Contact</p>
-                      </div>
+                      <p className="text-xs text-muted-foreground">Primary Contact: {tenantContact.name}</p>
                     </div>}
 
                   {/* Created Date */}
@@ -134,10 +131,9 @@ export default function AdminPackageTenantDetail() {
                     <div className="h-10 w-10 rounded-lg bg-muted/50 flex items-center justify-center">
                       <Calendar className="h-4 w-4 text-muted-foreground" />
                     </div>
-                    <div>
-                      
-                      <p className="text-xs text-muted-foreground">Member Since</p>
-                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      {tenantInfo ? new Date(tenantInfo.created_at).toLocaleDateString() : ''}
+                    </p>
                   </div>
               </div>
             </CardContent>
