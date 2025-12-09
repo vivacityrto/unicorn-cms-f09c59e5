@@ -82,10 +82,7 @@ export default function AdminPackageTenantDetail() {
   return <div className="min-h-screen bg-background">
       {/* Header with back button */}
       <div className="px-6 pt-6 pb-4">
-        <Button variant="ghost" size="sm" onClick={() => navigate(`/admin/package/${packageId}`)} className="mb-4 gap-2 text-muted-foreground hover:text-foreground">
-          <ArrowLeft className="h-4 w-4" />
-          Back to Package
-        </Button>
+        
       </div>
 
       {/* Tenant Info Card */}
