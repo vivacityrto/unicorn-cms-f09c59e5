@@ -433,7 +433,8 @@ export default function AuditTemplateBuilder() {
     templates: reusableTemplates,
     isLoading: isLoadingTemplates,
     createTemplate: createReusableTemplate,
-    updateTemplate: updateReusableTemplate
+    updateTemplate: updateReusableTemplate,
+    deleteTemplate: deleteReusableTemplate
   } = useReusableAuditTemplates();
   const [templateName, setTemplateName] = useState('Untitled template');
   const [searchQuery, setSearchQuery] = useState('');
@@ -754,7 +755,9 @@ export default function AuditTemplateBuilder() {
                                   className="h-7 w-7 rounded-lg opacity-0 group-hover:opacity-100 transition-all text-muted-foreground hover:text-destructive hover:bg-destructive/10"
                                   onClick={(e) => {
                                     e.stopPropagation();
-                                    toast.info('Delete functionality coming soon');
+                                    if (confirm(`Delete "${template.name}"? This cannot be undone.`)) {
+                                      deleteReusableTemplate.mutate(template.id);
+                                    }
                                   }}
                                 >
                                   <Trash2 className="h-3.5 w-3.5" />
