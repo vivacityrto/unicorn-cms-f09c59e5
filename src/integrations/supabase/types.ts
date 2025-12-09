@@ -4884,6 +4884,50 @@ export type Database = {
           },
         ]
       }
+      reusable_audit_templates: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: number
+          is_global: boolean
+          name: string
+          options: Json
+          tenant_id: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: never
+          is_global?: boolean
+          name: string
+          options?: Json
+          tenant_id: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: never
+          is_global?: boolean
+          name?: string
+          options?: Json
+          tenant_id?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reusable_audit_templates_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       risk_flags: {
         Row: {
           client_id: string | null
