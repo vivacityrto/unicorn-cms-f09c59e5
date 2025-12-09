@@ -115,7 +115,6 @@ export default function AdminPackageTenantDetail() {
             </div>
             <CardContent className="p-6">
               <div className="flex flex-wrap items-center justify-between gap-6">
-                <div className="flex flex-wrap items-center gap-6">
                   {/* Contact Person */}
                   {tenantContact && <div className="flex items-center gap-3">
                       <Avatar className="h-10 w-10 border-2 border-background shadow-sm">
@@ -146,7 +145,6 @@ export default function AdminPackageTenantDetail() {
                       <p className="text-xs text-muted-foreground">Member Since</p>
                     </div>
                   </div>
-                </div>
               </div>
             </CardContent>
           </Card>
