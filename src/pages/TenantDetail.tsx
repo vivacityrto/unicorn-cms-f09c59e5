@@ -447,48 +447,50 @@ export default function TenantDetail() {
                   </div>
                 </div>
                 <div className="p-4">
-                  <div className="flex items-center gap-2 overflow-x-auto">
+                  <div className="flex items-center gap-3 overflow-x-auto">
                     {tenantPackages.map(pkg => {
                       const isActive = activePackageId === pkg.id;
                       return (
-                        <div key={pkg.id} className={`flex-shrink-0 rounded-lg border transition-all duration-200 ${
-                          isActive 
-                            ? 'border-primary/40 bg-primary/5' 
-                            : 'border-border/40 bg-background hover:border-primary/20 hover:bg-muted/30'
-                        }`}>
-                          <button 
-                            onClick={() => setActivePackageId(pkg.id)} 
-                            className="flex items-center gap-3 px-4 py-3" 
-                            title={pkg.name}
-                          >
-                            <div className={`h-8 w-8 rounded-full flex items-center justify-center ${isActive ? 'bg-primary/20' : 'bg-muted/50'}`}>
-                              <FileText className={`h-4 w-4 ${isActive ? 'text-primary' : 'text-muted-foreground'}`} />
-                            </div>
-                            <div className="text-left">
-                              <p className={`text-sm font-medium ${isActive ? 'text-foreground' : 'text-muted-foreground'}`}>
-                                {pkg.name}
-                              </p>
-                              <p className="text-xs text-muted-foreground">
-                                {pkg.full_text || 'Package'}
-                              </p>
-                            </div>
-                            {isActive && <CheckCircle2 className="h-4 w-4 text-primary ml-2" />}
-                          </button>
-                          <div className="px-4 pb-3 pt-0">
-                            <Button 
-                              variant="outline" 
-                              size="sm" 
-                              className="w-full text-xs h-8 border-primary/30 text-primary hover:bg-primary hover:text-primary-foreground" 
-                              onClick={() => navigate(`/admin/package/${pkg.id}/tenant/${tenantId}`)}
-                            >
-                              <ExternalLink className="h-3 w-3 mr-1.5" />
-                              View Package
-                            </Button>
+                        <button 
+                          key={pkg.id}
+                          onClick={() => setActivePackageId(pkg.id)} 
+                          className={`flex-shrink-0 flex items-center gap-3 px-4 py-3 rounded-lg border transition-all duration-200 ${
+                            isActive 
+                              ? 'border-primary/40 bg-primary/10' 
+                              : 'border-border/40 bg-transparent hover:border-primary/20 hover:bg-muted/20'
+                          }`}
+                          title={pkg.name}
+                        >
+                          <div className={`h-8 w-8 rounded-full flex items-center justify-center ${isActive ? 'bg-primary/20' : 'bg-muted/50'}`}>
+                            <FileText className={`h-4 w-4 ${isActive ? 'text-primary' : 'text-muted-foreground'}`} />
                           </div>
-                        </div>
+                          <div className="text-left">
+                            <p className={`text-sm font-medium ${isActive ? 'text-foreground' : 'text-muted-foreground'}`}>
+                              {pkg.name}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              {pkg.full_text || 'Package'}
+                            </p>
+                          </div>
+                          {isActive && <CheckCircle2 className="h-4 w-4 text-primary ml-2" />}
+                        </button>
                       );
                     })}
                   </div>
+                  {/* View Package Button - separate row */}
+                  {activePackageId && (
+                    <div className="mt-3 pt-3 border-t border-border/30">
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="text-xs h-8 border-primary/30 text-primary hover:bg-primary hover:text-primary-foreground" 
+                        onClick={() => navigate(`/admin/package/${activePackageId}/tenant/${tenantId}`)}
+                      >
+                        <ExternalLink className="h-3 w-3 mr-1.5" />
+                        View Package Details
+                      </Button>
+                    </div>
+                  )}
                 </div>
               </Card>
             )}
