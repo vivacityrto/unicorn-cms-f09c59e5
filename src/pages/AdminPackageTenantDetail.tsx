@@ -8,61 +8,55 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ArrowLeft, Building2, Mail, Phone, MapPin, Globe, User, Calendar, ExternalLink } from "lucide-react";
 import PackageDetail from "./PackageDetail";
-
 interface TenantInfo {
   id: number;
   name: string;
   status: string;
   created_at: string;
 }
-
 interface TenantContact {
   name: string;
   email: string;
   phone: string;
   avatar_url?: string;
 }
-
 export default function AdminPackageTenantDetail() {
-  const { id: packageId, tenantId } = useParams();
+  const {
+    id: packageId,
+    tenantId
+  } = useParams();
   const navigate = useNavigate();
-  const { toast } = useToast();
+  const {
+    toast
+  } = useToast();
   const [tenantInfo, setTenantInfo] = useState<TenantInfo | null>(null);
   const [tenantContact, setTenantContact] = useState<TenantContact | null>(null);
   const [loading, setLoading] = useState(true);
-
   useEffect(() => {
     if (tenantId) {
       fetchTenantInfo();
     }
   }, [tenantId]);
-
   const fetchTenantInfo = async () => {
     if (!tenantId) return;
-    
     try {
       setLoading(true);
-      
+
       // Fetch tenant basic info
-      const { data: tenant, error: tenantError } = await supabase
-        .from("tenants")
-        .select("id, name, status, created_at")
-        .eq("id", parseInt(tenantId))
-        .single();
-      
+      const {
+        data: tenant,
+        error: tenantError
+      } = await supabase.from("tenants").select("id, name, status, created_at").eq("id", parseInt(tenantId)).single();
       if (tenantError) throw tenantError;
       setTenantInfo(tenant);
-      
+
       // Fetch admin user for contact info
-      const { data: adminUser, error: userError } = await supabase
-        .from("users")
-        .select("first_name, last_name, email, phone, mobile_phone, avatar_url")
-        .eq("tenant_id", parseInt(tenantId))
-        .eq("unicorn_role", "Admin")
-        .order("created_at", { ascending: true })
-        .limit(1)
-        .maybeSingle();
-      
+      const {
+        data: adminUser,
+        error: userError
+      } = await supabase.from("users").select("first_name, last_name, email, phone, mobile_phone, avatar_url").eq("tenant_id", parseInt(tenantId)).eq("unicorn_role", "Admin").order("created_at", {
+        ascending: true
+      }).limit(1).maybeSingle();
       if (!userError && adminUser) {
         setTenantContact({
           name: `${adminUser.first_name || ''} ${adminUser.last_name || ''}`.trim() || 'No contact',
@@ -82,29 +76,20 @@ export default function AdminPackageTenantDetail() {
       setLoading(false);
     }
   };
-
   const getInitials = (name: string) => {
     return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
   };
-
-  return (
-    <div className="min-h-screen bg-background">
+  return <div className="min-h-screen bg-background">
       {/* Header with back button */}
       <div className="px-6 pt-6 pb-4">
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => navigate(`/admin/package/${packageId}`)}
-          className="mb-4 gap-2 text-muted-foreground hover:text-foreground"
-        >
+        <Button variant="ghost" size="sm" onClick={() => navigate(`/admin/package/${packageId}`)} className="mb-4 gap-2 text-muted-foreground hover:text-foreground">
           <ArrowLeft className="h-4 w-4" />
           Back to Package
         </Button>
       </div>
 
       {/* Tenant Info Card */}
-      {!loading && tenantInfo && (
-        <div className="px-6 pb-6">
+      {!loading && tenantInfo && <div className="px-6 pb-6">
           <Card className="border-0 shadow-lg overflow-hidden">
             <div className="bg-gradient-to-r from-primary/5 to-primary/10 px-6 py-4 border-b border-border/50">
               <div className="flex items-center justify-between">
@@ -131,8 +116,7 @@ export default function AdminPackageTenantDetail() {
               <div className="flex flex-wrap items-center justify-between gap-6">
                 <div className="flex flex-wrap items-center gap-6">
                   {/* Contact Person */}
-                  {tenantContact && (
-                    <div className="flex items-center gap-3">
+                  {tenantContact && <div className="flex items-center gap-3">
                       <Avatar className="h-10 w-10 border-2 border-background shadow-sm">
                         <AvatarImage src={tenantContact.avatar_url} />
                         <AvatarFallback className="bg-muted text-muted-foreground text-sm font-medium">
@@ -143,25 +127,13 @@ export default function AdminPackageTenantDetail() {
                         <p className="text-sm font-medium">{tenantContact.name}</p>
                         <p className="text-xs text-muted-foreground">Primary Contact</p>
                       </div>
-                    </div>
-                  )}
+                    </div>}
 
                   {/* Email */}
-                  {tenantContact?.email && (
-                    <div className="flex items-center gap-3">
-                      <div className="h-10 w-10 rounded-lg bg-muted/50 flex items-center justify-center">
-                        <Mail className="h-4 w-4 text-muted-foreground" />
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium truncate max-w-[200px]">{tenantContact.email}</p>
-                        <p className="text-xs text-muted-foreground">Email</p>
-                      </div>
-                    </div>
-                  )}
+                  {tenantContact?.email}
 
                   {/* Phone */}
-                  {tenantContact?.phone && (
-                    <div className="flex items-center gap-3">
+                  {tenantContact?.phone && <div className="flex items-center gap-3">
                       <div className="h-10 w-10 rounded-lg bg-muted/50 flex items-center justify-center">
                         <Phone className="h-4 w-4 text-muted-foreground" />
                       </div>
@@ -169,8 +141,7 @@ export default function AdminPackageTenantDetail() {
                         <p className="text-sm font-medium">{tenantContact.phone}</p>
                         <p className="text-xs text-muted-foreground">Phone</p>
                       </div>
-                    </div>
-                  )}
+                    </div>}
 
                   {/* Created Date */}
                   <div className="flex items-center gap-3">
@@ -180,10 +151,10 @@ export default function AdminPackageTenantDetail() {
                     <div>
                       <p className="text-sm font-medium">
                         {new Date(tenantInfo.created_at).toLocaleDateString('en-AU', {
-                          day: '2-digit',
-                          month: 'short',
-                          year: 'numeric'
-                        })}
+                      day: '2-digit',
+                      month: 'short',
+                      year: 'numeric'
+                    })}
                       </p>
                       <p className="text-xs text-muted-foreground">Member Since</p>
                     </div>
@@ -191,24 +162,17 @@ export default function AdminPackageTenantDetail() {
                 </div>
 
                 {/* View Full Profile Button */}
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => navigate(`/tenant/${tenantId}`)}
-                  className="gap-2"
-                >
+                <Button variant="outline" size="sm" onClick={() => navigate(`/tenant/${tenantId}`)} className="gap-2">
                   View Full Profile
                   <ExternalLink className="h-3.5 w-3.5" />
                 </Button>
               </div>
             </CardContent>
           </Card>
-        </div>
-      )}
+        </div>}
 
       {/* Loading state for tenant card */}
-      {loading && (
-        <div className="px-6 pb-6">
+      {loading && <div className="px-6 pb-6">
           <Card className="border-0 shadow-lg overflow-hidden animate-pulse">
             <div className="bg-gradient-to-r from-primary/5 to-primary/10 px-6 py-4 border-b border-border/50">
               <div className="flex items-center justify-between">
@@ -223,23 +187,19 @@ export default function AdminPackageTenantDetail() {
             </div>
             <CardContent className="p-6">
               <div className="flex flex-wrap items-center gap-6">
-                {[1, 2, 3, 4].map(i => (
-                  <div key={i} className="flex items-center gap-3">
+                {[1, 2, 3, 4].map(i => <div key={i} className="flex items-center gap-3">
                     <div className="h-10 w-10 rounded-lg bg-muted" />
                     <div className="space-y-1">
                       <div className="h-4 w-32 bg-muted rounded" />
                       <div className="h-3 w-20 bg-muted rounded" />
                     </div>
-                  </div>
-                ))}
+                  </div>)}
               </div>
             </CardContent>
           </Card>
-        </div>
-      )}
+        </div>}
 
       {/* Package Detail Component */}
       <PackageDetail />
-    </div>
-  );
+    </div>;
 }
