@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { Combobox, ComboboxOption } from '@/components/ui/combobox';
-import { Search, Plus, Pencil, Building2, FileText, Box, Building, Type, Hash, CheckSquare, Calendar, Image, SlidersHorizontal, MessageSquare, PenTool, MapPin, GripVertical, Trash2, X, Eye, Shield, ToggleLeft, Star, CircleDot, AlertTriangle, CheckCircle, List } from 'lucide-react';
+import { Search, Plus, Pencil, Building2, FileText, Box, Building, Type, Hash, CheckSquare, Calendar as CalendarIcon, Image, SlidersHorizontal, MessageSquare, PenTool, MapPin, GripVertical, Trash2, X, Eye, Shield, ToggleLeft, Star, CircleDot, AlertTriangle, CheckCircle, List, CalendarClock } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription, DialogPortal, DialogOverlay } from '@/components/ui/dialog';
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { cn } from '@/lib/utils';
@@ -19,6 +19,11 @@ import { supabase } from '@/integrations/supabase/client';
 import { useQuery } from '@tanstack/react-query';
 import { useReusableAuditTemplates, ResponseOption } from '@/hooks/useReusableAuditTemplates';
 import { Label } from '@/components/ui/label';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Checkbox } from '@/components/ui/checkbox';
+import { format } from 'date-fns';
 
 // Hook to fetch tenants/clients
 function useTenants() {
@@ -329,27 +334,113 @@ function SortableQuestionCard({
             options: updatedOptions
           });
         };
-        return <div className="space-y-2">
+        return <div className="space-y-3">
             {checkboxOptions.map((option: {
             id: string;
             label: string;
-          }) => <div key={option.id} className="flex items-center gap-2 group">
-                <input type="checkbox" className="h-4 w-4 rounded border-muted-foreground/30" />
-                <Input value={option.label} onChange={e => updateCheckboxOption(option.id, e.target.value)} placeholder="Enter option..." className="flex-1 h-8 text-sm bg-transparent border-dashed focus:bg-muted/30" />
-                {checkboxOptions.length > 1 && <Button variant="ghost" size="icon" className="h-6 w-6 opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive" onClick={() => removeCheckboxOption(option.id)}>
-                    <X className="h-3 w-3" />
-                  </Button>}
-              </div>)}
-            <Button variant="ghost" size="sm" className="text-xs text-muted-foreground hover:text-foreground" onClick={addCheckboxOption}>
-              <Plus className="h-3 w-3 mr-1" />
+          }, index: number) => (
+            <div key={option.id} className="group relative flex items-center gap-3 p-3 rounded-xl bg-gradient-to-r from-muted/50 to-muted/30 border border-border/50 hover:border-primary/30 hover:shadow-sm transition-all duration-200">
+              <div className="flex items-center justify-center h-8 w-8 rounded-lg bg-primary/10 text-primary font-semibold text-sm shrink-0">
+                {index + 1}
+              </div>
+              <Checkbox className="h-5 w-5 rounded-md border-2 border-muted-foreground/30 data-[state=checked]:bg-primary data-[state=checked]:border-primary" />
+              <Input 
+                value={option.label} 
+                onChange={e => updateCheckboxOption(option.id, e.target.value)} 
+                placeholder="Enter option..." 
+                className="flex-1 h-9 text-sm bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0 placeholder:text-muted-foreground/60" 
+              />
+              {checkboxOptions.length > 1 && (
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className="h-7 w-7 rounded-lg opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-all" 
+                  onClick={() => removeCheckboxOption(option.id)}
+                >
+                  <X className="h-3.5 w-3.5" />
+                </Button>
+              )}
+            </div>
+          ))}
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="w-full mt-2 border-dashed border-primary/30 text-primary hover:bg-primary/5 hover:border-primary/50 transition-all" 
+              onClick={addCheckboxOption}
+            >
+              <Plus className="h-4 w-4 mr-2" />
               Add option
             </Button>
           </div>;
       case 'date_time':
-        return <div className="flex gap-2">
-            <Input type="date" className="bg-muted/50 border-dashed max-w-[160px]" />
-            <Input type="time" className="bg-muted/50 border-dashed max-w-[120px]" />
-          </div>;
+        return <div className="grid grid-cols-2 gap-3">
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" className={cn("w-full justify-start text-left font-normal hover:bg-primary/5 hover:border-primary/30 transition-all")}>
+                <CalendarClock className="mr-2 h-4 w-4 text-muted-foreground" />
+                <span className="text-muted-foreground">Pick a date</span>
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0 z-[80]" align="start">
+              <Calendar mode="single" initialFocus className="p-3 pointer-events-auto" />
+            </PopoverContent>
+          </Popover>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" className={cn("w-full justify-start text-left font-normal hover:bg-primary/5 hover:border-primary/30 transition-all")}>
+                <CalendarClock className="mr-2 h-4 w-4 text-muted-foreground" />
+                <span className="text-muted-foreground">Pick a time</span>
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-4 z-[80]" align="start">
+              <div className="flex items-center gap-2 pointer-events-auto">
+                <div className="flex flex-col gap-2">
+                  <Label className="text-xs text-muted-foreground">Hour</Label>
+                  <Select defaultValue="09">
+                    <SelectTrigger className="w-[70px]">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {Array.from({ length: 12 }, (_, i) => i + 1).map(h => (
+                        <SelectItem key={h} value={h.toString().padStart(2, "0")}>
+                          {h.toString().padStart(2, "0")}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <span className="text-2xl font-bold mt-5">:</span>
+                <div className="flex flex-col gap-2">
+                  <Label className="text-xs text-muted-foreground">Minute</Label>
+                  <Select defaultValue="00">
+                    <SelectTrigger className="w-[70px]">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {Array.from({ length: 60 }, (_, i) => i).map(m => (
+                        <SelectItem key={m} value={m.toString().padStart(2, "0")}>
+                          {m.toString().padStart(2, "0")}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="flex flex-col gap-2">
+                  <Label className="text-xs text-muted-foreground">Period</Label>
+                  <Select defaultValue="AM">
+                    <SelectTrigger className="w-[70px]">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="AM">AM</SelectItem>
+                      <SelectItem value="PM">PM</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            </PopoverContent>
+          </Popover>
+        </div>;
       case 'media':
         return <label className="border-2 border-dashed rounded-lg p-6 text-center bg-muted/30 cursor-pointer hover:bg-muted/50 transition-colors block">
             <input type="file" accept="image/*,video/*" className="hidden" />
