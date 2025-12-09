@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -105,25 +105,20 @@ export default function AdminPackageTenantDetail() {
       {/* Tenant Info Card */}
       {!loading && tenantInfo && (
         <div className="px-6 pb-6">
-          <Card className="bg-gradient-to-br from-primary/5 via-background to-muted/20 border-primary/20">
-            <CardHeader className="pb-3">
+          <Card className="border-0 shadow-lg overflow-hidden">
+            <div className="bg-gradient-to-r from-primary/5 to-primary/10 px-6 py-4 border-b border-border/50">
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  <div className="h-14 w-14 rounded-xl bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center shadow-lg shadow-primary/20">
-                    <Building2 className="h-7 w-7 text-primary-foreground" />
-                  </div>
-                  <div>
-                    <CardTitle className="text-xl font-bold">{tenantInfo.name}</CardTitle>
-                    <p className="text-sm text-muted-foreground mt-0.5">
+                <div className="flex items-center gap-3">
+                  <div className="space-y-1">
+                    <h3 className="text-base font-semibold text-foreground">{tenantInfo.name}</h3>
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <Building2 className="h-4 w-4" />
                       Tenant ID: {tenantInfo.id}
-                    </p>
+                    </div>
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
-                  <Badge 
-                    variant={tenantInfo.status === 'active' ? 'default' : 'secondary'}
-                    className="capitalize"
-                  >
+                  <Badge variant={tenantInfo.status === 'active' ? 'default' : 'secondary'} className="capitalize">
                     {tenantInfo.status}
                   </Badge>
                   <Button
@@ -137,9 +132,9 @@ export default function AdminPackageTenantDetail() {
                   </Button>
                 </div>
               </div>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            </div>
+            <CardContent className="p-6">
+              <div className="flex flex-wrap items-center gap-6">
                 {/* Contact Person */}
                 {tenantContact && (
                   <div className="flex items-center gap-3">
@@ -207,19 +202,21 @@ export default function AdminPackageTenantDetail() {
       {/* Loading state for tenant card */}
       {loading && (
         <div className="px-6 pb-6">
-          <Card className="animate-pulse">
-            <CardHeader className="pb-3">
-              <div className="flex items-center gap-4">
-                <div className="h-14 w-14 rounded-xl bg-muted" />
-                <div className="space-y-2">
-                  <div className="h-5 w-40 bg-muted rounded" />
-                  <div className="h-4 w-24 bg-muted rounded" />
+          <Card className="border-0 shadow-lg overflow-hidden animate-pulse">
+            <div className="bg-gradient-to-r from-primary/5 to-primary/10 px-6 py-4 border-b border-border/50">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="space-y-2">
+                    <div className="h-5 w-40 bg-muted rounded" />
+                    <div className="h-4 w-24 bg-muted rounded" />
+                  </div>
                 </div>
+                <div className="h-6 w-16 bg-muted rounded-full" />
               </div>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-3 gap-6">
-                {[1, 2, 3].map(i => (
+            </div>
+            <CardContent className="p-6">
+              <div className="flex flex-wrap items-center gap-6">
+                {[1, 2, 3, 4].map(i => (
                   <div key={i} className="flex items-center gap-3">
                     <div className="h-10 w-10 rounded-lg bg-muted" />
                     <div className="space-y-1">
