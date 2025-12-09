@@ -460,25 +460,93 @@ function SortableQuestionCard({
           'bg-orange-500': 'bg-orange-500/15 text-orange-600 border-orange-500/30',
           'bg-muted': 'bg-muted/80 text-muted-foreground border-border'
         };
-        return <div className="flex flex-wrap gap-2">
-            {question.options?.map((opt: any, idx: number) => {
-              const isSelected = selectedOptionIdx === idx;
-              const badgeClassPreview = isSelected 
-                ? colorMapPreview[opt.color || 'bg-muted'] || colorMapPreview['bg-muted']
-                : 'bg-muted/50 text-muted-foreground border-border/50';
-              return <span 
-                key={idx} 
-                onClick={() => setSelectedOptionIdx(idx)}
-                className={cn(
-                  "px-2.5 py-1 rounded-full text-[13px] font-semibold border backdrop-blur-sm cursor-pointer transition-all duration-200",
-                  badgeClassPreview,
-                  isSelected ? "ring-2 ring-offset-1 ring-primary/40 scale-105" : "hover:bg-muted/80"
+        const colorOptions = [
+          { value: 'bg-green-500', label: 'Green', dotClass: 'bg-green-500' },
+          { value: 'bg-red-500', label: 'Red', dotClass: 'bg-red-500' },
+          { value: 'bg-blue-500', label: 'Blue', dotClass: 'bg-blue-500' },
+          { value: 'bg-yellow-500', label: 'Yellow', dotClass: 'bg-yellow-500' },
+          { value: 'bg-purple-500', label: 'Purple', dotClass: 'bg-purple-500' },
+          { value: 'bg-orange-500', label: 'Orange', dotClass: 'bg-orange-500' },
+          { value: 'bg-muted', label: 'Gray', dotClass: 'bg-muted-foreground' }
+        ];
+        const mcOptions = question.options && question.options.length > 0 ? question.options : [
+          { id: '1', label: 'Option 1', color: 'bg-green-500' },
+          { id: '2', label: 'Option 2', color: 'bg-red-500' }
+        ];
+        const updateMcOption = (optionId: string, updates: { label?: string; color?: string }) => {
+          const updatedOptions = mcOptions.map((opt: any) => opt.id === optionId ? { ...opt, ...updates } : opt);
+          onUpdate(question.id, { options: updatedOptions });
+        };
+        const addMcOption = () => {
+          const newOption = {
+            id: String(Date.now()),
+            label: `Option ${mcOptions.length + 1}`,
+            color: colorOptions[mcOptions.length % colorOptions.length].value
+          };
+          onUpdate(question.id, { options: [...mcOptions, newOption] });
+        };
+        const removeMcOption = (optionId: string) => {
+          if (mcOptions.length <= 1) return;
+          const updatedOptions = mcOptions.filter((opt: any) => opt.id !== optionId);
+          onUpdate(question.id, { options: updatedOptions });
+        };
+        return <div className="space-y-3">
+          {mcOptions.map((opt: any, idx: number) => {
+            const badgeClassPreview = colorMapPreview[opt.color || 'bg-muted'] || colorMapPreview['bg-muted'];
+            return (
+              <div key={opt.id || idx} className="group relative flex items-center gap-3 py-1 px-3 rounded-xl bg-gradient-to-r from-muted/50 to-muted/30 border border-border/50 hover:border-primary/30 hover:shadow-sm transition-all duration-200">
+                <div className="flex items-center justify-center h-8 w-8 rounded-lg shrink-0">
+                  <span className={cn("px-2 py-0.5 rounded-full text-[11px] font-semibold border backdrop-blur-sm", badgeClassPreview)}>
+                    {idx + 1}
+                  </span>
+                </div>
+                <Input 
+                  value={opt.label} 
+                  onChange={e => updateMcOption(opt.id || String(idx), { label: e.target.value })} 
+                  placeholder="Enter option..." 
+                  className="flex-1 h-9 text-sm bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0 placeholder:text-muted-foreground/60" 
+                />
+                <Select value={opt.color || 'bg-muted'} onValueChange={(value) => updateMcOption(opt.id || String(idx), { color: value })}>
+                  <SelectTrigger className="w-[100px] h-8 text-xs">
+                    <div className="flex items-center gap-2">
+                      <div className={cn("h-3 w-3 rounded-full", colorOptions.find(c => c.value === opt.color)?.dotClass || 'bg-muted-foreground')} />
+                      <SelectValue />
+                    </div>
+                  </SelectTrigger>
+                  <SelectContent className="z-[100]">
+                    {colorOptions.map(color => (
+                      <SelectItem key={color.value} value={color.value}>
+                        <div className="flex items-center gap-2">
+                          <div className={cn("h-3 w-3 rounded-full", color.dotClass)} />
+                          <span>{color.label}</span>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {mcOptions.length > 1 && (
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="h-7 w-7 rounded-lg opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-all" 
+                    onClick={() => removeMcOption(opt.id || String(idx))}
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </Button>
                 )}
-              >
-                {opt.label}
-              </span>;
-            })}
-          </div>;
+              </div>
+            );
+          })}
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className="w-full mt-2 border-dashed border-violet-400/50 text-violet-500 hover:bg-violet-50 hover:border-violet-400 hover:text-violet-500 transition-all" 
+            onClick={addMcOption}
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            Add option
+          </Button>
+        </div>;
       case 'annotation':
         return <div className="border rounded-lg p-4 bg-muted/30">
             <div className="flex items-center gap-2 text-muted-foreground">
