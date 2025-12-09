@@ -107,9 +107,10 @@ export default function AdminPackageTenantDetail() {
                     </div>
                   </div>
                 </div>
-                <Badge variant={tenantInfo.status === 'active' ? 'default' : 'secondary'} className="capitalize">
-                  {tenantInfo.status}
-                </Badge>
+                <Button variant="outline" size="sm" onClick={() => navigate(`/tenant/${tenantId}`)} className="gap-2">
+                  View Full Profile
+                  <ExternalLink className="h-3.5 w-3.5" />
+                </Button>
               </div>
             </div>
             <CardContent className="p-6">
@@ -126,20 +127,6 @@ export default function AdminPackageTenantDetail() {
                       <div>
                         <p className="text-sm font-medium">{tenantContact.name}</p>
                         <p className="text-xs text-muted-foreground">Primary Contact</p>
-                      </div>
-                    </div>}
-
-                  {/* Email */}
-                  {tenantContact?.email}
-
-                  {/* Phone */}
-                  {tenantContact?.phone && <div className="flex items-center gap-3">
-                      <div className="h-10 w-10 rounded-lg bg-muted/50 flex items-center justify-center">
-                        <Phone className="h-4 w-4 text-muted-foreground" />
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium">{tenantContact.phone}</p>
-                        <p className="text-xs text-muted-foreground">Phone</p>
                       </div>
                     </div>}
 
@@ -160,12 +147,6 @@ export default function AdminPackageTenantDetail() {
                     </div>
                   </div>
                 </div>
-
-                {/* View Full Profile Button */}
-                <Button variant="outline" size="sm" onClick={() => navigate(`/tenant/${tenantId}`)} className="gap-2">
-                  View Full Profile
-                  <ExternalLink className="h-3.5 w-3.5" />
-                </Button>
               </div>
             </CardContent>
           </Card>
