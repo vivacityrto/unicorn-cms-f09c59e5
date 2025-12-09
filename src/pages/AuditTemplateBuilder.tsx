@@ -446,6 +446,7 @@ export default function AuditTemplateBuilder() {
   // Create response set dialog state
   const [isCreateResponseSetOpen, setIsCreateResponseSetOpen] = useState(false);
   const [newResponseSetName, setNewResponseSetName] = useState('');
+  const [newResponseSetType, setNewResponseSetType] = useState<'multiple_choice' | 'text_answer' | 'number' | 'checkbox' | 'date_time' | 'slider'>('multiple_choice');
   const [newResponseSetOptions, setNewResponseSetOptions] = useState<ResponseOption[]>([{
     label: 'Option 1',
     color: 'bg-green-500'
@@ -881,7 +882,7 @@ export default function AuditTemplateBuilder() {
           <DialogHeader>
             <DialogTitle>Create Response Set</DialogTitle>
             <DialogDescription>
-              Create a reusable set of response options for multiple choice questions.
+              Create a reusable response template for your audits.
             </DialogDescription>
           </DialogHeader>
           
@@ -890,52 +891,92 @@ export default function AuditTemplateBuilder() {
               <Label htmlFor="response-set-name">Name</Label>
               <Input id="response-set-name" placeholder="e.g., Risk Assessment, Pass/Fail" value={newResponseSetName} onChange={e => setNewResponseSetName(e.target.value)} />
             </div>
-            
+
             <div className="space-y-2">
-              <Label>Options</Label>
-              <div className="space-y-2">
-                {newResponseSetOptions.map((option, idx) => <div key={idx} className="flex items-center gap-2">
-                    <Input value={option.label} onChange={e => {
-                  const updated = [...newResponseSetOptions];
-                  updated[idx] = {
-                    ...updated[idx],
-                    label: e.target.value
-                  };
-                  setNewResponseSetOptions(updated);
-                }} placeholder="Option label" className="flex-1" />
-                    <select value={option.color || 'bg-muted'} onChange={e => {
-                  const updated = [...newResponseSetOptions];
-                  updated[idx] = {
-                    ...updated[idx],
-                    color: e.target.value
-                  };
-                  setNewResponseSetOptions(updated);
-                }} className="h-9 rounded-md border border-input bg-background px-3 py-1 text-sm">
-                      <option value="bg-green-500">Green</option>
-                      <option value="bg-red-500">Red</option>
-                      <option value="bg-yellow-500">Yellow</option>
-                      <option value="bg-blue-500">Blue</option>
-                      <option value="bg-purple-500">Purple</option>
-                      <option value="bg-orange-500">Orange</option>
-                      <option value="bg-muted">Gray</option>
-                    </select>
-                    {newResponseSetOptions.length > 1 && <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10" onClick={() => {
-                  setNewResponseSetOptions(prev => prev.filter((_, i) => i !== idx));
-                }}>
-                        <X className="h-4 w-4" />
-                      </Button>}
-                  </div>)}
-              </div>
-              <Button variant="outline" size="sm" className="w-full mt-2" onClick={() => {
-              setNewResponseSetOptions(prev => [...prev, {
-                label: `Option ${prev.length + 1}`,
-                color: 'bg-muted'
-              }]);
-            }}>
-                <Plus className="h-4 w-4 mr-1" />
-                Add Option
-              </Button>
+              <Label>Response Type</Label>
+              <select 
+                value={newResponseSetType} 
+                onChange={e => setNewResponseSetType(e.target.value as 'multiple_choice' | 'text_answer' | 'number' | 'checkbox' | 'date_time' | 'slider')}
+                className="w-full h-9 rounded-md border border-input bg-background px-3 py-1 text-sm"
+              >
+                <option value="multiple_choice">Multiple Choice</option>
+                <option value="text_answer">Text Answer</option>
+                <option value="number">Number</option>
+                <option value="checkbox">Checkbox</option>
+                <option value="date_time">Date & Time</option>
+                <option value="slider">Slider</option>
+              </select>
             </div>
+            
+            {newResponseSetType === 'multiple_choice' && (
+              <div className="space-y-2">
+                <Label>Options</Label>
+                <div className="space-y-2">
+                  {newResponseSetOptions.map((option, idx) => <div key={idx} className="flex items-center gap-2">
+                      <Input value={option.label} onChange={e => {
+                    const updated = [...newResponseSetOptions];
+                    updated[idx] = {
+                      ...updated[idx],
+                      label: e.target.value
+                    };
+                    setNewResponseSetOptions(updated);
+                  }} placeholder="Option label" className="flex-1" />
+                      <select value={option.color || 'bg-muted'} onChange={e => {
+                    const updated = [...newResponseSetOptions];
+                    updated[idx] = {
+                      ...updated[idx],
+                      color: e.target.value
+                    };
+                    setNewResponseSetOptions(updated);
+                  }} className="h-9 rounded-md border border-input bg-background px-3 py-1 text-sm">
+                        <option value="bg-green-500">Green</option>
+                        <option value="bg-red-500">Red</option>
+                        <option value="bg-yellow-500">Yellow</option>
+                        <option value="bg-blue-500">Blue</option>
+                        <option value="bg-purple-500">Purple</option>
+                        <option value="bg-orange-500">Orange</option>
+                        <option value="bg-muted">Gray</option>
+                      </select>
+                      {newResponseSetOptions.length > 1 && <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10" onClick={() => {
+                    setNewResponseSetOptions(prev => prev.filter((_, i) => i !== idx));
+                  }}>
+                          <X className="h-4 w-4" />
+                        </Button>}
+                    </div>)}
+                </div>
+                <Button variant="outline" size="sm" className="w-full mt-2" onClick={() => {
+                setNewResponseSetOptions(prev => [...prev, {
+                  label: `Option ${prev.length + 1}`,
+                  color: 'bg-muted'
+                }]);
+              }}>
+                  <Plus className="h-4 w-4 mr-1" />
+                  Add Option
+                </Button>
+              </div>
+            )}
+
+            {newResponseSetType === 'slider' && (
+              <div className="space-y-2">
+                <Label>Slider Range</Label>
+                <div className="flex items-center gap-2">
+                  <Input type="number" placeholder="Min (e.g., 0)" defaultValue="0" className="flex-1" />
+                  <span className="text-muted-foreground">to</span>
+                  <Input type="number" placeholder="Max (e.g., 100)" defaultValue="100" className="flex-1" />
+                </div>
+              </div>
+            )}
+
+            {(newResponseSetType === 'text_answer' || newResponseSetType === 'number' || newResponseSetType === 'checkbox' || newResponseSetType === 'date_time') && (
+              <div className="rounded-lg border border-dashed p-4 bg-muted/30">
+                <p className="text-sm text-muted-foreground text-center">
+                  {newResponseSetType === 'text_answer' && 'Text answer will allow free-form text input'}
+                  {newResponseSetType === 'number' && 'Number input will allow numeric values only'}
+                  {newResponseSetType === 'checkbox' && 'Checkbox will allow yes/no or checked/unchecked responses'}
+                  {newResponseSetType === 'date_time' && 'Date & Time picker for scheduling or recording dates'}
+                </p>
+              </div>
+            )}
           </div>
           
           <DialogFooter>
@@ -947,16 +988,23 @@ export default function AuditTemplateBuilder() {
               toast.error('Please enter a name for the response set');
               return;
             }
-            if (newResponseSetOptions.length < 2) {
-              toast.error('Please add at least 2 options');
+            if (newResponseSetType === 'multiple_choice' && newResponseSetOptions.length < 2) {
+              toast.error('Please add at least 2 options for multiple choice');
               return;
             }
+            
+            const optionsToSave = newResponseSetType === 'multiple_choice' 
+              ? newResponseSetOptions 
+              : [{ label: newResponseSetType, color: 'bg-muted' }];
+            
             await createReusableTemplate.mutateAsync({
               name: newResponseSetName,
-              options: newResponseSetOptions
+              description: `Type: ${newResponseSetType}`,
+              options: optionsToSave
             });
             setIsCreateResponseSetOpen(false);
             setNewResponseSetName('');
+            setNewResponseSetType('multiple_choice');
             setNewResponseSetOptions([{
               label: 'Option 1',
               color: 'bg-green-500'
