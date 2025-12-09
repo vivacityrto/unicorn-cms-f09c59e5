@@ -440,12 +440,7 @@ export default function TenantDetail() {
             
             {/* Packages Card - matching Package Details header style */}
             {tenantPackages.length > 0 && <Card className="border-0 shadow-lg overflow-hidden">
-                <div className="bg-muted/30 px-6 py-3 border-b border-border/50">
-                  <div className="flex items-center justify-between">
-                    <h2 className="font-semibold text-foreground">Packages</h2>
-                    <span className="text-xs text-muted-foreground">{tenantPackages.find(p => p.id === activePackageId)?.slug || tenantPackages.find(p => p.id === activePackageId)?.name || 'Package'}</span>
-                  </div>
-                </div>
+                
                 <div className="p-4">
                   <div className="flex items-center gap-3 overflow-x-auto">
                     {tenantPackages.map(pkg => {
@@ -709,17 +704,10 @@ export default function TenantDetail() {
                         </div>
 
                         {/* View Package Details Button */}
-                        {activePackageId && (
-                          <Button 
-                            variant="outline" 
-                            size="sm" 
-                            className="w-full text-xs h-9 border-primary/30 text-primary hover:bg-primary hover:text-primary-foreground mt-2" 
-                            onClick={() => navigate(`/admin/package/${activePackageId}/tenant/${tenantId}`)}
-                          >
+                        {activePackageId && <Button variant="outline" size="sm" className="w-full text-xs h-9 border-primary/30 text-primary hover:bg-primary hover:text-primary-foreground mt-2" onClick={() => navigate(`/admin/package/${activePackageId}/tenant/${tenantId}`)}>
                             <ExternalLink className="h-3 w-3 mr-1.5" />
                             View Package Details
-                          </Button>
-                        )}
+                          </Button>}
                       </>;
                 })()}
                   
