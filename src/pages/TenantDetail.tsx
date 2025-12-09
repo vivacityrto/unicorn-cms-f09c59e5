@@ -638,27 +638,25 @@ export default function TenantDetail() {
                 <div className="flex items-center justify-between">
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <button className="flex items-center gap-2 font-semibold text-foreground hover:text-primary transition-colors">
+                      <Button variant="outline" className="flex items-center gap-2 h-9 px-3 border-border/50 bg-background hover:bg-muted/50">
                         <FileText className="h-4 w-4 text-primary" />
-                        {tenantPackages.find(p => p.id === activePackageId)?.name || 'Select Package'}
-                        {tenantPackages.length > 1 && <ChevronDown className="h-4 w-4 text-muted-foreground" />}
-                      </button>
+                        <span className="font-medium">{tenantPackages.find(p => p.id === activePackageId)?.name || 'Select Package'}</span>
+                        <ChevronDown className="h-4 w-4 text-muted-foreground ml-1" />
+                      </Button>
                     </DropdownMenuTrigger>
-                    {tenantPackages.length > 1 && (
-                      <DropdownMenuContent align="start" className="w-56 bg-background border border-border shadow-lg z-50">
-                        {tenantPackages.map(pkg => (
-                          <DropdownMenuItem
-                            key={pkg.id}
-                            onClick={() => setActivePackageId(pkg.id)}
-                            className={`flex items-center gap-2 cursor-pointer ${pkg.id === activePackageId ? 'bg-primary/10 text-primary' : ''}`}
-                          >
-                            <FileText className="h-4 w-4" />
-                            {pkg.name}
-                            {pkg.id === activePackageId && <CheckCircle2 className="h-4 w-4 ml-auto text-primary" />}
-                          </DropdownMenuItem>
-                        ))}
-                      </DropdownMenuContent>
-                    )}
+                    <DropdownMenuContent align="start" className="w-56 bg-background border border-border shadow-lg z-50">
+                      {tenantPackages.map(pkg => (
+                        <DropdownMenuItem
+                          key={pkg.id}
+                          onClick={() => setActivePackageId(pkg.id)}
+                          className={`flex items-center gap-2 cursor-pointer ${pkg.id === activePackageId ? 'bg-primary/10 text-primary' : ''}`}
+                        >
+                          <FileText className="h-4 w-4" />
+                          {pkg.name}
+                          {pkg.id === activePackageId && <CheckCircle2 className="h-4 w-4 ml-auto text-primary" />}
+                        </DropdownMenuItem>
+                      ))}
+                    </DropdownMenuContent>
                   </DropdownMenu>
                   <span className="text-xs font-medium text-primary cursor-pointer hover:underline" onClick={() => navigate(`/tenant/${tenantId}/notes${activePackageId ? `?packageId=${activePackageId}` : ''}`)}>
                     View Data
