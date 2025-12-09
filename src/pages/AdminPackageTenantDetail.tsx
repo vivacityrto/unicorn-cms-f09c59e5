@@ -123,7 +123,7 @@ export default function AdminPackageTenantDetail() {
                           {getInitials(tenantContact.name)}
                         </AvatarFallback>
                       </Avatar>
-                      <p className="text-xs text-muted-foreground">Primary Contact: {tenantContact.name}</p>
+                      <p className="text-[15px] text-muted-foreground">Primary Contact: {tenantContact.name}</p>
                     </div>}
 
                   {/* Created Date */}
