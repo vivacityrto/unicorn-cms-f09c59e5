@@ -21,6 +21,8 @@ import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery } from '@tanstack/react-query';
+import { useReusableAuditTemplates, ResponseOption } from '@/hooks/useReusableAuditTemplates';
+import { Label } from '@/components/ui/label';
 
 // Hook to fetch tenants/clients
 function useTenants() {
@@ -125,27 +127,7 @@ interface QuestionType {
   category: 'title_page' | 'other_responses';
 }
 
-const defaultResponseSets: ResponseSet[] = [
-  { id: '1', name: 'Risk Assessment', options: [
-    { label: 'Safe', color: 'bg-green-500' },
-    { label: 'At Risk', color: 'bg-red-500' },
-    { label: 'N/A', color: 'bg-muted' }
-  ]},
-  { id: '2', name: 'Pass/Fail', options: [
-    { label: 'Pass', color: 'bg-green-500' },
-    { label: 'Fail', color: 'bg-red-500' },
-    { label: 'N/A', color: 'bg-muted' }
-  ]},
-  { id: '3', name: 'Yes/No', options: [
-    { label: 'Yes', color: 'bg-green-500' },
-    { label: 'No', color: 'bg-red-500' },
-    { label: 'N/A', color: 'bg-muted' }
-  ]},
-  { id: '4', name: 'Compliance', options: [
-    { label: 'Compliant', color: 'bg-green-500' },
-    { label: 'Non-Compliant', color: 'bg-red-500' },
-  ]},
-];
+// Default response sets are now fetched from the database via useReusableAuditTemplates hook
 
 const questionTypes: QuestionType[] = [
   { id: 'clients', label: 'Clients', icon: Building2, color: 'text-blue-500', category: 'title_page' },
@@ -466,15 +448,26 @@ export default function AuditTemplateBuilder() {
   );
   
   const { questions: savedQuestions, addQuestion, updateQuestion, deleteQuestion, reorderQuestions } = useAuditTemplateQuestions(templateId);
+  
+  // Reusable audit templates (response sets)
+  const { templates: reusableTemplates, isLoading: isLoadingTemplates, createTemplate: createReusableTemplate } = useReusableAuditTemplates();
 
   const [templateName, setTemplateName] = useState('Untitled template');
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedResponseSets, setSelectedResponseSets] = useState<string[]>(['1', '2', '3']);
+  const [selectedResponseSets, setSelectedResponseSets] = useState<string[]>([]);
   const [canvasQuestions, setCanvasQuestions] = useState<CanvasQuestion[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(!!templateIdParam);
+  
+  // Create response set dialog state
+  const [isCreateResponseSetOpen, setIsCreateResponseSetOpen] = useState(false);
+  const [newResponseSetName, setNewResponseSetName] = useState('');
+  const [newResponseSetOptions, setNewResponseSetOptions] = useState<ResponseOption[]>([
+    { label: 'Option 1', color: 'bg-green-500' },
+    { label: 'Option 2', color: 'bg-red-500' },
+  ]);
 
   // Load existing template data in edit mode
   useEffect(() => {
@@ -758,45 +751,59 @@ export default function AuditTemplateBuilder() {
             <div className="mb-6">
               <div className="flex items-center justify-between mb-3">
                 <h3 className="text-sm font-medium text-muted-foreground">Multiple choice responses</h3>
-                <Button variant="ghost" size="sm" className="h-7 text-primary hover:text-primary/80 text-xs">
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="h-7 text-primary hover:text-primary/80 text-xs"
+                  onClick={() => setIsCreateResponseSetOpen(true)}
+                >
                   <Plus className="h-3 w-3 mr-1" />
                   Responses
                 </Button>
               </div>
               <div className="space-y-3">
-                {defaultResponseSets.map((set) => (
-                  <div 
-                    key={set.id}
-                    className={cn(
-                      "p-3 rounded-lg border cursor-pointer transition-all hover:shadow-md",
-                      selectedResponseSets.includes(set.id) 
-                        ? "border-primary/50 bg-primary/5" 
-                        : "border-border hover:border-primary/30 hover:bg-muted/50"
-                    )}
-                    onClick={() => {
-                      addQuestionToCanvas(
-                        { id: 'multiple_choice', label: set.name, icon: CheckSquare, color: 'text-purple-600', category: 'other_responses' },
-                        set
-                      );
-                    }}
-                  >
-                    <div className="flex items-center gap-2 flex-wrap">
-                      {set.options.map((option, idx) => (
-                        <span
-                          key={idx}
-                          className={cn(
-                            "px-2.5 py-1 rounded text-xs font-medium",
-                            option.color,
-                            option.color === 'bg-muted' ? 'text-muted-foreground' : 'text-white'
-                          )}
-                        >
-                          {option.label}
-                        </span>
-                      ))}
-                      <Plus className="h-4 w-4 ml-auto text-primary" />
+                {isLoadingTemplates ? (
+                  <div className="text-sm text-muted-foreground text-center py-4">Loading response sets...</div>
+                ) : reusableTemplates && reusableTemplates.length > 0 ? (
+                  reusableTemplates.map((template) => (
+                    <div 
+                      key={template.id}
+                      className={cn(
+                        "p-3 rounded-lg border cursor-pointer transition-all hover:shadow-md",
+                        selectedResponseSets.includes(String(template.id)) 
+                          ? "border-primary/50 bg-primary/5" 
+                          : "border-border hover:border-primary/30 hover:bg-muted/50"
+                      )}
+                      onClick={() => {
+                        addQuestionToCanvas(
+                          { id: 'multiple_choice', label: template.name, icon: CheckSquare, color: 'text-purple-600', category: 'other_responses' },
+                          { id: String(template.id), name: template.name, options: template.options }
+                        );
+                      }}
+                    >
+                      <div className="flex items-center gap-2 flex-wrap">
+                        {template.options.map((option, idx) => (
+                          <span
+                            key={idx}
+                            className={cn(
+                              "px-2.5 py-1 rounded text-xs font-medium",
+                              option.color || 'bg-muted',
+                              option.color === 'bg-muted' ? 'text-muted-foreground' : 'text-white'
+                            )}
+                          >
+                            {option.label}
+                          </span>
+                        ))}
+                        <Plus className="h-4 w-4 ml-auto text-primary" />
+                      </div>
+                      {template.is_global && (
+                        <span className="text-[10px] text-muted-foreground mt-1 block">Global</span>
+                      )}
                     </div>
-                  </div>
-                ))}
+                  ))
+                ) : (
+                  <div className="text-sm text-muted-foreground text-center py-4">No response sets available</div>
+                )}
               </div>
             </div>
 
@@ -1051,6 +1058,126 @@ export default function AuditTemplateBuilder() {
           </DialogFooter>
           </DialogPrimitive.Content>
         </DialogPortal>
+      </Dialog>
+
+      {/* Create Response Set Dialog */}
+      <Dialog open={isCreateResponseSetOpen} onOpenChange={setIsCreateResponseSetOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Create Response Set</DialogTitle>
+            <DialogDescription>
+              Create a reusable set of response options for multiple choice questions.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="response-set-name">Name</Label>
+              <Input
+                id="response-set-name"
+                placeholder="e.g., Risk Assessment, Pass/Fail"
+                value={newResponseSetName}
+                onChange={(e) => setNewResponseSetName(e.target.value)}
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label>Options</Label>
+              <div className="space-y-2">
+                {newResponseSetOptions.map((option, idx) => (
+                  <div key={idx} className="flex items-center gap-2">
+                    <Input
+                      value={option.label}
+                      onChange={(e) => {
+                        const updated = [...newResponseSetOptions];
+                        updated[idx] = { ...updated[idx], label: e.target.value };
+                        setNewResponseSetOptions(updated);
+                      }}
+                      placeholder="Option label"
+                      className="flex-1"
+                    />
+                    <select
+                      value={option.color || 'bg-muted'}
+                      onChange={(e) => {
+                        const updated = [...newResponseSetOptions];
+                        updated[idx] = { ...updated[idx], color: e.target.value };
+                        setNewResponseSetOptions(updated);
+                      }}
+                      className="h-9 rounded-md border border-input bg-background px-3 py-1 text-sm"
+                    >
+                      <option value="bg-green-500">Green</option>
+                      <option value="bg-red-500">Red</option>
+                      <option value="bg-yellow-500">Yellow</option>
+                      <option value="bg-blue-500">Blue</option>
+                      <option value="bg-purple-500">Purple</option>
+                      <option value="bg-orange-500">Orange</option>
+                      <option value="bg-muted">Gray</option>
+                    </select>
+                    {newResponseSetOptions.length > 1 && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                        onClick={() => {
+                          setNewResponseSetOptions(prev => prev.filter((_, i) => i !== idx));
+                        }}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </div>
+                ))}
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full mt-2"
+                onClick={() => {
+                  setNewResponseSetOptions(prev => [
+                    ...prev,
+                    { label: `Option ${prev.length + 1}`, color: 'bg-muted' }
+                  ]);
+                }}
+              >
+                <Plus className="h-4 w-4 mr-1" />
+                Add Option
+              </Button>
+            </div>
+          </div>
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsCreateResponseSetOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={async () => {
+                if (!newResponseSetName.trim()) {
+                  toast.error('Please enter a name for the response set');
+                  return;
+                }
+                if (newResponseSetOptions.length < 2) {
+                  toast.error('Please add at least 2 options');
+                  return;
+                }
+                
+                await createReusableTemplate.mutateAsync({
+                  name: newResponseSetName,
+                  options: newResponseSetOptions,
+                });
+                
+                setIsCreateResponseSetOpen(false);
+                setNewResponseSetName('');
+                setNewResponseSetOptions([
+                  { label: 'Option 1', color: 'bg-green-500' },
+                  { label: 'Option 2', color: 'bg-red-500' },
+                ]);
+              }}
+              disabled={createReusableTemplate.isPending}
+            >
+              {createReusableTemplate.isPending ? 'Creating...' : 'Create'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
       </Dialog>
     </div>
   );
