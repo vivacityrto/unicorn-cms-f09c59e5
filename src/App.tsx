@@ -25,6 +25,7 @@ import TenantNotesWrapper from "./pages/TenantNotesWrapper";
 import ManagePackagesWrapper from "./pages/ManagePackagesWrapper";
 import PackageDetail from "./pages/PackageDetail";
 import AdminPackageDetailWrapper from "./pages/AdminPackageDetailWrapper";
+import AdminPackageTenantDetailWrapper from "./pages/AdminPackageTenantDetailWrapper";
 import AdminManagePackagesWrapper from "./pages/AdminManagePackagesWrapper";
 import ManageEmailsWrapper from "./pages/ManageEmailsWrapper";
 import DocumentDetailWrapper from "./pages/DocumentDetailWrapper";
@@ -294,6 +295,14 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <AdminPackageDetailWrapper />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/admin/package/:id/tenant/:tenantId"
+              element={
+                <ProtectedRoute>
+                  <AdminPackageTenantDetailWrapper />
                 </ProtectedRoute>
               } 
             />
