@@ -858,7 +858,11 @@ export default function ManagePackages() {
           }}>
               Cancel
             </Button>
-            <Button onClick={handleAddTenant} disabled={!selectedTenantId}>
+            <Button onClick={async () => {
+              if (!selectedTenantId || !activeTab) return;
+              await proceedWithAddTenant(selectedTenantId);
+              navigate(`/admin/package/${activeTab}/tenant/${selectedTenantId}`);
+            }} disabled={!selectedTenantId}>
               Setup Client
             </Button>
           </DialogFooter>
