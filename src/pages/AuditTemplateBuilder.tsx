@@ -348,7 +348,7 @@ function SortableQuestionCard({
                   <X className="h-3.5 w-3.5" />
                 </Button>}
             </div>)}
-            <Button variant="outline" size="sm" className="w-full mt-2 border-dashed border-primary/30 text-primary hover:bg-primary/5 hover:border-primary/50 transition-all" onClick={addCheckboxOption}>
+            <Button variant="outline" size="sm" className="w-full mt-2 border-dashed border-violet-400/50 text-violet-500 hover:bg-violet-50 hover:border-violet-400 hover:text-violet-500 transition-all" onClick={addCheckboxOption}>
               <Plus className="h-4 w-4 mr-2" />
               Add option
             </Button>
