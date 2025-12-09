@@ -645,22 +645,14 @@ export default function TenantDetail() {
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="start" className="w-56 bg-background border border-border shadow-lg z-50">
-                      {tenantPackages.map(pkg => (
-                        <DropdownMenuItem
-                          key={pkg.id}
-                          onClick={() => setActivePackageId(pkg.id)}
-                          className={`flex items-center gap-2 cursor-pointer ${pkg.id === activePackageId ? 'bg-primary/10 text-primary' : ''}`}
-                        >
+                      {tenantPackages.map(pkg => <DropdownMenuItem key={pkg.id} onClick={() => setActivePackageId(pkg.id)} className={`flex items-center gap-2 cursor-pointer ${pkg.id === activePackageId ? 'bg-primary/10 text-primary' : ''}`}>
                           <FileText className="h-4 w-4" />
                           {pkg.name}
                           {pkg.id === activePackageId && <CheckCircle2 className="h-4 w-4 ml-auto text-primary" />}
-                        </DropdownMenuItem>
-                      ))}
+                        </DropdownMenuItem>)}
                     </DropdownMenuContent>
                   </DropdownMenu>
-                  <span className="text-xs font-medium text-primary cursor-pointer hover:underline" onClick={() => navigate(`/tenant/${tenantId}/notes${activePackageId ? `?packageId=${activePackageId}` : ''}`)}>
-                    View Data
-                  </span>
+                  
                 </div>
               </div>
 
