@@ -260,6 +260,7 @@ function SortableQuestionCard({
     id: question.id
   });
   const [isFocused, setIsFocused] = useState(false);
+  const [selectedOptionIdx, setSelectedOptionIdx] = useState<number | null>(null);
   const style = {
     transform: CSS.Transform.toString(transform),
     transition
@@ -461,18 +462,19 @@ function SortableQuestionCard({
         };
         return <div className="flex flex-wrap gap-2">
             {question.options?.map((opt: any, idx: number) => {
-              const badgeClassPreview = colorMapPreview[opt.color || 'bg-muted'] || colorMapPreview['bg-muted'];
-              const isFirst = idx === 0; // First option shows as selected for preview
-              return <span key={idx} className={cn(
-                "relative px-2.5 py-1 rounded-full text-[13px] font-semibold border backdrop-blur-sm cursor-pointer transition-all hover:scale-105",
-                badgeClassPreview,
-                isFirst && "ring-2 ring-offset-2 ring-primary/50"
-              )}>
-                {isFirst && (
-                  <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-primary flex items-center justify-center shadow-sm">
-                    <CheckCircle className="h-3 w-3 text-primary-foreground" />
-                  </span>
+              const isSelected = selectedOptionIdx === idx;
+              const badgeClassPreview = isSelected 
+                ? colorMapPreview[opt.color || 'bg-muted'] || colorMapPreview['bg-muted']
+                : 'bg-muted/50 text-muted-foreground border-border/50';
+              return <span 
+                key={idx} 
+                onClick={() => setSelectedOptionIdx(idx)}
+                className={cn(
+                  "px-2.5 py-1 rounded-full text-[13px] font-semibold border backdrop-blur-sm cursor-pointer transition-all duration-200",
+                  badgeClassPreview,
+                  isSelected ? "ring-2 ring-offset-1 ring-primary/40 scale-105" : "hover:bg-muted/80"
                 )}
+              >
                 {opt.label}
               </span>;
             })}
