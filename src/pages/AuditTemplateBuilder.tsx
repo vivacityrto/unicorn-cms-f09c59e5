@@ -98,11 +98,10 @@ function useVivacityTeamUsers() {
   return useQuery({
     queryKey: ['vivacity-team-users'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('users')
-        .select('user_uuid, first_name, last_name, email')
-        .eq('user_type', 'Vivacity Team')
-        .order('first_name');
+      const {
+        data,
+        error
+      } = await supabase.from('users').select('user_uuid, first_name, last_name, email').eq('user_type', 'Vivacity Team').order('first_name');
       if (error) throw error;
       return data || [];
     }
@@ -111,7 +110,10 @@ function useVivacityTeamUsers() {
 
 // Vivacity Team dropdown preview component with smart search
 function VivacityTeamDropdownPreview() {
-  const { data: users, isLoading } = useVivacityTeamUsers();
+  const {
+    data: users,
+    isLoading
+  } = useVivacityTeamUsers();
   const [selectedUser, setSelectedUser] = useState<string>('');
   const userOptions: ComboboxOption[] = useMemo(() => {
     if (!users) return [];
@@ -338,36 +340,15 @@ function SortableQuestionCard({
             {checkboxOptions.map((option: {
             id: string;
             label: string;
-          }, index: number) => (
-            <div key={option.id} className="group relative flex items-center gap-3 p-3 rounded-xl bg-gradient-to-r from-muted/50 to-muted/30 border border-border/50 hover:border-primary/30 hover:shadow-sm transition-all duration-200">
-              <div className="flex items-center justify-center h-8 w-8 rounded-lg bg-primary/10 text-primary font-semibold text-sm shrink-0">
-                {index + 1}
-              </div>
+          }, index: number) => <div key={option.id} className="group relative flex items-center gap-3 p-3 rounded-xl bg-gradient-to-r from-muted/50 to-muted/30 border border-border/50 hover:border-primary/30 hover:shadow-sm transition-all duration-200">
+              
               <Checkbox className="h-5 w-5 rounded-md border-2 border-muted-foreground/30 data-[state=checked]:bg-primary data-[state=checked]:border-primary" />
-              <Input 
-                value={option.label} 
-                onChange={e => updateCheckboxOption(option.id, e.target.value)} 
-                placeholder="Enter option..." 
-                className="flex-1 h-9 text-sm bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0 placeholder:text-muted-foreground/60" 
-              />
-              {checkboxOptions.length > 1 && (
-                <Button 
-                  variant="ghost" 
-                  size="icon" 
-                  className="h-7 w-7 rounded-lg opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-all" 
-                  onClick={() => removeCheckboxOption(option.id)}
-                >
+              <Input value={option.label} onChange={e => updateCheckboxOption(option.id, e.target.value)} placeholder="Enter option..." className="flex-1 h-9 text-sm bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0 placeholder:text-muted-foreground/60" />
+              {checkboxOptions.length > 1 && <Button variant="ghost" size="icon" className="h-7 w-7 rounded-lg opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-all" onClick={() => removeCheckboxOption(option.id)}>
                   <X className="h-3.5 w-3.5" />
-                </Button>
-              )}
-            </div>
-          ))}
-            <Button 
-              variant="outline" 
-              size="sm" 
-              className="w-full mt-2 border-dashed border-primary/30 text-primary hover:bg-primary/5 hover:border-primary/50 transition-all" 
-              onClick={addCheckboxOption}
-            >
+                </Button>}
+            </div>)}
+            <Button variant="outline" size="sm" className="w-full mt-2 border-dashed border-primary/30 text-primary hover:bg-primary/5 hover:border-primary/50 transition-all" onClick={addCheckboxOption}>
               <Plus className="h-4 w-4 mr-2" />
               Add option
             </Button>
@@ -401,11 +382,11 @@ function SortableQuestionCard({
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {Array.from({ length: 12 }, (_, i) => i + 1).map(h => (
-                        <SelectItem key={h} value={h.toString().padStart(2, "0")}>
+                      {Array.from({
+                        length: 12
+                      }, (_, i) => i + 1).map(h => <SelectItem key={h} value={h.toString().padStart(2, "0")}>
                           {h.toString().padStart(2, "0")}
-                        </SelectItem>
-                      ))}
+                        </SelectItem>)}
                     </SelectContent>
                   </Select>
                 </div>
@@ -417,11 +398,11 @@ function SortableQuestionCard({
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {Array.from({ length: 60 }, (_, i) => i).map(m => (
-                        <SelectItem key={m} value={m.toString().padStart(2, "0")}>
+                      {Array.from({
+                        length: 60
+                      }, (_, i) => i).map(m => <SelectItem key={m} value={m.toString().padStart(2, "0")}>
                           {m.toString().padStart(2, "0")}
-                        </SelectItem>
-                      ))}
+                        </SelectItem>)}
                     </SelectContent>
                   </Select>
                 </div>
@@ -570,7 +551,11 @@ export default function AuditTemplateBuilder() {
 
   // Create response set dialog state
   const [isCreateResponseSetOpen, setIsCreateResponseSetOpen] = useState(false);
-  const [editingResponseSet, setEditingResponseSet] = useState<{ id: number; name: string; options: ResponseOption[] } | null>(null);
+  const [editingResponseSet, setEditingResponseSet] = useState<{
+    id: number;
+    name: string;
+    options: ResponseOption[];
+  } | null>(null);
   const [newResponseSetName, setNewResponseSetName] = useState('');
   const [newResponseSetType, setNewResponseSetType] = useState<'multiple_choice' | 'text_answer' | 'number' | 'checkbox' | 'date_time' | 'slider'>('multiple_choice');
   const [newResponseSetOptions, setNewResponseSetOptions] = useState<ResponseOption[]>([{
@@ -810,32 +795,19 @@ export default function AuditTemplateBuilder() {
                 </Button>
               </div>
               <div className="space-y-2">
-                {isLoadingTemplates ? (
-                  <div className="text-sm text-muted-foreground text-center py-4">Loading response sets...</div>
-                ) : reusableTemplates && reusableTemplates.length > 0 ? (
-                  reusableTemplates.map(template => (
-                    <div 
-                      key={template.id} 
-                      className={cn(
-                        "relative rounded-xl border bg-card/50 backdrop-blur-sm cursor-pointer transition-all duration-200 group overflow-hidden",
-                        selectedResponseSets.includes(String(template.id)) 
-                          ? "border-primary/50 bg-primary/5 shadow-md shadow-primary/10" 
-                          : "border-border/50 hover:border-primary/40 hover:shadow-lg hover:shadow-primary/5 hover:bg-card"
-                      )} 
-                      onClick={() => {
-                        addQuestionToCanvas({
-                          id: 'multiple_choice',
-                          label: template.name,
-                          icon: CheckSquare,
-                          color: 'text-purple-600',
-                          category: 'other_responses'
-                        }, {
-                          id: String(template.id),
-                          name: template.name,
-                          options: template.options
-                        });
-                      }}
-                    >
+                {isLoadingTemplates ? <div className="text-sm text-muted-foreground text-center py-4">Loading response sets...</div> : reusableTemplates && reusableTemplates.length > 0 ? reusableTemplates.map(template => <div key={template.id} className={cn("relative rounded-xl border bg-card/50 backdrop-blur-sm cursor-pointer transition-all duration-200 group overflow-hidden", selectedResponseSets.includes(String(template.id)) ? "border-primary/50 bg-primary/5 shadow-md shadow-primary/10" : "border-border/50 hover:border-primary/40 hover:shadow-lg hover:shadow-primary/5 hover:bg-card")} onClick={() => {
+                addQuestionToCanvas({
+                  id: 'multiple_choice',
+                  label: template.name,
+                  icon: CheckSquare,
+                  color: 'text-purple-600',
+                  category: 'other_responses'
+                }, {
+                  id: String(template.id),
+                  name: template.name,
+                  options: template.options
+                });
+              }}>
                       {/* Gradient accent line */}
                       <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-primary/60 via-primary to-primary/60 opacity-0 group-hover:opacity-100 transition-opacity" />
                       
@@ -845,113 +817,87 @@ export default function AuditTemplateBuilder() {
                           <div className="flex items-center gap-2">
                             <div className="h-7 w-7 rounded-lg bg-primary/10 flex items-center justify-center">
                               {(() => {
-                                const name = template.name.toLowerCase();
-                                const optionLabels = template.options.map(o => o.label.toLowerCase()).join(' ');
-                                
-                                // Check for compliance-related
-                                if (name.includes('complian') || optionLabels.includes('compliant') || optionLabels.includes('non-compliant')) {
-                                  return <Shield className="h-3.5 w-3.5 text-primary" />;
-                                }
-                                // Check for yes/no type
-                                if (name.includes('yes') || name.includes('no') || (optionLabels.includes('yes') && optionLabels.includes('no'))) {
-                                  return <ToggleLeft className="h-3.5 w-3.5 text-primary" />;
-                                }
-                                // Check for rating/scale type
-                                if (name.includes('rating') || name.includes('scale') || name.includes('likert') || name.includes('satisfaction')) {
-                                  return <Star className="h-3.5 w-3.5 text-primary" />;
-                                }
-                                // Check for status type
-                                if (name.includes('status') || optionLabels.includes('complete') || optionLabels.includes('progress')) {
-                                  return <CircleDot className="h-3.5 w-3.5 text-primary" />;
-                                }
-                                // Check for priority type
-                                if (name.includes('priority') || optionLabels.includes('high') || optionLabels.includes('medium') || optionLabels.includes('low')) {
-                                  return <AlertTriangle className="h-3.5 w-3.5 text-primary" />;
-                                }
-                                // Check for pass/fail type
-                                if (optionLabels.includes('pass') || optionLabels.includes('fail')) {
-                                  return <CheckCircle className="h-3.5 w-3.5 text-primary" />;
-                                }
-                                // Default icon
-                                return <List className="h-3.5 w-3.5 text-primary" />;
-                              })()}
+                          const name = template.name.toLowerCase();
+                          const optionLabels = template.options.map(o => o.label.toLowerCase()).join(' ');
+
+                          // Check for compliance-related
+                          if (name.includes('complian') || optionLabels.includes('compliant') || optionLabels.includes('non-compliant')) {
+                            return <Shield className="h-3.5 w-3.5 text-primary" />;
+                          }
+                          // Check for yes/no type
+                          if (name.includes('yes') || name.includes('no') || optionLabels.includes('yes') && optionLabels.includes('no')) {
+                            return <ToggleLeft className="h-3.5 w-3.5 text-primary" />;
+                          }
+                          // Check for rating/scale type
+                          if (name.includes('rating') || name.includes('scale') || name.includes('likert') || name.includes('satisfaction')) {
+                            return <Star className="h-3.5 w-3.5 text-primary" />;
+                          }
+                          // Check for status type
+                          if (name.includes('status') || optionLabels.includes('complete') || optionLabels.includes('progress')) {
+                            return <CircleDot className="h-3.5 w-3.5 text-primary" />;
+                          }
+                          // Check for priority type
+                          if (name.includes('priority') || optionLabels.includes('high') || optionLabels.includes('medium') || optionLabels.includes('low')) {
+                            return <AlertTriangle className="h-3.5 w-3.5 text-primary" />;
+                          }
+                          // Check for pass/fail type
+                          if (optionLabels.includes('pass') || optionLabels.includes('fail')) {
+                            return <CheckCircle className="h-3.5 w-3.5 text-primary" />;
+                          }
+                          // Default icon
+                          return <List className="h-3.5 w-3.5 text-primary" />;
+                        })()}
                             </div>
                             <span className="text-sm font-semibold text-foreground">{template.name}</span>
                           </div>
                           <div className="flex items-center gap-0.5">
-                            {template.is_global && (
-                              <span className="text-[10px] text-muted-foreground bg-muted/80 px-2 py-0.5 rounded-full font-medium">Global</span>
-                            )}
-                            {!template.is_global && (
-                              <>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-7 w-7 rounded-lg opacity-0 group-hover:opacity-100 transition-all text-muted-foreground hover:text-primary hover:bg-primary/10"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setEditingResponseSet({
-                                      id: template.id,
-                                      name: template.name,
-                                      options: template.options
-                                    });
-                                    setNewResponseSetName(template.name);
-                                    setNewResponseSetOptions(template.options);
-                                    setIsCreateResponseSetOpen(true);
-                                  }}
-                                >
+                            {template.is_global && <span className="text-[10px] text-muted-foreground bg-muted/80 px-2 py-0.5 rounded-full font-medium">Global</span>}
+                            {!template.is_global && <>
+                                <Button variant="ghost" size="icon" className="h-7 w-7 rounded-lg opacity-0 group-hover:opacity-100 transition-all text-muted-foreground hover:text-primary hover:bg-primary/10" onClick={e => {
+                          e.stopPropagation();
+                          setEditingResponseSet({
+                            id: template.id,
+                            name: template.name,
+                            options: template.options
+                          });
+                          setNewResponseSetName(template.name);
+                          setNewResponseSetOptions(template.options);
+                          setIsCreateResponseSetOpen(true);
+                        }}>
                                   <Pencil className="h-3.5 w-3.5" />
                                 </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-7 w-7 rounded-lg opacity-0 group-hover:opacity-100 transition-all text-muted-foreground hover:text-destructive hover:bg-destructive/10"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    if (confirm(`Delete "${template.name}"? This cannot be undone.`)) {
-                                      deleteReusableTemplate.mutate(template.id);
-                                    }
-                                  }}
-                                >
+                                <Button variant="ghost" size="icon" className="h-7 w-7 rounded-lg opacity-0 group-hover:opacity-100 transition-all text-muted-foreground hover:text-destructive hover:bg-destructive/10" onClick={e => {
+                          e.stopPropagation();
+                          if (confirm(`Delete "${template.name}"? This cannot be undone.`)) {
+                            deleteReusableTemplate.mutate(template.id);
+                          }
+                        }}>
                                   <Trash2 className="h-3.5 w-3.5" />
                                 </Button>
-                              </>
-                            )}
+                              </>}
                           </div>
                         </div>
                         
                         {/* Modern Badge Style Options */}
                         <div className="flex items-center gap-1.5 flex-wrap">
                           {template.options.map((option, idx) => {
-                            const colorMap: Record<string, string> = {
-                              'bg-green-500': 'bg-green-500/15 text-green-600 border-green-500/30',
-                              'bg-red-500': 'bg-red-500/15 text-red-600 border-red-500/30',
-                              'bg-yellow-500': 'bg-yellow-500/15 text-yellow-600 border-yellow-500/30',
-                              'bg-blue-500': 'bg-blue-500/15 text-blue-600 border-blue-500/30',
-                              'bg-purple-500': 'bg-purple-500/15 text-purple-600 border-purple-500/30',
-                              'bg-orange-500': 'bg-orange-500/15 text-orange-600 border-orange-500/30',
-                              'bg-muted': 'bg-muted/80 text-muted-foreground border-border',
-                            };
-                            const badgeClass = colorMap[option.color || 'bg-muted'] || colorMap['bg-muted'];
-                            return (
-                              <span 
-                                key={idx} 
-                                className={cn(
-                                  "px-2.5 py-1 rounded-full text-[0.65rem] font-semibold border backdrop-blur-sm",
-                                  badgeClass
-                                )}
-                              >
+                      const colorMap: Record<string, string> = {
+                        'bg-green-500': 'bg-green-500/15 text-green-600 border-green-500/30',
+                        'bg-red-500': 'bg-red-500/15 text-red-600 border-red-500/30',
+                        'bg-yellow-500': 'bg-yellow-500/15 text-yellow-600 border-yellow-500/30',
+                        'bg-blue-500': 'bg-blue-500/15 text-blue-600 border-blue-500/30',
+                        'bg-purple-500': 'bg-purple-500/15 text-purple-600 border-purple-500/30',
+                        'bg-orange-500': 'bg-orange-500/15 text-orange-600 border-orange-500/30',
+                        'bg-muted': 'bg-muted/80 text-muted-foreground border-border'
+                      };
+                      const badgeClass = colorMap[option.color || 'bg-muted'] || colorMap['bg-muted'];
+                      return <span key={idx} className={cn("px-2.5 py-1 rounded-full text-[0.65rem] font-semibold border backdrop-blur-sm", badgeClass)}>
                                 {option.label}
-                              </span>
-                            );
-                          })}
+                              </span>;
+                    })}
                         </div>
                       </div>
-                    </div>
-                  ))
-                ) : (
-                  <div className="text-sm text-muted-foreground text-center py-4">No response sets available</div>
-                )}
+                    </div>) : <div className="text-sm text-muted-foreground text-center py-4">No response sets available</div>}
               </div>
             </div>
 
@@ -1124,18 +1070,21 @@ export default function AuditTemplateBuilder() {
       </Dialog>
 
       {/* Create/Edit Response Set Dialog */}
-      <Dialog open={isCreateResponseSetOpen} onOpenChange={(open) => {
-        setIsCreateResponseSetOpen(open);
-        if (!open) {
-          setEditingResponseSet(null);
-          setNewResponseSetName('');
-          setNewResponseSetType('multiple_choice');
-          setNewResponseSetOptions([
-            { label: 'Option 1', color: 'bg-green-500' }, 
-            { label: 'Option 2', color: 'bg-red-500' }
-          ]);
-        }
-      }}>
+      <Dialog open={isCreateResponseSetOpen} onOpenChange={open => {
+      setIsCreateResponseSetOpen(open);
+      if (!open) {
+        setEditingResponseSet(null);
+        setNewResponseSetName('');
+        setNewResponseSetType('multiple_choice');
+        setNewResponseSetOptions([{
+          label: 'Option 1',
+          color: 'bg-green-500'
+        }, {
+          label: 'Option 2',
+          color: 'bg-red-500'
+        }]);
+      }
+    }}>
         <DialogPortal>
           <DialogOverlay className="z-[70] bg-black/70" />
           <DialogPrimitive.Content className={cn("fixed left-[50%] top-[50%] z-[70] flex flex-col w-full sm:max-w-[500px] max-w-[90vw] max-h-[85vh] translate-x-[-50%] translate-y-[-50%] gap-4 overflow-hidden scrollbar-hide border bg-background p-6 shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%] sm:rounded-lg")}>
@@ -1154,176 +1103,163 @@ export default function AuditTemplateBuilder() {
             <div className="overflow-y-auto scrollbar-hide flex-1 space-y-5 py-2 px-1">
               <div className="space-y-2">
                 <Label htmlFor="response-set-name" className="text-sm font-medium">Name</Label>
-                <Input 
-                  id="response-set-name" 
-                  placeholder="e.g., Risk Assessment, Pass/Fail" 
-                  value={newResponseSetName} 
-                  onChange={e => setNewResponseSetName(e.target.value)} 
-                  className="bg-background"
-                />
+                <Input id="response-set-name" placeholder="e.g., Risk Assessment, Pass/Fail" value={newResponseSetName} onChange={e => setNewResponseSetName(e.target.value)} className="bg-background" />
               </div>
 
               <div className="space-y-2">
                 <Label className="text-sm font-medium">Response Type</Label>
-                <Combobox 
-                  options={[
-                    { value: 'multiple_choice', label: 'Multiple Choice', group: 'Response Types' },
-                    { value: 'text_answer', label: 'Text Answer', group: 'Response Types' },
-                    { value: 'number', label: 'Number', group: 'Response Types' },
-                    { value: 'checkbox', label: 'Checkbox', group: 'Response Types' },
-                    { value: 'date_time', label: 'Date & Time', group: 'Response Types' },
-                    { value: 'slider', label: 'Slider', group: 'Response Types' },
-                  ]}
-                  value={newResponseSetType}
-                  onValueChange={(val) => setNewResponseSetType(val as typeof newResponseSetType)}
-                  placeholder="Select response type..."
-                  searchPlaceholder="Search types..."
-                  emptyText="No type found."
-                  className="bg-background"
-                />
+                <Combobox options={[{
+                value: 'multiple_choice',
+                label: 'Multiple Choice',
+                group: 'Response Types'
+              }, {
+                value: 'text_answer',
+                label: 'Text Answer',
+                group: 'Response Types'
+              }, {
+                value: 'number',
+                label: 'Number',
+                group: 'Response Types'
+              }, {
+                value: 'checkbox',
+                label: 'Checkbox',
+                group: 'Response Types'
+              }, {
+                value: 'date_time',
+                label: 'Date & Time',
+                group: 'Response Types'
+              }, {
+                value: 'slider',
+                label: 'Slider',
+                group: 'Response Types'
+              }]} value={newResponseSetType} onValueChange={val => setNewResponseSetType(val as typeof newResponseSetType)} placeholder="Select response type..." searchPlaceholder="Search types..." emptyText="No type found." className="bg-background" />
               </div>
               
-              {newResponseSetType === 'multiple_choice' && (
-                <div className="space-y-3">
+              {newResponseSetType === 'multiple_choice' && <div className="space-y-3">
                   <Label className="text-sm font-medium">Options</Label>
                   <div className="space-y-2 border rounded-lg p-3 bg-muted/20">
-                    {newResponseSetOptions.map((option, idx) => (
-                      <div key={idx} className="flex items-center gap-2">
-                        <Input 
-                          value={option.label} 
-                          onChange={e => {
-                            const updated = [...newResponseSetOptions];
-                            updated[idx] = { ...updated[idx], label: e.target.value };
-                            setNewResponseSetOptions(updated);
-                          }} 
-                          placeholder="Option label" 
-                          className="flex-1 bg-background" 
-                        />
-                        <Combobox 
-                          options={[
-                            { value: 'bg-green-500', label: 'Green' },
-                            { value: 'bg-red-500', label: 'Red' },
-                            { value: 'bg-yellow-500', label: 'Yellow' },
-                            { value: 'bg-blue-500', label: 'Blue' },
-                            { value: 'bg-purple-500', label: 'Purple' },
-                            { value: 'bg-orange-500', label: 'Orange' },
-                            { value: 'bg-muted', label: 'Gray' },
-                          ]}
-                          value={option.color || 'bg-muted'}
-                          onValueChange={(val) => {
-                            const updated = [...newResponseSetOptions];
-                            updated[idx] = { ...updated[idx], color: val };
-                            setNewResponseSetOptions(updated);
-                          }}
-                          placeholder="Color"
-                          className="w-[110px] bg-background"
-                        />
-                        {newResponseSetOptions.length > 1 && (
-                          <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10" 
-                            onClick={() => setNewResponseSetOptions(prev => prev.filter((_, i) => i !== idx))}
-                          >
+                    {newResponseSetOptions.map((option, idx) => <div key={idx} className="flex items-center gap-2">
+                        <Input value={option.label} onChange={e => {
+                    const updated = [...newResponseSetOptions];
+                    updated[idx] = {
+                      ...updated[idx],
+                      label: e.target.value
+                    };
+                    setNewResponseSetOptions(updated);
+                  }} placeholder="Option label" className="flex-1 bg-background" />
+                        <Combobox options={[{
+                    value: 'bg-green-500',
+                    label: 'Green'
+                  }, {
+                    value: 'bg-red-500',
+                    label: 'Red'
+                  }, {
+                    value: 'bg-yellow-500',
+                    label: 'Yellow'
+                  }, {
+                    value: 'bg-blue-500',
+                    label: 'Blue'
+                  }, {
+                    value: 'bg-purple-500',
+                    label: 'Purple'
+                  }, {
+                    value: 'bg-orange-500',
+                    label: 'Orange'
+                  }, {
+                    value: 'bg-muted',
+                    label: 'Gray'
+                  }]} value={option.color || 'bg-muted'} onValueChange={val => {
+                    const updated = [...newResponseSetOptions];
+                    updated[idx] = {
+                      ...updated[idx],
+                      color: val
+                    };
+                    setNewResponseSetOptions(updated);
+                  }} placeholder="Color" className="w-[110px] bg-background" />
+                        {newResponseSetOptions.length > 1 && <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10" onClick={() => setNewResponseSetOptions(prev => prev.filter((_, i) => i !== idx))}>
                             <X className="h-4 w-4" />
-                          </Button>
-                        )}
-                      </div>
-                    ))}
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      className="w-full mt-2 hover:bg-[hsl(196deg_100%_93.53%)] hover:text-black" 
-                      onClick={() => setNewResponseSetOptions(prev => [...prev, { label: `Option ${prev.length + 1}`, color: 'bg-muted' }])}
-                    >
+                          </Button>}
+                      </div>)}
+                    <Button variant="outline" size="sm" className="w-full mt-2 hover:bg-[hsl(196deg_100%_93.53%)] hover:text-black" onClick={() => setNewResponseSetOptions(prev => [...prev, {
+                  label: `Option ${prev.length + 1}`,
+                  color: 'bg-muted'
+                }])}>
                       <Plus className="h-4 w-4 mr-1" />
                       Add Option
                     </Button>
                   </div>
-                </div>
-              )}
+                </div>}
 
-              {newResponseSetType === 'slider' && (
-                <div className="space-y-3">
+              {newResponseSetType === 'slider' && <div className="space-y-3">
                   <Label className="text-sm font-medium">Slider Range</Label>
                   <div className="flex items-center gap-3 border rounded-lg p-3 bg-muted/20">
                     <Input type="number" placeholder="Min" defaultValue="0" className="flex-1 bg-background" />
                     <span className="text-muted-foreground text-sm">to</span>
                     <Input type="number" placeholder="Max" defaultValue="100" className="flex-1 bg-background" />
                   </div>
-                </div>
-              )}
+                </div>}
 
-              {(newResponseSetType === 'text_answer' || newResponseSetType === 'number' || newResponseSetType === 'checkbox' || newResponseSetType === 'date_time') && (
-                <div className="rounded-lg border border-dashed p-4 bg-muted/20">
+              {(newResponseSetType === 'text_answer' || newResponseSetType === 'number' || newResponseSetType === 'checkbox' || newResponseSetType === 'date_time') && <div className="rounded-lg border border-dashed p-4 bg-muted/20">
                   <p className="text-sm text-muted-foreground text-center">
                     {newResponseSetType === 'text_answer' && 'Text answer will allow free-form text input'}
                     {newResponseSetType === 'number' && 'Number input will allow numeric values only'}
                     {newResponseSetType === 'checkbox' && 'Checkbox will allow yes/no or checked/unchecked responses'}
                     {newResponseSetType === 'date_time' && 'Date & Time picker for scheduling or recording dates'}
                   </p>
-                </div>
-              )}
+                </div>}
             </div>
             
             <Separator />
             
             <DialogFooter className="gap-2">
-              <Button 
-                variant="outline" 
-                onClick={() => {
-                  setIsCreateResponseSetOpen(false);
-                  setEditingResponseSet(null);
-                }}
-                className="hover:bg-[hsl(196deg_100%_93.53%)] hover:text-black"
-              >
+              <Button variant="outline" onClick={() => {
+              setIsCreateResponseSetOpen(false);
+              setEditingResponseSet(null);
+            }} className="hover:bg-[hsl(196deg_100%_93.53%)] hover:text-black">
                 Cancel
               </Button>
-              <Button 
-                onClick={async () => {
-                  if (!newResponseSetName.trim()) {
-                    toast.error('Please enter a name for the response set');
-                    return;
-                  }
-                  if (newResponseSetType === 'multiple_choice' && newResponseSetOptions.length < 2) {
-                    toast.error('Please add at least 2 options for multiple choice');
-                    return;
-                  }
-                  
-                  const optionsToSave = newResponseSetType === 'multiple_choice' 
-                    ? newResponseSetOptions 
-                    : [{ label: newResponseSetType, color: 'bg-muted' }];
-                  
-                  if (editingResponseSet) {
-                    // Update existing response set
-                    await updateReusableTemplate.mutateAsync({
-                      id: editingResponseSet.id,
-                      name: newResponseSetName,
-                      description: `Type: ${newResponseSetType}`,
-                      options: optionsToSave
-                    });
-                  } else {
-                    // Create new response set
-                    await createReusableTemplate.mutateAsync({
-                      name: newResponseSetName,
-                      description: `Type: ${newResponseSetType}`,
-                      options: optionsToSave
-                    });
-                  }
-                  setIsCreateResponseSetOpen(false);
-                  setEditingResponseSet(null);
-                  setNewResponseSetName('');
-                  setNewResponseSetType('multiple_choice');
-                  setNewResponseSetOptions([
-                    { label: 'Option 1', color: 'bg-green-500' }, 
-                    { label: 'Option 2', color: 'bg-red-500' }
-                  ]);
-                }} 
-                disabled={createReusableTemplate.isPending || updateReusableTemplate?.isPending}
-              >
-                {(createReusableTemplate.isPending || updateReusableTemplate?.isPending) 
-                  ? (editingResponseSet ? 'Updating...' : 'Creating...') 
-                  : (editingResponseSet ? 'Update' : 'Create')}
+              <Button onClick={async () => {
+              if (!newResponseSetName.trim()) {
+                toast.error('Please enter a name for the response set');
+                return;
+              }
+              if (newResponseSetType === 'multiple_choice' && newResponseSetOptions.length < 2) {
+                toast.error('Please add at least 2 options for multiple choice');
+                return;
+              }
+              const optionsToSave = newResponseSetType === 'multiple_choice' ? newResponseSetOptions : [{
+                label: newResponseSetType,
+                color: 'bg-muted'
+              }];
+              if (editingResponseSet) {
+                // Update existing response set
+                await updateReusableTemplate.mutateAsync({
+                  id: editingResponseSet.id,
+                  name: newResponseSetName,
+                  description: `Type: ${newResponseSetType}`,
+                  options: optionsToSave
+                });
+              } else {
+                // Create new response set
+                await createReusableTemplate.mutateAsync({
+                  name: newResponseSetName,
+                  description: `Type: ${newResponseSetType}`,
+                  options: optionsToSave
+                });
+              }
+              setIsCreateResponseSetOpen(false);
+              setEditingResponseSet(null);
+              setNewResponseSetName('');
+              setNewResponseSetType('multiple_choice');
+              setNewResponseSetOptions([{
+                label: 'Option 1',
+                color: 'bg-green-500'
+              }, {
+                label: 'Option 2',
+                color: 'bg-red-500'
+              }]);
+            }} disabled={createReusableTemplate.isPending || updateReusableTemplate?.isPending}>
+                {createReusableTemplate.isPending || updateReusableTemplate?.isPending ? editingResponseSet ? 'Updating...' : 'Creating...' : editingResponseSet ? 'Update' : 'Create'}
               </Button>
             </DialogFooter>
           </DialogPrimitive.Content>
