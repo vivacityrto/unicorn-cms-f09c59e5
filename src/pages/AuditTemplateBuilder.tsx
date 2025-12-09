@@ -225,7 +225,6 @@ function SortableQuestionCard({ question, onDelete, onUpdate }: {
           <Input 
             placeholder={question.placeholder || getPlaceholderByType(question.question_type)}
             className="bg-muted/50 border-dashed"
-            disabled
           />
         );
       case 'number':
@@ -234,43 +233,41 @@ function SortableQuestionCard({ question, onDelete, onUpdate }: {
             type="number"
             placeholder={question.placeholder || getPlaceholderByType(question.question_type)}
             className="bg-muted/50 border-dashed max-w-[200px]"
-            disabled
           />
         );
       case 'checkbox':
         return (
           <div className="space-y-2">
-            <div className="flex items-center gap-2">
-              <div className="h-4 w-4 border rounded border-muted-foreground/30" />
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input type="checkbox" className="h-4 w-4 rounded border-muted-foreground/30" />
               <span className="text-sm text-muted-foreground">Option 1</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="h-4 w-4 border rounded border-muted-foreground/30" />
+            </label>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input type="checkbox" className="h-4 w-4 rounded border-muted-foreground/30" />
               <span className="text-sm text-muted-foreground">Option 2</span>
-            </div>
+            </label>
           </div>
         );
       case 'date_time':
         return (
           <div className="flex gap-2">
             <Input 
-              placeholder="DD/MM/YYYY"
-              className="bg-muted/50 border-dashed max-w-[140px]"
-              disabled
+              type="date"
+              className="bg-muted/50 border-dashed max-w-[160px]"
             />
             <Input 
-              placeholder="HH:MM"
-              className="bg-muted/50 border-dashed max-w-[100px]"
-              disabled
+              type="time"
+              className="bg-muted/50 border-dashed max-w-[120px]"
             />
           </div>
         );
       case 'media':
         return (
-          <div className="border-2 border-dashed rounded-lg p-6 text-center bg-muted/30">
+          <label className="border-2 border-dashed rounded-lg p-6 text-center bg-muted/30 cursor-pointer hover:bg-muted/50 transition-colors block">
+            <input type="file" accept="image/*,video/*" className="hidden" />
             <Image className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
             <p className="text-sm text-muted-foreground">Click to upload or drag and drop</p>
-          </div>
+          </label>
         );
       case 'slider':
         return (
@@ -280,16 +277,20 @@ function SortableQuestionCard({ question, onDelete, onUpdate }: {
               <span>50</span>
               <span>100</span>
             </div>
-            <div className="h-2 bg-muted rounded-full">
-              <div className="h-full w-1/2 bg-primary rounded-full" />
-            </div>
+            <input 
+              type="range" 
+              min="0" 
+              max="100" 
+              defaultValue="50"
+              className="w-full h-2 bg-muted rounded-full appearance-none cursor-pointer accent-primary"
+            />
           </div>
         );
       case 'signature':
         return (
-          <div className="border-2 border-dashed rounded-lg p-8 text-center bg-muted/30">
+          <div className="border-2 border-dashed rounded-lg p-8 text-center bg-muted/30 cursor-pointer hover:bg-muted/50 transition-colors">
             <PenTool className="h-6 w-6 mx-auto text-muted-foreground mb-2" />
-            <p className="text-sm text-muted-foreground">Sign here</p>
+            <p className="text-sm text-muted-foreground">Click to sign here</p>
           </div>
         );
       case 'location':
@@ -298,9 +299,8 @@ function SortableQuestionCard({ question, onDelete, onUpdate }: {
             <Input 
               placeholder={getPlaceholderByType(question.question_type)}
               className="bg-muted/50 border-dashed flex-1"
-              disabled
             />
-            <Button variant="outline" size="icon" className="shrink-0" disabled>
+            <Button variant="outline" size="icon" className="shrink-0">
               <MapPin className="h-4 w-4" />
             </Button>
           </div>
