@@ -107,7 +107,7 @@ export default function AdminPackageTenantDetail() {
                     </div>
                   </div>
                 </div>
-                <Button variant="outline" size="sm" onClick={() => navigate(`/tenant/${tenantId}`)} className="gap-2">
+                <Button variant="ghost" size="sm" onClick={() => navigate(`/tenant/${tenantId}`)} className="gap-2 text-muted-foreground hover:text-foreground">
                   View Full Profile
                   <ExternalLink className="h-3.5 w-3.5" />
                 </Button>
@@ -131,7 +131,7 @@ export default function AdminPackageTenantDetail() {
                     <div className="h-10 w-10 rounded-lg bg-muted/50 flex items-center justify-center">
                       <Calendar className="h-4 w-4 text-muted-foreground" />
                     </div>
-                    <p className="text-xs text-muted-foreground">
+                    <p className="text-[15px] text-muted-foreground">
                       {tenantInfo ? new Date(tenantInfo.created_at).toLocaleDateString() : ''}
                     </p>
                   </div>
