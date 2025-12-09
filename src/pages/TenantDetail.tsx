@@ -692,6 +692,21 @@ export default function TenantDetail() {
                             </p>
                           </div>
                         </div>
+
+                        {/* Package Info Card */}
+                        <div className="flex items-center gap-4 p-4 rounded-lg border border-border/40 bg-gradient-to-r from-primary/5 to-transparent hover:shadow-md transition-all duration-200">
+                          <div className="flex-shrink-0">
+                            <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
+                              <PackageIcon className="h-5 w-5 text-primary" />
+                            </div>
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-semibold text-foreground">{activePackage?.name || 'No Package'}</p>
+                            <p className="text-xs mt-0.5 text-muted-foreground">
+                              {activePackage?.full_text || 'Package details'}
+                            </p>
+                          </div>
+                        </div>
                       </>;
                 })()}
                   
