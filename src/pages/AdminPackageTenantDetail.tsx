@@ -109,6 +109,11 @@ export default function AdminPackageTenantDetail() {
             <div className="bg-gradient-to-r from-primary/5 to-primary/10 px-6 py-4 border-b border-border/50">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
+                  <Avatar className="h-10 w-10 border-2 border-background shadow-sm">
+                    <AvatarFallback className="bg-primary text-primary-foreground text-sm font-medium">
+                      {getInitials(tenantInfo.name)}
+                    </AvatarFallback>
+                  </Avatar>
                   <div className="space-y-1">
                     <h3 className="text-base font-semibold text-foreground">{tenantInfo.name}</h3>
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -117,82 +122,84 @@ export default function AdminPackageTenantDetail() {
                     </div>
                   </div>
                 </div>
-                <div className="flex items-center gap-3">
-                  <Badge variant={tenantInfo.status === 'active' ? 'default' : 'secondary'} className="capitalize">
-                    {tenantInfo.status}
-                  </Badge>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => navigate(`/tenant/${tenantId}`)}
-                    className="gap-2"
-                  >
-                    View Full Profile
-                    <ExternalLink className="h-3.5 w-3.5" />
-                  </Button>
-                </div>
+                <Badge variant={tenantInfo.status === 'active' ? 'default' : 'secondary'} className="capitalize">
+                  {tenantInfo.status}
+                </Badge>
               </div>
             </div>
             <CardContent className="p-6">
-              <div className="flex flex-wrap items-center gap-6">
-                {/* Contact Person */}
-                {tenantContact && (
-                  <div className="flex items-center gap-3">
-                    <Avatar className="h-10 w-10 border-2 border-background shadow-sm">
-                      <AvatarImage src={tenantContact.avatar_url} />
-                      <AvatarFallback className="bg-muted text-muted-foreground text-sm font-medium">
-                        {getInitials(tenantContact.name)}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div>
-                      <p className="text-sm font-medium">{tenantContact.name}</p>
-                      <p className="text-xs text-muted-foreground">Primary Contact</p>
+              <div className="flex flex-wrap items-center justify-between gap-6">
+                <div className="flex flex-wrap items-center gap-6">
+                  {/* Contact Person */}
+                  {tenantContact && (
+                    <div className="flex items-center gap-3">
+                      <Avatar className="h-10 w-10 border-2 border-background shadow-sm">
+                        <AvatarImage src={tenantContact.avatar_url} />
+                        <AvatarFallback className="bg-muted text-muted-foreground text-sm font-medium">
+                          {getInitials(tenantContact.name)}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div>
+                        <p className="text-sm font-medium">{tenantContact.name}</p>
+                        <p className="text-xs text-muted-foreground">Primary Contact</p>
+                      </div>
                     </div>
-                  </div>
-                )}
+                  )}
 
-                {/* Email */}
-                {tenantContact?.email && (
+                  {/* Email */}
+                  {tenantContact?.email && (
+                    <div className="flex items-center gap-3">
+                      <div className="h-10 w-10 rounded-lg bg-muted/50 flex items-center justify-center">
+                        <Mail className="h-4 w-4 text-muted-foreground" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium truncate max-w-[200px]">{tenantContact.email}</p>
+                        <p className="text-xs text-muted-foreground">Email</p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Phone */}
+                  {tenantContact?.phone && (
+                    <div className="flex items-center gap-3">
+                      <div className="h-10 w-10 rounded-lg bg-muted/50 flex items-center justify-center">
+                        <Phone className="h-4 w-4 text-muted-foreground" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium">{tenantContact.phone}</p>
+                        <p className="text-xs text-muted-foreground">Phone</p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Created Date */}
                   <div className="flex items-center gap-3">
                     <div className="h-10 w-10 rounded-lg bg-muted/50 flex items-center justify-center">
-                      <Mail className="h-4 w-4 text-muted-foreground" />
+                      <Calendar className="h-4 w-4 text-muted-foreground" />
                     </div>
                     <div>
-                      <p className="text-sm font-medium truncate max-w-[200px]">{tenantContact.email}</p>
-                      <p className="text-xs text-muted-foreground">Email</p>
+                      <p className="text-sm font-medium">
+                        {new Date(tenantInfo.created_at).toLocaleDateString('en-AU', {
+                          day: '2-digit',
+                          month: 'short',
+                          year: 'numeric'
+                        })}
+                      </p>
+                      <p className="text-xs text-muted-foreground">Member Since</p>
                     </div>
-                  </div>
-                )}
-
-                {/* Phone */}
-                {tenantContact?.phone && (
-                  <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 rounded-lg bg-muted/50 flex items-center justify-center">
-                      <Phone className="h-4 w-4 text-muted-foreground" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium">{tenantContact.phone}</p>
-                      <p className="text-xs text-muted-foreground">Phone</p>
-                    </div>
-                  </div>
-                )}
-
-                {/* Created Date */}
-                <div className="flex items-center gap-3">
-                  <div className="h-10 w-10 rounded-lg bg-muted/50 flex items-center justify-center">
-                    <Calendar className="h-4 w-4 text-muted-foreground" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium">
-                      {new Date(tenantInfo.created_at).toLocaleDateString('en-AU', {
-                        day: '2-digit',
-                        month: 'short',
-                        year: 'numeric'
-                      })}
-                    </p>
-                    <p className="text-xs text-muted-foreground">Member Since</p>
                   </div>
                 </div>
+
+                {/* View Full Profile Button */}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => navigate(`/tenant/${tenantId}`)}
+                  className="gap-2"
+                >
+                  View Full Profile
+                  <ExternalLink className="h-3.5 w-3.5" />
+                </Button>
               </div>
             </CardContent>
           </Card>
