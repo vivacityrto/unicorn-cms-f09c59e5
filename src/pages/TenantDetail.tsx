@@ -445,9 +445,7 @@ export default function TenantDetail() {
               const isActive = activePackageId === pkg.id;
               return <div key={pkg.id} className={`relative overflow-hidden rounded-2xl transition-all duration-300 border ${isActive ? "bg-gradient-to-br from-primary/10 via-primary/5 to-transparent border-primary/40 shadow-lg shadow-primary/10" : "bg-gradient-to-br from-background via-muted/20 to-muted/40 border-border/50 shadow-md hover:shadow-lg hover:border-primary/20"}`}>
                 <button onClick={() => setActivePackageId(pkg.id)} className="w-full flex items-center gap-4 px-6 py-4" title={pkg.name}>
-                  <div className={`flex items-center justify-center h-12 w-12 rounded-xl ${isActive ? "bg-primary/20" : "bg-muted/50"}`}>
-                    <FileText className={`h-6 w-6 ${isActive ? "text-primary" : "text-muted-foreground"}`} />
-                  </div>
+                  
                   <div className="relative flex flex-col items-start z-10">
                     <span className={`text-base font-bold tracking-wide transition-colors duration-200 ${isActive ? "text-foreground" : "text-muted-foreground"}`}>
                       {abbr}
@@ -458,12 +456,7 @@ export default function TenantDetail() {
                   </div>
                 </button>
                 <div className="px-6 pb-4 pt-0">
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    className="w-full text-sm h-9 border-primary/30 text-primary hover:bg-primary hover:text-primary-foreground"
-                    onClick={() => navigate(`/admin/package/${pkg.id}/tenant/${tenantId}`)}
-                  >
+                  <Button variant="outline" size="sm" className="w-full text-sm h-9 border-primary/30 text-primary hover:bg-primary hover:text-primary-foreground" onClick={() => navigate(`/admin/package/${pkg.id}/tenant/${tenantId}`)}>
                     <ExternalLink className="h-4 w-4 mr-2" />
                     View Package
                   </Button>
@@ -662,7 +655,7 @@ export default function TenantDetail() {
                   const daysUsed = Math.floor(minutesUsed / 1440);
                   const hoursUsedDisplay = Math.floor(minutesUsed % 1440 / 60);
                   const minsUsed = minutesUsed % 60;
-                  
+
                   // Deduct full days of usage from days remaining
                   const adjustedDaysRemaining = Math.max(0, daysRemaining - daysUsed);
                   const isAdjustedExpired = adjustedDaysRemaining <= 0;
