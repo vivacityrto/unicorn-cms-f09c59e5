@@ -125,6 +125,7 @@ export default function AdminPackageTenantDetail() {
                       </Avatar>
                       <div>
                         
+                        <p className="text-sm font-medium">{tenantContact.name}</p>
                         <p className="text-xs text-muted-foreground">Primary Contact</p>
                       </div>
                     </div>}
