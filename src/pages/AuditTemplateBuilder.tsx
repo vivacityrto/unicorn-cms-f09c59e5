@@ -684,27 +684,87 @@ export default function AuditTemplateBuilder() {
                 </Button>
               </div>
               <div className="space-y-3">
-                {isLoadingTemplates ? <div className="text-sm text-muted-foreground text-center py-4">Loading response sets...</div> : reusableTemplates && reusableTemplates.length > 0 ? reusableTemplates.map(template => <div key={template.id} className={cn("p-3 rounded-lg border cursor-pointer transition-all hover:shadow-md", selectedResponseSets.includes(String(template.id)) ? "border-primary/50 bg-primary/5" : "border-border hover:border-primary/30 hover:bg-muted/50")} onClick={() => {
-                addQuestionToCanvas({
-                  id: 'multiple_choice',
-                  label: template.name,
-                  icon: CheckSquare,
-                  color: 'text-purple-600',
-                  category: 'other_responses'
-                }, {
-                  id: String(template.id),
-                  name: template.name,
-                  options: template.options
-                });
-              }}>
-                      <div className="flex items-center gap-2 flex-wrap">
-                        {template.options.map((option, idx) => <span key={idx} className={cn("px-2.5 py-1 rounded text-xs font-medium", option.color || 'bg-muted', option.color === 'bg-muted' ? 'text-muted-foreground' : 'text-white')}>
-                            {option.label}
-                          </span>)}
-                        <Plus className="h-4 w-4 ml-auto text-primary" />
+                {isLoadingTemplates ? (
+                  <div className="text-sm text-muted-foreground text-center py-4">Loading response sets...</div>
+                ) : reusableTemplates && reusableTemplates.length > 0 ? (
+                  reusableTemplates.map(template => (
+                    <div 
+                      key={template.id} 
+                      className={cn(
+                        "p-3 rounded-lg border cursor-pointer transition-all hover:shadow-md group",
+                        selectedResponseSets.includes(String(template.id)) 
+                          ? "border-primary/50 bg-primary/5" 
+                          : "border-border hover:border-primary/30 hover:bg-muted/50"
+                      )} 
+                      onClick={() => {
+                        addQuestionToCanvas({
+                          id: 'multiple_choice',
+                          label: template.name,
+                          icon: CheckSquare,
+                          color: 'text-purple-600',
+                          category: 'other_responses'
+                        }, {
+                          id: String(template.id),
+                          name: template.name,
+                          options: template.options
+                        });
+                      }}
+                    >
+                      {/* Card Title with Delete */}
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-sm font-medium text-foreground">{template.name}</span>
+                        <div className="flex items-center gap-1">
+                          {template.is_global && (
+                            <span className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded">Global</span>
+                          )}
+                          {!template.is_global && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                // Delete functionality would go here
+                                toast.info('Delete functionality coming soon');
+                              }}
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </Button>
+                          )}
+                          <Plus className="h-4 w-4 text-primary opacity-0 group-hover:opacity-100 transition-opacity" />
+                        </div>
                       </div>
-                      {template.is_global && <span className="text-[10px] text-muted-foreground mt-1 block">Global</span>}
-                    </div>) : <div className="text-sm text-muted-foreground text-center py-4">No response sets available</div>}
+                      {/* Modern Badge Style Options */}
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        {template.options.map((option, idx) => {
+                          const colorMap: Record<string, string> = {
+                            'bg-green-500': 'bg-green-500/10 text-green-600 border-green-600',
+                            'bg-red-500': 'bg-red-500/10 text-red-600 border-red-600',
+                            'bg-yellow-500': 'bg-yellow-500/10 text-yellow-600 border-yellow-600',
+                            'bg-blue-500': 'bg-blue-500/10 text-blue-600 border-blue-600',
+                            'bg-purple-500': 'bg-purple-500/10 text-purple-600 border-purple-600',
+                            'bg-orange-500': 'bg-orange-500/10 text-orange-600 border-orange-600',
+                            'bg-muted': 'bg-muted text-muted-foreground border-muted-foreground/30',
+                          };
+                          const badgeClass = colorMap[option.color || 'bg-muted'] || colorMap['bg-muted'];
+                          return (
+                            <span 
+                              key={idx} 
+                              className={cn(
+                                "px-2 py-0.5 rounded-full text-[0.7rem] font-medium border",
+                                badgeClass
+                              )}
+                            >
+                              {option.label}
+                            </span>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-sm text-muted-foreground text-center py-4">No response sets available</div>
+                )}
               </div>
             </div>
 
