@@ -5768,6 +5768,70 @@ export type Database = {
           },
         ]
       }
+      tenant_stages: {
+        Row: {
+          client_tasks: Json | null
+          created_at: string
+          documents: Json | null
+          id: string
+          notes: string | null
+          package_id: number | null
+          staff_tasks: Json | null
+          stage_id: number
+          status: string | null
+          tenant_id: number
+          updated_at: string
+        }
+        Insert: {
+          client_tasks?: Json | null
+          created_at?: string
+          documents?: Json | null
+          id?: string
+          notes?: string | null
+          package_id?: number | null
+          staff_tasks?: Json | null
+          stage_id: number
+          status?: string | null
+          tenant_id: number
+          updated_at?: string
+        }
+        Update: {
+          client_tasks?: Json | null
+          created_at?: string
+          documents?: Json | null
+          id?: string
+          notes?: string | null
+          package_id?: number | null
+          staff_tasks?: Json | null
+          stage_id?: number
+          status?: string | null
+          tenant_id?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tenant_stages_package_id_fkey"
+            columns: ["package_id"]
+            isOneToOne: false
+            referencedRelation: "packages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tenant_stages_stage_id_fkey"
+            columns: ["stage_id"]
+            isOneToOne: false
+            referencedRelation: "documents_stages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tenant_stages_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tenants: {
         Row: {
           created_at: string
