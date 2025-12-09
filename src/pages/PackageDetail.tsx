@@ -13,7 +13,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Combobox } from "@/components/ui/combobox";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { ArrowLeft, Users, CheckCircle2, FileText, Plus, Search, ArrowUpDown, Trash2, Edit, Calendar, Layers, GripVertical } from "lucide-react";
+import { ArrowLeft, Users, CheckCircle2, FileText, Plus, Search, ArrowUpDown, Trash2, Edit, Calendar, Layers, GripVertical, UserPlus, Building2, MapPin, Hash } from "lucide-react";
+import { AddTenantDialog } from "@/components/AddTenantDialog";
 import { AddStageDialog } from "@/components/AddStageDialog";
 import { AddStaffTaskDialog } from "@/components/AddStaffTaskDialog";
 import { AddClientTaskDialog } from "@/components/AddClientTaskDialog";
@@ -198,6 +199,8 @@ const PackageDetail = () => {
   const [editingDocument, setEditingDocument] = useState<any | null>(null);
   const [isAddExistingDocDialogOpen, setIsAddExistingDocDialogOpen] = useState(false);
   const [isAddExistingStageDialogOpen, setIsAddExistingStageDialogOpen] = useState(false);
+  const [isSetupClientDialogOpen, setIsSetupClientDialogOpen] = useState(false);
+  const [selectedClient, setSelectedClient] = useState<TenantData | null>(null);
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -576,14 +579,64 @@ const PackageDetail = () => {
           <ArrowLeft className="h-4 w-4" />
           Back
         </Button>
-        <Button variant="ghost" onClick={() => setIsEditPackageDialogOpen(true)} className="gap-2 hover:bg-[hsl(196deg_100%_93.53%)] hover:text-black" style={{
-        boxShadow: "var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow)",
-        border: "1px solid #00000052"
-      }}>
-          <Edit className="h-4 w-4" />
-          Edit Package
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="ghost" onClick={() => setIsSetupClientDialogOpen(true)} className="gap-2 hover:bg-[hsl(196deg_100%_93.53%)] hover:text-black" style={{
+            boxShadow: "var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow)",
+            border: "1px solid #00000052"
+          }}>
+            <UserPlus className="h-4 w-4" />
+            Setup Client
+          </Button>
+          <Button variant="ghost" onClick={() => setIsEditPackageDialogOpen(true)} className="gap-2 hover:bg-[hsl(196deg_100%_93.53%)] hover:text-black" style={{
+            boxShadow: "var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow)",
+            border: "1px solid #00000052"
+          }}>
+            <Edit className="h-4 w-4" />
+            Edit Package
+          </Button>
+        </div>
       </div>
+
+      {/* Selected Client Card */}
+      {selectedClient && (
+        <Card className="border-0 shadow-lg overflow-hidden bg-gradient-to-r from-primary/5 to-accent/5">
+          <CardContent className="p-5">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
+                  <Building2 className="h-6 w-6 text-primary" />
+                </div>
+                <div className="space-y-1">
+                  <h3 className="text-lg font-semibold text-foreground">{selectedClient.name}</h3>
+                  <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                    <span className="flex items-center gap-1">
+                      <Hash className="h-3.5 w-3.5" />
+                      ID: {selectedClient.id}
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <Calendar className="h-3.5 w-3.5" />
+                      {new Date(selectedClient.created_at).toLocaleDateString()}
+                    </span>
+                  </div>
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                <Badge variant={selectedClient.status === "active" ? "default" : "secondary"}>
+                  {selectedClient.status}
+                </Badge>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setSelectedClient(null)}
+                  className="text-muted-foreground hover:text-destructive"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Package Header */}
       
@@ -1168,6 +1221,32 @@ const PackageDetail = () => {
     }} packageId={Number(id)} />
 
       <EditPackageDialog open={isEditPackageDialogOpen} onOpenChange={setIsEditPackageDialogOpen} onSuccess={fetchPackageData} packageData={packageInfo} />
+
+      <AddTenantDialog 
+        open={isSetupClientDialogOpen} 
+        onOpenChange={setIsSetupClientDialogOpen} 
+        preSelectedPackageId={Number(id)}
+        onSuccess={async () => {
+          // Fetch the most recently created tenant for this package
+          const { data: newTenant } = await supabase
+            .from('tenants')
+            .select('*')
+            .eq('package_id', Number(id))
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .single();
+          
+          if (newTenant) {
+            setSelectedClient({
+              id: newTenant.id,
+              name: newTenant.name,
+              status: newTenant.status || 'active',
+              created_at: newTenant.created_at
+            });
+          }
+          fetchPackageData();
+        }}
+      />
     </div>;
 };
 export default PackageDetail;
