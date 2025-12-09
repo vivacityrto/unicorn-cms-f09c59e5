@@ -340,7 +340,7 @@ function SortableQuestionCard({
             {checkboxOptions.map((option: {
             id: string;
             label: string;
-          }, index: number) => <div key={option.id} className="group relative flex items-center gap-3 p-3 rounded-xl bg-gradient-to-r from-muted/50 to-muted/30 border border-border/50 hover:border-primary/30 hover:shadow-sm transition-all duration-200">
+          }, index: number) => <div key={option.id} className="group relative flex items-center gap-3 py-1 px-3 rounded-xl bg-gradient-to-r from-muted/50 to-muted/30 border border-border/50 hover:border-primary/30 hover:shadow-sm transition-all duration-200">
               
               <Checkbox className="h-5 w-5 rounded-md border-2 border-muted-foreground/30 data-[state=checked]:bg-primary data-[state=checked]:border-primary" />
               <Input value={option.label} onChange={e => updateCheckboxOption(option.id, e.target.value)} placeholder="Enter option..." className="flex-1 h-9 text-sm bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0 placeholder:text-muted-foreground/60" />
