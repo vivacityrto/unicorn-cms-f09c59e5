@@ -232,20 +232,64 @@ function SortableQuestionCard({ question, onDelete, onUpdate }: {
           <Input 
             type="number"
             placeholder={question.placeholder || getPlaceholderByType(question.question_type)}
-            className="bg-muted/50 border-dashed max-w-[200px]"
+            className="bg-muted/50 border-dashed w-full"
           />
         );
       case 'checkbox':
+        const checkboxOptions = (question.options && question.options.length > 0) 
+          ? question.options 
+          : [{ id: '1', label: 'Option 1' }, { id: '2', label: 'Option 2' }];
+        
+        const updateCheckboxOption = (optionId: string, newLabel: string) => {
+          const updatedOptions = checkboxOptions.map(opt => 
+            opt.id === optionId ? { ...opt, label: newLabel } : opt
+          );
+          onUpdate(question.id, { options: updatedOptions });
+        };
+        
+        const addCheckboxOption = () => {
+          const newOption = { id: String(Date.now()), label: `Option ${checkboxOptions.length + 1}` };
+          onUpdate(question.id, { options: [...checkboxOptions, newOption] });
+        };
+        
+        const removeCheckboxOption = (optionId: string) => {
+          if (checkboxOptions.length <= 1) return;
+          const updatedOptions = checkboxOptions.filter(opt => opt.id !== optionId);
+          onUpdate(question.id, { options: updatedOptions });
+        };
+        
         return (
           <div className="space-y-2">
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input type="checkbox" className="h-4 w-4 rounded border-muted-foreground/30" />
-              <span className="text-sm text-muted-foreground">Option 1</span>
-            </label>
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input type="checkbox" className="h-4 w-4 rounded border-muted-foreground/30" />
-              <span className="text-sm text-muted-foreground">Option 2</span>
-            </label>
+            {checkboxOptions.map((option: { id: string; label: string }) => (
+              <div key={option.id} className="flex items-center gap-2 group">
+                <input type="checkbox" className="h-4 w-4 rounded border-muted-foreground/30" />
+                <Input
+                  value={option.label}
+                  onChange={(e) => updateCheckboxOption(option.id, e.target.value)}
+                  placeholder="Enter option..."
+                  className="flex-1 h-8 text-sm bg-transparent border-dashed focus:bg-muted/30"
+                />
+                {checkboxOptions.length > 1 && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-6 w-6 opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive"
+                    onClick={() => removeCheckboxOption(option.id)}
+                  >
+                    <X className="h-3 w-3" />
+                  </Button>
+                )}
+              </div>
+            ))}
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-xs text-muted-foreground hover:text-foreground"
+              onClick={addCheckboxOption}
+            >
+              <Plus className="h-3 w-3 mr-1" />
+              Add option
+            </Button>
           </div>
         );
       case 'date_time':
