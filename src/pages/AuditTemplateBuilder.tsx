@@ -462,7 +462,17 @@ function SortableQuestionCard({
         return <div className="flex flex-wrap gap-2">
             {question.options?.map((opt: any, idx: number) => {
               const badgeClassPreview = colorMapPreview[opt.color || 'bg-muted'] || colorMapPreview['bg-muted'];
-              return <span key={idx} className={cn("px-2.5 py-1 rounded-full text-[13px] font-semibold border backdrop-blur-sm cursor-pointer transition-all hover:scale-105", badgeClassPreview)}>
+              const isFirst = idx === 0; // First option shows as selected for preview
+              return <span key={idx} className={cn(
+                "relative px-2.5 py-1 rounded-full text-[13px] font-semibold border backdrop-blur-sm cursor-pointer transition-all hover:scale-105",
+                badgeClassPreview,
+                isFirst && "ring-2 ring-offset-2 ring-primary/50"
+              )}>
+                {isFirst && (
+                  <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-primary flex items-center justify-center shadow-sm">
+                    <CheckCircle className="h-3 w-3 text-primary-foreground" />
+                  </span>
+                )}
                 {opt.label}
               </span>;
             })}
