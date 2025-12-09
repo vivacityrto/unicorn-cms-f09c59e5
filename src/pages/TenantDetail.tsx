@@ -626,11 +626,36 @@ export default function TenantDetail() {
           <div className="space-y-6">
             {/* Package Time Remaining */}
             <Card className="border-0 shadow-lg overflow-hidden">
-              <div className="bg-muted/30 px-6 h-14 border-b border-border/50 flex items-center justify-between">
-                <h2 className="font-semibold text-foreground">Package Details</h2>
-                <span className="text-xs font-medium text-primary cursor-pointer hover:underline" onClick={() => navigate(`/tenant/${tenantId}/notes${activePackageId ? `?packageId=${activePackageId}` : ''}`)}>
-                  View Data
-                </span>
+              <div className="bg-muted/30 px-6 py-3 border-b border-border/50">
+                <div className="flex items-center justify-between mb-3">
+                  <h2 className="font-semibold text-foreground">Package Details</h2>
+                  <span className="text-xs font-medium text-primary cursor-pointer hover:underline" onClick={() => navigate(`/tenant/${tenantId}/notes${activePackageId ? `?packageId=${activePackageId}` : ''}`)}>
+                    View Data
+                  </span>
+                </div>
+                {/* Package Selector in Header */}
+                {tenantPackages.length > 1 && (
+                  <div className="flex items-center gap-2 overflow-x-auto pb-1">
+                    {tenantPackages.map((pkg) => {
+                      const isActive = pkg.id === activePackageId;
+                      return (
+                        <button
+                          key={pkg.id}
+                          onClick={() => setActivePackageId(pkg.id)}
+                          className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-sm whitespace-nowrap transition-all duration-200 ${
+                            isActive
+                              ? 'border-primary/40 bg-primary/10 text-foreground font-medium'
+                              : 'border-border/40 bg-background/50 text-muted-foreground hover:border-primary/20 hover:bg-muted/30'
+                          }`}
+                        >
+                          <FileText className={`h-4 w-4 ${isActive ? 'text-primary' : 'text-muted-foreground'}`} />
+                          {pkg.name}
+                          {isActive && <CheckCircle2 className="h-4 w-4 text-primary" />}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
 
               <div className="p-6">
@@ -691,41 +716,6 @@ export default function TenantDetail() {
                               {daysUsed}d {hoursUsedDisplay}h {minsUsed}m
                             </p>
                           </div>
-                        </div>
-
-                        {/* Package Selector Cards */}
-                        <div className="space-y-2">
-                          {tenantPackages.map((pkg) => {
-                            const isActive = pkg.id === activePackageId;
-                            return (
-                              <div 
-                                key={pkg.id}
-                                onClick={() => setActivePackageId(pkg.id)}
-                                className={`flex items-center gap-4 p-4 rounded-lg border cursor-pointer transition-all duration-200 ${
-                                  isActive 
-                                    ? 'border-primary/40 bg-gradient-to-r from-primary/10 to-primary/5 shadow-md' 
-                                    : 'border-border/40 bg-gradient-to-r from-muted/20 to-transparent hover:shadow-md hover:border-primary/20'
-                                }`}
-                              >
-                                <div className="flex-shrink-0">
-                                  <div className={`h-10 w-10 rounded-full flex items-center justify-center ${isActive ? 'bg-primary/20' : 'bg-primary/10'}`}>
-                                    <FileText className={`h-5 w-5 ${isActive ? 'text-primary' : 'text-primary/70'}`} />
-                                  </div>
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                  <p className={`text-sm font-semibold ${isActive ? 'text-foreground' : 'text-muted-foreground'}`}>{pkg.name}</p>
-                                  <p className="text-xs mt-0.5 text-muted-foreground">
-                                    {pkg.full_text || 'Package'}
-                                  </p>
-                                </div>
-                                {isActive && (
-                                  <div className="flex-shrink-0">
-                                    <CheckCircle2 className="h-5 w-5 text-primary" />
-                                  </div>
-                                )}
-                              </div>
-                            );
-                          })}
                         </div>
                       </>;
                 })()}
