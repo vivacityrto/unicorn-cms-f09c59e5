@@ -450,7 +450,8 @@ export default function TenantDetail() {
                     <span className={`text-base font-bold tracking-wide transition-colors duration-200 ${isActive ? "text-foreground" : "text-muted-foreground"}`}>
                       {abbr}
                     </span>
-                    <span className={`text-sm transition-colors duration-200 ${isActive ? "text-primary font-medium" : "text-muted-foreground/70"}`}>
+                    <span className={`flex items-center gap-2 text-sm transition-colors duration-200 ${isActive ? "text-primary font-medium" : "text-muted-foreground/70"}`}>
+                      <FileText className="h-4 w-4" />
                       {pkg.full_text || pkg.name}
                     </span>
                   </div>
