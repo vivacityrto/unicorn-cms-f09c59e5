@@ -437,24 +437,38 @@ export default function TenantDetail() {
           <div className="flex items-center gap-3">
             
             
-            {/* Package Tabs - Card style with icon */}
-            {tenantPackages.length > 0 && <div className="flex items-center gap-3">
+            {/* Package Tabs - Modern card style with View Package button */}
+            {tenantPackages.length > 0 && <div className="flex items-center gap-4">
                 {tenantPackages.map(pkg => {
               // Get package abbreviation from slug or create from name
               const abbr = pkg.slug?.replace(/^\/?package-?/i, '').toUpperCase() || pkg.name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 6);
               const isActive = activePackageId === pkg.id;
-              return <button key={pkg.id} onClick={() => setActivePackageId(pkg.id)} className={`relative overflow-hidden flex items-center gap-3 px-5 py-3 rounded-xl transition-all duration-300 border ${isActive ? "bg-gradient-to-br from-primary/10 via-primary/5 to-transparent border-primary/40 shadow-lg shadow-primary/10" : "bg-gradient-to-br from-background via-muted/20 to-muted/40 border-border/50 shadow-md hover:shadow-lg hover:border-primary/20 hover:from-primary/5 hover:via-background hover:to-muted/20"}`} title={pkg.name}>
-                
-                <div className="relative flex flex-col items-start z-10">
-                  <span className={`text-sm font-bold tracking-wide transition-colors duration-200 ${isActive ? "text-foreground" : "text-muted-foreground"}`}>
-                    {abbr}
-                  </span>
-                  <span className={`text-xs flex items-center gap-1.5 transition-colors duration-200 ${isActive ? "text-primary font-medium" : "text-muted-foreground/70"}`}>
-                    <FileText className="h-3 w-3" />
-                    {pkg.full_text || pkg.name}
-                  </span>
+              return <div key={pkg.id} className={`relative overflow-hidden rounded-2xl transition-all duration-300 border ${isActive ? "bg-gradient-to-br from-primary/10 via-primary/5 to-transparent border-primary/40 shadow-lg shadow-primary/10" : "bg-gradient-to-br from-background via-muted/20 to-muted/40 border-border/50 shadow-md hover:shadow-lg hover:border-primary/20"}`}>
+                <button onClick={() => setActivePackageId(pkg.id)} className="w-full flex items-center gap-4 px-6 py-4" title={pkg.name}>
+                  <div className={`flex items-center justify-center h-12 w-12 rounded-xl ${isActive ? "bg-primary/20" : "bg-muted/50"}`}>
+                    <FileText className={`h-6 w-6 ${isActive ? "text-primary" : "text-muted-foreground"}`} />
+                  </div>
+                  <div className="relative flex flex-col items-start z-10">
+                    <span className={`text-base font-bold tracking-wide transition-colors duration-200 ${isActive ? "text-foreground" : "text-muted-foreground"}`}>
+                      {abbr}
+                    </span>
+                    <span className={`text-sm transition-colors duration-200 ${isActive ? "text-primary font-medium" : "text-muted-foreground/70"}`}>
+                      {pkg.full_text || pkg.name}
+                    </span>
+                  </div>
+                </button>
+                <div className="px-6 pb-4 pt-0">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="w-full text-sm h-9 border-primary/30 text-primary hover:bg-primary hover:text-primary-foreground"
+                    onClick={() => navigate(`/admin/package/${pkg.id}/tenant/${tenantId}`)}
+                  >
+                    <ExternalLink className="h-4 w-4 mr-2" />
+                    View Package
+                  </Button>
                 </div>
-              </button>;
+              </div>;
             })}
               </div>}
           </div>
