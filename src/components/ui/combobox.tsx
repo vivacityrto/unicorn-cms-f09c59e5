@@ -81,7 +81,7 @@ export function Combobox({
           <ArrowUpDown className="ml-2 h-4 w-4 shrink-0 text-muted-foreground" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="p-[10px] bg-background z-50" align="start" sideOffset={5} style={{ width: 'var(--radix-popover-trigger-width)' }}>
+      <PopoverContent className="p-[10px] bg-background z-[100]" align="start" sideOffset={5} style={{ width: 'var(--radix-popover-trigger-width)' }}>
         <Command className="bg-background !p-0">
           <CommandInput placeholder={searchPlaceholder} className="h-9" />
           <CommandList className="overflow-y-auto !p-0 max-h-[320px]">
