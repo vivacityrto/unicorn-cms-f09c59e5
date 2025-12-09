@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { Combobox, ComboboxOption } from '@/components/ui/combobox';
-import { Search, Plus, Pencil, Building2, FileText, Box, Building, Type, Hash, CheckSquare, Calendar, Image, SlidersHorizontal, MessageSquare, PenTool, MapPin, GripVertical, Trash2, X, Eye } from 'lucide-react';
+import { Search, Plus, Pencil, Building2, FileText, Box, Building, Type, Hash, CheckSquare, Calendar, Image, SlidersHorizontal, MessageSquare, PenTool, MapPin, GripVertical, Trash2, X, Eye, Shield, ToggleLeft, Star, CircleDot, AlertTriangle, CheckCircle, List } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription, DialogPortal, DialogOverlay } from '@/components/ui/dialog';
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { cn } from '@/lib/utils';
@@ -721,7 +721,37 @@ export default function AuditTemplateBuilder() {
                         <div className="flex items-center justify-between mb-2.5">
                           <div className="flex items-center gap-2">
                             <div className="h-7 w-7 rounded-lg bg-primary/10 flex items-center justify-center">
-                              <CheckSquare className="h-3.5 w-3.5 text-primary" />
+                              {(() => {
+                                const name = template.name.toLowerCase();
+                                const optionLabels = template.options.map(o => o.label.toLowerCase()).join(' ');
+                                
+                                // Check for compliance-related
+                                if (name.includes('complian') || optionLabels.includes('compliant') || optionLabels.includes('non-compliant')) {
+                                  return <Shield className="h-3.5 w-3.5 text-primary" />;
+                                }
+                                // Check for yes/no type
+                                if (name.includes('yes') || name.includes('no') || (optionLabels.includes('yes') && optionLabels.includes('no'))) {
+                                  return <ToggleLeft className="h-3.5 w-3.5 text-primary" />;
+                                }
+                                // Check for rating/scale type
+                                if (name.includes('rating') || name.includes('scale') || name.includes('likert') || name.includes('satisfaction')) {
+                                  return <Star className="h-3.5 w-3.5 text-primary" />;
+                                }
+                                // Check for status type
+                                if (name.includes('status') || optionLabels.includes('complete') || optionLabels.includes('progress')) {
+                                  return <CircleDot className="h-3.5 w-3.5 text-primary" />;
+                                }
+                                // Check for priority type
+                                if (name.includes('priority') || optionLabels.includes('high') || optionLabels.includes('medium') || optionLabels.includes('low')) {
+                                  return <AlertTriangle className="h-3.5 w-3.5 text-primary" />;
+                                }
+                                // Check for pass/fail type
+                                if (optionLabels.includes('pass') || optionLabels.includes('fail')) {
+                                  return <CheckCircle className="h-3.5 w-3.5 text-primary" />;
+                                }
+                                // Default icon
+                                return <List className="h-3.5 w-3.5 text-primary" />;
+                              })()}
                             </div>
                             <span className="text-sm font-semibold text-foreground">{template.name}</span>
                           </div>
