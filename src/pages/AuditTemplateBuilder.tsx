@@ -87,6 +87,37 @@ function DocumentsDropdownPreview() {
   }, [documents]);
   return <Combobox options={documentOptions} value={selectedDocument} onValueChange={setSelectedDocument} placeholder={isLoading ? "Loading documents..." : "Search documents..."} searchPlaceholder="Type to search documents..." emptyText="No documents found." disabled={isLoading} className="bg-muted/50 border-dashed" />;
 }
+
+// Hook to fetch Vivacity Team users
+function useVivacityTeamUsers() {
+  return useQuery({
+    queryKey: ['vivacity-team-users'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('users')
+        .select('user_uuid, first_name, last_name, email')
+        .eq('user_type', 'Vivacity Team')
+        .order('first_name');
+      if (error) throw error;
+      return data || [];
+    }
+  });
+}
+
+// Vivacity Team dropdown preview component with smart search
+function VivacityTeamDropdownPreview() {
+  const { data: users, isLoading } = useVivacityTeamUsers();
+  const [selectedUser, setSelectedUser] = useState<string>('');
+  const userOptions: ComboboxOption[] = useMemo(() => {
+    if (!users) return [];
+    return users.map(user => ({
+      value: user.user_uuid,
+      label: `${user.first_name || ''} ${user.last_name || ''}`.trim() || user.email || 'Unknown User',
+      group: (user.first_name || 'Other').charAt(0).toUpperCase()
+    }));
+  }, [users]);
+  return <Combobox options={userOptions} value={selectedUser} onValueChange={setSelectedUser} placeholder={isLoading ? "Loading team members..." : "Search Vivacity Team..."} searchPlaceholder="Type to search team members..." emptyText="No team members found." disabled={isLoading} className="bg-muted/50 border-dashed" />;
+}
 interface ResponseSet {
   id: string;
   name: string;
@@ -124,8 +155,8 @@ const questionTypes: QuestionType[] = [{
   color: 'text-cyan-500',
   category: 'title_page'
 }, {
-  id: 'company',
-  label: 'Company',
+  id: 'vivacity_team',
+  label: 'Vivacity Team',
   icon: Building,
   color: 'text-blue-600',
   category: 'title_page'
@@ -236,8 +267,8 @@ function SortableQuestionCard({
         return 'Enter a number...';
       case 'clients':
         return 'Select a client...';
-      case 'company':
-        return 'Enter company name...';
+      case 'vivacity_team':
+        return 'Select a team member...';
       case 'documents':
         return 'Select a document...';
       case 'asset':
@@ -258,8 +289,9 @@ function SortableQuestionCard({
         return <ClientsDropdownPreview />;
       case 'documents':
         return <DocumentsDropdownPreview />;
+      case 'vivacity_team':
+        return <VivacityTeamDropdownPreview />;
       case 'text_answer':
-      case 'company':
       case 'asset':
         return <Input placeholder={question.placeholder || getPlaceholderByType(question.question_type)} className="bg-muted/50 border-dashed" />;
       case 'number':
@@ -872,7 +904,7 @@ export default function AuditTemplateBuilder() {
             <div className="p-4">
               {/* Title page information */}
               <div className="mb-6">
-                <h3 className="text-sm font-medium text-primary mb-3">Title page information</h3>
+                <h3 className="text-sm font-medium text-primary mb-3">System Responses</h3>
                 <div className="space-y-1">
                   {titlePageTypes.map(type => {
                   const Icon = type.icon;
