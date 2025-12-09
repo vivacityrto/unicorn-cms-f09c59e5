@@ -878,145 +878,181 @@ export default function AuditTemplateBuilder() {
 
       {/* Create Response Set Dialog */}
       <Dialog open={isCreateResponseSetOpen} onOpenChange={setIsCreateResponseSetOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Create Response Set</DialogTitle>
-            <DialogDescription>
-              Create a reusable response template for your audits.
-            </DialogDescription>
-          </DialogHeader>
-          
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="response-set-name">Name</Label>
-              <Input id="response-set-name" placeholder="e.g., Risk Assessment, Pass/Fail" value={newResponseSetName} onChange={e => setNewResponseSetName(e.target.value)} />
-            </div>
+        <DialogPortal>
+          <DialogOverlay className="z-[70] bg-black/70" />
+          <DialogPrimitive.Content className={cn("fixed left-[50%] top-[50%] z-[70] flex flex-col w-full sm:max-w-[500px] max-w-[90vw] max-h-[85vh] translate-x-[-50%] translate-y-[-50%] gap-4 overflow-hidden scrollbar-hide border bg-background p-6 shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%] sm:rounded-lg")}>
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2 text-xl">
+                <Plus className="h-5 w-5" />
+                Create Response Set
+              </DialogTitle>
+              <DialogDescription>
+                Create a reusable response template for your audits.
+              </DialogDescription>
+            </DialogHeader>
+            
+            <Separator />
+            
+            <div className="overflow-y-auto scrollbar-hide flex-1 space-y-5 py-2 px-1">
+              <div className="space-y-2">
+                <Label htmlFor="response-set-name" className="text-sm font-medium">Name</Label>
+                <Input 
+                  id="response-set-name" 
+                  placeholder="e.g., Risk Assessment, Pass/Fail" 
+                  value={newResponseSetName} 
+                  onChange={e => setNewResponseSetName(e.target.value)} 
+                  className="bg-background"
+                />
+              </div>
 
-            <div className="space-y-2">
-              <Label>Response Type</Label>
-              <select 
-                value={newResponseSetType} 
-                onChange={e => setNewResponseSetType(e.target.value as 'multiple_choice' | 'text_answer' | 'number' | 'checkbox' | 'date_time' | 'slider')}
-                className="w-full h-9 rounded-md border border-input bg-background px-3 py-1 text-sm"
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">Response Type</Label>
+                <Combobox 
+                  options={[
+                    { value: 'multiple_choice', label: 'Multiple Choice', group: 'Response Types' },
+                    { value: 'text_answer', label: 'Text Answer', group: 'Response Types' },
+                    { value: 'number', label: 'Number', group: 'Response Types' },
+                    { value: 'checkbox', label: 'Checkbox', group: 'Response Types' },
+                    { value: 'date_time', label: 'Date & Time', group: 'Response Types' },
+                    { value: 'slider', label: 'Slider', group: 'Response Types' },
+                  ]}
+                  value={newResponseSetType}
+                  onValueChange={(val) => setNewResponseSetType(val as typeof newResponseSetType)}
+                  placeholder="Select response type..."
+                  searchPlaceholder="Search types..."
+                  emptyText="No type found."
+                  className="bg-background"
+                />
+              </div>
+              
+              {newResponseSetType === 'multiple_choice' && (
+                <div className="space-y-3">
+                  <Label className="text-sm font-medium">Options</Label>
+                  <div className="space-y-2 border rounded-lg p-3 bg-muted/20">
+                    {newResponseSetOptions.map((option, idx) => (
+                      <div key={idx} className="flex items-center gap-2">
+                        <Input 
+                          value={option.label} 
+                          onChange={e => {
+                            const updated = [...newResponseSetOptions];
+                            updated[idx] = { ...updated[idx], label: e.target.value };
+                            setNewResponseSetOptions(updated);
+                          }} 
+                          placeholder="Option label" 
+                          className="flex-1 bg-background" 
+                        />
+                        <Combobox 
+                          options={[
+                            { value: 'bg-green-500', label: 'Green' },
+                            { value: 'bg-red-500', label: 'Red' },
+                            { value: 'bg-yellow-500', label: 'Yellow' },
+                            { value: 'bg-blue-500', label: 'Blue' },
+                            { value: 'bg-purple-500', label: 'Purple' },
+                            { value: 'bg-orange-500', label: 'Orange' },
+                            { value: 'bg-muted', label: 'Gray' },
+                          ]}
+                          value={option.color || 'bg-muted'}
+                          onValueChange={(val) => {
+                            const updated = [...newResponseSetOptions];
+                            updated[idx] = { ...updated[idx], color: val };
+                            setNewResponseSetOptions(updated);
+                          }}
+                          placeholder="Color"
+                          className="w-[110px] bg-background"
+                        />
+                        {newResponseSetOptions.length > 1 && (
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10" 
+                            onClick={() => setNewResponseSetOptions(prev => prev.filter((_, i) => i !== idx))}
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </div>
+                    ))}
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="w-full mt-2 hover:bg-[hsl(196deg_100%_93.53%)] hover:text-black" 
+                      onClick={() => setNewResponseSetOptions(prev => [...prev, { label: `Option ${prev.length + 1}`, color: 'bg-muted' }])}
+                    >
+                      <Plus className="h-4 w-4 mr-1" />
+                      Add Option
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {newResponseSetType === 'slider' && (
+                <div className="space-y-3">
+                  <Label className="text-sm font-medium">Slider Range</Label>
+                  <div className="flex items-center gap-3 border rounded-lg p-3 bg-muted/20">
+                    <Input type="number" placeholder="Min" defaultValue="0" className="flex-1 bg-background" />
+                    <span className="text-muted-foreground text-sm">to</span>
+                    <Input type="number" placeholder="Max" defaultValue="100" className="flex-1 bg-background" />
+                  </div>
+                </div>
+              )}
+
+              {(newResponseSetType === 'text_answer' || newResponseSetType === 'number' || newResponseSetType === 'checkbox' || newResponseSetType === 'date_time') && (
+                <div className="rounded-lg border border-dashed p-4 bg-muted/20">
+                  <p className="text-sm text-muted-foreground text-center">
+                    {newResponseSetType === 'text_answer' && 'Text answer will allow free-form text input'}
+                    {newResponseSetType === 'number' && 'Number input will allow numeric values only'}
+                    {newResponseSetType === 'checkbox' && 'Checkbox will allow yes/no or checked/unchecked responses'}
+                    {newResponseSetType === 'date_time' && 'Date & Time picker for scheduling or recording dates'}
+                  </p>
+                </div>
+              )}
+            </div>
+            
+            <Separator />
+            
+            <DialogFooter className="gap-2">
+              <Button 
+                variant="outline" 
+                onClick={() => setIsCreateResponseSetOpen(false)}
+                className="hover:bg-[hsl(196deg_100%_93.53%)] hover:text-black"
               >
-                <option value="multiple_choice">Multiple Choice</option>
-                <option value="text_answer">Text Answer</option>
-                <option value="number">Number</option>
-                <option value="checkbox">Checkbox</option>
-                <option value="date_time">Date & Time</option>
-                <option value="slider">Slider</option>
-              </select>
-            </div>
-            
-            {newResponseSetType === 'multiple_choice' && (
-              <div className="space-y-2">
-                <Label>Options</Label>
-                <div className="space-y-2">
-                  {newResponseSetOptions.map((option, idx) => <div key={idx} className="flex items-center gap-2">
-                      <Input value={option.label} onChange={e => {
-                    const updated = [...newResponseSetOptions];
-                    updated[idx] = {
-                      ...updated[idx],
-                      label: e.target.value
-                    };
-                    setNewResponseSetOptions(updated);
-                  }} placeholder="Option label" className="flex-1" />
-                      <select value={option.color || 'bg-muted'} onChange={e => {
-                    const updated = [...newResponseSetOptions];
-                    updated[idx] = {
-                      ...updated[idx],
-                      color: e.target.value
-                    };
-                    setNewResponseSetOptions(updated);
-                  }} className="h-9 rounded-md border border-input bg-background px-3 py-1 text-sm">
-                        <option value="bg-green-500">Green</option>
-                        <option value="bg-red-500">Red</option>
-                        <option value="bg-yellow-500">Yellow</option>
-                        <option value="bg-blue-500">Blue</option>
-                        <option value="bg-purple-500">Purple</option>
-                        <option value="bg-orange-500">Orange</option>
-                        <option value="bg-muted">Gray</option>
-                      </select>
-                      {newResponseSetOptions.length > 1 && <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10" onClick={() => {
-                    setNewResponseSetOptions(prev => prev.filter((_, i) => i !== idx));
-                  }}>
-                          <X className="h-4 w-4" />
-                        </Button>}
-                    </div>)}
-                </div>
-                <Button variant="outline" size="sm" className="w-full mt-2" onClick={() => {
-                setNewResponseSetOptions(prev => [...prev, {
-                  label: `Option ${prev.length + 1}`,
-                  color: 'bg-muted'
-                }]);
-              }}>
-                  <Plus className="h-4 w-4 mr-1" />
-                  Add Option
-                </Button>
-              </div>
-            )}
-
-            {newResponseSetType === 'slider' && (
-              <div className="space-y-2">
-                <Label>Slider Range</Label>
-                <div className="flex items-center gap-2">
-                  <Input type="number" placeholder="Min (e.g., 0)" defaultValue="0" className="flex-1" />
-                  <span className="text-muted-foreground">to</span>
-                  <Input type="number" placeholder="Max (e.g., 100)" defaultValue="100" className="flex-1" />
-                </div>
-              </div>
-            )}
-
-            {(newResponseSetType === 'text_answer' || newResponseSetType === 'number' || newResponseSetType === 'checkbox' || newResponseSetType === 'date_time') && (
-              <div className="rounded-lg border border-dashed p-4 bg-muted/30">
-                <p className="text-sm text-muted-foreground text-center">
-                  {newResponseSetType === 'text_answer' && 'Text answer will allow free-form text input'}
-                  {newResponseSetType === 'number' && 'Number input will allow numeric values only'}
-                  {newResponseSetType === 'checkbox' && 'Checkbox will allow yes/no or checked/unchecked responses'}
-                  {newResponseSetType === 'date_time' && 'Date & Time picker for scheduling or recording dates'}
-                </p>
-              </div>
-            )}
-          </div>
-          
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsCreateResponseSetOpen(false)}>
-              Cancel
-            </Button>
-            <Button onClick={async () => {
-            if (!newResponseSetName.trim()) {
-              toast.error('Please enter a name for the response set');
-              return;
-            }
-            if (newResponseSetType === 'multiple_choice' && newResponseSetOptions.length < 2) {
-              toast.error('Please add at least 2 options for multiple choice');
-              return;
-            }
-            
-            const optionsToSave = newResponseSetType === 'multiple_choice' 
-              ? newResponseSetOptions 
-              : [{ label: newResponseSetType, color: 'bg-muted' }];
-            
-            await createReusableTemplate.mutateAsync({
-              name: newResponseSetName,
-              description: `Type: ${newResponseSetType}`,
-              options: optionsToSave
-            });
-            setIsCreateResponseSetOpen(false);
-            setNewResponseSetName('');
-            setNewResponseSetType('multiple_choice');
-            setNewResponseSetOptions([{
-              label: 'Option 1',
-              color: 'bg-green-500'
-            }, {
-              label: 'Option 2',
-              color: 'bg-red-500'
-            }]);
-          }} disabled={createReusableTemplate.isPending}>
-              {createReusableTemplate.isPending ? 'Creating...' : 'Create'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
+                Cancel
+              </Button>
+              <Button 
+                onClick={async () => {
+                  if (!newResponseSetName.trim()) {
+                    toast.error('Please enter a name for the response set');
+                    return;
+                  }
+                  if (newResponseSetType === 'multiple_choice' && newResponseSetOptions.length < 2) {
+                    toast.error('Please add at least 2 options for multiple choice');
+                    return;
+                  }
+                  
+                  const optionsToSave = newResponseSetType === 'multiple_choice' 
+                    ? newResponseSetOptions 
+                    : [{ label: newResponseSetType, color: 'bg-muted' }];
+                  
+                  await createReusableTemplate.mutateAsync({
+                    name: newResponseSetName,
+                    description: `Type: ${newResponseSetType}`,
+                    options: optionsToSave
+                  });
+                  setIsCreateResponseSetOpen(false);
+                  setNewResponseSetName('');
+                  setNewResponseSetType('multiple_choice');
+                  setNewResponseSetOptions([
+                    { label: 'Option 1', color: 'bg-green-500' }, 
+                    { label: 'Option 2', color: 'bg-red-500' }
+                  ]);
+                }} 
+                disabled={createReusableTemplate.isPending}
+              >
+                {createReusableTemplate.isPending ? 'Creating...' : 'Create'}
+              </Button>
+            </DialogFooter>
+          </DialogPrimitive.Content>
+        </DialogPortal>
       </Dialog>
     </div>;
 }
