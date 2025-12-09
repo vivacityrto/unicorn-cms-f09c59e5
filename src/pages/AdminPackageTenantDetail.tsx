@@ -124,7 +124,7 @@ export default function AdminPackageTenantDetail() {
                         </AvatarFallback>
                       </Avatar>
                       <div>
-                        <p className="text-sm font-medium">{tenantContact.name}</p>
+                        
                         <p className="text-xs text-muted-foreground">Primary Contact</p>
                       </div>
                     </div>}
@@ -137,10 +137,10 @@ export default function AdminPackageTenantDetail() {
                     <div>
                       <p className="text-sm font-medium">
                         {new Date(tenantInfo.created_at).toLocaleDateString('en-AU', {
-                      day: '2-digit',
-                      month: 'short',
-                      year: 'numeric'
-                    })}
+                    day: '2-digit',
+                    month: 'short',
+                    year: 'numeric'
+                  })}
                       </p>
                       <p className="text-xs text-muted-foreground">Member Since</p>
                     </div>
