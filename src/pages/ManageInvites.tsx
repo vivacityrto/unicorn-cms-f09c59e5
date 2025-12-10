@@ -297,21 +297,19 @@ export default function ManageInvites() {
     pending: invites.filter(i => {
       const isExpired = i.expires_at && new Date(i.expires_at) < new Date();
       const userStatus = userStatuses.get(i.email);
-      const hasSignedIn = userStatus && userStatus.last_sign_in_at;
-      // Pending = (status 'pending' and NOT expired) OR status 'sent', AND user hasn't signed in
-      return ((i.status === 'pending' && !isExpired) || i.status === 'sent') && !hasSignedIn;
+      // Pending = not expired AND user hasn't registered yet
+      return !isExpired && !userStatus;
     }).length,
     expired: invites.filter(i => {
       const isExpired = i.expires_at && new Date(i.expires_at) < new Date();
       const userStatus = userStatuses.get(i.email);
-      const hasSignedIn = userStatus && userStatus.last_sign_in_at;
-      // Expired = (status 'expired' OR pending+expired) AND user hasn't signed in
-      return (i.status === 'expired' || (isExpired && i.status === 'pending')) && !hasSignedIn;
+      // Expired = past expiry AND user hasn't registered
+      return isExpired && !userStatus;
     }).length,
     verified: invites.filter(i => {
-      // Verified = user has signed in (completed the invite process)
+      // Verified = user exists in users table (they've registered)
       const userStatus = userStatuses.get(i.email);
-      return userStatus && userStatus.last_sign_in_at;
+      return !!userStatus;
     }).length,
   };
 
