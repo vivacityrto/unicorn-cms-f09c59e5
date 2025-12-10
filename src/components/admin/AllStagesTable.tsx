@@ -143,7 +143,8 @@ export function AllStagesTable() {
                         
                         <div>
                           <p className="font-medium text-foreground">{stage.package_name}</p>
-                          {stage.package_full_text && <p className="text-xs text-muted-foreground truncate max-w-[200px]">
+                          {stage.package_full_text && <p className="text-xs text-muted-foreground truncate max-w-[200px] pt-[10px] flex items-center gap-1">
+                              <FileText className="h-3 w-3" />
                               {stage.package_full_text}
                             </p>}
                         </div>
