@@ -130,7 +130,7 @@ export function AllStagesTable() {
                       <div className="flex items-center gap-2">
                         
                       <div>
-                          <p className="font-semibold text-foreground">{stage.stage_name}</p>
+                          <p className="font-semibold text-foreground pb-[5px]">{stage.stage_name}</p>
                           {stage.created_at && (
                             <p className="text-xs text-muted-foreground flex items-center gap-1">
                               <Calendar className="h-3 w-3" />
