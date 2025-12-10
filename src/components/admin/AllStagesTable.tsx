@@ -233,7 +233,7 @@ export function AllStagesTable() {
                 </p>
               </TableCell>
               <TableCell className="py-6 border-r border-border/50 min-w-[200px]">
-                <p className="text-sm text-muted-foreground whitespace-nowrap truncate max-w-[250px]">
+                <p className="text-sm text-muted-foreground line-clamp-2 max-w-[300px]">
                   {stage.description || '-'}
                 </p>
               </TableCell>

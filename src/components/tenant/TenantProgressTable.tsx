@@ -84,11 +84,11 @@ export default function TenantProgressTable({
       const {
         data,
         error
-      } = await supabase.from('package_stages').select('id, stage_name, short_name, stage_description, video_url, order_number, is_active').eq('package_id', packageId).eq('is_active', true).order('order_number', {
+      } = await (supabase.from('package_stages' as any).select('id, stage_name, short_name, stage_description, video_url, order_number, is_active').eq('package_id', packageId).eq('is_active', true).order('order_number', {
         ascending: true
-      });
+      }) as any);
       if (error) throw error;
-      const mappedStages: Stage[] = (data || []).map((stage, index) => ({
+      const mappedStages: Stage[] = (data || []).map((stage: any, index: number) => ({
         id: stage.order_number || index + 1,
         name: stage.stage_name || 'Unnamed Stage',
         status: "Not Started" as const,

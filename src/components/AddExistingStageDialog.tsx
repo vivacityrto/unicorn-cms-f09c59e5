@@ -52,13 +52,13 @@ export function AddExistingStageDialog({
     if (!packageId) return;
     
     try {
-      const { data, error } = await supabase
-        .from('package_stages')
+      const { data, error } = await (supabase
+        .from('package_stages' as any)
         .select('id')
-        .eq('package_id', packageId);
+        .eq('package_id', packageId) as any);
 
       if (error) throw error;
-      setCurrentStageIds(data?.map(s => s.id) || []);
+      setCurrentStageIds(data?.map((s: any) => s.id) || []);
     } catch (error: any) {
       console.error('Error fetching current stages:', error);
     }
@@ -69,15 +69,15 @@ export function AddExistingStageDialog({
       setLoading(true);
       
       // Fetch all stages from package_stages with joined documents_stages data
-      const { data: stagesData, error } = await supabase
-        .from('package_stages')
+      const { data: stagesData, error } = await (supabase
+        .from('package_stages' as any)
         .select('id, package_id, stage_id, order_number, documents_stages(id, title, short_name)')
-        .order('order_number');
+        .order('order_number') as any);
 
       if (error) throw error;
 
       // Get unique package IDs to fetch package names and full_text
-      const packageIds = [...new Set(stagesData?.map(s => s.package_id) || [])];
+      const packageIds = [...new Set(stagesData?.map((s: any) => s.package_id) || [])] as number[];
       
       const { data: packagesData, error: packagesError } = await supabase
         .from('packages')
@@ -87,7 +87,7 @@ export function AddExistingStageDialog({
       if (packagesError) throw packagesError;
 
       // Fetch document counts for each stage
-      const stageIds = stagesData?.map(s => s.id) || [];
+      const stageIds = stagesData?.map((s: any) => s.id) || [];
       const { data: documentCounts, error: docError } = await supabase
         .from('package_documents')
         .select('stage_id')
@@ -140,15 +140,15 @@ export function AddExistingStageDialog({
 
     try {
       // Insert the new stage with the stage_id reference
-      const { data: newStage, error: stageError } = await supabase
-        .from('package_stages')
+      const { data: newStage, error: stageError } = await (supabase
+        .from('package_stages' as any)
         .insert({
           package_id: packageId,
           stage_id: confirmStage.stage_id,
           stage_name: confirmStage.stage_name,
-        } as any)
+        })
         .select()
-        .single();
+        .single() as any);
 
       if (stageError) throw stageError;
 

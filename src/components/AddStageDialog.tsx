@@ -90,14 +90,14 @@ export function AddStageDialog({
         // Update existing stage
         const {
           error
-        } = await supabase.from('package_stages').update({
+        } = await (supabase.from('package_stages' as any).update({
           stage_name: formData.stage_name,
           short_name: formData.short_name || null,
           stage_description: formData.stage_description || null,
           video_url: formData.video_url || null,
           order_number: formData.order_number,
           is_active: formData.is_active
-        } as any).eq('id', stageData.id);
+        }).eq('id', stageData.id) as any);
         if (error) throw error;
         toast({
           title: "Success",
@@ -119,7 +119,7 @@ export function AddStageDialog({
         if (stageError) throw stageError;
         
         // Link to package - this is a dependent operation so must be sequential
-        const { error } = await supabase.from('package_stages').insert({
+        const { error } = await (supabase.from('package_stages' as any).insert({
           package_id: packageId,
           stage_id: newStage.id,
           stage_name: formData.stage_name,
@@ -128,7 +128,7 @@ export function AddStageDialog({
           video_url: formData.video_url || null,
           order_number: formData.order_number,
           is_active: formData.is_active
-        } as any);
+        }) as any);
         if (error) throw error;
         toast({
           title: "Success",
