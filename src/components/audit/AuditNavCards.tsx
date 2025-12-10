@@ -1,4 +1,5 @@
 import { FileText, ClipboardCheck, Calendar, BarChart3 } from 'lucide-react';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 
 interface AuditNavCardsProps {
@@ -18,35 +19,30 @@ const navItems = [
     label: 'Templates',
     description: 'Audit question banks',
     icon: FileText,
+    color: 'text-primary',
   },
   {
     id: 'inspections' as const,
     label: 'Inspections',
     description: 'Active & completed',
     icon: ClipboardCheck,
+    color: 'text-green-500',
   },
   {
     id: 'schedules' as const,
     label: 'Schedules',
     description: 'Upcoming audits',
     icon: Calendar,
+    color: 'text-yellow-500',
   },
   {
     id: 'analytics' as const,
     label: 'Analytics',
     description: 'Reports & insights',
     icon: BarChart3,
+    color: 'text-red-500',
   },
 ];
-
-const cardStyle = {
-  circleColor: 'bg-gray-400/15',
-  iconBg: 'bg-gradient-to-br from-gray-600 to-gray-800',
-  shadowColor: 'shadow-gray-200/50',
-  activeBorder: 'ring-primary',
-  activeCircleColor: 'bg-primary/15',
-  activeIconBg: 'bg-gradient-to-br from-primary to-blue-600',
-};
 
 export function AuditNavCards({ activeTab, onTabChange, counts }: AuditNavCardsProps) {
   return (
@@ -57,64 +53,26 @@ export function AuditNavCards({ activeTab, onTabChange, counts }: AuditNavCardsP
         const count = counts?.[item.id] ?? 0;
 
         return (
-          <button
+          <Card
             key={item.id}
             className={cn(
-              'group relative text-left rounded-2xl p-5 overflow-hidden',
-              'animate-scale-in transition-all duration-300',
-              'bg-card border border-border',
-              'shadow-md',
-              cardStyle.shadowColor,
+              'animate-scale-in cursor-pointer transition-all',
               isActive 
-                ? `scale-[1.02] shadow-lg ring-2 ${cardStyle.activeBorder}` 
-                : 'hover:scale-[1.02] hover:shadow-lg'
+                ? 'ring-2 ring-primary shadow-lg' 
+                : 'hover:shadow-lg'
             )}
-            style={{ animationDelay: `${index * 75}ms` }}
+            style={{ animationDelay: `${index * 50}ms` }}
             onClick={() => onTabChange(item.id)}
           >
-            {/* Decorative circles with color */}
-            <div className={cn(
-              'absolute top-0 right-0 w-24 h-24 rounded-full -translate-y-8 translate-x-8 transition-colors duration-300',
-              isActive ? cardStyle.activeCircleColor : cardStyle.circleColor
-            )} />
-            <div className={cn(
-              'absolute bottom-0 left-0 w-16 h-16 rounded-full translate-y-6 -translate-x-6 transition-colors duration-300',
-              isActive ? cardStyle.activeCircleColor : cardStyle.circleColor
-            )} />
-            
-            {/* Content */}
-            <div className="relative z-10">
-              <div className="flex items-start justify-between mb-4">
-                <div className={cn(
-                  'p-2 rounded-xl text-white transition-all duration-300',
-                  isActive ? cardStyle.activeIconBg : cardStyle.iconBg
-                )}>
-                  <Icon className="h-5 w-5" />
-                </div>
-                <span className={cn(
-                  'text-4xl font-bold tracking-tight transition-colors duration-300',
-                  isActive ? 'text-primary' : 'text-foreground'
-                )}>
-                  {count}
-                </span>
-              </div>
-              
-              <h3 className={cn(
-                'text-base font-semibold mb-0.5 transition-colors duration-300',
-                isActive ? 'text-primary' : 'text-foreground'
-              )}>
-                {item.label}
-              </h3>
-              <p className="text-sm text-muted-foreground">
-                {item.description}
-              </p>
-            </div>
-
-            {/* Active indicator dot */}
-            {isActive && (
-              <div className={cn('absolute top-3 right-3 w-2 h-2 rounded-full animate-pulse', cardStyle.activeIconBg)} />
-            )}
-          </button>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">{item.label}</CardTitle>
+              <Icon className={cn('h-[22px] w-[22px]', item.color)} />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{count}</div>
+              <p className="text-xs text-muted-foreground">{item.description}</p>
+            </CardContent>
+          </Card>
         );
       })}
     </div>
