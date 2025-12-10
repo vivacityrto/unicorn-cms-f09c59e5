@@ -154,7 +154,7 @@ export function AllStagesTable() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredStages.map((stage, index) => <TableRow key={stage.id} onClick={() => navigate(`/admin/package/${stage.package_id}`)} className={`group transition-all duration-200 border-b border-border/50 ${index % 2 === 0 ? "bg-background" : "bg-muted/20"} hover:bg-primary/5 animate-fade-in cursor-pointer`}>
+              {filteredStages.map((stage, index) => <TableRow key={stage.id} onClick={() => { setSelectedStage(stage); setEditDialogOpen(true); }} className={`group transition-all duration-200 border-b border-border/50 ${index % 2 === 0 ? "bg-background" : "bg-muted/20"} hover:bg-primary/5 animate-fade-in cursor-pointer`}>
                     <TableCell className="py-6 border-r border-border/50 min-w-[200px]">
                       <div className="flex items-center gap-2">
                         
