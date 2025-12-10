@@ -93,7 +93,7 @@ export function AuditNavCards({ activeTab, onTabChange, counts }: AuditNavCardsP
             {/* Active indicator bar */}
             <div 
               className={cn(
-                'absolute top-0 left-0 right-0 h-1 bg-gradient-to-r transition-transform duration-300 origin-left',
+                'absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r transition-transform duration-300 origin-left',
                 item.gradient,
                 isActive ? 'scale-x-100' : 'scale-x-0 group-hover:scale-x-100'
               )}
