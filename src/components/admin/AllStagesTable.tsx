@@ -5,9 +5,12 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Search, Layers, FileText, Calendar } from "lucide-react";
+import { Search, Layers, FileText, Calendar, Pencil, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 import { useNavigate } from "react-router-dom";
+import { AddStageDialog } from "@/components/AddStageDialog";
+import { useToast } from "@/hooks/use-toast";
+import { Button } from "@/components/ui/button";
 interface StageWithPackage {
   id: number;
   stage_name: string;
@@ -22,9 +25,12 @@ interface StageWithPackage {
 }
 export function AllStagesTable() {
   const navigate = useNavigate();
+  const { toast } = useToast();
   const [stages, setStages] = useState<StageWithPackage[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [selectedStage, setSelectedStage] = useState<StageWithPackage | null>(null);
   useEffect(() => {
     fetchAllStages();
   }, []);
@@ -90,6 +96,26 @@ export function AllStagesTable() {
     }
   };
   const filteredStages = stages.filter(stage => stage.stage_name.toLowerCase().includes(searchQuery.toLowerCase()) || stage.package_name.toLowerCase().includes(searchQuery.toLowerCase()) || (stage.package_full_text?.toLowerCase().includes(searchQuery.toLowerCase()) ?? false));
+
+  const handleEditClick = (e: React.MouseEvent, stage: StageWithPackage) => {
+    e.stopPropagation();
+    setSelectedStage(stage);
+    setEditDialogOpen(true);
+  };
+
+  const handleDeleteClick = async (e: React.MouseEvent, stage: StageWithPackage) => {
+    e.stopPropagation();
+    if (!confirm(`Are you sure you want to delete "${stage.stage_name}"?`)) return;
+    
+    try {
+      const { error } = await supabase.from('package_stages').delete().eq('id', stage.id);
+      if (error) throw error;
+      toast({ title: "Success", description: "Stage deleted successfully" });
+      fetchAllStages();
+    } catch (error: any) {
+      toast({ title: "Error", description: error.message || "Failed to delete stage", variant: "destructive" });
+    }
+  };
   if (loading) {
     return <div className="space-y-4">
         <Skeleton className="h-10 w-full max-w-sm" />
@@ -124,6 +150,7 @@ export function AllStagesTable() {
                   <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-border/50">Stage Description</TableHead>
                   <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-border/50 text-center">Documents</TableHead>
                   <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-border/50 text-center">Status</TableHead>
+                  <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-border/50 text-center">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -163,15 +190,41 @@ export function AllStagesTable() {
                         <span>{stage.document_count}</span>
                       </Badge>
                     </TableCell>
-                    <TableCell className="py-6 text-center">
+                    <TableCell className="py-6 border-r border-border/50 text-center">
                       <Badge variant={stage.is_active ? "default" : "secondary"} className="capitalize">
                         {stage.is_active ? 'Active' : 'Inactive'}
                       </Badge>
+                    </TableCell>
+                    <TableCell className="py-6 text-center">
+                      <div className="flex items-center justify-center gap-2">
+                        <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-primary/10" onClick={(e) => handleEditClick(e, stage)}>
+                          <Pencil className="h-4 w-4 text-muted-foreground" />
+                        </Button>
+                        <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-destructive/10" onClick={(e) => handleDeleteClick(e, stage)}>
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>)}
               </TableBody>
             </Table>
           </CardContent>
         </Card>}
+
+      <AddStageDialog
+        open={editDialogOpen}
+        onOpenChange={setEditDialogOpen}
+        onSuccess={fetchAllStages}
+        packageId={selectedStage?.package_id}
+        stageData={selectedStage ? {
+          id: selectedStage.id,
+          stage_name: selectedStage.stage_name,
+          short_name: null,
+          stage_description: selectedStage.stage_description,
+          video_url: null,
+          order_number: selectedStage.order_number,
+          is_active: selectedStage.is_active
+        } : null}
+      />
     </div>;
 }
