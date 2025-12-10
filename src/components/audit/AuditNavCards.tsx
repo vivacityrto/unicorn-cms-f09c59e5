@@ -1,5 +1,5 @@
 import { Card, CardContent } from '@/components/ui/card';
-import { FileText, ClipboardCheck, Calendar, BarChart3, ArrowRight } from 'lucide-react';
+import { FileText, ClipboardCheck, Calendar, BarChart3 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface AuditNavCardsProps {
@@ -119,21 +119,11 @@ export function AuditNavCards({ activeTab, onTabChange, counts }: AuditNavCardsP
                   />
                 </div>
                 
-                {/* Arrow indicator */}
-                <ArrowRight 
-                  className={cn(
-                    'h-4 w-4 text-muted-foreground/50 transition-all duration-300',
-                    'opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0',
-                    isActive && 'opacity-100 translate-x-0'
-                  )}
-                />
-              </div>
-
-              {/* Count with animated number */}
-              <div className="mb-1">
+                {/* Count on opposite side */}
                 <span 
                   className={cn(
-                    'text-3xl font-bold tracking-tight transition-colors duration-300',
+                    'text-3xl font-bold tracking-tight transition-all duration-300',
+                    'group-hover:scale-105',
                     isActive ? 'text-foreground' : 'text-foreground/80'
                   )}
                 >
