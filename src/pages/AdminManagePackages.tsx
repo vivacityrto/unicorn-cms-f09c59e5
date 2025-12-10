@@ -6,9 +6,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { Search, Plus, Trash2, FileText, Archive, X, GripVertical, Calendar as CalendarIcon, Layers, Edit, ChevronDown } from "lucide-react";
+import { Search, Plus, Trash2, FileText, Archive, X, GripVertical, Calendar as CalendarIcon, Layers, Edit, ChevronDown, Package, CheckCircle2, Clock } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { AddPackageDialog } from "@/components/AddPackageDialog";
 import { AddStageDialog } from "@/components/AddStageDialog";
@@ -505,6 +505,53 @@ export default function AdminManagePackages() {
           <Plus className="h-4 w-4 mr-2" />
           Add Package
         </Button>
+      </div>
+
+      {/* Stat Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <Card className="animate-scale-in cursor-pointer hover:shadow-lg transition-all" style={{ animationDelay: "0ms" }}>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Packages</CardTitle>
+            <Package className="h-[22px] w-[22px] text-primary" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{packages.length}</div>
+            <p className="text-xs text-muted-foreground">All packages in system</p>
+          </CardContent>
+        </Card>
+
+        <Card className="animate-scale-in cursor-pointer hover:shadow-lg transition-all" style={{ animationDelay: "50ms" }}>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Active</CardTitle>
+            <CheckCircle2 className="h-[22px] w-[22px] text-green-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{packages.filter(p => p.status === 'active').length}</div>
+            <p className="text-xs text-muted-foreground">Active packages</p>
+          </CardContent>
+        </Card>
+
+        <Card className="animate-scale-in cursor-pointer hover:shadow-lg transition-all" style={{ animationDelay: "100ms" }}>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Stages</CardTitle>
+            <Layers className="h-[22px] w-[22px] text-yellow-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{packages.reduce((sum, p) => sum + (p.stages_count || 0), 0)}</div>
+            <p className="text-xs text-muted-foreground">Across all packages</p>
+          </CardContent>
+        </Card>
+
+        <Card className="animate-scale-in cursor-pointer hover:shadow-lg transition-all" style={{ animationDelay: "150ms" }}>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Draft</CardTitle>
+            <Clock className="h-[22px] w-[22px] text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{packages.filter(p => p.status !== 'active').length}</div>
+            <p className="text-xs text-muted-foreground">Inactive packages</p>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Search */}
