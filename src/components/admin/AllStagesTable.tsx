@@ -5,7 +5,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Search, Layers, FileText, Calendar, Pencil, Trash2 } from "lucide-react";
+import { Search, Layers, FileText, Calendar, Pencil, Trash2, CheckCircle, XCircle } from "lucide-react";
 import { format } from "date-fns";
 import { useNavigate } from "react-router-dom";
 import { AddStageDialog } from "@/components/AddStageDialog";
@@ -191,7 +191,19 @@ export function AllStagesTable() {
                       </Badge>
                     </TableCell>
                     <TableCell className="py-6 border-r border-border/50 text-center">
-                      <Badge variant={stage.is_active ? "default" : "secondary"} className="capitalize">
+                      <Badge 
+                        variant="outline" 
+                        className={`capitalize flex items-center gap-1.5 w-fit mx-auto ${
+                          stage.is_active 
+                            ? "bg-green-500/10 text-green-600 hover:bg-green-500/20 border-green-600" 
+                            : "bg-red-500/10 text-red-600 hover:bg-red-500/20 border-red-600"
+                        } text-[0.75rem] py-[2px] px-[0.625rem] rounded-[11px]`}
+                      >
+                        {stage.is_active ? (
+                          <CheckCircle className="h-3.5 w-3.5" />
+                        ) : (
+                          <XCircle className="h-3.5 w-3.5" />
+                        )}
                         {stage.is_active ? 'Active' : 'Inactive'}
                       </Badge>
                     </TableCell>
