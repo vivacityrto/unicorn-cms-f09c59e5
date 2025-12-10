@@ -8,7 +8,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { Search, Plus, Trash2, FileText, Archive, X, GripVertical, Calendar as CalendarIcon, Layers, Edit, ChevronDown, Package, CheckCircle2, Clock } from "lucide-react";
+import { Search, Plus, Trash2, FileText, Archive, X, GripVertical, Calendar as CalendarIcon, Layers, Edit, ChevronDown, Package, CheckCircle2, Clock, XCircle } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { AddPackageDialog } from "@/components/AddPackageDialog";
 import { AddStageDialog } from "@/components/AddStageDialog";
@@ -637,7 +637,19 @@ export default function AdminManagePackages() {
                       </p>
                     </TableCell>
                     <TableCell className="py-6 border-r border-border/50 min-w-[140px]">
-                      <Badge variant={pkg.status === "active" ? "default" : "secondary"} className="capitalize">
+                      <Badge 
+                        variant="outline" 
+                        className={`capitalize flex items-center gap-1.5 w-fit ${
+                          pkg.status === "active" 
+                            ? "bg-green-500/10 text-green-600 hover:bg-green-500/20 border-green-600" 
+                            : "bg-red-500/10 text-red-600 hover:bg-red-500/20 border-red-600"
+                        } text-[0.75rem] py-[2px] px-[0.625rem] rounded-[11px]`}
+                      >
+                        {pkg.status === "active" ? (
+                          <CheckCircle2 className="h-3.5 w-3.5" />
+                        ) : (
+                          <XCircle className="h-3.5 w-3.5" />
+                        )}
                         {pkg.status}
                       </Badge>
                     </TableCell>
