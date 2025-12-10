@@ -138,14 +138,14 @@ export default function AdminManagePackages() {
       // Fetch packages and stage counts in parallel with a single optimized query
       const [packagesResult, stageCounts] = await Promise.all([
         supabase.from('packages').select('*').order('created_at', { ascending: false }),
-        supabase.from('package_stages').select('package_id')
+        supabase.from('package_stages' as any).select('package_id') as any
       ]);
       
       if (packagesResult.error) throw packagesResult.error;
       
       // Count stages per package locally (much faster than N queries)
       const countMap = new Map<number, number>();
-      (stageCounts.data || []).forEach(stage => {
+      ((stageCounts.data || []) as any[]).forEach((stage: any) => {
         countMap.set(stage.package_id, (countMap.get(stage.package_id) || 0) + 1);
       });
       
@@ -201,11 +201,11 @@ export default function AdminManagePackages() {
 
   const fetchStagesForPackage = async (packageId: number) => {
     try {
-      const { data, error } = await supabase
-        .from('package_stages')
+      const { data, error } = await (supabase
+        .from('package_stages' as any)
         .select('*')
         .eq('package_id', packageId)
-        .order('created_at', { ascending: true });
+        .order('created_at', { ascending: true }) as any);
 
       if (error) throw error;
       setStages(data || []);
@@ -900,10 +900,10 @@ export default function AdminManagePackages() {
                           onClick={async (e) => {
                             e.stopPropagation();
                             try {
-                              const { error } = await supabase
-                                .from('package_stages')
+                              const { error } = await (supabase
+                                .from('package_stages' as any)
                                 .delete()
-                                .eq('id', stage.id);
+                                .eq('id', stage.id) as any);
                               if (error) throw error;
                               if (selectedPackage) {
                                 fetchStagesForPackage(selectedPackage.id);

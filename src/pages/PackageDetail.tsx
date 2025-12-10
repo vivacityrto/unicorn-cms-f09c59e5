@@ -226,10 +226,10 @@ const PackageDetail = () => {
         }));
 
         for (const update of updates) {
-          const { error } = await supabase
-            .from('package_stages')
+          const { error } = await (supabase
+            .from('package_stages' as any)
             .update({ order_number: update.order_number })
-            .eq('id', update.id);
+            .eq('id', update.id) as any);
 
           if (error) throw error;
         }
@@ -416,7 +416,7 @@ const PackageDetail = () => {
     try {
       const {
         error
-      } = await supabase.from("package_stages").delete().eq("id", stageId);
+      } = await (supabase.from("package_stages" as any).delete().eq("id", stageId) as any);
       if (error) throw error;
       toast({
         title: "Success",
@@ -510,7 +510,7 @@ const PackageDetail = () => {
       const {
         data: stagesData,
         error: stagesError
-      } = await supabase.from("package_stages").select("*").eq("package_id", Number(id)).order("order_number");
+      } = await (supabase.from("package_stages" as any).select("*").eq("package_id", Number(id)).order("order_number") as any);
       if (stagesError) throw stagesError;
       setStages((stagesData || []) as StageData[]);
 
