@@ -67,7 +67,7 @@ export function AuditNavCards({ activeTab, onTabChange, counts }: AuditNavCardsP
           <button
             key={item.id}
             className={cn(
-              'group relative text-left rounded-2xl p-5',
+              'group relative text-left rounded-2xl p-5 overflow-hidden',
               'animate-scale-in transition-all duration-300',
               'bg-card border border-border',
               'shadow-md',
