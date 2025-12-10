@@ -43,7 +43,9 @@ const cardStyle = {
   circleColor: 'bg-gray-400/15',
   iconBg: 'bg-gradient-to-br from-gray-600 to-gray-800',
   shadowColor: 'shadow-gray-200/50',
-  activeBorder: 'ring-gray-400',
+  activeBorder: 'ring-primary',
+  activeCircleColor: 'bg-primary/15',
+  activeIconBg: 'bg-gradient-to-br from-primary to-blue-600',
 };
 
 export function AuditNavCards({ activeTab, onTabChange, counts }: AuditNavCardsProps) {
@@ -71,21 +73,36 @@ export function AuditNavCards({ activeTab, onTabChange, counts }: AuditNavCardsP
             onClick={() => onTabChange(item.id)}
           >
             {/* Decorative circles with color */}
-            <div className={cn('absolute top-0 right-0 w-24 h-24 rounded-full -translate-y-8 translate-x-8', cardStyle.circleColor)} />
-            <div className={cn('absolute bottom-0 left-0 w-16 h-16 rounded-full translate-y-6 -translate-x-6', cardStyle.circleColor)} />
+            <div className={cn(
+              'absolute top-0 right-0 w-24 h-24 rounded-full -translate-y-8 translate-x-8 transition-colors duration-300',
+              isActive ? cardStyle.activeCircleColor : cardStyle.circleColor
+            )} />
+            <div className={cn(
+              'absolute bottom-0 left-0 w-16 h-16 rounded-full translate-y-6 -translate-x-6 transition-colors duration-300',
+              isActive ? cardStyle.activeCircleColor : cardStyle.circleColor
+            )} />
             
             {/* Content */}
             <div className="relative z-10">
               <div className="flex items-start justify-between mb-4">
-                <div className={cn('p-2 rounded-xl text-white', cardStyle.iconBg)}>
+                <div className={cn(
+                  'p-2 rounded-xl text-white transition-all duration-300',
+                  isActive ? cardStyle.activeIconBg : cardStyle.iconBg
+                )}>
                   <Icon className="h-5 w-5" />
                 </div>
-                <span className="text-4xl font-bold tracking-tight text-foreground">
+                <span className={cn(
+                  'text-4xl font-bold tracking-tight transition-colors duration-300',
+                  isActive ? 'text-primary' : 'text-foreground'
+                )}>
                   {count}
                 </span>
               </div>
               
-              <h3 className="text-base font-semibold mb-0.5 text-foreground">
+              <h3 className={cn(
+                'text-base font-semibold mb-0.5 transition-colors duration-300',
+                isActive ? 'text-primary' : 'text-foreground'
+              )}>
                 {item.label}
               </h3>
               <p className="text-sm text-muted-foreground">
@@ -95,7 +112,7 @@ export function AuditNavCards({ activeTab, onTabChange, counts }: AuditNavCardsP
 
             {/* Active indicator dot */}
             {isActive && (
-              <div className={cn('absolute top-3 right-3 w-2 h-2 rounded-full animate-pulse', cardStyle.iconBg)} />
+              <div className={cn('absolute top-3 right-3 w-2 h-2 rounded-full animate-pulse', cardStyle.activeIconBg)} />
             )}
           </button>
         );
