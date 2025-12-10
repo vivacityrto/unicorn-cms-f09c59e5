@@ -58,7 +58,7 @@ export function AuditNavCards({ activeTab, onTabChange, counts }: AuditNavCardsP
             className={cn(
               'animate-scale-in cursor-pointer transition-all',
               isActive 
-                ? 'ring-2 ring-primary shadow-lg' 
+                ? 'shadow-lg' 
                 : 'hover:shadow-lg'
             )}
             style={{ animationDelay: `${index * 50}ms` }}
