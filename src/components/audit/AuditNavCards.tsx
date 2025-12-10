@@ -18,42 +18,33 @@ const navItems = [
     label: 'Templates',
     description: 'Audit question banks',
     icon: FileText,
-    circleColor: 'bg-gray-400/20',
-    iconBg: 'bg-gradient-to-br from-gray-600 to-gray-800',
-    shadowColor: 'shadow-gray-200',
-    activeBorder: 'ring-gray-400',
   },
   {
     id: 'inspections' as const,
     label: 'Inspections',
     description: 'Active & completed',
     icon: ClipboardCheck,
-    circleColor: 'bg-sky-400/20',
-    iconBg: 'bg-gradient-to-br from-sky-500 to-blue-600',
-    shadowColor: 'shadow-blue-100',
-    activeBorder: 'ring-blue-400',
   },
   {
     id: 'schedules' as const,
     label: 'Schedules',
     description: 'Upcoming audits',
     icon: Calendar,
-    circleColor: 'bg-emerald-400/20',
-    iconBg: 'bg-gradient-to-br from-emerald-500 to-teal-600',
-    shadowColor: 'shadow-emerald-100',
-    activeBorder: 'ring-emerald-400',
   },
   {
     id: 'analytics' as const,
     label: 'Analytics',
     description: 'Reports & insights',
     icon: BarChart3,
-    circleColor: 'bg-purple-400/20',
-    iconBg: 'bg-gradient-to-br from-purple-500 to-indigo-600',
-    shadowColor: 'shadow-purple-100',
-    activeBorder: 'ring-purple-400',
   },
 ];
+
+const cardStyle = {
+  circleColor: 'bg-gray-400/15',
+  iconBg: 'bg-gradient-to-br from-gray-600 to-gray-800',
+  shadowColor: 'shadow-gray-200/50',
+  activeBorder: 'ring-gray-400',
+};
 
 export function AuditNavCards({ activeTab, onTabChange, counts }: AuditNavCardsProps) {
   return (
@@ -71,22 +62,22 @@ export function AuditNavCards({ activeTab, onTabChange, counts }: AuditNavCardsP
               'animate-scale-in transition-all duration-300',
               'bg-card border border-border',
               'shadow-md',
-              item.shadowColor,
+              cardStyle.shadowColor,
               isActive 
-                ? `scale-[1.02] shadow-lg ring-2 ${item.activeBorder}` 
+                ? `scale-[1.02] shadow-lg ring-2 ${cardStyle.activeBorder}` 
                 : 'hover:scale-[1.02] hover:shadow-lg'
             )}
             style={{ animationDelay: `${index * 75}ms` }}
             onClick={() => onTabChange(item.id)}
           >
             {/* Decorative circles with color */}
-            <div className={cn('absolute top-0 right-0 w-24 h-24 rounded-full -translate-y-8 translate-x-8', item.circleColor)} />
-            <div className={cn('absolute bottom-0 left-0 w-16 h-16 rounded-full translate-y-6 -translate-x-6', item.circleColor)} />
+            <div className={cn('absolute top-0 right-0 w-24 h-24 rounded-full -translate-y-8 translate-x-8', cardStyle.circleColor)} />
+            <div className={cn('absolute bottom-0 left-0 w-16 h-16 rounded-full translate-y-6 -translate-x-6', cardStyle.circleColor)} />
             
             {/* Content */}
             <div className="relative z-10">
               <div className="flex items-start justify-between mb-4">
-                <div className={cn('p-2 rounded-xl text-white', item.iconBg)}>
+                <div className={cn('p-2 rounded-xl text-white', cardStyle.iconBg)}>
                   <Icon className="h-5 w-5" />
                 </div>
                 <span className="text-4xl font-bold tracking-tight text-foreground">
@@ -104,7 +95,7 @@ export function AuditNavCards({ activeTab, onTabChange, counts }: AuditNavCardsP
 
             {/* Active indicator dot */}
             {isActive && (
-              <div className={cn('absolute top-3 right-3 w-2 h-2 rounded-full animate-pulse', item.iconBg)} />
+              <div className={cn('absolute top-3 right-3 w-2 h-2 rounded-full animate-pulse', cardStyle.iconBg)} />
             )}
           </button>
         );
