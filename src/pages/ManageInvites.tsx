@@ -24,7 +24,7 @@ type InviteRow = {
   email: string;
   tenant_id: number;
   unicorn_role: string;
-  status: 'pending' | 'expired' | 'failed' | 'sent';
+  status: 'pending' | 'expired' | 'failed' | 'sent' | 'successful';
   error_message?: string | null;
   invited_by?: string | null;
   expires_at?: string | null;
@@ -291,13 +291,22 @@ export default function ManageInvites() {
     }
   };
 
+  // Calculate stats based on actual status badge logic to match table display
   const stats = {
     total: invites.length,
-    pending: invites.filter(i => i.status === 'pending' || (i.status === 'sent' && !userStatuses.get(i.email)?.last_sign_in_at)).length,
-    expired: invites.filter(i => i.status === 'expired' || (i.expires_at && new Date(i.expires_at) < new Date() && i.status === 'pending')).length,
+    pending: invites.filter(i => {
+      const isExpired = i.expires_at && new Date(i.expires_at) < new Date();
+      // Pending = status is 'pending' and NOT expired
+      return i.status === 'pending' && !isExpired;
+    }).length,
+    expired: invites.filter(i => {
+      const isExpired = i.expires_at && new Date(i.expires_at) < new Date();
+      // Expired = status is 'expired' OR (status is 'pending' AND past expiry)
+      return i.status === 'expired' || (isExpired && i.status === 'pending');
+    }).length,
     verified: invites.filter(i => {
-      const userStatus = userStatuses.get(i.email);
-      return userStatus && userStatus.last_sign_in_at;
+      // Verified = status is 'successful' (complete)
+      return i.status === 'successful';
     }).length,
   };
 
