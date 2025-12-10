@@ -4498,63 +4498,6 @@ export type Database = {
           },
         ]
       }
-      package_stages: {
-        Row: {
-          created_at: string | null
-          id: number
-          is_active: boolean | null
-          order_number: number | null
-          package_id: number
-          short_name: string | null
-          stage_description: string | null
-          stage_id: number
-          stage_name: string | null
-          updated_at: string | null
-          video_url: string | null
-        }
-        Insert: {
-          created_at?: string | null
-          id?: number
-          is_active?: boolean | null
-          order_number?: number | null
-          package_id: number
-          short_name?: string | null
-          stage_description?: string | null
-          stage_id: number
-          stage_name?: string | null
-          updated_at?: string | null
-          video_url?: string | null
-        }
-        Update: {
-          created_at?: string | null
-          id?: number
-          is_active?: boolean | null
-          order_number?: number | null
-          package_id?: number
-          short_name?: string | null
-          stage_description?: string | null
-          stage_id?: number
-          stage_name?: string | null
-          updated_at?: string | null
-          video_url?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "package_stages_package_id_fkey"
-            columns: ["package_id"]
-            isOneToOne: false
-            referencedRelation: "packages"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "package_stages_stage_id_fkey"
-            columns: ["stage_id"]
-            isOneToOne: false
-            referencedRelation: "documents_stages"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       package_workflow_logs: {
         Row: {
           action: string

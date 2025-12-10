@@ -21,6 +21,7 @@ interface Stage {
   description: string | null;
   video_url: string | null;
   created_at: string | null;
+  created_by: string | null;
 }
 
 export function AllStagesTable() {
@@ -67,7 +68,7 @@ export function AllStagesTable() {
       // Fetch all stages from documents_stages (master table)
       const { data: stagesData, error: stagesError } = await supabase
         .from('documents_stages')
-        .select('id, title, short_name, description, video_url, created_at')
+        .select('id, title, short_name, description, video_url, created_at, created_by')
         .order('created_at', { ascending: false });
 
       if (stagesError) throw stagesError;
@@ -204,6 +205,8 @@ export function AllStagesTable() {
               <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-border/50">Stage Name</TableHead>
               <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-border/50">Short Name</TableHead>
               <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-border/50">Stage Details</TableHead>
+              <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-border/50">Video URL</TableHead>
+              <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-border/50">Created By</TableHead>
               <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-border/50 text-center">Actions</TableHead>
             </TableRow>
           </TableHeader>
@@ -216,22 +219,32 @@ export function AllStagesTable() {
               <TableCell className="py-6 border-r border-border/50 min-w-[200px]">
                 <div className="flex items-center gap-2">
                   <div>
-                    <p className="font-semibold text-foreground pb-[10px]">{stage.title}</p>
-                    {stage.created_at && <p className="text-xs text-muted-foreground flex items-center gap-1">
+                    <p className="font-semibold text-foreground whitespace-nowrap">{stage.title}</p>
+                    {stage.created_at && <p className="text-xs text-muted-foreground flex items-center gap-1 whitespace-nowrap mt-1">
                       <Calendar className="h-3 w-3" />
                       {format(new Date(stage.created_at), 'dd MMM yyyy')}
                     </p>}
                   </div>
                 </div>
               </TableCell>
-              <TableCell className="py-6 border-r border-border/50 min-w-[150px]">
-                <p className="text-sm text-muted-foreground">
+              <TableCell className="py-6 border-r border-border/50 min-w-[120px]">
+                <p className="text-sm text-muted-foreground whitespace-nowrap truncate max-w-[150px]">
                   {stage.short_name || '-'}
                 </p>
               </TableCell>
-              <TableCell className="py-6 border-r border-border/50 min-w-[300px] pr-8">
-                <p className="text-sm text-muted-foreground line-clamp-2">
+              <TableCell className="py-6 border-r border-border/50 min-w-[200px]">
+                <p className="text-sm text-muted-foreground whitespace-nowrap truncate max-w-[250px]">
                   {stage.description || '-'}
+                </p>
+              </TableCell>
+              <TableCell className="py-6 border-r border-border/50 min-w-[150px]">
+                <p className="text-sm text-muted-foreground whitespace-nowrap truncate max-w-[200px]">
+                  {stage.video_url || '-'}
+                </p>
+              </TableCell>
+              <TableCell className="py-6 border-r border-border/50 min-w-[120px]">
+                <p className="text-sm text-muted-foreground whitespace-nowrap truncate max-w-[150px]">
+                  {stage.created_by || '-'}
                 </p>
               </TableCell>
               <TableCell className="py-6 text-center">
