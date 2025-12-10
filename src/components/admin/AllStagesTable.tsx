@@ -16,6 +16,7 @@ interface StageWithPackage {
   package_name: string;
   package_full_text: string | null;
   order_number: number | null;
+  stage_description: string | null;
   document_count: number;
   is_active: boolean;
 }
@@ -35,7 +36,7 @@ export function AllStagesTable() {
       const {
         data: stagesData,
         error: stagesError
-      } = await supabase.from('package_stages').select('id, stage_name, created_at, package_id, order_number, is_active').order('package_id').order('order_number');
+      } = await supabase.from('package_stages').select('id, stage_name, created_at, package_id, order_number, stage_description, is_active').order('package_id').order('order_number');
       if (stagesError) throw stagesError;
 
       // Get unique package IDs
@@ -77,6 +78,7 @@ export function AllStagesTable() {
         package_name: packageMap.get(stage.package_id)?.name || 'Unknown Package',
         package_full_text: packageMap.get(stage.package_id)?.full_text || null,
         order_number: stage.order_number,
+        stage_description: stage.stage_description,
         document_count: docCountMap.get(stage.id) || 0,
         is_active: stage.is_active ?? true
       }));
@@ -119,7 +121,7 @@ export function AllStagesTable() {
                 <TableRow className="hover:bg-transparent border-b">
                   <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-border/50">Stage Name</TableHead>
                   <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-border/50">Package</TableHead>
-                  <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-border/50 text-center">Order</TableHead>
+                  <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-border/50">Stage Description</TableHead>
                   <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-border/50 text-center">Documents</TableHead>
                   <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-border/50 text-center">Status</TableHead>
                 </TableRow>
@@ -150,10 +152,10 @@ export function AllStagesTable() {
                         </div>
                       </div>
                     </TableCell>
-                    <TableCell className="py-6 border-r border-border/50 text-center">
-                      <span className="text-sm text-muted-foreground">
-                        {stage.order_number ?? '-'}
-                      </span>
+                    <TableCell className="py-6 border-r border-border/50 min-w-[200px]">
+                      <p className="text-xs text-muted-foreground truncate max-w-[200px]">
+                        {stage.stage_description || '-'}
+                      </p>
                     </TableCell>
                     <TableCell className="py-6 border-r border-border/50 text-center">
                       <Badge variant="outline" className="flex items-center gap-1.5 w-fit mx-auto bg-primary/5 border-primary/20 text-primary">
