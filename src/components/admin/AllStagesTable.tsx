@@ -147,7 +147,7 @@ export function AllStagesTable() {
                 <TableRow className="hover:bg-transparent border-b">
                   <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-border/50">Stage Name</TableHead>
                   <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-border/50">Package</TableHead>
-                  <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-border/50">Stage Description</TableHead>
+                  <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-border/50">Stage Details</TableHead>
                   <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-border/50 text-center">Documents</TableHead>
                   <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-border/50 text-center">Status</TableHead>
                   <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-border/50 text-center">Actions</TableHead>
@@ -179,8 +179,8 @@ export function AllStagesTable() {
                         </div>
                       </div>
                     </TableCell>
-                    <TableCell className="py-6 border-r border-border/50 min-w-[200px]">
-                      <p className="text-xs text-muted-foreground truncate max-w-[200px]">
+                    <TableCell className="py-6 border-r border-border/50 min-w-[300px] pr-8">
+                      <p className="text-sm text-muted-foreground line-clamp-2">
                         {stage.stage_description || '-'}
                       </p>
                     </TableCell>
