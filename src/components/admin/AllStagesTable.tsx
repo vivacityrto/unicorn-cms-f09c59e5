@@ -5,12 +5,13 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Search, Layers, Archive, FileText } from "lucide-react";
+import { Search, Layers, Archive, FileText, Calendar } from "lucide-react";
+import { format } from "date-fns";
 import { useNavigate } from "react-router-dom";
 interface StageWithPackage {
   id: number;
   stage_name: string;
-  short_name: string | null;
+  created_at: string | null;
   package_id: number;
   package_name: string;
   package_full_text: string | null;
@@ -34,7 +35,7 @@ export function AllStagesTable() {
       const {
         data: stagesData,
         error: stagesError
-      } = await supabase.from('package_stages').select('id, stage_name, short_name, package_id, order_number, is_active').order('package_id').order('order_number');
+      } = await supabase.from('package_stages').select('id, stage_name, created_at, package_id, order_number, is_active').order('package_id').order('order_number');
       if (stagesError) throw stagesError;
 
       // Get unique package IDs
@@ -71,7 +72,7 @@ export function AllStagesTable() {
       const formattedStages: StageWithPackage[] = (stagesData || []).map(stage => ({
         id: stage.id,
         stage_name: stage.stage_name || 'Unnamed Stage',
-        short_name: stage.short_name,
+        created_at: stage.created_at,
         package_id: stage.package_id,
         package_name: packageMap.get(stage.package_id)?.name || 'Unknown Package',
         package_full_text: packageMap.get(stage.package_id)?.full_text || null,
@@ -128,9 +129,14 @@ export function AllStagesTable() {
                     <TableCell className="py-6 border-r border-border/50 min-w-[200px]">
                       <div className="flex items-center gap-2">
                         
-                        <div>
+                      <div>
                           <p className="font-semibold text-foreground">{stage.stage_name}</p>
-                          {stage.short_name && <p className="text-xs text-muted-foreground">{stage.short_name}</p>}
+                          {stage.created_at && (
+                            <p className="text-xs text-muted-foreground flex items-center gap-1">
+                              <Calendar className="h-3 w-3" />
+                              {format(new Date(stage.created_at), 'dd MMM yyyy')}
+                            </p>
+                          )}
                         </div>
                       </div>
                     </TableCell>
