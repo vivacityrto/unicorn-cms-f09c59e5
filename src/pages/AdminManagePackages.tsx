@@ -29,6 +29,9 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
+import { AllStagesTable } from "@/components/admin/AllStagesTable";
+
+type AdminPackageTab = 'packages' | 'stages';
 interface PackageType {
   id: number;
   name: string;
@@ -49,6 +52,8 @@ export default function AdminManagePackages() {
   const [filteredPackages, setFilteredPackages] = useState<PackageType[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
+  const [activeTab, setActiveTab] = useState<AdminPackageTab>('packages');
+  const [totalStagesCount, setTotalStagesCount] = useState(0);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [packageToDelete, setPackageToDelete] = useState<PackageType | null>(null);
@@ -143,6 +148,9 @@ export default function AdminManagePackages() {
       (stageCounts.data || []).forEach(stage => {
         countMap.set(stage.package_id, (countMap.get(stage.package_id) || 0) + 1);
       });
+      
+      // Set total stages count
+      setTotalStagesCount(stageCounts.data?.length || 0);
       
       const packagesWithCounts = (packagesResult.data || []).map(pkg => ({
         ...pkg,
@@ -509,7 +517,14 @@ export default function AdminManagePackages() {
 
       {/* Stat Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card className="animate-scale-in cursor-pointer hover:shadow-lg transition-all" style={{ animationDelay: "0ms" }}>
+        <Card 
+          className={cn(
+            "animate-scale-in cursor-pointer hover:shadow-lg transition-all",
+            activeTab === 'packages' && "shadow-lg"
+          )} 
+          style={{ animationDelay: "0ms" }}
+          onClick={() => setActiveTab('packages')}
+        >
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Packages</CardTitle>
             <Package className="h-[22px] w-[22px] text-primary" />
@@ -520,7 +535,11 @@ export default function AdminManagePackages() {
           </CardContent>
         </Card>
 
-        <Card className="animate-scale-in cursor-pointer hover:shadow-lg transition-all" style={{ animationDelay: "50ms" }}>
+        <Card 
+          className="animate-scale-in cursor-pointer hover:shadow-lg transition-all" 
+          style={{ animationDelay: "50ms" }}
+          onClick={() => setActiveTab('packages')}
+        >
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Active</CardTitle>
             <CheckCircle2 className="h-[22px] w-[22px] text-green-500" />
@@ -531,18 +550,29 @@ export default function AdminManagePackages() {
           </CardContent>
         </Card>
 
-        <Card className="animate-scale-in cursor-pointer hover:shadow-lg transition-all" style={{ animationDelay: "100ms" }}>
+        <Card 
+          className={cn(
+            "animate-scale-in cursor-pointer hover:shadow-lg transition-all",
+            activeTab === 'stages' && "shadow-lg"
+          )}
+          style={{ animationDelay: "100ms" }}
+          onClick={() => setActiveTab('stages')}
+        >
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Stages</CardTitle>
             <Layers className="h-[22px] w-[22px] text-yellow-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{packages.reduce((sum, p) => sum + (p.stages_count || 0), 0)}</div>
+            <div className="text-2xl font-bold">{totalStagesCount}</div>
             <p className="text-xs text-muted-foreground">Across all packages</p>
           </CardContent>
         </Card>
 
-        <Card className="animate-scale-in cursor-pointer hover:shadow-lg transition-all" style={{ animationDelay: "150ms" }}>
+        <Card 
+          className="animate-scale-in cursor-pointer hover:shadow-lg transition-all" 
+          style={{ animationDelay: "150ms" }}
+          onClick={() => setActiveTab('packages')}
+        >
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Draft</CardTitle>
             <Clock className="h-[22px] w-[22px] text-muted-foreground" />
@@ -554,13 +584,16 @@ export default function AdminManagePackages() {
         </Card>
       </div>
 
-      {/* Search */}
-      <div className="flex items-center justify-between gap-4">
-        <div className="relative flex-1 max-w-sm">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input placeholder="Search packages..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="pl-10" />
-        </div>
-      </div>
+      {/* Tab Content */}
+      {activeTab === 'packages' && (
+        <>
+          {/* Search */}
+          <div className="flex items-center justify-between gap-4">
+            <div className="relative flex-1 max-w-sm">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input placeholder="Search packages..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="pl-10" />
+            </div>
+          </div>
 
       {/* Packages Content */}
       {filteredPackages.length === 0 ? <Card className="border-2 border-dashed">
@@ -656,6 +689,10 @@ export default function AdminManagePackages() {
             </Table>
           </CardContent>
         </Card>}
+        </>
+      )}
+
+      {activeTab === 'stages' && <AllStagesTable />}
 
       {/* Add Package Dialog */}
       <AddPackageDialog open={isCreateDialogOpen} onOpenChange={open => {
