@@ -5,7 +5,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Search, Layers, Archive, FileText, Calendar } from "lucide-react";
+import { Search, Layers, FileText, Calendar } from "lucide-react";
 import { format } from "date-fns";
 import { useNavigate } from "react-router-dom";
 interface StageWithPackage {
@@ -131,18 +131,16 @@ export function AllStagesTable() {
                         
                       <div>
                           <p className="font-semibold text-foreground pb-[10px]">{stage.stage_name}</p>
-                          {stage.created_at && (
-                            <p className="text-xs text-muted-foreground flex items-center gap-1">
+                          {stage.created_at && <p className="text-xs text-muted-foreground flex items-center gap-1">
                               <Calendar className="h-3 w-3" />
                               {format(new Date(stage.created_at), 'dd MMM yyyy')}
-                            </p>
-                          )}
+                            </p>}
                         </div>
                       </div>
                     </TableCell>
                     <TableCell className="py-6 border-r border-border/50 min-w-[250px]">
                       <div className="flex items-center gap-2">
-                        <Archive className="h-4 w-4 text-muted-foreground" />
+                        
                         <div>
                           <p className="font-medium text-foreground">{stage.package_name}</p>
                           {stage.package_full_text && <p className="text-xs text-muted-foreground truncate max-w-[200px]">
