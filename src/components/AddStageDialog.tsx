@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Switch } from "@/components/ui/switch";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Layers, Loader2 } from "lucide-react";
@@ -24,7 +24,7 @@ interface AddStageDialogProps {
     stage_description: string | null;
     video_url: string | null;
     order_number: number | null;
-    is_active: boolean;
+    status: string | null;
   } | null;
 }
 
@@ -44,7 +44,7 @@ export function AddStageDialog({
     stage_description: "",
     video_url: "",
     order_number: 0,
-    is_active: true
+    status: "not_started" as "not_started" | "in_progress" | "completed"
   });
 
   // Pre-fill form when editing
@@ -56,7 +56,7 @@ export function AddStageDialog({
         stage_description: stageData.stage_description || "",
         video_url: stageData.video_url || "",
         order_number: stageData.order_number || 0,
-        is_active: stageData.is_active
+        status: (stageData.status as "not_started" | "in_progress" | "completed") || "not_started"
       });
     } else {
       setFormData({
@@ -65,7 +65,7 @@ export function AddStageDialog({
         stage_description: "",
         video_url: "",
         order_number: 0,
-        is_active: true
+        status: "not_started"
       });
     }
   }, [stageData, open]);
@@ -151,7 +151,7 @@ export function AddStageDialog({
         stage_description: "",
         video_url: "",
         order_number: 0,
-        is_active: true
+        status: "not_started"
       });
       onSuccess();
       onOpenChange(false);
@@ -238,19 +238,22 @@ export function AddStageDialog({
               />
             </div>
 
-            {/* Active Status */}
-            <div className="flex items-center justify-between space-x-2">
-              <div className="space-y-0.5">
-                <Label htmlFor="stage-active">Active Status</Label>
-                <p className="text-xs text-muted-foreground">
-                  Inactive stages won't be visible to users
-                </p>
-              </div>
-              <Switch
-                id="stage-active"
-                checked={formData.is_active}
-                onCheckedChange={checked => setFormData({ ...formData, is_active: checked })}
-              />
+            {/* Status */}
+            <div className="space-y-2">
+              <Label htmlFor="stage-status">Status</Label>
+              <Select
+                value={formData.status}
+                onValueChange={(value: "not_started" | "in_progress" | "completed") => setFormData({ ...formData, status: value })}
+              >
+                <SelectTrigger id="stage-status">
+                  <SelectValue placeholder="Select status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="not_started">Not Started</SelectItem>
+                  <SelectItem value="in_progress">In Progress</SelectItem>
+                  <SelectItem value="completed">Completed</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
 

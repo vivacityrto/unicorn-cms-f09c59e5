@@ -4,7 +4,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Search, Layers, Calendar, Pencil, Trash2, Plus, Loader2, ExternalLink, Tag, Video, LinkIcon } from "lucide-react";
+import { Search, Layers, Calendar, Pencil, Trash2, Plus, Loader2, ExternalLink, Tag, Video, LinkIcon, Circle, Clock, CheckCircle2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
@@ -23,6 +23,7 @@ interface Stage {
   video_url: string | null;
   created_at: string | null;
   created_by: string | null;
+  status: string | null;
 }
 interface UserInfo {
   user_uuid: string;
@@ -84,7 +85,7 @@ export function AllStagesTable() {
       const {
         data: stagesData,
         error: stagesError
-      } = await supabase.from('documents_stages').select('id, title, short_name, description, video_url, created_at, created_by').order('created_at', {
+      } = await supabase.from('documents_stages').select('id, title, short_name, description, video_url, created_at, created_by, status').order('created_at', {
         ascending: false
       });
       if (stagesError) throw stagesError;
@@ -259,7 +260,7 @@ export function AllStagesTable() {
             <TableRow className="hover:bg-transparent border-b">
               <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-border/50">Stage Name</TableHead>
               <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-border/50">Stage Details</TableHead>
-              <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-border/50">Short Name</TableHead>
+              <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-border/50">Status</TableHead>
               <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-border/50">Video</TableHead>
               <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-border/50">Created By</TableHead>
               <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-border/50 text-center">Actions</TableHead>
@@ -288,13 +289,23 @@ export function AllStagesTable() {
                       {stage.description || 'No details added.'}
                     </p>
                   </TableCell>
-                  <TableCell className="py-6 border-r border-border/50 min-w-[120px]">
-                    <div className="flex items-center gap-2">
-                      <Calendar className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                      <p className="text-sm text-muted-foreground whitespace-nowrap truncate max-w-[130px]">
-                        {stage.created_at ? format(new Date(stage.created_at), 'dd MMM yyyy') : '-'}
-                      </p>
-                    </div>
+                  <TableCell className="py-6 border-r border-border/50 min-w-[130px]">
+                    {stage.status === 'completed' ? (
+                      <Badge className="bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20 border border-emerald-600 text-[0.75rem] py-[2px] px-[0.625rem] rounded-[11px] gap-1.5">
+                        <CheckCircle2 className="h-3 w-3" />
+                        Completed
+                      </Badge>
+                    ) : stage.status === 'in_progress' ? (
+                      <Badge className="bg-amber-500/10 text-amber-600 hover:bg-amber-500/20 border border-amber-600 text-[0.75rem] py-[2px] px-[0.625rem] rounded-[11px] gap-1.5">
+                        <Clock className="h-3 w-3" />
+                        In Progress
+                      </Badge>
+                    ) : (
+                      <Badge className="bg-muted text-muted-foreground hover:bg-muted border border-border text-[0.75rem] py-[2px] px-[0.625rem] rounded-[11px] gap-1.5">
+                        <Circle className="h-3 w-3" />
+                        Not Started
+                      </Badge>
+                    )}
                   </TableCell>
                   <TableCell className="py-6 border-r border-border/50 min-w-[150px]">
                     {stage.video_url ? (
