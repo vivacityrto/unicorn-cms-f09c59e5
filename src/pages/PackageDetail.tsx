@@ -414,9 +414,10 @@ const PackageDetail = () => {
   };
   const handleDeleteStage = async (stageId: number) => {
     try {
-      const {
-        error
-      } = await (supabase.from("package_stages" as any).delete().eq("id", stageId) as any);
+      const { error } = await supabase
+        .from("documents_stages")
+        .delete()
+        .eq("id", stageId);
       if (error) throw error;
       toast({
         title: "Success",
@@ -506,20 +507,32 @@ const PackageDetail = () => {
       if (pkgError) throw pkgError;
       setPackageInfo(pkgData);
 
-      // Fetch stages for this package (gracefully handle if table doesn't exist)
-      try {
-        const {
-          data: stagesData,
-          error: stagesError
-        } = await (supabase.from("package_stages" as any).select("*").eq("package_id", Number(id)).order("order_number") as any);
-        if (!stagesError) {
-          setStages((stagesData || []) as StageData[]);
-        } else {
-          console.log("package_stages table may not exist:", stagesError.message);
-          setStages([]);
-        }
-      } catch (stageErr) {
-        console.log("Error fetching stages:", stageErr);
+      // Fetch stages from documents_stages table
+      const {
+        data: stagesData,
+        error: stagesError
+      } = await supabase
+        .from("documents_stages")
+        .select("*")
+        .order("id");
+      
+      if (!stagesError) {
+        // Map documents_stages to StageData format
+        const mappedStages = (stagesData || []).map((stage: any, index: number) => ({
+          id: stage.id,
+          package_id: Number(id),
+          stage_name: stage.title,
+          short_name: stage.short_name,
+          stage_description: stage.description,
+          video_url: stage.video_url,
+          order_number: index + 1,
+          is_active: true,
+          created_at: stage.created_at,
+          updated_at: stage.updated_at
+        }));
+        setStages(mappedStages as StageData[]);
+      } else {
+        console.log("Error fetching stages:", stagesError.message);
         setStages([]);
       }
 

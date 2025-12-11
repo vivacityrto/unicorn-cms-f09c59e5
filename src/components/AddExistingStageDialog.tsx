@@ -5,8 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Search, Plus, Archive, Layers, FileText, AlertCircle } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
+import { Search, Layers, AlertCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface AddExistingStageDialogProps {
@@ -18,13 +17,11 @@ interface AddExistingStageDialogProps {
 
 interface ExistingStage {
   id: number;
-  stage_id: number;
-  stage_name: string;
-  package_id: number;
-  package_name: string;
-  package_full_text: string;
-  is_active: boolean;
-  document_count: number;
+  title: string;
+  short_name: string | null;
+  description: string | null;
+  video_url: string | null;
+  created_at: string;
 }
 
 export function AddExistingStageDialog({
@@ -37,87 +34,28 @@ export function AddExistingStageDialog({
   const [searchQuery, setSearchQuery] = useState("");
   const [stages, setStages] = useState<ExistingStage[]>([]);
   const [loading, setLoading] = useState(false);
-  const [currentStageIds, setCurrentStageIds] = useState<number[]>([]);
   const [confirmStage, setConfirmStage] = useState<ExistingStage | null>(null);
   const [isConfirmDialogOpen, setIsConfirmDialogOpen] = useState(false);
 
   useEffect(() => {
-    if (open && packageId) {
-      fetchCurrentStages();
+    if (open) {
       fetchExistingStages();
     }
-  }, [open, packageId]);
-
-  const fetchCurrentStages = async () => {
-    if (!packageId) return;
-    
-    try {
-      const { data, error } = await (supabase
-        .from('package_stages' as any)
-        .select('id')
-        .eq('package_id', packageId) as any);
-
-      if (error) throw error;
-      setCurrentStageIds(data?.map((s: any) => s.id) || []);
-    } catch (error: any) {
-      console.error('Error fetching current stages:', error);
-    }
-  };
+  }, [open]);
 
   const fetchExistingStages = async () => {
     try {
       setLoading(true);
       
-      // Fetch all stages from package_stages with joined documents_stages data
-      const { data: stagesData, error } = await (supabase
-        .from('package_stages' as any)
-        .select('id, package_id, stage_id, order_number, documents_stages(id, title, short_name)')
-        .order('order_number') as any);
+      // Fetch all stages from documents_stages
+      const { data: stagesData, error } = await supabase
+        .from('documents_stages')
+        .select('*')
+        .order('title');
 
       if (error) throw error;
 
-      // Get unique package IDs to fetch package names and full_text
-      const packageIds = [...new Set(stagesData?.map((s: any) => s.package_id) || [])] as number[];
-      
-      const { data: packagesData, error: packagesError } = await supabase
-        .from('packages')
-        .select('id, name, full_text')
-        .in('id', packageIds);
-
-      if (packagesError) throw packagesError;
-
-      // Fetch document counts for each stage
-      const stageIds = stagesData?.map((s: any) => s.id) || [];
-      const { data: documentCounts, error: docError } = await supabase
-        .from('package_documents')
-        .select('stage_id')
-        .in('stage_id', stageIds);
-
-      if (docError) throw docError;
-
-      // Create a map of stage ID to document count
-      const docCountMap = new Map<number, number>();
-      documentCounts?.forEach(doc => {
-        if (doc.stage_id) {
-          docCountMap.set(doc.stage_id, (docCountMap.get(doc.stage_id) || 0) + 1);
-        }
-      });
-
-      // Create a map of package ID to package data
-      const packageMap = new Map(packagesData?.map(p => [p.id, { name: p.name, full_text: p.full_text }]) || []);
-
-      const formattedStages: ExistingStage[] = (stagesData || []).map((stage: any) => ({
-        id: stage.id,
-        stage_id: stage.stage_id,
-        stage_name: stage.documents_stages?.title || 'Unnamed Stage',
-        package_id: stage.package_id,
-        package_name: packageMap.get(stage.package_id)?.name || 'Unknown Package',
-        package_full_text: packageMap.get(stage.package_id)?.full_text || '',
-        is_active: true,
-        document_count: docCountMap.get(stage.id) || 0,
-      }));
-
-      setStages(formattedStages);
+      setStages(stagesData || []);
     } catch (error: any) {
       toast({
         title: 'Error',
@@ -136,72 +74,23 @@ export function AddExistingStageDialog({
 
   const handleAddStage = async () => {
     if (!confirmStage) return;
-    if (!packageId) return;
 
-    try {
-      // Insert the new stage with the stage_id reference
-      const { data: newStage, error: stageError } = await (supabase
-        .from('package_stages' as any)
-        .insert({
-          package_id: packageId,
-          stage_id: confirmStage.stage_id,
-          stage_name: confirmStage.stage_name,
-        })
-        .select()
-        .single() as any);
+    toast({
+      title: 'Stage Selected',
+      description: `"${confirmStage.title}" is now available`,
+    });
 
-      if (stageError) throw stageError;
-
-      // Then, copy all documents from the original stage to the new stage
-      const { data: documents, error: docError } = await supabase
-        .from('package_documents')
-        .select('*')
-        .eq('stage_id', confirmStage.id);
-
-      if (docError) throw docError;
-
-      if (documents && documents.length > 0) {
-        const documentCopies = documents.map(doc => ({
-          package_id: packageId,
-          stage_id: newStage.id,
-          document_name: doc.document_name,
-          description: doc.description,
-          order_number: doc.order_number,
-          file_type: doc.file_type,
-          is_client_doc: doc.is_client_doc,
-          categories_id: doc.categories_id,
-        }));
-
-        const { error: insertError } = await supabase
-          .from('package_documents')
-          .insert(documentCopies);
-
-        if (insertError) throw insertError;
-      }
-
-      toast({
-        title: 'Success',
-        description: `Stage added with ${documents?.length || 0} document(s)`,
-      });
-
-      setIsConfirmDialogOpen(false);
-      setConfirmStage(null);
-      onSuccess();
-      onOpenChange(false);
-    } catch (error: any) {
-      toast({
-        title: 'Error',
-        description: error.message || 'Failed to add stage',
-        variant: 'destructive',
-      });
-    }
+    setIsConfirmDialogOpen(false);
+    setConfirmStage(null);
+    onSuccess();
+    onOpenChange(false);
   };
 
   const filteredStages = stages.filter(
     (stage) =>
-      stage.stage_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      stage.package_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      stage.package_full_text.toLowerCase().includes(searchQuery.toLowerCase())
+      stage.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (stage.short_name && stage.short_name.toLowerCase().includes(searchQuery.toLowerCase())) ||
+      (stage.description && stage.description.toLowerCase().includes(searchQuery.toLowerCase()))
   );
 
   return (
@@ -226,7 +115,7 @@ export function AddExistingStageDialog({
           <div className="relative mb-4">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="Search stage by name or package..."
+              placeholder="Search stage by name..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-10 text-[15px]"
@@ -253,20 +142,19 @@ export function AddExistingStageDialog({
                   >
                     <div className="flex-1 min-w-0">
                       <p className="font-semibold text-sm text-foreground group-hover:text-primary transition-colors">
-                        {stage.stage_name}
+                        {stage.title}
                       </p>
-                      <div className="flex items-center gap-1.5 mt-1">
-                        <Archive className="h-3 w-3 text-muted-foreground" />
-                        <p className="text-xs text-muted-foreground truncate">
-                          {stage.package_full_text || stage.package_name}
+                      {stage.short_name && (
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Short: {stage.short_name}
                         </p>
-                      </div>
+                      )}
+                      {stage.description && (
+                        <p className="text-xs text-muted-foreground mt-1 truncate">
+                          {stage.description}
+                        </p>
+                      )}
                     </div>
-                    <Badge variant="outline" className="shrink-0 flex items-center gap-1.5 bg-primary/5 border-primary/20 text-primary font-medium px-3 py-1">
-                      <FileText className="h-3.5 w-3.5" />
-                      <span>{stage.document_count}</span>
-                      <span className="text-xs opacity-80">documents</span>
-                    </Badge>
                   </div>
                 ))}
               </div>
@@ -286,26 +174,25 @@ export function AddExistingStageDialog({
                 Confirm Add Stage
               </DialogTitle>
               <DialogDescription className="text-sm text-muted-foreground mt-2">
-                Are you sure you want to add this stage to the package?
+                Are you sure you want to add this stage?
               </DialogDescription>
             </DialogHeader>
             {confirmStage && (
               <div className="my-6 p-4 bg-muted/30 rounded-lg border border-border/50">
                 <div className="space-y-2">
                   <div>
-                    <span className="text-sm font-semibold text-foreground">{confirmStage.stage_name}</span>
+                    <span className="text-sm font-semibold text-foreground">{confirmStage.title}</span>
                   </div>
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                    <Archive className="h-3 w-3" />
-                    <span>{confirmStage.package_full_text || confirmStage.package_name}</span>
-                  </div>
-                  <div className="flex items-center gap-2 mt-2">
-                    <Badge variant="outline" className="flex items-center gap-1.5 bg-primary/5 border-primary/20 text-primary font-medium px-3 py-1">
-                      <FileText className="h-3.5 w-3.5" />
-                      <span>{confirmStage.document_count}</span>
-                      <span className="text-xs opacity-80">documents</span>
-                    </Badge>
-                  </div>
+                  {confirmStage.short_name && (
+                    <div className="text-xs text-muted-foreground">
+                      Short name: {confirmStage.short_name}
+                    </div>
+                  )}
+                  {confirmStage.description && (
+                    <div className="text-xs text-muted-foreground">
+                      {confirmStage.description}
+                    </div>
+                  )}
                 </div>
               </div>
             )}
