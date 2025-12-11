@@ -563,8 +563,8 @@ export default function AdminManagePackages() {
             <Layers className="h-[22px] w-[22px] text-yellow-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{totalStagesCount}</div>
-            <p className="text-xs text-muted-foreground">Across all packages</p>
+            <div className="text-2xl font-bold">{documentStages.length}</div>
+            <p className="text-xs text-muted-foreground">Reusable stages in library</p>
           </CardContent>
         </Card>
 
