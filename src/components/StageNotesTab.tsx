@@ -17,13 +17,8 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
-import { 
-  Plus, Pencil, Trash2, Calendar as CalendarIcon, Flag, Clock, User, 
-  StickyNote, FileText, Users, RefreshCw, AlertCircle, Phone, MoreHorizontal,
-  Play, Square, Timer, CheckCircle2, Upload, X, Paperclip
-} from "lucide-react";
+import { Plus, Pencil, Trash2, Calendar as CalendarIcon, Flag, Clock, User, StickyNote, FileText, Users, RefreshCw, AlertCircle, Phone, MoreHorizontal, Play, Square, Timer, CheckCircle2, Upload, X, Paperclip } from "lucide-react";
 import { format } from "date-fns";
-
 interface StageNote {
   id: string;
   stage_id: number;
@@ -47,15 +42,19 @@ interface StageNote {
     avatar_url: string | null;
   };
 }
-
 interface StageNotesTabProps {
   stageId: number;
   tenantId: number;
   packageId: number;
 }
-
-export function StageNotesTab({ stageId, tenantId, packageId }: StageNotesTabProps) {
-  const { toast } = useToast();
+export function StageNotesTab({
+  stageId,
+  tenantId,
+  packageId
+}: StageNotesTabProps) {
+  const {
+    toast
+  } = useToast();
   const [notes, setNotes] = useState<StageNote[]>([]);
   const [loading, setLoading] = useState(true);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
@@ -65,13 +64,24 @@ export function StageNotesTab({ stageId, tenantId, packageId }: StageNotesTabPro
   const [noteType, setNoteType] = useState("");
   const [priority, setPriority] = useState("");
   const [startedDate, setStartedDate] = useState<Date>();
-  const [startedTime, setStartedTime] = useState({ hour: "12", minute: "00", period: "AM" });
+  const [startedTime, setStartedTime] = useState({
+    hour: "12",
+    minute: "00",
+    period: "AM"
+  });
   const [completedDate, setCompletedDate] = useState<Date>();
-  const [completedTime, setCompletedTime] = useState({ hour: "12", minute: "00", period: "AM" });
+  const [completedTime, setCompletedTime] = useState({
+    hour: "12",
+    minute: "00",
+    period: "AM"
+  });
   const [saving, setSaving] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
-  const [existingFiles, setExistingFiles] = useState<{ path: string; name: string }[]>([]);
+  const [existingFiles, setExistingFiles] = useState<{
+    path: string;
+    name: string;
+  }[]>([]);
   const [filesToRemove, setFilesToRemove] = useState<string[]>([]);
   const [assignees, setAssignees] = useState<string[]>([]);
   const [vivacityTeam, setVivacityTeam] = useState<Array<{
@@ -84,7 +94,6 @@ export function StageNotesTab({ stageId, tenantId, packageId }: StageNotesTabPro
   const [timerStartTime, setTimerStartTime] = useState<number | null>(null);
   const [elapsedTime, setElapsedTime] = useState(0);
   const [accumulatedTime, setAccumulatedTime] = useState(0);
-
   useEffect(() => {
     fetchNotes();
     fetchVivacityTeam();
@@ -103,48 +112,44 @@ export function StageNotesTab({ stageId, tenantId, packageId }: StageNotesTabPro
       if (interval) clearInterval(interval);
     };
   }, [isTimerRunning, timerStartTime, accumulatedTime]);
-
   const getCurrentUser = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
+    const {
+      data: {
+        user
+      }
+    } = await supabase.auth.getUser();
     if (user) {
       setCurrentUserId(user.id);
       setAssignees([user.id]);
     }
   };
-
   const fetchVivacityTeam = async () => {
     try {
-      const { data, error } = await supabase
-        .from("users")
-        .select("user_uuid, first_name, last_name, avatar_url")
-        .in("unicorn_role", ["Super Admin", "Team Leader", "Team Member"])
-        .order("first_name");
+      const {
+        data,
+        error
+      } = await supabase.from("users").select("user_uuid, first_name, last_name, avatar_url").in("unicorn_role", ["Super Admin", "Team Leader", "Team Member"]).order("first_name");
       if (error) throw error;
       setVivacityTeam(data || []);
     } catch (error: any) {
       console.error("Error fetching team:", error);
     }
   };
-
   const fetchNotes = async () => {
     setLoading(true);
     try {
-      const { data, error } = await (supabase
-        .from("documents_notes" as any)
-        .select("*")
-        .eq("stage_id", stageId)
-        .eq("tenant_id", tenantId)
-        .order("created_at", { ascending: false }) as any);
-
+      const {
+        data,
+        error
+      } = await (supabase.from("documents_notes" as any).select("*").eq("stage_id", stageId).eq("tenant_id", tenantId).order("created_at", {
+        ascending: false
+      }) as any);
       if (error) throw error;
-
       if (data && data.length > 0) {
         const userIds = [...new Set(data.map((n: any) => n.created_by))] as string[];
-        const { data: usersData } = await supabase
-          .from("users")
-          .select("user_uuid, first_name, last_name, email, avatar_url")
-          .in("user_uuid", userIds);
-
+        const {
+          data: usersData
+        } = await supabase.from("users").select("user_uuid, first_name, last_name, email, avatar_url").in("user_uuid", userIds);
         const usersMap = new Map(usersData?.map(u => [u.user_uuid, u]) || []);
         const notesWithUsers = data.map((note: any) => ({
           ...note,
@@ -165,15 +170,22 @@ export function StageNotesTab({ stageId, tenantId, packageId }: StageNotesTabPro
       setLoading(false);
     }
   };
-
   const resetForm = () => {
     setNoteText("");
     setNoteType("");
     setPriority("");
     setStartedDate(undefined);
-    setStartedTime({ hour: "12", minute: "00", period: "AM" });
+    setStartedTime({
+      hour: "12",
+      minute: "00",
+      period: "AM"
+    });
     setCompletedDate(undefined);
-    setCompletedTime({ hour: "12", minute: "00", period: "AM" });
+    setCompletedTime({
+      hour: "12",
+      minute: "00",
+      period: "AM"
+    });
     setSelectedNote(null);
     setUploadedFiles([]);
     setExistingFiles([]);
@@ -184,7 +196,6 @@ export function StageNotesTab({ stageId, tenantId, packageId }: StageNotesTabPro
     setElapsedTime(0);
     setAccumulatedTime(0);
   };
-
   const handleOpenDialog = (note?: StageNote) => {
     if (note) {
       setSelectedNote(note);
@@ -203,7 +214,11 @@ export function StageNotesTab({ stageId, tenantId, packageId }: StageNotesTabPro
         });
       } else {
         setStartedDate(undefined);
-        setStartedTime({ hour: "12", minute: "00", period: "AM" });
+        setStartedTime({
+          hour: "12",
+          minute: "00",
+          period: "AM"
+        });
       }
       if (note.completed_date) {
         const endDate = new Date(note.completed_date);
@@ -217,7 +232,11 @@ export function StageNotesTab({ stageId, tenantId, packageId }: StageNotesTabPro
         });
       } else {
         setCompletedDate(undefined);
-        setCompletedTime({ hour: "12", minute: "00", period: "AM" });
+        setCompletedTime({
+          hour: "12",
+          minute: "00",
+          period: "AM"
+        });
       }
       setAssignees(note.assignees || []);
       if (note.uploaded_files && note.file_names) {
@@ -231,7 +250,6 @@ export function StageNotesTab({ stageId, tenantId, packageId }: StageNotesTabPro
     }
     setIsAddDialogOpen(true);
   };
-
   const handlePlayTimer = () => {
     const now = Date.now();
     setTimerStartTime(now);
@@ -248,7 +266,6 @@ export function StageNotesTab({ stageId, tenantId, packageId }: StageNotesTabPro
       });
     }
   };
-
   const handleStopTimer = () => {
     setIsTimerRunning(false);
     setAccumulatedTime(elapsedTime);
@@ -262,12 +279,11 @@ export function StageNotesTab({ stageId, tenantId, packageId }: StageNotesTabPro
       period: hours >= 12 ? "PM" : "AM"
     });
   };
-
   const formatElapsedTime = (ms: number) => {
     const totalSeconds = Math.floor(ms / 1000);
     const days = Math.floor(totalSeconds / 86400);
-    const hours = Math.floor((totalSeconds % 86400) / 3600);
-    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const hours = Math.floor(totalSeconds % 86400 / 3600);
+    const minutes = Math.floor(totalSeconds % 3600 / 60);
     const seconds = totalSeconds % 60;
     const parts = [];
     if (days > 0) parts.push(`${days}d`);
@@ -276,14 +292,20 @@ export function StageNotesTab({ stageId, tenantId, packageId }: StageNotesTabPro
     if (seconds > 0 || parts.length === 0) parts.push(`${seconds}s`);
     return parts.join(' ');
   };
-
   const calculateDuration = () => {
     if (startedDate && completedDate) {
-      const convert12To24 = (time: { hour: string; minute: string; period: string }) => {
+      const convert12To24 = (time: {
+        hour: string;
+        minute: string;
+        period: string;
+      }) => {
         let hour = parseInt(time.hour);
         if (time.period === "PM" && hour !== 12) hour += 12;
         if (time.period === "AM" && hour === 12) hour = 0;
-        return { hour, minute: parseInt(time.minute) };
+        return {
+          hour,
+          minute: parseInt(time.minute)
+        };
       };
       const startTime = convert12To24(startedTime);
       const endTime = convert12To24(completedTime);
@@ -295,7 +317,7 @@ export function StageNotesTab({ stageId, tenantId, packageId }: StageNotesTabPro
       if (diffMs < 0) return "Invalid duration";
       const diffMins = Math.floor(diffMs / 60000);
       const days = Math.floor(diffMins / 1440);
-      const hours = Math.floor((diffMins % 1440) / 60);
+      const hours = Math.floor(diffMins % 1440 / 60);
       const mins = diffMins % 60;
       const parts = [];
       if (days > 0) parts.push(`${days}d`);
@@ -308,31 +330,34 @@ export function StageNotesTab({ stageId, tenantId, packageId }: StageNotesTabPro
     }
     return "No duration";
   };
-
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (files) {
       setUploadedFiles(prev => [...prev, ...Array.from(files)]);
     }
   };
-
   const handleRemoveFile = (index: number) => {
     setUploadedFiles(prev => prev.filter((_, i) => i !== index));
   };
-
   const handleRemoveExistingFile = (path: string) => {
     setFilesToRemove(prev => [...prev, path]);
     setExistingFiles(prev => prev.filter(f => f.path !== path));
   };
-
   const handleSaveNote = async () => {
     if (!noteText.trim() || saving) return;
     setSaving(true);
-
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: {
+          user
+        }
+      } = await supabase.auth.getUser();
       if (!user) {
-        toast({ title: "Error", description: "You must be logged in", variant: "destructive" });
+        toast({
+          title: "Error",
+          description: "You must be logged in",
+          variant: "destructive"
+        });
         return;
       }
 
@@ -342,38 +367,38 @@ export function StageNotesTab({ stageId, tenantId, packageId }: StageNotesTabPro
       if (uploadedFiles.length > 0) {
         for (const file of uploadedFiles) {
           const fileName = `${Date.now()}-${file.name}`;
-          const { data: uploadData, error: uploadError } = await supabase.storage
-            .from('tenant-note-files')
-            .upload(fileName, file);
+          const {
+            data: uploadData,
+            error: uploadError
+          } = await supabase.storage.from('tenant-note-files').upload(fileName, file);
           if (uploadError) throw uploadError;
           fileUrls.push(uploadData.path);
           fileNames.push(file.name);
         }
       }
-
-      const convert12To24 = (time: { hour: string; minute: string; period: string }) => {
+      const convert12To24 = (time: {
+        hour: string;
+        minute: string;
+        period: string;
+      }) => {
         let hour = parseInt(time.hour);
         if (time.period === "PM" && hour !== 12) hour += 12;
         if (time.period === "AM" && hour === 12) hour = 0;
         return `${hour.toString().padStart(2, "0")}:${time.minute}`;
       };
-
       let startedDateTime = null;
       if (startedDate) {
         const time24 = convert12To24(startedTime);
         startedDateTime = `${format(startedDate, "yyyy-MM-dd")}T${time24}:00`;
       }
-
       let completedDateTime = null;
       if (completedDate) {
         const time24 = convert12To24(completedTime);
         completedDateTime = `${format(completedDate, "yyyy-MM-dd")}T${time24}:00`;
       }
-
       const remainingExistingFiles = existingFiles.filter(f => !filesToRemove.includes(f.path));
       const allFilePaths = [...remainingExistingFiles.map(f => f.path), ...fileUrls];
       const allFileNames = [...remainingExistingFiles.map(f => f.name), ...fileNames];
-
       const noteData = {
         note_details: noteText.trim(),
         note_type: noteType || null,
@@ -382,70 +407,74 @@ export function StageNotesTab({ stageId, tenantId, packageId }: StageNotesTabPro
         completed_date: completedDateTime,
         uploaded_files: allFilePaths.length > 0 ? allFilePaths : null,
         file_names: allFileNames.length > 0 ? allFileNames : null,
-        assignees: assignees.length > 0 ? assignees : null,
+        assignees: assignees.length > 0 ? assignees : null
       };
-
       if (selectedNote) {
-        const { error } = await (supabase
-          .from("documents_notes" as any)
-          .update(noteData)
-          .eq("id", selectedNote.id) as any);
+        const {
+          error
+        } = await (supabase.from("documents_notes" as any).update(noteData).eq("id", selectedNote.id) as any);
         if (error) throw error;
-        toast({ title: "Success", description: "Note updated successfully" });
+        toast({
+          title: "Success",
+          description: "Note updated successfully"
+        });
       } else {
-        const { error } = await (supabase
-          .from("documents_notes" as any)
-          .insert({
-            stage_id: stageId,
-            tenant_id: tenantId,
-            package_id: packageId,
-            ...noteData,
-            created_by: user.id
-          }) as any);
+        const {
+          error
+        } = await (supabase.from("documents_notes" as any).insert({
+          stage_id: stageId,
+          tenant_id: tenantId,
+          package_id: packageId,
+          ...noteData,
+          created_by: user.id
+        }) as any);
         if (error) throw error;
-        toast({ title: "Success", description: "Note added successfully" });
+        toast({
+          title: "Success",
+          description: "Note added successfully"
+        });
       }
-
       setIsAddDialogOpen(false);
       resetForm();
       fetchNotes();
     } catch (error: any) {
       console.error("Error saving note:", error);
-      toast({ title: "Error", description: error.message, variant: "destructive" });
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive"
+      });
     } finally {
       setSaving(false);
     }
   };
-
   const handleDeleteNote = async () => {
     if (!selectedNote) return;
-
     try {
-      const { error } = await (supabase
-        .from("documents_notes" as any)
-        .delete()
-        .eq("id", selectedNote.id) as any);
+      const {
+        error
+      } = await (supabase.from("documents_notes" as any).delete().eq("id", selectedNote.id) as any);
       if (error) throw error;
-      toast({ title: "Success", description: "Note deleted successfully" });
+      toast({
+        title: "Success",
+        description: "Note deleted successfully"
+      });
       setIsDeleteDialogOpen(false);
       setSelectedNote(null);
       fetchNotes();
     } catch (error: any) {
       console.error("Error deleting note:", error);
-      toast({ title: "Error", description: error.message, variant: "destructive" });
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive"
+      });
     }
   };
-
   const toggleAssignee = (userId: string) => {
-    setAssignees(prev =>
-      prev.includes(userId)
-        ? prev.filter(id => id !== userId)
-        : [...prev, userId]
-    );
+    setAssignees(prev => prev.includes(userId) ? prev.filter(id => id !== userId) : [...prev, userId]);
   };
-
-  return (
-    <div className="space-y-4">
+  return <div className="space-y-4">
       <div className="flex justify-end">
         <Button className="gap-2" onClick={() => handleOpenDialog()}>
           <Plus className="h-4 w-4" />
@@ -471,24 +500,17 @@ export function StageNotesTab({ stageId, tenantId, packageId }: StageNotesTabPro
               </TableRow>
             </TableHeader>
             <TableBody>
-              {loading ? (
-                <TableRow>
+              {loading ? <TableRow>
                   <TableCell colSpan={10} className="text-center py-12 text-muted-foreground">Loading...</TableCell>
-                </TableRow>
-              ) : notes.length === 0 ? (
-                <TableRow>
+                </TableRow> : notes.length === 0 ? <TableRow>
                   <TableCell colSpan={10} className="text-center py-12 text-muted-foreground">No notes have been added yet.</TableCell>
-                </TableRow>
-              ) : (
-                notes.map((note, index) => (
-                  <TableRow key={note.id}>
+                </TableRow> : notes.map((note, index) => <TableRow key={note.id}>
                     <TableCell className="font-medium text-muted-foreground border-r">{index + 1}</TableCell>
                     <TableCell className="border-r max-w-xs">
                       <p className="truncate">{note.note_details}</p>
                     </TableCell>
                     <TableCell className="border-r">
-                      {note.note_type ? (
-                        <div className="flex items-center gap-1.5">
+                      {note.note_type ? <div className="flex items-center gap-1.5">
                           {note.note_type === "general" && <FileText className="h-3.5 w-3.5 text-blue-500" />}
                           {note.note_type === "meeting" && <Users className="h-3.5 w-3.5 text-purple-500" />}
                           {note.note_type === "follow-up" && <RefreshCw className="h-3.5 w-3.5 text-orange-500" />}
@@ -496,137 +518,106 @@ export function StageNotesTab({ stageId, tenantId, packageId }: StageNotesTabPro
                           {note.note_type === "phone-call" && <Phone className="h-3.5 w-3.5 text-green-500" />}
                           {note.note_type === "others" && <MoreHorizontal className="h-3.5 w-3.5 text-gray-500" />}
                           <span className="text-sm capitalize">{note.note_type.replace("-", " ")}</span>
-                        </div>
-                      ) : <span className="text-xs text-muted-foreground">-</span>}
+                        </div> : <span className="text-xs text-muted-foreground">-</span>}
                     </TableCell>
                     <TableCell className="border-r">
-                      {note.priority ? (
-                        <div className="flex items-center gap-2">
-                          {note.priority === 'urgent' && (
-                            <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200 text-xs py-0.5 px-2 rounded-full">
+                      {note.priority ? <div className="flex items-center gap-2">
+                          {note.priority === 'urgent' && <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200 text-xs py-0.5 px-2 rounded-full">
                               <AlertCircle className="h-3 w-3 mr-1" />Urgent
-                            </Badge>
-                          )}
-                          {note.priority === 'high' && (
-                            <Badge variant="outline" className="bg-orange-50 text-orange-700 border-orange-200 text-xs py-0.5 px-2 rounded-full">
+                            </Badge>}
+                          {note.priority === 'high' && <Badge variant="outline" className="bg-orange-50 text-orange-700 border-orange-200 text-xs py-0.5 px-2 rounded-full">
                               <Flag className="h-3 w-3 mr-1" />High
-                            </Badge>
-                          )}
-                          {note.priority === 'normal' && (
-                            <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 text-xs py-0.5 px-2 rounded-full">
+                            </Badge>}
+                          {note.priority === 'normal' && <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 text-xs py-0.5 px-2 rounded-full">
                               <CheckCircle2 className="h-3 w-3 mr-1" />Normal
-                            </Badge>
-                          )}
-                          {note.priority === 'low' && (
-                            <Badge variant="outline" className="bg-gray-50 text-gray-700 border-gray-200 text-xs py-0.5 px-2 rounded-full">
+                            </Badge>}
+                          {note.priority === 'low' && <Badge variant="outline" className="bg-gray-50 text-gray-700 border-gray-200 text-xs py-0.5 px-2 rounded-full">
                               <Timer className="h-3 w-3 mr-1" />Low
-                            </Badge>
-                          )}
-                        </div>
-                      ) : <span className="text-xs text-muted-foreground">-</span>}
+                            </Badge>}
+                        </div> : <span className="text-xs text-muted-foreground">-</span>}
                     </TableCell>
                     <TableCell className="border-r">
-                      {note.started_date ? (
-                        <div className="flex items-center gap-2 text-sm">
+                      {note.started_date ? <div className="flex items-center gap-2 text-sm">
                           <CalendarIcon className="h-3.5 w-3.5 text-muted-foreground" />
                           <span>{format(new Date(note.started_date), "dd MMM yyyy h:mm a")}</span>
-                        </div>
-                      ) : <span className="text-xs text-muted-foreground">-</span>}
+                        </div> : <span className="text-xs text-muted-foreground">-</span>}
                     </TableCell>
                     <TableCell className="border-r">
-                      {note.completed_date ? (
-                        <div className="flex items-center gap-2 text-sm">
+                      {note.completed_date ? <div className="flex items-center gap-2 text-sm">
                           <CalendarIcon className="h-3.5 w-3.5 text-muted-foreground" />
                           <span>{format(new Date(note.completed_date), "dd MMM yyyy h:mm a")}</span>
-                        </div>
-                      ) : <span className="text-xs text-muted-foreground">-</span>}
+                        </div> : <span className="text-xs text-muted-foreground">-</span>}
                     </TableCell>
                     <TableCell className="border-r">
-                      {note.uploaded_files && note.uploaded_files.length > 0 ? (
-                        <Badge variant="outline" className="gap-1">
+                      {note.uploaded_files && note.uploaded_files.length > 0 ? <Badge variant="outline" className="gap-1">
                           <Paperclip className="h-3 w-3" />
                           {note.uploaded_files.length}
-                        </Badge>
-                      ) : <span className="text-xs text-muted-foreground">-</span>}
+                        </Badge> : <span className="text-xs text-muted-foreground">-</span>}
                     </TableCell>
                     <TableCell className="border-r">
-                      {note.assignees && note.assignees.length > 0 ? (
-                        <div className="flex items-center -space-x-2">
-                          {note.assignees.slice(0, 3).map((assigneeId) => {
-                            const user = vivacityTeam.find(u => u.user_uuid === assigneeId);
-                            return (
-                              <Avatar key={assigneeId} className="h-7 w-7 border-2 border-background">
+                      {note.assignees && note.assignees.length > 0 ? <div className="flex items-center -space-x-2">
+                          {note.assignees.slice(0, 3).map(assigneeId => {
+                    const user = vivacityTeam.find(u => u.user_uuid === assigneeId);
+                    return <Avatar key={assigneeId} className="h-7 w-7 border-2 border-background">
                                 {user?.avatar_url && <AvatarImage src={user.avatar_url} />}
                                 <AvatarFallback className="text-xs bg-primary/10 text-primary">
                                   {user ? `${user.first_name?.[0] || ''}${user.last_name?.[0] || ''}` : 'U'}
                                 </AvatarFallback>
-                              </Avatar>
-                            );
-                          })}
-                          {note.assignees.length > 3 && (
-                            <Avatar className="h-7 w-7 border-2 border-background">
+                              </Avatar>;
+                  })}
+                          {note.assignees.length > 3 && <Avatar className="h-7 w-7 border-2 border-background">
                               <AvatarFallback className="text-xs bg-muted">+{note.assignees.length - 3}</AvatarFallback>
-                            </Avatar>
-                          )}
-                        </div>
-                      ) : <span className="text-xs text-muted-foreground">-</span>}
+                            </Avatar>}
+                        </div> : <span className="text-xs text-muted-foreground">-</span>}
                     </TableCell>
                     <TableCell className="border-r">
-                      {note.started_date && note.completed_date ? (
-                        <div className="flex items-center gap-1.5 text-sm">
+                      {note.started_date && note.completed_date ? <div className="flex items-center gap-1.5 text-sm">
                           <Timer className="h-3.5 w-3.5 text-muted-foreground" />
                           <span>
                             {(() => {
-                              const start = new Date(note.started_date);
-                              const end = new Date(note.completed_date);
-                              const diffMs = end.getTime() - start.getTime();
-                              const diffMins = Math.floor(diffMs / 60000);
-                              const days = Math.floor(diffMins / 1440);
-                              const hours = Math.floor((diffMins % 1440) / 60);
-                              const mins = diffMins % 60;
-                              if (days > 0) return `${days}d ${hours}h`;
-                              return hours > 0 ? `${hours}h ${mins}m` : `${mins}m`;
-                            })()}
+                      const start = new Date(note.started_date);
+                      const end = new Date(note.completed_date);
+                      const diffMs = end.getTime() - start.getTime();
+                      const diffMins = Math.floor(diffMs / 60000);
+                      const days = Math.floor(diffMins / 1440);
+                      const hours = Math.floor(diffMins % 1440 / 60);
+                      const mins = diffMins % 60;
+                      if (days > 0) return `${days}d ${hours}h`;
+                      return hours > 0 ? `${hours}h ${mins}m` : `${mins}m`;
+                    })()}
                           </span>
-                        </div>
-                      ) : <span className="text-xs text-muted-foreground">-</span>}
+                        </div> : <span className="text-xs text-muted-foreground">-</span>}
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-1">
                         <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleOpenDialog(note)}>
                           <Pencil className="h-4 w-4" />
                         </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 text-destructive hover:text-destructive"
-                          onClick={() => { setSelectedNote(note); setIsDeleteDialogOpen(true); }}
-                        >
+                        <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => {
+                    setSelectedNote(note);
+                    setIsDeleteDialogOpen(true);
+                  }}>
                           <Trash2 className="h-4 w-4" />
                         </Button>
                       </div>
                     </TableCell>
-                  </TableRow>
-                ))
-              )}
+                  </TableRow>)}
             </TableBody>
           </Table>
         </CardContent>
       </Card>
 
       {/* Add/Edit Note Dialog */}
-      <Dialog open={isAddDialogOpen} onOpenChange={(open) => {
-        setIsAddDialogOpen(open);
-        if (!open) resetForm();
-      }}>
+      <Dialog open={isAddDialogOpen} onOpenChange={open => {
+      setIsAddDialogOpen(open);
+      if (!open) resetForm();
+    }}>
         <DialogPortal>
           <DialogOverlay className="z-[70] bg-black/70" />
-          <DialogPrimitive.Content
-            onPointerDownOutside={e => e.preventDefault()}
-            onInteractOutside={e => e.preventDefault()}
-            className="fixed left-[50%] top-[50%] z-[70] flex flex-col w-full max-h-[85vh] translate-x-[-50%] translate-y-[-50%] gap-4 overflow-hidden border bg-background p-6 shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 sm:rounded-lg"
-            style={{ width: '650px', maxWidth: '90vw' }}
-          >
+          <DialogPrimitive.Content onPointerDownOutside={e => e.preventDefault()} onInteractOutside={e => e.preventDefault()} className="fixed left-[50%] top-[50%] z-[70] flex flex-col w-full max-h-[85vh] translate-x-[-50%] translate-y-[-50%] gap-4 overflow-hidden border bg-background p-6 shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 sm:rounded-lg" style={{
+          width: '650px',
+          maxWidth: '90vw'
+        }}>
             <DialogHeader>
               <div className="flex items-start justify-between gap-4">
                 <div>
@@ -638,19 +629,7 @@ export function StageNotesTab({ stageId, tenantId, packageId }: StageNotesTabPro
                     {selectedNote ? "Update the note details below" : "Create a new note for this stage."}
                   </p>
                 </div>
-                <div className="flex gap-2 shrink-0">
-                  {!isTimerRunning ? (
-                    <Button type="button" size="sm" variant="outline" onClick={handlePlayTimer}
-                      className="gap-2 bg-green-500/10 text-green-600 border-green-500 hover:bg-green-500/20">
-                      <Play className="h-4 w-4" />Play
-                    </Button>
-                  ) : (
-                    <Button type="button" size="sm" variant="outline" onClick={handleStopTimer}
-                      className="gap-2 bg-red-500/10 text-red-600 border-red-500 hover:bg-red-500/20">
-                      <Square className="h-4 w-4" />Stop
-                    </Button>
-                  )}
-                </div>
+                
               </div>
             </DialogHeader>
 
@@ -664,8 +643,7 @@ export function StageNotesTab({ stageId, tenantId, packageId }: StageNotesTabPro
                   <Select value={noteType} onValueChange={setNoteType}>
                     <SelectTrigger className="w-full">
                       <SelectValue placeholder="Select type...">
-                        {noteType && (
-                          <div className="flex items-center gap-2">
+                        {noteType && <div className="flex items-center gap-2">
                             {noteType === "general" && <FileText className="h-4 w-4 text-blue-500" />}
                             {noteType === "meeting" && <Users className="h-4 w-4 text-purple-500" />}
                             {noteType === "follow-up" && <RefreshCw className="h-4 w-4 text-orange-500" />}
@@ -673,8 +651,7 @@ export function StageNotesTab({ stageId, tenantId, packageId }: StageNotesTabPro
                             {noteType === "phone-call" && <Phone className="h-4 w-4 text-green-500" />}
                             {noteType === "others" && <MoreHorizontal className="h-4 w-4 text-gray-500" />}
                             <span className="capitalize">{noteType.replace("-", " ")}</span>
-                          </div>
-                        )}
+                          </div>}
                       </SelectValue>
                     </SelectTrigger>
                     <SelectContent className="bg-background">
@@ -698,17 +675,10 @@ export function StageNotesTab({ stageId, tenantId, packageId }: StageNotesTabPro
                   <Select value={priority} onValueChange={setPriority}>
                     <SelectTrigger className="w-full">
                       <SelectValue placeholder="Select priority...">
-                        {priority && (
-                          <div className="flex items-center gap-2">
-                            <Flag className={cn("h-4 w-4", 
-                              priority === "urgent" && "fill-red-500 text-red-500",
-                              priority === "high" && "fill-orange-500 text-orange-500",
-                              priority === "normal" && "fill-yellow-500 text-yellow-500",
-                              priority === "low" && "fill-blue-500 text-blue-500"
-                            )} />
+                        {priority && <div className="flex items-center gap-2">
+                            <Flag className={cn("h-4 w-4", priority === "urgent" && "fill-red-500 text-red-500", priority === "high" && "fill-orange-500 text-orange-500", priority === "normal" && "fill-yellow-500 text-yellow-500", priority === "low" && "fill-blue-500 text-blue-500")} />
                             <span className="capitalize">{priority}</span>
-                          </div>
-                        )}
+                          </div>}
                       </SelectValue>
                     </SelectTrigger>
                     <SelectContent className="bg-background">
@@ -727,12 +697,7 @@ export function StageNotesTab({ stageId, tenantId, packageId }: StageNotesTabPro
               {/* Note Details */}
               <div className="space-y-2">
                 <Label>Note Details *</Label>
-                <Textarea
-                  value={noteText}
-                  onChange={(e) => setNoteText(e.target.value)}
-                  placeholder="Enter note details..."
-                  rows={4}
-                />
+                <Textarea value={noteText} onChange={e => setNoteText(e.target.value)} placeholder="Enter note details..." rows={4} />
               </div>
 
               {/* Started Date/Time */}
@@ -754,10 +719,19 @@ export function StageNotesTab({ stageId, tenantId, packageId }: StageNotesTabPro
                 <div className="space-y-2">
                   <Label>Started Time</Label>
                   <div className="flex items-center gap-2">
-                    <Input type="text" value={startedTime.hour} onChange={e => setStartedTime(prev => ({ ...prev, hour: e.target.value }))} className="w-14 text-center" maxLength={2} placeholder="HH" />
+                    <Input type="text" value={startedTime.hour} onChange={e => setStartedTime(prev => ({
+                    ...prev,
+                    hour: e.target.value
+                  }))} className="w-14 text-center" maxLength={2} placeholder="HH" />
                     <span>:</span>
-                    <Input type="text" value={startedTime.minute} onChange={e => setStartedTime(prev => ({ ...prev, minute: e.target.value }))} className="w-14 text-center" maxLength={2} placeholder="MM" />
-                    <Select value={startedTime.period} onValueChange={v => setStartedTime(prev => ({ ...prev, period: v }))}>
+                    <Input type="text" value={startedTime.minute} onChange={e => setStartedTime(prev => ({
+                    ...prev,
+                    minute: e.target.value
+                  }))} className="w-14 text-center" maxLength={2} placeholder="MM" />
+                    <Select value={startedTime.period} onValueChange={v => setStartedTime(prev => ({
+                    ...prev,
+                    period: v
+                  }))}>
                       <SelectTrigger className="w-20"><SelectValue /></SelectTrigger>
                       <SelectContent className="z-[80]"><SelectItem value="AM">AM</SelectItem><SelectItem value="PM">PM</SelectItem></SelectContent>
                     </Select>
@@ -784,10 +758,19 @@ export function StageNotesTab({ stageId, tenantId, packageId }: StageNotesTabPro
                 <div className="space-y-2">
                   <Label>Completed Time</Label>
                   <div className="flex items-center gap-2">
-                    <Input type="text" value={completedTime.hour} onChange={e => setCompletedTime(prev => ({ ...prev, hour: e.target.value }))} className="w-14 text-center" maxLength={2} placeholder="HH" />
+                    <Input type="text" value={completedTime.hour} onChange={e => setCompletedTime(prev => ({
+                    ...prev,
+                    hour: e.target.value
+                  }))} className="w-14 text-center" maxLength={2} placeholder="HH" />
                     <span>:</span>
-                    <Input type="text" value={completedTime.minute} onChange={e => setCompletedTime(prev => ({ ...prev, minute: e.target.value }))} className="w-14 text-center" maxLength={2} placeholder="MM" />
-                    <Select value={completedTime.period} onValueChange={v => setCompletedTime(prev => ({ ...prev, period: v }))}>
+                    <Input type="text" value={completedTime.minute} onChange={e => setCompletedTime(prev => ({
+                    ...prev,
+                    minute: e.target.value
+                  }))} className="w-14 text-center" maxLength={2} placeholder="MM" />
+                    <Select value={completedTime.period} onValueChange={v => setCompletedTime(prev => ({
+                    ...prev,
+                    period: v
+                  }))}>
                       <SelectTrigger className="w-20"><SelectValue /></SelectTrigger>
                       <SelectContent className="z-[80]"><SelectItem value="AM">AM</SelectItem><SelectItem value="PM">PM</SelectItem></SelectContent>
                     </Select>
@@ -811,45 +794,29 @@ export function StageNotesTab({ stageId, tenantId, packageId }: StageNotesTabPro
                     <span className="text-sm text-muted-foreground">Click to upload files</span>
                   </label>
                 </div>
-                {(existingFiles.length > 0 || uploadedFiles.length > 0) && (
-                  <div className="flex flex-wrap gap-2 mt-2">
-                    {existingFiles.map((file) => (
-                      <Badge key={file.path} variant="secondary" className="gap-1 pr-1">
+                {(existingFiles.length > 0 || uploadedFiles.length > 0) && <div className="flex flex-wrap gap-2 mt-2">
+                    {existingFiles.map(file => <Badge key={file.path} variant="secondary" className="gap-1 pr-1">
                         <Paperclip className="h-3 w-3" />
                         {file.name}
                         <Button variant="ghost" size="icon" className="h-4 w-4 ml-1" onClick={() => handleRemoveExistingFile(file.path)}>
                           <X className="h-3 w-3" />
                         </Button>
-                      </Badge>
-                    ))}
-                    {uploadedFiles.map((file, index) => (
-                      <Badge key={index} variant="secondary" className="gap-1 pr-1">
+                      </Badge>)}
+                    {uploadedFiles.map((file, index) => <Badge key={index} variant="secondary" className="gap-1 pr-1">
                         <Paperclip className="h-3 w-3" />
                         {file.name}
                         <Button variant="ghost" size="icon" className="h-4 w-4 ml-1" onClick={() => handleRemoveFile(index)}>
                           <X className="h-3 w-3" />
                         </Button>
-                      </Badge>
-                    ))}
-                  </div>
-                )}
+                      </Badge>)}
+                  </div>}
               </div>
 
               {/* Assignees */}
               <div className="space-y-2">
                 <Label>Assignees</Label>
                 <div className="flex flex-wrap gap-2 p-3 border rounded-lg max-h-32 overflow-y-auto">
-                  {vivacityTeam.map((user) => (
-                    <div
-                      key={user.user_uuid}
-                      onClick={() => toggleAssignee(user.user_uuid)}
-                      className={cn(
-                        "flex items-center gap-2 px-3 py-1.5 rounded-full cursor-pointer border transition-colors",
-                        assignees.includes(user.user_uuid)
-                          ? "bg-primary/10 border-primary text-primary"
-                          : "bg-muted/50 border-transparent hover:bg-muted"
-                      )}
-                    >
+                  {vivacityTeam.map(user => <div key={user.user_uuid} onClick={() => toggleAssignee(user.user_uuid)} className={cn("flex items-center gap-2 px-3 py-1.5 rounded-full cursor-pointer border transition-colors", assignees.includes(user.user_uuid) ? "bg-primary/10 border-primary text-primary" : "bg-muted/50 border-transparent hover:bg-muted")}>
                       <Avatar className="h-5 w-5">
                         {user.avatar_url && <AvatarImage src={user.avatar_url} />}
                         <AvatarFallback className="text-[10px]">
@@ -857,8 +824,7 @@ export function StageNotesTab({ stageId, tenantId, packageId }: StageNotesTabPro
                         </AvatarFallback>
                       </Avatar>
                       <span className="text-sm">{user.first_name} {user.last_name}</span>
-                    </div>
-                  ))}
+                    </div>)}
                 </div>
               </div>
             </div>
@@ -890,6 +856,5 @@ export function StageNotesTab({ stageId, tenantId, packageId }: StageNotesTabPro
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </div>
-  );
+    </div>;
 }
