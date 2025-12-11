@@ -723,7 +723,7 @@ export default function ManagePackages() {
                           View More
                         </button>
                       </div>
-                      <button onClick={() => setActiveTab(pkg.id.toString())} className={cn("relative items-center justify-center rounded-lg border transition-all duration-300", "px-3 py-3 min-w-[110px]", "text-sm font-semibold whitespace-nowrap shadow-sm", activeTab === pkg.id.toString() ? "text-primary bg-primary/10 border-primary" : "text-muted-foreground bg-background border-border hover:text-foreground hover:bg-muted/50 hover:border-border")}>
+                      <button onClick={() => setActiveTab(pkg.id.toString())} className={cn("relative items-center justify-center rounded-lg border transition-all duration-300", "px-3 py-3 min-w-[110px]", "text-sm font-semibold whitespace-nowrap shadow-sm", activeTab === pkg.id.toString() ? "text-primary bg-primary/10 border-border" : "text-muted-foreground bg-background border-border hover:text-foreground hover:bg-muted/50 hover:border-border")}>
                         {pkg.name}
                       </button>
                     </div>
