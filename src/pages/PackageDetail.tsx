@@ -506,13 +506,22 @@ const PackageDetail = () => {
       if (pkgError) throw pkgError;
       setPackageInfo(pkgData);
 
-      // Fetch stages for this package
-      const {
-        data: stagesData,
-        error: stagesError
-      } = await (supabase.from("package_stages" as any).select("*").eq("package_id", Number(id)).order("order_number") as any);
-      if (stagesError) throw stagesError;
-      setStages((stagesData || []) as StageData[]);
+      // Fetch stages for this package (gracefully handle if table doesn't exist)
+      try {
+        const {
+          data: stagesData,
+          error: stagesError
+        } = await (supabase.from("package_stages" as any).select("*").eq("package_id", Number(id)).order("order_number") as any);
+        if (!stagesError) {
+          setStages((stagesData || []) as StageData[]);
+        } else {
+          console.log("package_stages table may not exist:", stagesError.message);
+          setStages([]);
+        }
+      } catch (stageErr) {
+        console.log("Error fetching stages:", stageErr);
+        setStages([]);
+      }
 
       // Fetch tenants for this package (check package_ids array)
       const {
