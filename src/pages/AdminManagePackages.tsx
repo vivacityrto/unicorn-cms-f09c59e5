@@ -52,6 +52,7 @@ export default function AdminManagePackages() {
   const [filteredPackages, setFilteredPackages] = useState<PackageType[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all');
   const [activeTab, setActiveTab] = useState<AdminPackageTab>('packages');
   const [totalStagesCount, setTotalStagesCount] = useState(0);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
@@ -130,7 +131,7 @@ export default function AdminManagePackages() {
   }, [selectedPackage, selectedStage]);
   useEffect(() => {
     filterPackages();
-  }, [searchQuery, packages]);
+  }, [searchQuery, packages, statusFilter]);
   const fetchPackages = async () => {
     try {
       setLoading(true);
@@ -172,6 +173,11 @@ export default function AdminManagePackages() {
     let filtered = [...packages];
     if (searchQuery) {
       filtered = filtered.filter(pkg => pkg.name.toLowerCase().includes(searchQuery.toLowerCase()));
+    }
+    if (statusFilter === 'active') {
+      filtered = filtered.filter(pkg => pkg.status === 'active');
+    } else if (statusFilter === 'inactive') {
+      filtered = filtered.filter(pkg => pkg.status !== 'active');
     }
     setFilteredPackages(filtered);
   };
@@ -536,9 +542,9 @@ export default function AdminManagePackages() {
         </Card>
 
         <Card 
-          className="animate-scale-in cursor-pointer hover:shadow-lg transition-all" 
+          className={cn("animate-scale-in cursor-pointer hover:shadow-lg transition-all", statusFilter === 'active' && "ring-2 ring-green-500")}
           style={{ animationDelay: "50ms" }}
-          onClick={() => setActiveTab('packages')}
+          onClick={() => { setActiveTab('packages'); setStatusFilter(statusFilter === 'active' ? 'all' : 'active'); }}
         >
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Active</CardTitle>
@@ -569,9 +575,9 @@ export default function AdminManagePackages() {
         </Card>
 
         <Card 
-          className="animate-scale-in cursor-pointer hover:shadow-lg transition-all" 
+          className={cn("animate-scale-in cursor-pointer hover:shadow-lg transition-all", statusFilter === 'inactive' && "ring-2 ring-orange-500")}
           style={{ animationDelay: "150ms" }}
-          onClick={() => setActiveTab('packages')}
+          onClick={() => { setActiveTab('packages'); setStatusFilter(statusFilter === 'inactive' ? 'all' : 'inactive'); }}
         >
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Inactive</CardTitle>
