@@ -640,8 +640,89 @@ const PackageDetail = () => {
         </div>
       </div>
 
-      {/* Stages Section - Hidden when stage is selected */}
-      {!selectedStage && <div className="space-y-4 animate-fade-in">
+      {/* Tenants Table - Only shown on main package page (not tenant-specific) */}
+      {!tenantId && !selectedStage && <div className="space-y-4 animate-fade-in">
+          <Card className="border-0 shadow-lg overflow-hidden">
+            <div className="bg-gradient-to-r from-primary/5 to-primary/10 px-6 py-4 border-b border-border/50">
+              <div className="flex items-center justify-between">
+                <div className="space-y-1">
+                  <h3 className="text-base font-semibold text-foreground">Clients</h3>
+                  <p className="text-sm text-muted-foreground flex items-center gap-2">
+                    <Users className="h-4 w-4" />
+                    {allTenants.length} client{allTenants.length !== 1 ? 's' : ''} assigned to this package
+                  </p>
+                </div>
+                <Button className="gap-2" onClick={() => setIsAddDialogOpen(true)}>
+                  <Plus className="h-4 w-4" />
+                  Set up Client
+                </Button>
+              </div>
+            </div>
+            <CardContent className="p-6 space-y-4">
+              <div className="relative flex-1 max-w-md">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input placeholder="Search clients..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="pl-10 h-10" />
+              </div>
+
+              <Card className="border shadow-sm bg-white">
+                <CardContent className="p-0">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="border-b-2 hover:bg-transparent">
+                        <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-r">
+                          Client Name
+                        </TableHead>
+                        <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-r">
+                          Status
+                        </TableHead>
+                        <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-r">
+                          Users
+                        </TableHead>
+                        <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap">
+                          Created
+                        </TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredTenants.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={4} className="text-center py-12 text-muted-foreground">
+                            {searchQuery ? "No clients match your search" : "No clients have been added to this package yet."}
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        filteredTenants.map((tenant) => (
+                          <TableRow
+                            key={tenant.id}
+                            className="cursor-pointer hover:bg-muted/50 transition-colors"
+                            onClick={() => navigate(`/admin/package/${id}/tenant/${tenant.id}`)}
+                          >
+                            <TableCell className="font-medium border-r">{tenant.name}</TableCell>
+                            <TableCell className="border-r">
+                              <Badge variant={tenant.status === "active" ? "default" : "secondary"}>
+                                {tenant.status === "active" ? "Active" : "Inactive"}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="border-r">{tenant.user_count || 0}</TableCell>
+                            <TableCell>
+                              <div className="flex items-center gap-2">
+                                <Calendar className="h-4 w-4 text-muted-foreground" />
+                                {new Date(tenant.created_at).toLocaleDateString()}
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      )}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
+            </CardContent>
+          </Card>
+        </div>}
+
+      {/* Stages Section - Only shown on tenant-specific route OR when stage is selected */}
+      {tenantId && !selectedStage && <div className="space-y-4 animate-fade-in">
           <Card className="border-0 shadow-lg overflow-hidden">
             <div className="bg-gradient-to-r from-primary/5 to-primary/10 px-6 py-4 border-b border-border/50">
               <div className="flex items-center justify-between">
