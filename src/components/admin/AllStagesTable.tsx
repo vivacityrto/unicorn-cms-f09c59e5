@@ -289,9 +289,9 @@ export function AllStagesTable() {
                   </TableCell>
                   <TableCell className="py-6 border-r border-border/50 min-w-[120px]">
                     <div className="flex items-center gap-2">
-                      <Tag className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                      <Calendar className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                       <p className="text-sm text-muted-foreground whitespace-nowrap truncate max-w-[130px]">
-                        {stage.short_name || '-'}
+                        {stage.created_at ? format(new Date(stage.created_at), 'dd MMM yyyy') : '-'}
                       </p>
                     </div>
                   </TableCell>
