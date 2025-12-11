@@ -1845,6 +1845,85 @@ export type Database = {
           },
         ]
       }
+      documents_notes: {
+        Row: {
+          assignees: string[] | null
+          completed_date: string | null
+          created_at: string
+          created_by: string
+          duration: number | null
+          file_names: string[] | null
+          id: string
+          note_details: string
+          note_type: string | null
+          package_id: number | null
+          priority: string | null
+          stage_id: number
+          started_date: string | null
+          tenant_id: number
+          updated_at: string
+          uploaded_files: string[] | null
+        }
+        Insert: {
+          assignees?: string[] | null
+          completed_date?: string | null
+          created_at?: string
+          created_by: string
+          duration?: number | null
+          file_names?: string[] | null
+          id?: string
+          note_details: string
+          note_type?: string | null
+          package_id?: number | null
+          priority?: string | null
+          stage_id: number
+          started_date?: string | null
+          tenant_id: number
+          updated_at?: string
+          uploaded_files?: string[] | null
+        }
+        Update: {
+          assignees?: string[] | null
+          completed_date?: string | null
+          created_at?: string
+          created_by?: string
+          duration?: number | null
+          file_names?: string[] | null
+          id?: string
+          note_details?: string
+          note_type?: string | null
+          package_id?: number | null
+          priority?: string | null
+          stage_id?: number
+          started_date?: string | null
+          tenant_id?: number
+          updated_at?: string
+          uploaded_files?: string[] | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "documents_notes_package_id_fkey"
+            columns: ["package_id"]
+            isOneToOne: false
+            referencedRelation: "packages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "documents_notes_stage_id_fkey"
+            columns: ["stage_id"]
+            isOneToOne: false
+            referencedRelation: "documents_stages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "documents_notes_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       documents_stages: {
         Row: {
           created_at: string

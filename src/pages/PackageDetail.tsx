@@ -22,6 +22,7 @@ import { EditPackageDialog } from "@/components/EditPackageDialog";
 import { CreateDocumentDialog2 } from "@/components/CreateDocumentDialog2";
 import { AddExistingDocumentDialog } from "@/components/AddExistingDocumentDialog";
 import { AddExistingStageDialog } from "@/components/AddExistingStageDialog";
+import { StageNotesTab } from "@/components/StageNotesTab";
 import { cn } from "@/lib/utils";
 import {
   DndContext,
@@ -895,8 +896,14 @@ const PackageDetail = () => {
               </div>
 
               <div className="p-6">
-                <Tabs defaultValue="staff-tasks" className="space-y-6">
+                <Tabs defaultValue="notes" className="space-y-6">
             <TabsList className="flex gap-2 bg-transparent h-auto p-0 mb-4">
+              <TabsTrigger value="notes" className="h-10 px-4 py-2 gap-2 hover:bg-[hsl(196deg_100%_93.53%)] hover:text-black data-[state=active]:bg-[hsl(196deg_100%_93.53%)] data-[state=active]:text-black" style={{
+            boxShadow: "var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow)",
+            border: "1px solid #00000052"
+          }}>
+                Notes
+              </TabsTrigger>
               <TabsTrigger value="staff-tasks" className="h-10 px-4 py-2 gap-2 hover:bg-[hsl(196deg_100%_93.53%)] hover:text-black data-[state=active]:bg-[hsl(196deg_100%_93.53%)] data-[state=active]:text-black" style={{
             boxShadow: "var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow)",
             border: "1px solid #00000052"
@@ -916,6 +923,23 @@ const PackageDetail = () => {
                 Documents
               </TabsTrigger>
             </TabsList>
+
+            <TabsContent value="notes" className="space-y-4">
+              {tenantId && (
+                <StageNotesTab 
+                  stageId={selectedStage.id} 
+                  tenantId={Number(tenantId)} 
+                  packageId={Number(id)} 
+                />
+              )}
+              {!tenantId && (
+                <Card className="border shadow-sm">
+                  <CardContent className="p-8 text-center text-muted-foreground">
+                    Notes are only available when viewing a specific tenant's stages.
+                  </CardContent>
+                </Card>
+              )}
+            </TabsContent>
 
             <TabsContent value="staff-tasks" className="space-y-4">
               <div className="flex justify-end">
