@@ -82,7 +82,10 @@ export default function AdminPackageTenantDetail() {
   return <div className="min-h-screen bg-background">
       {/* Header with back button */}
       <div className="px-6 pt-6 pb-4">
-        <Button variant="ghost" size="sm" onClick={() => navigate(`/admin/package/${packageId}`)} className="mb-4 gap-2 text-muted-foreground hover:text-foreground">
+        <Button variant="ghost" size="sm" onClick={() => navigate(`/admin/package/${packageId}`)} className="mb-4 gap-2 bg-white hover:bg-[hsl(196deg_100%_93.53%)] hover:text-black" style={{
+          boxShadow: "var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow)",
+          border: "1px solid #00000052"
+        }}>
           <ArrowLeft className="h-4 w-4" />
           Back to Package
         </Button>
