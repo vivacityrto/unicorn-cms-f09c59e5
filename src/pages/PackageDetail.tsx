@@ -58,6 +58,9 @@ interface TenantData {
   created_at: string;
   user_count?: number;
   package_id?: number | null;
+  clo_name?: string | null;
+  risk_level?: string | null;
+  state?: string | null;
 }
 interface StageData {
   id: number;
@@ -563,26 +566,57 @@ const PackageDetail = () => {
       const {
         data: tenantsData,
         error: tenantsError
-      } = await supabase.from("tenants").select("id, name, status, created_at").contains("package_ids", [Number(id)]).order("name");
+      } = await supabase.from("tenants").select("id, name, status, created_at, risk_level").contains("package_ids", [Number(id)]).order("name");
       if (tenantsError) throw tenantsError;
       console.log("Tenants for package", id, ":", tenantsData);
 
-      // For each tenant, count users
-      const tenantsWithCounts = await Promise.all((tenantsData || []).map(async (tenant: any) => {
-        const {
-          count,
-          error: countError
-        } = await supabase.from("users").select("user_uuid", {
-          count: "exact",
-          head: true
-        }).eq("tenant_id", tenant.id);
-        if (countError) {
-          console.error(`Error counting users for tenant ${tenant.id}:`, countError);
+      const tenantIds = (tenantsData || []).map((t: any) => t.id);
+
+      // Batch fetch member counts
+      const { data: memberCounts } = await supabase.from("users").select("tenant_id").in("tenant_id", tenantIds);
+      const memberCountMap = (memberCounts || []).reduce((acc: Record<number, number>, user: any) => {
+        acc[user.tenant_id] = (acc[user.tenant_id] || 0) + 1;
+        return acc;
+      }, {});
+
+      // Batch fetch CLO data
+      const { data: connectedData } = await supabase.from("connected_tenants").select("tenant_id, user_uuid").in("tenant_id", tenantIds);
+      const connectedMap = (connectedData || []).reduce((acc: Record<number, string>, conn: any) => {
+        if (!acc[conn.tenant_id]) {
+          acc[conn.tenant_id] = conn.user_uuid;
         }
-        return {
-          ...tenant,
-          user_count: count || 0
-        };
+        return acc;
+      }, {});
+
+      // Batch fetch CLO user names
+      const userUuids = Object.values(connectedMap).filter(Boolean);
+      const { data: usersData } = await supabase.from("users").select("user_uuid, first_name, last_name").in("user_uuid", userUuids);
+      const userNameMap = (usersData || []).reduce((acc: Record<string, string>, user: any) => {
+        acc[user.user_uuid] = `${user.first_name} ${user.last_name}`;
+        return acc;
+      }, {});
+
+      // Fetch state from first admin user for each tenant
+      const { data: adminUsersData } = await supabase.from("users").select("tenant_id, state").eq("unicorn_role", "Admin").in("tenant_id", tenantIds);
+      const stateCodes = [...new Set(adminUsersData?.map((u: any) => u.state).filter(Boolean) || [])];
+      const { data: statesData } = await supabase.from("ctstates").select("Code, Description").in("Code", stateCodes);
+      const stateDescMap = (statesData || []).reduce((acc: Record<number, string>, state: any) => {
+        acc[state.Code] = state.Description;
+        return acc;
+      }, {});
+      const stateMap = (adminUsersData || []).reduce((acc: Record<number, string | null>, user: any) => {
+        if (!acc[user.tenant_id] && user.state) {
+          acc[user.tenant_id] = stateDescMap[user.state] || "";
+        }
+        return acc;
+      }, {});
+
+      // Merge all data
+      const tenantsWithCounts = (tenantsData || []).map((tenant: any) => ({
+        ...tenant,
+        user_count: memberCountMap[tenant.id] || 0,
+        clo_name: connectedMap[tenant.id] ? userNameMap[connectedMap[tenant.id]] : null,
+        state: stateMap[tenant.id] || null
       }));
 
       // Split into active and all tenants
@@ -711,55 +745,87 @@ const PackageDetail = () => {
 
               <Card className="border shadow-sm bg-white">
                 <CardContent className="p-0">
-                  <Table>
-                    <TableHeader>
-                      <TableRow className="border-b-2 hover:bg-transparent">
-                        <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-r">
-                          Client Name
-                        </TableHead>
-                        <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-r">
-                          Status
-                        </TableHead>
-                        <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-r">
-                          Users
-                        </TableHead>
-                        <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap">
-                          Created
-                        </TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {filteredTenants.length === 0 ? (
-                        <TableRow>
-                          <TableCell colSpan={4} className="text-center py-12 text-muted-foreground">
-                            {searchQuery ? "No clients match your search" : "No clients have been added to this package yet."}
-                          </TableCell>
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="border-b-2 hover:bg-transparent">
+                          <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-r border-border/50">
+                            Client Name
+                          </TableHead>
+                          <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-r border-border/50 text-center">
+                            Status
+                          </TableHead>
+                          <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-r border-border/50">
+                            CLO
+                          </TableHead>
+                          <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-r border-border/50 text-center">
+                            Members
+                          </TableHead>
+                          <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-r border-border/50 text-center">
+                            Risk Level
+                          </TableHead>
+                          <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-border/50">
+                            Created
+                          </TableHead>
                         </TableRow>
-                      ) : (
-                        filteredTenants.map((tenant) => (
-                          <TableRow
-                            key={tenant.id}
-                            className="cursor-pointer hover:bg-muted/50 transition-colors"
-                            onClick={() => navigate(`/admin/package/${id}/tenant/${tenant.id}`)}
-                          >
-                            <TableCell className="font-medium border-r">{tenant.name}</TableCell>
-                            <TableCell className="border-r">
-                              <Badge variant={tenant.status === "active" ? "default" : "secondary"}>
-                                {tenant.status === "active" ? "Active" : "Inactive"}
-                              </Badge>
-                            </TableCell>
-                            <TableCell className="border-r">{tenant.user_count || 0}</TableCell>
-                            <TableCell>
-                              <div className="flex items-center gap-2">
-                                <Calendar className="h-4 w-4 text-muted-foreground" />
-                                {new Date(tenant.created_at).toLocaleDateString()}
-                              </div>
+                      </TableHeader>
+                      <TableBody>
+                        {filteredTenants.length === 0 ? (
+                          <TableRow>
+                            <TableCell colSpan={6} className="text-center py-12 text-muted-foreground">
+                              {searchQuery ? "No clients match your search" : "No clients have been added to this package yet."}
                             </TableCell>
                           </TableRow>
-                        ))
-                      )}
-                    </TableBody>
-                  </Table>
+                        ) : (
+                          filteredTenants.map((tenant, index) => (
+                            <TableRow
+                              key={tenant.id}
+                              className={cn("group transition-all duration-200 cursor-pointer border-b border-border/50", index % 2 === 0 ? "bg-background" : "bg-muted/20", "hover:bg-primary/5 animate-fade-in")}
+                              onClick={() => navigate(`/admin/package/${id}/tenant/${tenant.id}`)}
+                            >
+                              <TableCell className="py-6 border-r border-border/50 min-w-[280px] pr-8">
+                                <div>
+                                  <div className="font-semibold text-foreground pb-[10px] whitespace-nowrap">
+                                    {tenant.name}
+                                  </div>
+                                  <div className="flex items-center justify-between text-xs text-muted-foreground mt-1 whitespace-nowrap">
+                                    <span className="flex items-center gap-1">
+                                      <Calendar className="w-3 h-3" />
+                                      {new Date(tenant.created_at).toLocaleDateString("en-GB")}
+                                    </span>
+                                    <span>{tenant.state || ""}</span>
+                                  </div>
+                                </div>
+                              </TableCell>
+                              <TableCell className="py-6 border-r border-border/50 text-center whitespace-nowrap">
+                                <Badge variant={tenant.status === "active" ? "default" : "secondary"} className="py-[3px] rounded-[9px]">
+                                  {tenant.status}
+                                </Badge>
+                              </TableCell>
+                              <TableCell className="py-6 border-r border-border/50 whitespace-nowrap">
+                                <span className="text-sm text-foreground">
+                                  {tenant.clo_name || "Not Assigned"}
+                                </span>
+                              </TableCell>
+                              <TableCell className="py-6 border-r border-border/50 text-center whitespace-nowrap">
+                                <span className="font-semibold">{tenant.user_count || 0}</span>
+                              </TableCell>
+                              <TableCell className="py-6 border-r border-border/50 text-center whitespace-nowrap">
+                                <Badge variant="outline" className="capitalize py-[3px] rounded-[9px]">
+                                  {tenant.risk_level || "low"}
+                                </Badge>
+                              </TableCell>
+                              <TableCell className="py-6 whitespace-nowrap">
+                                <div className="text-sm text-muted-foreground">
+                                  {new Date(tenant.created_at).toLocaleDateString()}
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          ))
+                        )}
+                      </TableBody>
+                    </Table>
+                  </div>
                 </CardContent>
               </Card>
             </CardContent>
