@@ -812,19 +812,62 @@ export function StageNotesTab({
                   </div>}
               </div>
 
-              {/* Assignees */}
+              {/* Followers */}
               <div className="space-y-2">
-                <Label>Assignees</Label>
-                <div className="flex flex-wrap gap-2 p-3 border rounded-lg max-h-32 overflow-y-auto">
-                  {vivacityTeam.map(user => <div key={user.user_uuid} onClick={() => toggleAssignee(user.user_uuid)} className={cn("flex items-center gap-2 px-3 py-1.5 rounded-full cursor-pointer border transition-colors", assignees.includes(user.user_uuid) ? "bg-primary/10 border-primary text-primary" : "bg-muted/50 border-transparent hover:bg-muted")}>
-                      <Avatar className="h-5 w-5">
-                        {user.avatar_url && <AvatarImage src={user.avatar_url} />}
-                        <AvatarFallback className="text-[10px]">
-                          {user.first_name?.[0]}{user.last_name?.[0]}
-                        </AvatarFallback>
-                      </Avatar>
-                      <span className="text-sm">{user.first_name} {user.last_name}</span>
-                    </div>)}
+                <Label className="text-primary font-semibold">Followers</Label>
+                <div className="flex items-center gap-2">
+                  {/* Selected assignees avatars */}
+                  {assignees.map(userId => {
+                    const user = vivacityTeam.find(u => u.user_uuid === userId);
+                    if (!user) return null;
+                    return (
+                      <div key={userId} className="relative group">
+                        <Avatar className="h-10 w-10 border-2 border-background shadow-sm cursor-pointer" onClick={() => toggleAssignee(userId)}>
+                          {user.avatar_url && <AvatarImage src={user.avatar_url} />}
+                          <AvatarFallback className="text-xs bg-primary/10 text-primary">
+                            {user.first_name?.[0]}{user.last_name?.[0]}
+                          </AvatarFallback>
+                        </Avatar>
+                        <button 
+                          onClick={() => toggleAssignee(userId)}
+                          className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-destructive text-destructive-foreground opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
+                        >
+                          <X className="h-2.5 w-2.5" />
+                        </button>
+                      </div>
+                    );
+                  })}
+                  
+                  {/* Add button with dropdown */}
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <button className="h-10 w-10 rounded-full border-2 border-dashed border-muted-foreground/40 flex items-center justify-center hover:border-primary hover:bg-primary/5 transition-colors cursor-pointer">
+                        <Plus className="h-4 w-4 text-muted-foreground" />
+                      </button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-64 p-2 z-[80]" align="start">
+                      <div className="space-y-1 max-h-48 overflow-y-auto">
+                        {vivacityTeam.filter(user => !assignees.includes(user.user_uuid)).map(user => (
+                          <div
+                            key={user.user_uuid}
+                            onClick={() => toggleAssignee(user.user_uuid)}
+                            className="flex items-center gap-2 px-2 py-1.5 rounded-md cursor-pointer hover:bg-muted transition-colors"
+                          >
+                            <Avatar className="h-7 w-7">
+                              {user.avatar_url && <AvatarImage src={user.avatar_url} />}
+                              <AvatarFallback className="text-[10px] bg-primary/10 text-primary">
+                                {user.first_name?.[0]}{user.last_name?.[0]}
+                              </AvatarFallback>
+                            </Avatar>
+                            <span className="text-sm">{user.first_name} {user.last_name}</span>
+                          </div>
+                        ))}
+                        {vivacityTeam.filter(user => !assignees.includes(user.user_uuid)).length === 0 && (
+                          <p className="text-sm text-muted-foreground text-center py-2">All team members added</p>
+                        )}
+                      </div>
+                    </PopoverContent>
+                  </Popover>
                 </div>
               </div>
             </div>
