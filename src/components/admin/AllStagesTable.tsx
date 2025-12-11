@@ -2,7 +2,6 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Search, Layers, Calendar, Pencil, Trash2, Plus, Loader2, ExternalLink, Tag } from "lucide-react";
@@ -288,17 +287,12 @@ export function AllStagesTable() {
                     </p>
                   </TableCell>
                   <TableCell className="py-6 border-r border-border/50 min-w-[120px]">
-                    {stage.short_name ? (
-                      <Badge 
-                        variant="outline" 
-                        className="bg-primary/10 text-primary hover:bg-primary/20 border-primary/30 text-[0.75rem] font-medium py-[2px] px-[0.625rem] rounded-[11px]"
-                      >
-                        <Tag className="mr-1 h-3 w-3" />
-                        {stage.short_name}
-                      </Badge>
-                    ) : (
-                      <span className="text-sm text-muted-foreground">-</span>
-                    )}
+                    <div className="flex items-center gap-2">
+                      <Tag className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                      <p className="text-sm text-muted-foreground whitespace-nowrap truncate max-w-[130px]">
+                        {stage.short_name || '-'}
+                      </p>
+                    </div>
                   </TableCell>
                   <TableCell className="py-6 border-r border-border/50 min-w-[150px]">
                     {stage.video_url ? (
