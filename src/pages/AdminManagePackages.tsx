@@ -574,8 +574,8 @@ export default function AdminManagePackages() {
           onClick={() => setActiveTab('packages')}
         >
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Draft</CardTitle>
-            <Clock className="h-[22px] w-[22px] text-muted-foreground" />
+            <CardTitle className="text-sm font-medium">Inactive</CardTitle>
+            <Clock className="h-[22px] w-[22px] text-orange-500" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{packages.filter(p => p.status !== 'active').length}</div>
