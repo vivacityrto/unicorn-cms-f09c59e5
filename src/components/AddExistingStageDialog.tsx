@@ -12,6 +12,7 @@ interface AddExistingStageDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   packageId: number | undefined;
+  tenantId?: number;
   onSuccess: () => void;
 }
 
@@ -28,20 +29,40 @@ export function AddExistingStageDialog({
   open,
   onOpenChange,
   packageId,
+  tenantId,
   onSuccess,
 }: AddExistingStageDialogProps) {
   const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState("");
   const [stages, setStages] = useState<ExistingStage[]>([]);
+  const [currentStageIds, setCurrentStageIds] = useState<number[]>([]);
   const [loading, setLoading] = useState(false);
   const [confirmStage, setConfirmStage] = useState<ExistingStage | null>(null);
   const [isConfirmDialogOpen, setIsConfirmDialogOpen] = useState(false);
 
   useEffect(() => {
     if (open) {
+      fetchCurrentTenantStages();
       fetchExistingStages();
     }
-  }, [open]);
+  }, [open, tenantId]);
+
+  const fetchCurrentTenantStages = async () => {
+    if (!tenantId) return;
+    
+    try {
+      const { data, error } = await supabase
+        .from('tenants')
+        .select('stage_ids')
+        .eq('id', tenantId)
+        .single();
+
+      if (error) throw error;
+      setCurrentStageIds(data?.stage_ids || []);
+    } catch (error: any) {
+      console.error('Error fetching current tenant stages:', error);
+    }
+  };
 
   const fetchExistingStages = async () => {
     try {
@@ -68,22 +89,49 @@ export function AddExistingStageDialog({
   };
 
   const handleStageClick = (stage: ExistingStage) => {
+    // Check if stage is already added to this tenant
+    if (currentStageIds.includes(stage.id)) {
+      toast({
+        title: 'Stage Already Added',
+        description: 'This stage is already assigned to this client',
+        variant: 'destructive',
+      });
+      return;
+    }
     setConfirmStage(stage);
     setIsConfirmDialogOpen(true);
   };
 
   const handleAddStage = async () => {
-    if (!confirmStage) return;
+    if (!confirmStage || !tenantId) return;
 
-    toast({
-      title: 'Stage Selected',
-      description: `"${confirmStage.title}" is now available`,
-    });
+    try {
+      // Add stage ID to tenant's stage_ids array
+      const updatedStageIds = [...currentStageIds, confirmStage.id];
 
-    setIsConfirmDialogOpen(false);
-    setConfirmStage(null);
-    onSuccess();
-    onOpenChange(false);
+      const { error } = await supabase
+        .from('tenants')
+        .update({ stage_ids: updatedStageIds })
+        .eq('id', tenantId);
+
+      if (error) throw error;
+
+      toast({
+        title: 'Stage Added',
+        description: `"${confirmStage.title}" has been added to this client`,
+      });
+
+      setIsConfirmDialogOpen(false);
+      setConfirmStage(null);
+      onSuccess();
+      onOpenChange(false);
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to add stage',
+        variant: 'destructive',
+      });
+    }
   };
 
   const filteredStages = stages.filter(
@@ -92,6 +140,9 @@ export function AddExistingStageDialog({
       (stage.short_name && stage.short_name.toLowerCase().includes(searchQuery.toLowerCase())) ||
       (stage.description && stage.description.toLowerCase().includes(searchQuery.toLowerCase()))
   );
+
+  // Filter out stages already assigned to this tenant
+  const availableStages = filteredStages.filter(stage => !currentStageIds.includes(stage.id));
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -108,7 +159,7 @@ export function AddExistingStageDialog({
               Add Existing Stage
             </DialogTitle>
             <p className="text-sm text-muted-foreground mt-2">
-              Search and select a stage to add to this package
+              Search and select a stage to add to this client
             </p>
           </DialogHeader>
 
@@ -127,13 +178,13 @@ export function AddExistingStageDialog({
               <div className="p-8 text-center text-sm text-muted-foreground">
                 Loading stages...
               </div>
-            ) : filteredStages.length === 0 ? (
+            ) : availableStages.length === 0 ? (
               <div className="p-8 text-center text-sm text-muted-foreground">
-                No available stages found
+                {stages.length === 0 ? "No stages found. Create a new stage first." : "No available stages found (all stages may already be assigned)"}
               </div>
             ) : (
               <div className="divide-y divide-border/50">
-                {filteredStages.map((stage, index) => (
+                {availableStages.map((stage, index) => (
                   <div
                     key={stage.id}
                     onClick={() => handleStageClick(stage)}
@@ -174,7 +225,7 @@ export function AddExistingStageDialog({
                 Confirm Add Stage
               </DialogTitle>
               <DialogDescription className="text-sm text-muted-foreground mt-2">
-                Are you sure you want to add this stage?
+                Are you sure you want to add this stage to this client?
               </DialogDescription>
             </DialogHeader>
             {confirmStage && (

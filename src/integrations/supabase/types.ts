@@ -5787,6 +5787,7 @@ export type Database = {
           package_ids: number[] | null
           risk_level: string | null
           slug: string
+          stage_ids: number[] | null
           state: Database["public"]["Enums"]["australian_state"] | null
           status: string
           updated_at: string
@@ -5802,6 +5803,7 @@ export type Database = {
           package_ids?: number[] | null
           risk_level?: string | null
           slug: string
+          stage_ids?: number[] | null
           state?: Database["public"]["Enums"]["australian_state"] | null
           status?: string
           updated_at?: string
@@ -5817,6 +5819,7 @@ export type Database = {
           package_ids?: number[] | null
           risk_level?: string | null
           slug?: string
+          stage_ids?: number[] | null
           state?: Database["public"]["Enums"]["australian_state"] | null
           status?: string
           updated_at?: string

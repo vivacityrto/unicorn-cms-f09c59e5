@@ -507,32 +507,54 @@ const PackageDetail = () => {
       if (pkgError) throw pkgError;
       setPackageInfo(pkgData);
 
-      // Fetch stages from documents_stages table
-      const {
-        data: stagesData,
-        error: stagesError
-      } = await supabase
-        .from("documents_stages")
-        .select("*")
-        .order("id");
-      
-      if (!stagesError) {
-        // Map documents_stages to StageData format
-        const mappedStages = (stagesData || []).map((stage: any, index: number) => ({
-          id: stage.id,
-          package_id: Number(id),
-          stage_name: stage.title,
-          short_name: stage.short_name,
-          stage_description: stage.description,
-          video_url: stage.video_url,
-          order_number: index + 1,
-          is_active: true,
-          created_at: stage.created_at,
-          updated_at: stage.updated_at
-        }));
-        setStages(mappedStages as StageData[]);
+      // Fetch stages based on tenant's stage_ids if on tenant page
+      if (tenantId) {
+        // First get the tenant's stage_ids
+        const { data: tenantData, error: tenantError } = await supabase
+          .from("tenants")
+          .select("stage_ids")
+          .eq("id", Number(tenantId))
+          .single();
+        
+        if (tenantError) {
+          console.log("Error fetching tenant stage_ids:", tenantError.message);
+          setStages([]);
+        } else {
+          const stageIds = tenantData?.stage_ids || [];
+          
+          if (stageIds.length > 0) {
+            // Fetch stages from documents_stages where id is in stage_ids
+            const { data: stagesData, error: stagesError } = await supabase
+              .from("documents_stages")
+              .select("*")
+              .in("id", stageIds)
+              .order("id");
+            
+            if (!stagesError) {
+              const mappedStages = (stagesData || []).map((stage: any, index: number) => ({
+                id: stage.id,
+                package_id: Number(id),
+                stage_name: stage.title,
+                short_name: stage.short_name,
+                stage_description: stage.description,
+                video_url: stage.video_url,
+                order_number: index + 1,
+                is_active: true,
+                created_at: stage.created_at,
+                updated_at: stage.updated_at
+              }));
+              setStages(mappedStages as StageData[]);
+            } else {
+              console.log("Error fetching stages:", stagesError.message);
+              setStages([]);
+            }
+          } else {
+            // No stages assigned to this tenant yet
+            setStages([]);
+          }
+        }
       } else {
-        console.log("Error fetching stages:", stagesError.message);
+        // No tenant selected, show empty stages
         setStages([]);
       }
 
@@ -1246,13 +1268,13 @@ const PackageDetail = () => {
       <AddStageDialog open={isStageDialogOpen} onOpenChange={setIsStageDialogOpen} onSuccess={() => {
       setIsStageDialogOpen(false);
       fetchPackageData();
-    }} packageId={Number(id)} />
+    }} packageId={Number(id)} tenantId={tenantId ? Number(tenantId) : undefined} />
 
       <AddStageDialog open={isEditStageDialogOpen} onOpenChange={setIsEditStageDialogOpen} onSuccess={() => {
       setIsEditStageDialogOpen(false);
       setEditingStage(null);
       fetchPackageData();
-    }} packageId={Number(id)} stageData={editingStage} />
+    }} packageId={Number(id)} tenantId={tenantId ? Number(tenantId) : undefined} stageData={editingStage} />
 
       <AddStaffTaskDialog open={isStaffTaskDialogOpen} onOpenChange={open => {
       setIsStaffTaskDialogOpen(open);
@@ -1274,7 +1296,7 @@ const PackageDetail = () => {
       <AddExistingStageDialog open={isAddExistingStageDialogOpen} onOpenChange={setIsAddExistingStageDialogOpen} onSuccess={() => {
       setIsAddExistingStageDialogOpen(false);
       fetchPackageData();
-    }} packageId={Number(id)} />
+    }} packageId={Number(id)} tenantId={tenantId ? Number(tenantId) : undefined} />
 
       <EditPackageDialog open={isEditPackageDialogOpen} onOpenChange={setIsEditPackageDialogOpen} onSuccess={fetchPackageData} packageData={packageInfo} />
     </div>;

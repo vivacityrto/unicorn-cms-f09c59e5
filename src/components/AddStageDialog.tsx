@@ -16,6 +16,7 @@ interface AddStageDialogProps {
   onOpenChange: (open: boolean) => void;
   onSuccess: () => void;
   packageId?: number;
+  tenantId?: number;
   stageData?: {
     id: number;
     stage_name: string;
@@ -32,6 +33,7 @@ export function AddStageDialog({
   onOpenChange,
   onSuccess,
   packageId,
+  tenantId,
   stageData
 }: AddStageDialogProps) {
   const { toast } = useToast();
@@ -100,16 +102,42 @@ export function AddStageDialog({
         });
       } else {
         // Create new stage in documents_stages
-        const { error } = await supabase
+        const { data: newStage, error: stageError } = await supabase
           .from('documents_stages')
           .insert({
             title: formData.stage_name,
             short_name: formData.short_name || null,
             description: formData.stage_description || null,
             video_url: formData.video_url || null,
-          });
+          })
+          .select('id')
+          .single();
         
-        if (error) throw error;
+        if (stageError) throw stageError;
+
+        // If tenantId is provided, add the stage to tenant's stage_ids
+        if (tenantId && newStage) {
+          // Get current stage_ids
+          const { data: tenantData, error: tenantFetchError } = await supabase
+            .from('tenants')
+            .select('stage_ids')
+            .eq('id', tenantId)
+            .single();
+
+          if (tenantFetchError) throw tenantFetchError;
+
+          const currentStageIds = tenantData?.stage_ids || [];
+          const updatedStageIds = [...currentStageIds, newStage.id];
+
+          // Update tenant with new stage_ids
+          const { error: tenantUpdateError } = await supabase
+            .from('tenants')
+            .update({ stage_ids: updatedStageIds })
+            .eq('id', tenantId);
+
+          if (tenantUpdateError) throw tenantUpdateError;
+        }
+
         toast({
           title: "Success",
           description: "Stage created successfully"
