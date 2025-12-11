@@ -275,9 +275,9 @@ export function AllStagesTable() {
                     <div className="flex items-center gap-2">
                       <div>
                         <p className="font-semibold text-foreground whitespace-nowrap pb-2.5">{stage.title}</p>
-                        {stage.created_at && <p className="text-xs text-muted-foreground flex items-center gap-1 whitespace-nowrap mt-1">
-                          <Calendar className="h-3 w-3" />
-                          Created: {format(new Date(stage.created_at), 'dd MMM yyyy')}
+                        {stage.short_name && <p className="text-xs text-muted-foreground flex items-center gap-1 whitespace-nowrap mt-1">
+                          <Tag className="h-3 w-3" />
+                          {stage.short_name}
                         </p>}
                       </div>
                     </div>
