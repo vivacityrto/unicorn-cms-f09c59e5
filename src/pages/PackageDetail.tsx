@@ -367,8 +367,8 @@ const PackageDetail = () => {
       setIsConfirmDialogOpen(false);
       setSelectedTenantId("");
       setConfirmTenantData(null);
-      fetchPackageData();
-      fetchAvailableTenants();
+      // Navigate to tenant-specific page to add stages
+      navigate(`/admin/package/${id}/tenant/${tenantId}`);
     } catch (error: any) {
       toast({
         title: "Error",
