@@ -4,7 +4,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Search, Layers, Calendar, Pencil, Trash2, Plus, Loader2, ExternalLink } from "lucide-react";
+import { Search, Layers, Calendar, Pencil, Trash2, Plus, Loader2, ExternalLink, Tag } from "lucide-react";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
@@ -276,7 +276,7 @@ export function AllStagesTable() {
                         <p className="font-semibold text-foreground whitespace-nowrap">{stage.title}</p>
                         {stage.created_at && <p className="text-xs text-muted-foreground flex items-center gap-1 whitespace-nowrap mt-1">
                           <Calendar className="h-3 w-3" />
-                          {format(new Date(stage.created_at), 'dd MMM yyyy')}
+                          Created: {format(new Date(stage.created_at), 'dd MMM yyyy')}
                         </p>}
                       </div>
                     </div>
@@ -287,9 +287,12 @@ export function AllStagesTable() {
                     </p>
                   </TableCell>
                   <TableCell className="py-6 border-r border-border/50 min-w-[120px]">
-                    <p className="text-sm text-muted-foreground whitespace-nowrap truncate max-w-[150px]">
-                      {stage.short_name || '-'}
-                    </p>
+                    <div className="flex items-center gap-2">
+                      <Tag className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                      <p className="text-sm text-muted-foreground whitespace-nowrap truncate max-w-[130px]">
+                        {stage.short_name || '-'}
+                      </p>
+                    </div>
                   </TableCell>
                   <TableCell className="py-6 border-r border-border/50 min-w-[150px]">
                     {stage.video_url ? (
