@@ -2,17 +2,24 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Search, Layers, Calendar, Pencil, Trash2, CheckCircle, XCircle, Plus } from "lucide-react";
+import { Search, Layers, Calendar, Pencil, Trash2, Plus, Loader2 } from "lucide-react";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2 } from "lucide-react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination";
 
 interface Stage {
   id: number;
@@ -24,14 +31,24 @@ interface Stage {
   created_by: string | null;
 }
 
+interface UserInfo {
+  user_uuid: string;
+  first_name: string | null;
+  last_name: string | null;
+  avatar_url: string | null;
+}
+
 export function AllStagesTable() {
   const { toast } = useToast();
   const [stages, setStages] = useState<Stage[]>([]);
+  const [users, setUsers] = useState<Record<string, UserInfo>>({});
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [selectedStage, setSelectedStage] = useState<Stage | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 20;
   const [formData, setFormData] = useState({
     title: "",
     short_name: "",
@@ -42,6 +59,11 @@ export function AllStagesTable() {
   useEffect(() => {
     fetchAllStages();
   }, []);
+
+  useEffect(() => {
+    // Reset to first page when search changes
+    setCurrentPage(1);
+  }, [searchQuery]);
 
   useEffect(() => {
     if (selectedStage) {
@@ -74,6 +96,23 @@ export function AllStagesTable() {
       if (stagesError) throw stagesError;
 
       setStages(stagesData || []);
+
+      // Fetch user info for created_by UUIDs
+      const userIds = [...new Set((stagesData || []).filter(s => s.created_by).map(s => s.created_by as string))];
+      if (userIds.length > 0) {
+        const { data: usersData, error: usersError } = await supabase
+          .from('users')
+          .select('user_uuid, first_name, last_name, avatar_url')
+          .in('user_uuid', userIds);
+
+        if (!usersError && usersData) {
+          const usersMap: Record<string, UserInfo> = {};
+          usersData.forEach(user => {
+            usersMap[user.user_uuid] = user;
+          });
+          setUsers(usersMap);
+        }
+      }
     } catch (error) {
       console.error('Error fetching stages:', error);
     } finally {
@@ -86,6 +125,18 @@ export function AllStagesTable() {
     (stage.description?.toLowerCase().includes(searchQuery.toLowerCase()) ?? false) ||
     (stage.short_name?.toLowerCase().includes(searchQuery.toLowerCase()) ?? false)
   );
+
+  const totalPages = Math.ceil(filteredStages.length / itemsPerPage);
+  const paginatedStages = filteredStages.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+
+  const getUserDisplay = (userId: string | null) => {
+    if (!userId) return { name: '-', avatar: null, initials: '-' };
+    const user = users[userId];
+    if (!user) return { name: '-', avatar: null, initials: '-' };
+    const name = [user.first_name, user.last_name].filter(Boolean).join(' ') || '-';
+    const initials = [user.first_name?.[0], user.last_name?.[0]].filter(Boolean).join('').toUpperCase() || '?';
+    return { name, avatar: user.avatar_url, initials };
+  };
 
   const handleEditClick = (e: React.MouseEvent, stage: Stage) => {
     e.stopPropagation();
@@ -211,57 +262,131 @@ export function AllStagesTable() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredStages.map((stage, index) => <TableRow 
-              key={stage.id} 
-              onClick={() => { setSelectedStage(stage); setEditDialogOpen(true); }} 
-              className={`group transition-all duration-200 border-b border-border/50 ${index % 2 === 0 ? "bg-background" : "bg-muted/20"} hover:bg-primary/5 animate-fade-in cursor-pointer`}
-            >
-              <TableCell className="py-6 border-r border-border/50 min-w-[200px]">
-                <div className="flex items-center gap-2">
-                  <div>
-                    <p className="font-semibold text-foreground whitespace-nowrap">{stage.title}</p>
-                    {stage.created_at && <p className="text-xs text-muted-foreground flex items-center gap-1 whitespace-nowrap mt-1">
-                      <Calendar className="h-3 w-3" />
-                      {format(new Date(stage.created_at), 'dd MMM yyyy')}
-                    </p>}
-                  </div>
-                </div>
-              </TableCell>
-              <TableCell className="py-6 border-r border-border/50 min-w-[120px]">
-                <p className="text-sm text-muted-foreground whitespace-nowrap truncate max-w-[150px]">
-                  {stage.short_name || '-'}
-                </p>
-              </TableCell>
-              <TableCell className="py-6 border-r border-border/50 min-w-[200px]">
-                <p className="text-sm text-muted-foreground line-clamp-2 max-w-[300px]">
-                  {stage.description || '-'}
-                </p>
-              </TableCell>
-              <TableCell className="py-6 border-r border-border/50 min-w-[150px]">
-                <p className="text-sm text-muted-foreground whitespace-nowrap truncate max-w-[200px]">
-                  {stage.video_url || '-'}
-                </p>
-              </TableCell>
-              <TableCell className="py-6 border-r border-border/50 min-w-[120px]">
-                <p className="text-sm text-muted-foreground whitespace-nowrap truncate max-w-[150px]">
-                  {stage.created_by || '-'}
-                </p>
-              </TableCell>
-              <TableCell className="py-6 text-center">
-                <div className="flex items-center justify-center gap-2">
-                  <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-primary/10" onClick={(e) => handleEditClick(e, stage)}>
-                    <Pencil className="h-4 w-4 text-muted-foreground" />
-                  </Button>
-                  <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-destructive/10" onClick={(e) => handleDeleteClick(e, stage)}>
-                    <Trash2 className="h-4 w-4 text-destructive" />
-                  </Button>
-                </div>
-              </TableCell>
-            </TableRow>)}
+            {paginatedStages.map((stage, index) => {
+              const userInfo = getUserDisplay(stage.created_by);
+              return (
+                <TableRow 
+                  key={stage.id} 
+                  onClick={() => { setSelectedStage(stage); setEditDialogOpen(true); }} 
+                  className={`group transition-all duration-200 border-b border-border/50 ${index % 2 === 0 ? "bg-background" : "bg-muted/20"} hover:bg-primary/5 animate-fade-in cursor-pointer`}
+                >
+                  <TableCell className="py-6 border-r border-border/50 min-w-[200px]">
+                    <div className="flex items-center gap-2">
+                      <div>
+                        <p className="font-semibold text-foreground whitespace-nowrap">{stage.title}</p>
+                        {stage.created_at && <p className="text-xs text-muted-foreground flex items-center gap-1 whitespace-nowrap mt-1">
+                          <Calendar className="h-3 w-3" />
+                          {format(new Date(stage.created_at), 'dd MMM yyyy')}
+                        </p>}
+                      </div>
+                    </div>
+                  </TableCell>
+                  <TableCell className="py-6 border-r border-border/50 min-w-[120px]">
+                    <p className="text-sm text-muted-foreground whitespace-nowrap truncate max-w-[150px]">
+                      {stage.short_name || '-'}
+                    </p>
+                  </TableCell>
+                  <TableCell className="py-6 border-r border-border/50 min-w-[200px]">
+                    <p className="text-sm text-muted-foreground line-clamp-2 max-w-[300px]">
+                      {stage.description || '-'}
+                    </p>
+                  </TableCell>
+                  <TableCell className="py-6 border-r border-border/50 min-w-[150px]">
+                    <p className="text-sm text-muted-foreground whitespace-nowrap truncate max-w-[200px]">
+                      {stage.video_url || '-'}
+                    </p>
+                  </TableCell>
+                  <TableCell className="py-6 border-r border-border/50 min-w-[150px]">
+                    <div className="flex items-center gap-2">
+                      <Avatar className="h-8 w-8">
+                        <AvatarImage src={userInfo.avatar || undefined} />
+                        <AvatarFallback className="text-xs bg-primary/10 text-primary">
+                          {userInfo.initials}
+                        </AvatarFallback>
+                      </Avatar>
+                      <p className="text-sm text-muted-foreground whitespace-nowrap truncate max-w-[120px]">
+                        {userInfo.name}
+                      </p>
+                    </div>
+                  </TableCell>
+                  <TableCell className="py-6 text-center">
+                    <div className="flex items-center justify-center gap-2">
+                      <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-primary/10" onClick={(e) => handleEditClick(e, stage)}>
+                        <Pencil className="h-4 w-4 text-muted-foreground" />
+                      </Button>
+                      <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-destructive/10" onClick={(e) => handleDeleteClick(e, stage)}>
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              );
+            })}
           </TableBody>
         </Table>
       </CardContent>
     </Card>}
+
+    {/* Pagination */}
+    {filteredStages.length > 0 && (
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div className="text-sm text-muted-foreground whitespace-nowrap">
+          Showing {Math.min((currentPage - 1) * itemsPerPage + 1, filteredStages.length)}–{Math.min(currentPage * itemsPerPage, filteredStages.length)} of {filteredStages.length} results
+        </div>
+        <Pagination>
+          <PaginationContent>
+            <PaginationItem>
+              <PaginationPrevious 
+                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                className={currentPage === 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+              />
+            </PaginationItem>
+            {Array.from({ length: totalPages }, (_, i) => i + 1)
+              .filter(page => {
+                if (totalPages <= 7) return true;
+                if (page === 1 || page === totalPages) return true;
+                if (page >= currentPage - 1 && page <= currentPage + 1) return true;
+                return false;
+              })
+              .map((page, index, array) => {
+                if (index > 0 && array[index - 1] !== page - 1) {
+                  return [
+                    <PaginationItem key={`ellipsis-${page}`}>
+                      <span className="px-4">...</span>
+                    </PaginationItem>,
+                    <PaginationItem key={page}>
+                      <PaginationLink
+                        onClick={() => setCurrentPage(page)}
+                        isActive={currentPage === page}
+                        className="cursor-pointer"
+                      >
+                        {page}
+                      </PaginationLink>
+                    </PaginationItem>
+                  ];
+                }
+                return (
+                  <PaginationItem key={page}>
+                    <PaginationLink
+                      onClick={() => setCurrentPage(page)}
+                      isActive={currentPage === page}
+                      className="cursor-pointer"
+                    >
+                      {page}
+                    </PaginationLink>
+                  </PaginationItem>
+                );
+              })}
+            <PaginationItem>
+              <PaginationNext 
+                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                className={currentPage === totalPages ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+              />
+            </PaginationItem>
+          </PaginationContent>
+        </Pagination>
+      </div>
+    )}
 
     {/* Stage Dialog */}
     <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
