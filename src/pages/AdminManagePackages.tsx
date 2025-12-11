@@ -515,9 +515,12 @@ export default function AdminManagePackages() {
           <h1 className="text-[28px] font-bold">Manage Packages</h1>
           <p className="text-muted-foreground">View and manage all system packages</p>
         </div>
-        <Button onClick={() => setIsCreateDialogOpen(true)} className="bg-[hsl(188_74%_51%)] hover:bg-[hsl(188_74%_51%)]/90">
+        <Button 
+          onClick={() => activeTab === 'stages' ? setIsStageDialogOpen(true) : setIsCreateDialogOpen(true)} 
+          className="bg-[hsl(188_74%_51%)] hover:bg-[hsl(188_74%_51%)]/90"
+        >
           <Plus className="h-4 w-4 mr-2" />
-          Add Package
+          {activeTab === 'stages' ? 'Add Stage' : 'Add Package'}
         </Button>
       </div>
 
