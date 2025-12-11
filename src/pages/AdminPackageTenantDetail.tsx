@@ -110,7 +110,7 @@ export default function AdminPackageTenantDetail() {
                     </div>
                   </div>
                 </div>
-                <Button variant="outline" size="sm" onClick={() => navigate(`/tenant/${tenantId}`)} className="gap-2 hover:bg-muted/50">
+                <Button variant="outline" size="sm" onClick={() => navigate(`/tenant/${tenantId}`)} className="gap-2 hover:bg-[hsl(196deg_100%_93.53%)] hover:text-black">
                   View Full Profile
                   <ExternalLink className="h-3.5 w-3.5" />
                 </Button>
