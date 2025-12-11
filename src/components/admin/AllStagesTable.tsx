@@ -285,7 +285,7 @@ export function AllStagesTable() {
                   </TableCell>
                   <TableCell className="py-6 border-r border-border/50 min-w-[200px]">
                     <p className="text-sm text-muted-foreground truncate max-w-[300px]">
-                      {stage.description || '-'}
+                      {stage.description || 'No details added.'}
                     </p>
                   </TableCell>
                   <TableCell className="py-6 border-r border-border/50 min-w-[120px]">
