@@ -4,7 +4,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Search, Layers, Calendar, Pencil, Trash2, Plus, Loader2 } from "lucide-react";
+import { Search, Layers, Calendar, Pencil, Trash2, Plus, Loader2, ExternalLink } from "lucide-react";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
@@ -254,9 +254,9 @@ export function AllStagesTable() {
           <TableHeader>
             <TableRow className="hover:bg-transparent border-b">
               <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-border/50">Stage Name</TableHead>
-              <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-border/50">Short Name</TableHead>
               <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-border/50">Stage Details</TableHead>
-              <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-border/50">Video URL</TableHead>
+              <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-border/50">Short Name</TableHead>
+              <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-border/50 text-center">Video</TableHead>
               <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-border/50">Created By</TableHead>
               <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-border/50 text-center">Actions</TableHead>
             </TableRow>
@@ -281,20 +281,30 @@ export function AllStagesTable() {
                       </div>
                     </div>
                   </TableCell>
-                  <TableCell className="py-6 border-r border-border/50 min-w-[120px]">
-                    <p className="text-sm text-muted-foreground whitespace-nowrap truncate max-w-[150px]">
-                      {stage.short_name || '-'}
-                    </p>
-                  </TableCell>
                   <TableCell className="py-6 border-r border-border/50 min-w-[200px]">
                     <p className="text-sm text-muted-foreground line-clamp-2 max-w-[300px]">
                       {stage.description || '-'}
                     </p>
                   </TableCell>
-                  <TableCell className="py-6 border-r border-border/50 min-w-[150px]">
-                    <p className="text-sm text-muted-foreground whitespace-nowrap truncate max-w-[200px]">
-                      {stage.video_url || '-'}
+                  <TableCell className="py-6 border-r border-border/50 min-w-[120px]">
+                    <p className="text-sm text-muted-foreground whitespace-nowrap truncate max-w-[150px]">
+                      {stage.short_name || '-'}
                     </p>
+                  </TableCell>
+                  <TableCell className="py-6 border-r border-border/50 text-center">
+                    {stage.video_url ? (
+                      <a
+                        href={stage.video_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={(e) => e.stopPropagation()}
+                        className="inline-flex items-center justify-center h-8 w-8 rounded-md hover:bg-primary/10 transition-colors"
+                      >
+                        <ExternalLink className="h-4 w-4 text-primary" />
+                      </a>
+                    ) : (
+                      <span className="text-sm text-muted-foreground">-</span>
+                    )}
                   </TableCell>
                   <TableCell className="py-6 border-r border-border/50 min-w-[150px]">
                     <div className="flex items-center gap-2">
