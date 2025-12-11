@@ -536,15 +536,15 @@ export function StageNotesTab({
                             </Badge>}
                         </div> : <span className="text-xs text-muted-foreground">-</span>}
                     </TableCell>
-                    <TableCell className="border-r">
+                    <TableCell className="border-r whitespace-nowrap">
                       {note.started_date ? <div className="flex items-center gap-2 text-sm">
-                          <CalendarIcon className="h-3.5 w-3.5 text-muted-foreground" />
+                          <CalendarIcon className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
                           <span>{format(new Date(note.started_date), "dd MMM yyyy h:mm a")}</span>
                         </div> : <span className="text-xs text-muted-foreground">-</span>}
                     </TableCell>
-                    <TableCell className="border-r">
+                    <TableCell className="border-r whitespace-nowrap">
                       {note.completed_date ? <div className="flex items-center gap-2 text-sm">
-                          <CalendarIcon className="h-3.5 w-3.5 text-muted-foreground" />
+                          <CalendarIcon className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
                           <span>{format(new Date(note.completed_date), "dd MMM yyyy h:mm a")}</span>
                         </div> : <span className="text-xs text-muted-foreground">-</span>}
                     </TableCell>
@@ -570,9 +570,9 @@ export function StageNotesTab({
                             </Avatar>}
                         </div> : <span className="text-xs text-muted-foreground">-</span>}
                     </TableCell>
-                    <TableCell className="border-r">
+                    <TableCell className="border-r whitespace-nowrap">
                       {note.started_date && note.completed_date ? <div className="flex items-center gap-1.5 text-sm">
-                          <Timer className="h-3.5 w-3.5 text-muted-foreground" />
+                          <Timer className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
                           <span>
                             {(() => {
                       const start = new Date(note.started_date);
