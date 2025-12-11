@@ -12,15 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import {
-  Pagination,
-  PaginationContent,
-  PaginationItem,
-  PaginationLink,
-  PaginationNext,
-  PaginationPrevious,
-} from "@/components/ui/pagination";
-
+import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from "@/components/ui/pagination";
 interface Stage {
   id: number;
   title: string;
@@ -30,16 +22,16 @@ interface Stage {
   created_at: string | null;
   created_by: string | null;
 }
-
 interface UserInfo {
   user_uuid: string;
   first_name: string | null;
   last_name: string | null;
   avatar_url: string | null;
 }
-
 export function AllStagesTable() {
-  const { toast } = useToast();
+  const {
+    toast
+  } = useToast();
   const [stages, setStages] = useState<Stage[]>([]);
   const [users, setUsers] = useState<Record<string, UserInfo>>({});
   const [loading, setLoading] = useState(true);
@@ -55,16 +47,13 @@ export function AllStagesTable() {
     description: "",
     video_url: ""
   });
-
   useEffect(() => {
     fetchAllStages();
   }, []);
-
   useEffect(() => {
     // Reset to first page when search changes
     setCurrentPage(1);
   }, [searchQuery]);
-
   useEffect(() => {
     if (selectedStage) {
       setFormData({
@@ -82,29 +71,27 @@ export function AllStagesTable() {
       });
     }
   }, [selectedStage, editDialogOpen]);
-
   const fetchAllStages = async () => {
     try {
       setLoading(true);
 
       // Fetch all stages from documents_stages (master table)
-      const { data: stagesData, error: stagesError } = await supabase
-        .from('documents_stages')
-        .select('id, title, short_name, description, video_url, created_at, created_by')
-        .order('created_at', { ascending: false });
-
+      const {
+        data: stagesData,
+        error: stagesError
+      } = await supabase.from('documents_stages').select('id, title, short_name, description, video_url, created_at, created_by').order('created_at', {
+        ascending: false
+      });
       if (stagesError) throw stagesError;
-
       setStages(stagesData || []);
 
       // Fetch user info for created_by UUIDs
       const userIds = [...new Set((stagesData || []).filter(s => s.created_by).map(s => s.created_by as string))];
       if (userIds.length > 0) {
-        const { data: usersData, error: usersError } = await supabase
-          .from('users')
-          .select('user_uuid, first_name, last_name, avatar_url')
-          .in('user_uuid', userIds);
-
+        const {
+          data: usersData,
+          error: usersError
+        } = await supabase.from('users').select('user_uuid, first_name, last_name, avatar_url').in('user_uuid', userIds);
         if (!usersError && usersData) {
           const usersMap: Record<string, UserInfo> = {};
           usersData.forEach(user => {
@@ -119,50 +106,59 @@ export function AllStagesTable() {
       setLoading(false);
     }
   };
-
-  const filteredStages = stages.filter(stage => 
-    stage.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
-    (stage.description?.toLowerCase().includes(searchQuery.toLowerCase()) ?? false) ||
-    (stage.short_name?.toLowerCase().includes(searchQuery.toLowerCase()) ?? false)
-  );
-
+  const filteredStages = stages.filter(stage => stage.title.toLowerCase().includes(searchQuery.toLowerCase()) || (stage.description?.toLowerCase().includes(searchQuery.toLowerCase()) ?? false) || (stage.short_name?.toLowerCase().includes(searchQuery.toLowerCase()) ?? false));
   const totalPages = Math.ceil(filteredStages.length / itemsPerPage);
   const paginatedStages = filteredStages.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
-
   const getUserDisplay = (userId: string | null) => {
-    if (!userId) return { name: '-', avatar: null, initials: '-' };
+    if (!userId) return {
+      name: '-',
+      avatar: null,
+      initials: '-'
+    };
     const user = users[userId];
-    if (!user) return { name: '-', avatar: null, initials: '-' };
+    if (!user) return {
+      name: '-',
+      avatar: null,
+      initials: '-'
+    };
     const name = [user.first_name, user.last_name].filter(Boolean).join(' ') || '-';
     const initials = [user.first_name?.[0], user.last_name?.[0]].filter(Boolean).join('').toUpperCase() || '?';
-    return { name, avatar: user.avatar_url, initials };
+    return {
+      name,
+      avatar: user.avatar_url,
+      initials
+    };
   };
-
   const handleEditClick = (e: React.MouseEvent, stage: Stage) => {
     e.stopPropagation();
     setSelectedStage(stage);
     setEditDialogOpen(true);
   };
-
   const handleAddClick = () => {
     setSelectedStage(null);
     setEditDialogOpen(true);
   };
-
   const handleDeleteClick = async (e: React.MouseEvent, stage: Stage) => {
     e.stopPropagation();
     if (!confirm(`Are you sure you want to delete "${stage.title}"?`)) return;
-    
     try {
-      const { error } = await supabase.from('documents_stages').delete().eq('id', stage.id);
+      const {
+        error
+      } = await supabase.from('documents_stages').delete().eq('id', stage.id);
       if (error) throw error;
-      toast({ title: "Success", description: "Stage deleted successfully" });
+      toast({
+        title: "Success",
+        description: "Stage deleted successfully"
+      });
       fetchAllStages();
     } catch (error: any) {
-      toast({ title: "Error", description: error.message || "Failed to delete stage", variant: "destructive" });
+      toast({
+        title: "Error",
+        description: error.message || "Failed to delete stage",
+        variant: "destructive"
+      });
     }
   };
-
   const handleSave = async () => {
     if (!formData.title.trim()) {
       toast({
@@ -172,39 +168,39 @@ export function AllStagesTable() {
       });
       return;
     }
-
     try {
       setIsLoading(true);
-
       if (selectedStage) {
         // Update existing stage
-        const { error } = await supabase
-          .from('documents_stages')
-          .update({
-            title: formData.title,
-            short_name: formData.short_name || null,
-            description: formData.description || null,
-            video_url: formData.video_url || null
-          })
-          .eq('id', selectedStage.id);
-
+        const {
+          error
+        } = await supabase.from('documents_stages').update({
+          title: formData.title,
+          short_name: formData.short_name || null,
+          description: formData.description || null,
+          video_url: formData.video_url || null
+        }).eq('id', selectedStage.id);
         if (error) throw error;
-        toast({ title: "Success", description: "Stage updated successfully" });
+        toast({
+          title: "Success",
+          description: "Stage updated successfully"
+        });
       } else {
         // Create new stage
-        const { error } = await supabase
-          .from('documents_stages')
-          .insert({
-            title: formData.title,
-            short_name: formData.short_name || null,
-            description: formData.description || null,
-            video_url: formData.video_url || null
-          });
-
+        const {
+          error
+        } = await supabase.from('documents_stages').insert({
+          title: formData.title,
+          short_name: formData.short_name || null,
+          description: formData.description || null,
+          video_url: formData.video_url || null
+        });
         if (error) throw error;
-        toast({ title: "Success", description: "Stage created successfully" });
+        toast({
+          title: "Success",
+          description: "Stage created successfully"
+        });
       }
-
       setEditDialogOpen(false);
       setSelectedStage(null);
       fetchAllStages();
@@ -218,14 +214,12 @@ export function AllStagesTable() {
       setIsLoading(false);
     }
   };
-
   if (loading) {
     return <div className="space-y-4">
       <Skeleton className="h-10 w-full max-w-sm" />
       <Skeleton className="h-96" />
     </div>;
   }
-
   return <div className="space-y-4">
     {/* Search and Add */}
     <div className="flex items-center justify-between gap-4">
@@ -233,10 +227,7 @@ export function AllStagesTable() {
         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
         <Input placeholder="Search stages..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="pl-10" />
       </div>
-      <Button onClick={handleAddClick} className="bg-[hsl(188_74%_51%)] hover:bg-[hsl(188_74%_51%)]/90">
-        <Plus className="h-4 w-4 mr-2" />
-        Add Stage
-      </Button>
+      
     </div>
 
     {/* Stages Table */}
@@ -264,12 +255,10 @@ export function AllStagesTable() {
           <TableBody>
             {paginatedStages.map((stage, index) => {
               const userInfo = getUserDisplay(stage.created_by);
-              return (
-                <TableRow 
-                  key={stage.id} 
-                  onClick={() => { setSelectedStage(stage); setEditDialogOpen(true); }} 
-                  className={`group transition-all duration-200 border-b border-border/50 ${index % 2 === 0 ? "bg-background" : "bg-muted/20"} hover:bg-primary/5 animate-fade-in cursor-pointer`}
-                >
+              return <TableRow key={stage.id} onClick={() => {
+                setSelectedStage(stage);
+                setEditDialogOpen(true);
+              }} className={`group transition-all duration-200 border-b border-border/50 ${index % 2 === 0 ? "bg-background" : "bg-muted/20"} hover:bg-primary/5 animate-fade-in cursor-pointer`}>
                   <TableCell className="py-6 border-r border-border/50 min-w-[200px]">
                     <div className="flex items-center gap-2">
                       <div>
@@ -295,20 +284,10 @@ export function AllStagesTable() {
                     </div>
                   </TableCell>
                   <TableCell className="py-6 border-r border-border/50 min-w-[150px]">
-                    {stage.video_url ? (
-                      <a
-                        href={stage.video_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        onClick={(e) => e.stopPropagation()}
-                        className="inline-flex items-center gap-2 text-sm text-primary hover:underline max-w-[200px]"
-                      >
+                    {stage.video_url ? <a href={stage.video_url} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()} className="inline-flex items-center gap-2 text-sm text-primary hover:underline max-w-[200px]">
                         <span className="truncate">{stage.video_url}</span>
                         <ExternalLink className="h-4 w-4 flex-shrink-0" />
-                      </a>
-                    ) : (
-                      <span className="text-sm text-muted-foreground">-</span>
-                    )}
+                      </a> : <span className="text-sm text-muted-foreground">-</span>}
                   </TableCell>
                   <TableCell className="py-6 border-r border-border/50 min-w-[150px]">
                     <div className="flex items-center gap-2">
@@ -325,16 +304,15 @@ export function AllStagesTable() {
                   </TableCell>
                   <TableCell className="py-6 text-center">
                     <div className="flex items-center justify-center gap-2">
-                      <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-primary/10" onClick={(e) => handleEditClick(e, stage)}>
+                      <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-primary/10" onClick={e => handleEditClick(e, stage)}>
                         <Pencil className="h-4 w-4 text-muted-foreground" />
                       </Button>
-                      <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-destructive/10" onClick={(e) => handleDeleteClick(e, stage)}>
+                      <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-destructive/10" onClick={e => handleDeleteClick(e, stage)}>
                         <Trash2 className="h-4 w-4 text-destructive" />
                       </Button>
                     </div>
                   </TableCell>
-                </TableRow>
-              );
+                </TableRow>;
             })}
           </TableBody>
         </Table>
@@ -342,65 +320,44 @@ export function AllStagesTable() {
     </Card>}
 
     {/* Pagination */}
-    {filteredStages.length > 0 && (
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+    {filteredStages.length > 0 && <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div className="text-sm text-muted-foreground whitespace-nowrap">
           Showing {Math.min((currentPage - 1) * itemsPerPage + 1, filteredStages.length)}–{Math.min(currentPage * itemsPerPage, filteredStages.length)} of {filteredStages.length} results
         </div>
         <Pagination>
           <PaginationContent>
             <PaginationItem>
-              <PaginationPrevious 
-                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                className={currentPage === 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
-              />
+              <PaginationPrevious onClick={() => setCurrentPage(p => Math.max(1, p - 1))} className={currentPage === 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'} />
             </PaginationItem>
-            {Array.from({ length: totalPages }, (_, i) => i + 1)
-              .filter(page => {
-                if (totalPages <= 7) return true;
-                if (page === 1 || page === totalPages) return true;
-                if (page >= currentPage - 1 && page <= currentPage + 1) return true;
-                return false;
-              })
-              .map((page, index, array) => {
-                if (index > 0 && array[index - 1] !== page - 1) {
-                  return [
-                    <PaginationItem key={`ellipsis-${page}`}>
+            {Array.from({
+            length: totalPages
+          }, (_, i) => i + 1).filter(page => {
+            if (totalPages <= 7) return true;
+            if (page === 1 || page === totalPages) return true;
+            if (page >= currentPage - 1 && page <= currentPage + 1) return true;
+            return false;
+          }).map((page, index, array) => {
+            if (index > 0 && array[index - 1] !== page - 1) {
+              return [<PaginationItem key={`ellipsis-${page}`}>
                       <span className="px-4">...</span>
-                    </PaginationItem>,
-                    <PaginationItem key={page}>
-                      <PaginationLink
-                        onClick={() => setCurrentPage(page)}
-                        isActive={currentPage === page}
-                        className="cursor-pointer"
-                      >
+                    </PaginationItem>, <PaginationItem key={page}>
+                      <PaginationLink onClick={() => setCurrentPage(page)} isActive={currentPage === page} className="cursor-pointer">
                         {page}
                       </PaginationLink>
-                    </PaginationItem>
-                  ];
-                }
-                return (
-                  <PaginationItem key={page}>
-                    <PaginationLink
-                      onClick={() => setCurrentPage(page)}
-                      isActive={currentPage === page}
-                      className="cursor-pointer"
-                    >
+                    </PaginationItem>];
+            }
+            return <PaginationItem key={page}>
+                    <PaginationLink onClick={() => setCurrentPage(page)} isActive={currentPage === page} className="cursor-pointer">
                       {page}
                     </PaginationLink>
-                  </PaginationItem>
-                );
-              })}
+                  </PaginationItem>;
+          })}
             <PaginationItem>
-              <PaginationNext 
-                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                className={currentPage === totalPages ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
-              />
+              <PaginationNext onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} className={currentPage === totalPages ? 'pointer-events-none opacity-50' : 'cursor-pointer'} />
             </PaginationItem>
           </PaginationContent>
         </Pagination>
-      </div>
-    )}
+      </div>}
 
     {/* Stage Dialog */}
     <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
@@ -418,22 +375,18 @@ export function AllStagesTable() {
         <div className="space-y-4 py-4">
           <div className="space-y-2">
             <Label htmlFor="stage-title">Title *</Label>
-            <Input 
-              id="stage-title" 
-              value={formData.title} 
-              onChange={e => setFormData({ ...formData, title: e.target.value })} 
-              placeholder="Enter stage title" 
-            />
+            <Input id="stage-title" value={formData.title} onChange={e => setFormData({
+              ...formData,
+              title: e.target.value
+            })} placeholder="Enter stage title" />
           </div>
 
           <div className="space-y-2">
             <Label htmlFor="stage-short-name">Short Name</Label>
-            <Input 
-              id="stage-short-name" 
-              value={formData.short_name} 
-              onChange={e => setFormData({ ...formData, short_name: e.target.value })} 
-              placeholder="Enter short name" 
-            />
+            <Input id="stage-short-name" value={formData.short_name} onChange={e => setFormData({
+              ...formData,
+              short_name: e.target.value
+            })} placeholder="Enter short name" />
             <p className="text-xs text-muted-foreground">
               Used when the full stage name would be too long to display
             </p>
@@ -441,25 +394,18 @@ export function AllStagesTable() {
 
           <div className="space-y-2">
             <Label htmlFor="stage-description">Description</Label>
-            <Textarea 
-              id="stage-description" 
-              value={formData.description} 
-              onChange={e => setFormData({ ...formData, description: e.target.value })} 
-              placeholder="Enter description" 
-              rows={4} 
-              className="resize-none" 
-            />
+            <Textarea id="stage-description" value={formData.description} onChange={e => setFormData({
+              ...formData,
+              description: e.target.value
+            })} placeholder="Enter description" rows={4} className="resize-none" />
           </div>
 
           <div className="space-y-2">
             <Label htmlFor="stage-video">Help Video URL</Label>
-            <Input 
-              id="stage-video" 
-              type="url" 
-              value={formData.video_url} 
-              onChange={e => setFormData({ ...formData, video_url: e.target.value })} 
-              placeholder="https://..." 
-            />
+            <Input id="stage-video" type="url" value={formData.video_url} onChange={e => setFormData({
+              ...formData,
+              video_url: e.target.value
+            })} placeholder="https://..." />
           </div>
         </div>
 
