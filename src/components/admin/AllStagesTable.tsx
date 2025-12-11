@@ -9,6 +9,7 @@ import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -40,6 +41,9 @@ export function AllStagesTable() {
   const [selectedStage, setSelectedStage] = useState<Stage | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [stageToDelete, setStageToDelete] = useState<Stage | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
   const itemsPerPage = 20;
   const [formData, setFormData] = useState({
     title: "",
@@ -138,13 +142,17 @@ export function AllStagesTable() {
     setSelectedStage(null);
     setEditDialogOpen(true);
   };
-  const handleDeleteClick = async (e: React.MouseEvent, stage: Stage) => {
+  const handleDeleteClick = (e: React.MouseEvent, stage: Stage) => {
     e.stopPropagation();
-    if (!confirm(`Are you sure you want to delete "${stage.title}"?`)) return;
+    setStageToDelete(stage);
+    setDeleteDialogOpen(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!stageToDelete) return;
     try {
-      const {
-        error
-      } = await supabase.from('documents_stages').delete().eq('id', stage.id);
+      setIsDeleting(true);
+      const { error } = await supabase.from('documents_stages').delete().eq('id', stageToDelete.id);
       if (error) throw error;
       toast({
         title: "Success",
@@ -157,6 +165,10 @@ export function AllStagesTable() {
         description: error.message || "Failed to delete stage",
         variant: "destructive"
       });
+    } finally {
+      setIsDeleting(false);
+      setDeleteDialogOpen(false);
+      setStageToDelete(null);
     }
   };
   const handleSave = async () => {
@@ -425,5 +437,34 @@ export function AllStagesTable() {
         </DialogFooter>
       </DialogContent>
     </Dialog>
+
+    {/* Delete Confirmation Dialog */}
+    <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Delete Stage</AlertDialogTitle>
+          <AlertDialogDescription>
+            Are you sure you want to delete "{stageToDelete?.title}"? This action cannot be undone.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+          <AlertDialogAction
+            onClick={confirmDelete}
+            disabled={isDeleting}
+            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+          >
+            {isDeleting ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Deleting...
+              </>
+            ) : (
+              'Delete'
+            )}
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   </div>;
 }
