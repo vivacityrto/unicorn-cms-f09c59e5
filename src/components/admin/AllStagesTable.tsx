@@ -4,7 +4,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Search, Layers, Calendar, Pencil, Trash2, Plus, Loader2, ExternalLink, Tag } from "lucide-react";
+import { Search, Layers, Calendar, Pencil, Trash2, Plus, Loader2, ExternalLink, Tag, Video, LinkIcon } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
@@ -296,10 +297,19 @@ export function AllStagesTable() {
                     </div>
                   </TableCell>
                   <TableCell className="py-6 border-r border-border/50 min-w-[150px]">
-                    {stage.video_url ? <a href={stage.video_url} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()} className="inline-flex items-center gap-2 text-sm text-primary hover:underline max-w-[200px]">
-                        <span className="truncate">{stage.video_url}</span>
-                        <ExternalLink className="h-4 w-4 flex-shrink-0" />
-                      </a> : <span className="text-sm text-muted-foreground">-</span>}
+                    {stage.video_url ? (
+                      <a href={stage.video_url} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()}>
+                        <Badge className="bg-blue-500/10 text-blue-600 hover:bg-blue-500/20 border border-blue-600 text-[0.75rem] py-[2px] px-[0.625rem] rounded-[11px] gap-1.5">
+                          <Video className="h-3 w-3" />
+                          Video Link
+                        </Badge>
+                      </a>
+                    ) : (
+                      <Badge className="bg-muted text-muted-foreground hover:bg-muted border border-border text-[0.75rem] py-[2px] px-[0.625rem] rounded-[11px] gap-1.5">
+                        <LinkIcon className="h-3 w-3" />
+                        No Link
+                      </Badge>
+                    )}
                   </TableCell>
                   <TableCell className="py-6 border-r border-border/50 min-w-[150px]">
                     <div className="flex items-center gap-2">
