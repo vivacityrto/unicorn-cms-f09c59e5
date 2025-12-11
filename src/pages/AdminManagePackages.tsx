@@ -542,7 +542,7 @@ export default function AdminManagePackages() {
         </Card>
 
         <Card 
-          className={cn("animate-scale-in cursor-pointer hover:shadow-lg transition-all", statusFilter === 'active' && "ring-2 ring-green-500")}
+          className={cn("animate-scale-in cursor-pointer hover:shadow-lg transition-all", statusFilter === 'active' && "shadow-lg")}
           style={{ animationDelay: "50ms" }}
           onClick={() => { setActiveTab('packages'); setStatusFilter(statusFilter === 'active' ? 'all' : 'active'); }}
         >
@@ -575,7 +575,7 @@ export default function AdminManagePackages() {
         </Card>
 
         <Card 
-          className={cn("animate-scale-in cursor-pointer hover:shadow-lg transition-all", statusFilter === 'inactive' && "ring-2 ring-orange-500")}
+          className={cn("animate-scale-in cursor-pointer hover:shadow-lg transition-all", statusFilter === 'inactive' && "shadow-lg")}
           style={{ animationDelay: "150ms" }}
           onClick={() => { setActiveTab('packages'); setStatusFilter(statusFilter === 'inactive' ? 'all' : 'inactive'); }}
         >
