@@ -14,7 +14,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "@/components/ui/separator";
 import { Combobox } from "@/components/ui/combobox";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { ArrowLeft, Users, CheckCircle2, FileText, Plus, Search, ArrowUpDown, Trash2, Edit, Calendar, Layers, GripVertical } from "lucide-react";
+import { ArrowLeft, Users, CheckCircle2, FileText, Plus, Search, ArrowUpDown, Trash2, Edit, Calendar, Layers, GripVertical, XCircle } from "lucide-react";
 import { AddStageDialog } from "@/components/AddStageDialog";
 import { AddStaffTaskDialog } from "@/components/AddStaffTaskDialog";
 import { AddClientTaskDialog } from "@/components/AddClientTaskDialog";
@@ -798,8 +798,18 @@ const PackageDetail = () => {
                                 </div>
                               </TableCell>
                               <TableCell className="py-6 border-r border-border/50 text-center whitespace-nowrap">
-                                <Badge variant={tenant.status === "active" ? "default" : "secondary"} className="py-[3px] rounded-[9px]">
-                                  {tenant.status}
+                                <Badge 
+                                  variant="outline" 
+                                  className={tenant.status === "active" 
+                                    ? "bg-green-500/10 text-green-600 hover:bg-green-500/20 border border-green-600 text-[0.75rem] py-[2px] px-[0.625rem] rounded-[11px]" 
+                                    : "bg-red-500/10 text-red-600 hover:bg-red-500/20 border border-red-600 text-[0.75rem] py-[2px] px-[0.625rem] rounded-[11px]"
+                                  }
+                                >
+                                  {tenant.status === "active" ? (
+                                    <><CheckCircle2 className="h-3 w-3 mr-1" />Active</>
+                                  ) : (
+                                    <><XCircle className="h-3 w-3 mr-1" />Inactive</>
+                                  )}
                                 </Badge>
                               </TableCell>
                               <TableCell className="py-6 border-r border-border/50 whitespace-nowrap">
