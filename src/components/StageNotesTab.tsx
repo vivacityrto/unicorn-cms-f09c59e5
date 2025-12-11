@@ -471,8 +471,28 @@ export function StageNotesTab({
       });
     }
   };
-  const toggleAssignee = (userId: string) => {
+  const toggleAssignee = async (userId: string) => {
+    const isAdding = !assignees.includes(userId);
     setAssignees(prev => prev.includes(userId) ? prev.filter(id => id !== userId) : [...prev, userId]);
+    
+    // Send notification when adding a new assignee (not for removal)
+    if (isAdding && userId !== currentUserId) {
+      try {
+        const currentUserData = vivacityTeam.find(u => u.user_uuid === currentUserId);
+        const assigneeData = vivacityTeam.find(u => u.user_uuid === userId);
+        
+        await (supabase.from("user_notifications" as any).insert({
+          user_id: userId,
+          tenant_id: tenantId,
+          type: "follower",
+          title: "You've been added as a follower",
+          message: `${currentUserData?.first_name || 'Someone'} ${currentUserData?.last_name || ''} added you as a follower on a stage note.`,
+          created_by: currentUserId
+        }) as any);
+      } catch (error) {
+        console.error("Error sending notification:", error);
+      }
+    }
   };
   return <div className="space-y-4">
       <div className="flex justify-end">
@@ -504,7 +524,7 @@ export function StageNotesTab({
                   <TableCell colSpan={10} className="text-center py-12 text-muted-foreground">Loading...</TableCell>
                 </TableRow> : notes.length === 0 ? <TableRow>
                   <TableCell colSpan={10} className="text-center py-12 text-muted-foreground">No notes have been added yet.</TableCell>
-                </TableRow> : notes.map((note, index) => <TableRow key={note.id}>
+                </TableRow> : notes.map((note, index) => <TableRow key={note.id} className="hover:bg-muted/50 cursor-pointer transition-colors">
                     <TableCell className="font-medium text-muted-foreground border-r">{index + 1}</TableCell>
                     <TableCell className="border-r max-w-xs">
                       <p className="truncate">{note.note_details}</p>
