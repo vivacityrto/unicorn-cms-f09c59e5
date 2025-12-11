@@ -651,7 +651,7 @@ const PackageDetail = () => {
       {/* Header */}
       {!tenantId ? (
         <div className="flex items-center justify-between">
-          <Button variant="ghost" onClick={() => navigate(-1)} className="gap-2 hover:bg-[hsl(196deg_100%_93.53%)] hover:text-black" style={{
+          <Button variant="ghost" onClick={() => navigate('/admin/packages')} className="gap-2 hover:bg-[hsl(196deg_100%_93.53%)] hover:text-black" style={{
             boxShadow: "var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow)",
             border: "1px solid #00000052"
           }}>
