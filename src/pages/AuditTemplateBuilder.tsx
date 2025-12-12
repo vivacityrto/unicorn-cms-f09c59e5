@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { Combobox, ComboboxOption } from '@/components/ui/combobox';
-import { Search, Plus, Pencil, Building2, FileText, Box, Building, Type, Hash, CheckSquare, CalendarDays, Image, SlidersHorizontal, MessageSquare, PenTool, MapPin, GripVertical, Trash2, X, Eye, Shield, ToggleLeft, Star, CircleDot, AlertTriangle, CheckCircle, List, CalendarClock } from 'lucide-react';
+import { Search, Plus, Pencil, Building2, FileText, Box, Building, Type, Hash, CheckSquare, CalendarDays, Image, SlidersHorizontal, MessageSquare, PenTool, MapPin, GripVertical, Trash2, X, Eye, Shield, ToggleLeft, Star, CircleDot, AlertTriangle, CheckCircle, List, CalendarClock, AlignLeft, FileStack } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription, DialogPortal, DialogOverlay } from '@/components/ui/dialog';
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { cn } from '@/lib/utils';
@@ -222,10 +222,16 @@ const questionTypes: QuestionType[] = [{
   color: 'text-red-500',
   category: 'other_responses'
 }, {
-  id: 'multiple_choice',
-  label: 'Multiple Choice',
-  icon: CheckSquare,
+  id: 'paragraph',
+  label: 'Paragraph',
+  icon: AlignLeft,
   color: 'text-purple-600',
+  category: 'other_responses'
+}, {
+  id: 'page_break',
+  label: 'Next Page',
+  icon: FileStack,
+  color: 'text-indigo-500',
   category: 'other_responses'
 }];
 interface CanvasQuestion {
@@ -1069,7 +1075,9 @@ export default function AuditTemplateBuilder() {
                         <Button variant="outline" size="icon">
                           <MapPin className="h-4 w-4" />
                         </Button>
-                      </div> : question.question_type === 'annotation' ? <textarea placeholder="Add notes or comments..." className="w-full max-w-md border rounded-lg p-3 text-sm resize-none h-20" /> : null}
+                      </div> : question.question_type === 'annotation' ? <textarea placeholder="Add notes or comments..." className="w-full max-w-md border rounded-lg p-3 text-sm resize-none h-20" /> : question.question_type === 'paragraph' ? <textarea placeholder="Enter your detailed response..." className="w-full max-w-md border rounded-lg p-3 text-sm resize-none h-32" /> : question.question_type === 'page_break' ? <div className="border-t-2 border-dashed border-muted-foreground/30 my-4 relative">
+                          <span className="absolute left-1/2 -translate-x-1/2 -translate-y-1/2 bg-background px-3 text-xs text-muted-foreground font-medium">Page Break</span>
+                        </div> : null}
                   </div>
                 </div>;
             })}
