@@ -2,6 +2,7 @@ import * as React from "react"
 import { Check, ArrowUpDown, Calendar, Mail } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Badge } from "@/components/ui/badge"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import {
   Command,
@@ -27,6 +28,8 @@ export interface ComboboxOption {
   status?: string
   colorDot?: string // CSS class for color dot (e.g., 'bg-green-500')
   email?: string
+  avatarUrl?: string // URL for user avatar
+  avatarFallback?: string // Fallback initials for avatar
 }
 
 interface ComboboxProps {
@@ -126,6 +129,12 @@ export function Combobox({
                             {showColorDots && option.colorDot && (
                               <span className={cn("w-3 h-3 rounded-full shrink-0", option.colorDot)} />
                             )}
+                            <Avatar className="h-8 w-8 shrink-0">
+                              <AvatarImage src={option.avatarUrl} alt={option.label} />
+                              <AvatarFallback className="bg-primary/10 text-primary text-xs">
+                                {option.avatarFallback || option.label.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
+                              </AvatarFallback>
+                            </Avatar>
                           </div>
                         </div>
                         {option.secondaryLabel && (
