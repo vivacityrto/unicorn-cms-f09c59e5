@@ -513,11 +513,9 @@ function SortableQuestionCard({
       {/* Header with drag handle and delete */}
       <div className="flex items-center justify-between px-5 py-3 bg-muted/30 border-b border-border/40 rounded-t-lg">
         <div className="flex items-center gap-3">
-          {previewMode ? <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+          <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
               {questionNumber}.
-            </span> : <button {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground p-1.5 rounded-md hover:bg-background/80 transition-colors">
-              <GripVertical className="h-4 w-4" />
-            </button>}
+            </span>
           <div className={cn("h-8 w-8 rounded-md flex items-center justify-center bg-background shadow-sm border border-border/50", questionType?.color)}>
             <Icon className="h-4 w-4" />
           </div>
@@ -525,9 +523,9 @@ function SortableQuestionCard({
             {question.question_type.replace(/_/g, ' ')}
           </span>
         </div>
-        {!previewMode && <Button variant="ghost" size="icon" className="h-8 w-8 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors" onClick={() => onDelete(question.id)}>
+        <Button variant="ghost" size="icon" className="h-8 w-8 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors" onClick={() => onDelete(question.id)}>
             <Trash2 className="h-4 w-4" />
-          </Button>}
+          </Button>
       </div>
 
       {/* Content area */}
@@ -615,7 +613,7 @@ function SortableQuestionCard({
         
         {/* Required and action buttons row - hidden for page breaks */}
         {question.question_type !== 'page_break' && <div className="flex items-center justify-between px-5 py-3">
-            {!previewMode ? <label className="flex items-center gap-2 text-sm cursor-pointer hover:text-foreground transition-colors">
+            <label className="flex items-center gap-2 text-sm cursor-pointer hover:text-foreground transition-colors">
                 <input type="checkbox" checked={question.required || false} onChange={e => onUpdate(question.id, {
             required: e.target.checked
           })} className="rounded border-muted-foreground/30" />
@@ -623,12 +621,9 @@ function SortableQuestionCard({
                   {question.required && <span className="text-destructive">*</span>}
                   <span className="text-foreground">Required</span>
                 </span>
-              </label> : question.required ? <span className="flex items-center gap-1 text-sm">
-                  <span className="text-destructive">*</span>
-                  <span className="text-foreground">Required</span>
-                </span> : <span className="text-sm text-muted-foreground">Optional</span>}
+              </label>
             <div className="flex items-center gap-4">
-              {!previewMode && !question.required && <span className="text-sm text-muted-foreground">Optional</span>}
+              {!question.required && <span className="text-sm text-muted-foreground">Optional</span>}
               <button onClick={() => {
             if (showNotes && question.notes) {
               // Save the note
