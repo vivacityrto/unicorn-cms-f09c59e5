@@ -530,7 +530,7 @@ function SortableQuestionCard({
         {renderInputPreview()}
       </div>
 
-      {/* Required toggle */}
+      {/* Required toggle and actions */}
       <div className="flex items-center justify-between mt-4 pt-4 border-t">
         <label className="flex items-center gap-2 text-sm text-muted-foreground cursor-pointer">
           <input type="checkbox" checked={question.required || false} onChange={e => onUpdate(question.id, {
@@ -538,6 +538,20 @@ function SortableQuestionCard({
         })} className="rounded border-muted-foreground/30" />
           Required
         </label>
+        <div className="flex items-center gap-1">
+          <Button variant="ghost" size="sm" className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground">
+            <MessageSquare className="h-3.5 w-3.5 mr-1" />
+            Add Note
+          </Button>
+          <Button variant="ghost" size="sm" className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground">
+            <Image className="h-3.5 w-3.5 mr-1" />
+            Add Media
+          </Button>
+          <Button variant="ghost" size="sm" className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground">
+            <Plus className="h-3.5 w-3.5 mr-1" />
+            Create Action
+          </Button>
+        </div>
       </div>
     </div>;
 }
