@@ -123,7 +123,8 @@ function VivacityTeamDropdownPreview() {
     return users.map(user => ({
       value: user.user_uuid,
       label: `${user.first_name || ''} ${user.last_name || ''}`.trim() || user.email || 'Unknown User',
-      group: (user.first_name || 'Other').charAt(0).toUpperCase()
+      group: (user.first_name || 'Other').charAt(0).toUpperCase(),
+      email: user.email || undefined
     }));
   }, [users]);
   return <Combobox options={userOptions} value={selectedUser} onValueChange={setSelectedUser} placeholder={isLoading ? "Loading team members..." : "Search Vivacity Team..."} searchPlaceholder="Type to search team members..." emptyText="No team members found." disabled={isLoading} className="bg-muted/50 border-dashed" />;
