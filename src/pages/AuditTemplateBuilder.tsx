@@ -1058,13 +1058,7 @@ export default function AuditTemplateBuilder() {
             </div>
             
             {/* Footer - matches canvas container styling */}
-            <div className="bg-muted/50 px-8 py-4">
-              <DialogFooter className="gap-2">
-                <Button variant="outline" onClick={() => setIsPreviewOpen(false)} className="focus:z-10 bg-card hover:bg-muted">
-                  Close
-                </Button>
-              </DialogFooter>
-            </div>
+            
           </DialogPrimitive.Content>
         </DialogPortal>
       </Dialog>
