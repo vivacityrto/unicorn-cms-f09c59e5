@@ -5,6 +5,7 @@ import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, us
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
@@ -959,26 +960,23 @@ export default function AuditTemplateBuilder() {
       }
     };
     return <DashboardLayout>
-        <div className="space-y-6 p-6 animate-fade-in w-full">
+        <div className="p-6 space-y-6 animate-fade-in w-full">
           {/* Page Header */}
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              
-              <div>
-                <h1 className="text-[28px] font-bold">{templateName || "Untitled Template"}</h1>
-                <p className="text-muted-foreground">
-                  Complete the inspection by filling out all required fields below.
-                </p>
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <h1 className="text-2xl font-semibold">{templateName || "Untitled Template"}</h1>
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                {totalPages > 1 && `Page ${previewPage + 1} of ${totalPages}`}
               </div>
             </div>
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              {totalPages > 1 && `Page ${previewPage + 1} of ${totalPages}`}
-            </div>
+            <p className="text-muted-foreground">
+              Complete the inspection by filling out all required fields below.
+            </p>
           </div>
 
-          {/* Content */}
-          <div className="max-w-[800px] mx-auto">
-            <div className="bg-card rounded-xl border shadow-sm p-6 min-h-[400px]">
+          {/* Content Card */}
+          <Card>
+            <CardContent className="p-6">
               {canvasQuestions.length === 0 || currentPageQuestionsToShow.length === 0 ? <div className="text-center py-12">
                   <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
                     <Plus className="h-8 w-8 text-primary" />
@@ -1022,8 +1020,8 @@ export default function AuditTemplateBuilder() {
                     </div>
                   </div>
                 </div>}
-            </div>
-          </div>
+            </CardContent>
+          </Card>
         </div>
       </DashboardLayout>;
   }
