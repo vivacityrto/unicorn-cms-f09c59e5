@@ -559,7 +559,8 @@ const PackageDetail = () => {
                 order_number: index + 1,
                 is_active: true,
                 created_at: stage.created_at,
-                updated_at: stage.updated_at
+                updated_at: stage.updated_at,
+                status: stage.status || 'not_started'
               }));
               setStages(mappedStages as StageData[]);
             } else {
