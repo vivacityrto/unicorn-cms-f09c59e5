@@ -567,7 +567,7 @@ function SortableQuestionCard({
       <div className="p-5 space-y-4">
         {/* Question label input */}
         {previewMode ? (
-          <p className="text-base font-medium text-foreground">{question.label || 'Untitled question'}</p>
+          <p className="font-medium text-foreground" style={{ fontSize: '15px' }}>{question.label || 'Untitled question'}</p>
         ) : (
           <Input value={question.label} onChange={e => onUpdate(question.id, {
             label: e.target.value
@@ -1275,7 +1275,7 @@ export default function AuditTemplateBuilder() {
           {/* Page Header */}
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <h1 className="text-2xl font-semibold">{templateName || "Untitled Template"}</h1>
+              <h1 className="font-semibold" style={{ fontSize: '23px' }}>{templateName || "Untitled Template"}</h1>
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 {totalPages > 1 && `Page ${previewPage + 1} of ${totalPages}`}
               </div>
