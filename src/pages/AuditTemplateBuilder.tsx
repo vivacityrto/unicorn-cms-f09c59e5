@@ -1273,7 +1273,7 @@ export default function AuditTemplateBuilder() {
         setPreviewPage(prev => prev + 1);
       }
     };
-    const handleSubmit = () => {
+    const handleSubmit = async () => {
       if (validateCurrentPage()) {
         // Calculate compliance score
         const score = calculateComplianceScore(canvasQuestions, previewResponses);
@@ -1281,15 +1281,66 @@ export default function AuditTemplateBuilder() {
           q => q.scoring_enabled && q.question_type === 'multiple_choice' && hasComplianceOptions(q.options)
         );
         
-        if (hasScoringQuestions) {
-          toast.success(`Inspection submitted! Compliance Score: ${score}%`);
-        } else {
-          toast.success('Inspection submitted successfully!');
+        try {
+          // Find document question and get selected document name
+          const documentsQuestion = canvasQuestions.find(q => q.question_type === 'documents');
+          let docNumber = null;
+          if (documentsQuestion && previewResponses[documentsQuestion.id]) {
+            // Fetch the document title from the selected document ID
+            const { data: docData } = await supabase
+              .from('documents')
+              .select('title')
+              .eq('id', previewResponses[documentsQuestion.id])
+              .single();
+            docNumber = docData?.title || null;
+          }
+          
+          // Get client_id from responses if clients question exists
+          const clientsQuestion = canvasQuestions.find(q => q.question_type === 'clients');
+          const clientId = clientsQuestion ? previewResponses[clientsQuestion.id] : null;
+          
+          // Create inspection record in audit table
+          if (profile?.tenant_id && profile?.user_uuid) {
+            // We need a valid client_id - use the selected one or a placeholder
+            const validClientId = clientId || null;
+            
+            if (validClientId) {
+              const { error: insertError } = await supabase
+                .from('audit')
+                .insert({
+                  tenant_id: profile.tenant_id,
+                  client_id: validClientId,
+                  template_id: templateIdParam ? parseInt(templateIdParam) : null,
+                  audit_title: templateName || 'Untitled Inspection',
+                  created_by: profile.user_uuid,
+                  conducted_by: profile.user_uuid,
+                  doc_number: docNumber,
+                  status: 'completed',
+                  started_at: new Date().toISOString(),
+                  completed_at: new Date().toISOString()
+                });
+              
+              if (insertError) {
+                console.error('Error saving inspection:', insertError);
+                toast.error('Failed to save inspection record');
+                return;
+              }
+            }
+          }
+          
+          if (hasScoringQuestions) {
+            toast.success(`Inspection submitted! Compliance Score: ${score}%`);
+          } else {
+            toast.success('Inspection submitted successfully!');
+          }
+          setPreviewResponses({});
+          setValidationErrors(new Set());
+          setPreviewPage(0);
+          navigate('/audits');
+        } catch (error) {
+          console.error('Error submitting inspection:', error);
+          toast.error('Failed to submit inspection');
         }
-        setPreviewResponses({});
-        setValidationErrors(new Set());
-        setPreviewPage(0);
-        navigate('/audits');
       }
     };
     

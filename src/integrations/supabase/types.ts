@@ -87,11 +87,14 @@ export type Database = {
       }
       audit: {
         Row: {
+          action_title: string | null
           audit_title: string
           client_id: string
           completed_at: string | null
+          conducted_by: string | null
           created_at: string
           created_by: string
+          doc_number: string | null
           id: number
           started_at: string | null
           status: string
@@ -100,11 +103,14 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          action_title?: string | null
           audit_title?: string
           client_id: string
           completed_at?: string | null
+          conducted_by?: string | null
           created_at?: string
           created_by: string
+          doc_number?: string | null
           id?: number
           started_at?: string | null
           status?: string
@@ -113,11 +119,14 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          action_title?: string | null
           audit_title?: string
           client_id?: string
           completed_at?: string | null
+          conducted_by?: string | null
           created_at?: string
           created_by?: string
+          doc_number?: string | null
           id?: number
           started_at?: string | null
           status?: string
