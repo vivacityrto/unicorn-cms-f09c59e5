@@ -85,16 +85,11 @@ export function AllStagesTable() {
       const {
         data: stagesData,
         error: stagesError
-      } = await supabase.from('documents_stages').select('id, title, short_name, description, video_url, created_at, created_by').order('created_at', {
+      } = await supabase.from('documents_stages').select('id, title, short_name, description, video_url, created_at, created_by, status').order('created_at', {
         ascending: false
       });
       if (stagesError) throw stagesError;
-      // Map to Stage interface with default status
-      const stagesWithStatus: Stage[] = (stagesData || []).map(stage => ({
-        ...stage,
-        status: null // Default status, will be managed at tenant level
-      }));
-      setStages(stagesWithStatus);
+      setStages(stagesData || []);
 
       // Fetch user info for created_by UUIDs
       const userIds = [...new Set((stagesData || []).filter(s => s.created_by).map(s => s.created_by as string))];
@@ -295,10 +290,22 @@ export function AllStagesTable() {
                     </p>
                   </TableCell>
                   <TableCell className="py-6 border-r border-border/50 min-w-[130px]">
-                    <Badge className="bg-muted text-muted-foreground hover:bg-muted border border-border text-[0.75rem] py-[2px] px-[0.625rem] rounded-[11px] gap-1.5">
-                      <Circle className="h-3 w-3" />
-                      Not Started
-                    </Badge>
+                    {stage.status === 'completed' ? (
+                      <Badge className="bg-green-500/10 text-green-600 hover:bg-green-500/20 border border-green-600 text-[0.75rem] py-[2px] px-[0.625rem] rounded-[11px] gap-1.5">
+                        <CheckCircle2 className="h-3 w-3" />
+                        Completed
+                      </Badge>
+                    ) : stage.status === 'in_progress' ? (
+                      <Badge className="bg-blue-500/10 text-blue-600 hover:bg-blue-500/20 border border-blue-600 text-[0.75rem] py-[2px] px-[0.625rem] rounded-[11px] gap-1.5">
+                        <Clock className="h-3 w-3" />
+                        In Progress
+                      </Badge>
+                    ) : (
+                      <Badge className="bg-muted text-muted-foreground hover:bg-muted border border-border text-[0.75rem] py-[2px] px-[0.625rem] rounded-[11px] gap-1.5">
+                        <Circle className="h-3 w-3" />
+                        Not Started
+                      </Badge>
+                    )}
                   </TableCell>
                   <TableCell className="py-6 border-r border-border/50 min-w-[150px]">
                     {stage.video_url ? (
