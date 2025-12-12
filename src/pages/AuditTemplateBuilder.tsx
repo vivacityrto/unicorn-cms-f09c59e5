@@ -626,12 +626,28 @@ function SortableQuestionCard({
         
         {/* Required and action buttons row */}
         <div className="flex items-center justify-between px-5 py-3">
-          <label className="flex items-center gap-2 text-sm text-muted-foreground cursor-pointer hover:text-foreground transition-colors">
-            <input type="checkbox" checked={question.required || false} onChange={e => onUpdate(question.id, {
-            required: e.target.checked
-          })} className="rounded border-muted-foreground/30" />
-            Required
-          </label>
+          {!previewMode ? (
+            <label className="flex items-center gap-2 text-sm cursor-pointer hover:text-foreground transition-colors">
+              <input type="checkbox" checked={question.required || false} onChange={e => onUpdate(question.id, {
+              required: e.target.checked
+            })} className="rounded border-muted-foreground/30" />
+              {question.required ? (
+                <span className="flex items-center gap-1">
+                  <span className="text-destructive">*</span>
+                  <span className="text-foreground">Required</span>
+                </span>
+              ) : (
+                <span className="text-muted-foreground">Not Required</span>
+              )}
+            </label>
+          ) : (
+            question.required && (
+              <span className="flex items-center gap-1 text-sm">
+                <span className="text-destructive">*</span>
+                <span className="text-foreground">Required</span>
+              </span>
+            )
+          )}
           <div className="flex items-center gap-4">
             <button 
               onClick={() => {
