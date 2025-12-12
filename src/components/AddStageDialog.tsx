@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Layers, Loader2 } from "lucide-react";
+import { Layers, Loader2, Circle, Clock, CheckCircle2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface AddStageDialogProps {
@@ -241,19 +241,43 @@ export function AddStageDialog({
             </div>
 
             {/* Status */}
-            <div className="space-y-2">
+            <div className="space-y-2 w-1/2">
               <Label htmlFor="stage-status">Status</Label>
               <Select
                 value={formData.status}
                 onValueChange={(value: "not_started" | "in_progress" | "completed") => setFormData({ ...formData, status: value })}
               >
                 <SelectTrigger id="stage-status">
-                  <SelectValue placeholder="Select status" />
+                  <SelectValue placeholder="Select status">
+                    {formData.status && (
+                      <div className="flex items-center gap-2">
+                        {formData.status === 'completed' && <CheckCircle2 className="h-4 w-4 text-green-500" />}
+                        {formData.status === 'in_progress' && <Clock className="h-4 w-4 text-blue-500" />}
+                        {formData.status === 'not_started' && <Circle className="h-4 w-4 text-muted-foreground" />}
+                        <span className="capitalize">{formData.status.replace('_', ' ')}</span>
+                      </div>
+                    )}
+                  </SelectValue>
                 </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="not_started">Not Started</SelectItem>
-                  <SelectItem value="in_progress">In Progress</SelectItem>
-                  <SelectItem value="completed">Completed</SelectItem>
+                <SelectContent className="bg-background">
+                  <SelectItem value="not_started">
+                    <div className="flex items-center gap-2">
+                      <Circle className="h-4 w-4 text-muted-foreground" />
+                      <span>Not Started</span>
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="in_progress">
+                    <div className="flex items-center gap-2">
+                      <Clock className="h-4 w-4 text-blue-500" />
+                      <span>In Progress</span>
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="completed">
+                    <div className="flex items-center gap-2">
+                      <CheckCircle2 className="h-4 w-4 text-green-500" />
+                      <span>Completed</span>
+                    </div>
+                  </SelectItem>
                 </SelectContent>
               </Select>
             </div>
