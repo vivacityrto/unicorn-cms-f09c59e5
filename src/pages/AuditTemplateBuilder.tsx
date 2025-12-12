@@ -46,17 +46,31 @@ function useTenants() {
   });
 }
 
-// Hook to fetch documents
+// Hook to fetch documents with category names
 function useDocuments() {
   return useQuery({
-    queryKey: ['documents-list'],
+    queryKey: ['documents-list-with-categories'],
     queryFn: async () => {
-      const {
-        data,
-        error
-      } = await supabase.from('documents').select('id, title, category').order('category').order('title');
-      if (error) throw error;
-      return data || [];
+      // Fetch documents and categories in parallel
+      const [docsResult, categoriesResult] = await Promise.all([
+        supabase.from('documents').select('id, title, category').order('category').order('title'),
+        supabase.from('documents_categories').select('id, name')
+      ]);
+      
+      if (docsResult.error) throw docsResult.error;
+      if (categoriesResult.error) throw categoriesResult.error;
+      
+      // Create a map of category id to name
+      const categoryMap = new Map<string, string>();
+      (categoriesResult.data || []).forEach(cat => {
+        categoryMap.set(String(cat.id), cat.name);
+      });
+      
+      // Map documents with category names
+      return (docsResult.data || []).map(doc => ({
+        ...doc,
+        categoryName: doc.category ? categoryMap.get(doc.category) || 'Uncategorized' : 'Uncategorized'
+      }));
     }
   });
 }
@@ -91,8 +105,8 @@ function DocumentsDropdownPreview({ value, onValueChange, hasError }: { value?: 
     return documents.map(doc => ({
       value: String(doc.id),
       label: doc.title || 'Untitled Document',
-      group: doc.category || 'Uncategorized',
-      category: doc.category || 'Uncategorized'
+      group: doc.categoryName || 'Uncategorized',
+      category: doc.categoryName || 'Uncategorized'
     }));
   }, [documents]);
   return <Combobox options={documentOptions} value={value || ''} onValueChange={(v) => onValueChange?.(v)} placeholder={isLoading ? "Loading documents..." : "Search documents..."} searchPlaceholder="Type to search documents..." emptyText="No documents found." disabled={isLoading} showAvatar={false} className={cn("bg-muted/50 border-dashed", hasError && "border-destructive")} />;
