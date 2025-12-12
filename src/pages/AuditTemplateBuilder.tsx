@@ -302,6 +302,18 @@ function SortableQuestionCard({
     site: '',
     asset: ''
   });
+
+  // Disable body scroll when action sheet is open
+  useEffect(() => {
+    if (showActionPanel) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [showActionPanel]);
   
   // Fetch Vivacity team for assignees
   const { data: vivacityTeamData } = useVivacityTeamUsers();
