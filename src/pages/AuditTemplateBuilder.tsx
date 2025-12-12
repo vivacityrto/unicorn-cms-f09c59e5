@@ -1377,12 +1377,13 @@ export default function AuditTemplateBuilder() {
                   </div>
                 )}
                 <Button 
-                  variant="ghost" 
-                  size="icon" 
-                  className="h-8 w-8 hover:bg-muted"
+                  variant="outline" 
+                  size="sm" 
+                  className="gap-2 hover:bg-muted"
                   onClick={() => navigate(`/audits/create-template/${templateIdParam}`)}
                 >
-                  <Pencil className="h-4 w-4 text-muted-foreground hover:text-foreground" />
+                  <Pencil className="h-4 w-4" />
+                  Edit Template
                 </Button>
               </div>
             </div>
