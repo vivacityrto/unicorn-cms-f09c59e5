@@ -476,7 +476,7 @@ function SortableQuestionCard({
                 key={idx} 
                 onClick={() => setSelectedOptionIdx(idx)}
                 className={cn(
-                  "px-2.5 py-1 rounded-lg text-sm font-semibold border backdrop-blur-sm cursor-pointer transition-all duration-200",
+                  "px-2.5 py-1 rounded-[9px] text-sm font-semibold border backdrop-blur-sm cursor-pointer transition-all duration-200",
                   badgeClassPreview,
                   isSelected ? "scale-105" : "hover:bg-muted/80"
                 )}
