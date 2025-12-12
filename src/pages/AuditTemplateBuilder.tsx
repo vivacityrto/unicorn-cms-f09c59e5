@@ -314,9 +314,11 @@ function SortableQuestionCard({
       document.body.style.overflow = '';
     };
   }, [showActionPanel]);
-  
+
   // Fetch Vivacity team for assignees
-  const { data: vivacityTeamData } = useVivacityTeamUsers();
+  const {
+    data: vivacityTeamData
+  } = useVivacityTeamUsers();
   const [selectedOptionIdx, setSelectedOptionIdx] = useState<number | null>(responseValue !== undefined && question.options?.length ? question.options.findIndex((opt: any) => opt.label === responseValue) : null);
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -531,12 +533,7 @@ function SortableQuestionCard({
           </div>;
       case 'annotation':
         return <div className="border rounded-lg p-4 bg-muted/30">
-            <Textarea 
-              value={responseValue || ''} 
-              onChange={e => onResponseChange?.(question.id, e.target.value)}
-              placeholder="Add notes or comments..."
-              className="min-h-[100px] bg-transparent border-none resize-none focus-visible:ring-0 focus-visible:ring-offset-0 placeholder:text-muted-foreground/50"
-            />
+            <Textarea value={responseValue || ''} onChange={e => onResponseChange?.(question.id, e.target.value)} placeholder="Add notes or comments..." className="min-h-[100px] bg-transparent border-none resize-none focus-visible:ring-0 focus-visible:ring-offset-0 placeholder:text-muted-foreground/50" />
           </div>;
       default:
         return null;
@@ -566,13 +563,9 @@ function SortableQuestionCard({
       {/* Content area */}
       <div className="p-5 space-y-4">
         {/* Question label input */}
-        {previewMode ? (
-          <p className="font-medium text-foreground" style={{ fontSize: '15px' }}>{question.label || 'Untitled question'}</p>
-        ) : (
-          <Input value={question.label} onChange={e => onUpdate(question.id, {
-            label: e.target.value
-          })} placeholder="Enter your question" className="text-base font-medium border-none bg-transparent px-0 h-auto focus-visible:ring-0 focus-visible:ring-offset-0 placeholder:text-muted-foreground/50" />
-        )}
+        {previewMode ? <p className="text-base font-medium text-foreground">{question.label || 'Untitled question'}</p> : <Input value={question.label} onChange={e => onUpdate(question.id, {
+        label: e.target.value
+      })} placeholder="Enter your question" className="text-base font-medium border-none bg-transparent px-0 h-auto focus-visible:ring-0 focus-visible:ring-offset-0 placeholder:text-muted-foreground/50" />}
 
         {/* Input preview based on question type */}
         <div className="pt-2">
@@ -684,10 +677,7 @@ function SortableQuestionCard({
                 <Image className="h-4 w-4" />
                 {question.media_files && question.media_files.length > 0 ? `Media (${question.media_files.length})` : "Add Media"}
               </button>
-              <button 
-                onClick={() => setShowActionPanel(true)}
-                className="flex items-center gap-2 text-sm text-muted-foreground cursor-pointer hover:text-primary transition-colors"
-              >
+              <button onClick={() => setShowActionPanel(true)} className="flex items-center gap-2 text-sm text-muted-foreground cursor-pointer hover:text-primary transition-colors">
                 <Plus className="h-4 w-4" />
                 Create Action
               </button>
@@ -695,10 +685,7 @@ function SortableQuestionCard({
           </div>}
           
         {/* Action Panel Slide-in */}
-        <div className={cn(
-          "fixed top-0 right-0 h-full w-[425px] bg-card border-l shadow-xl z-50 transform transition-transform duration-300 ease-out",
-          showActionPanel ? "translate-x-0" : "translate-x-full"
-        )}>
+        <div className={cn("fixed top-0 right-0 h-full w-[425px] bg-card border-l shadow-xl z-50 transform transition-transform duration-300 ease-out", showActionPanel ? "translate-x-0" : "translate-x-full")}>
           <div className="flex flex-col h-full">
             {/* Header */}
             <div className="flex items-start justify-between px-4 py-3 border-b">
@@ -718,29 +705,26 @@ function SortableQuestionCard({
             <div className="flex-1 overflow-y-auto p-4 space-y-0">
               {/* Title Section */}
               <div className="pb-4">
-                <Input
-                  value={actionForm.title}
-                  onChange={(e) => setActionForm(prev => ({ ...prev, title: e.target.value }))}
-                  placeholder="Add title..."
-                  className="text-lg font-medium border-primary/30 focus:border-primary"
-                />
+                <Input value={actionForm.title} onChange={e => setActionForm(prev => ({
+                ...prev,
+                title: e.target.value
+              }))} placeholder="Add title..." className="text-lg font-medium border-primary/30 focus:border-primary" />
               </div>
               
               {/* Description Section */}
               <div className="pb-4">
-                <Textarea
-                  value={actionForm.description}
-                  onChange={(e) => {
-                    setActionForm(prev => ({ ...prev, description: e.target.value }));
-                    // Auto-expand textarea
-                    const target = e.target as HTMLTextAreaElement;
-                    target.style.height = 'auto';
-                    target.style.height = `${Math.max(80, target.scrollHeight)}px`;
-                  }}
-                  placeholder="Add description..."
-                  className="min-h-[80px] resize-y"
-                  style={{ overflow: 'hidden' }}
-                />
+                <Textarea value={actionForm.description} onChange={e => {
+                setActionForm(prev => ({
+                  ...prev,
+                  description: e.target.value
+                }));
+                // Auto-expand textarea
+                const target = e.target as HTMLTextAreaElement;
+                target.style.height = 'auto';
+                target.style.height = `${Math.max(80, target.scrollHeight)}px`;
+              }} placeholder="Add description..." className="min-h-[80px] resize-y" style={{
+                overflow: 'hidden'
+              }} />
               </div>
               
               <Separator className="my-2" />
@@ -750,21 +734,16 @@ function SortableQuestionCard({
                 {/* Priority - matching StageNotesTab style */}
                 <div className="flex items-center justify-between py-3 border-b border-border/40">
                   <span className="text-sm text-muted-foreground">Priority</span>
-                  <Select value={actionForm.priority} onValueChange={(v) => setActionForm(prev => ({ ...prev, priority: v }))}>
+                  <Select value={actionForm.priority} onValueChange={v => setActionForm(prev => ({
+                  ...prev,
+                  priority: v
+                }))}>
                     <SelectTrigger className="w-[140px]">
                       <SelectValue placeholder="Select priority...">
-                        {actionForm.priority && (
-                          <div className="flex items-center gap-2">
-                            <Flag className={cn(
-                              "h-4 w-4",
-                              actionForm.priority === "urgent" && "fill-red-500 text-red-500",
-                              actionForm.priority === "high" && "fill-orange-500 text-orange-500",
-                              actionForm.priority === "normal" && "fill-yellow-500 text-yellow-500",
-                              actionForm.priority === "low" && "fill-blue-500 text-blue-500"
-                            )} />
+                        {actionForm.priority && <div className="flex items-center gap-2">
+                            <Flag className={cn("h-4 w-4", actionForm.priority === "urgent" && "fill-red-500 text-red-500", actionForm.priority === "high" && "fill-orange-500 text-orange-500", actionForm.priority === "normal" && "fill-yellow-500 text-yellow-500", actionForm.priority === "low" && "fill-blue-500 text-blue-500")} />
                             <span className="capitalize">{actionForm.priority}</span>
-                          </div>
-                        )}
+                          </div>}
                       </SelectValue>
                     </SelectTrigger>
                     <SelectContent className="bg-background">
@@ -810,13 +789,10 @@ function SortableQuestionCard({
                       </Button>
                     </PopoverTrigger>
                     <PopoverContent className="w-auto p-0 z-[80]" align="end">
-                      <Calendar
-                        mode="single"
-                        selected={actionForm.dueDate || undefined}
-                        onSelect={(date) => setActionForm(prev => ({ ...prev, dueDate: date || null }))}
-                        initialFocus
-                        className="pointer-events-auto"
-                      />
+                      <Calendar mode="single" selected={actionForm.dueDate || undefined} onSelect={date => setActionForm(prev => ({
+                      ...prev,
+                      dueDate: date || null
+                    }))} initialFocus className="pointer-events-auto" />
                     </PopoverContent>
                   </Popover>
                 </div>
@@ -826,24 +802,19 @@ function SortableQuestionCard({
                   <span className="text-sm text-muted-foreground mb-2 block">Assignees</span>
                   <div className="flex items-center gap-2 flex-wrap">
                     {actionAssignees.map(userId => {
-                      const user = vivacityTeamData?.find(u => u.user_uuid === userId);
-                      if (!user) return null;
-                      return (
-                        <div key={userId} className="relative group">
+                    const user = vivacityTeamData?.find(u => u.user_uuid === userId);
+                    if (!user) return null;
+                    return <div key={userId} className="relative group">
                           <Avatar className="h-10 w-10 border-2 border-background shadow-sm cursor-pointer">
                             <AvatarFallback className="text-xs bg-primary/10 text-primary">
                               {user.first_name?.[0]}{user.last_name?.[0]}
                             </AvatarFallback>
                           </Avatar>
-                          <button 
-                            onClick={() => setActionAssignees(prev => prev.filter(id => id !== userId))}
-                            className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-destructive text-destructive-foreground opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
-                          >
+                          <button onClick={() => setActionAssignees(prev => prev.filter(id => id !== userId))} className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-destructive text-destructive-foreground opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                             <X className="h-2.5 w-2.5" />
                           </button>
-                        </div>
-                      );
-                    })}
+                        </div>;
+                  })}
                     <Popover>
                       <PopoverTrigger asChild>
                         <button className="h-10 w-10 rounded-full border-2 border-dashed border-muted-foreground/40 flex items-center justify-center hover:border-primary hover:bg-primary/5 transition-colors cursor-pointer">
@@ -852,23 +823,15 @@ function SortableQuestionCard({
                       </PopoverTrigger>
                       <PopoverContent className="w-64 p-2 z-[80]" align="start">
                         <div className="space-y-1 max-h-48 overflow-y-auto">
-                          {vivacityTeamData?.filter(user => !actionAssignees.includes(user.user_uuid)).map(user => (
-                            <div
-                              key={user.user_uuid}
-                              onClick={() => setActionAssignees(prev => [...prev, user.user_uuid])}
-                              className="flex items-center gap-2 px-2 py-1.5 rounded-md cursor-pointer hover:bg-muted transition-colors"
-                            >
+                          {vivacityTeamData?.filter(user => !actionAssignees.includes(user.user_uuid)).map(user => <div key={user.user_uuid} onClick={() => setActionAssignees(prev => [...prev, user.user_uuid])} className="flex items-center gap-2 px-2 py-1.5 rounded-md cursor-pointer hover:bg-muted transition-colors">
                               <Avatar className="h-7 w-7">
                                 <AvatarFallback className="text-[10px] bg-primary/10 text-primary">
                                   {user.first_name?.[0]}{user.last_name?.[0]}
                                 </AvatarFallback>
                               </Avatar>
                               <span className="text-sm">{user.first_name} {user.last_name}</span>
-                            </div>
-                          ))}
-                          {vivacityTeamData?.filter(user => !actionAssignees.includes(user.user_uuid)).length === 0 && (
-                            <p className="text-sm text-muted-foreground text-center py-2">All team members added</p>
-                          )}
+                            </div>)}
+                          {vivacityTeamData?.filter(user => !actionAssignees.includes(user.user_uuid)).length === 0 && <p className="text-sm text-muted-foreground text-center py-2">All team members added</p>}
                         </div>
                       </PopoverContent>
                     </Popover>
@@ -883,23 +846,19 @@ function SortableQuestionCard({
                 {/* Site */}
                 <div className="flex items-center justify-between py-3 border-b border-border/40">
                   <span className="text-sm text-muted-foreground">Site</span>
-                  <Input
-                    value={actionForm.site}
-                    onChange={(e) => setActionForm(prev => ({ ...prev, site: e.target.value }))}
-                    placeholder="Add site..."
-                    className="w-[180px] h-9"
-                  />
+                  <Input value={actionForm.site} onChange={e => setActionForm(prev => ({
+                  ...prev,
+                  site: e.target.value
+                }))} placeholder="Add site..." className="w-[180px] h-9" />
                 </div>
                 
                 {/* Asset */}
                 <div className="flex items-center justify-between py-3 border-b border-border/40">
                   <span className="text-sm text-muted-foreground">Asset</span>
-                  <Input
-                    value={actionForm.asset}
-                    onChange={(e) => setActionForm(prev => ({ ...prev, asset: e.target.value }))}
-                    placeholder="Add asset..."
-                    className="w-[180px] h-9"
-                  />
+                  <Input value={actionForm.asset} onChange={e => setActionForm(prev => ({
+                  ...prev,
+                  asset: e.target.value
+                }))} placeholder="Add asset..." className="w-[180px] h-9" />
                 </div>
               </div>
               
@@ -909,18 +868,13 @@ function SortableQuestionCard({
               <div className="py-3">
                 <span className="text-sm text-muted-foreground mb-2 block">Labels</span>
                 <div className="flex items-center gap-2 flex-wrap">
-                  {actionLabels.map((label, idx) => (
-                    <Badge key={idx} variant="secondary" className="bg-blue-500/10 text-blue-600 hover:bg-blue-500/20 border border-blue-600 text-[0.75rem] py-[2px] px-[0.625rem] rounded-[11px] gap-1 pr-1">
+                  {actionLabels.map((label, idx) => <Badge key={idx} variant="secondary" className="bg-blue-500/10 text-blue-600 hover:bg-blue-500/20 border border-blue-600 text-[0.75rem] py-[2px] px-[0.625rem] rounded-[11px] gap-1 pr-1">
                       <Tag className="h-3 w-3" />
                       {label}
-                      <button
-                        onClick={() => setActionLabels(prev => prev.filter((_, i) => i !== idx))}
-                        className="ml-1 hover:text-destructive"
-                      >
+                      <button onClick={() => setActionLabels(prev => prev.filter((_, i) => i !== idx))} className="ml-1 hover:text-destructive">
                         <X className="h-3 w-3" />
                       </button>
-                    </Badge>
-                  ))}
+                    </Badge>)}
                   <Popover>
                     <PopoverTrigger asChild>
                       <button className="h-8 px-3 rounded-md border border-dashed border-muted-foreground/40 flex items-center gap-1.5 hover:border-primary hover:bg-primary/5 transition-colors cursor-pointer text-sm text-muted-foreground">
@@ -930,16 +884,10 @@ function SortableQuestionCard({
                     </PopoverTrigger>
                     <PopoverContent className="w-48 p-2 z-[80]" align="start">
                       <div className="space-y-1">
-                        {['Urgent', 'Review', 'Follow-up', 'Compliance', 'Documentation', 'Training'].filter(l => !actionLabels.includes(l)).map(label => (
-                          <div
-                            key={label}
-                            onClick={() => setActionLabels(prev => [...prev, label])}
-                            className="flex items-center gap-2 px-2 py-1.5 rounded-md cursor-pointer hover:bg-muted transition-colors text-sm"
-                          >
+                        {['Urgent', 'Review', 'Follow-up', 'Compliance', 'Documentation', 'Training'].filter(l => !actionLabels.includes(l)).map(label => <div key={label} onClick={() => setActionLabels(prev => [...prev, label])} className="flex items-center gap-2 px-2 py-1.5 rounded-md cursor-pointer hover:bg-muted transition-colors text-sm">
                             <Tag className="h-3.5 w-3.5 text-muted-foreground" />
                             {label}
-                          </div>
-                        ))}
+                          </div>)}
                       </div>
                     </PopoverContent>
                   </Popover>
@@ -958,12 +906,7 @@ function SortableQuestionCard({
         </div>
         
         {/* Backdrop */}
-        {showActionPanel && (
-          <div 
-            className="fixed inset-0 bg-black/20 z-40 animate-fade-in"
-            onClick={() => setShowActionPanel(false)}
-          />
-        )}
+        {showActionPanel && <div className="fixed inset-0 bg-black/20 z-40 animate-fade-in" onClick={() => setShowActionPanel(false)} />}
       </div>
     </div>;
 }
@@ -1275,10 +1218,8 @@ export default function AuditTemplateBuilder() {
           {/* Page Header */}
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <h1 className="font-semibold" style={{ fontSize: '23px' }}>{templateName || "Untitled Template"}</h1>
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                {totalPages > 1 && `Page ${previewPage + 1} of ${totalPages}`}
-              </div>
+              <h1 className="text-2xl font-semibold">{templateName || "Untitled Template"}</h1>
+              
             </div>
             <p className="text-muted-foreground">
               Complete the inspection by filling out all required fields below.
