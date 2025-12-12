@@ -1405,7 +1405,7 @@ export default function AuditTemplateBuilder() {
                 </Button>
               </div>
             </div>
-            <p className="text-muted-foreground flex items-center gap-2">
+            <p className="text-[hsl(0deg_0%_15.11%)] font-semibold flex items-center gap-2">
               <FileText className="h-4 w-4" />
               {templateName || 'Untitled Template'}
             </p>
