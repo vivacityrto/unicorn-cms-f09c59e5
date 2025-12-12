@@ -253,11 +253,57 @@ interface CanvasQuestion {
   description?: string;
   required?: boolean;
   notes?: string;
+  scoring_enabled?: boolean;
   media_files?: {
     name: string;
     url: string;
   }[];
 }
+
+// Check if a question has compliance-related options (Compliant/Non-Compliant)
+const hasComplianceOptions = (options?: any[]) => {
+  if (!options || options.length === 0) return false;
+  const labels = options.map(o => o.label?.toLowerCase() || '');
+  return labels.some(l => l.includes('non-compliant') || l.includes('noncompliant'));
+};
+
+// Calculate compliance score based on responses
+const calculateComplianceScore = (
+  questions: CanvasQuestion[],
+  responses: Record<string, any>
+): number => {
+  // Filter to only scoring-enabled questions with compliance options
+  const scorableQuestions = questions.filter(
+    q => q.scoring_enabled && q.question_type === 'multiple_choice' && hasComplianceOptions(q.options)
+  );
+  
+  if (scorableQuestions.length === 0) return 100;
+  
+  let totalScore = 0;
+  let answeredCount = 0;
+  
+  scorableQuestions.forEach(q => {
+    const response = responses[q.id];
+    if (!response) return;
+    
+    const responseLower = response.toLowerCase();
+    answeredCount++;
+    
+    // Compliant = 100%, N/A = 100% (doesn't affect score), Non-Compliant = 0%
+    if (responseLower.includes('n/a') || responseLower === 'na' || responseLower === 'not applicable') {
+      totalScore += 100;
+    } else if (responseLower.includes('compliant') && !responseLower.includes('non')) {
+      totalScore += 100;
+    } else if (responseLower.includes('non-compliant') || responseLower.includes('noncompliant')) {
+      totalScore += 0;
+    } else {
+      // Default to 50% for unknown responses
+      totalScore += 50;
+    }
+  });
+  
+  return answeredCount > 0 ? Math.round(totalScore / answeredCount) : 100;
+};
 function SortableQuestionCard({
   question,
   onDelete,
@@ -649,18 +695,34 @@ function SortableQuestionCard({
         
         {/* Required and action buttons row - hidden for page breaks */}
         {question.question_type !== 'page_break' && <div className="flex items-center justify-between px-5 py-3">
-            {!previewMode ? <label className="flex items-center gap-2 text-sm cursor-pointer hover:text-foreground transition-colors">
-                <input type="checkbox" checked={question.required || false} onChange={e => onUpdate(question.id, {
-            required: e.target.checked
-          })} className="rounded border-muted-foreground/30" />
-                <span className="flex items-center gap-1">
-                  {question.required && <span className="text-destructive">*</span>}
-                  <span className="text-foreground">Required</span>
-                </span>
-              </label> : question.required ? <span className="flex items-center gap-1 text-sm">
-                  <span className="text-destructive">*</span>
-                  <span className="text-foreground">Required</span>
-                </span> : <span className="text-sm text-muted-foreground">Optional</span>}
+            <div className="flex items-center gap-4">
+              {!previewMode ? <label className="flex items-center gap-2 text-sm cursor-pointer hover:text-foreground transition-colors">
+                  <input type="checkbox" checked={question.required || false} onChange={e => onUpdate(question.id, {
+              required: e.target.checked
+            })} className="rounded border-muted-foreground/30" />
+                  <span className="flex items-center gap-1">
+                    {question.required && <span className="text-destructive">*</span>}
+                    <span className="text-foreground">Required</span>
+                  </span>
+                </label> : question.required ? <span className="flex items-center gap-1 text-sm">
+                    <span className="text-destructive">*</span>
+                    <span className="text-foreground">Required</span>
+                  </span> : <span className="text-sm text-muted-foreground">Optional</span>}
+              
+              {/* Compliance Scoring checkbox - only for multiple_choice with non-compliant options */}
+              {!previewMode && question.question_type === 'multiple_choice' && hasComplianceOptions(question.options) && (
+                <label className="flex items-center gap-2 text-sm cursor-pointer hover:text-foreground transition-colors ml-4">
+                  <Checkbox 
+                    checked={question.scoring_enabled || false} 
+                    onCheckedChange={(checked) => onUpdate(question.id, {
+                      scoring_enabled: checked === true
+                    })} 
+                    className="h-4 w-4"
+                  />
+                  <span className="text-foreground">Compliance Scoring</span>
+                </label>
+              )}
+            </div>
             <div className="flex items-center gap-4">
               {!previewMode && !question.required}
               <button onClick={() => {
@@ -1210,20 +1272,48 @@ export default function AuditTemplateBuilder() {
     };
     const handleSubmit = () => {
       if (validateCurrentPage()) {
-        toast.success('Inspection submitted successfully!');
+        // Calculate compliance score
+        const score = calculateComplianceScore(canvasQuestions, previewResponses);
+        const hasScoringQuestions = canvasQuestions.some(
+          q => q.scoring_enabled && q.question_type === 'multiple_choice' && hasComplianceOptions(q.options)
+        );
+        
+        if (hasScoringQuestions) {
+          toast.success(`Inspection submitted! Compliance Score: ${score}%`);
+        } else {
+          toast.success('Inspection submitted successfully!');
+        }
         setPreviewResponses({});
         setValidationErrors(new Set());
         setPreviewPage(0);
         navigate('/audits');
       }
     };
+    
+    // Calculate live compliance score
+    const liveComplianceScore = calculateComplianceScore(canvasQuestions, previewResponses);
+    const hasScoringQuestions = canvasQuestions.some(
+      q => q.scoring_enabled && q.question_type === 'multiple_choice' && hasComplianceOptions(q.options)
+    );
+    
     return <DashboardLayout>
         <div className="p-6 space-y-6 animate-fade-in w-full">
           {/* Page Header */}
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              
-              
+              {hasScoringQuestions && (
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-muted-foreground">Compliance Score:</span>
+                  <Badge className={cn(
+                    "text-sm font-semibold",
+                    liveComplianceScore >= 80 ? "bg-green-500/15 text-green-600 border-green-500/30" :
+                    liveComplianceScore >= 50 ? "bg-yellow-500/15 text-yellow-600 border-yellow-500/30" :
+                    "bg-red-500/15 text-red-600 border-red-500/30"
+                  )}>
+                    {liveComplianceScore}%
+                  </Badge>
+                </div>
+              )}
             </div>
             <p className="text-muted-foreground flex items-center gap-2">
               <FileText className="h-4 w-4" />
