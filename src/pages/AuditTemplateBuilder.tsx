@@ -792,7 +792,10 @@ export default function AuditTemplateBuilder() {
       <div className="border-b bg-card sticky top-0 z-10">
         <div className="flex items-center justify-between px-6 py-4">
           <div className="flex items-center gap-4">
-            <Button variant="ghost" onClick={() => navigate('/audits')} className="hover:bg-muted gap-2 hover:text-black [&:hover_svg]:text-black">
+            <Button variant="ghost" onClick={() => navigate('/audits')} className="gap-2 hover:bg-[hsl(196deg_100%_93.53%)] hover:text-black [&:hover_svg]:text-black" style={{
+              boxShadow: "var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow)",
+              border: "1px solid #00000052"
+            }}>
               <X className="h-4 w-4" />
               Cancel
             </Button>
@@ -834,7 +837,7 @@ export default function AuditTemplateBuilder() {
             <div className="mb-6">
               <div className="flex items-center justify-between mb-3">
                 <h3 className="text-sm font-medium text-muted-foreground">Saved choice responses</h3>
-                <Button variant="ghost" size="sm" className="h-7 text-primary hover:text-primary/80 text-xs" onClick={() => setIsCreateResponseSetOpen(true)}>
+                <Button variant="ghost" size="sm" className="h-7 text-primary hover:text-primary/80 hover:bg-transparent text-xs" onClick={() => setIsCreateResponseSetOpen(true)}>
                   <Plus className="h-3 w-3 mr-1" />
                   Responses
                 </Button>
