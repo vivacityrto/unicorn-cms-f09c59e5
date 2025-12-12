@@ -934,7 +934,7 @@ export default function AuditTemplateBuilder() {
                         </div>
                         
                         {/* Modern Badge Style Options */}
-                        <div className="flex items-center gap-2 w-full">
+                        <div className="flex flex-wrap items-center gap-2 w-full">
                           {template.options.map((option, idx) => {
                       const colorMap: Record<string, string> = {
                         'bg-green-500': 'bg-green-500/15 text-green-600 border-green-500/30',
@@ -946,7 +946,7 @@ export default function AuditTemplateBuilder() {
                         'bg-muted': 'bg-muted/80 text-muted-foreground border-border'
                       };
                       const badgeClass = colorMap[option.color || 'bg-muted'] || colorMap['bg-muted'];
-                      return <span key={idx} className={cn("px-2.5 py-1 rounded-lg text-[15px] font-normal border backdrop-blur-sm flex-1 text-center", badgeClass)}>
+                      return <span key={idx} className={cn("px-2.5 py-1 rounded-lg text-[15px] font-normal border backdrop-blur-sm text-center whitespace-nowrap", badgeClass)}>
                                 {option.label}
                               </span>;
                     })}
