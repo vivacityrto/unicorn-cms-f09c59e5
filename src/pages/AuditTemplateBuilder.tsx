@@ -1034,14 +1034,26 @@ export default function AuditTemplateBuilder() {
         <DialogPortal>
           <DialogOverlay className="z-[70] bg-black/70" />
           <DialogPrimitive.Content className={cn("fixed left-[50%] top-[50%] z-[70] flex flex-col w-full max-w-4xl max-h-[90vh] translate-x-[-50%] translate-y-[-50%] overflow-hidden scrollbar-hide duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%]")}>
-            {/* Header - matches canvas container styling */}
-            
-            <DialogDescription className="sr-only">Preview your template</DialogDescription>
+            {/* Preview Header */}
+            <div className="bg-card rounded-t-xl border border-b-0 px-6 py-4">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                  <Eye className="h-5 w-5 text-primary" />
+                </div>
+                <div>
+                  <DialogTitle className="text-lg font-semibold text-foreground">Preview Mode</DialogTitle>
+                  <DialogDescription className="text-sm text-muted-foreground">
+                    You're viewing how this template will appear to users. Close to continue editing.
+                  </DialogDescription>
+                </div>
+              </div>
+            </div>
+            <Separator />
             
             {/* Same canvas container as edit mode */}
             <div className="flex-1 overflow-auto">
               <div className="max-w-4xl mx-auto">
-                <div className="bg-card rounded-xl border shadow-sm p-6 min-h-[400px]">
+                <div className="bg-card rounded-b-xl border border-t-0 shadow-sm p-6 min-h-[400px]">
                   {canvasQuestions.length === 0 ? <div className="text-center py-12">
                       <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
                         <Plus className="h-8 w-8 text-primary" />
