@@ -703,10 +703,10 @@ function SortableQuestionCard({
             {/* Header */}
             <div className="flex items-start justify-between px-4 py-3 border-b">
               <div className="flex flex-col gap-1">
-                <Badge className="bg-primary/10 text-primary border-primary/20 gap-1.5 w-fit">
-                  <Shield className="h-3.5 w-3.5" />
+                <div className="flex items-center gap-1.5 text-primary font-medium">
+                  <Shield className="h-4 w-4" />
                   Add Action
-                </Badge>
+                </div>
                 <p className="text-xs text-muted-foreground">Create corrective or preventive actions for audit findings</p>
               </div>
               <Button variant="ghost" size="icon" onClick={() => setShowActionPanel(false)}>
@@ -910,7 +910,7 @@ function SortableQuestionCard({
                 <span className="text-sm text-muted-foreground mb-2 block">Labels</span>
                 <div className="flex items-center gap-2 flex-wrap">
                   {actionLabels.map((label, idx) => (
-                    <Badge key={idx} variant="secondary" className="gap-1 pr-1">
+                    <Badge key={idx} variant="secondary" className="bg-blue-500/10 text-blue-600 hover:bg-blue-500/20 border border-blue-600 text-[0.75rem] py-[2px] px-[0.625rem] rounded-[11px] gap-1 pr-1">
                       <Tag className="h-3 w-3" />
                       {label}
                       <button
