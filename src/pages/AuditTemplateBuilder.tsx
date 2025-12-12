@@ -53,7 +53,7 @@ function useDocuments() {
     queryFn: async () => {
       // Fetch documents and categories in parallel
       const [docsResult, categoriesResult] = await Promise.all([
-        supabase.from('documents').select('id, title, category').order('category').order('title'),
+        supabase.from('documents').select('id, title, category, createdat').order('category').order('title'),
         supabase.from('documents_categories').select('id, name')
       ]);
       
@@ -106,7 +106,8 @@ function DocumentsDropdownPreview({ value, onValueChange, hasError }: { value?: 
       value: String(doc.id),
       label: doc.title || 'Untitled Document',
       group: doc.categoryName || 'Uncategorized',
-      category: doc.categoryName || 'Uncategorized'
+      category: doc.categoryName || 'Uncategorized',
+      createdAt: doc.createdat || undefined
     }));
   }, [documents]);
   return <Combobox options={documentOptions} value={value || ''} onValueChange={(v) => onValueChange?.(v)} placeholder={isLoading ? "Loading documents..." : "Search documents..."} searchPlaceholder="Type to search documents..." emptyText="No documents found." disabled={isLoading} showAvatar={false} className={cn("bg-muted/50 border-dashed", hasError && "border-destructive")} />;

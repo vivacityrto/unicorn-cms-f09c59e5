@@ -150,13 +150,13 @@ export function Combobox({
                               {option.category}
                             </span>
                           )}
-                          {option.createdAt && (
-                            <span className="text-xs text-muted-foreground/70 pt-[5px] flex items-center gap-1">
-                              <Calendar className="h-3 w-3" />
-                              Created: {new Date(option.createdAt).toLocaleDateString()}
-                            </span>
-                          )}
                         </div>
+                        {option.createdAt && (
+                          <span className="text-xs text-muted-foreground/70 flex items-center gap-1 shrink-0">
+                            <Calendar className="h-3 w-3" />
+                            {new Date(option.createdAt).toLocaleDateString()}
+                          </span>
+                        )}
                         {showAvatar && (
                           <Avatar className="h-8 w-8 shrink-0 self-center">
                             <AvatarImage src={option.avatarUrl} alt={option.label} />
