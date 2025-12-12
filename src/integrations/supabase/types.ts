@@ -95,6 +95,7 @@ export type Database = {
           id: number
           started_at: string | null
           status: string
+          template_id: number | null
           tenant_id: number
           updated_at: string
         }
@@ -107,6 +108,7 @@ export type Database = {
           id?: number
           started_at?: string | null
           status?: string
+          template_id?: number | null
           tenant_id: number
           updated_at?: string
         }
@@ -119,6 +121,7 @@ export type Database = {
           id?: number
           started_at?: string | null
           status?: string
+          template_id?: number | null
           tenant_id?: number
           updated_at?: string
         }
@@ -135,6 +138,13 @@ export type Database = {
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "dashboard_client_snapshot"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "audit_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "audit_templates"
             referencedColumns: ["id"]
           },
           {
