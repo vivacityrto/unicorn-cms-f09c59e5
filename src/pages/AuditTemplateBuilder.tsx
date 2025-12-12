@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useMemo } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent, DragStartEvent, DragOverlay } from '@dnd-kit/core';
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
@@ -711,6 +711,8 @@ function SortableQuestionCard({
 }
 export default function AuditTemplateBuilder() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const isLiveMode = searchParams.get('live') === 'true';
   const {
     templateId: templateIdParam
   } = useParams();
@@ -813,6 +815,13 @@ export default function AuditTemplateBuilder() {
     };
     loadTemplate();
   }, [templateIdParam, navigate]);
+
+  // Auto-open preview when in live mode
+  useEffect(() => {
+    if (isLiveMode && !isLoading && canvasQuestions.length > 0) {
+      setIsPreviewOpen(true);
+    }
+  }, [isLiveMode, isLoading, canvasQuestions.length]);
   const sensors = useSensors(useSensor(PointerSensor), useSensor(KeyboardSensor, {
     coordinateGetter: sortableKeyboardCoordinates
   }));
@@ -1186,6 +1195,10 @@ export default function AuditTemplateBuilder() {
         setPreviewPage(0);
         setPreviewResponses({});
         setValidationErrors(new Set());
+        // Navigate back to audits list if in live mode
+        if (isLiveMode) {
+          navigate('/audits');
+        }
       }
     }}>
         <DialogPortal>
@@ -1198,7 +1211,10 @@ export default function AuditTemplateBuilder() {
                 <div>
                   <DialogTitle className="text-lg font-semibold text-foreground">{templateName || "Untitled Template"}</DialogTitle>
                   <DialogDescription className="text-sm text-muted-foreground">
-                    You're viewing how this template will appear to users. Close to continue editing.
+                    {isLiveMode 
+                      ? "Complete the inspection by filling out all required fields below."
+                      : "You're viewing how this template will appear to users. Close to continue editing."
+                    }
                   </DialogDescription>
                 </div>
               </div>
@@ -1336,11 +1352,14 @@ export default function AuditTemplateBuilder() {
                 
                 const handleSubmit = () => {
                   if (validateCurrentPage()) {
-                    toast.success('Form submitted successfully!');
+                    toast.success(isLiveMode ? 'Inspection submitted successfully!' : 'Form submitted successfully!');
                     setIsPreviewOpen(false);
                     setPreviewResponses({});
                     setValidationErrors(new Set());
                     setPreviewPage(0);
+                    if (isLiveMode) {
+                      navigate('/audits');
+                    }
                   }
                 };
                 
@@ -1367,6 +1386,9 @@ export default function AuditTemplateBuilder() {
                             setPreviewResponses({});
                             setValidationErrors(new Set());
                             setPreviewPage(0);
+                            if (isLiveMode) {
+                              navigate('/audits');
+                            }
                           }} className="gap-2 hover:bg-[hsl(196deg_100%_93.53%)] hover:text-black" style={{ boxShadow: "var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow)", border: "1px solid #00000052" }}>
                             Cancel
                           </Button>
