@@ -587,9 +587,7 @@ function SortableQuestionCard({
       {/* Header with drag handle and delete */}
       <div className="flex items-center justify-between px-5 py-3 bg-muted/30 border-b border-border/40 rounded-t-lg">
         <div className="flex items-center gap-3">
-          {previewMode ? <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-              {questionNumber}.
-            </span> : <button {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground p-1.5 rounded-md hover:bg-background/80 transition-colors">
+          {!previewMode && <button {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground p-1.5 rounded-md hover:bg-background/80 transition-colors">
               <GripVertical className="h-4 w-4" />
             </button>}
           <div className={cn("h-8 w-8 rounded-md flex items-center justify-center bg-background shadow-sm border border-border/50", questionType?.color)}>
@@ -609,7 +607,7 @@ function SortableQuestionCard({
         {/* Question label input */}
         {previewMode ? <p className="font-medium text-foreground" style={{
         fontSize: '15px'
-      }}>{question.label || 'Untitled question'}</p> : <Input value={question.label} onChange={e => onUpdate(question.id, {
+      }}>{questionNumber}. {question.label || 'Untitled question'}</p> : <Input value={question.label} onChange={e => onUpdate(question.id, {
         label: e.target.value
       })} placeholder="Enter your question" className="font-medium border-none bg-transparent px-0 h-auto focus-visible:ring-0 focus-visible:ring-offset-0 placeholder:text-muted-foreground/50" style={{
         fontSize: '15px'
