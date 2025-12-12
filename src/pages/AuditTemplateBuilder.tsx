@@ -696,14 +696,14 @@ function SortableQuestionCard({
           
         {/* Action Panel Slide-in */}
         <div className={cn(
-          "fixed top-0 right-0 h-full w-[400px] bg-card border-l shadow-xl z-50 transform transition-transform duration-300 ease-out",
+          "fixed top-0 right-0 h-full w-[425px] bg-card border-l shadow-xl z-50 transform transition-transform duration-300 ease-out",
           showActionPanel ? "translate-x-0" : "translate-x-full"
         )}>
           <div className="flex flex-col h-full">
             {/* Header */}
             <div className="flex items-start justify-between px-4 py-3 border-b">
               <div className="flex flex-col gap-1">
-                <div className="flex items-center gap-1.5 text-primary font-medium">
+                <div className="flex items-center gap-1.5 text-foreground font-medium">
                   <Shield className="h-4 w-4" />
                   Add Action
                 </div>
