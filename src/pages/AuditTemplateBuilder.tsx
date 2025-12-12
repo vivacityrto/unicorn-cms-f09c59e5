@@ -513,9 +513,11 @@ function SortableQuestionCard({
       {/* Header with drag handle and delete */}
       <div className="flex items-center justify-between px-5 py-3 bg-muted/30 border-b border-border/40 rounded-t-lg">
         <div className="flex items-center gap-3">
-          <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+          {previewMode ? <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
               {questionNumber}.
-            </span>
+            </span> : <button {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground p-1.5 rounded-md hover:bg-background/80 transition-colors">
+              <GripVertical className="h-4 w-4" />
+            </button>}
           <div className={cn("h-8 w-8 rounded-md flex items-center justify-center bg-background shadow-sm border border-border/50", questionType?.color)}>
             <Icon className="h-4 w-4" />
           </div>
@@ -523,17 +525,21 @@ function SortableQuestionCard({
             {question.question_type.replace(/_/g, ' ')}
           </span>
         </div>
-        <Button variant="ghost" size="icon" className="h-8 w-8 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors" onClick={() => onDelete(question.id)}>
+        {!previewMode && <Button variant="ghost" size="icon" className="h-8 w-8 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors" onClick={() => onDelete(question.id)}>
             <Trash2 className="h-4 w-4" />
-          </Button>
+          </Button>}
       </div>
 
       {/* Content area */}
       <div className="p-5 space-y-4">
         {/* Question label input */}
-        <Input value={question.label} onChange={e => onUpdate(question.id, {
-        label: e.target.value
-      })} placeholder="Enter your question" className="text-base font-medium border-none bg-transparent px-0 h-auto focus-visible:ring-0 focus-visible:ring-offset-0 placeholder:text-muted-foreground/50" />
+        {previewMode ? (
+          <p className="text-base font-medium text-foreground">{question.label || 'Untitled question'}</p>
+        ) : (
+          <Input value={question.label} onChange={e => onUpdate(question.id, {
+            label: e.target.value
+          })} placeholder="Enter your question" className="text-base font-medium border-none bg-transparent px-0 h-auto focus-visible:ring-0 focus-visible:ring-offset-0 placeholder:text-muted-foreground/50" />
+        )}
 
         {/* Input preview based on question type */}
         <div className="pt-2">
@@ -613,7 +619,7 @@ function SortableQuestionCard({
         
         {/* Required and action buttons row - hidden for page breaks */}
         {question.question_type !== 'page_break' && <div className="flex items-center justify-between px-5 py-3">
-            <label className="flex items-center gap-2 text-sm cursor-pointer hover:text-foreground transition-colors">
+            {!previewMode ? <label className="flex items-center gap-2 text-sm cursor-pointer hover:text-foreground transition-colors">
                 <input type="checkbox" checked={question.required || false} onChange={e => onUpdate(question.id, {
             required: e.target.checked
           })} className="rounded border-muted-foreground/30" />
@@ -621,9 +627,12 @@ function SortableQuestionCard({
                   {question.required && <span className="text-destructive">*</span>}
                   <span className="text-foreground">Required</span>
                 </span>
-              </label>
+              </label> : question.required ? <span className="flex items-center gap-1 text-sm">
+                  <span className="text-destructive">*</span>
+                  <span className="text-foreground">Required</span>
+                </span> : <span className="text-sm text-muted-foreground">Optional</span>}
             <div className="flex items-center gap-4">
-              {!question.required && <span className="text-sm text-muted-foreground">Optional</span>}
+              {!previewMode && !question.required && <span className="text-sm text-muted-foreground">Optional</span>}
               <button onClick={() => {
             if (showNotes && question.notes) {
               // Save the note
