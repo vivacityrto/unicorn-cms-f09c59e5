@@ -96,11 +96,6 @@ export function Combobox({
               <React.Fragment key={groupKey}>
                 {groupIndex > 0 && <CommandSeparator className="my-1" />}
                 <CommandGroup className="!p-0">
-                  {groupKey !== 'default' && (
-                    <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">
-                      {groupKey}
-                    </div>
-                  )}
                   {groupedOptions[groupKey].map((option) => (
                     <CommandItem
                       key={option.value}
