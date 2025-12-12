@@ -14,6 +14,13 @@ export interface AuditTemplateQuestion {
   category: string;
 }
 
+export interface AuditTemplateCreator {
+  user_uuid: string;
+  first_name: string | null;
+  last_name: string | null;
+  avatar_url: string | null;
+}
+
 export interface AuditTemplate {
   id?: number;
   tenant_id?: number;
@@ -26,6 +33,7 @@ export interface AuditTemplate {
   updated_at?: string;
   last_published?: string;
   questions?: AuditTemplateQuestion[];
+  creator?: AuditTemplateCreator | null;
 }
 
 export function useAuditTemplates() {
@@ -35,13 +43,38 @@ export function useAuditTemplates() {
   const { data: templates, isLoading } = useQuery({
     queryKey: ['audit_templates', profile?.tenant_id],
     queryFn: async () => {
-      const { data, error } = await supabase
+      // Fetch templates
+      const { data: templatesData, error: templatesError } = await supabase
         .from('audit_templates')
         .select('*')
         .order('created_at', { ascending: false });
       
-      if (error) throw error;
-      return data;
+      if (templatesError) throw templatesError;
+      
+      // Get unique creator IDs
+      const creatorIds = [...new Set(templatesData?.map(t => t.created_by).filter(Boolean))] as string[];
+      
+      // Fetch creators if any
+      let creatorsMap: Record<string, AuditTemplateCreator> = {};
+      if (creatorIds.length > 0) {
+        const { data: usersData } = await supabase
+          .from('users')
+          .select('user_uuid, first_name, last_name, avatar_url')
+          .in('user_uuid', creatorIds);
+        
+        if (usersData) {
+          creatorsMap = usersData.reduce((acc, user) => {
+            acc[user.user_uuid] = user;
+            return acc;
+          }, {} as Record<string, AuditTemplateCreator>);
+        }
+      }
+      
+      // Merge templates with creators
+      return (templatesData || []).map(template => ({
+        ...template,
+        creator: template.created_by ? creatorsMap[template.created_by] || null : null,
+      })) as AuditTemplate[];
     },
     enabled: !!profile?.tenant_id,
   });
