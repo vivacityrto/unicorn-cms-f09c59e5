@@ -705,96 +705,119 @@ function SortableQuestionCard({
             </div>
             
             {/* Form Content */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-4">
-              {/* Title */}
-              <Input
-                value={actionForm.title}
-                onChange={(e) => setActionForm(prev => ({ ...prev, title: e.target.value }))}
-                placeholder="Add title..."
-                className="text-lg font-medium border-primary/30 focus:border-primary"
-              />
-              
-              {/* Description */}
-              <Textarea
-                value={actionForm.description}
-                onChange={(e) => setActionForm(prev => ({ ...prev, description: e.target.value }))}
-                placeholder="Add description..."
-                className="min-h-[80px] resize-none"
-              />
-              
-              {/* Priority */}
-              <div className="flex items-center justify-between py-2">
-                <span className="text-sm text-muted-foreground">Priority</span>
-                <Select value={actionForm.priority} onValueChange={(v) => setActionForm(prev => ({ ...prev, priority: v }))}>
-                  <SelectTrigger className="w-[120px] border-none shadow-none">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="low">
-                      <span className="text-blue-500">↓ Low</span>
-                    </SelectItem>
-                    <SelectItem value="medium">
-                      <span className="text-yellow-500">→ Medium</span>
-                    </SelectItem>
-                    <SelectItem value="high">
-                      <span className="text-red-500">↑ High</span>
-                    </SelectItem>
-                  </SelectContent>
-                </Select>
+            <div className="flex-1 overflow-y-auto p-4 space-y-0">
+              {/* Title Section */}
+              <div className="pb-4">
+                <Input
+                  value={actionForm.title}
+                  onChange={(e) => setActionForm(prev => ({ ...prev, title: e.target.value }))}
+                  placeholder="Add title..."
+                  className="text-lg font-medium border-primary/30 focus:border-primary"
+                />
               </div>
               
-              {/* Due Date */}
-              <div className="flex items-center justify-between py-2">
-                <span className="text-sm text-muted-foreground">Due date</span>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button variant="ghost" className="gap-2 text-sm font-normal">
-                      <CalendarDays className="h-4 w-4" />
-                      {actionForm.dueDate ? format(actionForm.dueDate, 'dd MMM yyyy h:mm a') : 'Select date'}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="end">
-                    <Calendar
-                      mode="single"
-                      selected={actionForm.dueDate || undefined}
-                      onSelect={(date) => setActionForm(prev => ({ ...prev, dueDate: date || null }))}
-                      initialFocus
-                    />
-                  </PopoverContent>
-                </Popover>
+              {/* Description Section */}
+              <div className="pb-4">
+                <Textarea
+                  value={actionForm.description}
+                  onChange={(e) => {
+                    setActionForm(prev => ({ ...prev, description: e.target.value }));
+                    // Auto-expand textarea
+                    const target = e.target as HTMLTextAreaElement;
+                    target.style.height = 'auto';
+                    target.style.height = `${Math.max(80, target.scrollHeight)}px`;
+                  }}
+                  placeholder="Add description..."
+                  className="min-h-[80px] resize-y"
+                  style={{ overflow: 'hidden' }}
+                />
               </div>
               
-              {/* Assignees */}
-              <div className="flex items-center justify-between py-2">
-                <span className="text-sm text-muted-foreground">Assignees</span>
-                <Button variant="ghost" className="gap-2 text-sm font-normal text-muted-foreground">
-                  <Building2 className="h-4 w-4" />
-                  Add assignee
-                </Button>
+              <Separator className="my-2" />
+              
+              {/* Details Section */}
+              <div className="space-y-0">
+                {/* Priority */}
+                <div className="flex items-center justify-between py-3 border-b border-border/40">
+                  <span className="text-sm text-muted-foreground">Priority</span>
+                  <Select value={actionForm.priority} onValueChange={(v) => setActionForm(prev => ({ ...prev, priority: v }))}>
+                    <SelectTrigger className="w-[120px] border-none shadow-none">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="low">
+                        <span className="text-blue-500">↓ Low</span>
+                      </SelectItem>
+                      <SelectItem value="medium">
+                        <span className="text-yellow-500">→ Medium</span>
+                      </SelectItem>
+                      <SelectItem value="high">
+                        <span className="text-red-500">↑ High</span>
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                {/* Due Date */}
+                <div className="flex items-center justify-between py-3 border-b border-border/40">
+                  <span className="text-sm text-muted-foreground">Due date</span>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button variant="ghost" className="gap-2 text-sm font-normal h-auto py-1">
+                        <CalendarDays className="h-4 w-4" />
+                        {actionForm.dueDate ? format(actionForm.dueDate, 'dd MMM yyyy h:mm a') : 'Select date'}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="end">
+                      <Calendar
+                        mode="single"
+                        selected={actionForm.dueDate || undefined}
+                        onSelect={(date) => setActionForm(prev => ({ ...prev, dueDate: date || null }))}
+                        initialFocus
+                      />
+                    </PopoverContent>
+                  </Popover>
+                </div>
+                
+                {/* Assignees */}
+                <div className="flex items-center justify-between py-3 border-b border-border/40">
+                  <span className="text-sm text-muted-foreground">Assignees</span>
+                  <Button variant="ghost" className="gap-2 text-sm font-normal text-muted-foreground h-auto py-1">
+                    <Building2 className="h-4 w-4" />
+                    Add assignee
+                  </Button>
+                </div>
               </div>
               
-              {/* Site */}
-              <div className="flex items-center justify-between py-2">
-                <span className="text-sm text-muted-foreground">Site</span>
-                <Button variant="ghost" className="gap-2 text-sm font-normal text-muted-foreground">
-                  <Building className="h-4 w-4" />
-                  Add site
-                </Button>
+              <Separator className="my-2" />
+              
+              {/* Location Section */}
+              <div className="space-y-0">
+                {/* Site */}
+                <div className="flex items-center justify-between py-3 border-b border-border/40">
+                  <span className="text-sm text-muted-foreground">Site</span>
+                  <Button variant="ghost" className="gap-2 text-sm font-normal text-muted-foreground h-auto py-1">
+                    <Building className="h-4 w-4" />
+                    Add site
+                  </Button>
+                </div>
+                
+                {/* Asset */}
+                <div className="flex items-center justify-between py-3 border-b border-border/40">
+                  <span className="text-sm text-muted-foreground">Asset</span>
+                  <Button variant="ghost" className="gap-2 text-sm font-normal text-muted-foreground h-auto py-1">
+                    <Box className="h-4 w-4" />
+                    Add asset
+                  </Button>
+                </div>
               </div>
               
-              {/* Asset */}
-              <div className="flex items-center justify-between py-2">
-                <span className="text-sm text-muted-foreground">Asset</span>
-                <Button variant="ghost" className="gap-2 text-sm font-normal text-muted-foreground">
-                  <Box className="h-4 w-4" />
-                  Add asset
-                </Button>
-              </div>
+              <Separator className="my-2" />
               
-              {/* Labels */}
-              <div className="flex items-center justify-between py-2">
+              {/* Labels Section */}
+              <div className="flex items-center justify-between py-3">
                 <span className="text-sm text-muted-foreground">Labels</span>
-                <Button variant="ghost" className="gap-2 text-sm font-normal text-muted-foreground">
+                <Button variant="ghost" className="gap-2 text-sm font-normal text-muted-foreground h-auto py-1">
                   <CircleDot className="h-4 w-4" />
                   Add labels
                 </Button>
