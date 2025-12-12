@@ -238,27 +238,34 @@ export function AuditTemplatesTable({
                       {getStatusBadge(template.status)}
                     </TableCell>
                     <TableCell className="py-6 border-r border-border/50 text-center whitespace-nowrap">
-                      {template.creator ? (
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <div className="flex items-center justify-center">
-                                <Avatar className="h-8 w-8 cursor-pointer">
-                                  <AvatarImage src={template.creator.avatar_url || undefined} alt={`${template.creator.first_name || ''} ${template.creator.last_name || ''}`} />
-                                  <AvatarFallback className="bg-primary/10 text-primary text-xs">
-                                    {(template.creator.first_name?.[0] || '') + (template.creator.last_name?.[0] || '') || '?'}
-                                  </AvatarFallback>
-                                </Avatar>
-                              </div>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p>{`${template.creator.first_name || ''} ${template.creator.last_name || ''}`.trim() || 'Unknown'}</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-                      ) : (
-                        <span className="text-muted-foreground">-</span>
-                      )}
+                      {(() => {
+                        // Default to Ian's data for now
+                        const creator = template.creator || {
+                          user_uuid: '384cf51f-87f5-479b-a9c4-a2293be84e3a',
+                          first_name: 'Ian',
+                          last_name: 'Baterna',
+                          avatar_url: 'https://yxkgdalkbrriasiyyrwk.supabase.co/storage/v1/object/public/avatars/384cf51f-87f5-479b-a9c4-a2293be84e3a/384cf51f-87f5-479b-a9c4-a2293be84e3a.webp'
+                        };
+                        return (
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <div className="flex items-center justify-center">
+                                  <Avatar className="h-8 w-8 cursor-pointer">
+                                    <AvatarImage src={creator.avatar_url || undefined} alt={`${creator.first_name || ''} ${creator.last_name || ''}`} />
+                                    <AvatarFallback className="bg-primary/10 text-primary text-xs">
+                                      {(creator.first_name?.[0] || '') + (creator.last_name?.[0] || '') || '?'}
+                                    </AvatarFallback>
+                                  </Avatar>
+                                </div>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>{`${creator.first_name || ''} ${creator.last_name || ''}`.trim() || 'Unknown'}</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        );
+                      })()}
                     </TableCell>
                     <TableCell className="py-6 px-4 text-center whitespace-nowrap">
                       <div className="flex items-center justify-center gap-2">
