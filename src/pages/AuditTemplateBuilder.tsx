@@ -1051,265 +1051,65 @@ export default function AuditTemplateBuilder() {
       {/* Preview Dialog */}
       <Dialog open={isPreviewOpen} onOpenChange={(open) => {
         setIsPreviewOpen(open);
-        if (!open) setPreviewPage(0); // Reset to first page when closing
+        if (!open) setPreviewPage(0);
       }}>
         <DialogPortal>
           <DialogOverlay className="z-[70] bg-black/70" />
-          <DialogPrimitive.Content className={cn("fixed left-[50%] top-[50%] z-[70] flex flex-col w-full max-w-4xl max-h-[90vh] translate-x-[-50%] translate-y-[-50%] gap-4 overflow-hidden scrollbar-hide border bg-background shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%] rounded-xl")}>
-            {/* Form Header */}
-            <div className="bg-primary/5 border-b px-8 py-6">
-              <div className="flex items-start justify-between">
-                <div>
-                  <DialogTitle className="flex items-center gap-3 text-2xl font-semibold">
-                    <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                      <Eye className="h-5 w-5 text-primary" />
+          <DialogPrimitive.Content className={cn("fixed left-[50%] top-[50%] z-[70] flex flex-col w-full max-w-4xl max-h-[90vh] translate-x-[-50%] translate-y-[-50%] overflow-hidden scrollbar-hide border bg-muted/30 shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%] rounded-xl")}>
+            {/* Header */}
+            <div className="flex items-center justify-between px-6 py-4 bg-background border-b">
+              <DialogTitle className="flex items-center gap-2 text-lg font-semibold">
+                <Eye className="h-5 w-5 text-primary" />
+                {templateName || "Template Preview"}
+              </DialogTitle>
+              <Button variant="ghost" size="icon" onClick={() => setIsPreviewOpen(false)} className="rounded-full h-8 w-8">
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+            <DialogDescription className="sr-only">Preview your template</DialogDescription>
+            
+            {/* Same canvas container as edit mode */}
+            <div className="flex-1 overflow-auto p-8">
+              <div className="max-w-3xl mx-auto">
+                <div className="bg-card rounded-xl border shadow-sm p-6 min-h-[400px]">
+                  {canvasQuestions.length === 0 ? (
+                    <div className="text-center py-12">
+                      <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
+                        <Plus className="h-8 w-8 text-primary" />
+                      </div>
+                      <h3 className="text-lg font-semibold text-foreground mb-2">No questions added</h3>
+                      <p className="text-sm text-muted-foreground max-w-md mx-auto">
+                        Add questions to your template to see them here.
+                      </p>
                     </div>
-                    {templateName || "Template Preview"}
-                  </DialogTitle>
-                  <DialogDescription className="mt-2 text-muted-foreground">
-                    Preview how this template will appear to users
-                  </DialogDescription>
+                  ) : (
+                    <div className="space-y-4">
+                      {canvasQuestions.map(question => (
+                        <SortableQuestionCard 
+                          key={question.id} 
+                          question={question} 
+                          onDelete={deleteCanvasQuestion} 
+                          onUpdate={updateCanvasQuestion} 
+                        />
+                      ))}
+                    </div>
+                  )}
                 </div>
-                <Button variant="ghost" size="icon" onClick={() => setIsPreviewOpen(false)} className="rounded-full">
-                  <X className="h-4 w-4" />
-                </Button>
               </div>
             </div>
             
-            {(() => {
-              // Split questions into pages based on page_break
-              const pages: CanvasQuestion[][] = [];
-              let currentPage: CanvasQuestion[] = [];
-              
-              canvasQuestions.forEach((question) => {
-                if (question.question_type === 'page_break') {
-                  if (currentPage.length > 0) {
-                    pages.push(currentPage);
-                    currentPage = [];
-                  }
-                } else {
-                  currentPage.push(question);
-                }
-              });
-              
-              // Push the last page if it has content
-              if (currentPage.length > 0) {
-                pages.push(currentPage);
-              }
-              
-              // If no pages (empty or only page breaks), show empty state
-              if (pages.length === 0) {
-                pages.push([]);
-              }
-              
-              const totalPages = pages.length;
-              const hasMultiplePages = totalPages > 1;
-              const currentPageQuestions = pages[previewPage] || [];
-              const isLastPage = previewPage === totalPages - 1;
-              const isFirstPage = previewPage === 0;
-              
-              // Calculate global question index offset for numbering
-              let questionOffset = 0;
-              for (let i = 0; i < previewPage; i++) {
-                questionOffset += pages[i]?.length || 0;
-              }
-              
-              return (
-                <>
-                  {/* Page indicator */}
-                  {hasMultiplePages && (
-                    <div className="flex items-center justify-center gap-2">
-                      <span className="text-sm font-medium text-muted-foreground">
-                        Step {previewPage + 1} of {totalPages}
-                      </span>
-                      <div className="flex gap-1">
-                        {pages.map((_, idx) => (
-                          <div 
-                            key={idx} 
-                            className={cn(
-                              "h-2 w-2 rounded-full transition-colors",
-                              idx === previewPage ? "bg-primary" : "bg-muted"
-                            )}
-                          />
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                  
-                  <div className="overflow-y-auto scrollbar-hide flex-1 py-6 px-8">
-                    <div className="max-w-3xl mx-auto space-y-6">
-                    {currentPageQuestions.length === 0 ? (
-                      <div className="text-center py-12 text-muted-foreground">
-                        No questions on this page
-                      </div>
-                    ) : (
-                      currentPageQuestions.map((question, index) => {
-                        const questionType = questionTypes.find(q => q.id === question.question_type);
-                        const Icon = questionType?.icon || FileText;
-                        const globalIndex = questionOffset + index;
-                        
-                        return (
-                          <div key={question.id} className="bg-card border rounded-xl p-6 shadow-sm">
-                            <div className="flex items-start gap-4 mb-4">
-                              <div className={cn("h-10 w-10 rounded-lg flex items-center justify-center bg-background shadow-sm border border-border/50", questionType?.color)}>
-                                <Icon className="h-5 w-5" />
-                              </div>
-                              <div className="flex-1">
-                                <div className="flex items-center gap-2 mb-1">
-                                  <span className="text-sm font-medium text-muted-foreground">Q{globalIndex + 1}</span>
-                                  <span className="text-lg font-semibold">{question.label}</span>
-                                  {question.required && <span className="text-destructive text-lg">*</span>}
-                                </div>
-                                {question.description && <p className="text-sm text-muted-foreground mt-1">{question.description}</p>}
-                                {question.notes && (
-                                  <div className="mt-2 p-3 bg-muted/50 rounded-lg border border-border/40">
-                                    <p className="text-sm text-muted-foreground italic">{question.notes}</p>
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                            
-                            {/* Render interactive preview based on question type */}
-                            <div className="ml-14">
-                              {question.question_type === 'text_answer' || question.question_type === 'site' || question.question_type === 'company' || question.question_type === 'document_number' || question.question_type === 'asset' ? (
-                                <Input placeholder="Enter your answer..." className="max-w-md" />
-                              ) : question.question_type === 'number' ? (
-                                <Input type="number" placeholder="Enter a number..." className="max-w-[200px]" />
-                              ) : question.question_type === 'checkbox' ? (
-                                <div className="space-y-2">
-                                  <label className="flex items-center gap-2 cursor-pointer">
-                                    <input type="checkbox" className="rounded" />
-                                    <span className="text-sm">Option 1</span>
-                                  </label>
-                                  <label className="flex items-center gap-2 cursor-pointer">
-                                    <input type="checkbox" className="rounded" />
-                                    <span className="text-sm">Option 2</span>
-                                  </label>
-                                </div>
-                              ) : question.question_type === 'date_time' ? (
-                                <div className="flex gap-2">
-                                  <Input type="date" className="max-w-[160px]" />
-                                  <Input type="time" className="max-w-[120px]" />
-                                </div>
-                              ) : question.question_type === 'multiple_choice' && question.options ? (
-                                <div className="flex flex-wrap gap-2">
-                                  {question.options.map((opt: any, idx: number) => (
-                                    <button key={idx} className={cn("px-4 py-2 rounded-lg text-sm font-medium transition-all hover:scale-105", opt.color || 'bg-muted', opt.color === 'bg-muted' ? 'text-muted-foreground hover:bg-muted/80' : 'text-white hover:opacity-90')}>
-                                      {opt.label}
-                                    </button>
-                                  ))}
-                                </div>
-                              ) : question.question_type === 'slider' ? (
-                                <div className="max-w-md">
-                                  <input type="range" min="0" max="100" className="w-full" />
-                                  <div className="flex justify-between text-xs text-muted-foreground mt-1">
-                                    <span>0</span>
-                                    <span>50</span>
-                                    <span>100</span>
-                                  </div>
-                                </div>
-                              ) : question.question_type === 'media' ? (
-                                <div className="border-2 border-dashed rounded-lg p-6 text-center max-w-md">
-                                  <Image className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
-                                  <p className="text-sm text-muted-foreground">Click to upload media</p>
-                                </div>
-                              ) : question.question_type === 'signature' ? (
-                                <div className="border-2 border-dashed rounded-lg p-8 text-center max-w-md">
-                                  <PenTool className="h-6 w-6 mx-auto text-muted-foreground mb-2" />
-                                  <p className="text-sm text-muted-foreground">Sign here</p>
-                                </div>
-                              ) : question.question_type === 'location' ? (
-                                <div className="flex items-center gap-2 max-w-md">
-                                  <Input placeholder="Enter location..." className="flex-1" />
-                                  <Button variant="outline" size="icon">
-                                    <MapPin className="h-4 w-4" />
-                                  </Button>
-                                </div>
-                              ) : question.question_type === 'annotation' ? (
-                                <textarea placeholder="Add notes or comments..." className="w-full max-w-md border rounded-lg p-3 text-sm resize-none h-20" />
-                              ) : question.question_type === 'paragraph' ? (
-                                <textarea placeholder="Enter your detailed response..." className="w-full max-w-md border rounded-lg p-3 text-sm resize-none h-32" />
-                              ) : null}
-                            </div>
-                          </div>
-                        );
-                      })
-                    )}
-                    </div>
-                  </div>
-                  
-                  {/* Footer with navigation */}
-                  <div className="border-t bg-muted/30 px-8 py-4">
-                  <DialogFooter className="gap-2">
-                    {hasMultiplePages ? (
-                      <>
-                        {/* Previous button - only show if not on first page */}
-                        <Button 
-                          variant="outline" 
-                          onClick={() => setPreviewPage(p => Math.max(0, p - 1))}
-                          disabled={isFirstPage}
-                          className="focus:z-10 hover:bg-[#40c6e524] hover:text-black"
-                        >
-                          Previous
-                        </Button>
-                        
-                        {isLastPage ? (
-                          <>
-                            <Button 
-                              variant="outline" 
-                              onClick={() => {
-                                setIsPreviewOpen(false);
-                                setPreviewPage(0);
-                              }} 
-                              className="focus:z-10 hover:bg-[#40c6e524] hover:text-black"
-                            >
-                              Close
-                            </Button>
-                            <Button 
-                              onClick={() => {
-                                toast.success('Form submitted successfully!');
-                                setIsPreviewOpen(false);
-                                setPreviewPage(0);
-                              }} 
-                              className="focus:z-10"
-                            >
-                              Submit
-                            </Button>
-                          </>
-                        ) : (
-                          <Button 
-                            onClick={() => setPreviewPage(p => Math.min(totalPages - 1, p + 1))}
-                            className="focus:z-10"
-                          >
-                            Next
-                          </Button>
-                        )}
-                      </>
-                    ) : (
-                      <>
-                        <Button 
-                          variant="outline" 
-                          onClick={() => setIsPreviewOpen(false)} 
-                          className="focus:z-10 hover:bg-[#40c6e524] hover:text-black"
-                        >
-                          Close
-                        </Button>
-                        <Button 
-                          onClick={() => {
-                            toast.success('Form submitted successfully!');
-                            setIsPreviewOpen(false);
-                          }} 
-                          className="focus:z-10"
-                        >
-                          Submit
-                        </Button>
-                      </>
-                    )}
-                  </DialogFooter>
-                  </div>
-                </>
-              );
-            })()}
+            {/* Footer */}
+            <div className="border-t bg-background px-6 py-4">
+              <DialogFooter className="gap-2">
+                <Button 
+                  variant="outline" 
+                  onClick={() => setIsPreviewOpen(false)} 
+                  className="focus:z-10 hover:bg-[#40c6e524] hover:text-black"
+                >
+                  Close
+                </Button>
+              </DialogFooter>
+            </div>
           </DialogPrimitive.Content>
         </DialogPortal>
       </Dialog>
