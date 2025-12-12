@@ -710,7 +710,7 @@ function SortableQuestionCard({
 export default function AuditTemplateBuilder() {
   const navigate = useNavigate();
   const {
-    id: templateIdParam
+    templateId: templateIdParam
   } = useParams();
   const {
     profile
