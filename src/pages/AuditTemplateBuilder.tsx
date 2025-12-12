@@ -1069,8 +1069,16 @@ export default function AuditTemplateBuilder() {
               </div>
             </div>
             
-            {/* Footer - matches canvas container styling */}
-            
+            {/* Sticky Footer */}
+            <Separator />
+            <div className="bg-card rounded-b-xl border border-t-0 px-6 py-4 flex items-center justify-end gap-3">
+              <Button variant="outline" onClick={() => setIsPreviewOpen(false)}>
+                Cancel
+              </Button>
+              <Button onClick={() => setIsPreviewOpen(false)}>
+                Submit
+              </Button>
+            </div>
           </DialogPrimitive.Content>
         </DialogPortal>
       </Dialog>
