@@ -533,33 +533,37 @@ function SortableQuestionCard({
       </div>
 
       {/* Footer with actions */}
-      <div className="flex items-center justify-between px-5 py-3 bg-muted/20 border-t border-border/40 rounded-b-lg">
-        <div className="flex flex-col gap-3">
-          {/* Description/helper text input */}
+      <div className="bg-muted/20 border-t border-border/40 rounded-b-lg">
+        {/* Description input - full width */}
+        <div className="px-5 py-3">
           <Input value={question.description || ''} onChange={e => onUpdate(question.id, {
           description: e.target.value
-        })} placeholder="Add description (optional)" className="text-sm text-muted-foreground border-none bg-transparent px-0 h-auto focus-visible:ring-0 focus-visible:ring-offset-0 placeholder:text-muted-foreground/40" />
-          <div className="border-t border-border/40" />
+        })} placeholder="Add description (optional)" className="w-full text-sm text-muted-foreground border-none bg-transparent px-0 h-auto focus-visible:ring-0 focus-visible:ring-offset-0 placeholder:text-muted-foreground/40" />
+        </div>
+        {/* Separator */}
+        <div className="border-t border-border/40 mx-5" />
+        {/* Required and action buttons row */}
+        <div className="flex items-center justify-between px-5 py-3">
           <label className="flex items-center gap-2 text-sm text-muted-foreground cursor-pointer hover:text-foreground transition-colors">
             <input type="checkbox" checked={question.required || false} onChange={e => onUpdate(question.id, {
             required: e.target.checked
           })} className="rounded border-muted-foreground/30" />
             Required
           </label>
-        </div>
-        <div className="flex items-center gap-4">
-          <button className="flex items-center gap-2 text-sm text-muted-foreground cursor-pointer hover:text-purple-600 transition-colors">
-            <MessageSquare className="h-4 w-4" />
-            Add Note
-          </button>
-          <button className="flex items-center gap-2 text-sm text-muted-foreground cursor-pointer hover:text-purple-600 transition-colors">
-            <Image className="h-4 w-4" />
-            Add Media
-          </button>
-          <button className="flex items-center gap-2 text-sm text-muted-foreground cursor-pointer hover:text-purple-600 transition-colors">
-            <Plus className="h-4 w-4" />
-            Create Action
-          </button>
+          <div className="flex items-center gap-4">
+            <button className="flex items-center gap-2 text-sm text-muted-foreground cursor-pointer hover:text-purple-600 transition-colors">
+              <MessageSquare className="h-4 w-4" />
+              Add Note
+            </button>
+            <button className="flex items-center gap-2 text-sm text-muted-foreground cursor-pointer hover:text-purple-600 transition-colors">
+              <Image className="h-4 w-4" />
+              Add Media
+            </button>
+            <button className="flex items-center gap-2 text-sm text-muted-foreground cursor-pointer hover:text-purple-600 transition-colors">
+              <Plus className="h-4 w-4" />
+              Create Action
+            </button>
+          </div>
         </div>
       </div>
     </div>;
