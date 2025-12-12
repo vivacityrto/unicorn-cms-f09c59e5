@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect, useMemo } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { DashboardLayout } from '@/components/DashboardLayout';
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent, DragStartEvent, DragOverlay } from '@dnd-kit/core';
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
@@ -1021,10 +1022,10 @@ export default function AuditTemplateBuilder() {
     };
 
     return (
-      <div className="min-h-screen bg-background flex flex-col">
-        {/* Header */}
-        <div className="border-b bg-card sticky top-0 z-10">
-          <div className="flex items-center justify-between px-6 py-4">
+      <DashboardLayout>
+        <div className="space-y-6 p-6 animate-fade-in w-full">
+          {/* Page Header */}
+          <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <Button 
                 variant="ghost" 
@@ -1039,8 +1040,8 @@ export default function AuditTemplateBuilder() {
                 Cancel
               </Button>
               <div>
-                <h1 className="text-xl font-semibold">{templateName || "Untitled Template"}</h1>
-                <p className="text-sm text-muted-foreground">
+                <h1 className="text-[28px] font-bold">{templateName || "Untitled Template"}</h1>
+                <p className="text-muted-foreground">
                   Complete the inspection by filling out all required fields below.
                 </p>
               </div>
@@ -1049,10 +1050,8 @@ export default function AuditTemplateBuilder() {
               {totalPages > 1 && `Page ${previewPage + 1} of ${totalPages}`}
             </div>
           </div>
-        </div>
 
-        {/* Content */}
-        <div className="flex-1 bg-muted/30 p-8 overflow-auto">
+          {/* Content */}
           <div className="max-w-[800px] mx-auto">
             <div className="bg-card rounded-xl border shadow-sm p-6 min-h-[400px]">
               {canvasQuestions.length === 0 || currentPageQuestionsToShow.length === 0 ? (
@@ -1087,48 +1086,46 @@ export default function AuditTemplateBuilder() {
                       hasError={validationErrors.has(question.id)}
                     />
                   ))}
+                  
+                  {/* Navigation buttons inside the card */}
+                  <div className="flex items-center justify-between pt-6 border-t border-border/40 mt-6">
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      {totalPages > 1 && `Page ${previewPage + 1} of ${totalPages}`}
+                    </div>
+                    <div className="flex items-center gap-3">
+                      {totalPages > 1 && !isFirstPage && (
+                        <Button 
+                          variant="ghost" 
+                          onClick={() => setPreviewPage(prev => prev - 1)} 
+                          className="gap-2 hover:bg-[hsl(196deg_100%_93.53%)] hover:text-black" 
+                          style={{ border: "1px solid #00000052" }}
+                        >
+                          Previous
+                        </Button>
+                      )}
+                      {totalPages > 1 && !isLastPage && (
+                        <Button 
+                          variant="ghost" 
+                          onClick={handleNext} 
+                          className="gap-2 hover:bg-[hsl(196deg_100%_93.53%)] hover:text-black" 
+                          style={{ border: "1px solid #00000052" }}
+                        >
+                          Next
+                        </Button>
+                      )}
+                      {isLastPage && (
+                        <Button onClick={handleSubmit} className="bg-primary hover:bg-primary/90">
+                          Submit
+                        </Button>
+                      )}
+                    </div>
+                  </div>
                 </div>
               )}
             </div>
           </div>
         </div>
-
-        {/* Footer */}
-        <div className="border-t bg-card sticky bottom-0 z-10">
-          <div className="flex items-center justify-between px-6 py-4">
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              {totalPages > 1 && `Page ${previewPage + 1} of ${totalPages}`}
-            </div>
-            <div className="flex items-center gap-3">
-              {totalPages > 1 && !isFirstPage && (
-                <Button 
-                  variant="ghost" 
-                  onClick={() => setPreviewPage(prev => prev - 1)} 
-                  className="gap-2 hover:bg-[hsl(196deg_100%_93.53%)] hover:text-black" 
-                  style={{ border: "1px solid #00000052" }}
-                >
-                  Previous
-                </Button>
-              )}
-              {totalPages > 1 && !isLastPage && (
-                <Button 
-                  variant="ghost" 
-                  onClick={handleNext} 
-                  className="gap-2 hover:bg-[hsl(196deg_100%_93.53%)] hover:text-black" 
-                  style={{ border: "1px solid #00000052" }}
-                >
-                  Next
-                </Button>
-              )}
-              {isLastPage && (
-                <Button onClick={handleSubmit} className="bg-primary hover:bg-primary/90">
-                  Submit
-                </Button>
-              )}
-            </div>
-          </div>
-        </div>
-      </div>
+      </DashboardLayout>
     );
   }
 
