@@ -13,7 +13,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { AuditNavCards } from "@/components/audit/AuditNavCards";
 import { AuditTemplatesTable, AuditTemplate } from "@/components/audit/AuditTemplatesTable";
 import { AuditInspectionsTable, AuditInspection } from "@/components/audit/AuditInspectionsTable";
-import { StartInspectionDialog } from "@/components/audit/StartInspectionDialog";
+import { LiveInspectionDialog } from "@/components/audit/LiveInspectionDialog";
 import { toast } from "sonner";
 type AuditTab = "templates" | "inspections" | "schedules" | "analytics";
 export default function Audits() {
@@ -317,8 +317,8 @@ export default function Audits() {
           </Card>
         )}
 
-        {/* Start Inspection Dialog */}
-        <StartInspectionDialog
+        {/* Live Inspection Dialog */}
+        <LiveInspectionDialog
           open={startInspectionOpen}
           onOpenChange={setStartInspectionOpen}
           template={selectedTemplate}
