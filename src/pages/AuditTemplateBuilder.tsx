@@ -709,9 +709,9 @@ function SortableQuestionCard({
                 </div>
                 <p className="text-xs text-muted-foreground">Create corrective or preventive actions for audit findings</p>
               </div>
-              <Button variant="ghost" size="icon" onClick={() => setShowActionPanel(false)}>
+              <button onClick={() => setShowActionPanel(false)} className="p-2 hover:text-destructive transition-colors">
                 <X className="h-4 w-4" />
-              </Button>
+              </button>
             </div>
             
             {/* Form Content */}
