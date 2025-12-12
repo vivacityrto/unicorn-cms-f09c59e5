@@ -893,7 +893,7 @@ export default function AuditTemplateBuilder() {
                           return <List className="h-3.5 w-3.5 text-primary" />;
                         })()}
                             </div>
-                            <span className="text-sm font-semibold text-foreground">{template.name}</span>
+                            <span className="text-sm font-semibold text-foreground truncate max-w-[150px]">{template.name}</span>
                           </div>
                           <div className="flex items-center gap-0.5">
                             {template.is_global && <span className="text-[10px] text-muted-foreground bg-muted/80 px-2 py-0.5 rounded-full font-medium">Global</span>}
