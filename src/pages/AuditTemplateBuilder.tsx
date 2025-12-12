@@ -105,7 +105,7 @@ function useVivacityTeamUsers() {
       const {
         data,
         error
-      } = await supabase.from('users').select('user_uuid, first_name, last_name, email').eq('user_type', 'Vivacity Team').order('first_name');
+      } = await supabase.from('users').select('user_uuid, first_name, last_name, email, avatar_url').eq('user_type', 'Vivacity Team').order('first_name');
       if (error) throw error;
       return data || [];
     }
@@ -124,7 +124,9 @@ function VivacityTeamDropdownPreview({ value, onValueChange, hasError }: { value
       value: user.user_uuid,
       label: `${user.first_name || ''} ${user.last_name || ''}`.trim() || user.email || 'Unknown User',
       group: (user.first_name || 'Other').charAt(0).toUpperCase(),
-      email: user.email || undefined
+      email: user.email || undefined,
+      avatarUrl: user.avatar_url || undefined,
+      avatarFallback: `${user.first_name?.[0] || ''}${user.last_name?.[0] || ''}`
     }));
   }, [users]);
   return <Combobox options={userOptions} value={value || ''} onValueChange={(v) => onValueChange?.(v)} placeholder={isLoading ? "Loading team members..." : "Search Vivacity Team..."} searchPlaceholder="Type to search team members..." emptyText="No team members found." disabled={isLoading} className={cn("bg-muted/50 border-dashed", hasError && "border-destructive")} />;
