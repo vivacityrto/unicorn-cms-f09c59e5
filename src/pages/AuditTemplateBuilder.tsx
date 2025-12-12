@@ -924,7 +924,7 @@ export default function AuditTemplateBuilder() {
                         </div>
                         
                         {/* Modern Badge Style Options */}
-                        <div className="flex items-center justify-evenly w-full">
+                        <div className="flex items-center gap-2 w-full">
                           {template.options.map((option, idx) => {
                       const colorMap: Record<string, string> = {
                         'bg-green-500': 'bg-green-500/15 text-green-600 border-green-500/30',
