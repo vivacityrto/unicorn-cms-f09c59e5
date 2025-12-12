@@ -1,5 +1,5 @@
 import * as React from "react"
-import { Check, ArrowUpDown, Calendar, Mail } from "lucide-react"
+import { Check, ArrowUpDown, Calendar, Mail, FolderOpen } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -30,6 +30,7 @@ export interface ComboboxOption {
   email?: string
   avatarUrl?: string // URL for user avatar
   avatarFallback?: string // Fallback initials for avatar
+  category?: string // Category name to display below label
 }
 
 interface ComboboxProps {
@@ -141,6 +142,12 @@ export function Combobox({
                             <span className="text-xs text-muted-foreground/70 pt-[5px] flex items-center gap-1">
                               <Mail className="h-3 w-3" />
                               {option.email}
+                            </span>
+                          )}
+                          {option.category && (
+                            <span className="text-xs text-muted-foreground/70 pt-[5px] flex items-center gap-1">
+                              <FolderOpen className="h-3 w-3" />
+                              {option.category}
                             </span>
                           )}
                           {option.createdAt && (

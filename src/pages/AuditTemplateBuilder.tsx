@@ -91,7 +91,8 @@ function DocumentsDropdownPreview({ value, onValueChange, hasError }: { value?: 
     return documents.map(doc => ({
       value: String(doc.id),
       label: doc.title || 'Untitled Document',
-      group: doc.category || 'Uncategorized'
+      group: doc.category || 'Uncategorized',
+      category: doc.category || 'Uncategorized'
     }));
   }, [documents]);
   return <Combobox options={documentOptions} value={value || ''} onValueChange={(v) => onValueChange?.(v)} placeholder={isLoading ? "Loading documents..." : "Search documents..."} searchPlaceholder="Type to search documents..." emptyText="No documents found." disabled={isLoading} showAvatar={false} className={cn("bg-muted/50 border-dashed", hasError && "border-destructive")} />;
