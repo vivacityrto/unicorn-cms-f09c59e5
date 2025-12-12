@@ -245,6 +245,7 @@ interface CanvasQuestion {
   placeholder?: string;
   description?: string;
   required?: boolean;
+  notes?: string;
 }
 function SortableQuestionCard({
   question,
@@ -266,6 +267,7 @@ function SortableQuestionCard({
     id: question.id
   });
   const [isFocused, setIsFocused] = useState(false);
+  const [showNotes, setShowNotes] = useState(false);
   const [selectedOptionIdx, setSelectedOptionIdx] = useState<number | null>(null);
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -534,14 +536,18 @@ function SortableQuestionCard({
 
       {/* Footer with actions */}
       <div className="bg-muted/20 border-t border-border/40 rounded-b-lg">
-        {/* Description input - full width */}
-        <div className="px-5 py-3">
-          <Input value={question.description || ''} onChange={e => onUpdate(question.id, {
-          description: e.target.value
-        })} placeholder="Add description (optional)" className="w-full text-sm text-muted-foreground border-none bg-transparent px-0 h-auto focus-visible:ring-0 focus-visible:ring-offset-0 placeholder:text-muted-foreground/40" />
-        </div>
-        {/* Separator */}
-        <div className="border-t border-border/40 mx-5" />
+        {/* Notes input - full width, shown when Add Note is clicked */}
+        {showNotes && (
+          <>
+            <div className="px-5 py-3">
+              <Input value={question.notes || ''} onChange={e => onUpdate(question.id, {
+              notes: e.target.value
+            })} placeholder="Add Notes" className="w-full text-sm text-muted-foreground border-none bg-transparent px-0 h-auto focus-visible:ring-0 focus-visible:ring-offset-0 placeholder:text-muted-foreground/40" />
+            </div>
+            {/* Separator */}
+            <div className="border-t border-border/40 mx-5" />
+          </>
+        )}
         {/* Required and action buttons row */}
         <div className="flex items-center justify-between px-5 py-3">
           <label className="flex items-center gap-2 text-sm text-muted-foreground cursor-pointer hover:text-foreground transition-colors">
@@ -551,7 +557,13 @@ function SortableQuestionCard({
             Required
           </label>
           <div className="flex items-center gap-4">
-            <button className="flex items-center gap-2 text-sm text-muted-foreground cursor-pointer hover:text-purple-600 transition-colors">
+            <button 
+              onClick={() => setShowNotes(!showNotes)}
+              className={cn(
+                "flex items-center gap-2 text-sm cursor-pointer transition-colors",
+                showNotes ? "text-purple-600" : "text-muted-foreground hover:text-purple-600"
+              )}
+            >
               <MessageSquare className="h-4 w-4" />
               Add Note
             </button>
