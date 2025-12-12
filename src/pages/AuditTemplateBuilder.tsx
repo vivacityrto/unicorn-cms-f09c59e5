@@ -578,8 +578,9 @@ function SortableQuestionCard({
                       }));
                       const existingFiles = question.media_files || [];
                       onUpdate(question.id, { media_files: [...existingFiles, ...newFiles] });
+                      setShowMedia(false);
                     }
-                  }} 
+                  }}
                   className="hidden" 
                   id={`media-upload-${question.id}`} 
                 />
