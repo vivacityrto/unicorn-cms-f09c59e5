@@ -1221,8 +1221,9 @@ export default function AuditTemplateBuilder() {
               
               
             </div>
-            <p className="text-muted-foreground">
-              Complete the inspection by filling out all required fields below.
+            <p className="text-muted-foreground flex items-center gap-2">
+              <FileText className="h-4 w-4" />
+              {templateName || 'Untitled Template'}
             </p>
           </div>
 
