@@ -470,22 +470,12 @@ function SortableQuestionCard({
         };
         return <div className="flex flex-wrap gap-2">
             {question.options?.map((opt: any, idx: number) => {
-              const isSelected = selectedOptionIdx === idx;
-              const badgeClassPreview = isSelected 
-                ? colorMapPreview[opt.color || 'bg-muted'] || colorMapPreview['bg-muted']
-                : 'bg-muted/50 text-muted-foreground border-border/50';
-              return <span 
-                key={idx} 
-                onClick={() => setSelectedOptionIdx(idx)}
-                className={cn(
-                  "px-2.5 py-1 rounded-lg text-[15px] font-normal border backdrop-blur-sm cursor-pointer transition-all duration-200",
-                  badgeClassPreview,
-                  isSelected ? "scale-105" : "hover:bg-muted/80"
-                )}
-              >
+            const isSelected = selectedOptionIdx === idx;
+            const badgeClassPreview = isSelected ? colorMapPreview[opt.color || 'bg-muted'] || colorMapPreview['bg-muted'] : 'bg-muted/50 text-muted-foreground border-border/50';
+            return <span key={idx} onClick={() => setSelectedOptionIdx(idx)} className={cn("px-2.5 py-1 rounded-lg text-[15px] font-normal border backdrop-blur-sm cursor-pointer transition-all duration-200", badgeClassPreview, isSelected ? "scale-105" : "hover:bg-muted/80")}>
                 {opt.label}
               </span>;
-            })}
+          })}
           </div>;
       case 'annotation':
         return <div className="border rounded-lg p-4 bg-muted/30">
@@ -498,11 +488,7 @@ function SortableQuestionCard({
         return null;
     }
   };
-  return <div ref={setNodeRef} style={style} className={cn(
-    "bg-card border rounded-lg shadow-sm transition-all duration-200",
-    isDragging && "opacity-50 shadow-xl scale-[1.02]",
-    isFocused ? "border-primary/50 shadow-md ring-1 ring-primary/20" : "border-border/60 hover:border-border hover:shadow-md"
-  )} onFocus={() => setIsFocused(true)} onBlur={() => setIsFocused(false)}>
+  return <div ref={setNodeRef} style={style} className={cn("bg-card border rounded-lg shadow-sm transition-all duration-200", isDragging && "opacity-50 shadow-xl scale-[1.02]", isFocused ? "border-primary/50 shadow-md ring-1 ring-primary/20" : "border-border/60 hover:border-border hover:shadow-md")} onFocus={() => setIsFocused(true)} onBlur={() => setIsFocused(false)}>
       {/* Header with drag handle and delete */}
       <div className="flex items-center justify-between px-5 py-3 bg-muted/30 border-b border-border/40 rounded-t-lg">
         <div className="flex items-center gap-3">
@@ -537,17 +523,15 @@ function SortableQuestionCard({
       {/* Footer with actions */}
       <div className="bg-muted/20 border-t border-border/40 rounded-b-lg">
         {/* Notes input - full width, shown when Add Note is clicked */}
-        {showNotes && (
-          <>
+        {showNotes && <>
             <div className="px-5 py-3">
               <Input value={question.notes || ''} onChange={e => onUpdate(question.id, {
-              notes: e.target.value
-            })} placeholder="Add Notes" className="w-full text-sm text-muted-foreground border-none bg-transparent px-0 h-auto focus-visible:ring-0 focus-visible:ring-offset-0 placeholder:text-muted-foreground/40" />
+            notes: e.target.value
+          })} placeholder="Add Notes" className="w-full text-sm text-muted-foreground border-none bg-transparent px-0 h-auto focus-visible:ring-0 focus-visible:ring-offset-0 placeholder:text-muted-foreground/40" />
             </div>
             {/* Separator */}
             <div className="border-t border-border/40 mx-5" />
-          </>
-        )}
+          </>}
         {/* Required and action buttons row */}
         <div className="flex items-center justify-between px-5 py-3">
           <label className="flex items-center gap-2 text-sm text-muted-foreground cursor-pointer hover:text-foreground transition-colors">
@@ -557,13 +541,7 @@ function SortableQuestionCard({
             Required
           </label>
           <div className="flex items-center gap-4">
-            <button 
-              onClick={() => setShowNotes(!showNotes)}
-              className={cn(
-                "flex items-center gap-2 text-sm cursor-pointer transition-colors",
-                showNotes ? "text-purple-600" : "text-muted-foreground hover:text-purple-600"
-              )}
-            >
+            <button onClick={() => setShowNotes(!showNotes)} className={cn("flex items-center gap-2 text-sm cursor-pointer transition-colors", showNotes ? "text-purple-600" : "text-muted-foreground hover:text-purple-600")}>
               <MessageSquare className="h-4 w-4" />
               Add Note
             </button>
@@ -818,9 +796,9 @@ export default function AuditTemplateBuilder() {
         <div className="flex items-center justify-between px-6 py-4">
           <div className="flex items-center gap-4">
             <Button variant="ghost" onClick={() => navigate('/audits')} className="gap-2 hover:bg-[hsl(196deg_100%_93.53%)] hover:text-black [&:hover_svg]:text-black" style={{
-              boxShadow: "var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow)",
-              border: "1px solid #00000052"
-            }}>
+            boxShadow: "var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow)",
+            border: "1px solid #00000052"
+          }}>
               <X className="h-4 w-4" />
               Cancel
             </Button>
@@ -1049,31 +1027,22 @@ export default function AuditTemplateBuilder() {
       </div>
 
       {/* Preview Dialog */}
-      <Dialog open={isPreviewOpen} onOpenChange={(open) => {
-        setIsPreviewOpen(open);
-        if (!open) setPreviewPage(0);
-      }}>
+      <Dialog open={isPreviewOpen} onOpenChange={open => {
+      setIsPreviewOpen(open);
+      if (!open) setPreviewPage(0);
+    }}>
         <DialogPortal>
           <DialogOverlay className="z-[70] bg-black/70" />
           <DialogPrimitive.Content className={cn("fixed left-[50%] top-[50%] z-[70] flex flex-col w-full max-w-4xl max-h-[90vh] translate-x-[-50%] translate-y-[-50%] overflow-hidden scrollbar-hide shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%] rounded-xl bg-muted/50")}>
             {/* Header - matches canvas container styling */}
-            <div className="flex items-center justify-between px-8 py-4 bg-muted/50">
-              <DialogTitle className="flex items-center gap-2 text-lg font-semibold text-foreground">
-                <Eye className="h-5 w-5 text-primary" />
-                {templateName || "Template Preview"}
-              </DialogTitle>
-              <Button variant="ghost" size="icon" onClick={() => setIsPreviewOpen(false)} className="rounded-full h-8 w-8 hover:bg-muted">
-                <X className="h-4 w-4" />
-              </Button>
-            </div>
+            
             <DialogDescription className="sr-only">Preview your template</DialogDescription>
             
             {/* Same canvas container as edit mode */}
             <div className="flex-1 overflow-auto p-8 pt-0">
               <div className="max-w-3xl mx-auto">
                 <div className="bg-card rounded-xl border shadow-sm p-6 min-h-[400px]">
-                  {canvasQuestions.length === 0 ? (
-                    <div className="text-center py-12">
+                  {canvasQuestions.length === 0 ? <div className="text-center py-12">
                       <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
                         <Plus className="h-8 w-8 text-primary" />
                       </div>
@@ -1081,19 +1050,9 @@ export default function AuditTemplateBuilder() {
                       <p className="text-sm text-muted-foreground max-w-md mx-auto">
                         Add questions to your template to see them here.
                       </p>
-                    </div>
-                  ) : (
-                    <div className="space-y-4">
-                      {canvasQuestions.map(question => (
-                        <SortableQuestionCard 
-                          key={question.id} 
-                          question={question} 
-                          onDelete={deleteCanvasQuestion} 
-                          onUpdate={updateCanvasQuestion} 
-                        />
-                      ))}
-                    </div>
-                  )}
+                    </div> : <div className="space-y-4">
+                      {canvasQuestions.map(question => <SortableQuestionCard key={question.id} question={question} onDelete={deleteCanvasQuestion} onUpdate={updateCanvasQuestion} />)}
+                    </div>}
                 </div>
               </div>
             </div>
@@ -1101,11 +1060,7 @@ export default function AuditTemplateBuilder() {
             {/* Footer - matches canvas container styling */}
             <div className="bg-muted/50 px-8 py-4">
               <DialogFooter className="gap-2">
-                <Button 
-                  variant="outline" 
-                  onClick={() => setIsPreviewOpen(false)} 
-                  className="focus:z-10 bg-card hover:bg-muted"
-                >
+                <Button variant="outline" onClick={() => setIsPreviewOpen(false)} className="focus:z-10 bg-card hover:bg-muted">
                   Close
                 </Button>
               </DialogFooter>
@@ -1192,50 +1147,42 @@ export default function AuditTemplateBuilder() {
                     };
                     setNewResponseSetOptions(updated);
                   }} placeholder="Option label" className="flex-1 bg-background" />
-                        <Combobox 
-                          showColorDots
-                          hideCheck
-                          options={[{
-                            value: 'bg-green-500',
-                            label: 'Green',
-                            colorDot: 'bg-green-500'
-                          }, {
-                            value: 'bg-red-500',
-                            label: 'Red',
-                            colorDot: 'bg-red-500'
-                          }, {
-                            value: 'bg-yellow-500',
-                            label: 'Yellow',
-                            colorDot: 'bg-yellow-500'
-                          }, {
-                            value: 'bg-blue-500',
-                            label: 'Blue',
-                            colorDot: 'bg-blue-500'
-                          }, {
-                            value: 'bg-purple-500',
-                            label: 'Purple',
-                            colorDot: 'bg-purple-500'
-                          }, {
-                            value: 'bg-orange-500',
-                            label: 'Orange',
-                            colorDot: 'bg-orange-500'
-                          }, {
-                            value: 'bg-muted',
-                            label: 'Gray',
-                            colorDot: 'bg-gray-400'
-                          }]} 
-                          value={option.color || 'bg-muted'} 
-                          onValueChange={val => {
-                            const updated = [...newResponseSetOptions];
-                            updated[idx] = {
-                              ...updated[idx],
-                              color: val
-                            };
-                            setNewResponseSetOptions(updated);
-                          }} 
-                          placeholder="Color" 
-                          className="w-[110px] bg-background" 
-                        />
+                        <Combobox showColorDots hideCheck options={[{
+                    value: 'bg-green-500',
+                    label: 'Green',
+                    colorDot: 'bg-green-500'
+                  }, {
+                    value: 'bg-red-500',
+                    label: 'Red',
+                    colorDot: 'bg-red-500'
+                  }, {
+                    value: 'bg-yellow-500',
+                    label: 'Yellow',
+                    colorDot: 'bg-yellow-500'
+                  }, {
+                    value: 'bg-blue-500',
+                    label: 'Blue',
+                    colorDot: 'bg-blue-500'
+                  }, {
+                    value: 'bg-purple-500',
+                    label: 'Purple',
+                    colorDot: 'bg-purple-500'
+                  }, {
+                    value: 'bg-orange-500',
+                    label: 'Orange',
+                    colorDot: 'bg-orange-500'
+                  }, {
+                    value: 'bg-muted',
+                    label: 'Gray',
+                    colorDot: 'bg-gray-400'
+                  }]} value={option.color || 'bg-muted'} onValueChange={val => {
+                    const updated = [...newResponseSetOptions];
+                    updated[idx] = {
+                      ...updated[idx],
+                      color: val
+                    };
+                    setNewResponseSetOptions(updated);
+                  }} placeholder="Color" className="w-[110px] bg-background" />
                         {newResponseSetOptions.length > 1 && <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10" onClick={() => setNewResponseSetOptions(prev => prev.filter((_, i) => i !== idx))}>
                             <X className="h-4 w-4" />
                           </Button>}
