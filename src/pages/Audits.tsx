@@ -13,6 +13,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { AuditNavCards } from "@/components/audit/AuditNavCards";
 import { AuditTemplatesTable, AuditTemplate } from "@/components/audit/AuditTemplatesTable";
 import { AuditInspectionsTable, AuditInspection } from "@/components/audit/AuditInspectionsTable";
+import { LiveInspectionDialog } from "@/components/audit/LiveInspectionDialog";
 import { toast } from "sonner";
 type AuditTab = "templates" | "inspections" | "schedules" | "analytics";
 export default function Audits() {
@@ -22,6 +23,8 @@ export default function Audits() {
   const [activeTab, setActiveTab] = useState<AuditTab>("templates");
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [selectedClient, setSelectedClient] = useState<string>("");
+  const [startInspectionOpen, setStartInspectionOpen] = useState(false);
+  const [selectedTemplate, setSelectedTemplate] = useState<AuditTemplate | null>(null);
 
   // Fetch templates from audit_templates table
   const {
@@ -115,7 +118,8 @@ export default function Audits() {
     [audits, templates],
   );
   const handleStartInspection = (template: AuditTemplate) => {
-    navigate(`/audits/create-template/${template.id}?live=true`);
+    setSelectedTemplate(template);
+    setStartInspectionOpen(true);
   };
   const handleCreateTemplate = () => {
     navigate("/audits/create-template");
@@ -312,6 +316,13 @@ export default function Audits() {
             </CardContent>
           </Card>
         )}
+
+        {/* Live Inspection Dialog */}
+        <LiveInspectionDialog
+          open={startInspectionOpen}
+          onOpenChange={setStartInspectionOpen}
+          template={selectedTemplate}
+        />
       </div>
     </DashboardLayout>
   );
