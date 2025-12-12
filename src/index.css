@@ -150,12 +150,7 @@
   }
 }
 
-@layer components {
-  .zoom-in-95 {
-    padding: 20px 17px;
-    border-radius: 25px;
-    --tw-enter-scale: 0.95;
-  }
+
   
   .data-\[state\=open\]\:zoom-in-95[data-state=open] {
     padding: 20px 17px !important;
