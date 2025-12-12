@@ -637,7 +637,7 @@ function SortableQuestionCard({
                   <span className="text-foreground">Required</span>
                 </span>
               ) : (
-                <span className="text-muted-foreground">Not Required</span>
+                <span className="text-muted-foreground">Optional</span>
               )}
             </label>
           ) : (
