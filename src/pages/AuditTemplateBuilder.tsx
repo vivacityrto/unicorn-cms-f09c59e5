@@ -1375,7 +1375,7 @@ export default function AuditTemplateBuilder() {
 
           {/* Content Card */}
           <Card className="w-[70%]">
-            <CardContent className="p-6">
+            <CardContent className="p-6" style={{ backgroundColor: '#7320810f' }}>
               {canvasQuestions.length === 0 || currentPageQuestionsToShow.length === 0 ? <div className="text-center py-12">
                   <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
                     <Plus className="h-8 w-8 text-primary" />
