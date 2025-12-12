@@ -534,11 +534,12 @@ function SortableQuestionCard({
 
       {/* Footer with actions */}
       <div className="flex items-center justify-between px-5 py-3 bg-muted/20 border-t border-border/40 rounded-b-lg">
-        <div className="flex flex-col gap-2">
+        <div className="flex flex-col gap-3">
           {/* Description/helper text input */}
           <Input value={question.description || ''} onChange={e => onUpdate(question.id, {
           description: e.target.value
         })} placeholder="Add description (optional)" className="text-sm text-muted-foreground border-none bg-transparent px-0 h-auto focus-visible:ring-0 focus-visible:ring-offset-0 placeholder:text-muted-foreground/40" />
+          <div className="border-t border-border/40" />
           <label className="flex items-center gap-2 text-sm text-muted-foreground cursor-pointer hover:text-foreground transition-colors">
             <input type="checkbox" checked={question.required || false} onChange={e => onUpdate(question.id, {
             required: e.target.checked
