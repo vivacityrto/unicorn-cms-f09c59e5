@@ -696,32 +696,33 @@ function SortableQuestionCard({
         {/* Required and action buttons row - hidden for page breaks */}
         {question.question_type !== 'page_break' && <div className="flex items-center justify-between px-5 py-3">
             <div className="flex items-center gap-4">
-              {!previewMode ? <label className="flex items-center gap-2 text-sm cursor-pointer hover:text-foreground transition-colors">
-                  <input type="checkbox" checked={question.required || false} onChange={e => onUpdate(question.id, {
-              required: e.target.checked
-            })} className="rounded border-muted-foreground/30" />
-                  <span className="flex items-center gap-1">
-                    {question.required && <span className="text-destructive">*</span>}
-                    <span className="text-foreground">Required</span>
-                  </span>
-                </label> : question.required ? <span className="flex items-center gap-1 text-sm">
+              {!previewMode ? <>
+                  <label className="flex items-center gap-2 text-sm cursor-pointer hover:text-foreground transition-colors">
+                    <input type="checkbox" checked={question.required || false} onChange={e => onUpdate(question.id, {
+                required: e.target.checked
+              })} className="rounded border-muted-foreground/30" />
+                    <span className="flex items-center gap-1">
+                      {question.required && <span className="text-destructive">*</span>}
+                      <span className="text-foreground">Required</span>
+                    </span>
+                  </label>
+                  {/* Score checkbox - only for multiple_choice with non-compliant options */}
+                  {question.question_type === 'multiple_choice' && hasComplianceOptions(question.options) && (
+                    <label className="flex items-center gap-2 text-sm cursor-pointer hover:text-foreground transition-colors">
+                      <Checkbox 
+                        checked={question.scoring_enabled || false} 
+                        onCheckedChange={(checked) => onUpdate(question.id, {
+                          scoring_enabled: checked === true
+                        })} 
+                        className="h-4 w-4"
+                      />
+                      <span className="text-foreground">Score</span>
+                    </label>
+                  )}
+                </> : question.required ? <span className="flex items-center gap-1 text-sm">
                     <span className="text-destructive">*</span>
                     <span className="text-foreground">Required</span>
                   </span> : <span className="text-sm text-muted-foreground">Optional</span>}
-              
-              {/* Compliance Scoring checkbox - only for multiple_choice with non-compliant options */}
-              {!previewMode && question.question_type === 'multiple_choice' && hasComplianceOptions(question.options) && (
-                <label className="flex items-center gap-2 text-sm cursor-pointer hover:text-foreground transition-colors ml-4">
-                  <Checkbox 
-                    checked={question.scoring_enabled || false} 
-                    onCheckedChange={(checked) => onUpdate(question.id, {
-                      scoring_enabled: checked === true
-                    })} 
-                    className="h-4 w-4"
-                  />
-                  <span className="text-foreground">Compliance Scoring</span>
-                </label>
-              )}
             </div>
             <div className="flex items-center gap-4">
               {!previewMode && !question.required}
