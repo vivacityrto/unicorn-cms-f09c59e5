@@ -264,7 +264,8 @@ interface CanvasQuestion {
 const hasComplianceOptions = (options?: any[]) => {
   if (!options || options.length === 0) return false;
   const labels = options.map(o => o.label?.toLowerCase() || '');
-  return labels.some(l => l.includes('non-compliant') || l.includes('noncompliant'));
+  // Check for various formats: "non-compliant", "noncompliant", "non compliant"
+  return labels.some(l => l.includes('non-compliant') || l.includes('noncompliant') || l.includes('non compliant'));
 };
 
 // Calculate compliance score based on responses
@@ -294,7 +295,7 @@ const calculateComplianceScore = (
       totalScore += 100;
     } else if (responseLower.includes('compliant') && !responseLower.includes('non')) {
       totalScore += 100;
-    } else if (responseLower.includes('non-compliant') || responseLower.includes('noncompliant')) {
+    } else if (responseLower.includes('non-compliant') || responseLower.includes('noncompliant') || responseLower.includes('non compliant')) {
       totalScore += 0;
     } else {
       // Default to 50% for unknown responses
