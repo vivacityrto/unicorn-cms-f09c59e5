@@ -1041,7 +1041,7 @@ export default function AuditTemplateBuilder() {
                   <Eye className="h-5 w-5 text-primary" />
                 </div>
                 <div>
-                  <DialogTitle className="text-lg font-semibold text-foreground">Preview Mode</DialogTitle>
+                  <DialogTitle className="text-lg font-semibold text-foreground">{templateName || "Untitled Template"}</DialogTitle>
                   <DialogDescription className="text-sm text-muted-foreground">
                     You're viewing how this template will appear to users. Close to continue editing.
                   </DialogDescription>
