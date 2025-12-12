@@ -1,5 +1,5 @@
 import * as React from "react"
-import { Check, ArrowUpDown, Calendar } from "lucide-react"
+import { Check, ArrowUpDown, Calendar, Mail } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -26,6 +26,7 @@ export interface ComboboxOption {
   createdAt?: string
   status?: string
   colorDot?: string // CSS class for color dot (e.g., 'bg-green-500')
+  email?: string
 }
 
 interface ComboboxProps {
@@ -111,7 +112,7 @@ export function Combobox({
                       className="rounded-none cursor-pointer hover:!bg-[hsl(196deg_100%_93.53%)] hover:!text-black data-[selected=true]:bg-[hsl(196deg_100%_93.53%)] data-[selected=true]:text-black border-b border-border last:border-b-0"
                       style={{ lineHeight: '20px', fontSize: '15px' }}
                     >
-                      <div className="flex flex-col py-1.5 w-full">
+                      <div className="flex flex-col pb-2.5 w-full">
                         <div className="flex items-center justify-between w-full">
                           <span className="font-medium">{option.label}</span>
                           <div className="flex items-center gap-2">
@@ -134,6 +135,12 @@ export function Combobox({
                         </div>
                         {option.secondaryLabel && (
                           <span className="text-xs text-muted-foreground mt-0.5">{option.secondaryLabel}</span>
+                        )}
+                        {option.email && (
+                          <span className="text-xs text-muted-foreground/70 pt-[5px] flex items-center gap-1">
+                            <Mail className="h-3 w-3" />
+                            {option.email}
+                          </span>
                         )}
                         {option.createdAt && (
                           <span className="text-xs text-muted-foreground/70 pt-[5px] flex items-center gap-1">
