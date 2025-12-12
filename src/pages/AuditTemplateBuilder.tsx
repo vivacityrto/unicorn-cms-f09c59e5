@@ -12,7 +12,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { Combobox, ComboboxOption } from '@/components/ui/combobox';
-import { Search, Plus, Pencil, Building2, FileText, Box, Building, Type, Hash, CheckSquare, CalendarDays, Image, SlidersHorizontal, MessageSquare, PenTool, MapPin, GripVertical, Trash2, X, Eye, Shield, ToggleLeft, Star, CircleDot, AlertTriangle, CheckCircle, List, CalendarClock, AlignLeft, FileStack, Upload, File, Flag, Tag } from 'lucide-react';
+import { Search, Plus, Pencil, Building2, FileText, Box, Building, Type, Hash, CheckSquare, CalendarDays, Image, SlidersHorizontal, MessageSquare, PenTool, MapPin, GripVertical, Trash2, X, Eye, Shield, ToggleLeft, Star, CircleDot, AlertTriangle, CheckCircle, List, CalendarClock, AlignLeft, FileStack, Upload, File, Flag, Tag, ArrowLeft } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { SelectSeparator } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription, DialogPortal, DialogOverlay } from '@/components/ui/dialog';
@@ -1353,19 +1353,38 @@ export default function AuditTemplateBuilder() {
           {/* Page Header */}
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              {hasScoringQuestions && (
-                <div className="flex items-center gap-2">
-                  <span className="text-sm text-muted-foreground">Compliance Score:</span>
-                  <Badge className={cn(
-                    "text-sm font-semibold",
-                    liveComplianceScore >= 80 ? "bg-green-500/15 text-green-600 border-green-500/30" :
-                    liveComplianceScore >= 50 ? "bg-yellow-500/15 text-yellow-600 border-yellow-500/30" :
-                    "bg-red-500/15 text-red-600 border-red-500/30"
-                  )}>
-                    {liveComplianceScore}%
-                  </Badge>
-                </div>
-              )}
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => navigate('/audits')}
+                className="gap-2"
+              >
+                <ArrowLeft className="h-4 w-4" />
+                Back
+              </Button>
+              <div className="flex items-center gap-3">
+                {hasScoringQuestions && (
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-muted-foreground">Compliance Score:</span>
+                    <Badge className={cn(
+                      "text-sm font-semibold",
+                      liveComplianceScore >= 80 ? "bg-green-500/15 text-green-600 border-green-500/30" :
+                      liveComplianceScore >= 50 ? "bg-yellow-500/15 text-yellow-600 border-yellow-500/30" :
+                      "bg-red-500/15 text-red-600 border-red-500/30"
+                    )}>
+                      {liveComplianceScore}%
+                    </Badge>
+                  </div>
+                )}
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className="h-8 w-8 hover:bg-muted"
+                  onClick={() => navigate(`/audits/create-template/${templateIdParam}`)}
+                >
+                  <Pencil className="h-4 w-4 text-muted-foreground hover:text-foreground" />
+                </Button>
+              </div>
             </div>
             <p className="text-muted-foreground flex items-center gap-2">
               <FileText className="h-4 w-4" />
