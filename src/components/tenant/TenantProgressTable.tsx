@@ -17,6 +17,7 @@ interface StageData {
   video_url: string | null;
   order_number: number | null;
   is_active: boolean;
+  status?: string | null;
 }
 interface Stage {
   id: number;

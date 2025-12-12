@@ -24,7 +24,7 @@ interface AddStageDialogProps {
     stage_description: string | null;
     video_url: string | null;
     order_number: number | null;
-    status: string | null;
+    status?: string | null;
   } | null;
 }
 
