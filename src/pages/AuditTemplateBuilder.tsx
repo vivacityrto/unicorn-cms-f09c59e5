@@ -62,12 +62,11 @@ function useDocuments() {
 }
 
 // Clients dropdown preview component with smart search
-function ClientsDropdownPreview() {
+function ClientsDropdownPreview({ value, onValueChange, hasError }: { value?: string; onValueChange?: (value: string) => void; hasError?: boolean }) {
   const {
     data: tenants,
     isLoading
   } = useTenants();
-  const [selectedClient, setSelectedClient] = useState<string>('');
   const clientOptions: ComboboxOption[] = useMemo(() => {
     if (!tenants) return [];
     return tenants.map(tenant => ({
@@ -78,16 +77,15 @@ function ClientsDropdownPreview() {
       status: tenant.status || undefined
     }));
   }, [tenants]);
-  return <Combobox options={clientOptions} value={selectedClient} onValueChange={setSelectedClient} placeholder={isLoading ? "Loading clients..." : "Search clients..."} searchPlaceholder="Type to search clients..." emptyText="No clients found." disabled={isLoading} className="bg-muted/50 border-dashed" />;
+  return <Combobox options={clientOptions} value={value || ''} onValueChange={(v) => onValueChange?.(v)} placeholder={isLoading ? "Loading clients..." : "Search clients..."} searchPlaceholder="Type to search clients..." emptyText="No clients found." disabled={isLoading} className={cn("bg-muted/50 border-dashed", hasError && "border-destructive")} />;
 }
 
 // Documents dropdown preview component with smart search
-function DocumentsDropdownPreview() {
+function DocumentsDropdownPreview({ value, onValueChange, hasError }: { value?: string; onValueChange?: (value: string) => void; hasError?: boolean }) {
   const {
     data: documents,
     isLoading
   } = useDocuments();
-  const [selectedDocument, setSelectedDocument] = useState<string>('');
   const documentOptions: ComboboxOption[] = useMemo(() => {
     if (!documents) return [];
     return documents.map(doc => ({
@@ -96,7 +94,7 @@ function DocumentsDropdownPreview() {
       group: doc.category || 'Uncategorized'
     }));
   }, [documents]);
-  return <Combobox options={documentOptions} value={selectedDocument} onValueChange={setSelectedDocument} placeholder={isLoading ? "Loading documents..." : "Search documents..."} searchPlaceholder="Type to search documents..." emptyText="No documents found." disabled={isLoading} className="bg-muted/50 border-dashed" />;
+  return <Combobox options={documentOptions} value={value || ''} onValueChange={(v) => onValueChange?.(v)} placeholder={isLoading ? "Loading documents..." : "Search documents..."} searchPlaceholder="Type to search documents..." emptyText="No documents found." disabled={isLoading} className={cn("bg-muted/50 border-dashed", hasError && "border-destructive")} />;
 }
 
 // Hook to fetch Vivacity Team users
@@ -115,12 +113,11 @@ function useVivacityTeamUsers() {
 }
 
 // Vivacity Team dropdown preview component with smart search
-function VivacityTeamDropdownPreview() {
+function VivacityTeamDropdownPreview({ value, onValueChange, hasError }: { value?: string; onValueChange?: (value: string) => void; hasError?: boolean }) {
   const {
     data: users,
     isLoading
   } = useVivacityTeamUsers();
-  const [selectedUser, setSelectedUser] = useState<string>('');
   const userOptions: ComboboxOption[] = useMemo(() => {
     if (!users) return [];
     return users.map(user => ({
@@ -130,7 +127,7 @@ function VivacityTeamDropdownPreview() {
       email: user.email || undefined
     }));
   }, [users]);
-  return <Combobox options={userOptions} value={selectedUser} onValueChange={setSelectedUser} placeholder={isLoading ? "Loading team members..." : "Search Vivacity Team..."} searchPlaceholder="Type to search team members..." emptyText="No team members found." disabled={isLoading} className="bg-muted/50 border-dashed" />;
+  return <Combobox options={userOptions} value={value || ''} onValueChange={(v) => onValueChange?.(v)} placeholder={isLoading ? "Loading team members..." : "Search Vivacity Team..."} searchPlaceholder="Type to search team members..." emptyText="No team members found." disabled={isLoading} className={cn("bg-muted/50 border-dashed", hasError && "border-destructive")} />;
 }
 interface ResponseSet {
   id: string;
@@ -400,11 +397,11 @@ function SortableQuestionCard({
   const renderInputPreview = () => {
     switch (question.question_type) {
       case 'clients':
-        return <ClientsDropdownPreview />;
+        return <ClientsDropdownPreview value={responseValue} onValueChange={(v) => onResponseChange?.(question.id, v)} hasError={hasError} />;
       case 'documents':
-        return <DocumentsDropdownPreview />;
+        return <DocumentsDropdownPreview value={responseValue} onValueChange={(v) => onResponseChange?.(question.id, v)} hasError={hasError} />;
       case 'vivacity_team':
-        return <VivacityTeamDropdownPreview />;
+        return <VivacityTeamDropdownPreview value={responseValue} onValueChange={(v) => onResponseChange?.(question.id, v)} hasError={hasError} />;
       case 'text_answer':
       case 'asset':
         return <Input placeholder={question.placeholder || getPlaceholderByType(question.question_type)} className={cn("bg-muted/50 border-dashed", hasError && "border-destructive")} value={responseValue || ''} onChange={e => onResponseChange?.(question.id, e.target.value)} />;
@@ -699,9 +696,13 @@ function SortableQuestionCard({
             <div className="flex items-center gap-4">
               {!previewMode ? <>
                   <label className="flex items-center gap-2 text-sm cursor-pointer hover:text-foreground transition-colors">
-                    <input type="checkbox" checked={question.required || false} onChange={e => onUpdate(question.id, {
-                required: e.target.checked
-              })} className="rounded border-muted-foreground/30" />
+                    <Checkbox 
+                      checked={question.required || false} 
+                      onCheckedChange={(checked) => onUpdate(question.id, {
+                        required: checked === true
+                      })} 
+                      className="h-4 w-4"
+                    />
                     <span className="flex items-center gap-1">
                       {question.required && <span className="text-destructive">*</span>}
                       <span className="text-foreground">Required</span>
