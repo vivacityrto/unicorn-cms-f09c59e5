@@ -45,6 +45,7 @@ interface ComboboxProps {
   showColorDots?: boolean
   hideCheck?: boolean
   showAvatar?: boolean
+  showCreatedAt?: boolean
 }
 
 export function Combobox({
@@ -59,6 +60,7 @@ export function Combobox({
   showColorDots = false,
   hideCheck = false,
   showAvatar = true,
+  showCreatedAt = false,
 }: ComboboxProps) {
   const [open, setOpen] = React.useState(false)
 
@@ -151,7 +153,7 @@ export function Combobox({
                             </span>
                           )}
                         </div>
-                        {option.createdAt && (
+                        {showCreatedAt && option.createdAt && (
                           <span className="text-xs text-muted-foreground/70 flex items-center gap-1 shrink-0">
                             <Calendar className="h-3 w-3" />
                             {new Date(option.createdAt).toLocaleDateString()}
