@@ -272,6 +272,7 @@ function SortableQuestionCard({
   });
   const [isFocused, setIsFocused] = useState(false);
   const [showNotes, setShowNotes] = useState(false);
+  const [isEditingNote, setIsEditingNote] = useState(false);
   const [selectedOptionIdx, setSelectedOptionIdx] = useState<number | null>(null);
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -528,16 +529,34 @@ function SortableQuestionCard({
 
       {/* Footer with actions */}
       <div className="bg-muted/20 border-t border-border/40 rounded-b-lg">
-        {/* Notes input - full width, shown when Add Note is clicked */}
-        {showNotes && <>
+        {/* Notes display or input */}
+        {question.notes && !isEditingNote ? (
+          <div className="px-5 py-3 flex items-center justify-between">
+            <p className="text-sm text-foreground">{question.notes}</p>
+            <button 
+              onClick={() => {
+                setShowNotes(true);
+                setIsEditingNote(true);
+              }} 
+              className="text-muted-foreground hover:text-primary transition-colors"
+            >
+              <Pencil className="h-4 w-4" />
+            </button>
+          </div>
+        ) : showNotes && (
+          <>
             <div className="px-5 py-3">
-              <Input value={question.notes || ''} onChange={e => onUpdate(question.id, {
-            notes: e.target.value
-          })} placeholder="Add Notes" className="w-full text-sm text-muted-foreground border-none bg-transparent px-0 h-auto focus-visible:ring-0 focus-visible:ring-offset-0 placeholder:text-muted-foreground/40" />
+              <Input 
+                value={question.notes || ''} 
+                onChange={e => onUpdate(question.id, { notes: e.target.value })} 
+                placeholder="Add Notes" 
+                className="w-full text-sm text-muted-foreground border-none bg-transparent px-0 h-auto focus-visible:ring-0 focus-visible:ring-offset-0 placeholder:text-muted-foreground/40" 
+              />
             </div>
             {/* Separator */}
             <div className="border-t border-border/40 mx-5" />
-          </>}
+          </>
+        )}
         {/* Required and action buttons row */}
         <div className="flex items-center justify-between px-5 py-3">
           <label className="flex items-center gap-2 text-sm text-muted-foreground cursor-pointer hover:text-foreground transition-colors">
@@ -547,9 +566,22 @@ function SortableQuestionCard({
             Required
           </label>
           <div className="flex items-center gap-4">
-            <button onClick={() => setShowNotes(!showNotes)} className={cn("flex items-center gap-2 text-sm cursor-pointer transition-colors", showNotes ? "text-primary" : "text-muted-foreground hover:text-primary")}>
+            <button 
+              onClick={() => {
+                if (showNotes && question.notes) {
+                  // Save the note
+                  setShowNotes(false);
+                  setIsEditingNote(false);
+                } else {
+                  // Show the note input
+                  setShowNotes(!showNotes);
+                  setIsEditingNote(true);
+                }
+              }} 
+              className={cn("flex items-center gap-2 text-sm cursor-pointer transition-colors", showNotes ? "text-primary" : "text-muted-foreground hover:text-primary")}
+            >
               <MessageSquare className="h-4 w-4" />
-              Add Note
+              {showNotes && question.notes ? "Save Note" : "Add Note"}
             </button>
             <button className="flex items-center gap-2 text-sm text-muted-foreground cursor-pointer hover:text-primary transition-colors">
               <Image className="h-4 w-4" />
