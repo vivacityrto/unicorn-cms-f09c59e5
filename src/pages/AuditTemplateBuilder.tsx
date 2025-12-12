@@ -1152,18 +1152,18 @@ export default function AuditTemplateBuilder() {
                     </div>
                     <div className="flex items-center gap-3">
                       {totalPages > 1 && !isFirstPage && (
-                        <Button variant="outline" onClick={() => setPreviewPage(prev => prev - 1)}>
+                        <Button variant="ghost" onClick={() => setPreviewPage(prev => prev - 1)} className="gap-2 hover:bg-[hsl(196deg_100%_93.53%)] hover:text-black" style={{ boxShadow: "var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow)", border: "1px solid #00000052" }}>
                           Previous
                         </Button>
                       )}
                       {totalPages > 1 && !isLastPage && (
-                        <Button onClick={() => setPreviewPage(prev => prev + 1)}>
+                        <Button variant="ghost" onClick={() => setPreviewPage(prev => prev + 1)} className="gap-2 hover:bg-[hsl(196deg_100%_93.53%)] hover:text-black" style={{ boxShadow: "var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow)", border: "1px solid #00000052" }}>
                           Next
                         </Button>
                       )}
                       {isLastPage && (
                         <>
-                          <Button variant="outline" onClick={() => setIsPreviewOpen(false)}>
+                          <Button variant="ghost" onClick={() => setIsPreviewOpen(false)} className="gap-2 hover:bg-[hsl(196deg_100%_93.53%)] hover:text-black" style={{ boxShadow: "var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow)", border: "1px solid #00000052" }}>
                             Cancel
                           </Button>
                           <Button onClick={() => setIsPreviewOpen(false)}>
