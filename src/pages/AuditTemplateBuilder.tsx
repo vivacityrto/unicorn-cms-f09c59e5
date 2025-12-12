@@ -713,6 +713,7 @@ export default function AuditTemplateBuilder() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const isLiveMode = searchParams.get('live') === 'true';
+  const isInspectionMode = searchParams.get('mode') === 'inspection';
   const {
     templateId: templateIdParam
   } = useParams();
@@ -952,6 +953,185 @@ export default function AuditTemplateBuilder() {
         </div>
       </div>;
   }
+
+  // Inspection mode - full page view with preview-style cards
+  if (isInspectionMode) {
+    // Split questions into pages based on page_break
+    const pages: CanvasQuestion[][] = [];
+    let currentPageQuestions: CanvasQuestion[] = [];
+    
+    canvasQuestions.forEach((question) => {
+      if (question.question_type === 'page_break') {
+        if (currentPageQuestions.length > 0) {
+          pages.push(currentPageQuestions);
+          currentPageQuestions = [];
+        }
+      } else {
+        currentPageQuestions.push(question);
+      }
+    });
+    if (currentPageQuestions.length > 0) {
+      pages.push(currentPageQuestions);
+    }
+    
+    const totalPages = pages.length;
+    const currentPageQuestionsToShow = pages[previewPage] || [];
+    const isLastPage = previewPage >= totalPages - 1;
+    const isFirstPage = previewPage === 0;
+    
+    // Calculate question number offset for current page
+    let questionOffset = 0;
+    for (let i = 0; i < previewPage; i++) {
+      questionOffset += (pages[i] || []).length;
+    }
+    
+    const validateCurrentPage = () => {
+      const requiredQuestions = currentPageQuestionsToShow.filter(q => q.required);
+      const errors: string[] = [];
+      
+      requiredQuestions.forEach(q => {
+        const value = previewResponses[q.id];
+        if (!value || (typeof value === 'string' && value.trim() === '')) {
+          errors.push(q.id);
+        }
+      });
+      
+      if (errors.length > 0) {
+        setValidationErrors(new Set(errors));
+        toast.error('Please fill in all required fields');
+        return false;
+      }
+      return true;
+    };
+    
+    const handleNext = () => {
+      if (validateCurrentPage()) {
+        setPreviewPage(prev => prev + 1);
+      }
+    };
+    
+    const handleSubmit = () => {
+      if (validateCurrentPage()) {
+        toast.success('Inspection submitted successfully!');
+        setPreviewResponses({});
+        setValidationErrors(new Set());
+        setPreviewPage(0);
+        navigate('/audits');
+      }
+    };
+
+    return (
+      <div className="min-h-screen bg-background flex flex-col">
+        {/* Header */}
+        <div className="border-b bg-card sticky top-0 z-10">
+          <div className="flex items-center justify-between px-6 py-4">
+            <div className="flex items-center gap-4">
+              <Button 
+                variant="ghost" 
+                onClick={() => navigate('/audits')} 
+                className="gap-2 hover:bg-[hsl(196deg_100%_93.53%)] hover:text-black [&:hover_svg]:text-black" 
+                style={{
+                  boxShadow: "var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow)",
+                  border: "1px solid #00000052"
+                }}
+              >
+                <X className="h-4 w-4" />
+                Cancel
+              </Button>
+              <div>
+                <h1 className="text-xl font-semibold">{templateName || "Untitled Template"}</h1>
+                <p className="text-sm text-muted-foreground">
+                  Complete the inspection by filling out all required fields below.
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              {totalPages > 1 && `Page ${previewPage + 1} of ${totalPages}`}
+            </div>
+          </div>
+        </div>
+
+        {/* Content */}
+        <div className="flex-1 bg-muted/30 p-8 overflow-auto">
+          <div className="max-w-[800px] mx-auto">
+            <div className="bg-card rounded-xl border shadow-sm p-6 min-h-[400px]">
+              {canvasQuestions.length === 0 || currentPageQuestionsToShow.length === 0 ? (
+                <div className="text-center py-12">
+                  <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
+                    <Plus className="h-8 w-8 text-primary" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-foreground mb-2">No questions added</h3>
+                  <p className="text-sm text-muted-foreground max-w-md mx-auto">
+                    This template has no questions to display.
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {currentPageQuestionsToShow.map((question, index) => (
+                    <SortableQuestionCard 
+                      key={question.id} 
+                      question={question} 
+                      onDelete={deleteCanvasQuestion} 
+                      onUpdate={updateCanvasQuestion} 
+                      previewMode={true} 
+                      questionNumber={questionOffset + index + 1}
+                      responseValue={previewResponses[question.id]}
+                      onResponseChange={(qId, value) => {
+                        setPreviewResponses(prev => ({ ...prev, [qId]: value }));
+                        setValidationErrors(prev => {
+                          const newErrors = new Set(prev);
+                          newErrors.delete(qId);
+                          return newErrors;
+                        });
+                      }}
+                      hasError={validationErrors.has(question.id)}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="border-t bg-card sticky bottom-0 z-10">
+          <div className="flex items-center justify-between px-6 py-4">
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              {totalPages > 1 && `Page ${previewPage + 1} of ${totalPages}`}
+            </div>
+            <div className="flex items-center gap-3">
+              {totalPages > 1 && !isFirstPage && (
+                <Button 
+                  variant="ghost" 
+                  onClick={() => setPreviewPage(prev => prev - 1)} 
+                  className="gap-2 hover:bg-[hsl(196deg_100%_93.53%)] hover:text-black" 
+                  style={{ border: "1px solid #00000052" }}
+                >
+                  Previous
+                </Button>
+              )}
+              {totalPages > 1 && !isLastPage && (
+                <Button 
+                  variant="ghost" 
+                  onClick={handleNext} 
+                  className="gap-2 hover:bg-[hsl(196deg_100%_93.53%)] hover:text-black" 
+                  style={{ border: "1px solid #00000052" }}
+                >
+                  Next
+                </Button>
+              )}
+              {isLastPage && (
+                <Button onClick={handleSubmit} className="bg-primary hover:bg-primary/90">
+                  Submit
+                </Button>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return <div className="min-h-screen bg-background">
       {/* Header */}
       <div className="border-b bg-card sticky top-0 z-10">
