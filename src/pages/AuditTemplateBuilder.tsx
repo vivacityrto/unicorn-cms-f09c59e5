@@ -842,7 +842,7 @@ export default function AuditTemplateBuilder() {
       id: `temp-${Date.now()}`,
       tempId: `temp-${Date.now()}`,
       question_type: responseSet ? 'multiple_choice' : type.id,
-      label: responseSet ? responseSet.name : type.label,
+      label: '',
       order_index: canvasQuestions.length,
       options: responseSet ? responseSet.options : [],
       category: type.category
