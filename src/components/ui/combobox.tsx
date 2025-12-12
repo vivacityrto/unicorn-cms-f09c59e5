@@ -43,6 +43,7 @@ interface ComboboxProps {
   disabled?: boolean
   showColorDots?: boolean
   hideCheck?: boolean
+  showAvatar?: boolean
 }
 
 export function Combobox({
@@ -56,6 +57,7 @@ export function Combobox({
   disabled = false,
   showColorDots = false,
   hideCheck = false,
+  showAvatar = true,
 }: ComboboxProps) {
   const [open, setOpen] = React.useState(false)
 
@@ -148,12 +150,14 @@ export function Combobox({
                             </span>
                           )}
                         </div>
-                        <Avatar className="h-8 w-8 shrink-0 self-center">
-                          <AvatarImage src={option.avatarUrl} alt={option.label} />
-                          <AvatarFallback className="bg-primary/10 text-primary text-xs">
-                            {option.avatarFallback || option.label.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
-                          </AvatarFallback>
-                        </Avatar>
+                        {showAvatar && (
+                          <Avatar className="h-8 w-8 shrink-0 self-center">
+                            <AvatarImage src={option.avatarUrl} alt={option.label} />
+                            <AvatarFallback className="bg-primary/10 text-primary text-xs">
+                              {option.avatarFallback || option.label.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
+                            </AvatarFallback>
+                          </Avatar>
+                        )}
                       </div>
                       {!hideCheck && (
                         <Check className={cn("ml-auto h-4 w-4 shrink-0", value === option.value ? "opacity-100" : "opacity-0")} />

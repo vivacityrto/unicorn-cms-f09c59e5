@@ -77,7 +77,7 @@ function ClientsDropdownPreview({ value, onValueChange, hasError }: { value?: st
       status: tenant.status || undefined
     }));
   }, [tenants]);
-  return <Combobox options={clientOptions} value={value || ''} onValueChange={(v) => onValueChange?.(v)} placeholder={isLoading ? "Loading clients..." : "Search clients..."} searchPlaceholder="Type to search clients..." emptyText="No clients found." disabled={isLoading} className={cn("bg-muted/50 border-dashed", hasError && "border-destructive")} />;
+  return <Combobox options={clientOptions} value={value || ''} onValueChange={(v) => onValueChange?.(v)} placeholder={isLoading ? "Loading clients..." : "Search clients..."} searchPlaceholder="Type to search clients..." emptyText="No clients found." disabled={isLoading} showAvatar={false} className={cn("bg-muted/50 border-dashed", hasError && "border-destructive")} />;
 }
 
 // Documents dropdown preview component with smart search
@@ -94,7 +94,7 @@ function DocumentsDropdownPreview({ value, onValueChange, hasError }: { value?: 
       group: doc.category || 'Uncategorized'
     }));
   }, [documents]);
-  return <Combobox options={documentOptions} value={value || ''} onValueChange={(v) => onValueChange?.(v)} placeholder={isLoading ? "Loading documents..." : "Search documents..."} searchPlaceholder="Type to search documents..." emptyText="No documents found." disabled={isLoading} className={cn("bg-muted/50 border-dashed", hasError && "border-destructive")} />;
+  return <Combobox options={documentOptions} value={value || ''} onValueChange={(v) => onValueChange?.(v)} placeholder={isLoading ? "Loading documents..." : "Search documents..."} searchPlaceholder="Type to search documents..." emptyText="No documents found." disabled={isLoading} showAvatar={false} className={cn("bg-muted/50 border-dashed", hasError && "border-destructive")} />;
 }
 
 // Hook to fetch Vivacity Team users
