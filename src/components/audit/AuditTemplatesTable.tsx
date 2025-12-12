@@ -5,7 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { Search, MoreHorizontal, FileText, Play, Copy, Pencil, Trash2, Users, CheckCircle, Lock, FileEdit, ArrowUpDown, Calendar } from 'lucide-react';
+import { Search, FileText, Play, Pencil, Trash2, Users, CheckCircle, Lock, FileEdit, ArrowUpDown, Calendar } from 'lucide-react';
 import { cn } from '@/lib/utils';
 export interface AuditTemplate {
   id: string;
@@ -230,27 +230,12 @@ export function AuditTemplatesTable({
                           <Play className="h-3.5 w-3.5 mr-1.5" />
                           Start inspection
                         </Button>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-8 w-8">
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end" className="bg-popover border border-border shadow-lg z-50">
-                            <DropdownMenuItem onClick={() => onEditTemplate?.(template)}>
-                              <Pencil className="h-4 w-4 mr-2" />
-                              Edit template
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => onDuplicateTemplate?.(template)}>
-                              <Copy className="h-4 w-4 mr-2" />
-                              Duplicate
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => onDeleteTemplate?.(template)} className="text-destructive focus:text-destructive">
-                              <Trash2 className="h-4 w-4 mr-2" />
-                              Delete
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
+                        <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-muted" onClick={() => onEditTemplate?.(template)}>
+                          <Pencil className="h-4 w-4 text-muted-foreground hover:text-foreground" />
+                        </Button>
+                        <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-destructive/10" onClick={() => onDeleteTemplate?.(template)}>
+                          <Trash2 className="h-4 w-4 text-muted-foreground hover:text-destructive" />
+                        </Button>
                       </div>
                     </TableCell>
                   </TableRow>)}
