@@ -263,34 +263,51 @@ function QuestionCard({
 
   return (
     <div className={cn(
-      "group relative rounded-xl border bg-card p-5 transition-all duration-200",
-      hasError && "border-destructive bg-destructive/5"
+      "bg-card border rounded-lg shadow-sm transition-all duration-200",
+      hasError && "border-destructive ring-1 ring-destructive/20",
+      !hasError && "border-border/60 hover:border-border hover:shadow-md"
     )}>
-      <div className="flex items-start gap-4">
-        <div className={cn(
-          "flex items-center justify-center h-10 w-10 rounded-xl shrink-0",
-          "bg-primary/10"
-        )}>
-          <Icon className="h-5 w-5 text-primary" />
-        </div>
-        <div className="flex-1 min-w-0 space-y-3">
-          <div className="flex items-start gap-2">
-            <span className="text-xs font-medium text-muted-foreground bg-muted px-2 py-0.5 rounded">
-              Q{questionNumber}
-            </span>
-            {question.required && (
-              <span className="text-xs font-medium text-destructive bg-destructive/10 px-2 py-0.5 rounded flex items-center gap-1">
-                <AlertTriangle className="h-3 w-3" />
-                Required
-              </span>
-            )}
+      {/* Header with question number and type */}
+      <div className="flex items-center justify-between px-5 py-3 bg-muted/30 border-b border-border/40 rounded-t-lg">
+        <div className="flex items-center gap-3">
+          <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+            {questionNumber}.
+          </span>
+          <div className="h-8 w-8 rounded-md flex items-center justify-center bg-background shadow-sm border border-border/50">
+            <Icon className="h-4 w-4" />
           </div>
-          <p className="text-base font-medium text-foreground">{question.label || 'Untitled question'}</p>
-          {question.notes && question.question_type !== 'paragraph' && (
-            <p className="text-sm text-muted-foreground">{question.notes}</p>
+          <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+            {question.question_type.replace(/_/g, ' ')}
+          </span>
+        </div>
+      </div>
+
+      {/* Content area */}
+      <div className="p-5 space-y-4">
+        {/* Question label */}
+        <p className="text-base font-medium text-foreground">{question.label || 'Untitled question'}</p>
+
+        {/* Input based on question type */}
+        <div className="pt-2">
+          {renderInput()}
+        </div>
+      </div>
+
+      {/* Footer with required/optional indicator */}
+      <div className="bg-muted/20 border-t border-border/40 rounded-b-lg">
+        <div className="flex items-center justify-between px-5 py-3">
+          {question.required ? (
+            <span className="flex items-center gap-1 text-sm">
+              <span className="text-destructive">*</span>
+              <span className="text-foreground">Required</span>
+            </span>
+          ) : (
+            <span className="text-sm text-muted-foreground">Optional</span>
           )}
-          <div className="pt-2">
-            {renderInput()}
+          <div className="flex items-center gap-4">
+            {!question.required && (
+              <span className="text-sm text-muted-foreground">Optional</span>
+            )}
           </div>
         </div>
       </div>
