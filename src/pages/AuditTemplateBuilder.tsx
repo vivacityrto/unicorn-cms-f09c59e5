@@ -1039,19 +1039,21 @@ export default function AuditTemplateBuilder() {
             <DialogDescription className="sr-only">Preview your template</DialogDescription>
             
             {/* Same canvas container as edit mode */}
-            <div className="max-w-3xl mx-auto flex-1 overflow-auto p-8 pt-0">
-              <div className="bg-card rounded-xl border shadow-sm p-6 min-h-[400px]">
-                {canvasQuestions.length === 0 ? <div className="text-center py-12">
-                    <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
-                      <Plus className="h-8 w-8 text-primary" />
-                    </div>
-                    <h3 className="text-lg font-semibold text-foreground mb-2">No questions added</h3>
-                    <p className="text-sm text-muted-foreground max-w-md mx-auto">
-                      Add questions to your template to see them here.
-                    </p>
-                  </div> : <div className="space-y-4">
-                    {canvasQuestions.map(question => <SortableQuestionCard key={question.id} question={question} onDelete={deleteCanvasQuestion} onUpdate={updateCanvasQuestion} />)}
-                  </div>}
+            <div className="flex-1 overflow-auto p-8 pt-0">
+              <div className="max-w-3xl mx-auto">
+                <div className="bg-card rounded-xl border shadow-sm p-6 min-h-[400px]">
+                  {canvasQuestions.length === 0 ? <div className="text-center py-12">
+                      <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
+                        <Plus className="h-8 w-8 text-primary" />
+                      </div>
+                      <h3 className="text-lg font-semibold text-foreground mb-2">No questions added</h3>
+                      <p className="text-sm text-muted-foreground max-w-md mx-auto">
+                        Add questions to your template to see them here.
+                      </p>
+                    </div> : <div className="space-y-4">
+                      {canvasQuestions.map(question => <SortableQuestionCard key={question.id} question={question} onDelete={deleteCanvasQuestion} onUpdate={updateCanvasQuestion} />)}
+                    </div>}
+                </div>
               </div>
             </div>
             
