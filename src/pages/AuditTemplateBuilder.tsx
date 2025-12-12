@@ -539,16 +539,16 @@ function SortableQuestionCard({
           Required
         </label>
         <div className="flex items-center gap-1">
-          <Button variant="ghost" size="sm" className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground hover:bg-transparent">
-            <MessageSquare className="h-3.5 w-3.5 mr-1" />
+          <Button variant="ghost" size="sm" className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground hover:bg-transparent gap-1">
+            <MessageSquare className="h-3.5 w-3.5" />
             Add Note
           </Button>
-          <Button variant="ghost" size="sm" className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground hover:bg-transparent">
-            <Image className="h-3.5 w-3.5 mr-1" />
+          <Button variant="ghost" size="sm" className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground hover:bg-transparent gap-1">
+            <Image className="h-3.5 w-3.5" />
             Add Media
           </Button>
-          <Button variant="ghost" size="sm" className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground hover:bg-transparent">
-            <Plus className="h-3.5 w-3.5 mr-1" />
+          <Button variant="ghost" size="sm" className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground hover:bg-transparent gap-1">
+            <Plus className="h-3.5 w-3.5" />
             Create Action
           </Button>
         </div>
