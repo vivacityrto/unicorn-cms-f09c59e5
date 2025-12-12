@@ -287,6 +287,17 @@ function SortableQuestionCard({
   const [showNotes, setShowNotes] = useState(false);
   const [isEditingNote, setIsEditingNote] = useState(false);
   const [showMedia, setShowMedia] = useState(false);
+  const [showActionPanel, setShowActionPanel] = useState(false);
+  const [actionForm, setActionForm] = useState({
+    title: '',
+    description: '',
+    priority: 'low',
+    dueDate: null as Date | null,
+    assignees: '',
+    site: '',
+    asset: '',
+    labels: ''
+  });
   const [selectedOptionIdx, setSelectedOptionIdx] = useState<number | null>(responseValue !== undefined && question.options?.length ? question.options.findIndex((opt: any) => opt.label === responseValue) : null);
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -654,12 +665,158 @@ function SortableQuestionCard({
                 <Image className="h-4 w-4" />
                 {question.media_files && question.media_files.length > 0 ? `Media (${question.media_files.length})` : "Add Media"}
               </button>
-              <button className="flex items-center gap-2 text-sm text-muted-foreground cursor-pointer hover:text-primary transition-colors">
+              <button 
+                onClick={() => setShowActionPanel(true)}
+                className="flex items-center gap-2 text-sm text-muted-foreground cursor-pointer hover:text-primary transition-colors"
+              >
                 <Plus className="h-4 w-4" />
                 Create Action
               </button>
             </div>
           </div>}
+          
+        {/* Action Panel Slide-in */}
+        <div className={cn(
+          "fixed top-0 right-0 h-full w-[400px] bg-card border-l shadow-xl z-50 transform transition-transform duration-300 ease-out",
+          showActionPanel ? "translate-x-0" : "translate-x-full"
+        )}>
+          <div className="flex flex-col h-full">
+            {/* Header */}
+            <div className="flex items-center justify-between px-4 py-3 border-b">
+              <div className="flex items-center gap-2">
+                <Select value="action" onValueChange={() => {}}>
+                  <SelectTrigger className="w-[120px] border-none shadow-none bg-primary/10 text-primary font-medium">
+                    <div className="flex items-center gap-2">
+                      <Shield className="h-4 w-4" />
+                      <SelectValue placeholder="Action" />
+                    </div>
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="action">Action</SelectItem>
+                    <SelectItem value="observation">Observation</SelectItem>
+                    <SelectItem value="recommendation">Recommendation</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <Button variant="ghost" size="icon" onClick={() => setShowActionPanel(false)}>
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+            
+            {/* Form Content */}
+            <div className="flex-1 overflow-y-auto p-4 space-y-4">
+              {/* Title */}
+              <Input
+                value={actionForm.title}
+                onChange={(e) => setActionForm(prev => ({ ...prev, title: e.target.value }))}
+                placeholder="Add title..."
+                className="text-lg font-medium border-primary/30 focus:border-primary"
+              />
+              
+              {/* Description */}
+              <Textarea
+                value={actionForm.description}
+                onChange={(e) => setActionForm(prev => ({ ...prev, description: e.target.value }))}
+                placeholder="Add description..."
+                className="min-h-[80px] resize-none"
+              />
+              
+              {/* Priority */}
+              <div className="flex items-center justify-between py-2">
+                <span className="text-sm text-muted-foreground">Priority</span>
+                <Select value={actionForm.priority} onValueChange={(v) => setActionForm(prev => ({ ...prev, priority: v }))}>
+                  <SelectTrigger className="w-[120px] border-none shadow-none">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="low">
+                      <span className="text-blue-500">↓ Low</span>
+                    </SelectItem>
+                    <SelectItem value="medium">
+                      <span className="text-yellow-500">→ Medium</span>
+                    </SelectItem>
+                    <SelectItem value="high">
+                      <span className="text-red-500">↑ High</span>
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              {/* Due Date */}
+              <div className="flex items-center justify-between py-2">
+                <span className="text-sm text-muted-foreground">Due date</span>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="ghost" className="gap-2 text-sm font-normal">
+                      <CalendarDays className="h-4 w-4" />
+                      {actionForm.dueDate ? format(actionForm.dueDate, 'dd MMM yyyy h:mm a') : 'Select date'}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="end">
+                    <Calendar
+                      mode="single"
+                      selected={actionForm.dueDate || undefined}
+                      onSelect={(date) => setActionForm(prev => ({ ...prev, dueDate: date || null }))}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+              
+              {/* Assignees */}
+              <div className="flex items-center justify-between py-2">
+                <span className="text-sm text-muted-foreground">Assignees</span>
+                <Button variant="ghost" className="gap-2 text-sm font-normal text-muted-foreground">
+                  <Building2 className="h-4 w-4" />
+                  Add assignee
+                </Button>
+              </div>
+              
+              {/* Site */}
+              <div className="flex items-center justify-between py-2">
+                <span className="text-sm text-muted-foreground">Site</span>
+                <Button variant="ghost" className="gap-2 text-sm font-normal text-muted-foreground">
+                  <Building className="h-4 w-4" />
+                  Add site
+                </Button>
+              </div>
+              
+              {/* Asset */}
+              <div className="flex items-center justify-between py-2">
+                <span className="text-sm text-muted-foreground">Asset</span>
+                <Button variant="ghost" className="gap-2 text-sm font-normal text-muted-foreground">
+                  <Box className="h-4 w-4" />
+                  Add asset
+                </Button>
+              </div>
+              
+              {/* Labels */}
+              <div className="flex items-center justify-between py-2">
+                <span className="text-sm text-muted-foreground">Labels</span>
+                <Button variant="ghost" className="gap-2 text-sm font-normal text-muted-foreground">
+                  <CircleDot className="h-4 w-4" />
+                  Add labels
+                </Button>
+              </div>
+            </div>
+            
+            {/* Footer */}
+            <div className="px-4 py-3 border-t">
+              <p className="text-xs text-muted-foreground flex items-center gap-2">
+                <Eye className="h-3 w-3" />
+                Visible to anyone who has access to the relevant inspection.
+              </p>
+            </div>
+          </div>
+        </div>
+        
+        {/* Backdrop */}
+        {showActionPanel && (
+          <div 
+            className="fixed inset-0 bg-black/20 z-40 animate-fade-in"
+            onClick={() => setShowActionPanel(false)}
+          />
+        )}
       </div>
     </div>;
 }
