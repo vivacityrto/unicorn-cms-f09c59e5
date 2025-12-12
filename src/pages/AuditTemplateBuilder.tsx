@@ -526,11 +526,6 @@ function SortableQuestionCard({
         label: e.target.value
       })} placeholder="Enter your question" className="text-base font-medium border-none bg-transparent px-0 h-auto focus-visible:ring-0 focus-visible:ring-offset-0 placeholder:text-muted-foreground/50" />
 
-        {/* Description/helper text input */}
-        <Input value={question.description || ''} onChange={e => onUpdate(question.id, {
-        description: e.target.value
-      })} placeholder="Add description (optional)" className="text-sm text-muted-foreground border-none bg-transparent px-0 h-auto focus-visible:ring-0 focus-visible:ring-offset-0 placeholder:text-muted-foreground/40" />
-
         {/* Input preview based on question type */}
         <div className="pt-2">
           {renderInputPreview()}
@@ -539,12 +534,18 @@ function SortableQuestionCard({
 
       {/* Footer with actions */}
       <div className="flex items-center justify-between px-5 py-3 bg-muted/20 border-t border-border/40 rounded-b-lg">
-        <label className="flex items-center gap-2 text-sm text-muted-foreground cursor-pointer hover:text-foreground transition-colors">
-          <input type="checkbox" checked={question.required || false} onChange={e => onUpdate(question.id, {
-          required: e.target.checked
-        })} className="rounded border-muted-foreground/30" />
-          Required
-        </label>
+        <div className="flex flex-col gap-2">
+          {/* Description/helper text input */}
+          <Input value={question.description || ''} onChange={e => onUpdate(question.id, {
+          description: e.target.value
+        })} placeholder="Add description (optional)" className="text-sm text-muted-foreground border-none bg-transparent px-0 h-auto focus-visible:ring-0 focus-visible:ring-offset-0 placeholder:text-muted-foreground/40" />
+          <label className="flex items-center gap-2 text-sm text-muted-foreground cursor-pointer hover:text-foreground transition-colors">
+            <input type="checkbox" checked={question.required || false} onChange={e => onUpdate(question.id, {
+            required: e.target.checked
+          })} className="rounded border-muted-foreground/30" />
+            Required
+          </label>
+        </div>
         <div className="flex items-center gap-4">
           <button className="flex items-center gap-2 text-sm text-muted-foreground cursor-pointer hover:text-purple-600 transition-colors">
             <MessageSquare className="h-4 w-4" />

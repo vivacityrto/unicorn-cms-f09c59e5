@@ -639,6 +639,7 @@ export type Database = {
           created_at: string
           id: number
           label: string
+          notes: string | null
           options: Json | null
           order_index: number
           question_type: string
@@ -651,6 +652,7 @@ export type Database = {
           created_at?: string
           id?: number
           label: string
+          notes?: string | null
           options?: Json | null
           order_index?: number
           question_type: string
@@ -663,6 +665,7 @@ export type Database = {
           created_at?: string
           id?: number
           label?: string
+          notes?: string | null
           options?: Json | null
           order_index?: number
           question_type?: string
