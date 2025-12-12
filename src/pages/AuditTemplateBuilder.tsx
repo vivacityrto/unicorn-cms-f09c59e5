@@ -1055,19 +1055,26 @@ export default function AuditTemplateBuilder() {
       }}>
         <DialogPortal>
           <DialogOverlay className="z-[70] bg-black/70" />
-          <DialogPrimitive.Content className={cn("fixed left-[50%] top-[50%] z-[70] flex flex-col w-full sm:max-w-[600px] max-w-[90vw] max-h-[85vh] translate-x-[-50%] translate-y-[-50%] gap-4 overflow-hidden scrollbar-hide border bg-background p-6 shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%] sm:rounded-lg")}>
-            <DialogHeader>
+          <DialogPrimitive.Content className={cn("fixed left-[50%] top-[50%] z-[70] flex flex-col w-full max-w-4xl max-h-[90vh] translate-x-[-50%] translate-y-[-50%] gap-4 overflow-hidden scrollbar-hide border bg-background shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%] rounded-xl")}>
+            {/* Form Header */}
+            <div className="bg-primary/5 border-b px-8 py-6">
               <div className="flex items-start justify-between">
-                <DialogTitle className="flex items-center gap-2 text-xl">
-                  <Eye className="h-5 w-5" />
-                  {templateName || "Template Preview"}
-                </DialogTitle>
+                <div>
+                  <DialogTitle className="flex items-center gap-3 text-2xl font-semibold">
+                    <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                      <Eye className="h-5 w-5 text-primary" />
+                    </div>
+                    {templateName || "Template Preview"}
+                  </DialogTitle>
+                  <DialogDescription className="mt-2 text-muted-foreground">
+                    Preview how this template will appear to users
+                  </DialogDescription>
+                </div>
+                <Button variant="ghost" size="icon" onClick={() => setIsPreviewOpen(false)} className="rounded-full">
+                  <X className="h-4 w-4" />
+                </Button>
               </div>
-              <DialogDescription>
-                Preview how this template will appear to users
-              </DialogDescription>
-            </DialogHeader>
-            <Separator />
+            </div>
             
             {(() => {
               // Split questions into pages based on page_break
@@ -1129,9 +1136,10 @@ export default function AuditTemplateBuilder() {
                     </div>
                   )}
                   
-                  <div className="overflow-y-auto scrollbar-hide flex-1 space-y-6 py-4 px-1">
+                  <div className="overflow-y-auto scrollbar-hide flex-1 py-6 px-8">
+                    <div className="max-w-3xl mx-auto space-y-6">
                     {currentPageQuestions.length === 0 ? (
-                      <div className="text-center py-8 text-muted-foreground">
+                      <div className="text-center py-12 text-muted-foreground">
                         No questions on this page
                       </div>
                     ) : (
@@ -1141,21 +1149,28 @@ export default function AuditTemplateBuilder() {
                         const globalIndex = questionOffset + index;
                         
                         return (
-                          <div key={question.id} className="border rounded-lg p-4">
-                            <div className="flex items-start gap-3 mb-3">
-                              <span className="text-sm font-medium text-muted-foreground">{globalIndex + 1}.</span>
+                          <div key={question.id} className="bg-card border rounded-xl p-6 shadow-sm">
+                            <div className="flex items-start gap-4 mb-4">
+                              <div className={cn("h-10 w-10 rounded-lg flex items-center justify-center bg-background shadow-sm border border-border/50", questionType?.color)}>
+                                <Icon className="h-5 w-5" />
+                              </div>
                               <div className="flex-1">
                                 <div className="flex items-center gap-2 mb-1">
-                                  <Icon className={cn("h-4 w-4", questionType?.color)} />
-                                  <span className="font-medium">{question.label}</span>
-                                  {question.required && <span className="text-destructive">*</span>}
+                                  <span className="text-sm font-medium text-muted-foreground">Q{globalIndex + 1}</span>
+                                  <span className="text-lg font-semibold">{question.label}</span>
+                                  {question.required && <span className="text-destructive text-lg">*</span>}
                                 </div>
-                                {question.description && <p className="text-sm text-muted-foreground">{question.description}</p>}
+                                {question.description && <p className="text-sm text-muted-foreground mt-1">{question.description}</p>}
+                                {question.notes && (
+                                  <div className="mt-2 p-3 bg-muted/50 rounded-lg border border-border/40">
+                                    <p className="text-sm text-muted-foreground italic">{question.notes}</p>
+                                  </div>
+                                )}
                               </div>
                             </div>
                             
                             {/* Render interactive preview based on question type */}
-                            <div className="ml-6">
+                            <div className="ml-14">
                               {question.question_type === 'text_answer' || question.question_type === 'site' || question.question_type === 'company' || question.question_type === 'document_number' || question.question_type === 'asset' ? (
                                 <Input placeholder="Enter your answer..." className="max-w-md" />
                               ) : question.question_type === 'number' ? (
@@ -1220,11 +1235,11 @@ export default function AuditTemplateBuilder() {
                         );
                       })
                     )}
+                    </div>
                   </div>
                   
-                  <Separator className="my-1" />
-                  
                   {/* Footer with navigation */}
+                  <div className="border-t bg-muted/30 px-8 py-4">
                   <DialogFooter className="gap-2">
                     {hasMultiplePages ? (
                       <>
@@ -1291,6 +1306,7 @@ export default function AuditTemplateBuilder() {
                       </>
                     )}
                   </DialogFooter>
+                  </div>
                 </>
               );
             })()}
