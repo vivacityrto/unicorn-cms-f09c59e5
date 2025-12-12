@@ -478,7 +478,7 @@ function SortableQuestionCard({
                 className={cn(
                   "px-2.5 py-1 rounded-full text-[13px] font-semibold border backdrop-blur-sm cursor-pointer transition-all duration-200",
                   badgeClassPreview,
-                  isSelected ? "ring-2 ring-offset-1 ring-primary/40 scale-105" : "hover:bg-muted/80"
+                  isSelected ? "scale-105" : "hover:bg-muted/80"
                 )}
               >
                 {opt.label}
