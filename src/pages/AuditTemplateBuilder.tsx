@@ -6,12 +6,15 @@ import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSo
 import { CSS } from '@dnd-kit/utilities';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { Combobox, ComboboxOption } from '@/components/ui/combobox';
-import { Search, Plus, Pencil, Building2, FileText, Box, Building, Type, Hash, CheckSquare, CalendarDays, Image, SlidersHorizontal, MessageSquare, PenTool, MapPin, GripVertical, Trash2, X, Eye, Shield, ToggleLeft, Star, CircleDot, AlertTriangle, CheckCircle, List, CalendarClock, AlignLeft, FileStack, Upload, File } from 'lucide-react';
+import { Search, Plus, Pencil, Building2, FileText, Box, Building, Type, Hash, CheckSquare, CalendarDays, Image, SlidersHorizontal, MessageSquare, PenTool, MapPin, GripVertical, Trash2, X, Eye, Shield, ToggleLeft, Star, CircleDot, AlertTriangle, CheckCircle, List, CalendarClock, AlignLeft, FileStack, Upload, File, Flag, Tag } from 'lucide-react';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { SelectSeparator } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription, DialogPortal, DialogOverlay } from '@/components/ui/dialog';
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { cn } from '@/lib/utils';
@@ -289,16 +292,19 @@ function SortableQuestionCard({
   const [isEditingNote, setIsEditingNote] = useState(false);
   const [showMedia, setShowMedia] = useState(false);
   const [showActionPanel, setShowActionPanel] = useState(false);
+  const [actionAssignees, setActionAssignees] = useState<string[]>([]);
+  const [actionLabels, setActionLabels] = useState<string[]>([]);
   const [actionForm, setActionForm] = useState({
     title: '',
     description: '',
-    priority: 'low',
+    priority: '',
     dueDate: null as Date | null,
-    assignees: '',
     site: '',
-    asset: '',
-    labels: ''
+    asset: ''
   });
+  
+  // Fetch Vivacity team for assignees
+  const { data: vivacityTeamData } = useVivacityTeamUsers();
   const [selectedOptionIdx, setSelectedOptionIdx] = useState<number | null>(responseValue !== undefined && question.options?.length ? question.options.findIndex((opt: any) => opt.label === responseValue) : null);
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -684,21 +690,10 @@ function SortableQuestionCard({
           <div className="flex flex-col h-full">
             {/* Header */}
             <div className="flex items-center justify-between px-4 py-3 border-b">
-              <div className="flex items-center gap-2">
-                <Select value="action" onValueChange={() => {}}>
-                  <SelectTrigger className="w-[120px] border-none shadow-none bg-primary/10 text-primary font-medium">
-                    <div className="flex items-center gap-2">
-                      <Shield className="h-4 w-4" />
-                      <SelectValue placeholder="Action" />
-                    </div>
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="action">Action</SelectItem>
-                    <SelectItem value="observation">Observation</SelectItem>
-                    <SelectItem value="recommendation">Recommendation</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+              <Badge className="bg-primary/10 text-primary border-primary/20 gap-1.5">
+                <Shield className="h-3.5 w-3.5" />
+                Action
+              </Badge>
               <Button variant="ghost" size="icon" onClick={() => setShowActionPanel(false)}>
                 <X className="h-4 w-4" />
               </Button>
@@ -737,55 +732,132 @@ function SortableQuestionCard({
               
               {/* Details Section */}
               <div className="space-y-0">
-                {/* Priority */}
+                {/* Priority - matching StageNotesTab style */}
                 <div className="flex items-center justify-between py-3 border-b border-border/40">
                   <span className="text-sm text-muted-foreground">Priority</span>
                   <Select value={actionForm.priority} onValueChange={(v) => setActionForm(prev => ({ ...prev, priority: v }))}>
-                    <SelectTrigger className="w-[120px] border-none shadow-none">
-                      <SelectValue />
+                    <SelectTrigger className="w-[140px]">
+                      <SelectValue placeholder="Select priority...">
+                        {actionForm.priority && (
+                          <div className="flex items-center gap-2">
+                            <Flag className={cn(
+                              "h-4 w-4",
+                              actionForm.priority === "urgent" && "fill-red-500 text-red-500",
+                              actionForm.priority === "high" && "fill-orange-500 text-orange-500",
+                              actionForm.priority === "normal" && "fill-yellow-500 text-yellow-500",
+                              actionForm.priority === "low" && "fill-blue-500 text-blue-500"
+                            )} />
+                            <span className="capitalize">{actionForm.priority}</span>
+                          </div>
+                        )}
+                      </SelectValue>
                     </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="low">
-                        <span className="text-blue-500">↓ Low</span>
+                    <SelectContent className="bg-background">
+                      <SelectItem value="urgent">
+                        <div className="flex items-center gap-2">
+                          <Flag className="h-4 w-4 fill-red-500 text-red-500" />
+                          <span>Urgent</span>
+                        </div>
                       </SelectItem>
-                      <SelectItem value="medium">
-                        <span className="text-yellow-500">→ Medium</span>
-                      </SelectItem>
+                      <SelectSeparator />
                       <SelectItem value="high">
-                        <span className="text-red-500">↑ High</span>
+                        <div className="flex items-center gap-2">
+                          <Flag className="h-4 w-4 fill-orange-500 text-orange-500" />
+                          <span>High</span>
+                        </div>
+                      </SelectItem>
+                      <SelectSeparator />
+                      <SelectItem value="normal">
+                        <div className="flex items-center gap-2">
+                          <Flag className="h-4 w-4 fill-yellow-500 text-yellow-500" />
+                          <span>Normal</span>
+                        </div>
+                      </SelectItem>
+                      <SelectSeparator />
+                      <SelectItem value="low">
+                        <div className="flex items-center gap-2">
+                          <Flag className="h-4 w-4 fill-blue-500 text-blue-500" />
+                          <span>Low</span>
+                        </div>
                       </SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
                 
-                {/* Due Date */}
+                {/* Due Date - matching StageNotesTab style */}
                 <div className="flex items-center justify-between py-3 border-b border-border/40">
                   <span className="text-sm text-muted-foreground">Due date</span>
                   <Popover>
                     <PopoverTrigger asChild>
-                      <Button variant="ghost" className="gap-2 text-sm font-normal h-auto py-1">
-                        <CalendarDays className="h-4 w-4" />
-                        {actionForm.dueDate ? format(actionForm.dueDate, 'dd MMM yyyy h:mm a') : 'Select date'}
+                      <Button variant="outline" className="justify-start text-left font-normal h-9">
+                        <CalendarDays className="mr-2 h-4 w-4" />
+                        {actionForm.dueDate ? format(actionForm.dueDate, 'PPP') : 'Pick a date'}
                       </Button>
                     </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="end">
+                    <PopoverContent className="w-auto p-0 z-[80]" align="end">
                       <Calendar
                         mode="single"
                         selected={actionForm.dueDate || undefined}
                         onSelect={(date) => setActionForm(prev => ({ ...prev, dueDate: date || null }))}
                         initialFocus
+                        className="pointer-events-auto"
                       />
                     </PopoverContent>
                   </Popover>
                 </div>
                 
-                {/* Assignees */}
-                <div className="flex items-center justify-between py-3 border-b border-border/40">
-                  <span className="text-sm text-muted-foreground">Assignees</span>
-                  <Button variant="ghost" className="gap-2 text-sm font-normal text-muted-foreground h-auto py-1">
-                    <Building2 className="h-4 w-4" />
-                    Add assignee
-                  </Button>
+                {/* Assignees - matching StageNotesTab followers style */}
+                <div className="py-3 border-b border-border/40">
+                  <span className="text-sm text-muted-foreground mb-2 block">Assignees</span>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    {actionAssignees.map(userId => {
+                      const user = vivacityTeamData?.find(u => u.user_uuid === userId);
+                      if (!user) return null;
+                      return (
+                        <div key={userId} className="relative group">
+                          <Avatar className="h-10 w-10 border-2 border-background shadow-sm cursor-pointer">
+                            <AvatarFallback className="text-xs bg-primary/10 text-primary">
+                              {user.first_name?.[0]}{user.last_name?.[0]}
+                            </AvatarFallback>
+                          </Avatar>
+                          <button 
+                            onClick={() => setActionAssignees(prev => prev.filter(id => id !== userId))}
+                            className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-destructive text-destructive-foreground opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
+                          >
+                            <X className="h-2.5 w-2.5" />
+                          </button>
+                        </div>
+                      );
+                    })}
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <button className="h-10 w-10 rounded-full border-2 border-dashed border-muted-foreground/40 flex items-center justify-center hover:border-primary hover:bg-primary/5 transition-colors cursor-pointer">
+                          <Plus className="h-4 w-4 text-muted-foreground" />
+                        </button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-64 p-2 z-[80]" align="start">
+                        <div className="space-y-1 max-h-48 overflow-y-auto">
+                          {vivacityTeamData?.filter(user => !actionAssignees.includes(user.user_uuid)).map(user => (
+                            <div
+                              key={user.user_uuid}
+                              onClick={() => setActionAssignees(prev => [...prev, user.user_uuid])}
+                              className="flex items-center gap-2 px-2 py-1.5 rounded-md cursor-pointer hover:bg-muted transition-colors"
+                            >
+                              <Avatar className="h-7 w-7">
+                                <AvatarFallback className="text-[10px] bg-primary/10 text-primary">
+                                  {user.first_name?.[0]}{user.last_name?.[0]}
+                                </AvatarFallback>
+                              </Avatar>
+                              <span className="text-sm">{user.first_name} {user.last_name}</span>
+                            </div>
+                          ))}
+                          {vivacityTeamData?.filter(user => !actionAssignees.includes(user.user_uuid)).length === 0 && (
+                            <p className="text-sm text-muted-foreground text-center py-2">All team members added</p>
+                          )}
+                        </div>
+                      </PopoverContent>
+                    </Popover>
+                  </div>
                 </div>
               </div>
               
@@ -796,31 +868,67 @@ function SortableQuestionCard({
                 {/* Site */}
                 <div className="flex items-center justify-between py-3 border-b border-border/40">
                   <span className="text-sm text-muted-foreground">Site</span>
-                  <Button variant="ghost" className="gap-2 text-sm font-normal text-muted-foreground h-auto py-1">
-                    <Building className="h-4 w-4" />
-                    Add site
-                  </Button>
+                  <Input
+                    value={actionForm.site}
+                    onChange={(e) => setActionForm(prev => ({ ...prev, site: e.target.value }))}
+                    placeholder="Add site..."
+                    className="w-[180px] h-9"
+                  />
                 </div>
                 
                 {/* Asset */}
                 <div className="flex items-center justify-between py-3 border-b border-border/40">
                   <span className="text-sm text-muted-foreground">Asset</span>
-                  <Button variant="ghost" className="gap-2 text-sm font-normal text-muted-foreground h-auto py-1">
-                    <Box className="h-4 w-4" />
-                    Add asset
-                  </Button>
+                  <Input
+                    value={actionForm.asset}
+                    onChange={(e) => setActionForm(prev => ({ ...prev, asset: e.target.value }))}
+                    placeholder="Add asset..."
+                    className="w-[180px] h-9"
+                  />
                 </div>
               </div>
               
               <Separator className="my-2" />
               
               {/* Labels Section */}
-              <div className="flex items-center justify-between py-3">
-                <span className="text-sm text-muted-foreground">Labels</span>
-                <Button variant="ghost" className="gap-2 text-sm font-normal text-muted-foreground h-auto py-1">
-                  <CircleDot className="h-4 w-4" />
-                  Add labels
-                </Button>
+              <div className="py-3">
+                <span className="text-sm text-muted-foreground mb-2 block">Labels</span>
+                <div className="flex items-center gap-2 flex-wrap">
+                  {actionLabels.map((label, idx) => (
+                    <Badge key={idx} variant="secondary" className="gap-1 pr-1">
+                      <Tag className="h-3 w-3" />
+                      {label}
+                      <button
+                        onClick={() => setActionLabels(prev => prev.filter((_, i) => i !== idx))}
+                        className="ml-1 hover:text-destructive"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </Badge>
+                  ))}
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <button className="h-8 px-3 rounded-md border border-dashed border-muted-foreground/40 flex items-center gap-1.5 hover:border-primary hover:bg-primary/5 transition-colors cursor-pointer text-sm text-muted-foreground">
+                        <Plus className="h-3.5 w-3.5" />
+                        Add label
+                      </button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-48 p-2 z-[80]" align="start">
+                      <div className="space-y-1">
+                        {['Urgent', 'Review', 'Follow-up', 'Compliance', 'Documentation', 'Training'].filter(l => !actionLabels.includes(l)).map(label => (
+                          <div
+                            key={label}
+                            onClick={() => setActionLabels(prev => [...prev, label])}
+                            className="flex items-center gap-2 px-2 py-1.5 rounded-md cursor-pointer hover:bg-muted transition-colors text-sm"
+                          >
+                            <Tag className="h-3.5 w-3.5 text-muted-foreground" />
+                            {label}
+                          </div>
+                        ))}
+                      </div>
+                    </PopoverContent>
+                  </Popover>
+                </div>
               </div>
             </div>
             
