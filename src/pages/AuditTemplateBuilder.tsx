@@ -1218,7 +1218,7 @@ export default function AuditTemplateBuilder() {
           {/* Page Header */}
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <h1 className="text-2xl font-semibold">{templateName || "Untitled Template"}</h1>
+              
               
             </div>
             <p className="text-muted-foreground">
