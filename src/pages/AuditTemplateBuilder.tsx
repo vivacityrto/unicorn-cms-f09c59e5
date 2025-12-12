@@ -247,7 +247,10 @@ interface CanvasQuestion {
   description?: string;
   required?: boolean;
   notes?: string;
-  media_files?: { name: string; url: string }[];
+  media_files?: {
+    name: string;
+    url: string;
+  }[];
 }
 function SortableQuestionCard({
   question,
@@ -282,11 +285,7 @@ function SortableQuestionCard({
   const [showNotes, setShowNotes] = useState(false);
   const [isEditingNote, setIsEditingNote] = useState(false);
   const [showMedia, setShowMedia] = useState(false);
-  const [selectedOptionIdx, setSelectedOptionIdx] = useState<number | null>(
-    responseValue !== undefined && question.options?.length 
-      ? question.options.findIndex((opt: any) => opt.label === responseValue)
-      : null
-  );
+  const [selectedOptionIdx, setSelectedOptionIdx] = useState<number | null>(responseValue !== undefined && question.options?.length ? question.options.findIndex((opt: any) => opt.label === responseValue) : null);
   const style = {
     transform: CSS.Transform.toString(transform),
     transition
@@ -327,20 +326,9 @@ function SortableQuestionCard({
         return <VivacityTeamDropdownPreview />;
       case 'text_answer':
       case 'asset':
-        return <Input 
-          placeholder={question.placeholder || getPlaceholderByType(question.question_type)} 
-          className={cn("bg-muted/50 border-dashed", hasError && "border-destructive")}
-          value={responseValue || ''}
-          onChange={(e) => onResponseChange?.(question.id, e.target.value)}
-        />;
+        return <Input placeholder={question.placeholder || getPlaceholderByType(question.question_type)} className={cn("bg-muted/50 border-dashed", hasError && "border-destructive")} value={responseValue || ''} onChange={e => onResponseChange?.(question.id, e.target.value)} />;
       case 'number':
-        return <Input 
-          type="number" 
-          placeholder={question.placeholder || getPlaceholderByType(question.question_type)} 
-          className={cn("bg-muted/50 border-dashed w-full", hasError && "border-destructive")}
-          value={responseValue || ''}
-          onChange={(e) => onResponseChange?.(question.id, e.target.value)}
-        />;
+        return <Input type="number" placeholder={question.placeholder || getPlaceholderByType(question.question_type)} className={cn("bg-muted/50 border-dashed w-full", hasError && "border-destructive")} value={responseValue || ''} onChange={e => onResponseChange?.(question.id, e.target.value)} />;
       case 'checkbox':
         const checkboxOptions = question.options && question.options.length > 0 ? question.options : [{
           id: '1',
@@ -557,58 +545,42 @@ function SortableQuestionCard({
       {/* Footer with actions */}
       <div className="bg-muted/20 border-t border-border/40 rounded-b-lg">
         {/* Notes display or input */}
-        {question.notes && !isEditingNote ? (
-          <div className="px-5 py-3 flex items-center justify-between">
+        {question.notes && !isEditingNote ? <div className="px-5 py-3 flex items-center justify-between">
             <p className="text-sm text-foreground">{question.notes}</p>
-            <button 
-              onClick={() => {
-                setShowNotes(true);
-                setIsEditingNote(true);
-              }} 
-              className="text-muted-foreground hover:text-primary transition-colors"
-            >
+            <button onClick={() => {
+          setShowNotes(true);
+          setIsEditingNote(true);
+        }} className="text-muted-foreground hover:text-primary transition-colors">
               <Pencil className="h-4 w-4" />
             </button>
-          </div>
-        ) : showNotes && (
-          <>
+          </div> : showNotes && <>
             <div className="px-5 py-3">
-              <Input 
-                value={question.notes || ''} 
-                onChange={e => onUpdate(question.id, { notes: e.target.value })} 
-                placeholder="Add Notes" 
-                className="w-full text-sm text-muted-foreground border-none bg-transparent px-0 h-auto focus-visible:ring-0 focus-visible:ring-offset-0 placeholder:text-muted-foreground/40" 
-              />
+              <Input value={question.notes || ''} onChange={e => onUpdate(question.id, {
+            notes: e.target.value
+          })} placeholder="Add Notes" className="w-full text-sm text-muted-foreground border-none bg-transparent px-0 h-auto focus-visible:ring-0 focus-visible:ring-offset-0 placeholder:text-muted-foreground/40" />
             </div>
             {/* Separator */}
             <div className="border-t border-border/40 mx-5" />
-          </>
-        )}
+          </>}
         
         {/* Media upload section */}
-        {showMedia && (
-          <>
+        {showMedia && <>
             <div className="px-5 py-3">
               <div className="border-2 border-dashed rounded-lg p-4 bg-muted/30">
-                <input 
-                  type="file" 
-                  multiple 
-                  accept="image/*,video/*,.pdf,.doc,.docx" 
-                  onChange={(e) => {
-                    const files = e.target.files;
-                    if (files && files.length > 0) {
-                      const newFiles = Array.from(files).map(file => ({
-                        name: file.name,
-                        url: URL.createObjectURL(file)
-                      }));
-                      const existingFiles = question.media_files || [];
-                      onUpdate(question.id, { media_files: [...existingFiles, ...newFiles] });
-                      setShowMedia(false);
-                    }
-                  }}
-                  className="hidden" 
-                  id={`media-upload-${question.id}`} 
-                />
+                <input type="file" multiple accept="image/*,video/*,.pdf,.doc,.docx" onChange={e => {
+              const files = e.target.files;
+              if (files && files.length > 0) {
+                const newFiles = Array.from(files).map(file => ({
+                  name: file.name,
+                  url: URL.createObjectURL(file)
+                }));
+                const existingFiles = question.media_files || [];
+                onUpdate(question.id, {
+                  media_files: [...existingFiles, ...newFiles]
+                });
+                setShowMedia(false);
+              }
+            }} className="hidden" id={`media-upload-${question.id}`} />
                 <label htmlFor={`media-upload-${question.id}`} className="flex flex-col items-center gap-2 cursor-pointer">
                   <Upload className="h-6 w-6 text-muted-foreground" />
                   <p className="text-sm text-muted-foreground">Click to upload media files</p>
@@ -618,85 +590,59 @@ function SortableQuestionCard({
             </div>
             {/* Separator */}
             <div className="border-t border-border/40 mx-5" />
-          </>
-        )}
+          </>}
         
         {/* Media files display */}
-        {question.media_files && question.media_files.length > 0 && (
-          <>
+        {question.media_files && question.media_files.length > 0 && <>
             <div className="px-5 py-3 flex flex-wrap gap-2">
-              {question.media_files.map((file, index) => (
-                <div 
-                  key={index} 
-                  className="flex items-center gap-2 px-3 py-1.5 bg-primary/10 text-primary rounded-full text-sm"
-                >
+              {question.media_files.map((file, index) => <div key={index} className="flex items-center gap-2 px-3 py-1.5 bg-primary/10 text-primary rounded-full text-sm">
                   <File className="h-3.5 w-3.5" />
                   <span className="max-w-[150px] truncate">{file.name}</span>
-                  <button 
-                    onClick={() => {
-                      const updatedFiles = question.media_files?.filter((_, i) => i !== index);
-                      onUpdate(question.id, { media_files: updatedFiles });
-                    }}
-                    className="hover:text-destructive transition-colors"
-                  >
+                  <button onClick={() => {
+              const updatedFiles = question.media_files?.filter((_, i) => i !== index);
+              onUpdate(question.id, {
+                media_files: updatedFiles
+              });
+            }} className="hover:text-destructive transition-colors">
                     <X className="h-3.5 w-3.5" />
                   </button>
-                </div>
-              ))}
+                </div>)}
             </div>
             {/* Separator */}
             <div className="border-t border-border/40 mx-5" />
-          </>
-        )}
+          </>}
         
         {/* Required and action buttons row - hidden for page breaks */}
-        {question.question_type !== 'page_break' && (
-          <div className="flex items-center justify-between px-5 py-3">
-            {!previewMode ? (
-              <label className="flex items-center gap-2 text-sm cursor-pointer hover:text-foreground transition-colors">
+        {question.question_type !== 'page_break' && <div className="flex items-center justify-between px-5 py-3">
+            {!previewMode ? <label className="flex items-center gap-2 text-sm cursor-pointer hover:text-foreground transition-colors">
                 <input type="checkbox" checked={question.required || false} onChange={e => onUpdate(question.id, {
-                required: e.target.checked
-              })} className="rounded border-muted-foreground/30" />
+            required: e.target.checked
+          })} className="rounded border-muted-foreground/30" />
                 <span className="flex items-center gap-1">
                   {question.required && <span className="text-destructive">*</span>}
                   <span className="text-foreground">Required</span>
                 </span>
-              </label>
-            ) : (
-              question.required ? (
-                <span className="flex items-center gap-1 text-sm">
+              </label> : question.required ? <span className="flex items-center gap-1 text-sm">
                   <span className="text-destructive">*</span>
                   <span className="text-foreground">Required</span>
-                </span>
-              ) : (
-                <span className="text-sm text-muted-foreground">Optional</span>
-              )
-            )}
+                </span> : <span className="text-sm text-muted-foreground">Optional</span>}
             <div className="flex items-center gap-4">
-              {!previewMode && !question.required && (
-                <span className="text-sm text-muted-foreground">Optional</span>
-              )}
-              <button 
-                onClick={() => {
-                  if (showNotes && question.notes) {
-                    // Save the note
-                    setShowNotes(false);
-                    setIsEditingNote(false);
-                  } else {
-                    // Show the note input
-                    setShowNotes(!showNotes);
-                    setIsEditingNote(true);
-                  }
-                }} 
-                className={cn("flex items-center gap-2 text-sm cursor-pointer transition-colors", showNotes ? "text-primary" : "text-muted-foreground hover:text-primary")}
-              >
+              {!previewMode && !question.required && <span className="text-sm text-muted-foreground">Optional</span>}
+              <button onClick={() => {
+            if (showNotes && question.notes) {
+              // Save the note
+              setShowNotes(false);
+              setIsEditingNote(false);
+            } else {
+              // Show the note input
+              setShowNotes(!showNotes);
+              setIsEditingNote(true);
+            }
+          }} className={cn("flex items-center gap-2 text-sm cursor-pointer transition-colors", showNotes ? "text-primary" : "text-muted-foreground hover:text-primary")}>
                 <MessageSquare className="h-4 w-4" />
                 {showNotes && question.notes ? "Save Note" : "Add Note"}
               </button>
-              <button 
-                onClick={() => setShowMedia(!showMedia)}
-                className={cn("flex items-center gap-2 text-sm cursor-pointer transition-colors", showMedia || (question.media_files && question.media_files.length > 0) ? "text-primary" : "text-muted-foreground hover:text-primary")}
-              >
+              <button onClick={() => setShowMedia(!showMedia)} className={cn("flex items-center gap-2 text-sm cursor-pointer transition-colors", showMedia || question.media_files && question.media_files.length > 0 ? "text-primary" : "text-muted-foreground hover:text-primary")}>
                 <Image className="h-4 w-4" />
                 {question.media_files && question.media_files.length > 0 ? `Media (${question.media_files.length})` : "Add Media"}
               </button>
@@ -705,8 +651,7 @@ function SortableQuestionCard({
                 Create Action
               </button>
             </div>
-          </div>
-        )}
+          </div>}
       </div>
     </div>;
 }
@@ -960,8 +905,7 @@ export default function AuditTemplateBuilder() {
     // Split questions into pages based on page_break
     const pages: CanvasQuestion[][] = [];
     let currentPageQuestions: CanvasQuestion[] = [];
-    
-    canvasQuestions.forEach((question) => {
+    canvasQuestions.forEach(question => {
       if (question.question_type === 'page_break') {
         if (currentPageQuestions.length > 0) {
           pages.push(currentPageQuestions);
@@ -974,29 +918,25 @@ export default function AuditTemplateBuilder() {
     if (currentPageQuestions.length > 0) {
       pages.push(currentPageQuestions);
     }
-    
     const totalPages = pages.length;
     const currentPageQuestionsToShow = pages[previewPage] || [];
     const isLastPage = previewPage >= totalPages - 1;
     const isFirstPage = previewPage === 0;
-    
+
     // Calculate question number offset for current page
     let questionOffset = 0;
     for (let i = 0; i < previewPage; i++) {
       questionOffset += (pages[i] || []).length;
     }
-    
     const validateCurrentPage = () => {
       const requiredQuestions = currentPageQuestionsToShow.filter(q => q.required);
       const errors: string[] = [];
-      
       requiredQuestions.forEach(q => {
         const value = previewResponses[q.id];
-        if (!value || (typeof value === 'string' && value.trim() === '')) {
+        if (!value || typeof value === 'string' && value.trim() === '') {
           errors.push(q.id);
         }
       });
-      
       if (errors.length > 0) {
         setValidationErrors(new Set(errors));
         toast.error('Please fill in all required fields');
@@ -1004,13 +944,11 @@ export default function AuditTemplateBuilder() {
       }
       return true;
     };
-    
     const handleNext = () => {
       if (validateCurrentPage()) {
         setPreviewPage(prev => prev + 1);
       }
     };
-    
     const handleSubmit = () => {
       if (validateCurrentPage()) {
         toast.success('Inspection submitted successfully!');
@@ -1020,25 +958,12 @@ export default function AuditTemplateBuilder() {
         navigate('/audits');
       }
     };
-
-    return (
-      <DashboardLayout>
+    return <DashboardLayout>
         <div className="space-y-6 p-6 animate-fade-in w-full">
           {/* Page Header */}
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <Button 
-                variant="ghost" 
-                onClick={() => navigate('/audits')} 
-                className="gap-2 hover:bg-[hsl(196deg_100%_93.53%)] hover:text-black [&:hover_svg]:text-black" 
-                style={{
-                  boxShadow: "var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow)",
-                  border: "1px solid #00000052"
-                }}
-              >
-                <X className="h-4 w-4" />
-                Cancel
-              </Button>
+              
               <div>
                 <h1 className="text-[28px] font-bold">{templateName || "Untitled Template"}</h1>
                 <p className="text-muted-foreground">
@@ -1054,8 +979,7 @@ export default function AuditTemplateBuilder() {
           {/* Content */}
           <div className="max-w-[800px] mx-auto">
             <div className="bg-card rounded-xl border shadow-sm p-6 min-h-[400px]">
-              {canvasQuestions.length === 0 || currentPageQuestionsToShow.length === 0 ? (
-                <div className="text-center py-12">
+              {canvasQuestions.length === 0 || currentPageQuestionsToShow.length === 0 ? <div className="text-center py-12">
                   <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
                     <Plus className="h-8 w-8 text-primary" />
                   </div>
@@ -1063,29 +987,18 @@ export default function AuditTemplateBuilder() {
                   <p className="text-sm text-muted-foreground max-w-md mx-auto">
                     This template has no questions to display.
                   </p>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {currentPageQuestionsToShow.map((question, index) => (
-                    <SortableQuestionCard 
-                      key={question.id} 
-                      question={question} 
-                      onDelete={deleteCanvasQuestion} 
-                      onUpdate={updateCanvasQuestion} 
-                      previewMode={true} 
-                      questionNumber={questionOffset + index + 1}
-                      responseValue={previewResponses[question.id]}
-                      onResponseChange={(qId, value) => {
-                        setPreviewResponses(prev => ({ ...prev, [qId]: value }));
-                        setValidationErrors(prev => {
-                          const newErrors = new Set(prev);
-                          newErrors.delete(qId);
-                          return newErrors;
-                        });
-                      }}
-                      hasError={validationErrors.has(question.id)}
-                    />
-                  ))}
+                </div> : <div className="space-y-4">
+                  {currentPageQuestionsToShow.map((question, index) => <SortableQuestionCard key={question.id} question={question} onDelete={deleteCanvasQuestion} onUpdate={updateCanvasQuestion} previewMode={true} questionNumber={questionOffset + index + 1} responseValue={previewResponses[question.id]} onResponseChange={(qId, value) => {
+                setPreviewResponses(prev => ({
+                  ...prev,
+                  [qId]: value
+                }));
+                setValidationErrors(prev => {
+                  const newErrors = new Set(prev);
+                  newErrors.delete(qId);
+                  return newErrors;
+                });
+              }} hasError={validationErrors.has(question.id)} />)}
                   
                   {/* Navigation buttons inside the card */}
                   <div className="flex items-center justify-between pt-6 border-t border-border/40 mt-6">
@@ -1093,42 +1006,27 @@ export default function AuditTemplateBuilder() {
                       {totalPages > 1 && `Page ${previewPage + 1} of ${totalPages}`}
                     </div>
                     <div className="flex items-center gap-3">
-                      {totalPages > 1 && !isFirstPage && (
-                        <Button 
-                          variant="ghost" 
-                          onClick={() => setPreviewPage(prev => prev - 1)} 
-                          className="gap-2 hover:bg-[hsl(196deg_100%_93.53%)] hover:text-black" 
-                          style={{ border: "1px solid #00000052" }}
-                        >
+                      {totalPages > 1 && !isFirstPage && <Button variant="ghost" onClick={() => setPreviewPage(prev => prev - 1)} className="gap-2 hover:bg-[hsl(196deg_100%_93.53%)] hover:text-black" style={{
+                    border: "1px solid #00000052"
+                  }}>
                           Previous
-                        </Button>
-                      )}
-                      {totalPages > 1 && !isLastPage && (
-                        <Button 
-                          variant="ghost" 
-                          onClick={handleNext} 
-                          className="gap-2 hover:bg-[hsl(196deg_100%_93.53%)] hover:text-black" 
-                          style={{ border: "1px solid #00000052" }}
-                        >
+                        </Button>}
+                      {totalPages > 1 && !isLastPage && <Button variant="ghost" onClick={handleNext} className="gap-2 hover:bg-[hsl(196deg_100%_93.53%)] hover:text-black" style={{
+                    border: "1px solid #00000052"
+                  }}>
                           Next
-                        </Button>
-                      )}
-                      {isLastPage && (
-                        <Button onClick={handleSubmit} className="bg-primary hover:bg-primary/90">
+                        </Button>}
+                      {isLastPage && <Button onClick={handleSubmit} className="bg-primary hover:bg-primary/90">
                           Submit
-                        </Button>
-                      )}
+                        </Button>}
                     </div>
                   </div>
-                </div>
-              )}
+                </div>}
             </div>
           </div>
         </div>
-      </DashboardLayout>
-    );
+      </DashboardLayout>;
   }
-
   return <div className="min-h-screen bg-background">
       {/* Header */}
       <div className="border-b bg-card sticky top-0 z-10">
@@ -1388,10 +1286,7 @@ export default function AuditTemplateBuilder() {
                 <div>
                   <DialogTitle className="text-lg font-semibold text-foreground">{templateName || "Untitled Template"}</DialogTitle>
                   <DialogDescription className="text-sm text-muted-foreground">
-                    {isLiveMode 
-                      ? "Complete the inspection by filling out all required fields below."
-                      : "You're viewing how this template will appear to users. Close to continue editing."
-                    }
+                    {isLiveMode ? "Complete the inspection by filling out all required fields below." : "You're viewing how this template will appear to users. Close to continue editing."}
                   </DialogDescription>
                 </div>
               </div>
@@ -1403,36 +1298,32 @@ export default function AuditTemplateBuilder() {
               <div className="max-w-4xl mx-auto">
                 <div className="bg-card border border-t-0 shadow-sm p-6 min-h-[400px]">
                   {(() => {
-                    // Split questions into pages based on page_break
-                    const pages: CanvasQuestion[][] = [];
-                    let currentPage: CanvasQuestion[] = [];
-                    
-                    canvasQuestions.forEach((question) => {
-                      if (question.question_type === 'page_break') {
-                        if (currentPage.length > 0) {
-                          pages.push(currentPage);
-                          currentPage = [];
-                        }
-                      } else {
-                        currentPage.push(question);
+                  // Split questions into pages based on page_break
+                  const pages: CanvasQuestion[][] = [];
+                  let currentPage: CanvasQuestion[] = [];
+                  canvasQuestions.forEach(question => {
+                    if (question.question_type === 'page_break') {
+                      if (currentPage.length > 0) {
+                        pages.push(currentPage);
+                        currentPage = [];
                       }
-                    });
-                    if (currentPage.length > 0) {
-                      pages.push(currentPage);
+                    } else {
+                      currentPage.push(question);
                     }
-                    
-                    const totalPages = pages.length;
-                    const currentPageQuestions = pages[previewPage] || [];
-                    
-                    // Calculate question number offset for current page
-                    let questionOffset = 0;
-                    for (let i = 0; i < previewPage; i++) {
-                      questionOffset += (pages[i] || []).length;
-                    }
-                    
-                    if (canvasQuestions.length === 0 || currentPageQuestions.length === 0) {
-                      return (
-                        <div className="text-center py-12">
+                  });
+                  if (currentPage.length > 0) {
+                    pages.push(currentPage);
+                  }
+                  const totalPages = pages.length;
+                  const currentPageQuestions = pages[previewPage] || [];
+
+                  // Calculate question number offset for current page
+                  let questionOffset = 0;
+                  for (let i = 0; i < previewPage; i++) {
+                    questionOffset += (pages[i] || []).length;
+                  }
+                  if (canvasQuestions.length === 0 || currentPageQuestions.length === 0) {
+                    return <div className="text-center py-12">
                           <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
                             <Plus className="h-8 w-8 text-primary" />
                           </div>
@@ -1440,35 +1331,22 @@ export default function AuditTemplateBuilder() {
                           <p className="text-sm text-muted-foreground max-w-md mx-auto">
                             Add questions to your template to see them here.
                           </p>
-                        </div>
-                      );
-                    }
-                    
-                    return (
-                      <div className="space-y-4">
-                        {currentPageQuestions.map((question, index) => (
-                          <SortableQuestionCard 
-                            key={question.id} 
-                            question={question} 
-                            onDelete={deleteCanvasQuestion} 
-                            onUpdate={updateCanvasQuestion} 
-                            previewMode={true} 
-                            questionNumber={questionOffset + index + 1}
-                            responseValue={previewResponses[question.id]}
-                            onResponseChange={(qId, value) => {
-                              setPreviewResponses(prev => ({ ...prev, [qId]: value }));
-                              setValidationErrors(prev => {
-                                const newErrors = new Set(prev);
-                                newErrors.delete(qId);
-                                return newErrors;
-                              });
-                            }}
-                            hasError={validationErrors.has(question.id)}
-                          />
-                        ))}
-                      </div>
-                    );
-                  })()}
+                        </div>;
+                  }
+                  return <div className="space-y-4">
+                        {currentPageQuestions.map((question, index) => <SortableQuestionCard key={question.id} question={question} onDelete={deleteCanvasQuestion} onUpdate={updateCanvasQuestion} previewMode={true} questionNumber={questionOffset + index + 1} responseValue={previewResponses[question.id]} onResponseChange={(qId, value) => {
+                      setPreviewResponses(prev => ({
+                        ...prev,
+                        [qId]: value
+                      }));
+                      setValidationErrors(prev => {
+                        const newErrors = new Set(prev);
+                        newErrors.delete(qId);
+                        return newErrors;
+                      });
+                    }} hasError={validationErrors.has(question.id)} />)}
+                      </div>;
+                })()}
                 </div>
               </div>
             </div>
@@ -1477,107 +1355,100 @@ export default function AuditTemplateBuilder() {
             <Separator />
             <div className="bg-card rounded-b-xl border border-t-0 px-6 py-4 flex items-center justify-between gap-3">
               {(() => {
-                // Calculate total pages again for footer
-                const pages: CanvasQuestion[][] = [];
-                let currentPage: CanvasQuestion[] = [];
-                
-                canvasQuestions.forEach((question) => {
-                  if (question.question_type === 'page_break') {
-                    if (currentPage.length > 0) {
-                      pages.push(currentPage);
-                      currentPage = [];
-                    }
-                  } else {
-                    currentPage.push(question);
+              // Calculate total pages again for footer
+              const pages: CanvasQuestion[][] = [];
+              let currentPage: CanvasQuestion[] = [];
+              canvasQuestions.forEach(question => {
+                if (question.question_type === 'page_break') {
+                  if (currentPage.length > 0) {
+                    pages.push(currentPage);
+                    currentPage = [];
+                  }
+                } else {
+                  currentPage.push(question);
+                }
+              });
+              if (currentPage.length > 0) {
+                pages.push(currentPage);
+              }
+              const totalPages = pages.length;
+              const isLastPage = previewPage >= totalPages - 1;
+              const isFirstPage = previewPage === 0;
+              const currentPageQuestions = pages[previewPage] || [];
+
+              // Validation function
+              const validateCurrentPage = () => {
+                const requiredQuestions = currentPageQuestions.filter(q => q.required);
+                const errors: string[] = [];
+                requiredQuestions.forEach(q => {
+                  const value = previewResponses[q.id];
+                  if (!value || typeof value === 'string' && value.trim() === '') {
+                    errors.push(q.id);
                   }
                 });
-                if (currentPage.length > 0) {
-                  pages.push(currentPage);
+                if (errors.length > 0) {
+                  setValidationErrors(new Set(errors));
+                  toast.error('Please fill in all required fields');
+                  return false;
                 }
-                
-                const totalPages = pages.length;
-                const isLastPage = previewPage >= totalPages - 1;
-                const isFirstPage = previewPage === 0;
-                
-                const currentPageQuestions = pages[previewPage] || [];
-                
-                // Validation function
-                const validateCurrentPage = () => {
-                  const requiredQuestions = currentPageQuestions.filter(q => q.required);
-                  const errors: string[] = [];
-                  
-                  requiredQuestions.forEach(q => {
-                    const value = previewResponses[q.id];
-                    if (!value || (typeof value === 'string' && value.trim() === '')) {
-                      errors.push(q.id);
-                    }
-                  });
-                  
-                  if (errors.length > 0) {
-                    setValidationErrors(new Set(errors));
-                    toast.error('Please fill in all required fields');
-                    return false;
+                return true;
+              };
+              const handleNext = () => {
+                if (validateCurrentPage()) {
+                  setPreviewPage(prev => prev + 1);
+                }
+              };
+              const handleSubmit = () => {
+                if (validateCurrentPage()) {
+                  toast.success(isLiveMode ? 'Inspection submitted successfully!' : 'Form submitted successfully!');
+                  setIsPreviewOpen(false);
+                  setPreviewResponses({});
+                  setValidationErrors(new Set());
+                  setPreviewPage(0);
+                  if (isLiveMode) {
+                    navigate('/audits');
                   }
-                  return true;
-                };
-                
-                const handleNext = () => {
-                  if (validateCurrentPage()) {
-                    setPreviewPage(prev => prev + 1);
-                  }
-                };
-                
-                const handleSubmit = () => {
-                  if (validateCurrentPage()) {
-                    toast.success(isLiveMode ? 'Inspection submitted successfully!' : 'Form submitted successfully!');
-                    setIsPreviewOpen(false);
-                    setPreviewResponses({});
-                    setValidationErrors(new Set());
-                    setPreviewPage(0);
-                    if (isLiveMode) {
-                      navigate('/audits');
-                    }
-                  }
-                };
-                
-                return (
-                  <>
+                }
+              };
+              return <>
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
                       {totalPages > 1 && `Page ${previewPage + 1} of ${totalPages}`}
                     </div>
                     <div className="flex items-center gap-3">
-                      {totalPages > 1 && !isFirstPage && (
-                        <Button variant="ghost" onClick={() => setPreviewPage(prev => prev - 1)} className="gap-2 hover:bg-[hsl(196deg_100%_93.53%)] hover:text-black" style={{ boxShadow: "var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow)", border: "1px solid #00000052" }}>
+                      {totalPages > 1 && !isFirstPage && <Button variant="ghost" onClick={() => setPreviewPage(prev => prev - 1)} className="gap-2 hover:bg-[hsl(196deg_100%_93.53%)] hover:text-black" style={{
+                    boxShadow: "var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow)",
+                    border: "1px solid #00000052"
+                  }}>
                           Previous
-                        </Button>
-                      )}
-                      {totalPages > 1 && !isLastPage && (
-                        <Button variant="ghost" onClick={handleNext} className="gap-2 hover:bg-[hsl(196deg_100%_93.53%)] hover:text-black" style={{ boxShadow: "var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow)", border: "1px solid #00000052" }}>
+                        </Button>}
+                      {totalPages > 1 && !isLastPage && <Button variant="ghost" onClick={handleNext} className="gap-2 hover:bg-[hsl(196deg_100%_93.53%)] hover:text-black" style={{
+                    boxShadow: "var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow)",
+                    border: "1px solid #00000052"
+                  }}>
                           Next
-                        </Button>
-                      )}
-                      {isLastPage && (
-                        <>
+                        </Button>}
+                      {isLastPage && <>
                           <Button variant="ghost" onClick={() => {
-                            setIsPreviewOpen(false);
-                            setPreviewResponses({});
-                            setValidationErrors(new Set());
-                            setPreviewPage(0);
-                            if (isLiveMode) {
-                              navigate('/audits');
-                            }
-                          }} className="gap-2 hover:bg-[hsl(196deg_100%_93.53%)] hover:text-black" style={{ boxShadow: "var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow)", border: "1px solid #00000052" }}>
+                      setIsPreviewOpen(false);
+                      setPreviewResponses({});
+                      setValidationErrors(new Set());
+                      setPreviewPage(0);
+                      if (isLiveMode) {
+                        navigate('/audits');
+                      }
+                    }} className="gap-2 hover:bg-[hsl(196deg_100%_93.53%)] hover:text-black" style={{
+                      boxShadow: "var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow)",
+                      border: "1px solid #00000052"
+                    }}>
                             Cancel
                           </Button>
                           <Button onClick={handleSubmit}>
                             Submit
                           </Button>
-                        </>
-                      )}
+                        </>}
                     </div>
-                  </>
-                );
-              })()}
+                  </>;
+            })()}
             </div>
           </DialogPrimitive.Content>
         </DialogPortal>
