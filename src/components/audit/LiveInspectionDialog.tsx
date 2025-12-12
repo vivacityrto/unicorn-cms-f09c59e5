@@ -285,7 +285,7 @@ function QuestionCard({
       {/* Content area */}
       <div className="p-5 space-y-4">
         {/* Question label */}
-        <p className="text-base font-medium text-foreground">{question.label || 'Untitled question'}</p>
+        <p className="text-[15px] font-medium text-foreground">{question.label || 'Untitled question'}</p>
 
         {/* Input based on question type */}
         <div className="pt-2">
