@@ -648,62 +648,64 @@ function SortableQuestionCard({
           </>
         )}
         
-        {/* Required and action buttons row */}
-        <div className="flex items-center justify-between px-5 py-3">
-          {!previewMode ? (
-            <label className="flex items-center gap-2 text-sm cursor-pointer hover:text-foreground transition-colors">
-              <input type="checkbox" checked={question.required || false} onChange={e => onUpdate(question.id, {
-              required: e.target.checked
-            })} className="rounded border-muted-foreground/30" />
-              <span className="flex items-center gap-1">
-                {question.required && <span className="text-destructive">*</span>}
-                <span className="text-foreground">Required</span>
-              </span>
-            </label>
-          ) : (
-            question.required ? (
-              <span className="flex items-center gap-1 text-sm">
-                <span className="text-destructive">*</span>
-                <span className="text-foreground">Required</span>
-              </span>
+        {/* Required and action buttons row - hidden for page breaks */}
+        {question.question_type !== 'page_break' && (
+          <div className="flex items-center justify-between px-5 py-3">
+            {!previewMode ? (
+              <label className="flex items-center gap-2 text-sm cursor-pointer hover:text-foreground transition-colors">
+                <input type="checkbox" checked={question.required || false} onChange={e => onUpdate(question.id, {
+                required: e.target.checked
+              })} className="rounded border-muted-foreground/30" />
+                <span className="flex items-center gap-1">
+                  {question.required && <span className="text-destructive">*</span>}
+                  <span className="text-foreground">Required</span>
+                </span>
+              </label>
             ) : (
-              <span className="text-sm text-muted-foreground">Optional</span>
-            )
-          )}
-          <div className="flex items-center gap-4">
-            {!previewMode && !question.required && (
-              <span className="text-sm text-muted-foreground">Optional</span>
+              question.required ? (
+                <span className="flex items-center gap-1 text-sm">
+                  <span className="text-destructive">*</span>
+                  <span className="text-foreground">Required</span>
+                </span>
+              ) : (
+                <span className="text-sm text-muted-foreground">Optional</span>
+              )
             )}
-            <button 
-              onClick={() => {
-                if (showNotes && question.notes) {
-                  // Save the note
-                  setShowNotes(false);
-                  setIsEditingNote(false);
-                } else {
-                  // Show the note input
-                  setShowNotes(!showNotes);
-                  setIsEditingNote(true);
-                }
-              }} 
-              className={cn("flex items-center gap-2 text-sm cursor-pointer transition-colors", showNotes ? "text-primary" : "text-muted-foreground hover:text-primary")}
-            >
-              <MessageSquare className="h-4 w-4" />
-              {showNotes && question.notes ? "Save Note" : "Add Note"}
-            </button>
-            <button 
-              onClick={() => setShowMedia(!showMedia)}
-              className={cn("flex items-center gap-2 text-sm cursor-pointer transition-colors", showMedia || (question.media_files && question.media_files.length > 0) ? "text-primary" : "text-muted-foreground hover:text-primary")}
-            >
-              <Image className="h-4 w-4" />
-              {question.media_files && question.media_files.length > 0 ? `Media (${question.media_files.length})` : "Add Media"}
-            </button>
-            <button className="flex items-center gap-2 text-sm text-muted-foreground cursor-pointer hover:text-primary transition-colors">
-              <Plus className="h-4 w-4" />
-              Create Action
-            </button>
+            <div className="flex items-center gap-4">
+              {!previewMode && !question.required && (
+                <span className="text-sm text-muted-foreground">Optional</span>
+              )}
+              <button 
+                onClick={() => {
+                  if (showNotes && question.notes) {
+                    // Save the note
+                    setShowNotes(false);
+                    setIsEditingNote(false);
+                  } else {
+                    // Show the note input
+                    setShowNotes(!showNotes);
+                    setIsEditingNote(true);
+                  }
+                }} 
+                className={cn("flex items-center gap-2 text-sm cursor-pointer transition-colors", showNotes ? "text-primary" : "text-muted-foreground hover:text-primary")}
+              >
+                <MessageSquare className="h-4 w-4" />
+                {showNotes && question.notes ? "Save Note" : "Add Note"}
+              </button>
+              <button 
+                onClick={() => setShowMedia(!showMedia)}
+                className={cn("flex items-center gap-2 text-sm cursor-pointer transition-colors", showMedia || (question.media_files && question.media_files.length > 0) ? "text-primary" : "text-muted-foreground hover:text-primary")}
+              >
+                <Image className="h-4 w-4" />
+                {question.media_files && question.media_files.length > 0 ? `Media (${question.media_files.length})` : "Add Media"}
+              </button>
+              <button className="flex items-center gap-2 text-sm text-muted-foreground cursor-pointer hover:text-primary transition-colors">
+                <Plus className="h-4 w-4" />
+                Create Action
+              </button>
+            </div>
           </div>
-        </div>
+        )}
       </div>
     </div>;
 }
