@@ -185,6 +185,9 @@ export function AuditTemplatesTable({
           <Table>
             <TableHeader>
               <TableRow className="border-b-2 hover:bg-transparent">
+                <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-r border-border/50 text-center w-[80px]">
+                  ID
+                </TableHead>
                 <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-r border-border/50 min-w-[300px]">
                   Template
                 </TableHead>
@@ -205,13 +208,13 @@ export function AuditTemplatesTable({
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center py-12 text-muted-foreground">
+                  <TableCell colSpan={6} className="text-center py-12 text-muted-foreground">
                     Loading templates...
                   </TableCell>
                 </TableRow>
               ) : filteredTemplates.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center py-12">
+                  <TableCell colSpan={6} className="text-center py-12">
                     <FileText className="h-10 w-10 mx-auto mb-3 text-muted-foreground/50" />
                     <p className="text-muted-foreground">No templates found</p>
                     <Button variant="link" onClick={onCreateTemplate} className="mt-2">
@@ -229,6 +232,9 @@ export function AuditTemplatesTable({
                       'hover:bg-primary/5 animate-fade-in'
                     )}
                   >
+                    <TableCell className="py-6 border-r border-border/50 text-center w-[80px]">
+                      <span className="font-mono text-sm text-muted-foreground">{template.id}</span>
+                    </TableCell>
                     <TableCell className="py-6 border-r border-border/50 min-w-[300px] pr-8">
                       <div className="flex items-center gap-3">
                         <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
