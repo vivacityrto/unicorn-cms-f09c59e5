@@ -7,11 +7,11 @@
   .scrollbar-hide::-webkit-scrollbar {
     display: none;
   }
-  
+
   /* Hide scrollbar for IE, Edge and Firefox */
   .scrollbar-hide {
-    -ms-overflow-style: none;  /* IE and Edge */
-    scrollbar-width: none;  /* Firefox */
+    -ms-overflow-style: none; /* IE and Edge */
+    scrollbar-width: none; /* Firefox */
   }
 
   /* Clean thin scrollbar */
@@ -19,20 +19,20 @@
     width: 6px;
     height: 6px;
   }
-  
+
   .scrollbar-thin::-webkit-scrollbar-track {
     background: transparent;
   }
-  
+
   .scrollbar-thin::-webkit-scrollbar-thumb {
     background: hsl(var(--muted-foreground) / 0.3);
     border-radius: 3px;
   }
-  
+
   .scrollbar-thin::-webkit-scrollbar-thumb:hover {
     background: hsl(var(--muted-foreground) / 0.5);
   }
-  
+
   .scrollbar-thin {
     scrollbar-width: thin;
     scrollbar-color: hsl(var(--muted-foreground) / 0.3) transparent;
@@ -150,9 +150,14 @@
   }
 }
 
+@layer components {
+  .zoom-in-95 {
+    padding: 20px 17px;
+    border-radius: 25px;
+    --tw-enter-scale: 0.95;
+  }
 
-  
-  .data-\[state\=open\]\:zoom-in-95[data-state=open] {
+  .data-\[state\=open\]\:zoom-in-95[data-state="open"] {
     padding: 20px 17px !important;
     border-radius: 25px !important;
   }
