@@ -25,6 +25,7 @@ export interface ComboboxOption {
   group?: string
   createdAt?: string
   status?: string
+  colorDot?: string // CSS class for color dot (e.g., 'bg-green-500')
 }
 
 interface ComboboxProps {
@@ -36,6 +37,8 @@ interface ComboboxProps {
   searchPlaceholder?: string
   className?: string
   disabled?: boolean
+  showColorDots?: boolean
+  hideCheck?: boolean
 }
 
 export function Combobox({
@@ -47,6 +50,8 @@ export function Combobox({
   searchPlaceholder = "Search...",
   className,
   disabled = false,
+  showColorDots = false,
+  hideCheck = false,
 }: ComboboxProps) {
   const [open, setOpen] = React.useState(false)
 
@@ -81,7 +86,7 @@ export function Combobox({
           <ArrowUpDown className="ml-2 h-4 w-4 shrink-0 text-muted-foreground" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="p-[10px] bg-background z-[100]" align="start" sideOffset={5} style={{ width: 'var(--radix-popover-trigger-width)' }}>
+      <PopoverContent className="p-[10px] bg-background z-[100] w-[188px]" align="start" sideOffset={5}>
         <Command className="bg-background !p-0">
           <CommandInput placeholder={searchPlaceholder} className="h-9" />
           <CommandList className="overflow-y-auto !p-0 max-h-[320px]">
@@ -109,18 +114,23 @@ export function Combobox({
                       <div className="flex flex-col py-1.5 w-full">
                         <div className="flex items-center justify-between w-full">
                           <span className="font-medium">{option.label}</span>
-                          {option.status && (
-                            <Badge 
-                              variant="outline"
-                              className={cn(
-                                "text-[0.75rem] py-[2px] px-[0.625rem] rounded-[11px] ml-2",
-                                option.status === 'active' && "bg-green-500/10 text-green-600 hover:bg-green-500/20 border border-green-600",
-                                option.status === 'inactive' && "bg-red-500/10 text-red-600 hover:bg-red-500/20 border border-red-600"
-                              )}
-                            >
-                              {option.status}
-                            </Badge>
-                          )}
+                          <div className="flex items-center gap-2">
+                            {option.status && (
+                              <Badge 
+                                variant="outline"
+                                className={cn(
+                                  "text-[0.75rem] py-[2px] px-[0.625rem] rounded-[11px]",
+                                  option.status === 'active' && "bg-green-500/10 text-green-600 hover:bg-green-500/20 border border-green-600",
+                                  option.status === 'inactive' && "bg-red-500/10 text-red-600 hover:bg-red-500/20 border border-red-600"
+                                )}
+                              >
+                                {option.status}
+                              </Badge>
+                            )}
+                            {showColorDots && option.colorDot && (
+                              <span className={cn("w-3 h-3 rounded-full shrink-0", option.colorDot)} />
+                            )}
+                          </div>
                         </div>
                         {option.secondaryLabel && (
                           <span className="text-xs text-muted-foreground mt-0.5">{option.secondaryLabel}</span>
@@ -132,7 +142,9 @@ export function Combobox({
                           </span>
                         )}
                       </div>
-                      <Check className={cn("ml-auto h-4 w-4 shrink-0", value === option.value ? "opacity-100" : "opacity-0")} />
+                      {!hideCheck && (
+                        <Check className={cn("ml-auto h-4 w-4 shrink-0", value === option.value ? "opacity-100" : "opacity-0")} />
+                      )}
                     </CommandItem>
                   ))}
                 </CommandGroup>

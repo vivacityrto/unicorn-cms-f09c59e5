@@ -1334,35 +1334,50 @@ export default function AuditTemplateBuilder() {
                     };
                     setNewResponseSetOptions(updated);
                   }} placeholder="Option label" className="flex-1 bg-background" />
-                        <Combobox options={[{
-                    value: 'bg-green-500',
-                    label: 'Green'
-                  }, {
-                    value: 'bg-red-500',
-                    label: 'Red'
-                  }, {
-                    value: 'bg-yellow-500',
-                    label: 'Yellow'
-                  }, {
-                    value: 'bg-blue-500',
-                    label: 'Blue'
-                  }, {
-                    value: 'bg-purple-500',
-                    label: 'Purple'
-                  }, {
-                    value: 'bg-orange-500',
-                    label: 'Orange'
-                  }, {
-                    value: 'bg-muted',
-                    label: 'Gray'
-                  }]} value={option.color || 'bg-muted'} onValueChange={val => {
-                    const updated = [...newResponseSetOptions];
-                    updated[idx] = {
-                      ...updated[idx],
-                      color: val
-                    };
-                    setNewResponseSetOptions(updated);
-                  }} placeholder="Color" className="w-[110px] bg-background" />
+                        <Combobox 
+                          showColorDots
+                          hideCheck
+                          options={[{
+                            value: 'bg-green-500',
+                            label: 'Green',
+                            colorDot: 'bg-green-500'
+                          }, {
+                            value: 'bg-red-500',
+                            label: 'Red',
+                            colorDot: 'bg-red-500'
+                          }, {
+                            value: 'bg-yellow-500',
+                            label: 'Yellow',
+                            colorDot: 'bg-yellow-500'
+                          }, {
+                            value: 'bg-blue-500',
+                            label: 'Blue',
+                            colorDot: 'bg-blue-500'
+                          }, {
+                            value: 'bg-purple-500',
+                            label: 'Purple',
+                            colorDot: 'bg-purple-500'
+                          }, {
+                            value: 'bg-orange-500',
+                            label: 'Orange',
+                            colorDot: 'bg-orange-500'
+                          }, {
+                            value: 'bg-muted',
+                            label: 'Gray',
+                            colorDot: 'bg-gray-400'
+                          }]} 
+                          value={option.color || 'bg-muted'} 
+                          onValueChange={val => {
+                            const updated = [...newResponseSetOptions];
+                            updated[idx] = {
+                              ...updated[idx],
+                              color: val
+                            };
+                            setNewResponseSetOptions(updated);
+                          }} 
+                          placeholder="Color" 
+                          className="w-[110px] bg-background" 
+                        />
                         {newResponseSetOptions.length > 1 && <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10" onClick={() => setNewResponseSetOptions(prev => prev.filter((_, i) => i !== idx))}>
                             <X className="h-4 w-4" />
                           </Button>}
