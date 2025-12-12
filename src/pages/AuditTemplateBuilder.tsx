@@ -496,15 +496,11 @@ function SortableQuestionCard({
       {/* Header with drag handle and delete */}
       <div className="flex items-center justify-between px-5 py-3 bg-muted/30 border-b border-border/40 rounded-t-lg">
         <div className="flex items-center gap-3">
-          {previewMode ? (
-            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+          {previewMode ? <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
               {questionNumber}.
-            </span>
-          ) : (
-            <button {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground p-1.5 rounded-md hover:bg-background/80 transition-colors">
+            </span> : <button {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground p-1.5 rounded-md hover:bg-background/80 transition-colors">
               <GripVertical className="h-4 w-4" />
-            </button>
-          )}
+            </button>}
           <div className={cn("h-8 w-8 rounded-md flex items-center justify-center bg-background shadow-sm border border-border/50", questionType?.color)}>
             <Icon className="h-4 w-4" />
           </div>
@@ -512,11 +508,9 @@ function SortableQuestionCard({
             {question.question_type.replace(/_/g, ' ')}
           </span>
         </div>
-        {!previewMode && (
-          <Button variant="ghost" size="icon" className="h-8 w-8 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors" onClick={() => onDelete(question.id)}>
+        {!previewMode && <Button variant="ghost" size="icon" className="h-8 w-8 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors" onClick={() => onDelete(question.id)}>
             <Trash2 className="h-4 w-4" />
-          </Button>
-        )}
+          </Button>}
       </div>
 
       {/* Content area */}
@@ -1049,9 +1043,7 @@ export default function AuditTemplateBuilder() {
             {/* Preview Header */}
             <div className="bg-card rounded-t-xl border border-b-0 px-6 py-4">
               <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                  <Eye className="h-5 w-5 text-primary" />
-                </div>
+                
                 <div>
                   <DialogTitle className="text-lg font-semibold text-foreground">{templateName || "Untitled Template"}</DialogTitle>
                   <DialogDescription className="text-sm text-muted-foreground">
