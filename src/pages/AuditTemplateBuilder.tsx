@@ -253,13 +253,19 @@ function SortableQuestionCard({
   onDelete,
   onUpdate,
   previewMode = false,
-  questionNumber
+  questionNumber,
+  responseValue,
+  onResponseChange,
+  hasError
 }: {
   question: CanvasQuestion;
   onDelete: (id: string) => void;
   onUpdate: (id: string, updates: Partial<CanvasQuestion>) => void;
   previewMode?: boolean;
   questionNumber?: number;
+  responseValue?: any;
+  onResponseChange?: (questionId: string, value: any) => void;
+  hasError?: boolean;
 }) {
   const {
     attributes,
@@ -275,7 +281,11 @@ function SortableQuestionCard({
   const [showNotes, setShowNotes] = useState(false);
   const [isEditingNote, setIsEditingNote] = useState(false);
   const [showMedia, setShowMedia] = useState(false);
-  const [selectedOptionIdx, setSelectedOptionIdx] = useState<number | null>(null);
+  const [selectedOptionIdx, setSelectedOptionIdx] = useState<number | null>(
+    responseValue !== undefined && question.options?.length 
+      ? question.options.findIndex((opt: any) => opt.label === responseValue)
+      : null
+  );
   const style = {
     transform: CSS.Transform.toString(transform),
     transition
@@ -316,9 +326,20 @@ function SortableQuestionCard({
         return <VivacityTeamDropdownPreview />;
       case 'text_answer':
       case 'asset':
-        return <Input placeholder={question.placeholder || getPlaceholderByType(question.question_type)} className="bg-muted/50 border-dashed" />;
+        return <Input 
+          placeholder={question.placeholder || getPlaceholderByType(question.question_type)} 
+          className={cn("bg-muted/50 border-dashed", hasError && "border-destructive")}
+          value={responseValue || ''}
+          onChange={(e) => onResponseChange?.(question.id, e.target.value)}
+        />;
       case 'number':
-        return <Input type="number" placeholder={question.placeholder || getPlaceholderByType(question.question_type)} className="bg-muted/50 border-dashed w-full" />;
+        return <Input 
+          type="number" 
+          placeholder={question.placeholder || getPlaceholderByType(question.question_type)} 
+          className={cn("bg-muted/50 border-dashed w-full", hasError && "border-destructive")}
+          value={responseValue || ''}
+          onChange={(e) => onResponseChange?.(question.id, e.target.value)}
+        />;
       case 'checkbox':
         const checkboxOptions = question.options && question.options.length > 0 ? question.options : [{
           id: '1',
@@ -479,7 +500,10 @@ function SortableQuestionCard({
             {question.options?.map((opt: any, idx: number) => {
             const isSelected = selectedOptionIdx === idx;
             const badgeClassPreview = isSelected ? colorMapPreview[opt.color || 'bg-muted'] || colorMapPreview['bg-muted'] : 'bg-muted/50 text-muted-foreground border-border/50';
-            return <span key={idx} onClick={() => setSelectedOptionIdx(idx)} className={cn("px-2.5 py-1 rounded-lg text-[15px] font-normal border backdrop-blur-sm cursor-pointer transition-all duration-200", badgeClassPreview, isSelected ? "scale-105" : "hover:bg-muted/80")}>
+            return <span key={idx} onClick={() => {
+              setSelectedOptionIdx(idx);
+              onResponseChange?.(question.id, opt.label);
+            }} className={cn("px-2.5 py-1 rounded-lg text-[15px] font-normal border backdrop-blur-sm cursor-pointer transition-all duration-200", badgeClassPreview, isSelected ? "scale-105" : "hover:bg-muted/80")}>
                 {opt.label}
               </span>;
           })}
@@ -495,7 +519,7 @@ function SortableQuestionCard({
         return null;
     }
   };
-  return <div ref={setNodeRef} style={style} className={cn("bg-card border rounded-lg shadow-sm transition-all duration-200", isDragging && "opacity-50 shadow-xl scale-[1.02]", isFocused ? "border-primary/50 shadow-md ring-1 ring-primary/20" : "border-border/60 hover:border-border hover:shadow-md")} onFocus={() => setIsFocused(true)} onBlur={() => setIsFocused(false)}>
+  return <div ref={setNodeRef} style={style} className={cn("bg-card border rounded-lg shadow-sm transition-all duration-200", isDragging && "opacity-50 shadow-xl scale-[1.02]", hasError && "border-destructive ring-1 ring-destructive/20", isFocused ? "border-primary/50 shadow-md ring-1 ring-primary/20" : !hasError && "border-border/60 hover:border-border hover:shadow-md")} onFocus={() => setIsFocused(true)} onBlur={() => setIsFocused(false)}>
       {/* Header with drag handle and delete */}
       <div className="flex items-center justify-between px-5 py-3 bg-muted/30 border-b border-border/40 rounded-t-lg">
         <div className="flex items-center gap-3">
@@ -721,6 +745,8 @@ export default function AuditTemplateBuilder() {
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [previewPage, setPreviewPage] = useState(0);
   const [isLoading, setIsLoading] = useState(!!templateIdParam);
+  const [previewResponses, setPreviewResponses] = useState<Record<string, any>>({});
+  const [validationErrors, setValidationErrors] = useState<Set<string>>(new Set());
 
   // Create response set dialog state
   const [isCreateResponseSetOpen, setIsCreateResponseSetOpen] = useState(false);
@@ -1154,7 +1180,11 @@ export default function AuditTemplateBuilder() {
       {/* Preview Dialog */}
       <Dialog open={isPreviewOpen} onOpenChange={open => {
       setIsPreviewOpen(open);
-      if (!open) setPreviewPage(0);
+      if (!open) {
+        setPreviewPage(0);
+        setPreviewResponses({});
+        setValidationErrors(new Set());
+      }
     }}>
         <DialogPortal>
           <DialogOverlay className="z-[70] bg-black/70" />
@@ -1228,7 +1258,17 @@ export default function AuditTemplateBuilder() {
                             onDelete={deleteCanvasQuestion} 
                             onUpdate={updateCanvasQuestion} 
                             previewMode={true} 
-                            questionNumber={questionOffset + index + 1} 
+                            questionNumber={questionOffset + index + 1}
+                            responseValue={previewResponses[question.id]}
+                            onResponseChange={(qId, value) => {
+                              setPreviewResponses(prev => ({ ...prev, [qId]: value }));
+                              setValidationErrors(prev => {
+                                const newErrors = new Set(prev);
+                                newErrors.delete(qId);
+                                return newErrors;
+                              });
+                            }}
+                            hasError={validationErrors.has(question.id)}
                           />
                         ))}
                       </div>
@@ -1264,6 +1304,44 @@ export default function AuditTemplateBuilder() {
                 const isLastPage = previewPage >= totalPages - 1;
                 const isFirstPage = previewPage === 0;
                 
+                const currentPageQuestions = pages[previewPage] || [];
+                
+                // Validation function
+                const validateCurrentPage = () => {
+                  const requiredQuestions = currentPageQuestions.filter(q => q.required);
+                  const errors: string[] = [];
+                  
+                  requiredQuestions.forEach(q => {
+                    const value = previewResponses[q.id];
+                    if (!value || (typeof value === 'string' && value.trim() === '')) {
+                      errors.push(q.id);
+                    }
+                  });
+                  
+                  if (errors.length > 0) {
+                    setValidationErrors(new Set(errors));
+                    toast.error('Please fill in all required fields');
+                    return false;
+                  }
+                  return true;
+                };
+                
+                const handleNext = () => {
+                  if (validateCurrentPage()) {
+                    setPreviewPage(prev => prev + 1);
+                  }
+                };
+                
+                const handleSubmit = () => {
+                  if (validateCurrentPage()) {
+                    toast.success('Form submitted successfully!');
+                    setIsPreviewOpen(false);
+                    setPreviewResponses({});
+                    setValidationErrors(new Set());
+                    setPreviewPage(0);
+                  }
+                };
+                
                 return (
                   <>
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -1276,16 +1354,21 @@ export default function AuditTemplateBuilder() {
                         </Button>
                       )}
                       {totalPages > 1 && !isLastPage && (
-                        <Button variant="ghost" onClick={() => setPreviewPage(prev => prev + 1)} className="gap-2 hover:bg-[hsl(196deg_100%_93.53%)] hover:text-black" style={{ boxShadow: "var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow)", border: "1px solid #00000052" }}>
+                        <Button variant="ghost" onClick={handleNext} className="gap-2 hover:bg-[hsl(196deg_100%_93.53%)] hover:text-black" style={{ boxShadow: "var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow)", border: "1px solid #00000052" }}>
                           Next
                         </Button>
                       )}
                       {isLastPage && (
                         <>
-                          <Button variant="ghost" onClick={() => setIsPreviewOpen(false)} className="gap-2 hover:bg-[hsl(196deg_100%_93.53%)] hover:text-black" style={{ boxShadow: "var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow)", border: "1px solid #00000052" }}>
+                          <Button variant="ghost" onClick={() => {
+                            setIsPreviewOpen(false);
+                            setPreviewResponses({});
+                            setValidationErrors(new Set());
+                            setPreviewPage(0);
+                          }} className="gap-2 hover:bg-[hsl(196deg_100%_93.53%)] hover:text-black" style={{ boxShadow: "var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow)", border: "1px solid #00000052" }}>
                             Cancel
                           </Button>
-                          <Button onClick={() => setIsPreviewOpen(false)}>
+                          <Button onClick={handleSubmit}>
                             Submit
                           </Button>
                         </>
