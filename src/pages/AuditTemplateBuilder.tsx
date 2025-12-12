@@ -563,9 +563,9 @@ function SortableQuestionCard({
       {/* Content area */}
       <div className="p-5 space-y-4">
         {/* Question label input */}
-        {previewMode ? <p className="text-base font-medium text-foreground">{question.label || 'Untitled question'}</p> : <Input value={question.label} onChange={e => onUpdate(question.id, {
+        {previewMode ? <p className="font-medium text-foreground" style={{ fontSize: '15px' }}>{question.label || 'Untitled question'}</p> : <Input value={question.label} onChange={e => onUpdate(question.id, {
         label: e.target.value
-      })} placeholder="Enter your question" className="text-base font-medium border-none bg-transparent px-0 h-auto focus-visible:ring-0 focus-visible:ring-offset-0 placeholder:text-muted-foreground/50" />}
+      })} placeholder="Enter your question" className="font-medium border-none bg-transparent px-0 h-auto focus-visible:ring-0 focus-visible:ring-offset-0 placeholder:text-muted-foreground/50" style={{ fontSize: '15px' }} />}
 
         {/* Input preview based on question type */}
         <div className="pt-2">
