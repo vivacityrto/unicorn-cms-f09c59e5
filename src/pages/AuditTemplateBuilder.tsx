@@ -497,9 +497,9 @@ function SortableQuestionCard({
       <div className="flex items-center justify-between px-5 py-3 bg-muted/30 border-b border-border/40 rounded-t-lg">
         <div className="flex items-center gap-3">
           {previewMode ? (
-            <div className="h-8 w-8 rounded-md flex items-center justify-center bg-primary text-primary-foreground font-semibold text-sm">
-              {questionNumber}
-            </div>
+            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+              {questionNumber}.
+            </span>
           ) : (
             <button {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground p-1.5 rounded-md hover:bg-background/80 transition-colors">
               <GripVertical className="h-4 w-4" />
