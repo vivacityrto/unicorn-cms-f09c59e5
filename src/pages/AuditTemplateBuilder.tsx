@@ -498,7 +498,7 @@ function SortableQuestionCard({
   };
   return <div ref={setNodeRef} style={style} className={cn("bg-card border-2 rounded-xl p-5 transition-all", isDragging && "opacity-50 shadow-xl", isFocused ? "border-primary shadow-lg" : "border-border hover:border-primary/30")} onFocus={() => setIsFocused(true)} onBlur={() => setIsFocused(false)}>
       {/* Header with drag handle and delete */}
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex items-center justify-between pb-3 mb-4 border-b border-border/50">
         <div className="flex items-center gap-3">
           <button {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground p-1 rounded hover:bg-muted">
             <GripVertical className="h-5 w-5" />
