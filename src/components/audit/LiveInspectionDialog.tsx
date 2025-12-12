@@ -191,24 +191,37 @@ function QuestionCard({
         );
       case 'multiple_choice':
         const mcOptions = question.options?.length ? question.options : [{ label: 'Option 1' }];
+        const colorMapPreview: Record<string, string> = {
+          'bg-green-500': 'bg-green-500/15 text-green-600 border-green-500/30',
+          'bg-red-500': 'bg-red-500/15 text-red-600 border-red-500/30',
+          'bg-blue-500': 'bg-blue-500/15 text-blue-600 border-blue-500/30',
+          'bg-yellow-500': 'bg-yellow-500/15 text-yellow-600 border-yellow-500/30',
+          'bg-purple-500': 'bg-purple-500/15 text-purple-600 border-purple-500/30',
+          'bg-orange-500': 'bg-orange-500/15 text-orange-600 border-orange-500/30',
+          'bg-muted': 'bg-muted/80 text-muted-foreground border-border'
+        };
         return (
           <div className="flex flex-wrap gap-2">
-            {mcOptions.map((opt: any, idx: number) => (
-              <Button
-                key={idx}
-                type="button"
-                variant={responseValue === opt.label ? "default" : "outline"}
-                size="sm"
-                className={cn(
-                  "transition-all",
-                  responseValue === opt.label && opt.color,
-                  hasError && "border-destructive"
-                )}
-                onClick={() => onResponseChange(question.id, opt.label)}
-              >
-                {opt.label}
-              </Button>
-            ))}
+            {mcOptions.map((opt: any, idx: number) => {
+              const isSelected = responseValue === opt.label;
+              const badgeClassPreview = isSelected 
+                ? colorMapPreview[opt.color || 'bg-muted'] || colorMapPreview['bg-muted'] 
+                : 'bg-muted/50 text-muted-foreground border-border/50';
+              return (
+                <span 
+                  key={idx} 
+                  onClick={() => onResponseChange(question.id, opt.label)}
+                  className={cn(
+                    "px-2.5 py-1 rounded-lg text-[15px] font-normal border backdrop-blur-sm cursor-pointer transition-all duration-200",
+                    badgeClassPreview,
+                    isSelected ? "scale-105" : "hover:bg-muted/80",
+                    hasError && "border-destructive"
+                  )}
+                >
+                  {opt.label}
+                </span>
+              );
+            })}
           </div>
         );
       case 'date_time':
