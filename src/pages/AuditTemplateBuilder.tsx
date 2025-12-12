@@ -7,6 +7,7 @@ import { CSS } from '@dnd-kit/utilities';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { Combobox, ComboboxOption } from '@/components/ui/combobox';
@@ -500,10 +501,12 @@ function SortableQuestionCard({
           </div>;
       case 'annotation':
         return <div className="border rounded-lg p-4 bg-muted/30">
-            <div className="flex items-center gap-2 text-muted-foreground">
-              <MessageSquare className="h-4 w-4" />
-              <span className="text-sm">Add notes or comments...</span>
-            </div>
+            <Textarea 
+              value={responseValue || ''} 
+              onChange={e => onResponseChange?.(question.id, e.target.value)}
+              placeholder="Add notes or comments..."
+              className="min-h-[100px] bg-transparent border-none resize-none focus-visible:ring-0 focus-visible:ring-offset-0 placeholder:text-muted-foreground/50"
+            />
           </div>;
       default:
         return null;
