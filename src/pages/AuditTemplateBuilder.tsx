@@ -496,49 +496,56 @@ function SortableQuestionCard({
         return null;
     }
   };
-  return <div ref={setNodeRef} style={style} className={cn("bg-card border-2 rounded-xl p-5 transition-all", isDragging && "opacity-50 shadow-xl", isFocused ? "border-primary shadow-lg" : "border-border hover:border-primary/30")} onFocus={() => setIsFocused(true)} onBlur={() => setIsFocused(false)}>
+  return <div ref={setNodeRef} style={style} className={cn(
+    "bg-card border rounded-lg shadow-sm transition-all duration-200",
+    isDragging && "opacity-50 shadow-xl scale-[1.02]",
+    isFocused ? "border-primary/50 shadow-md ring-1 ring-primary/20" : "border-border/60 hover:border-border hover:shadow-md"
+  )} onFocus={() => setIsFocused(true)} onBlur={() => setIsFocused(false)}>
       {/* Header with drag handle and delete */}
-      <div className="flex items-center justify-between pb-3 mb-4 border-b border-border/50">
+      <div className="flex items-center justify-between px-5 py-3 bg-muted/30 border-b border-border/40 rounded-t-lg">
         <div className="flex items-center gap-3">
-          <button {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground p-1 rounded hover:bg-muted">
-            <GripVertical className="h-5 w-5" />
+          <button {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground p-1.5 rounded-md hover:bg-background/80 transition-colors">
+            <GripVertical className="h-4 w-4" />
           </button>
-          <div className={cn("h-9 w-9 rounded-lg flex items-center justify-center", questionType?.color, "bg-muted")}>
-            <Icon className="h-5 w-5" />
+          <div className={cn("h-8 w-8 rounded-md flex items-center justify-center bg-background shadow-sm border border-border/50", questionType?.color)}>
+            <Icon className="h-4 w-4" />
           </div>
-          <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+          <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
             {question.question_type.replace(/_/g, ' ')}
           </span>
         </div>
-        <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10" onClick={() => onDelete(question.id)}>
+        <Button variant="ghost" size="icon" className="h-8 w-8 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors" onClick={() => onDelete(question.id)}>
           <Trash2 className="h-4 w-4" />
         </Button>
       </div>
 
-      {/* Question label input */}
-      <Input value={question.label} onChange={e => onUpdate(question.id, {
-      label: e.target.value
-    })} placeholder="Enter your question" className="text-lg font-medium border-none bg-transparent px-0 h-auto focus-visible:ring-0 focus-visible:ring-offset-0 placeholder:text-muted-foreground/50" />
+      {/* Content area */}
+      <div className="p-5 space-y-4">
+        {/* Question label input */}
+        <Input value={question.label} onChange={e => onUpdate(question.id, {
+        label: e.target.value
+      })} placeholder="Enter your question" className="text-base font-medium border-none bg-transparent px-0 h-auto focus-visible:ring-0 focus-visible:ring-offset-0 placeholder:text-muted-foreground/50" />
 
-      {/* Description/helper text input */}
-      <Input value={question.description || ''} onChange={e => onUpdate(question.id, {
-      description: e.target.value
-    })} placeholder="Add description (optional)" className="text-sm text-muted-foreground border-none bg-transparent px-0 h-auto mt-1 focus-visible:ring-0 focus-visible:ring-offset-0 placeholder:text-muted-foreground/40" />
+        {/* Description/helper text input */}
+        <Input value={question.description || ''} onChange={e => onUpdate(question.id, {
+        description: e.target.value
+      })} placeholder="Add description (optional)" className="text-sm text-muted-foreground border-none bg-transparent px-0 h-auto focus-visible:ring-0 focus-visible:ring-offset-0 placeholder:text-muted-foreground/40" />
 
-      {/* Input preview based on question type */}
-      <div className="mt-3">
-        {renderInputPreview()}
+        {/* Input preview based on question type */}
+        <div className="pt-2">
+          {renderInputPreview()}
+        </div>
       </div>
 
-      {/* Required toggle and actions */}
-      <div className="flex items-center justify-between mt-4 pt-4 border-t">
-        <label className="flex items-center gap-2 text-sm text-muted-foreground cursor-pointer">
+      {/* Footer with actions */}
+      <div className="flex items-center justify-between px-5 py-3 bg-muted/20 border-t border-border/40 rounded-b-lg">
+        <label className="flex items-center gap-2 text-sm text-muted-foreground cursor-pointer hover:text-foreground transition-colors">
           <input type="checkbox" checked={question.required || false} onChange={e => onUpdate(question.id, {
           required: e.target.checked
         })} className="rounded border-muted-foreground/30" />
           Required
         </label>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-4">
           <button className="flex items-center gap-2 text-sm text-muted-foreground cursor-pointer hover:text-purple-600 transition-colors">
             <MessageSquare className="h-4 w-4" />
             Add Note
