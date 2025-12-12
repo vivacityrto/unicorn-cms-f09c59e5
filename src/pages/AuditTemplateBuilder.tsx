@@ -250,11 +250,15 @@ interface CanvasQuestion {
 function SortableQuestionCard({
   question,
   onDelete,
-  onUpdate
+  onUpdate,
+  previewMode = false,
+  questionNumber
 }: {
   question: CanvasQuestion;
   onDelete: (id: string) => void;
   onUpdate: (id: string, updates: Partial<CanvasQuestion>) => void;
+  previewMode?: boolean;
+  questionNumber?: number;
 }) {
   const {
     attributes,
@@ -492,9 +496,15 @@ function SortableQuestionCard({
       {/* Header with drag handle and delete */}
       <div className="flex items-center justify-between px-5 py-3 bg-muted/30 border-b border-border/40 rounded-t-lg">
         <div className="flex items-center gap-3">
-          <button {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground p-1.5 rounded-md hover:bg-background/80 transition-colors">
-            <GripVertical className="h-4 w-4" />
-          </button>
+          {previewMode ? (
+            <div className="h-8 w-8 rounded-md flex items-center justify-center bg-primary text-primary-foreground font-semibold text-sm">
+              {questionNumber}
+            </div>
+          ) : (
+            <button {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground p-1.5 rounded-md hover:bg-background/80 transition-colors">
+              <GripVertical className="h-4 w-4" />
+            </button>
+          )}
           <div className={cn("h-8 w-8 rounded-md flex items-center justify-center bg-background shadow-sm border border-border/50", questionType?.color)}>
             <Icon className="h-4 w-4" />
           </div>
@@ -502,9 +512,11 @@ function SortableQuestionCard({
             {question.question_type.replace(/_/g, ' ')}
           </span>
         </div>
-        <Button variant="ghost" size="icon" className="h-8 w-8 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors" onClick={() => onDelete(question.id)}>
-          <Trash2 className="h-4 w-4" />
-        </Button>
+        {!previewMode && (
+          <Button variant="ghost" size="icon" className="h-8 w-8 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors" onClick={() => onDelete(question.id)}>
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        )}
       </div>
 
       {/* Content area */}
@@ -1063,7 +1075,7 @@ export default function AuditTemplateBuilder() {
                         Add questions to your template to see them here.
                       </p>
                     </div> : <div className="space-y-4">
-                      {canvasQuestions.map(question => <SortableQuestionCard key={question.id} question={question} onDelete={deleteCanvasQuestion} onUpdate={updateCanvasQuestion} />)}
+                      {canvasQuestions.map((question, index) => <SortableQuestionCard key={question.id} question={question} onDelete={deleteCanvasQuestion} onUpdate={updateCanvasQuestion} previewMode={true} questionNumber={index + 1} />)}
                     </div>}
                 </div>
               </div>
