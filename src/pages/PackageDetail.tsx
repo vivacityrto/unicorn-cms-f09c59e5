@@ -14,7 +14,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "@/components/ui/separator";
 import { Combobox } from "@/components/ui/combobox";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { ArrowLeft, Users, CheckCircle2, FileText, Plus, Search, ArrowUpDown, Trash2, Edit, Calendar, Layers, GripVertical, XCircle } from "lucide-react";
+import { ArrowLeft, Users, CheckCircle2, FileText, Plus, Search, ArrowUpDown, Trash2, Edit, Calendar, Layers, GripVertical, XCircle, Circle, Clock } from "lucide-react";
 import { AddStageDialog } from "@/components/AddStageDialog";
 import { AddStaffTaskDialog } from "@/components/AddStaffTaskDialog";
 import { AddClientTaskDialog } from "@/components/AddClientTaskDialog";
@@ -73,6 +73,7 @@ interface StageData {
   is_active: boolean;
   created_at: string;
   updated_at: string;
+  status?: string | null;
 }
 
 interface SortableRowProps {
@@ -123,9 +124,22 @@ const SortableRow = ({ stage, index, onSelect, onEdit, onDelete }: SortableRowPr
       <TableCell className="border-r">{stage.short_name || "-"}</TableCell>
       <TableCell className="border-r max-w-md truncate">{stage.stage_description || "-"}</TableCell>
       <TableCell className="border-r">
-        <Badge variant={stage.is_active ? "default" : "secondary"}>
-          {stage.is_active ? "Active" : "Inactive"}
-        </Badge>
+        {stage.status === 'completed' ? (
+          <Badge className="bg-green-500/10 text-green-600 hover:bg-green-500/20 border border-green-600 text-[0.75rem] py-[2px] px-[0.625rem] rounded-[11px] gap-1.5">
+            <CheckCircle2 className="h-3 w-3" />
+            Completed
+          </Badge>
+        ) : stage.status === 'in_progress' ? (
+          <Badge className="bg-blue-500/10 text-blue-600 hover:bg-blue-500/20 border border-blue-600 text-[0.75rem] py-[2px] px-[0.625rem] rounded-[11px] gap-1.5">
+            <Clock className="h-3 w-3" />
+            In Progress
+          </Badge>
+        ) : (
+          <Badge className="bg-muted text-muted-foreground hover:bg-muted border border-border text-[0.75rem] py-[2px] px-[0.625rem] rounded-[11px] gap-1.5">
+            <Circle className="h-3 w-3" />
+            Not Started
+          </Badge>
+        )}
       </TableCell>
       <TableCell>
         <div className="flex items-center gap-2">
