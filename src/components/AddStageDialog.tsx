@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Layers, Loader2, Circle, Clock, CheckCircle2 } from "lucide-react";
@@ -266,12 +267,14 @@ export function AddStageDialog({
                       <span>Not Started</span>
                     </div>
                   </SelectItem>
+                  <Separator className="my-1" />
                   <SelectItem value="in_progress">
                     <div className="flex items-center gap-2">
                       <Clock className="h-4 w-4 text-blue-500" />
                       <span>In Progress</span>
                     </div>
                   </SelectItem>
+                  <Separator className="my-1" />
                   <SelectItem value="completed">
                     <div className="flex items-center gap-2">
                       <CheckCircle2 className="h-4 w-4 text-green-500" />
