@@ -441,7 +441,7 @@ export function LiveInspectionDialog({ open, onOpenChange, template }: LiveInspe
         <DialogOverlay className="z-[70] bg-black/70" />
         <DialogPrimitive.Content 
           className={cn(
-            "fixed left-[50%] top-[50%] z-[70] flex flex-col w-full max-w-4xl max-h-[90vh]",
+            "fixed left-[50%] top-[50%] z-[70] flex flex-col w-[800px] max-h-[90vh]",
             "translate-x-[-50%] translate-y-[-50%] overflow-hidden scrollbar-hide",
             "duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out",
             "data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",

@@ -1203,7 +1203,7 @@ export default function AuditTemplateBuilder() {
     }}>
         <DialogPortal>
           <DialogOverlay className="z-[70] bg-black/70" />
-          <DialogPrimitive.Content className={cn("fixed left-[50%] top-[50%] z-[70] flex flex-col w-full max-w-4xl max-h-[90vh] translate-x-[-50%] translate-y-[-50%] overflow-hidden scrollbar-hide duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%]")}>
+          <DialogPrimitive.Content className={cn("fixed left-[50%] top-[50%] z-[70] flex flex-col w-[800px] max-h-[90vh] translate-x-[-50%] translate-y-[-50%] overflow-hidden scrollbar-hide duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%]")}>
             {/* Preview Header */}
             <div className="bg-card rounded-t-xl border border-b-0 px-6 py-4">
               <div className="flex items-center gap-3">
