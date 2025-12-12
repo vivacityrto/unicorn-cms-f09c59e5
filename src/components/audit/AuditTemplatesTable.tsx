@@ -4,9 +4,17 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Search, FileText, Play, Pencil, Trash2, Users, CheckCircle, Lock, FileEdit, ArrowUpDown, Calendar } from 'lucide-react';
 import { cn } from '@/lib/utils';
+export interface AuditTemplateCreator {
+  user_uuid: string;
+  first_name: string | null;
+  last_name: string | null;
+  avatar_url: string | null;
+}
+
 export interface AuditTemplate {
   id: string;
   name: string;
@@ -15,6 +23,8 @@ export interface AuditTemplate {
   access: 'all_users' | 'restricted';
   status: 'active' | 'locked' | 'draft';
   icon_url?: string;
+  created_by?: string;
+  creator?: AuditTemplateCreator | null;
 }
 interface AuditTemplatesTableProps {
   templates: AuditTemplate[];
@@ -172,6 +182,9 @@ export function AuditTemplatesTable({
                 <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-r border-border/50 text-center">
                   Status
                 </TableHead>
+                <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-r border-border/50 text-center">
+                  Created by
+                </TableHead>
                 <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap text-center">
                   Actions
                 </TableHead>
@@ -179,11 +192,11 @@ export function AuditTemplatesTable({
             </TableHeader>
             <TableBody>
               {isLoading ? <TableRow>
-                  <TableCell colSpan={6} className="text-center py-12 text-muted-foreground">
+                  <TableCell colSpan={7} className="text-center py-12 text-muted-foreground">
                     Loading templates...
                   </TableCell>
                 </TableRow> : filteredTemplates.length === 0 ? <TableRow>
-                  <TableCell colSpan={6} className="text-center py-12">
+                  <TableCell colSpan={7} className="text-center py-12">
                     <FileText className="h-10 w-10 mx-auto mb-3 text-muted-foreground/50" />
                     <p className="text-muted-foreground">No templates found</p>
                     <Button variant="link" onClick={onCreateTemplate} className="mt-2">
@@ -223,6 +236,29 @@ export function AuditTemplatesTable({
                     </TableCell>
                     <TableCell className="py-6 border-r border-border/50 text-center whitespace-nowrap">
                       {getStatusBadge(template.status)}
+                    </TableCell>
+                    <TableCell className="py-6 border-r border-border/50 text-center whitespace-nowrap">
+                      {template.creator ? (
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <div className="flex items-center justify-center">
+                                <Avatar className="h-8 w-8 cursor-pointer">
+                                  <AvatarImage src={template.creator.avatar_url || undefined} alt={`${template.creator.first_name || ''} ${template.creator.last_name || ''}`} />
+                                  <AvatarFallback className="bg-primary/10 text-primary text-xs">
+                                    {(template.creator.first_name?.[0] || '') + (template.creator.last_name?.[0] || '') || '?'}
+                                  </AvatarFallback>
+                                </Avatar>
+                              </div>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>{`${template.creator.first_name || ''} ${template.creator.last_name || ''}`.trim() || 'Unknown'}</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      ) : (
+                        <span className="text-muted-foreground">-</span>
+                      )}
                     </TableCell>
                     <TableCell className="py-6 px-4 text-center whitespace-nowrap">
                       <div className="flex items-center justify-center gap-2">
