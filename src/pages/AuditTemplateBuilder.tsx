@@ -547,15 +547,15 @@ function SortableQuestionCard({
             Required
           </label>
           <div className="flex items-center gap-4">
-            <button onClick={() => setShowNotes(!showNotes)} className={cn("flex items-center gap-2 text-sm cursor-pointer transition-colors", showNotes ? "text-purple-600" : "text-muted-foreground hover:text-purple-600")}>
+            <button onClick={() => setShowNotes(!showNotes)} className={cn("flex items-center gap-2 text-sm cursor-pointer transition-colors", showNotes ? "text-primary" : "text-muted-foreground hover:text-primary")}>
               <MessageSquare className="h-4 w-4" />
               Add Note
             </button>
-            <button className="flex items-center gap-2 text-sm text-muted-foreground cursor-pointer hover:text-purple-600 transition-colors">
+            <button className="flex items-center gap-2 text-sm text-muted-foreground cursor-pointer hover:text-primary transition-colors">
               <Image className="h-4 w-4" />
               Add Media
             </button>
-            <button className="flex items-center gap-2 text-sm text-muted-foreground cursor-pointer hover:text-purple-600 transition-colors">
+            <button className="flex items-center gap-2 text-sm text-muted-foreground cursor-pointer hover:text-primary transition-colors">
               <Plus className="h-4 w-4" />
               Create Action
             </button>
