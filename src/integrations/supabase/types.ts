@@ -1931,6 +1931,7 @@ export type Database = {
           description: string | null
           id: number
           short_name: string | null
+          status: string | null
           title: string
           updated_at: string
           video_url: string | null
@@ -1941,6 +1942,7 @@ export type Database = {
           description?: string | null
           id?: never
           short_name?: string | null
+          status?: string | null
           title: string
           updated_at?: string
           video_url?: string | null
@@ -1951,6 +1953,7 @@ export type Database = {
           description?: string | null
           id?: never
           short_name?: string | null
+          status?: string | null
           title?: string
           updated_at?: string
           video_url?: string | null

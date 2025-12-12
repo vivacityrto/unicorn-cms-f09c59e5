@@ -92,6 +92,7 @@ export function AddStageDialog({
             short_name: formData.short_name || null,
             description: formData.stage_description || null,
             video_url: formData.video_url || null,
+            status: formData.status,
           })
           .eq('id', stageData.id);
         
@@ -109,6 +110,7 @@ export function AddStageDialog({
             short_name: formData.short_name || null,
             description: formData.stage_description || null,
             video_url: formData.video_url || null,
+            status: formData.status,
           })
           .select('id')
           .single();
