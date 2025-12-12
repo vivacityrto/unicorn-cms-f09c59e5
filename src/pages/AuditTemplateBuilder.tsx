@@ -639,11 +639,13 @@ function SortableQuestionCard({
               )}
             </label>
           ) : (
-            question.required && (
+            question.required ? (
               <span className="flex items-center gap-1 text-sm">
                 <span className="text-destructive">*</span>
                 <span className="text-foreground">Required</span>
               </span>
+            ) : (
+              <span className="text-sm text-muted-foreground">Optional</span>
             )
           )}
           <div className="flex items-center gap-4">
