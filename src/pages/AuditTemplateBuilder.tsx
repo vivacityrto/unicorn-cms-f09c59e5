@@ -1053,7 +1053,7 @@ export default function AuditTemplateBuilder() {
             {/* Same canvas container as edit mode */}
             <div className="flex-1 overflow-auto">
               <div className="max-w-4xl mx-auto">
-                <div className="bg-card rounded-b-xl border border-t-0 shadow-sm p-6 min-h-[400px]">
+                <div className="bg-card border border-t-0 shadow-sm p-6 min-h-[400px]">
                   {canvasQuestions.length === 0 ? <div className="text-center py-12">
                       <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
                         <Plus className="h-8 w-8 text-primary" />
