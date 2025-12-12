@@ -631,12 +631,10 @@ function SortableQuestionCard({
               <input type="checkbox" checked={question.required || false} onChange={e => onUpdate(question.id, {
               required: e.target.checked
             })} className="rounded border-muted-foreground/30" />
-              {question.required && (
-                <span className="flex items-center gap-1">
-                  <span className="text-destructive">*</span>
-                  <span className="text-foreground">Required</span>
-                </span>
-              )}
+              <span className="flex items-center gap-1">
+                {question.required && <span className="text-destructive">*</span>}
+                <span className="text-foreground">Required</span>
+              </span>
             </label>
           ) : (
             question.required ? (
