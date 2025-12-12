@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { Combobox, ComboboxOption } from '@/components/ui/combobox';
-import { Search, Plus, Pencil, Building2, FileText, Box, Building, Type, Hash, CheckSquare, CalendarDays, Image, SlidersHorizontal, MessageSquare, PenTool, MapPin, GripVertical, Trash2, X, Eye, Shield, ToggleLeft, Star, CircleDot, AlertTriangle, CheckCircle, List, CalendarClock, AlignLeft, FileStack } from 'lucide-react';
+import { Search, Plus, Pencil, Building2, FileText, Box, Building, Type, Hash, CheckSquare, CalendarDays, Image, SlidersHorizontal, MessageSquare, PenTool, MapPin, GripVertical, Trash2, X, Eye, Shield, ToggleLeft, Star, CircleDot, AlertTriangle, CheckCircle, List, CalendarClock, AlignLeft, FileStack, Upload, File } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription, DialogPortal, DialogOverlay } from '@/components/ui/dialog';
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { cn } from '@/lib/utils';
@@ -246,6 +246,7 @@ interface CanvasQuestion {
   description?: string;
   required?: boolean;
   notes?: string;
+  media_files?: { name: string; url: string }[];
 }
 function SortableQuestionCard({
   question,
@@ -273,6 +274,7 @@ function SortableQuestionCard({
   const [isFocused, setIsFocused] = useState(false);
   const [showNotes, setShowNotes] = useState(false);
   const [isEditingNote, setIsEditingNote] = useState(false);
+  const [showMedia, setShowMedia] = useState(false);
   const [selectedOptionIdx, setSelectedOptionIdx] = useState<number | null>(null);
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -557,6 +559,70 @@ function SortableQuestionCard({
             <div className="border-t border-border/40 mx-5" />
           </>
         )}
+        
+        {/* Media upload section */}
+        {showMedia && (
+          <>
+            <div className="px-5 py-3">
+              <div className="border-2 border-dashed rounded-lg p-4 bg-muted/30">
+                <input 
+                  type="file" 
+                  multiple 
+                  accept="image/*,video/*,.pdf,.doc,.docx" 
+                  onChange={(e) => {
+                    const files = e.target.files;
+                    if (files && files.length > 0) {
+                      const newFiles = Array.from(files).map(file => ({
+                        name: file.name,
+                        url: URL.createObjectURL(file)
+                      }));
+                      const existingFiles = question.media_files || [];
+                      onUpdate(question.id, { media_files: [...existingFiles, ...newFiles] });
+                    }
+                  }} 
+                  className="hidden" 
+                  id={`media-upload-${question.id}`} 
+                />
+                <label htmlFor={`media-upload-${question.id}`} className="flex flex-col items-center gap-2 cursor-pointer">
+                  <Upload className="h-6 w-6 text-muted-foreground" />
+                  <p className="text-sm text-muted-foreground">Click to upload media files</p>
+                  <p className="text-xs text-muted-foreground/60">Images, videos, PDFs, documents</p>
+                </label>
+              </div>
+            </div>
+            {/* Separator */}
+            <div className="border-t border-border/40 mx-5" />
+          </>
+        )}
+        
+        {/* Media files display */}
+        {question.media_files && question.media_files.length > 0 && (
+          <>
+            <div className="px-5 py-3 flex flex-wrap gap-2">
+              {question.media_files.map((file, index) => (
+                <div 
+                  key={index} 
+                  className="flex items-center gap-2 px-3 py-1.5 bg-primary/10 text-primary rounded-full text-sm"
+                >
+                  <File className="h-3.5 w-3.5" />
+                  <span className="max-w-[150px] truncate">{file.name}</span>
+                  <button 
+                    onClick={() => {
+                      const updatedFiles = question.media_files?.filter((_, i) => i !== index);
+                      onUpdate(question.id, { media_files: updatedFiles });
+                    }}
+                    className="hover:text-destructive transition-colors"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              ))}
+            </div>
+            {/* Separator */}
+            <div className="border-t border-border/40 mx-5" />
+          </>
+        )}
+        
         {/* Required and action buttons row */}
         <div className="flex items-center justify-between px-5 py-3">
           <label className="flex items-center gap-2 text-sm text-muted-foreground cursor-pointer hover:text-foreground transition-colors">
@@ -583,9 +649,12 @@ function SortableQuestionCard({
               <MessageSquare className="h-4 w-4" />
               {showNotes && question.notes ? "Save Note" : "Add Note"}
             </button>
-            <button className="flex items-center gap-2 text-sm text-muted-foreground cursor-pointer hover:text-primary transition-colors">
+            <button 
+              onClick={() => setShowMedia(!showMedia)}
+              className={cn("flex items-center gap-2 text-sm cursor-pointer transition-colors", showMedia || (question.media_files && question.media_files.length > 0) ? "text-primary" : "text-muted-foreground hover:text-primary")}
+            >
               <Image className="h-4 w-4" />
-              Add Media
+              {question.media_files && question.media_files.length > 0 ? `Media (${question.media_files.length})` : "Add Media"}
             </button>
             <button className="flex items-center gap-2 text-sm text-muted-foreground cursor-pointer hover:text-primary transition-colors">
               <Plus className="h-4 w-4" />
