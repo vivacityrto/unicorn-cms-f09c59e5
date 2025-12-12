@@ -130,7 +130,7 @@ const SortableRow = ({ stage, index, onSelect, onEdit, onDelete }: SortableRowPr
             Completed
           </Badge>
         ) : stage.status === 'in_progress' ? (
-          <Badge className="bg-blue-500/10 text-blue-600 hover:bg-blue-500/20 border border-blue-600 text-[0.75rem] py-[2px] px-[0.625rem] rounded-[11px] gap-1.5">
+          <Badge className="bg-yellow-500/10 text-yellow-600 hover:bg-yellow-500/20 border border-yellow-600 text-[0.75rem] py-[2px] px-[0.625rem] rounded-[11px] gap-1.5">
             <Clock className="h-3 w-3" />
             In Progress
           </Badge>
