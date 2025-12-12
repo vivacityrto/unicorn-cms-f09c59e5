@@ -1405,14 +1405,17 @@ export default function AuditTemplateBuilder() {
                 </Button>
               </div>
             </div>
-            <p className="text-[hsl(0deg_0%_15.11%)] font-semibold flex items-center gap-2">
-              <FileText className="h-4 w-4" />
-              {templateName || 'Untitled Template'}
-            </p>
           </div>
 
           {/* Content Card */}
           <Card className="w-[70%]">
+            {/* Form Header */}
+            <div className="px-6 pt-6 pb-4 border-b border-border/40">
+              <p className="text-[hsl(0deg_0%_15.11%)] font-semibold flex items-center gap-2 text-lg">
+                <FileText className="h-5 w-5" />
+                {templateName || 'Untitled Template'}
+              </p>
+            </div>
             <CardContent className="p-6" style={{ backgroundColor: '#7320810f' }}>
               {canvasQuestions.length === 0 || currentPageQuestionsToShow.length === 0 ? <div className="text-center py-12">
                   <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
