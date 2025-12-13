@@ -61,6 +61,7 @@ interface TenantData {
   user_count?: number;
   package_id?: number | null;
   clo_name?: string | null;
+  clo_avatar_url?: string | null;
   risk_level?: string | null;
   state?: string | null;
 }
@@ -607,9 +608,12 @@ const PackageDetail = () => {
 
       // Batch fetch CLO user names
       const userUuids = Object.values(connectedMap).filter(Boolean);
-      const { data: usersData } = await supabase.from("users").select("user_uuid, first_name, last_name").in("user_uuid", userUuids);
-      const userNameMap = (usersData || []).reduce((acc: Record<string, string>, user: any) => {
-        acc[user.user_uuid] = `${user.first_name} ${user.last_name}`;
+      const { data: usersData } = await supabase.from("users").select("user_uuid, first_name, last_name, avatar_url").in("user_uuid", userUuids);
+      const userDataMap = (usersData || []).reduce((acc: Record<string, { name: string; avatar_url: string | null }>, user: any) => {
+        acc[user.user_uuid] = {
+          name: `${user.first_name} ${user.last_name}`,
+          avatar_url: user.avatar_url
+        };
         return acc;
       }, {});
 
@@ -632,7 +636,8 @@ const PackageDetail = () => {
       const tenantsWithCounts = (tenantsData || []).map((tenant: any) => ({
         ...tenant,
         user_count: memberCountMap[tenant.id] || 0,
-        clo_name: connectedMap[tenant.id] ? userNameMap[connectedMap[tenant.id]] : null,
+        clo_name: connectedMap[tenant.id] ? userDataMap[connectedMap[tenant.id]]?.name : null,
+        clo_avatar_url: connectedMap[tenant.id] ? userDataMap[connectedMap[tenant.id]]?.avatar_url : null,
         state: stateMap[tenant.id] || null
       }));
 
@@ -783,7 +788,7 @@ const PackageDetail = () => {
                             Risk Level
                           </TableHead>
                           <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-border/50">
-                            Created
+                            Date Added
                           </TableHead>
                         </TableRow>
                       </TableHeader>
@@ -837,6 +842,7 @@ const PackageDetail = () => {
                                       <TooltipTrigger asChild>
                                         <div className="flex items-center justify-center">
                                           <Avatar className="h-8 w-8 cursor-pointer">
+                                            <AvatarImage src={tenant.clo_avatar_url || undefined} alt={tenant.clo_name} />
                                             <AvatarFallback className="bg-primary/10 text-primary text-xs font-medium">
                                               {tenant.clo_name.split(' ').map((n: string) => n[0]).join('').substring(0, 2).toUpperCase()}
                                             </AvatarFallback>
@@ -861,7 +867,8 @@ const PackageDetail = () => {
                                 </Badge>
                               </TableCell>
                               <TableCell className="py-6 whitespace-nowrap">
-                                <div className="text-sm text-muted-foreground">
+                                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                  <Calendar className="h-4 w-4" />
                                   {new Date(tenant.created_at).toLocaleDateString()}
                                 </div>
                               </TableCell>
