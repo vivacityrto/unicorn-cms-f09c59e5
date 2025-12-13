@@ -442,6 +442,14 @@ export default function TenantDetail() {
         </div>
       </div>
 
+      {/* Status Badge */}
+      <div className="px-6 mb-2">
+        <Badge variant={tenantStatus === "active" ? "default" : "destructive"} className={tenantStatus === "active" ? "bg-green-500/20 text-green-600 hover:bg-green-500/30 border border-green-600 text-[0.75rem] py-[2px] px-[0.625rem] rounded-[11px]" : "bg-red-500/20 text-red-600 hover:bg-red-500/30 border border-red-600 text-[0.75rem] py-[2px] px-[0.625rem] rounded-[11px]"}>
+          {tenantStatus === "active" ? <CheckCircle2 className="mr-1 h-3 w-3" /> : <XCircle className="mr-1 h-3 w-3" />}
+          {tenantStatus === "active" ? "Active" : "Inactive"}
+        </Badge>
+      </div>
+
       {/* Header Card */}
       <div className="px-6">
         <Card className="border-0 shadow-lg overflow-hidden">
@@ -456,15 +464,9 @@ export default function TenantDetail() {
                   </AvatarFallback>
                 </Avatar>
                 <div className="space-y-1">
-                  <div className="flex items-center gap-2">
-                    <h3 className="text-base font-semibold text-white">
-                      Hello, {clientData.contactname || clientData.companyname}
-                    </h3>
-                    <Badge variant={tenantStatus === "active" ? "default" : "destructive"} className={tenantStatus === "active" ? "bg-green-500/10 text-green-600 hover:bg-green-500/20 border border-green-600 text-[0.75rem] py-[2px] px-[0.625rem] rounded-[11px]" : "bg-red-500/10 text-red-600 hover:bg-red-500/20 border border-red-600 text-[0.75rem] py-[2px] px-[0.625rem] rounded-[11px]"}>
-                      {tenantStatus === "active" ? <CheckCircle2 className="mr-1 h-3 w-3" /> : <XCircle className="mr-1 h-3 w-3" />}
-                      {tenantStatus === "active" ? "Active" : "Inactive"}
-                    </Badge>
-                  </div>
+                  <h3 className="text-base font-semibold text-white">
+                    Hello, {clientData.contactname || clientData.companyname}
+                  </h3>
                   <div className="flex items-center gap-2 text-sm text-white/70">
                     <Building2 className="h-4 w-4" />
                     {clientData.companyname}
