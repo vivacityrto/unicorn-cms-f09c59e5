@@ -241,49 +241,51 @@ export function AddStageDialog({
               />
             </div>
 
-            {/* Status */}
-            <div className="space-y-2 w-1/2">
-              <Label htmlFor="stage-status">Status</Label>
-              <Select
-                value={formData.status}
-                onValueChange={(value: "not_started" | "in_progress" | "completed") => setFormData({ ...formData, status: value })}
-              >
-                <SelectTrigger id="stage-status">
-                  <SelectValue placeholder="Select status">
-                    {formData.status && (
+            {/* Status - Only show when adding stage for a specific tenant */}
+            {tenantId && (
+              <div className="space-y-2 w-1/2">
+                <Label htmlFor="stage-status">Status</Label>
+                <Select
+                  value={formData.status}
+                  onValueChange={(value: "not_started" | "in_progress" | "completed") => setFormData({ ...formData, status: value })}
+                >
+                  <SelectTrigger id="stage-status">
+                    <SelectValue placeholder="Select status">
+                      {formData.status && (
+                        <div className="flex items-center gap-2">
+                          {formData.status === 'completed' && <CheckCircle2 className="h-4 w-4 text-green-500" />}
+                          {formData.status === 'in_progress' && <Clock className="h-4 w-4 text-blue-500" />}
+                          {formData.status === 'not_started' && <Circle className="h-4 w-4 text-muted-foreground" />}
+                          <span className="capitalize">{formData.status.replace('_', ' ')}</span>
+                        </div>
+                      )}
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent className="bg-background">
+                    <SelectItem value="not_started">
                       <div className="flex items-center gap-2">
-                        {formData.status === 'completed' && <CheckCircle2 className="h-4 w-4 text-green-500" />}
-                        {formData.status === 'in_progress' && <Clock className="h-4 w-4 text-blue-500" />}
-                        {formData.status === 'not_started' && <Circle className="h-4 w-4 text-muted-foreground" />}
-                        <span className="capitalize">{formData.status.replace('_', ' ')}</span>
+                        <Circle className="h-4 w-4 text-muted-foreground" />
+                        <span>Not Started</span>
                       </div>
-                    )}
-                  </SelectValue>
-                </SelectTrigger>
-                <SelectContent className="bg-background">
-                  <SelectItem value="not_started">
-                    <div className="flex items-center gap-2">
-                      <Circle className="h-4 w-4 text-muted-foreground" />
-                      <span>Not Started</span>
-                    </div>
-                  </SelectItem>
-                  <Separator className="my-1" />
-                  <SelectItem value="in_progress">
-                    <div className="flex items-center gap-2">
-                      <Clock className="h-4 w-4 text-blue-500" />
-                      <span>In Progress</span>
-                    </div>
-                  </SelectItem>
-                  <Separator className="my-1" />
-                  <SelectItem value="completed">
-                    <div className="flex items-center gap-2">
-                      <CheckCircle2 className="h-4 w-4 text-green-500" />
-                      <span>Completed</span>
-                    </div>
-                  </SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+                    </SelectItem>
+                    <Separator className="my-1" />
+                    <SelectItem value="in_progress">
+                      <div className="flex items-center gap-2">
+                        <Clock className="h-4 w-4 text-blue-500" />
+                        <span>In Progress</span>
+                      </div>
+                    </SelectItem>
+                    <Separator className="my-1" />
+                    <SelectItem value="completed">
+                      <div className="flex items-center gap-2">
+                        <CheckCircle2 className="h-4 w-4 text-green-500" />
+                        <span>Completed</span>
+                      </div>
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
           </div>
 
           <DialogFooter>
