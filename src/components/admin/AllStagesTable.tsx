@@ -274,7 +274,7 @@ export function AllStagesTable() {
                   <TableCell className="py-6 border-r border-border/50 min-w-[200px]">
                     <div className="flex items-center gap-2">
                       <div>
-                        <p className="font-semibold text-foreground whitespace-nowrap pb-2.5">{stage.title}</p>
+                        <p className="font-semibold text-foreground whitespace-nowrap pb-[5px]">{stage.title}</p>
                         {stage.short_name && <p className="text-xs text-muted-foreground flex items-center gap-1 whitespace-nowrap mt-1">
                           <Tag className="h-3 w-3" />
                           {stage.short_name}
