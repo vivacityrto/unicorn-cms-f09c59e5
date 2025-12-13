@@ -444,11 +444,6 @@ export default function TenantDetail() {
                 
               </Card>}
           </div>
-          <Badge variant={tenantStatus === "active" ? "default" : "secondary"} className={`px-4 py-1.5 text-sm font-semibold ${tenantStatus === "active" ? "bg-green-100 text-green-800 hover:bg-green-100" : "bg-red-100 text-red-800 hover:bg-red-100"}`} style={{
-          border: tenantStatus === "active" ? "0.7px solid rgb(22, 101, 52)" : "0.7px solid rgb(153, 27, 27)"
-        }}>
-            {tenantStatus === "active" ? "Active" : "Inactive"}
-          </Badge>
         </div>
       </div>
 
@@ -464,9 +459,16 @@ export default function TenantDetail() {
                   </AvatarFallback>
                 </Avatar>
                 <div className="space-y-1">
-                  <h3 className="text-base font-semibold text-white">
-                    Hello, {clientData.contactname || clientData.companyname}
-                  </h3>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-base font-semibold text-white">
+                      Hello, {clientData.contactname || clientData.companyname}
+                    </h3>
+                    <Badge variant={tenantStatus === "active" ? "default" : "secondary"} className={`px-4 py-1.5 text-sm font-semibold ${tenantStatus === "active" ? "bg-green-100 text-green-800 hover:bg-green-100" : "bg-red-100 text-red-800 hover:bg-red-100"}`} style={{
+                      border: tenantStatus === "active" ? "0.7px solid rgb(22, 101, 52)" : "0.7px solid rgb(153, 27, 27)"
+                    }}>
+                      {tenantStatus === "active" ? "Active" : "Inactive"}
+                    </Badge>
+                  </div>
                   <div className="flex items-center gap-2 text-sm text-white/70">
                     <Building2 className="h-4 w-4" />
                     {clientData.companyname}
