@@ -668,7 +668,7 @@ export default function TenantDetail() {
                               <ChevronDown className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
                             </div>
                           </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end" className="w-64 bg-background border border-border/50 shadow-xl z-50 p-1">
+                          <DropdownMenuContent align="start" className="w-[var(--radix-dropdown-menu-trigger-width)] bg-background border border-border/50 shadow-xl z-50 p-1">
                             {tenantPackages.map((pkg, index) => (
                               <React.Fragment key={pkg.id}>
                                 <DropdownMenuItem 
