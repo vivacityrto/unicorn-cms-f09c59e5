@@ -460,7 +460,7 @@ export default function TenantDetail() {
                     <h3 className="text-base font-semibold text-white">
                       Hello, {clientData.contactname || clientData.companyname}
                     </h3>
-                    <Badge variant={tenantStatus === "active" ? "default" : "secondary"} className={`px-4 py-1.5 text-sm font-semibold ${tenantStatus === "active" ? "bg-green-100 text-green-800 hover:bg-green-100" : "bg-red-100 text-red-800 hover:bg-red-100"}`} style={{
+                    <Badge variant={tenantStatus === "active" ? "default" : "secondary"} className={`px-2 py-0.5 text-xs font-medium ${tenantStatus === "active" ? "bg-green-100 text-green-800 hover:bg-green-100" : "bg-red-100 text-red-800 hover:bg-red-100"}`} style={{
                     border: tenantStatus === "active" ? "0.7px solid rgb(22, 101, 52)" : "0.7px solid rgb(153, 27, 27)"
                   }}>
                       {tenantStatus === "active" ? "Active" : "Inactive"}
