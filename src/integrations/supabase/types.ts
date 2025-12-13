@@ -374,6 +374,86 @@ export type Database = {
           },
         ]
       }
+      audit_inspection: {
+        Row: {
+          client_id: string | null
+          completed_at: string | null
+          compliance_score: number | null
+          conducted_by: string
+          created_at: string
+          doc_number: string | null
+          id: number
+          inspection_title: string
+          responses: Json | null
+          started_at: string | null
+          status: string
+          template_id: number
+          tenant_id: number
+          updated_at: string
+        }
+        Insert: {
+          client_id?: string | null
+          completed_at?: string | null
+          compliance_score?: number | null
+          conducted_by: string
+          created_at?: string
+          doc_number?: string | null
+          id?: number
+          inspection_title: string
+          responses?: Json | null
+          started_at?: string | null
+          status?: string
+          template_id: number
+          tenant_id: number
+          updated_at?: string
+        }
+        Update: {
+          client_id?: string | null
+          completed_at?: string | null
+          compliance_score?: number | null
+          conducted_by?: string
+          created_at?: string
+          doc_number?: string | null
+          id?: number
+          inspection_title?: string
+          responses?: Json | null
+          started_at?: string | null
+          status?: string
+          template_id?: number
+          tenant_id?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "audit_inspection_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients_legacy"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "audit_inspection_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "dashboard_client_snapshot"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "audit_inspection_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "audit_templates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "audit_inspection_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       audit_invites: {
         Row: {
           actor_user_id: string | null
