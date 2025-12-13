@@ -691,7 +691,7 @@ const PackageDetail = () => {
       {/* Overview Section */}
       <div className="mb-20">
         {packageInfo.details && <Card className="border-0 shadow-lg overflow-hidden">
-            <div className="bg-gradient-to-r from-primary/5 to-primary/10 px-6 py-4 border-b border-border/50">
+            <div className="bg-muted/50 px-6 py-4 border-b border-border/50">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   
@@ -703,7 +703,8 @@ const PackageDetail = () => {
                     </div>
                   </div>
                 </div>
-                <Badge variant={packageInfo.status === "active" ? "default" : "secondary"}>
+                <Badge variant={packageInfo.status === "active" ? "default" : "destructive"} className={packageInfo.status === "active" ? "bg-green-500/10 text-green-600 hover:bg-green-500/20 border border-green-600 text-[0.75rem] py-[2px] px-[0.625rem] rounded-[11px]" : "bg-red-500/10 text-red-600 hover:bg-red-500/20 border border-red-600 text-[0.75rem] py-[2px] px-[0.625rem] rounded-[11px]"}>
+                  {packageInfo.status === "active" ? <CheckCircle2 className="mr-1 h-3 w-3" /> : <XCircle className="mr-1 h-3 w-3" />}
                   {packageInfo.status === "active" ? "Active" : "Inactive"}
                 </Badge>
               </div>
