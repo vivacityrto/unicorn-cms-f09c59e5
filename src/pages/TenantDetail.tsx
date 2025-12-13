@@ -545,7 +545,13 @@ export default function TenantDetail() {
             {/* Recent Documents */}
             <Card className="border-0 shadow-lg overflow-hidden">
               <div className="bg-muted/30 px-6 h-14 border-b border-border/50 flex items-center justify-between">
-                <h2 className="font-semibold text-foreground">Recent Documents</h2>
+                <div className="flex flex-col">
+                  <h2 className="font-semibold text-foreground">Recent Documents</h2>
+                  <span className="text-xs text-muted-foreground flex items-center gap-1">
+                    <Calendar className="h-3 w-3" />
+                    Added in 7 days
+                  </span>
+                </div>
                 <span className="text-xs font-medium text-primary cursor-pointer hover:underline" onClick={() => navigate(`/tenant/${tenantId}/documents${activePackageId ? `?packageId=${activePackageId}` : ''}`)}>
                   View all
                 </span>
