@@ -604,25 +604,39 @@ export default function TenantDetail() {
           <div className="space-y-6">
             {/* Package Time Remaining */}
             <Card className="border-0 shadow-lg overflow-hidden">
-              <div className="bg-muted/30 px-6 py-3 border-b border-border/50">
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="outline" className="w-full flex items-center justify-between gap-2 h-10 px-4 border-border/50 bg-background hover:bg-muted/50">
-                      <div className="flex items-center gap-2">
-                        <FileText className="h-4 w-4 text-primary" />
-                        <span className="font-medium">{tenantPackages.find(p => p.id === activePackageId)?.name || 'Select Package'}</span>
-                      </div>
-                      <ChevronDown className="h-4 w-4 text-muted-foreground" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="start" className="w-56 bg-background border border-border shadow-lg z-50">
-                    {tenantPackages.map(pkg => <DropdownMenuItem key={pkg.id} onClick={() => setActivePackageId(pkg.id)} className={`flex items-center gap-2 cursor-pointer ${pkg.id === activePackageId ? 'bg-primary/10 text-primary' : ''}`}>
-                        <FileText className="h-4 w-4" />
-                        {pkg.name}
-                        {pkg.id === activePackageId && <CheckCircle2 className="h-4 w-4 ml-auto text-primary" />}
-                      </DropdownMenuItem>)}
-                  </DropdownMenuContent>
-                </DropdownMenu>
+              <div className="bg-muted/30 px-6 py-4 border-b border-border/50">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2">
+                    <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
+                      <PackageIcon className="h-4 w-4 text-primary" />
+                    </div>
+                    <span className="text-sm font-semibold text-foreground">Active Package</span>
+                  </div>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="outline" size="sm" className="h-9 px-3 gap-2 border-primary/30 bg-primary/5 hover:bg-primary/10 text-primary font-medium shadow-sm">
+                        <FileText className="h-3.5 w-3.5" />
+                        <span className="max-w-[120px] truncate">{tenantPackages.find(p => p.id === activePackageId)?.name || 'Select'}</span>
+                        <ChevronDown className="h-3.5 w-3.5 opacity-60" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-64 bg-background border border-border/50 shadow-xl z-50 p-1">
+                      {tenantPackages.map(pkg => (
+                        <DropdownMenuItem 
+                          key={pkg.id} 
+                          onClick={() => setActivePackageId(pkg.id)} 
+                          className={`flex items-center gap-3 cursor-pointer rounded-md px-3 py-2.5 ${pkg.id === activePackageId ? 'bg-primary/10 text-primary' : 'hover:bg-muted/50'}`}
+                        >
+                          <div className={`h-7 w-7 rounded-full flex items-center justify-center ${pkg.id === activePackageId ? 'bg-primary/20' : 'bg-muted'}`}>
+                            <FileText className="h-3.5 w-3.5" />
+                          </div>
+                          <span className="flex-1 font-medium text-sm">{pkg.name}</span>
+                          {pkg.id === activePackageId && <CheckCircle2 className="h-4 w-4 text-primary" />}
+                        </DropdownMenuItem>
+                      ))}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
               </div>
 
               <div className="p-6">
