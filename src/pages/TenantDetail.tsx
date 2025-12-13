@@ -455,7 +455,7 @@ export default function TenantDetail() {
       {/* Header Card */}
       <div className="px-6">
         <Card className="border-0 shadow-lg overflow-hidden">
-          <div className="px-6 py-4 border-b border-primary/20" style={{ background: 'var(--gradient-sidebar)' }}>
+          <div className="px-6 py-4 border-b border-white/20" style={{ backgroundImage: 'linear-gradient(135deg, rgb(97 9 161) 0%, rgb(213 28 73) 100%)' }}>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-4">
                 <Avatar className="h-12 w-12">
