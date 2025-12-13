@@ -455,7 +455,7 @@ export default function TenantDetail() {
       {/* Header Card */}
       <div className="px-6">
         <Card className="border-0 shadow-lg overflow-hidden">
-          <div className="bg-gradient-to-r from-primary/5 to-primary/10 px-6 py-4 border-b border-border/50">
+          <div className="bg-sidebar px-6 py-4 border-b border-sidebar-border">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-4">
                 <Avatar className="h-12 w-12">
