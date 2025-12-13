@@ -2085,13 +2085,6 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "email_attachments_document_id_fkey"
-            columns: ["document_id"]
-            isOneToOne: false
-            referencedRelation: "package_documents"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "email_attachments_email_id_fkey"
             columns: ["email_id"]
             isOneToOne: false
@@ -4347,93 +4340,6 @@ export type Database = {
             columns: ["stage_id"]
             isOneToOne: false
             referencedRelation: "documents_stages"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      package_documents: {
-        Row: {
-          categories_id: number | null
-          category_id: number | null
-          created_at: string | null
-          description: string | null
-          document_name: string
-          due_date_offset: number | null
-          file_paths: string[] | null
-          file_type: string | null
-          id: number
-          is_active: boolean | null
-          is_client_doc: boolean | null
-          is_released_to_client: boolean
-          month: string | null
-          order_number: number | null
-          package_id: number
-          stage_id: number
-          template_file_path: string | null
-          updated_at: string | null
-          version: number | null
-          watermark: boolean | null
-          year: number | null
-        }
-        Insert: {
-          categories_id?: number | null
-          category_id?: number | null
-          created_at?: string | null
-          description?: string | null
-          document_name: string
-          due_date_offset?: number | null
-          file_paths?: string[] | null
-          file_type?: string | null
-          id?: number
-          is_active?: boolean | null
-          is_client_doc?: boolean | null
-          is_released_to_client?: boolean
-          month?: string | null
-          order_number?: number | null
-          package_id: number
-          stage_id: number
-          template_file_path?: string | null
-          updated_at?: string | null
-          version?: number | null
-          watermark?: boolean | null
-          year?: number | null
-        }
-        Update: {
-          categories_id?: number | null
-          category_id?: number | null
-          created_at?: string | null
-          description?: string | null
-          document_name?: string
-          due_date_offset?: number | null
-          file_paths?: string[] | null
-          file_type?: string | null
-          id?: number
-          is_active?: boolean | null
-          is_client_doc?: boolean | null
-          is_released_to_client?: boolean
-          month?: string | null
-          order_number?: number | null
-          package_id?: number
-          stage_id?: number
-          template_file_path?: string | null
-          updated_at?: string | null
-          version?: number | null
-          watermark?: boolean | null
-          year?: number | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "fk_package_documents_categories"
-            columns: ["categories_id"]
-            isOneToOne: false
-            referencedRelation: "documents_categories"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "package_documents_category_id_fkey"
-            columns: ["category_id"]
-            isOneToOne: false
-            referencedRelation: "documents_categories"
             referencedColumns: ["id"]
           },
         ]
