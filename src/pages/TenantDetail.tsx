@@ -653,6 +653,22 @@ export default function TenantDetail() {
                   const adjustedDaysRemaining = Math.max(0, daysRemaining - daysUsed);
                   const isAdjustedExpired = adjustedDaysRemaining <= 0;
                   return <>
+                        {/* Current Package */}
+                        <div className="flex items-center gap-4 p-4 rounded-lg border border-border/40 bg-gradient-to-r from-primary/5 to-transparent hover:shadow-md transition-all duration-200">
+                          <div className="flex-shrink-0">
+                            <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
+                              <PackageIcon className="h-5 w-5 text-primary" />
+                            </div>
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-semibold text-foreground">Package</p>
+                            <p className="text-xs mt-0.5 text-muted-foreground truncate">
+                              {activePackage?.name || 'No package selected'}
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* Days Remaining */}
                         <div className="flex items-center gap-4 p-4 rounded-lg border border-border/40 bg-gradient-to-r from-blue-500/5 to-transparent hover:shadow-md transition-all duration-200">
                           <div className="flex-shrink-0">
                             <div className="h-10 w-10 rounded-full bg-blue-500/10 flex items-center justify-center">
