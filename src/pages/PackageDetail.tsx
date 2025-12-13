@@ -5,6 +5,8 @@ import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -738,7 +740,7 @@ const PackageDetail = () => {
       {/* Tenants Table - Only shown on main package page (not tenant-specific) */}
       {!tenantId && !selectedStage && <div className="space-y-4 animate-fade-in">
           <Card className="border-0 shadow-lg overflow-hidden">
-            <div className="bg-gradient-to-r from-primary/5 to-primary/10 px-6 py-4 border-b border-border/50">
+            <div className="bg-muted/50 px-6 py-4 border-b border-border/50">
               <div className="flex items-center justify-between">
                 <div className="space-y-1">
                   <h3 className="text-base font-semibold text-foreground">Clients</h3>
@@ -829,9 +831,26 @@ const PackageDetail = () => {
                                 </Badge>
                               </TableCell>
                               <TableCell className="py-6 border-r border-border/50 whitespace-nowrap">
-                                <span className="text-sm text-foreground">
-                                  {tenant.clo_name || "Not Assigned"}
-                                </span>
+                                {tenant.clo_name ? (
+                                  <TooltipProvider>
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <div className="flex items-center justify-center">
+                                          <Avatar className="h-8 w-8 cursor-pointer">
+                                            <AvatarFallback className="bg-primary/10 text-primary text-xs font-medium">
+                                              {tenant.clo_name.split(' ').map((n: string) => n[0]).join('').substring(0, 2).toUpperCase()}
+                                            </AvatarFallback>
+                                          </Avatar>
+                                        </div>
+                                      </TooltipTrigger>
+                                      <TooltipContent>
+                                        <p>{tenant.clo_name}</p>
+                                      </TooltipContent>
+                                    </Tooltip>
+                                  </TooltipProvider>
+                                ) : (
+                                  <span className="text-sm text-muted-foreground">Not Assigned</span>
+                                )}
                               </TableCell>
                               <TableCell className="py-6 border-r border-border/50 text-center whitespace-nowrap">
                                 <span className="font-semibold">{tenant.user_count || 0}</span>
