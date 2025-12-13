@@ -175,10 +175,36 @@ export function AddExistingDocumentDialog({
     try {
       setIsLoading(true);
 
-      // Add all selected documents (copy them to new stage)
-      const insertPromises = selectedDocuments.map(selectedDoc => supabase.from('package_documents').insert({
+      // Check which documents are already linked to this package/stage
+      const { data: existingLinks, error: checkError } = await supabase
+        .from('package_documents')
+        .select('document_id')
+        .eq('package_id', packageId)
+        .eq('stage_id', stageId)
+        .not('document_id', 'is', null);
+
+      if (checkError) throw checkError;
+
+      const existingDocIds = new Set((existingLinks || []).map(link => link.document_id));
+
+      // Filter out documents that are already linked
+      const newDocuments = selectedDocuments.filter(doc => !existingDocIds.has(doc.id));
+      const alreadyLinkedCount = selectedDocuments.length - newDocuments.length;
+
+      if (newDocuments.length === 0) {
+        toast({
+          title: "Info",
+          description: "All selected documents are already linked to this stage",
+        });
+        setIsConfirmDialogOpen(false);
+        return;
+      }
+
+      // Link documents by referencing document_id (no duplication)
+      const insertPromises = newDocuments.map(selectedDoc => supabase.from('package_documents').insert({
         package_id: packageId,
         stage_id: stageId,
+        document_id: selectedDoc.id,
         document_name: selectedDoc.title,
         description: selectedDoc.description || null,
         is_client_doc: selectedDoc.isclientdoc || false,
@@ -192,9 +218,14 @@ export function AddExistingDocumentDialog({
       if (errors.length > 0) {
         throw new Error(`Failed to add ${errors.length} document(s)`);
       }
+
+      const message = alreadyLinkedCount > 0 
+        ? `${newDocuments.length} document(s) linked. ${alreadyLinkedCount} already existed.`
+        : `${newDocuments.length} document(s) linked to stage successfully`;
+
       toast({
         title: "Success",
-        description: `${selectedDocuments.length} document(s) added to package successfully`
+        description: message
       });
       setSelectedDocuments([]);
       setSearchQuery("");
