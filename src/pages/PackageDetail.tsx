@@ -479,7 +479,7 @@ const PackageDetail = () => {
       const {
         data,
         error
-      } = await supabase.from("package_documents").select("*").eq("package_id", Number(id)).eq("stage_id", stageId).order("order_number");
+      } = await supabase.from("documents").select("*").eq("package_id", Number(id)).eq("stage", stageId).order("id");
       if (error) throw error;
       setDocuments(data || []);
     } catch (error: any) {
@@ -1264,7 +1264,7 @@ const PackageDetail = () => {
                           if (confirm("Are you sure you want to delete this document?")) {
                             const {
                               error
-                            } = await supabase.from("package_documents").delete().eq("id", doc.id);
+                            } = await supabase.from("documents").delete().eq("id", doc.id);
                             if (error) {
                               toast({
                                 title: "Error",

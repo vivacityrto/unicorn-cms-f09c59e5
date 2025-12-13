@@ -114,7 +114,7 @@ export default function AdminManagePackages() {
       setLoadingTasks(true);
       
       Promise.all([
-        supabase.from('package_documents').select('*').eq('package_id', selectedPackage.id).eq('stage_id', selectedStage.id).order('order_number', { ascending: true }),
+        supabase.from('documents').select('*').eq('package_id', selectedPackage.id).eq('stage', selectedStage.id).order('id', { ascending: true }),
         supabase.from('package_staff_tasks').select('*').eq('package_id', selectedPackage.id).eq('stage_id', selectedStage.id).order('order_number', { ascending: true }),
         supabase.from('package_client_tasks').select('*').eq('package_id', selectedPackage.id).eq('stage_id', selectedStage.id).order('order_number', { ascending: true })
       ]).then(([docsResult, staffResult, clientResult]) => {
@@ -273,16 +273,16 @@ export default function AdminManagePackages() {
     try {
       setLoadingDocuments(true);
       let query = supabase
-        .from('package_documents')
+        .from('documents')
         .select('*')
         .eq('package_id', packageId);
       
       // Filter by stage if provided
       if (stageId) {
-        query = query.eq('stage_id', stageId);
+        query = query.eq('stage', stageId);
       }
       
-      const { data, error } = await query.order('order_number', { ascending: true });
+      const { data, error } = await query.order('id', { ascending: true });
 
       if (error) throw error;
       setPackageDocuments(data || []);
@@ -1235,7 +1235,7 @@ export default function AdminManagePackages() {
                               if (confirm(`Are you sure you want to delete "${doc.document_name}"?`)) {
                                 try {
                                   const { error } = await supabase
-                                    .from('package_documents')
+                                    .from('documents')
                                     .delete()
                                     .eq('id', doc.id);
                                   

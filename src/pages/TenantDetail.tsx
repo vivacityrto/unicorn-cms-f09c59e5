@@ -205,9 +205,9 @@ export default function TenantDetail() {
         const {
           data: docsData,
           count: docCountData
-        } = await supabase.from("package_documents").select("*, documents_categories!fk_package_documents_categories(name)", {
+        } = await supabase.from("documents").select("*", {
           count: 'exact'
-        }).eq("package_id", currentPackageId).eq("is_released_to_client", true).order("created_at", {
+        }).eq("package_id", currentPackageId).eq("is_released", true).order("createdat", {
           ascending: false
         }).limit(3);
         setDocumentCount(docCountData || 0);

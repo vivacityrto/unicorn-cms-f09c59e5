@@ -13,15 +13,15 @@ import { Separator } from "@/components/ui/separator";
 
 interface Document {
   id: number;
-  document_name: string;
+  title: string;
   description: string | null;
-  file_paths: string[] | null;
-  package_id: number;
-  stage_id: number | null;
-  is_released_to_client: boolean;
-  categories_id: number | null;
-  documents_categories?: { name: string } | null;
-  created_at: string;
+  uploaded_files: string[] | null;
+  package_id: number | null;
+  stage: number | null;
+  is_released: boolean | null;
+  category: string | null;
+  createdat: string | null;
+  isclientdoc: boolean | null;
 }
 
 export default function TenantDocuments() {
@@ -67,11 +67,11 @@ export default function TenantDocuments() {
         // Fetch documents from package_documents matching the active package_id (only released documents)
         if (activePackageId) {
           const { data: documentsData, error } = await supabase
-            .from("package_documents")
-            .select("*, documents_categories!fk_package_documents_categories(name)")
+            .from("documents")
+            .select("*")
             .eq("package_id", activePackageId)
-            .eq("is_released_to_client", true)
-            .order("created_at", { ascending: false });
+            .eq("is_released", true)
+            .order("createdat", { ascending: false });
 
           if (error) throw error;
           
@@ -93,7 +93,7 @@ export default function TenantDocuments() {
   const handleDelete = async (documentId: number) => {
     try {
       const { error } = await supabase
-        .from("package_documents")
+        .from("documents")
         .delete()
         .eq("id", documentId);
 
@@ -116,9 +116,9 @@ export default function TenantDocuments() {
   };
 
   const filteredDocuments = documents.filter(doc =>
-    doc.document_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    doc.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
     doc.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    doc.documents_categories?.name?.toLowerCase().includes(searchQuery.toLowerCase())
+    doc.category?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   const handleRowClick = (doc: Document) => {
@@ -231,53 +231,53 @@ export default function TenantDocuments() {
                   <TableCell className="py-6 border-r border-border/50 whitespace-nowrap">
                     <div className="flex items-center gap-2">
                       <FileText className="h-4 w-4 text-primary flex-shrink-0" />
-                      <span className="font-semibold text-foreground">{doc.document_name}</span>
+                      <span className="font-semibold text-foreground">{doc.title}</span>
                     </div>
                   </TableCell>
                   <TableCell className="py-6 border-r border-border/50 whitespace-nowrap text-muted-foreground text-sm">
                     <div className="truncate max-w-[230px]">{doc.description || "—"}</div>
                   </TableCell>
                   <TableCell className="py-6 border-r border-border/50 whitespace-nowrap">
-                    {doc.documents_categories?.name ? (
+                    {doc.category ? (
                       <Badge variant="secondary" className="text-xs font-medium py-[3px] rounded-[9px] whitespace-nowrap">
-                        {doc.documents_categories.name}
+                        {doc.category}
                       </Badge>
                     ) : (
                       <span className="text-muted-foreground text-sm">—</span>
                     )}
                   </TableCell>
                   <TableCell className="py-6 border-r border-border/50 text-center">
-                    {doc.is_released_to_client ? (
+                    {doc.is_released ? (
                       <CheckCircle2 className="h-5 w-5 text-green-600 mx-auto" />
                     ) : (
                       <XCircle className="h-5 w-5 text-muted-foreground mx-auto" />
                     )}
                   </TableCell>
                   <TableCell className="py-6 border-r border-border/50 whitespace-nowrap">
-                    {doc.file_paths && doc.file_paths.length > 0 ? (
+                    {doc.uploaded_files && doc.uploaded_files.length > 0 ? (
                       <Button
                         variant="outline"
                         size="sm"
                         onClick={(e) => {
                           e.stopPropagation();
-                          setSelectedFiles(doc.file_paths || []);
+                          setSelectedFiles(doc.uploaded_files || []);
                           setFilesDialogOpen(true);
                         }}
                         className="text-xs whitespace-nowrap hover:bg-[hsl(196deg_100%_93.53%/79%)] hover:text-black [&:hover_svg]:text-black"
                       >
                         <FileText className="h-3 w-3 mr-1" />
-                        View Files ({doc.file_paths.length})
+                        View Files ({doc.uploaded_files.length})
                       </Button>
                     ) : (
                       <span className="text-muted-foreground text-sm">No files</span>
                     )}
                   </TableCell>
                   <TableCell className="py-6 border-r border-border/50 text-muted-foreground text-sm whitespace-nowrap">
-                    {new Date(doc.created_at).toLocaleDateString('en-US', {
+                    {doc.createdat ? new Date(doc.createdat).toLocaleDateString('en-US', {
                       year: 'numeric',
                       month: 'short',
                       day: 'numeric'
-                    })}
+                    }) : '—'}
                   </TableCell>
                   <TableCell className="py-6">
                     <div className="flex items-center gap-1">

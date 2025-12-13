@@ -140,32 +140,38 @@ export function CreateDocumentDialog2({ open, onOpenChange, onSuccess, packageId
         fileUrls.push(...uploadedPaths);
       }
 
+      // Get category name from ID
+      const categoryName = formData.category_id 
+        ? categories.find(c => c.id === formData.category_id)?.name || null
+        : null;
+
+      // Store document in public.documents table
       const documentData = {
-        package_id: packageId,
-        stage_id: stageId,
-        document_name: formData.document_name,
+        title: formData.document_name,
         description: formData.description || null,
-        file_type: uploadedFiles.length > 0 ? uploadedFiles.map(f => f.name).join(', ') : (editDocument?.file_type || null),
-        is_client_doc: formData.release_to_client,
-        is_released_to_client: formData.release_to_client,
-        is_active: formData.is_active,
-        order_number: editDocument?.order_number || 0,
-        file_paths: fileUrls.length > 0 ? fileUrls : null,
-        categories_id: formData.category_id
+        format: uploadedFiles.length > 0 ? uploadedFiles.map(f => f.name.split('.').pop()).join(', ') : null,
+        isclientdoc: formData.release_to_client,
+        is_released: formData.release_to_client,
+        watermark: formData.watermark,
+        stage: stageId,
+        package_id: packageId,
+        category: categoryName,
+        uploaded_files: fileUrls.length > 0 ? fileUrls : null,
+        file_names: uploadedFiles.length > 0 ? uploadedFiles.map(f => f.name) : (editDocument?.file_names || null),
       };
 
       let error;
       if (editDocument) {
-        // Update existing document
+        // Update existing document in public.documents
         const result = await supabase
-          .from('package_documents')
+          .from('documents')
           .update(documentData)
           .eq('id', editDocument.id);
         error = result.error;
       } else {
-        // Insert new document
+        // Insert new document into public.documents
         const result = await supabase
-          .from('package_documents')
+          .from('documents')
           .insert(documentData);
         error = result.error;
       }
