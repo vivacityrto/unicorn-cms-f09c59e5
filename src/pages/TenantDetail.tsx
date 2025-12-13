@@ -476,10 +476,10 @@ export default function TenantDetail() {
                 <a href="#" className="group relative p-2.5 rounded-full bg-gradient-to-br from-background to-muted border border-border/40 transition-all duration-300 hover:shadow-lg hover:scale-110 hover:border-[#1877F2]/30 cursor-not-allowed" title="Facebook" onClick={e => e.preventDefault()}>
                   <Facebook className="h-4 w-4 text-[#1877F2] group-hover:scale-110 transition-transform" />
                 </a>
-                <a href="#" className="group relative p-2.5 rounded-xl bg-gradient-to-br from-background to-muted border border-border/40 transition-all duration-300 hover:shadow-lg hover:scale-110 hover:border-[#E4405F]/30 cursor-not-allowed" title="Instagram" onClick={e => e.preventDefault()}>
+                <a href="#" className="group relative p-2.5 rounded-full bg-gradient-to-br from-background to-muted border border-border/40 transition-all duration-300 hover:shadow-lg hover:scale-110 hover:border-[#E4405F]/30 cursor-not-allowed" title="Instagram" onClick={e => e.preventDefault()}>
                   <Instagram className="h-4 w-4 text-[#E4405F] group-hover:scale-110 transition-transform" />
                 </a>
-                <a href="#" className="group relative p-2.5 rounded-xl bg-gradient-to-br from-background to-muted border border-border/40 transition-all duration-300 hover:shadow-lg hover:scale-110 hover:border-[#0A66C2]/30 cursor-not-allowed" title="LinkedIn" onClick={e => e.preventDefault()}>
+                <a href="#" className="group relative p-2.5 rounded-full bg-gradient-to-br from-background to-muted border border-border/40 transition-all duration-300 hover:shadow-lg hover:scale-110 hover:border-[#0A66C2]/30 cursor-not-allowed" title="LinkedIn" onClick={e => e.preventDefault()}>
                   <Linkedin className="h-4 w-4 text-[#0A66C2] group-hover:scale-110 transition-transform" />
                 </a>
               </div>
