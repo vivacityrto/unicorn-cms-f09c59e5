@@ -21,13 +21,13 @@ interface AddExistingDocumentDialogProps {
 }
 interface Document {
   id: number;
-  document_name: string;
+  title: string;
   description: string | null;
-  is_client_doc: boolean | null;
+  isclientdoc: boolean | null;
   package_id: number | null;
-  stage_id: number | null;
-  categories_id: number | null;
-  file_paths: string[] | null;
+  stage: number | null;
+  category: string | null;
+  uploaded_files: string[] | null;
 }
 export function AddExistingDocumentDialog({
   open,
@@ -63,16 +63,16 @@ export function AddExistingDocumentDialog({
     // Filter by search query
     if (searchQuery.trim() !== "") {
       const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(doc => doc.document_name.toLowerCase().includes(query) || doc.id.toString().includes(query) || doc.description?.toLowerCase().includes(query));
+      filtered = filtered.filter(doc => doc.title.toLowerCase().includes(query) || doc.id.toString().includes(query) || doc.description?.toLowerCase().includes(query));
     }
 
-    // Filter by selected category ID
+    // Filter by selected category
     if (selectedCategory !== "all") {
-      filtered = filtered.filter(doc => doc.categories_id?.toString() === selectedCategory);
+      filtered = filtered.filter(doc => doc.category === selectedCategory);
     }
 
     // Sort by name
-    filtered = [...filtered].sort((a, b) => a.document_name.localeCompare(b.document_name));
+    filtered = [...filtered].sort((a, b) => a.title.localeCompare(b.title));
     
     setFilteredDocuments(filtered);
   }, [searchQuery, documents, selectedCategory]);
@@ -96,9 +96,9 @@ export function AddExistingDocumentDialog({
         data,
         error
       } = await supabase
-        .from('package_documents')
-        .select('id, document_name, description, is_client_doc, package_id, stage_id, categories_id, file_paths')
-        .order('document_name');
+        .from('documents')
+        .select('id, title, description, isclientdoc, package_id, stage, category, uploaded_files')
+        .order('title');
       if (error) throw error;
       setDocuments(data || []);
       setFilteredDocuments(data || []);
@@ -128,7 +128,7 @@ export function AddExistingDocumentDialog({
     if (checked && selectedCategory !== "all") {
       // Select all documents in the current category
       const docsInCategory = filteredDocuments.filter(
-        doc => doc.categories_id?.toString() === selectedCategory
+        doc => doc.category === selectedCategory
       );
       setSelectedDocuments(prev => {
         const newDocs = docsInCategory.filter(doc => !prev.some(d => d.id === doc.id));
@@ -137,7 +137,7 @@ export function AddExistingDocumentDialog({
     } else if (!checked && selectedCategory !== "all") {
       // Deselect all documents in the current category
       setSelectedDocuments(prev =>
-        prev.filter(doc => doc.categories_id?.toString() !== selectedCategory)
+        prev.filter(doc => doc.category !== selectedCategory)
       );
     }
   };
@@ -145,7 +145,7 @@ export function AddExistingDocumentDialog({
   const areAllCategoryDocsSelected = () => {
     if (selectedCategory === "all") return false;
     const docsInCategory = filteredDocuments.filter(
-      doc => doc.categories_id?.toString() === selectedCategory
+      doc => doc.category === selectedCategory
     );
     return docsInCategory.length > 0 && docsInCategory.every(doc =>
       selectedDocuments.some(d => d.id === doc.id)
@@ -179,13 +179,13 @@ export function AddExistingDocumentDialog({
       const insertPromises = selectedDocuments.map(selectedDoc => supabase.from('package_documents').insert({
         package_id: packageId,
         stage_id: stageId,
-        document_name: selectedDoc.document_name,
+        document_name: selectedDoc.title,
         description: selectedDoc.description || null,
-        is_client_doc: selectedDoc.is_client_doc || false,
+        is_client_doc: selectedDoc.isclientdoc || false,
         is_active: true,
         order_number: 0,
-        categories_id: selectedDoc.categories_id,
-        file_paths: selectedDoc.file_paths
+        categories_id: null,
+        file_paths: selectedDoc.uploaded_files
       }));
       const results = await Promise.all(insertPromises);
       const errors = results.filter(r => r.error);
@@ -296,16 +296,15 @@ export function AddExistingDocumentDialog({
               </div> : <div className="space-y-2 pb-4 max-h-[500px] overflow-y-auto">
                 {filteredDocuments.map(doc => {
               const isSelected = selectedDocuments.some(d => d.id === doc.id);
-              const categoryName = categories.find(c => c.id === doc.categories_id)?.name;
               return <button key={doc.id} onClick={() => toggleDocumentSelection(doc)} className={cn("w-[97%] text-left p-4 rounded-lg border transition-all hover:bg-muted/50", isSelected ? "border-primary bg-primary/5" : "border-border")}>
                       <div className="flex items-start gap-3 w-full">
                         <Checkbox checked={isSelected} className="mt-0.5 flex-shrink-0" />
                         <div className="flex items-start justify-between gap-3 flex-1 min-w-0">
                           <div className="flex-1 min-w-0">
-                            <div className="font-medium text-sm truncate">{doc.document_name}</div>
+                            <div className="font-medium text-sm truncate">{doc.title}</div>
                             <div className="text-xs text-muted-foreground mt-1 flex items-center gap-2 flex-wrap">
-                              {categoryName && <>
-                                <span>{categoryName}</span>
+                              {doc.category && <>
+                                <span>{doc.category}</span>
                                 <span>•</span>
                               </>}
                               <span>Status: {doc.package_id ? 'in package' : 'available'}</span>
@@ -366,14 +365,13 @@ export function AddExistingDocumentDialog({
             <div className="my-6 max-h-[300px] overflow-y-auto">
               <div className="space-y-2">
                 {selectedDocuments.map((doc) => {
-                  const categoryName = categories.find(c => c.id === doc.categories_id)?.name;
                   return (
                     <div key={doc.id} className="p-3 bg-muted/30 rounded-lg border border-border/50">
                       <div className="flex items-start justify-between gap-2">
                         <div className="flex-1 min-w-0">
-                          <div className="font-semibold text-sm text-foreground truncate">{doc.document_name}</div>
-                          {categoryName && (
-                            <div className="text-xs text-muted-foreground mt-1">{categoryName}</div>
+                          <div className="font-semibold text-sm text-foreground truncate">{doc.title}</div>
+                          {doc.category && (
+                            <div className="text-xs text-muted-foreground mt-1">{doc.category}</div>
                           )}
                         </div>
                         <Badge variant="outline" className="shrink-0 text-xs">
