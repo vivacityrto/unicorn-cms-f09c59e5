@@ -94,23 +94,25 @@ export default function AdminPackageTenantDetail() {
       {/* Tenant Info Card */}
       {!loading && tenantInfo && <div className="px-6 pb-6">
           <Card className="border-0 shadow-lg overflow-hidden">
-            <div className="bg-gradient-to-r from-primary/5 to-primary/10 px-6 py-4 border-b border-border/50">
+            <div className="px-6 py-4 border-b border-white/20" style={{
+              backgroundImage: 'linear-gradient(135deg, rgb(98 33 145) 0%, rgb(213 28 73 / 72%) 100%)'
+            }}>
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <Avatar className="h-10 w-10 border-2 border-background shadow-sm">
-                    <AvatarFallback className="bg-primary text-primary-foreground text-sm font-medium">
+                  <Avatar className="h-10 w-10">
+                    <AvatarFallback className="bg-white/20 text-white text-sm font-medium">
                       {getInitials(tenantInfo.name)}
                     </AvatarFallback>
                   </Avatar>
                   <div className="space-y-1">
-                    <h3 className="text-base font-semibold text-foreground">{tenantInfo.name}</h3>
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <h3 className="text-base font-semibold text-white">{tenantInfo.name}</h3>
+                    <div className="flex items-center gap-2 text-sm text-white/70">
                       <Mail className="h-4 w-4" />
                       {tenantContact?.email || 'No email'}
                     </div>
                   </div>
                 </div>
-                <Button variant="outline" size="sm" onClick={() => navigate(`/tenant/${tenantId}`)} className="gap-2 hover:bg-[hsl(196deg_100%_93.53%)] hover:text-black">
+                <Button variant="outline" size="sm" onClick={() => navigate(`/tenant/${tenantId}`)} className="gap-2 bg-white/10 border-white/30 text-white hover:bg-white/20 hover:text-white">
                   View Full Profile
                   <ExternalLink className="h-3.5 w-3.5" />
                 </Button>
