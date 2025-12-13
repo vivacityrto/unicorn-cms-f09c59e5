@@ -177,17 +177,16 @@ export function AddExistingDocumentDialog({
 
       // Check which documents are already linked to this package/stage
       const { data: existingLinks, error: checkError } = await supabase
-        .from('package_documents')
-        .select('document_id')
+        .from('documents')
+        .select('id')
         .eq('package_id', packageId)
-        .eq('stage_id', stageId)
-        .not('document_id', 'is', null);
+        .eq('stage', stageId);
 
       if (checkError) throw checkError;
 
-      const existingDocIds = new Set((existingLinks || []).map(link => link.document_id));
+      const existingDocIds = new Set((existingLinks || []).map(link => link.id));
 
-      // Filter out documents that are already linked
+      // Filter out documents that are already in this stage
       const newDocuments = selectedDocuments.filter(doc => !existingDocIds.has(doc.id));
       const alreadyLinkedCount = selectedDocuments.length - newDocuments.length;
 
@@ -200,20 +199,16 @@ export function AddExistingDocumentDialog({
         return;
       }
 
-      // Link documents by referencing document_id (no duplication)
-      const insertPromises = newDocuments.map(selectedDoc => supabase.from('package_documents').insert({
-        package_id: packageId,
-        stage_id: stageId,
-        document_id: selectedDoc.id,
-        document_name: selectedDoc.title,
-        description: selectedDoc.description || null,
-        is_client_doc: selectedDoc.isclientdoc || false,
-        is_active: true,
-        order_number: 0,
-        categories_id: null,
-        file_paths: selectedDoc.uploaded_files
-      }));
-      const results = await Promise.all(insertPromises);
+      // Update documents to link them to this package/stage (no duplication - just update their package_id and stage)
+      const updatePromises = newDocuments.map(selectedDoc => 
+        supabase.from('documents')
+          .update({
+            package_id: packageId,
+            stage: stageId,
+          })
+          .eq('id', selectedDoc.id)
+      );
+      const results = await Promise.all(updatePromises);
       const errors = results.filter(r => r.error);
       if (errors.length > 0) {
         throw new Error(`Failed to add ${errors.length} document(s)`);

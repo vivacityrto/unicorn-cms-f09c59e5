@@ -11,18 +11,17 @@ import { Separator } from "@/components/ui/separator";
 
 interface PackageDocument {
   id: number;
-  document_name: string;
+  title: string;
   description: string | null;
-  file_paths: string[] | null;
-  package_id: number;
-  stage_id: number | null;
-  is_released_to_client: boolean;
-  categories_id: number | null;
-  documents_categories?: { name: string } | null;
-  created_at: string;
+  uploaded_files: string[] | null;
+  package_id: number | null;
+  stage: number | null;
+  is_released: boolean | null;
+  category: string | null;
+  createdat: string | null;
   updated_at: string | null;
-  file_type: string | null;
-  due_date_offset: number | null;
+  format: string | null;
+  isclientdoc: boolean | null;
 }
 
 export default function TenantDocumentDetail() {
@@ -61,8 +60,8 @@ export default function TenantDocumentDetail() {
         // Fetch document from package_documents
         if (activePackageId) {
           const { data: packageDocData, error } = await supabase
-            .from("package_documents")
-            .select("*, documents_categories!categories_id(name)")
+            .from("documents")
+            .select("*")
             .eq("id", parseInt(documentId!))
             .eq("package_id", activePackageId)
             .maybeSingle();
@@ -180,7 +179,7 @@ export default function TenantDocumentDetail() {
 
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold">{docData.document_name}</h1>
+        <h1 className="text-2xl font-bold">{docData.title}</h1>
         <p className="text-sm text-muted-foreground">{tenantName}</p>
       </div>
 
@@ -211,8 +210,8 @@ export default function TenantDocumentDetail() {
                 <div>
                   <label className="text-sm font-medium text-muted-foreground">Category</label>
                   <div className="mt-1">
-                    {docData.documents_categories?.name ? (
-                      <Badge variant="secondary">{docData.documents_categories.name}</Badge>
+                    {docData.category ? (
+                      <Badge variant="secondary">{docData.category}</Badge>
                     ) : (
                       <span className="text-muted-foreground">—</span>
                     )}
@@ -221,7 +220,7 @@ export default function TenantDocumentDetail() {
                 <div>
                   <label className="text-sm font-medium text-muted-foreground">Released to Client</label>
                   <div className="mt-1 flex items-center gap-2">
-                    {docData.is_released_to_client ? (
+                    {docData.is_released ? (
                       <>
                         <CheckCircle2 className="h-4 w-4 text-green-600" />
                         <span className="text-green-600">Yes</span>
@@ -239,17 +238,17 @@ export default function TenantDocumentDetail() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="text-sm font-medium text-muted-foreground">File Type</label>
-                  <p className="mt-1">{docData.file_type || "—"}</p>
+                  <p className="mt-1">{docData.format || "—"}</p>
                 </div>
                 <div>
                   <label className="text-sm font-medium text-muted-foreground">Created</label>
                   <div className="mt-1 flex items-center gap-2 text-muted-foreground">
                     <Calendar className="h-4 w-4" />
-                    {new Date(docData.created_at).toLocaleDateString('en-US', {
+                    {docData.createdat ? new Date(docData.createdat).toLocaleDateString('en-US', {
                       year: 'numeric',
                       month: 'long',
                       day: 'numeric'
-                    })}
+                    }) : '—'}
                   </div>
                 </div>
               </div>
@@ -264,9 +263,9 @@ export default function TenantDocumentDetail() {
               <CardTitle className="text-lg">Files</CardTitle>
             </CardHeader>
             <CardContent>
-              {docData.file_paths && docData.file_paths.length > 0 ? (
+              {docData.uploaded_files && docData.uploaded_files.length > 0 ? (
                 <div className="space-y-3">
-                  {docData.file_paths.map((filePath, index) => {
+                  {docData.uploaded_files.map((filePath, index) => {
                     const fileName = filePath.split('/').pop() || `File ${index + 1}`;
                     return (
                       <div 

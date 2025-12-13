@@ -52,16 +52,14 @@ export function AddDocumentDialog({ open, onOpenChange, onSuccess, packageId, st
     try {
       setIsLoading(true);
       const { error } = await supabase
-        .from('package_documents')
+        .from('documents')
         .insert({
           package_id: packageId,
-          stage_id: stageId,
-          document_name: formData.document_name,
+          stage: stageId,
+          title: formData.document_name,
           description: formData.description || null,
-          file_type: formData.file_type || null,
-          is_client_doc: formData.is_client_doc,
-          is_active: formData.is_active,
-          order_number: 0
+          format: formData.file_type || null,
+          isclientdoc: formData.is_client_doc,
         });
 
       if (error) throw error;
