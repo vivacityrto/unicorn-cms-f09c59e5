@@ -653,20 +653,40 @@ export default function TenantDetail() {
                   const adjustedDaysRemaining = Math.max(0, daysRemaining - daysUsed);
                   const isAdjustedExpired = adjustedDaysRemaining <= 0;
                   return <>
-                        {/* Current Package */}
-                        <div className="flex items-center gap-4 p-4 rounded-lg border border-border/40 bg-gradient-to-r from-primary/5 to-transparent hover:shadow-md transition-all duration-200">
-                          <div className="flex-shrink-0">
-                            <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
-                              <PackageIcon className="h-5 w-5 text-primary" />
+                        {/* Current Package - Dropdown */}
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <div className="flex items-center gap-4 p-4 rounded-lg border border-border/40 bg-gradient-to-r from-primary/5 to-transparent hover:shadow-md transition-all duration-200 cursor-pointer group">
+                              <div className="flex-shrink-0">
+                                <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
+                                  <PackageIcon className="h-5 w-5 text-primary" />
+                                </div>
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm font-semibold text-foreground">Package</p>
+                                <p className="text-xs mt-0.5 text-muted-foreground truncate">
+                                  {activePackage?.name || 'No package selected'}
+                                </p>
+                              </div>
+                              <ChevronDown className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
                             </div>
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-semibold text-foreground">Package</p>
-                            <p className="text-xs mt-0.5 text-muted-foreground truncate">
-                              {activePackage?.name || 'No package selected'}
-                            </p>
-                          </div>
-                        </div>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="w-64 bg-background border border-border/50 shadow-xl z-50 p-1">
+                            {tenantPackages.map(pkg => (
+                              <DropdownMenuItem 
+                                key={pkg.id} 
+                                onClick={() => setActivePackageId(pkg.id)} 
+                                className={`flex items-center gap-3 cursor-pointer rounded-md px-3 py-2.5 ${pkg.id === activePackageId ? 'bg-primary/10 text-primary' : 'hover:bg-muted/50'}`}
+                              >
+                                <div className={`h-7 w-7 rounded-full flex items-center justify-center ${pkg.id === activePackageId ? 'bg-primary/20' : 'bg-muted'}`}>
+                                  <PackageIcon className="h-3.5 w-3.5" />
+                                </div>
+                                <span className="flex-1 font-medium text-sm">{pkg.name}</span>
+                                {pkg.id === activePackageId && <CheckCircle2 className="h-4 w-4 text-primary" />}
+                              </DropdownMenuItem>
+                            ))}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
 
                         {/* Days Remaining */}
                         <div className="flex items-center gap-4 p-4 rounded-lg border border-border/40 bg-gradient-to-r from-blue-500/5 to-transparent hover:shadow-md transition-all duration-200">
@@ -683,9 +703,6 @@ export default function TenantDetail() {
                           </div>
                         </div>
                         
-                        
-
-                        
                         {/* Time Used Summary - from Notes Duration */}
                         <div className="flex items-center gap-4 p-4 rounded-lg border border-border/40 bg-gradient-to-r from-orange-500/5 to-transparent hover:shadow-md transition-all duration-200">
                           <div className="flex-shrink-0">
@@ -699,36 +716,6 @@ export default function TenantDetail() {
                               {daysUsed}d {hoursUsedDisplay}h {minsUsed}m
                             </p>
                           </div>
-                        </div>
-
-                        {/* Package Selector Dropdown */}
-                        <div className="pt-4 mt-4 border-t border-border/40">
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="outline" size="sm" className="w-full h-9 px-3 gap-2 border-primary/30 bg-primary/5 hover:bg-primary/10 text-primary font-medium shadow-sm justify-between">
-                                <div className="flex items-center gap-2">
-                                  <FileText className="h-3.5 w-3.5" />
-                                  <span className="truncate">{tenantPackages.find(p => p.id === activePackageId)?.name || 'Select Package'}</span>
-                                </div>
-                                <ChevronDown className="h-3.5 w-3.5 opacity-60" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="center" className="w-64 bg-background border border-border/50 shadow-xl z-50 p-1">
-                              {tenantPackages.map(pkg => (
-                                <DropdownMenuItem 
-                                  key={pkg.id} 
-                                  onClick={() => setActivePackageId(pkg.id)} 
-                                  className={`flex items-center gap-3 cursor-pointer rounded-md px-3 py-2.5 ${pkg.id === activePackageId ? 'bg-primary/10 text-primary' : 'hover:bg-muted/50'}`}
-                                >
-                                  <div className={`h-7 w-7 rounded-full flex items-center justify-center ${pkg.id === activePackageId ? 'bg-primary/20' : 'bg-muted'}`}>
-                                    <FileText className="h-3.5 w-3.5" />
-                                  </div>
-                                  <span className="flex-1 font-medium text-sm">{pkg.name}</span>
-                                  {pkg.id === activePackageId && <CheckCircle2 className="h-4 w-4 text-primary" />}
-                                </DropdownMenuItem>
-                              ))}
-                            </DropdownMenuContent>
-                          </DropdownMenu>
                         </div>
                       </>;
                 })()}
