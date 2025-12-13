@@ -861,7 +861,7 @@ const PackageDetail = () => {
       {/* Stages Section - Only shown on tenant-specific route OR when stage is selected */}
       {tenantId && !selectedStage && <div className="space-y-4 animate-fade-in">
           <Card className="border-0 shadow-lg overflow-hidden">
-            <div className="bg-gradient-to-r from-primary/5 to-primary/10 px-6 py-4 border-b border-border/50">
+            <div className="bg-muted/50 px-6 py-4 border-b border-border/50">
               <div className="flex items-center justify-between">
                 <div className="space-y-1">
                   <h3 className="text-base font-semibold text-foreground">Stages</h3>
