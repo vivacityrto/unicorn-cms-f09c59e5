@@ -455,19 +455,19 @@ export default function TenantDetail() {
       {/* Header Card */}
       <div className="px-6">
         <Card className="border-0 shadow-lg overflow-hidden">
-          <div className="bg-sidebar px-6 py-4 border-b border-sidebar-border">
+          <div className="px-6 py-4 border-b border-primary/20" style={{ background: 'var(--gradient-sidebar)' }}>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-4">
                 <Avatar className="h-12 w-12">
-                  <AvatarFallback className="bg-primary/10 text-primary text-lg font-semibold">
+                  <AvatarFallback className="bg-white/20 text-white text-lg font-semibold">
                     {clientData.companyname?.substring(0, 2).toUpperCase() || 'TN'}
                   </AvatarFallback>
                 </Avatar>
                 <div className="space-y-1">
-                  <h3 className="text-base font-semibold text-foreground">
+                  <h3 className="text-base font-semibold text-white">
                     Hello, {clientData.contactname || clientData.companyname}
                   </h3>
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <div className="flex items-center gap-2 text-sm text-white/70">
                     <Building2 className="h-4 w-4" />
                     {clientData.companyname}
                   </div>
