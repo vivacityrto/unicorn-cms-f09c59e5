@@ -610,7 +610,7 @@ export default function TenantDetail() {
                     <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
                       <PackageIcon className="h-4 w-4 text-primary" />
                     </div>
-                    <span className="text-sm font-semibold text-foreground">Active Package</span>
+                    <span className="text-sm font-semibold text-foreground">Active Package ({tenantPackages.length})</span>
                   </div>
                   {activePackageId && (
                     <Button 
