@@ -423,12 +423,7 @@ export default function TenantDetail() {
   };
   if (loading || !clientData) {
     return <div className="p-6 max-w-7xl mx-auto">
-        <div className="flex items-center justify-center min-h-[400px]">
-          <div className="text-center">
-            <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-primary border-r-transparent mb-4"></div>
-            <p className="text-muted-foreground">Loading tenant details...</p>
-          </div>
-        </div>
+        
       </div>;
   }
   return <div className="min-h-screen bg-background">
@@ -450,7 +445,9 @@ export default function TenantDetail() {
       {/* Header Card */}
       <div className="px-6">
         <Card className="border-0 shadow-lg overflow-hidden">
-          <div className="px-6 py-4 border-b border-white/20" style={{ backgroundImage: 'linear-gradient(135deg, rgb(98 33 145) 0%, rgb(213 28 73 / 72%) 100%)' }}>
+          <div className="px-6 py-4 border-b border-white/20" style={{
+          backgroundImage: 'linear-gradient(135deg, rgb(98 33 145) 0%, rgb(213 28 73 / 72%) 100%)'
+        }}>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-4">
                 <Avatar className="h-12 w-12">
@@ -464,8 +461,8 @@ export default function TenantDetail() {
                       Hello, {clientData.contactname || clientData.companyname}
                     </h3>
                     <Badge variant={tenantStatus === "active" ? "default" : "secondary"} className={`px-4 py-1.5 text-sm font-semibold ${tenantStatus === "active" ? "bg-green-100 text-green-800 hover:bg-green-100" : "bg-red-100 text-red-800 hover:bg-red-100"}`} style={{
-                      border: tenantStatus === "active" ? "0.7px solid rgb(22, 101, 52)" : "0.7px solid rgb(153, 27, 27)"
-                    }}>
+                    border: tenantStatus === "active" ? "0.7px solid rgb(22, 101, 52)" : "0.7px solid rgb(153, 27, 27)"
+                  }}>
                       {tenantStatus === "active" ? "Active" : "Inactive"}
                     </Badge>
                   </div>
@@ -671,23 +668,16 @@ export default function TenantDetail() {
                             </div>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="start" className="w-[var(--radix-dropdown-menu-trigger-width)] bg-background border border-border/50 shadow-xl z-50 p-1">
-                            {tenantPackages.map((pkg, index) => (
-                              <React.Fragment key={pkg.id}>
-                                <DropdownMenuItem 
-                                  onClick={() => setActivePackageId(pkg.id)} 
-                                  className={`flex items-center gap-3 cursor-pointer rounded-md px-3 py-2.5 ${pkg.id === activePackageId ? 'bg-primary/10 text-primary' : 'hover:bg-muted/50'}`}
-                                >
+                            {tenantPackages.map((pkg, index) => <React.Fragment key={pkg.id}>
+                                <DropdownMenuItem onClick={() => setActivePackageId(pkg.id)} className={`flex items-center gap-3 cursor-pointer rounded-md px-3 py-2.5 ${pkg.id === activePackageId ? 'bg-primary/10 text-primary' : 'hover:bg-muted/50'}`}>
                                   <div className={`h-7 w-7 rounded-full flex items-center justify-center ${pkg.id === activePackageId ? 'bg-primary/20' : 'bg-muted'}`}>
                                     <FileText className="h-3.5 w-3.5" />
                                   </div>
                                   <span className="flex-1 font-medium text-sm">{pkg.name}</span>
                                   {pkg.id === activePackageId && <CheckCircle2 className="h-4 w-4 text-primary" />}
                                 </DropdownMenuItem>
-                                {index < tenantPackages.length - 1 && (
-                                  <div className="mx-2 my-1 h-px bg-gradient-to-r from-transparent via-border to-transparent" />
-                                )}
-                              </React.Fragment>
-                            ))}
+                                {index < tenantPackages.length - 1 && <div className="mx-2 my-1 h-px bg-gradient-to-r from-transparent via-border to-transparent" />}
+                              </React.Fragment>)}
                           </DropdownMenuContent>
                         </DropdownMenu>
 
