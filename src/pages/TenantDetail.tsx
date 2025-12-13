@@ -607,21 +607,12 @@ export default function TenantDetail() {
               <div className="bg-muted/30 px-6 py-4 border-b border-border/50">
                 <div className="flex items-center justify-between gap-3">
                   <div className="flex items-center gap-2">
-                    <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
-                      <PackageIcon className="h-4 w-4 text-primary" />
-                    </div>
+                    
                     <span className="text-sm font-semibold text-foreground">Active Package ({tenantPackages.length})</span>
                   </div>
-                  {activePackageId && (
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
-                      className="h-8 w-8 p-0 text-primary hover:bg-primary/10" 
-                      onClick={() => navigate(`/admin/package/${activePackageId}/tenant/${tenantId}`)}
-                    >
+                  {activePackageId && <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-primary hover:bg-primary/10" onClick={() => navigate(`/admin/package/${activePackageId}/tenant/${tenantId}`)}>
                       <ExternalLink className="h-4 w-4" />
-                    </Button>
-                  )}
+                    </Button>}
                 </div>
               </div>
 
@@ -672,19 +663,13 @@ export default function TenantDetail() {
                             </div>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end" className="w-64 bg-background border border-border/50 shadow-xl z-50 p-1">
-                            {tenantPackages.map(pkg => (
-                              <DropdownMenuItem 
-                                key={pkg.id} 
-                                onClick={() => setActivePackageId(pkg.id)} 
-                                className={`flex items-center gap-3 cursor-pointer rounded-md px-3 py-2.5 ${pkg.id === activePackageId ? 'bg-primary/10 text-primary' : 'hover:bg-muted/50'}`}
-                              >
+                            {tenantPackages.map(pkg => <DropdownMenuItem key={pkg.id} onClick={() => setActivePackageId(pkg.id)} className={`flex items-center gap-3 cursor-pointer rounded-md px-3 py-2.5 ${pkg.id === activePackageId ? 'bg-primary/10 text-primary' : 'hover:bg-muted/50'}`}>
                                 <div className={`h-7 w-7 rounded-full flex items-center justify-center ${pkg.id === activePackageId ? 'bg-primary/20' : 'bg-muted'}`}>
                                   <PackageIcon className="h-3.5 w-3.5" />
                                 </div>
                                 <span className="flex-1 font-medium text-sm">{pkg.name}</span>
                                 {pkg.id === activePackageId && <CheckCircle2 className="h-4 w-4 text-primary" />}
-                              </DropdownMenuItem>
-                            ))}
+                              </DropdownMenuItem>)}
                           </DropdownMenuContent>
                         </DropdownMenu>
 
