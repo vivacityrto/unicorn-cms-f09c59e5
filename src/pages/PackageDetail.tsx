@@ -754,9 +754,9 @@ const PackageDetail = () => {
                     {allTenants.length} client{allTenants.length !== 1 ? 's' : ''} assigned to this package
                   </p>
                 </div>
-                <Button className="gap-2" onClick={() => setIsAddDialogOpen(true)}>
+                <Button className="bg-[hsl(188_74%_51%)] hover:bg-[hsl(188_74%_51%)]/90 gap-2" onClick={() => setIsAddDialogOpen(true)}>
                   <Plus className="h-4 w-4" />
-                  Set up Client
+                  Setup Client
                 </Button>
               </div>
             </div>
@@ -778,7 +778,7 @@ const PackageDetail = () => {
                           <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-r border-border/50 text-center">
                             Status
                           </TableHead>
-                          <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-r border-border/50">
+                          <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-r border-border/50 text-center">
                             CLO
                           </TableHead>
                           <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-r border-border/50 text-center">
@@ -835,15 +835,15 @@ const PackageDetail = () => {
                                   )}
                                 </Badge>
                               </TableCell>
-                              <TableCell className="py-6 border-r border-border/50 whitespace-nowrap">
+                              <TableCell className="py-6 border-r border-border/50 whitespace-nowrap text-center">
                                 {tenant.clo_name ? (
                                   <TooltipProvider>
                                     <Tooltip>
                                       <TooltipTrigger asChild>
                                         <div className="flex items-center justify-center">
-                                          <Avatar className="h-8 w-8 cursor-pointer">
+                                          <Avatar className="h-10 w-10 cursor-pointer">
                                             <AvatarImage src={tenant.clo_avatar_url || undefined} alt={tenant.clo_name} />
-                                            <AvatarFallback className="bg-primary/10 text-primary text-xs font-medium">
+                                            <AvatarFallback className="bg-primary/10 text-primary text-sm font-medium">
                                               {tenant.clo_name.split(' ').map((n: string) => n[0]).join('').substring(0, 2).toUpperCase()}
                                             </AvatarFallback>
                                           </Avatar>
