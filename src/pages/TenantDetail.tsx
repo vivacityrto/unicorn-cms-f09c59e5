@@ -610,7 +610,7 @@ export default function TenantDetail() {
                     
                     <span className="text-sm font-semibold text-foreground">Active Package ({tenantPackages.length})</span>
                   </div>
-                  {activePackageId && <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-primary hover:bg-primary/10" onClick={() => navigate(`/admin/package/${activePackageId}/tenant/${tenantId}`)}>
+                  {activePackageId && <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-foreground hover:bg-primary hover:text-primary-foreground" onClick={() => navigate(`/admin/package/${activePackageId}/tenant/${tenantId}`)}>
                       <ExternalLink className="h-4 w-4" />
                     </Button>}
                 </div>
