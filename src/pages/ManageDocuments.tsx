@@ -1333,7 +1333,7 @@ export default function ManageDocuments() {
                 </Sheet>
 
                 <DialogFooter className="flex-shrink-0 pt-4 mt-4 border-t">
-                  <Button variant="outline" size="default" type="button" onClick={() => setIsCreateDialogOpen(false)}>
+                  <Button variant="ghost" size="default" type="button" onClick={() => setIsCreateDialogOpen(false)} className="hover:bg-muted hover:text-foreground">
                     Cancel
                   </Button>
                   <Button onClick={handleCreateDocument} disabled={!formData.title}>
