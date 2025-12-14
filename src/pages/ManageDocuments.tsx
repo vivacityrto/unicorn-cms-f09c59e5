@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { FileText, Search, ArrowUpDown, Plus, FolderTree, FileStack, ListTree, X, Download, Eye, Trash2, Send, Mail, Building2, Filter, ChevronDown, ChevronUp } from "lucide-react";
+import { FileText, Search, ArrowUpDown, Plus, FolderTree, FileStack, ListTree, X, Download, Eye, Trash2, Send, Mail, Building2, Filter, ChevronDown, ChevronUp, Pencil } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useAuth } from "@/hooks/useAuth";
 import { Combobox } from "@/components/ui/combobox";
@@ -140,6 +140,11 @@ export default function ManageDocuments() {
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 20;
+
+  // Individual document actions
+  const [editingDocumentId, setEditingDocumentId] = useState<number | null>(null);
+  const [documentToDelete, setDocumentToDelete] = useState<number | null>(null);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
   // Form state
   const [formData, setFormData] = useState({
@@ -1474,12 +1479,13 @@ export default function ManageDocuments() {
                 <TableHead className="font-semibold bg-muted/30 text-foreground w-40 h-14 whitespace-nowrap border-r">Version Updated</TableHead>
                 <TableHead className="font-semibold bg-muted/30 text-foreground w-32 h-14 whitespace-nowrap border-r">Client Doc</TableHead>
                 <TableHead className="font-semibold bg-muted/30 text-foreground w-24 h-14 whitespace-nowrap border-r">Stage</TableHead>
-                <TableHead className="font-semibold bg-muted/30 text-foreground w-32 h-14 whitespace-nowrap">Category</TableHead>
+                <TableHead className="font-semibold bg-muted/30 text-foreground w-32 h-14 whitespace-nowrap border-r">Category</TableHead>
+                <TableHead className="font-semibold bg-muted/30 text-foreground w-24 h-14 whitespace-nowrap text-center">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {filteredDocuments.length === 0 ? <TableRow>
-                  <TableCell colSpan={11} className="text-center py-16 text-muted-foreground">
+                  <TableCell colSpan={12} className="text-center py-16 text-muted-foreground">
                     No documents found
                   </TableCell>
                 </TableRow> : paginatedDocuments.map((doc, index) => {
@@ -1544,12 +1550,40 @@ export default function ManageDocuments() {
                       <TableCell className="whitespace-nowrap py-6 text-muted-foreground text-sm border-r border-border/50">
                         {stages.find(s => s.id === doc.stage)?.title || "—"}
                       </TableCell>
-                      <TableCell className="whitespace-nowrap py-6 text-muted-foreground text-sm">
+                      <TableCell className="whitespace-nowrap py-6 text-muted-foreground text-sm border-r border-border/50">
                         {categoryBadges.length > 0 ? (
                           categoryBadges.length > 1 
                             ? `${categoryBadges[0]} +${categoryBadges.length - 1}` 
                             : categoryBadges[0]
                         ) : "—"}
+                      </TableCell>
+                      <TableCell className="whitespace-nowrap py-6">
+                        <div className="flex items-center justify-center gap-1">
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="h-8 w-8 hover:bg-muted" 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setEditingDocumentId(doc.id);
+                              setIsCreateDialogOpen(true);
+                            }}
+                          >
+                            <Pencil className="h-4 w-4 text-muted-foreground hover:text-foreground" />
+                          </Button>
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="h-8 w-8 hover:bg-destructive/10" 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setDocumentToDelete(doc.id);
+                              setIsDeleteDialogOpen(true);
+                            }}
+                          >
+                            <Trash2 className="h-4 w-4 text-muted-foreground hover:text-destructive" />
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>;
             })}
@@ -1632,6 +1666,46 @@ export default function ManageDocuments() {
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction onClick={handleBulkDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Single Document Delete Dialog */}
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Document?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this document? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="hover:bg-muted hover:text-foreground">Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={async () => {
+                if (!documentToDelete) return;
+                try {
+                  const { error } = await supabase.from("documents").delete().eq("id", documentToDelete);
+                  if (error) throw error;
+                  toast({
+                    title: "Success",
+                    description: "Document deleted successfully"
+                  });
+                  setDocumentToDelete(null);
+                  setIsDeleteDialogOpen(false);
+                  fetchDocuments();
+                } catch (error: any) {
+                  toast({
+                    title: "Error",
+                    description: error.message,
+                    variant: "destructive"
+                  });
+                }
+              }} 
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
               Delete
             </AlertDialogAction>
           </AlertDialogFooter>
