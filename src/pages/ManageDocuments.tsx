@@ -1272,16 +1272,33 @@ export default function ManageDocuments() {
                             <button
                               type="button"
                               onClick={async () => {
-                                // Support both legacy full URLs and new storage paths
-                                if (file.url.startsWith("http")) {
-                                  window.open(file.url, "_blank");
-                                } else {
-                                  const { data } = supabase.storage
-                                    .from("document-files")
-                                    .getPublicUrl(file.url);
-                                  if (data.publicUrl) {
-                                    window.open(data.publicUrl, "_blank");
+                                try {
+                                  // Handle legacy full URLs and storage paths
+                                  if (file.url.startsWith("http")) {
+                                    const url = new URL(file.url);
+                                    const segments = url.pathname.split("/").filter(Boolean);
+                                    const publicIndex = segments.indexOf("public");
+
+                                    if (publicIndex !== -1 && segments.length > publicIndex + 2) {
+                                      const bucket = segments[publicIndex + 1];
+                                      const objectPath = segments.slice(publicIndex + 2).join("/");
+                                      const { data } = supabase.storage.from(bucket).getPublicUrl(objectPath);
+                                      if (data.publicUrl) {
+                                        window.open(data.publicUrl, "_blank");
+                                      } else {
+                                        window.open(file.url, "_blank");
+                                      }
+                                    } else {
+                                      window.open(file.url, "_blank");
+                                    }
+                                  } else {
+                                    const { data } = supabase.storage.from("document-files").getPublicUrl(file.url);
+                                    if (data.publicUrl) {
+                                      window.open(data.publicUrl, "_blank");
+                                    }
                                   }
+                                } catch {
+                                  window.open(file.url, "_blank");
                                 }
                               }}
                               className="ml-1 text-primary border border-primary bg-primary/20 hover:bg-primary/30 rounded-full p-0.5"
