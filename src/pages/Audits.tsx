@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { useAudits } from "@/hooks/useAudits";
@@ -13,8 +13,11 @@ import { useAuth } from "@/hooks/useAuth";
 import { AuditNavCards } from "@/components/audit/AuditNavCards";
 import { AuditTemplatesTable, AuditTemplate } from "@/components/audit/AuditTemplatesTable";
 import { AuditInspectionsTable, AuditInspection } from "@/components/audit/AuditInspectionsTable";
+import { DeleteConfirmDialog } from "@/components/audit/DeleteConfirmDialog";
 import { toast } from "sonner";
+
 type AuditTab = "templates" | "inspections" | "schedules" | "analytics";
+
 export default function Audits() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -29,6 +32,11 @@ export default function Audits() {
   });
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [selectedClient, setSelectedClient] = useState<string>("");
+  
+  // Delete dialog state
+  const [deleteTemplateDialog, setDeleteTemplateDialog] = useState<{ open: boolean; template: AuditTemplate | null }>({ open: false, template: null });
+  const [deleteInspectionDialog, setDeleteInspectionDialog] = useState<{ open: boolean; inspection: AuditInspection | null }>({ open: false, inspection: null });
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // Fetch templates from audit_templates table
   const {
@@ -189,8 +197,11 @@ export default function Audits() {
   );
 
   // Delete inspection handler
-  const handleDeleteInspection = async (inspection: AuditInspection) => {
-    if (!confirm(`Are you sure you want to delete this inspection?`)) return;
+  const handleDeleteInspection = async () => {
+    const inspection = deleteInspectionDialog.inspection;
+    if (!inspection) return;
+    
+    setIsDeleting(true);
     try {
       const { error } = await supabase
         .from("audit_inspection")
@@ -199,8 +210,11 @@ export default function Audits() {
       if (error) throw error;
       toast.success("Inspection deleted successfully");
       refetchInspections();
+      setDeleteInspectionDialog({ open: false, inspection: null });
     } catch (error: any) {
       toast.error("Failed to delete inspection: " + error.message);
+    } finally {
+      setIsDeleting(false);
     }
   };
   const handleStartInspection = (template: AuditTemplate) => {
@@ -259,11 +273,11 @@ export default function Audits() {
       toast.error("Failed to duplicate template: " + error.message);
     }
   };
-  const handleDeleteTemplate = async (template: AuditTemplate) => {
-    if (!confirm(`Are you sure you want to delete "${template.name}"? This action cannot be undone.`)) {
-      return;
-    }
+  const handleDeleteTemplate = async () => {
+    const template = deleteTemplateDialog.template;
+    if (!template) return;
 
+    setIsDeleting(true);
     try {
       // Delete questions first (due to foreign key)
       const { error: questionsError } = await supabase
@@ -280,8 +294,11 @@ export default function Audits() {
 
       toast.success(`Template "${template.name}" deleted successfully`);
       refetchTemplates();
+      setDeleteTemplateDialog({ open: false, template: null });
     } catch (error: any) {
       toast.error("Failed to delete template: " + error.message);
+    } finally {
+      setIsDeleting(false);
     }
   };
   return (
@@ -376,7 +393,7 @@ export default function Audits() {
             onStartInspection={handleStartInspection}
             onEditTemplate={(t) => navigate(`/audits/create-template/${t.id}`)}
             onDuplicateTemplate={handleDuplicateTemplate}
-            onDeleteTemplate={handleDeleteTemplate}
+            onDeleteTemplate={(t) => setDeleteTemplateDialog({ open: true, template: t })}
           />
         )}
 
@@ -385,7 +402,7 @@ export default function Audits() {
             inspections={inspections} 
             isLoading={inspectionsLoading} 
             onEditInspection={(inspection) => navigate(`/audits/create-template/${inspection.template_id}?mode=inspection&inspectionId=${inspection.id}`)}
-            onDeleteInspection={handleDeleteInspection}
+            onDeleteInspection={(inspection) => setDeleteInspectionDialog({ open: true, inspection })}
           />
         )}
 
@@ -409,6 +426,28 @@ export default function Audits() {
           </Card>
         )}
       </div>
+
+      {/* Delete Template Dialog */}
+      <DeleteConfirmDialog
+        open={deleteTemplateDialog.open}
+        onOpenChange={(open) => setDeleteTemplateDialog({ open, template: open ? deleteTemplateDialog.template : null })}
+        title="Delete Template"
+        description="This action cannot be undone. This will permanently delete the template and all associated questions."
+        itemName={deleteTemplateDialog.template?.name}
+        onConfirm={handleDeleteTemplate}
+        isDeleting={isDeleting}
+      />
+
+      {/* Delete Inspection Dialog */}
+      <DeleteConfirmDialog
+        open={deleteInspectionDialog.open}
+        onOpenChange={(open) => setDeleteInspectionDialog({ open, inspection: open ? deleteInspectionDialog.inspection : null })}
+        title="Delete Inspection"
+        description="This action cannot be undone. This will permanently delete the inspection record."
+        itemName={deleteInspectionDialog.inspection?.template_name}
+        onConfirm={handleDeleteInspection}
+        isDeleting={isDeleting}
+      />
     </DashboardLayout>
   );
 }
