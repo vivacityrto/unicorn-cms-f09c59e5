@@ -33,6 +33,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 interface Category {
   id: number;
   name: string;
+  description: string | null;
   created_at: string;
   updated_at: string;
   created_by: string | null;
@@ -322,6 +323,7 @@ export default function ManageCategories() {
               <TableRow className="border-b-2 hover:bg-transparent">
                 <TableHead className="font-semibold bg-muted/30 text-foreground h-14 whitespace-nowrap border-r text-center w-24">ID</TableHead>
                 <TableHead className="font-semibold bg-muted/30 text-foreground h-14 whitespace-nowrap border-r">Name</TableHead>
+                <TableHead className="font-semibold bg-muted/30 text-foreground h-14 whitespace-nowrap border-r">Description</TableHead>
                 <TableHead className="font-semibold bg-muted/30 text-foreground h-14 whitespace-nowrap border-r">Created</TableHead>
                 <TableHead className="font-semibold bg-muted/30 text-foreground h-14 whitespace-nowrap border-r">Created By</TableHead>
                 <TableHead className="font-semibold bg-muted/30 text-foreground h-14 whitespace-nowrap text-right">Actions</TableHead>
@@ -330,7 +332,7 @@ export default function ManageCategories() {
             <TableBody>
               {filteredCategories.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center py-16 text-muted-foreground">
+                  <TableCell colSpan={6} className="text-center py-16 text-muted-foreground">
                     {searchQuery ? 'No categories match your search' : 'No categories found'}
                   </TableCell>
                 </TableRow>
@@ -342,6 +344,9 @@ export default function ManageCategories() {
                   </TableCell>
                   <TableCell className="py-6 border-r border-border/50">
                     <span className="font-semibold text-foreground">{category.name}</span>
+                  </TableCell>
+                  <TableCell className="py-6 border-r border-border/50 text-muted-foreground text-sm">
+                    {category.description || 'No description added'}
                   </TableCell>
                   <TableCell className="py-6 border-r border-border/50 text-muted-foreground text-sm">
                     {new Date(category.created_at).toLocaleDateString()}
