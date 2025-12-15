@@ -1300,47 +1300,47 @@ export default function AuditTemplateBuilder() {
         try {
           // Find document question and get selected document name
           const documentsQuestion = canvasQuestions.find(q => q.question_type === 'documents');
-          let docNumber = null;
+          let docNumber: string | null = null;
           if (documentsQuestion && previewResponses[documentsQuestion.id]) {
-            // Fetch the document title from the selected document ID
+            const selectedDocId = previewResponses[documentsQuestion.id];
             const { data: docData } = await supabase
               .from('documents')
               .select('title')
-              .eq('id', previewResponses[documentsQuestion.id])
+              .eq('id', selectedDocId)
               .single();
             docNumber = docData?.title || null;
           }
           
           // Get client_id from responses if clients question exists
           const clientsQuestion = canvasQuestions.find(q => q.question_type === 'clients');
-          const clientId = clientsQuestion ? previewResponses[clientsQuestion.id] : null;
+          const clientResponse = clientsQuestion ? previewResponses[clientsQuestion.id] : null;
+          const clientId = typeof clientResponse === 'string' ? clientResponse : null;
+
+          // Validate UUID format for client_id (avoid 22P02 errors)
+          const isValidUuid = (value: string | null) => !!value && /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(value);
+          const validClientId = isValidUuid(clientId) ? clientId : null;
           
-          // Create inspection record in audit table
           if (profile?.tenant_id && profile?.user_uuid) {
-            // We need a valid client_id - use the selected one or a placeholder
-            const validClientId = clientId || null;
+            const { error: insertError } = await supabase
+              .from('audit_inspection')
+              .insert({
+                tenant_id: profile.tenant_id,
+                client_id: validClientId,
+                template_id: templateIdParam ? parseInt(templateIdParam) : null,
+                inspection_title: templateName || 'Untitled Inspection',
+                doc_number: docNumber,
+                status: 'completed',
+                compliance_score: hasScoringQuestions ? score : null,
+                conducted_by: profile.user_uuid,
+                started_at: new Date().toISOString(),
+                completed_at: new Date().toISOString(),
+                responses: previewResponses,
+              });
             
-            if (validClientId) {
-              const { error: insertError } = await supabase
-                .from('audit')
-                .insert({
-                  tenant_id: profile.tenant_id,
-                  client_id: validClientId,
-                  template_id: templateIdParam ? parseInt(templateIdParam) : null,
-                  audit_title: templateName || 'Untitled Inspection',
-                  created_by: profile.user_uuid,
-                  conducted_by: profile.user_uuid,
-                  doc_number: docNumber,
-                  status: 'completed',
-                  started_at: new Date().toISOString(),
-                  completed_at: new Date().toISOString()
-                });
-              
-              if (insertError) {
-                console.error('Error saving inspection:', insertError);
-                toast.error('Failed to save inspection record');
-                return;
-              }
+            if (insertError) {
+              console.error('Error saving inspection:', insertError);
+              toast.error('Failed to save inspection record');
+              return;
             }
           }
           
