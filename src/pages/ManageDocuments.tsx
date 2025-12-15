@@ -26,6 +26,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { CalendarIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from '@/components/ui/pagination';
+import { Separator } from "@/components/ui/separator";
 interface Document {
   id: number;
   title: string;
@@ -1035,13 +1036,13 @@ export default function ManageDocuments() {
                   </DialogDescription>
                 </DialogHeader>
                 <div className="flex-1 overflow-y-auto scrollbar-hide px-1 min-h-0">
-                  <div className="grid gap-4 py-4 px-1">
-                  <div className="grid gap-2">
+                  <div className="grid gap-6 py-4 px-1">
+                  <div className="grid gap-2.5">
                     <Label>Order Number (Auto-populated)</Label>
                     <Input type="text" value={nextOrderNumber?.toString() || "Will be assigned automatically"} disabled className="bg-muted cursor-not-allowed" />
                   </div>
 
-                  <div className="grid gap-2">
+                  <div className="grid gap-2.5">
                     <Label htmlFor="title">Name *</Label>
                     <Input id="title" value={formData.title} onChange={e => setFormData({
                     ...formData,
@@ -1049,7 +1050,7 @@ export default function ManageDocuments() {
                   })} required />
                   </div>
 
-                  <div className="grid gap-2">
+                  <div className="grid gap-2.5">
                     <Label htmlFor="description">Description</Label>
                     <Input id="description" value={formData.description} onChange={e => setFormData({
                     ...formData,
@@ -1057,9 +1058,11 @@ export default function ManageDocuments() {
                   })} />
                   </div>
 
+                  <Separator className="my-1" />
+
                   
 
-                  <div className="grid gap-2">
+                  <div className="grid gap-2.5">
                     <Label>Version Date</Label>
                     <Popover>
                       <PopoverTrigger asChild>
@@ -1077,7 +1080,7 @@ export default function ManageDocuments() {
                     </Popover>
                   </div>
 
-                  <div className="grid gap-2">
+                  <div className="grid gap-2.5">
                     <Label htmlFor="versionnumber">Version Number</Label>
                     <Input id="versionnumber" type="number" value={formData.versionnumber} onChange={e => setFormData({
                     ...formData,
@@ -1085,7 +1088,7 @@ export default function ManageDocuments() {
                   })} />
                   </div>
 
-                  <div className="grid gap-2">
+                  <div className="grid gap-2.5">
                     <Label>Version Last Updated</Label>
                     <Popover>
                       <PopoverTrigger asChild>
@@ -1103,9 +1106,11 @@ export default function ManageDocuments() {
                     </Popover>
                   </div>
 
+                  <Separator className="my-1" />
+
                   
 
-                  <div className="grid gap-2">
+                  <div className="grid gap-2.5">
                     <Label htmlFor="stage">Stage</Label>
                     <Combobox options={stages.map(stage => ({
                     value: stage.id.toString(),
@@ -1116,7 +1121,7 @@ export default function ManageDocuments() {
                   })} placeholder="Select stage..." searchPlaceholder="Search stages..." emptyText="No stages found." className="w-full" showAvatar={false} autoWidth />
                   </div>
 
-                  <div className="grid gap-2">
+                  <div className="grid gap-2.5">
                     <Label htmlFor="category">Category</Label>
                     <Popover>
                       <PopoverTrigger asChild>
@@ -1176,7 +1181,9 @@ export default function ManageDocuments() {
                       </div>}
                   </div>
 
-                  <div className="grid gap-2">
+                  <Separator className="my-1" />
+
+                  <div className="grid gap-2.5">
                     <Label htmlFor="files">Files</Label>
                     <Sheet open={isFieldsSheetOpen} onOpenChange={setIsFieldsSheetOpen}>
                       <SheetContent side="right" className="w-[560px] sm:max-w-[540px] data-[state=open]:duration-500">
