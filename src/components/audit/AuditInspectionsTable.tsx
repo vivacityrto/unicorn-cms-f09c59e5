@@ -4,6 +4,7 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Search, MoreHorizontal, FileText, ArrowUpDown, Settings, Calendar, Pencil, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -285,15 +286,23 @@ export function AuditInspectionsTable({
                       {getStatusBadge(inspection.status)}
                     </TableCell>
                     <TableCell className="py-5 border-r border-border/50 text-center">
-                      <div className="flex items-center justify-center gap-2">
-                        <Avatar className="h-7 w-7">
-                          <AvatarImage src={inspection.conducted_by_avatar} />
-                          <AvatarFallback className="text-xs bg-primary/10 text-primary">
-                            {inspection.conducted_by_name?.split(' ').map(n => n[0]).join('').toUpperCase() || '?'}
-                          </AvatarFallback>
-                        </Avatar>
-                        <span className="text-sm text-foreground">{inspection.conducted_by_name}</span>
-                      </div>
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <div className="flex items-center justify-center">
+                              <Avatar className="h-8 w-8 cursor-pointer">
+                                <AvatarImage src={inspection.conducted_by_avatar} alt={inspection.conducted_by_name} />
+                                <AvatarFallback className="text-xs bg-primary/10 text-primary">
+                                  {inspection.conducted_by_name?.split(' ').map(n => n[0]).join('').toUpperCase() || '?'}
+                                </AvatarFallback>
+                              </Avatar>
+                            </div>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>{inspection.conducted_by_name || 'Unknown'}</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
                     </TableCell>
                     <TableCell className="py-5 px-4 text-center whitespace-nowrap">
                       <div className="flex items-center justify-center gap-1">
