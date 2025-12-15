@@ -1447,7 +1447,7 @@ export default function AuditTemplateBuilder() {
                 {inspectionIdParam ? (
                   <Button 
                     size="sm" 
-                    className="gap-2 bg-green-600 hover:bg-green-700 text-white"
+                    className="gap-2 bg-green-500/15 hover:bg-green-500/25 text-green-600 border border-green-600"
                     onClick={async () => {
                       if (!validateCurrentPage()) return;
                       
