@@ -45,6 +45,15 @@ export default function Audits() {
 
       if (error) throw error;
 
+      // Fetch inspections to determine which templates are in use
+      const { data: inspectionTemplateIds } = await supabase
+        .from("audit_inspection")
+        .select("template_id");
+      
+      const templateIdsInUse = new Set(
+        (inspectionTemplateIds || []).map((i) => i.template_id?.toString())
+      );
+
       // Transform to match AuditTemplate interface
       // Use last_published if available, otherwise fall back to updated_at
       return data.map((t) => ({
@@ -54,6 +63,7 @@ export default function Audits() {
         last_published: t.last_published || t.updated_at,
         access: t.access as "all_users" | "restricted",
         status: t.status as "active" | "locked" | "draft",
+        has_inspections: templateIdsInUse.has(t.id.toString()),
       })) as AuditTemplate[];
     },
     enabled: !!profile?.tenant_id,
