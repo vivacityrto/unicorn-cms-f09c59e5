@@ -1010,33 +1010,6 @@ export default function ManageDocuments() {
                 })} />
                   </div>
 
-                  <div className="grid gap-2">
-                    <Label htmlFor="format">Format</Label>
-                    <Combobox
-                      options={[
-                        { value: "PDF", label: "PDF" },
-                        { value: "DOCX", label: "DOCX" },
-                        { value: "XLSX", label: "XLSX" },
-                        { value: "PPTX", label: "PPTX" },
-                        { value: "TXT", label: "TXT" },
-                        { value: "JPG", label: "JPG" },
-                        { value: "PNG", label: "PNG" },
-                        { value: "ZIP", label: "ZIP" }
-                      ]}
-                      value={formData.format}
-                      onValueChange={value => setFormData({
-                        ...formData,
-                        format: value
-                      })}
-                      placeholder="Select format..."
-                      searchPlaceholder="Search formats..."
-                      emptyText="No format found."
-                      className="w-full"
-                      showAvatar={false}
-                      autoWidth
-                    />
-                  </div>
-
                   <div className="flex items-center gap-2">
                     <Switch id="watermark" checked={formData.watermark} onCheckedChange={checked => setFormData({
                   ...formData,
@@ -1512,7 +1485,7 @@ export default function ManageDocuments() {
                   Name
                 </TableHead>
                 <TableHead className="font-semibold bg-muted/30 text-foreground min-w-[250px] h-14 whitespace-nowrap border-r">Description</TableHead>
-                <TableHead className="font-semibold bg-muted/30 text-foreground w-24 h-14 whitespace-nowrap border-r">Format</TableHead>
+                <TableHead className="font-semibold bg-muted/30 text-foreground w-24 h-14 whitespace-nowrap border-r text-center">Files</TableHead>
                 <TableHead className="font-semibold bg-muted/30 text-foreground w-28 h-14 whitespace-nowrap border-r">Watermark</TableHead>
                 <TableHead className="font-semibold bg-muted/30 text-foreground w-32 h-14 whitespace-nowrap border-r">
                   Version Date
@@ -1567,10 +1540,17 @@ export default function ManageDocuments() {
                       <TableCell className="text-muted-foreground text-sm whitespace-nowrap py-6 border-r border-border/50">
                         <div className="truncate max-w-[230px]">{doc.description || "—"}</div>
                       </TableCell>
-                      <TableCell className="whitespace-nowrap py-6 border-r border-border/50">
-                        {doc.format ? <Badge variant="secondary" className="text-xs font-medium py-[3px] rounded-[9px]">
-                            {doc.format}
-                          </Badge> : "—"}
+                      <TableCell className="whitespace-nowrap py-6 border-r border-border/50 text-center" onClick={e => e.stopPropagation()}>
+                        {doc.uploaded_files && doc.uploaded_files.length > 0 ? (
+                          <Badge 
+                            className="bg-green-500/10 text-green-600 hover:bg-green-500/20 border border-green-600 text-[0.75rem] py-[2px] px-[0.625rem] rounded-[11px] font-medium cursor-pointer"
+                          >
+                            <FileText className="h-3 w-3 mr-1" />
+                            {doc.uploaded_files.length} {doc.uploaded_files.length === 1 ? 'File' : 'Files'}
+                          </Badge>
+                        ) : (
+                          <span className="text-sm text-muted-foreground">—</span>
+                        )}
                       </TableCell>
                       <TableCell className="whitespace-nowrap py-6 border-r border-border/50">
                         <Badge variant={doc.watermark ? "default" : "outline"} className="text-xs font-medium py-[3px] rounded-[9px]">
