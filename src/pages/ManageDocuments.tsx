@@ -565,7 +565,7 @@ export default function ManageDocuments() {
           description: "Document updated successfully"
         });
       } else {
-        // Insert new document
+        // Insert new document with created_by set to current user
         const {
           error
         } = await supabase.from("documents").insert({
@@ -580,7 +580,8 @@ export default function ManageDocuments() {
           stage: formData.stage ? parseInt(formData.stage) : null,
           category: formData.categories.length > 0 ? formData.categories.join(',') : null,
           uploaded_files: allFileUrls.length > 0 ? allFileUrls : null,
-          file_names: allFileNames.length > 0 ? allFileNames : null
+          file_names: allFileNames.length > 0 ? allFileNames : null,
+          created_by: profile?.user_uuid || null
         });
         if (error) throw error;
         toast({
