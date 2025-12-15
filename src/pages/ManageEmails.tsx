@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
-import { Search, Plus, Trash2, FileText, Calendar, User, Mail, Pencil } from "lucide-react";
+import { Search, Plus, Trash2, FileText, Calendar, Mail, Pencil } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -144,8 +144,8 @@ export default function ManageEmails() {
           <Button onClick={() => {
           setEditingEmail(null);
           setCreateDialogOpen(true);
-        }} className="gap-2">
-            <Plus className="h-4 w-4" />
+        }} className="bg-[hsl(188_74%_51%)] hover:bg-[hsl(188_74%_51%)]/90">
+            <Plus className="h-4 w-4 mr-2" />
             Create New Email
           </Button>
         </div>
@@ -184,9 +184,15 @@ export default function ManageEmails() {
             }}>
                     {/* Name Column */}
                     <TableCell className="py-4 border-r border-border">
-                      <span className="text-sm font-medium text-foreground">
-                        {email.name || "Untitled"}
-                      </span>
+                      <div className="flex flex-col gap-1">
+                        <span className="text-sm font-medium text-foreground">
+                          {email.name || "Untitled"}
+                        </span>
+                        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                          <Calendar className="h-3 w-3" />
+                          <span>{formatDate(email.created_at)}</span>
+                        </div>
+                      </div>
                     </TableCell>
 
                     {/* Description Column */}
