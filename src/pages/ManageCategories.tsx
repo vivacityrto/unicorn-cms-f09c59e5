@@ -21,10 +21,14 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from '@/components/ui/pagination';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Separator } from '@/components/ui/separator';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface Category {
   id: number;
@@ -43,7 +47,7 @@ export default function ManageCategories() {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
-  const [formData, setFormData] = useState({ name: '' });
+  const [formData, setFormData] = useState({ name: '', description: '' });
   const [searchQuery, setSearchQuery] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 20;
@@ -116,7 +120,7 @@ export default function ManageCategories() {
         description: 'Category created successfully',
       });
 
-      setFormData({ name: '' });
+      setFormData({ name: '', description: '' });
       setIsCreateDialogOpen(false);
       fetchCategories();
     } catch (error: any) {
@@ -151,7 +155,7 @@ export default function ManageCategories() {
         description: 'Category updated successfully',
       });
 
-      setFormData({ name: '' });
+      setFormData({ name: '', description: '' });
       setEditingCategory(null);
       setIsEditDialogOpen(false);
       fetchCategories();
@@ -194,7 +198,7 @@ export default function ManageCategories() {
 
   const openEditDialog = (category: Category) => {
     setEditingCategory(category);
-    setFormData({ name: category.name });
+    setFormData({ name: category.name, description: '' });
     setIsEditDialogOpen(true);
   };
 
@@ -253,23 +257,42 @@ export default function ManageCategories() {
               New Category
             </Button>
           </DialogTrigger>
-          <DialogContent>
+          <DialogContent className="sm:max-w-[600px] max-h-[85vh] overflow-hidden flex flex-col border-[3px] border-[#dfdfdf]">
             <DialogHeader>
-              <DialogTitle>Create New Category</DialogTitle>
+              <DialogTitle className="flex items-center gap-2">
+                <FolderTree className="h-5 w-5" />
+                Create New Category
+              </DialogTitle>
+              <DialogDescription>
+                Add a new category to organize documents
+              </DialogDescription>
             </DialogHeader>
-            <div className="grid gap-4 py-4">
-              <div className="grid gap-2">
+            <Separator />
+            <div className="flex-1 overflow-y-auto space-y-6 py-4 px-1">
+              <div className="space-y-2">
                 <Label htmlFor="name">Category Name *</Label>
                 <Input
                   id="name"
                   value={formData.name}
-                  onChange={(e) => setFormData({ name: e.target.value })}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                   placeholder="Enter category name"
                 />
               </div>
+              <div className="space-y-2">
+                <Label htmlFor="description">Description</Label>
+                <Textarea
+                  id="description"
+                  value={formData.description}
+                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                  placeholder="Enter category description"
+                  rows={4}
+                  className="resize-none"
+                />
+              </div>
             </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
+            <Separator className="my-1" />
+            <DialogFooter className="gap-3">
+              <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)} className="hover:bg-[#40c6e524] hover:text-black">
                 Cancel
               </Button>
               <Button onClick={handleCreateCategory}>Create Category</Button>
@@ -323,8 +346,21 @@ export default function ManageCategories() {
                   <TableCell className="py-6 border-r border-border/50 text-muted-foreground text-sm">
                     {new Date(category.created_at).toLocaleDateString()}
                   </TableCell>
-                  <TableCell className="py-6 border-r border-border/50 text-muted-foreground text-sm">
-                    {category.creator_name || 'Unknown'}
+                  <TableCell className="py-6 border-r border-border/50">
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Avatar className="h-8 w-8 cursor-pointer">
+                            <AvatarFallback className="bg-primary/10 text-primary text-xs">
+                              {category.creator_name ? category.creator_name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() : 'UN'}
+                            </AvatarFallback>
+                          </Avatar>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>{category.creator_name || 'Unknown'}</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
                   </TableCell>
                   <TableCell className="text-right py-6">
                     <div className="flex justify-end gap-2">
@@ -416,23 +452,42 @@ export default function ManageCategories() {
       )}
 
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent>
+        <DialogContent className="sm:max-w-[600px] max-h-[85vh] overflow-hidden flex flex-col border-[3px] border-[#dfdfdf]">
           <DialogHeader>
-            <DialogTitle>Edit Category</DialogTitle>
+            <DialogTitle className="flex items-center gap-2">
+              <FolderTree className="h-5 w-5" />
+              Edit Category
+            </DialogTitle>
+            <DialogDescription>
+              Update category details
+            </DialogDescription>
           </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid gap-2">
+          <Separator />
+          <div className="flex-1 overflow-y-auto space-y-6 py-4 px-1">
+            <div className="space-y-2">
               <Label htmlFor="edit-name">Category Name *</Label>
               <Input
                 id="edit-name"
                 value={formData.name}
-                onChange={(e) => setFormData({ name: e.target.value })}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 placeholder="Enter category name"
               />
             </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-description">Description</Label>
+              <Textarea
+                id="edit-description"
+                value={formData.description}
+                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                placeholder="Enter category description"
+                rows={4}
+                className="resize-none"
+              />
+            </div>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
+          <Separator className="my-1" />
+          <DialogFooter className="gap-3">
+            <Button variant="outline" onClick={() => setIsEditDialogOpen(false)} className="hover:bg-[#40c6e524] hover:text-black">
               Cancel
             </Button>
             <Button onClick={handleEditCategory}>Save Changes</Button>
