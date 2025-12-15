@@ -1516,7 +1516,8 @@ export default function ManageDocuments() {
                               New
                             </Badge>}
                           </div>
-                          <span className="text-xs text-muted-foreground">
+                          <span className="text-xs text-muted-foreground flex items-center gap-1 pt-[5px]">
+                            <Calendar className="h-3 w-3" />
                             Created: {doc.createdat ? format(new Date(doc.createdat), "MM/dd/yyyy") : "—"}
                           </span>
                         </div>
