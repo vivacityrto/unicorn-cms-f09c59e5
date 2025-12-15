@@ -1045,6 +1045,7 @@ export default function AuditTemplateBuilder() {
   const [canvasQuestions, setCanvasQuestions] = useState<CanvasQuestion[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [previewPage, setPreviewPage] = useState(0);
   const [isLoading, setIsLoading] = useState(!!templateIdParam);
@@ -1342,7 +1343,9 @@ export default function AuditTemplateBuilder() {
       }
     };
     const handleSubmit = async () => {
+      if (isSubmitting) return; // Prevent double submission
       if (validateCurrentPage()) {
+        setIsSubmitting(true);
         // Calculate compliance score
         const score = calculateComplianceScore(canvasQuestions, previewResponses);
         const hasScoringQuestions = canvasQuestions.some(
@@ -1429,6 +1432,8 @@ export default function AuditTemplateBuilder() {
         } catch (error) {
           console.error('Error submitting inspection:', error);
           toast.error('Failed to submit inspection');
+        } finally {
+          setIsSubmitting(false);
         }
       }
     };
@@ -1587,8 +1592,8 @@ export default function AuditTemplateBuilder() {
                   }}>
                           Next
                         </Button>}
-                      {isLastPage && <Button onClick={handleSubmit} className="bg-primary hover:bg-primary/90">
-                          Submit
+                      {isLastPage && <Button onClick={handleSubmit} disabled={isSubmitting} className="bg-primary hover:bg-primary/90">
+                          {isSubmitting ? 'Submitting...' : 'Submit'}
                         </Button>}
                     </div>
                   </div>
