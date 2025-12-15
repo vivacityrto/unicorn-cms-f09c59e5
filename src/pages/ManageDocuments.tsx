@@ -146,6 +146,7 @@ export default function ManageDocuments() {
   const [editingDocumentId, setEditingDocumentId] = useState<number | null>(null);
   const [documentToDelete, setDocumentToDelete] = useState<number | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [existingFiles, setExistingFiles] = useState<{ url: string; name: string }[]>([]);
 
   // Form state
   const [formData, setFormData] = useState({
@@ -192,6 +193,16 @@ export default function ManageDocuments() {
           stage: doc.stage?.toString() || "",
           categories: doc.category ? doc.category.split(",").map(c => c.trim()) : []
         });
+        // Set existing files
+        if (doc.uploaded_files && doc.file_names) {
+          const files = doc.uploaded_files.map((url, index) => ({
+            url,
+            name: doc.file_names?.[index] || `File ${index + 1}`
+          }));
+          setExistingFiles(files);
+        } else {
+          setExistingFiles([]);
+        }
       }
     }
   }, [editingDocumentId, isCreateDialogOpen, documents]);
@@ -472,9 +483,9 @@ export default function ManageDocuments() {
   };
   const handleCreateDocument = async () => {
     try {
-      // Upload files to storage if any
-      const fileUrls: string[] = [];
-      const fileNames: string[] = [];
+      // Upload new files to storage if any
+      const newFileUrls: string[] = [];
+      const newFileNames: string[] = [];
       if (uploadedFiles.length > 0) {
         for (const file of uploadedFiles) {
           const fileName = `${Date.now()}-${file.name}`;
@@ -483,37 +494,64 @@ export default function ManageDocuments() {
             error: uploadError
           } = await supabase.storage.from("document-files").upload(fileName, file);
           if (uploadError) throw uploadError;
-          fileUrls.push(uploadData.path);
-          fileNames.push(file.name);
+          newFileUrls.push(uploadData.path);
+          newFileNames.push(file.name);
         }
       }
 
-      // Insert document
-      const {
-        error
-      } = await supabase.from("documents").insert({
-        title: formData.title,
-        description: formData.description || null,
-        format: formData.format || null,
-        watermark: formData.watermark,
-        versiondate: formData.versiondate ? format(formData.versiondate, "yyyy-MM-dd") : null,
-        versionnumber: formData.versionnumber ? parseInt(formData.versionnumber) : null,
-        versionlastupdated: formData.versionlastupdated ? formData.versionlastupdated.toISOString() : null,
-        isclientdoc: formData.isclientdoc,
-        stage: formData.stage ? parseInt(formData.stage) : null,
-        category: formData.categories.length > 0 ? formData.categories.join(',') : null,
-        uploaded_files: fileUrls,
-        file_names: fileNames
-      });
-      if (error) throw error;
-      toast({
-        title: "Success",
-        description: "Document created successfully"
-      });
+      // Combine existing files with new uploads
+      const allFileUrls = [...existingFiles.map(f => f.url), ...newFileUrls];
+      const allFileNames = [...existingFiles.map(f => f.name), ...newFileNames];
 
-      // Reset form and update next order number
-      const newNextOrderNumber = nextOrderNumber ? nextOrderNumber + 1 : 1;
-      setNextOrderNumber(newNextOrderNumber);
+      if (editingDocumentId) {
+        // Update existing document
+        const { error } = await supabase.from("documents").update({
+          title: formData.title,
+          description: formData.description || null,
+          format: formData.format || null,
+          watermark: formData.watermark,
+          versiondate: formData.versiondate ? format(formData.versiondate, "yyyy-MM-dd") : null,
+          versionnumber: formData.versionnumber ? parseInt(formData.versionnumber) : null,
+          versionlastupdated: formData.versionlastupdated ? formData.versionlastupdated.toISOString() : null,
+          isclientdoc: formData.isclientdoc,
+          stage: formData.stage ? parseInt(formData.stage) : null,
+          category: formData.categories.length > 0 ? formData.categories.join(',') : null,
+          uploaded_files: allFileUrls.length > 0 ? allFileUrls : null,
+          file_names: allFileNames.length > 0 ? allFileNames : null
+        }).eq("id", editingDocumentId);
+        if (error) throw error;
+        toast({
+          title: "Success",
+          description: "Document updated successfully"
+        });
+      } else {
+        // Insert new document
+        const { error } = await supabase.from("documents").insert({
+          title: formData.title,
+          description: formData.description || null,
+          format: formData.format || null,
+          watermark: formData.watermark,
+          versiondate: formData.versiondate ? format(formData.versiondate, "yyyy-MM-dd") : null,
+          versionnumber: formData.versionnumber ? parseInt(formData.versionnumber) : null,
+          versionlastupdated: formData.versionlastupdated ? formData.versionlastupdated.toISOString() : null,
+          isclientdoc: formData.isclientdoc,
+          stage: formData.stage ? parseInt(formData.stage) : null,
+          category: formData.categories.length > 0 ? formData.categories.join(',') : null,
+          uploaded_files: allFileUrls.length > 0 ? allFileUrls : null,
+          file_names: allFileNames.length > 0 ? allFileNames : null
+        });
+        if (error) throw error;
+        toast({
+          title: "Success",
+          description: "Document created successfully"
+        });
+
+        // Update next order number only for new documents
+        const newNextOrderNumber = nextOrderNumber ? nextOrderNumber + 1 : 1;
+        setNextOrderNumber(newNextOrderNumber);
+      }
+
+      // Reset form
       setFormData({
         title: "",
         description: "",
@@ -527,6 +565,8 @@ export default function ManageDocuments() {
         categories: []
       });
       setUploadedFiles([]);
+      setExistingFiles([]);
+      setEditingDocumentId(null);
       setIsCreateDialogOpen(false);
       fetchDocuments();
     } catch (error: any) {
@@ -955,6 +995,7 @@ export default function ManageDocuments() {
                   categories: []
                 });
                 setUploadedFiles([]);
+                setExistingFiles([]);
               }
             }}>
               <TooltipProvider>
@@ -1223,8 +1264,34 @@ export default function ManageDocuments() {
                       </SheetContent>
                     </Sheet>
                     <Input id="files" type="file" multiple onChange={handleFileUpload} className="cursor-pointer" />
+                    
+                    {/* Display existing files (edit mode) */}
+                    {existingFiles.length > 0 && <div className="flex flex-wrap gap-2 mt-2">
+                        {existingFiles.map((file, index) => <Badge key={`existing-${index}`} variant="secondary" className="gap-1 py-2 px-5">
+                            {file.name}
+                            <button 
+                              type="button" 
+                              onClick={async () => {
+                                const { data } = supabase.storage.from("document-files").getPublicUrl(file.url);
+                                window.open(data.publicUrl, "_blank");
+                              }} 
+                              className="ml-1 text-primary border border-primary bg-primary/20 hover:bg-primary/30 rounded-full p-0.5"
+                            >
+                              <Eye className="h-3 w-3" />
+                            </button>
+                            <button 
+                              type="button" 
+                              onClick={() => setExistingFiles(prev => prev.filter((_, i) => i !== index))} 
+                              className="ml-1 text-destructive border border-destructive bg-destructive/20 hover:bg-destructive/30 rounded-full p-0.5"
+                            >
+                              <X className="h-3 w-3" />
+                            </button>
+                          </Badge>)}
+                      </div>}
+
+                    {/* Display new uploaded files */}
                     {uploadedFiles.length > 0 && <div className="flex flex-wrap gap-2 mt-2">
-                        {uploadedFiles.map((file, index) => <Badge key={index} variant="secondary" className="gap-1 py-2 px-5">
+                        {uploadedFiles.map((file, index) => <Badge key={`new-${index}`} variant="secondary" className="gap-1 py-2 px-5">
                             {file.name}
                             <button type="button" onClick={() => handleRemoveFile(index)} className="ml-1 text-destructive border border-destructive bg-destructive/20 hover:bg-destructive/30 rounded-full p-0.5">
                               <X className="h-3 w-3" />
@@ -1357,7 +1424,7 @@ export default function ManageDocuments() {
                     Cancel
                   </Button>
                   <Button onClick={handleCreateDocument} disabled={!formData.title}>
-                    Create Document
+                    {editingDocumentId ? "Update Document" : "Create Document"}
                   </Button>
                 </DialogFooter>
               </DialogContent>
