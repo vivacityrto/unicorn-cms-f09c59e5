@@ -295,7 +295,7 @@ export default function CreateEmailDialog({
             </Alert>
           )}
 
-          <div className="flex-1 overflow-y-auto space-y-3 pr-2">
+          <div className="flex-1 overflow-y-auto space-y-3 px-1 -mx-1">
             {/* Name */}
             <div className="space-y-1.5">
               <Label htmlFor="name">Name</Label>
