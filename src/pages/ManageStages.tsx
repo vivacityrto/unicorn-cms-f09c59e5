@@ -32,7 +32,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { Pencil, Trash2, Plus, Search, ArrowLeft, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Pencil, Trash2, Plus, Search, ArrowLeft, ChevronLeft, ChevronRight, Video } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 import {
   Pagination,
   PaginationContent,
@@ -321,11 +322,13 @@ export default function ManageStages() {
                         target="_blank" 
                         rel="noopener noreferrer"
                         onClick={(e) => e.stopPropagation()}
-                        className="text-blue-600 hover:text-blue-800 hover:underline max-w-xs truncate whitespace-nowrap block"
                       >
-                        {stage.video_url}
+                        <Badge variant="secondary" className="gap-1 cursor-pointer hover:bg-secondary/80">
+                          <Video className="h-3 w-3" />
+                          Video Link
+                        </Badge>
                       </a>
-                    ) : <span className="text-muted-foreground">-</span>}
+                    ) : <span className="text-muted-foreground text-sm">No link</span>}
                   </TableCell>
                   <TableCell className="py-6 border-r border-border/50 text-muted-foreground text-sm whitespace-nowrap">
                     {new Date(stage.created_at).toLocaleDateString()}
