@@ -46,6 +46,7 @@ interface ComboboxProps {
   hideCheck?: boolean
   showAvatar?: boolean
   showCreatedAt?: boolean
+  autoWidth?: boolean // When true, popover width fits content instead of matching trigger
 }
 
 export function Combobox({
@@ -61,6 +62,7 @@ export function Combobox({
   hideCheck = false,
   showAvatar = true,
   showCreatedAt = false,
+  autoWidth = false,
 }: ComboboxProps) {
   const [open, setOpen] = React.useState(false)
 
@@ -95,7 +97,7 @@ export function Combobox({
           <ArrowUpDown className="ml-2 h-4 w-4 shrink-0 text-muted-foreground" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="p-[10px] bg-background z-[100] w-[var(--radix-popover-trigger-width)]" align="start" sideOffset={5}>
+      <PopoverContent className={cn("p-[10px] bg-background z-[100]", autoWidth ? "w-auto min-w-[180px]" : "w-[var(--radix-popover-trigger-width)]")} align="start" sideOffset={5}>
         <Command className="bg-background !p-0">
           <CommandInput placeholder={searchPlaceholder} className="h-9" />
           <CommandList className="overflow-y-auto !p-0 max-h-[320px]">
