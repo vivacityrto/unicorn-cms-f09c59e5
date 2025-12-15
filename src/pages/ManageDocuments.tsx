@@ -1191,7 +1191,7 @@ export default function ManageDocuments() {
                             <Badge 
                               key={catId} 
                               variant="default"
-                              className="bg-primary/10 text-primary hover:bg-primary/20 border border-primary text-[0.75rem] py-[2px] px-[0.625rem] rounded-[11px] cursor-pointer"
+                              className="bg-primary/10 text-primary hover:bg-primary/20 border border-primary text-[0.8125rem] py-1 px-3 rounded-[11px] cursor-pointer"
                               onClick={() => {
                                 setFormData({
                                   ...formData,
@@ -1199,9 +1199,9 @@ export default function ManageDocuments() {
                                 });
                               }}
                             >
-                              <FolderOpen className="mr-1 h-3 w-3" />
+                              <FolderOpen className="mr-1.5 h-3.5 w-3.5" />
                               {category.name}
-                              <X className="ml-1 h-3 w-3" />
+                              <X className="ml-1.5 h-3.5 w-3.5" />
                             </Badge>
                           ) : null;
                         })}
