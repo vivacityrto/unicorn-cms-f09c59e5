@@ -534,11 +534,11 @@ export default function TasksManagement() {
                   </div>
                 )}
               </div>
-              <div className="flex items-center gap-2">
-                <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
+              <div className="flex items-center gap-3">
+                <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)} className="hover:bg-[#40c6e524] hover:text-black">
                   Cancel
                 </Button>
-              <Button onClick={async () => {
+                <Button onClick={async () => {
                   if (!formData.task_name || !formData.due_date || !formData.tenant_id || !user) return;
                   
                   try {
