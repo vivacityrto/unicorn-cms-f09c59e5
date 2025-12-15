@@ -1272,7 +1272,7 @@ const PackageDetail = () => {
                           </TableCell>
                         </TableRow> : documents.map((doc, index) => <TableRow key={doc.id}>
                             <TableCell className="font-medium text-muted-foreground border-r">{index + 1}</TableCell>
-                            <TableCell className="font-medium border-r">{doc.document_name}</TableCell>
+                            <TableCell className="font-medium border-r">{doc.title}</TableCell>
                             <TableCell className="border-r max-w-md truncate">{doc.description || "-"}</TableCell>
                             <TableCell className="border-r">
                               <Badge variant={doc.is_active ? "default" : "secondary"}>
