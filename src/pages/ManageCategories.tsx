@@ -68,7 +68,7 @@ export default function ManageCategories() {
           creator:created_by (
             first_name,
             last_name,
-            profilephoto
+            avatar_url
           )
         `)
         .order('id', { ascending: true });
@@ -79,7 +79,7 @@ export default function ManageCategories() {
       const categoriesWithCreator = (data || []).map((cat: any) => ({
         ...cat,
         creator_name: cat.creator ? `${cat.creator.first_name} ${cat.creator.last_name}` : 'Unknown',
-        creator_avatar: cat.creator?.profilephoto || null,
+        creator_avatar: cat.creator?.avatar_url || null,
         creator: undefined // Remove the nested object
       }));
       
