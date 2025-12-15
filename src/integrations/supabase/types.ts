@@ -386,6 +386,7 @@ export type Database = {
           id: number
           inspection_title: string
           responses: Json | null
+          selected_tenant_id: number | null
           started_at: string | null
           status: string
           template_id: number
@@ -403,6 +404,7 @@ export type Database = {
           id?: number
           inspection_title: string
           responses?: Json | null
+          selected_tenant_id?: number | null
           started_at?: string | null
           status?: string
           template_id: number
@@ -420,6 +422,7 @@ export type Database = {
           id?: number
           inspection_title?: string
           responses?: Json | null
+          selected_tenant_id?: number | null
           started_at?: string | null
           status?: string
           template_id?: number
@@ -446,6 +449,13 @@ export type Database = {
             columns: ["document_id"]
             isOneToOne: false
             referencedRelation: "documents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "audit_inspection_selected_tenant_id_fkey"
+            columns: ["selected_tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
             referencedColumns: ["id"]
           },
           {
