@@ -992,6 +992,7 @@ export default function ManageDocuments() {
                       searchPlaceholder="Search formats..."
                       emptyText="No format found."
                       className="w-full"
+                      showAvatar={false}
                     />
                   </div>
 
@@ -1063,7 +1064,7 @@ export default function ManageDocuments() {
                 }))} value={formData.stage} onValueChange={value => setFormData({
                   ...formData,
                   stage: value
-                })} placeholder="Select stage..." searchPlaceholder="Search stages..." emptyText="No stages found." className="w-full" />
+                })} placeholder="Select stage..." searchPlaceholder="Search stages..." emptyText="No stages found." className="w-full" showAvatar={false} />
                   </div>
 
                   <div className="grid gap-2">
