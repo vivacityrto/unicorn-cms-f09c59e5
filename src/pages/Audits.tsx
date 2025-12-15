@@ -321,45 +321,6 @@ export default function Audits() {
               Create Template
             </Button>
           )}
-          {activeTab === "inspections" && (
-            <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
-              <DialogTrigger asChild>
-                <Button className="bg-[hsl(188_74%_51%)] hover:bg-[hsl(188_74%_51%)]/90 gap-2">
-                  <Plus className="h-4 w-4" />
-                  New Audit
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Create New Audit</DialogTitle>
-                </DialogHeader>
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">Select Client</label>
-                    <Select value={selectedClient} onValueChange={setSelectedClient}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Choose a client" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {clients?.map((client) => (
-                          <SelectItem key={client.id} value={client.id}>
-                            {client.companyname || client.rto_name || "Unknown"}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <Button
-                    onClick={handleCreateAudit}
-                    disabled={!selectedClient || createAudit.isPending}
-                    className="w-full"
-                  >
-                    Create Audit
-                  </Button>
-                </div>
-              </DialogContent>
-            </Dialog>
-          )}
           {activeTab === "schedules" && (
             <Dialog>
               <DialogTrigger asChild>
