@@ -5,21 +5,20 @@ import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { Search, MoreHorizontal, FileText, ArrowUpDown, Settings, ArrowRight } from 'lucide-react';
+import { Search, MoreHorizontal, FileText, ArrowUpDown, Settings, Calendar, Pencil, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { Link } from 'react-router-dom';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 export interface AuditInspection {
   id: number;
-  audit_title: string;
-  client_name: string;
-  client_rto_id?: string;
-  client_logo?: string;
+  template_id: number;
+  template_name: string;
+  conducted_by: string;
+  conducted_by_name: string;
+  conducted_by_avatar?: string;
   status: string;
-  open_actions: number;
-  closed_actions: number;
-  doc_number?: number;
-  score?: number;
+  doc_number?: string;
+  compliance_score?: number;
   started_at?: string;
   completed_at?: string;
   created_at: string;
@@ -28,60 +27,44 @@ export interface AuditInspection {
 interface AuditInspectionsTableProps {
   inspections: AuditInspection[];
   isLoading?: boolean;
-  onContinue?: (inspection: AuditInspection) => void;
-  onViewReport?: (inspection: AuditInspection) => void;
+  onEditInspection?: (inspection: AuditInspection) => void;
   onDeleteInspection?: (inspection: AuditInspection) => void;
 }
 
 export function AuditInspectionsTable({
   inspections,
   isLoading,
-  onContinue,
-  onViewReport,
+  onEditInspection,
   onDeleteInspection
 }: AuditInspectionsTableProps) {
   const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState<'all' | 'draft' | 'in_progress' | 'complete'>('all');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'draft' | 'in_progress' | 'completed'>('all');
   const [statusSearchQuery, setStatusSearchQuery] = useState('');
-  const [sortBy, setSortBy] = useState<'started_at' | 'completed_at'>('started_at');
+  const [sortBy, setSortBy] = useState<'created_at' | 'completed_at'>('created_at');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   
   const filteredInspections = useMemo(() => {
     return inspections
       .filter(inspection => {
         const matchesSearch = 
-          inspection.client_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          inspection.audit_title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          (inspection.client_rto_id && inspection.client_rto_id.includes(searchQuery));
+          inspection.template_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          (inspection.doc_number && inspection.doc_number.toLowerCase().includes(searchQuery.toLowerCase())) ||
+          inspection.conducted_by_name.toLowerCase().includes(searchQuery.toLowerCase());
         const matchesStatus = statusFilter === 'all' || inspection.status === statusFilter;
         return matchesSearch && matchesStatus;
       })
       .sort((a, b) => {
-        const dateA = new Date(sortBy === 'started_at' ? (a.started_at || a.created_at) : (a.completed_at || a.created_at)).getTime();
-        const dateB = new Date(sortBy === 'started_at' ? (b.started_at || b.created_at) : (b.completed_at || b.created_at)).getTime();
+        const dateA = new Date(sortBy === 'created_at' ? a.created_at : (a.completed_at || a.created_at)).getTime();
+        const dateB = new Date(sortBy === 'created_at' ? b.created_at : (b.completed_at || b.created_at)).getTime();
         return sortOrder === 'desc' ? dateB - dateA : dateA - dateB;
       });
   }, [inspections, searchQuery, statusFilter, sortBy, sortOrder]);
-
-  // Group inspections by date
-  const groupedInspections = useMemo(() => {
-    const groups: { [key: string]: AuditInspection[] } = {};
-    filteredInspections.forEach(inspection => {
-      const date = new Date(inspection.started_at || inspection.created_at);
-      const dateKey = date.toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' });
-      if (!groups[dateKey]) {
-        groups[dateKey] = [];
-      }
-      groups[dateKey].push(inspection);
-    });
-    return groups;
-  }, [filteredInspections]);
 
   const statusOptions = [
     { value: 'all', label: 'All statuses' },
     { value: 'draft', label: 'Draft' },
     { value: 'in_progress', label: 'In Progress' },
-    { value: 'complete', label: 'Complete' },
+    { value: 'completed', label: 'Completed' },
   ];
 
   const filteredStatusOptions = statusOptions.filter(option => 
@@ -102,19 +85,35 @@ export function AuditInspectionsTable({
     });
   };
 
-  const formatActionsDisplay = (open: number, closed: number) => {
-    if (open === 0 && closed === 0) return '-';
-    if (closed === 0) return `${open} Open`;
-    if (open === 0) return `${closed} Closed`;
-    return `${open} Open, ${closed} Closed`;
-  };
-
-  const handleSort = (column: 'started_at' | 'completed_at') => {
+  const handleSort = (column: 'created_at' | 'completed_at') => {
     if (sortBy === column) {
       setSortOrder(sortOrder === 'desc' ? 'asc' : 'desc');
     } else {
       setSortBy(column);
       setSortOrder('desc');
+    }
+  };
+
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case 'completed':
+        return (
+          <Badge className="bg-green-500/10 text-green-600 hover:bg-green-500/20 border border-green-600 text-[0.75rem] py-[2px] px-[0.625rem] rounded-[11px]">
+            Completed
+          </Badge>
+        );
+      case 'in_progress':
+        return (
+          <Badge className="bg-blue-500/10 text-blue-600 hover:bg-blue-500/20 border border-blue-600 text-[0.75rem] py-[2px] px-[0.625rem] rounded-[11px]">
+            In Progress
+          </Badge>
+        );
+      default:
+        return (
+          <Badge variant="outline" className="text-[0.75rem] py-[2px] px-[0.625rem] rounded-[11px]">
+            {status}
+          </Badge>
+        );
     }
   };
 
@@ -160,7 +159,7 @@ export function AuditInspectionsTable({
                         : "text-foreground hover:bg-muted"
                     )} 
                     onClick={() => {
-                      setStatusFilter(option.value as 'all' | 'draft' | 'in_progress' | 'complete');
+                      setStatusFilter(option.value as 'all' | 'draft' | 'in_progress' | 'completed');
                       setStatusSearchQuery("");
                     }}
                   >
@@ -187,41 +186,34 @@ export function AuditInspectionsTable({
           <Table>
             <TableHeader>
               <TableRow className="border-b-2 hover:bg-transparent">
-                <TableHead className="bg-muted/30 font-semibold text-primary h-14 whitespace-nowrap border-r border-border/50 min-w-[300px]">
+                <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-r border-border/50 text-center w-12">
+                  #
+                </TableHead>
+                <TableHead className="bg-muted/30 font-semibold text-primary h-14 whitespace-nowrap border-r border-border/50 min-w-[250px]">
                   Inspection
                 </TableHead>
                 <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-r border-border/50 text-center">
-                  Actions
+                  Doc Number
                 </TableHead>
                 <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-r border-border/50 text-center">
-                  Doc number
-                </TableHead>
-                <TableHead className="bg-muted/30 font-semibold text-primary h-14 whitespace-nowrap border-r border-border/50 text-center">
                   Score
                 </TableHead>
+                <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-r border-border/50 text-center">
+                  Status
+                </TableHead>
                 <TableHead 
-                  className="bg-muted/30 font-semibold text-primary h-14 whitespace-nowrap border-r border-border/50 text-center cursor-pointer hover:bg-muted/50"
-                  onClick={() => handleSort('started_at')}
+                  className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-r border-border/50 text-center cursor-pointer hover:bg-muted/50"
+                  onClick={() => handleSort('created_at')}
                 >
                   <div className="flex items-center justify-center gap-1">
-                    Conducted
-                    {sortBy === 'started_at' && (
+                    Conducted By
+                    {sortBy === 'created_at' && (
                       <ArrowUpDown className="h-3.5 w-3.5" />
                     )}
                   </div>
                 </TableHead>
-                <TableHead 
-                  className="bg-muted/30 font-semibold text-primary h-14 whitespace-nowrap border-r border-border/50 text-center cursor-pointer hover:bg-muted/50"
-                  onClick={() => handleSort('completed_at')}
-                >
-                  <div className="flex items-center justify-center gap-1">
-                    Completed
-                  </div>
-                </TableHead>
-                <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap text-center w-[140px]">
-                  <div className="flex items-center justify-center gap-2">
-                    <Settings className="h-4 w-4 text-muted-foreground" />
-                  </div>
+                <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap text-center w-[100px]">
+                  Actions
                 </TableHead>
               </TableRow>
             </TableHeader>
@@ -240,112 +232,85 @@ export function AuditInspectionsTable({
                   </TableCell>
                 </TableRow>
               ) : (
-                Object.entries(groupedInspections).map(([dateGroup, groupInspections]) => (
-                  <>
-                    {/* Date Group Header */}
-                    <TableRow key={`header-${dateGroup}`} className="bg-muted/10 hover:bg-muted/10">
-                      <TableCell colSpan={7} className="py-3 font-semibold text-foreground text-sm">
-                        {dateGroup}
-                      </TableCell>
-                    </TableRow>
-                    {/* Inspection Rows */}
-                    {groupInspections.map((inspection, index) => (
-                      <TableRow 
-                        key={inspection.id} 
-                        className={cn(
-                          'group transition-all duration-200 border-b border-border/50', 
-                          index % 2 === 0 ? 'bg-background' : 'bg-muted/20', 
-                          'hover:bg-primary/5 animate-fade-in'
-                        )}
-                      >
-                        <TableCell className="py-5 border-r border-border/50 min-w-[300px] pr-8">
-                          <div className="flex items-center gap-3">
-                            <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0 overflow-hidden">
-                              {inspection.client_logo ? (
-                                <img src={inspection.client_logo} alt="" className="h-full w-full object-cover" />
-                              ) : (
-                                <span className="text-xs font-bold text-primary">viva</span>
-                              )}
-                            </div>
-                            <div className="min-w-0">
-                              <p className="font-semibold text-foreground truncate">
-                                {inspection.client_name}
-                                {inspection.client_rto_id && (
-                                  <span className="text-primary"> / {inspection.client_rto_id}</span>
-                                )}
-                              </p>
-                              <p className="text-[13px] text-muted-foreground truncate mt-0.5">
-                                {inspection.audit_title}
-                              </p>
-                            </div>
-                          </div>
-                        </TableCell>
-                        <TableCell className="py-5 border-r border-border/50 text-center whitespace-nowrap text-muted-foreground">
-                          {formatActionsDisplay(inspection.open_actions, inspection.closed_actions)}
-                        </TableCell>
-                        <TableCell className="py-5 border-r border-border/50 text-center whitespace-nowrap text-muted-foreground">
-                          {inspection.doc_number || '-'}
-                        </TableCell>
-                        <TableCell className="py-5 border-r border-border/50 text-center whitespace-nowrap text-muted-foreground">
-                          {inspection.score !== undefined ? `${inspection.score.toFixed(2)}%` : '-'}
-                        </TableCell>
-                        <TableCell className="py-5 border-r border-border/50 text-center whitespace-nowrap text-muted-foreground">
-                          {formatDate(inspection.started_at)}
-                        </TableCell>
-                        <TableCell className="py-5 border-r border-border/50 text-center whitespace-nowrap text-muted-foreground">
-                          {formatDate(inspection.completed_at)}
-                        </TableCell>
-                        <TableCell className="py-5 px-4 text-center whitespace-nowrap">
-                          <div className="flex items-center justify-center gap-2">
-                            {inspection.status === 'complete' ? (
-                              <Link to={`/audits/${inspection.id}/report`}>
-                                <Button 
-                                  variant="link" 
-                                  size="sm" 
-                                  className="text-primary hover:text-primary/80 p-0 h-auto font-medium"
-                                >
-                                  View report
-                                </Button>
-                              </Link>
-                            ) : (
-                              <Link to={`/audits/${inspection.id}`}>
-                                <Button 
-                                  variant="link" 
-                                  size="sm" 
-                                  className="text-primary hover:text-primary/80 p-0 h-auto font-medium"
-                                >
-                                  Continue
-                                </Button>
-                              </Link>
-                            )}
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="icon" className="h-8 w-8">
-                                  <MoreHorizontal className="h-4 w-4" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end" className="bg-popover border border-border shadow-lg z-50">
-                                <DropdownMenuItem asChild>
-                                  <Link to={`/audits/${inspection.id}`}>
-                                    <ArrowRight className="h-4 w-4 mr-2" />
-                                    Open inspection
-                                  </Link>
-                                </DropdownMenuItem>
-                                {inspection.status === 'complete' && (
-                                  <DropdownMenuItem asChild>
-                                    <Link to={`/audits/${inspection.id}/report`}>
-                                      <FileText className="h-4 w-4 mr-2" />
-                                      View report
-                                    </Link>
-                                  </DropdownMenuItem>
-                                )}
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </>
+                filteredInspections.map((inspection, index) => (
+                  <TableRow 
+                    key={inspection.id} 
+                    className={cn(
+                      'group transition-all duration-200 border-b border-border/50', 
+                      index % 2 === 0 ? 'bg-background' : 'bg-muted/20', 
+                      'hover:bg-primary/5'
+                    )}
+                  >
+                    <TableCell className="py-5 border-r border-border/50 text-center text-muted-foreground font-medium">
+                      {index + 1}
+                    </TableCell>
+                    <TableCell className="py-5 border-r border-border/50 min-w-[250px]">
+                      <div>
+                        <p className="font-semibold text-foreground">
+                          {inspection.template_name}
+                        </p>
+                        <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
+                          <Calendar className="h-3 w-3" />
+                          <span>{formatDate(inspection.created_at)}</span>
+                        </div>
+                      </div>
+                    </TableCell>
+                    <TableCell className="py-5 border-r border-border/50 text-center whitespace-nowrap text-muted-foreground">
+                      {inspection.doc_number || '-'}
+                    </TableCell>
+                    <TableCell className="py-5 border-r border-border/50 text-center whitespace-nowrap">
+                      {inspection.compliance_score !== undefined && inspection.compliance_score !== null ? (
+                        <Badge 
+                          className={cn(
+                            "text-[0.75rem] py-[2px] px-[0.625rem] rounded-[11px]",
+                            inspection.compliance_score >= 80 
+                              ? "bg-green-500/10 text-green-600 border border-green-600" 
+                              : inspection.compliance_score >= 50 
+                                ? "bg-yellow-500/10 text-yellow-600 border border-yellow-600"
+                                : "bg-red-500/10 text-red-600 border border-red-600"
+                          )}
+                        >
+                          {inspection.compliance_score.toFixed(0)}%
+                        </Badge>
+                      ) : (
+                        <span className="text-muted-foreground">-</span>
+                      )}
+                    </TableCell>
+                    <TableCell className="py-5 border-r border-border/50 text-center whitespace-nowrap">
+                      {getStatusBadge(inspection.status)}
+                    </TableCell>
+                    <TableCell className="py-5 border-r border-border/50 text-center">
+                      <div className="flex items-center justify-center gap-2">
+                        <Avatar className="h-7 w-7">
+                          <AvatarImage src={inspection.conducted_by_avatar} />
+                          <AvatarFallback className="text-xs bg-primary/10 text-primary">
+                            {inspection.conducted_by_name?.split(' ').map(n => n[0]).join('').toUpperCase() || '?'}
+                          </AvatarFallback>
+                        </Avatar>
+                        <span className="text-sm text-foreground">{inspection.conducted_by_name}</span>
+                      </div>
+                    </TableCell>
+                    <TableCell className="py-5 px-4 text-center whitespace-nowrap">
+                      <div className="flex items-center justify-center gap-1">
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="h-8 w-8 text-muted-foreground hover:text-primary hover:bg-primary/10"
+                          onClick={() => onEditInspection?.(inspection)}
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                          onClick={() => onDeleteInspection?.(inspection)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
                 ))
               )}
             </TableBody>

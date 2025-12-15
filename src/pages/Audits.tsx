@@ -73,35 +73,71 @@ export default function Audits() {
     enabled: !!profile?.tenant_id,
   });
 
-  // Transform audits to inspection format
+  // Fetch inspections from audit_inspection table
+  const {
+    data: inspectionsData,
+    isLoading: inspectionsLoading,
+    refetch: refetchInspections,
+  } = useQuery({
+    queryKey: ["audit_inspections", profile?.tenant_id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("audit_inspection")
+        .select(`
+          id,
+          template_id,
+          inspection_title,
+          doc_number,
+          status,
+          compliance_score,
+          conducted_by,
+          started_at,
+          completed_at,
+          created_at
+        `)
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!profile?.tenant_id,
+  });
+
+  // Fetch users for conducted_by display
+  const { data: users } = useQuery({
+    queryKey: ["users_for_inspections"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("users")
+        .select("user_uuid, first_name, last_name, profile_photo");
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!profile?.tenant_id,
+  });
+
+  // Transform inspections to display format
   const inspections: AuditInspection[] = useMemo(() => {
-    if (!audits) return [];
-    return audits.map((audit: any) => {
-      const client = clients?.find((c) => c.id === audit.client_id);
+    if (!inspectionsData) return [];
+    return inspectionsData.map((inspection) => {
+      const template = templates?.find((t) => t.id === inspection.template_id?.toString());
+      const user = users?.find((u) => u.user_uuid === inspection.conducted_by);
       return {
-        id: audit.id,
-        audit_title: audit.audit_title,
-        client_name: client?.companyname || client?.rto_name || "Unknown Client",
-        client_rto_id: client?.rtoid,
-        client_logo: client?.logo_url,
-        status: audit.status,
-        open_actions: Math.floor(Math.random() * 30),
-        // TODO: Get real action counts
-        closed_actions: Math.floor(Math.random() * 15),
-        doc_number: undefined,
-        // TODO: Get real doc number
-        score:
-          audit.status === "complete"
-            ? Math.random() * 50 + 50
-            : audit.status === "in_progress"
-              ? Math.random() * 40
-              : undefined,
-        started_at: audit.started_at,
-        completed_at: audit.completed_at,
-        created_at: audit.created_at,
+        id: inspection.id,
+        template_id: inspection.template_id,
+        template_name: template?.name || inspection.inspection_title || 'Unknown Template',
+        conducted_by: inspection.conducted_by,
+        conducted_by_name: user ? `${user.first_name || ''} ${user.last_name || ''}`.trim() || 'Unknown' : 'Unknown',
+        conducted_by_avatar: typeof user?.profile_photo === 'string' ? user.profile_photo : undefined,
+        status: inspection.status,
+        doc_number: inspection.doc_number || undefined,
+        compliance_score: inspection.compliance_score ? Number(inspection.compliance_score) : undefined,
+        started_at: inspection.started_at || undefined,
+        completed_at: inspection.completed_at || undefined,
+        created_at: inspection.created_at,
       };
     });
-  }, [audits, clients]);
+  }, [inspectionsData, templates, users]);
   const handleCreateAudit = async () => {
     if (!selectedClient) return;
     await createAudit.mutateAsync({
@@ -115,12 +151,28 @@ export default function Audits() {
   const counts = useMemo(
     () => ({
       templates: templates?.length || 0,
-      inspections: audits?.length || 0,
+      inspections: inspectionsData?.length || 0,
       schedules: 0,
       analytics: 0,
     }),
-    [audits, templates],
+    [inspectionsData, templates],
   );
+
+  // Delete inspection handler
+  const handleDeleteInspection = async (inspection: AuditInspection) => {
+    if (!confirm(`Are you sure you want to delete this inspection?`)) return;
+    try {
+      const { error } = await supabase
+        .from("audit_inspection")
+        .delete()
+        .eq("id", inspection.id);
+      if (error) throw error;
+      toast.success("Inspection deleted successfully");
+      refetchInspections();
+    } catch (error: any) {
+      toast.error("Failed to delete inspection: " + error.message);
+    }
+  };
   const handleStartInspection = (template: AuditTemplate) => {
     navigate(`/audits/create-template/${template.id}?mode=inspection`);
   };
@@ -298,7 +350,13 @@ export default function Audits() {
           />
         )}
 
-        {activeTab === "inspections" && <AuditInspectionsTable inspections={inspections} isLoading={isLoading} />}
+        {activeTab === "inspections" && (
+          <AuditInspectionsTable 
+            inspections={inspections} 
+            isLoading={inspectionsLoading} 
+            onDeleteInspection={handleDeleteInspection}
+          />
+        )}
 
         {activeTab === "schedules" && (
           <Card>
