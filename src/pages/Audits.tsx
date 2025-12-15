@@ -374,6 +374,7 @@ export default function Audits() {
           <AuditInspectionsTable 
             inspections={inspections} 
             isLoading={inspectionsLoading} 
+            onEditInspection={(inspection) => navigate(`/audits/create-template/${inspection.template_id}?mode=inspection&inspectionId=${inspection.id}`)}
             onDeleteInspection={handleDeleteInspection}
           />
         )}

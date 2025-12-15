@@ -195,7 +195,7 @@ export function AuditInspectionsTable({
                 <TableHead className="bg-muted/30 font-semibold text-primary h-14 whitespace-nowrap border-r border-border/50 min-w-[250px]">
                   Inspection
                 </TableHead>
-                <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-r border-border/50 text-center">
+                <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-r border-border/50 text-left pl-4">
                   Doc Number
                 </TableHead>
                 <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-r border-border/50 text-center">
@@ -261,7 +261,7 @@ export function AuditInspectionsTable({
                         </div>
                       </div>
                     </TableCell>
-                    <TableCell className="py-5 border-r border-border/50 text-center whitespace-nowrap text-muted-foreground">
+                    <TableCell className="py-5 border-r border-border/50 text-left pl-4 whitespace-nowrap text-muted-foreground">
                       {inspection.doc_number 
                         ? (inspection.document_id ? `#${inspection.document_id} ${inspection.doc_number}` : inspection.doc_number)
                         : '-'}

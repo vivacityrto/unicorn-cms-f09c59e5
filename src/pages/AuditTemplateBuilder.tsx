@@ -1000,6 +1000,7 @@ export default function AuditTemplateBuilder() {
   const [searchParams] = useSearchParams();
   const isLiveMode = searchParams.get('live') === 'true';
   const isInspectionMode = searchParams.get('mode') === 'inspection';
+  const inspectionIdParam = searchParams.get('inspectionId');
   const {
     templateId: templateIdParam
   } = useParams();
@@ -1102,6 +1103,34 @@ export default function AuditTemplateBuilder() {
     };
     loadTemplate();
   }, [templateIdParam, navigate]);
+
+  // Load existing inspection data when editing
+  useEffect(() => {
+    const loadInspection = async () => {
+      if (!inspectionIdParam || !isInspectionMode) return;
+      
+      try {
+        const { data: inspection, error } = await supabase
+          .from('audit_inspection')
+          .select('*')
+          .eq('id', parseInt(inspectionIdParam))
+          .single();
+        
+        if (error) throw error;
+        
+        if (inspection && inspection.responses) {
+          // Populate previewResponses with existing inspection data
+          const responses = typeof inspection.responses === 'object' ? inspection.responses : {};
+          setPreviewResponses(responses as Record<string, any>);
+        }
+      } catch (error: any) {
+        console.error('Failed to load inspection:', error);
+        toast.error('Failed to load inspection data');
+      }
+    };
+    
+    loadInspection();
+  }, [inspectionIdParam, isInspectionMode]);
 
   // Auto-open preview when in live mode
   useEffect(() => {
