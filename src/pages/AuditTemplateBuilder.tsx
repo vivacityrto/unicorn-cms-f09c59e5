@@ -284,6 +284,14 @@ const hasComplianceOptions = (options?: any[]) => {
 };
 
 // Calculate compliance score based on responses
+// Helper to extract the actual value from a response (handles both simple values and object format)
+const getResponseActualValue = (response: any): any => {
+  if (response && typeof response === 'object' && 'value' in response) {
+    return response.value;
+  }
+  return response;
+};
+
 const calculateComplianceScore = (
   questions: CanvasQuestion[],
   responses: Record<string, any>
@@ -299,10 +307,11 @@ const calculateComplianceScore = (
   let countedQuestions = 0;
   
   scorableQuestions.forEach(q => {
-    const response = responses[q.id];
+    const rawResponse = responses[q.id];
+    const response = getResponseActualValue(rawResponse);
     if (!response) return;
     
-    const responseLower = response.toLowerCase();
+    const responseLower = String(response).toLowerCase();
     
     // N/A = excluded from calculation (doesn't count)
     if (responseLower.includes('n/a') || responseLower === 'na' || responseLower === 'not applicable') {
@@ -370,6 +379,59 @@ function SortableQuestionCard({
     asset: ''
   });
 
+  // In preview mode, responseValue can be an object with { value, notes, media_files }
+  // Or a simple value for backward compatibility
+  const getResponseValue = () => {
+    if (responseValue && typeof responseValue === 'object' && 'value' in responseValue) {
+      return responseValue.value;
+    }
+    return responseValue;
+  };
+  
+  const getResponseNotes = () => {
+    if (responseValue && typeof responseValue === 'object' && 'notes' in responseValue) {
+      return responseValue.notes as string;
+    }
+    return '';
+  };
+  
+  const getResponseMediaFiles = () => {
+    if (responseValue && typeof responseValue === 'object' && 'media_files' in responseValue) {
+      return responseValue.media_files as { name: string; url: string }[];
+    }
+    return [];
+  };
+
+  // Local state for notes and media in preview mode
+  const [previewNotes, setPreviewNotes] = useState(getResponseNotes());
+  const [previewMediaFiles, setPreviewMediaFiles] = useState<{ name: string; url: string }[]>(getResponseMediaFiles());
+
+  // Sync from responseValue when it changes (e.g., on load)
+  useEffect(() => {
+    setPreviewNotes(getResponseNotes());
+    setPreviewMediaFiles(getResponseMediaFiles());
+  }, [responseValue]);
+
+  // Update response with notes/files in preview mode
+  const updatePreviewResponse = (newValue?: any, newNotes?: string, newMediaFiles?: { name: string; url: string }[]) => {
+    if (!previewMode || !onResponseChange) return;
+    
+    const currentValue = newValue !== undefined ? newValue : getResponseValue();
+    const currentNotes = newNotes !== undefined ? newNotes : previewNotes;
+    const currentMedia = newMediaFiles !== undefined ? newMediaFiles : previewMediaFiles;
+    
+    // Only use object format if there are notes or media
+    if (currentNotes || (currentMedia && currentMedia.length > 0)) {
+      onResponseChange(question.id, {
+        value: currentValue,
+        notes: currentNotes,
+        media_files: currentMedia
+      });
+    } else {
+      onResponseChange(question.id, currentValue);
+    }
+  };
+
   // Disable body scroll when action sheet is open
   useEffect(() => {
     if (showActionPanel) {
@@ -386,7 +448,8 @@ function SortableQuestionCard({
   const {
     data: vivacityTeamData
   } = useVivacityTeamUsers();
-  const [selectedOptionIdx, setSelectedOptionIdx] = useState<number | null>(responseValue !== undefined && question.options?.length ? question.options.findIndex((opt: any) => opt.label === responseValue) : null);
+  const actualResponseValue = getResponseValue();
+  const [selectedOptionIdx, setSelectedOptionIdx] = useState<number | null>(actualResponseValue !== undefined && question.options?.length ? question.options.findIndex((opt: any) => opt.label === actualResponseValue) : null);
   const style = {
     transform: CSS.Transform.toString(transform),
     transition
@@ -417,19 +480,28 @@ function SortableQuestionCard({
         return 'Enter response...';
     }
   };
+  // Helper to handle value change while preserving notes/media
+  const handleValueChange = (value: any) => {
+    if (previewMode) {
+      updatePreviewResponse(value, undefined, undefined);
+    } else {
+      onResponseChange?.(question.id, value);
+    }
+  };
+
   const renderInputPreview = () => {
     switch (question.question_type) {
       case 'clients':
-        return <ClientsDropdownPreview value={responseValue} onValueChange={(v) => onResponseChange?.(question.id, v)} hasError={hasError} />;
+        return <ClientsDropdownPreview value={actualResponseValue} onValueChange={handleValueChange} hasError={hasError} />;
       case 'documents':
-        return <DocumentsDropdownPreview value={responseValue} onValueChange={(v) => onResponseChange?.(question.id, v)} hasError={hasError} />;
+        return <DocumentsDropdownPreview value={actualResponseValue} onValueChange={handleValueChange} hasError={hasError} />;
       case 'vivacity_team':
-        return <VivacityTeamDropdownPreview value={responseValue} onValueChange={(v) => onResponseChange?.(question.id, v)} hasError={hasError} />;
+        return <VivacityTeamDropdownPreview value={actualResponseValue} onValueChange={handleValueChange} hasError={hasError} />;
       case 'text_answer':
       case 'asset':
-        return <Input placeholder={question.placeholder || getPlaceholderByType(question.question_type)} className={cn("bg-muted/50 border-dashed", hasError && "border-destructive")} value={responseValue || ''} onChange={e => onResponseChange?.(question.id, e.target.value)} />;
+        return <Input placeholder={question.placeholder || getPlaceholderByType(question.question_type)} className={cn("bg-muted/50 border-dashed", hasError && "border-destructive")} value={actualResponseValue || ''} onChange={e => handleValueChange(e.target.value)} />;
       case 'number':
-        return <Input type="number" placeholder={question.placeholder || getPlaceholderByType(question.question_type)} className={cn("bg-muted/50 border-dashed w-full", hasError && "border-destructive")} value={responseValue || ''} onChange={e => onResponseChange?.(question.id, e.target.value)} />;
+        return <Input type="number" placeholder={question.placeholder || getPlaceholderByType(question.question_type)} className={cn("bg-muted/50 border-dashed w-full", hasError && "border-destructive")} value={actualResponseValue || ''} onChange={e => handleValueChange(e.target.value)} />;
       case 'checkbox':
         const checkboxOptions = question.options && question.options.length > 0 ? question.options : [{
           id: '1',
@@ -592,7 +664,7 @@ function SortableQuestionCard({
             const badgeClassPreview = isSelected ? colorMapPreview[opt.color || 'bg-muted'] || colorMapPreview['bg-muted'] : 'bg-muted/50 text-muted-foreground border-border/50';
             return <span key={idx} onClick={() => {
               setSelectedOptionIdx(idx);
-              onResponseChange?.(question.id, opt.label);
+              handleValueChange(opt.label);
             }} className={cn("px-2.5 py-1 rounded-lg text-[15px] font-normal border backdrop-blur-sm cursor-pointer transition-all duration-200", badgeClassPreview, isSelected ? "scale-105" : "hover:bg-muted/80")}>
                 {opt.label}
               </span>;
@@ -600,7 +672,7 @@ function SortableQuestionCard({
           </div>;
       case 'annotation':
         return <div className="border rounded-lg p-4 bg-muted/30">
-            <Textarea value={responseValue || ''} onChange={e => onResponseChange?.(question.id, e.target.value)} placeholder="Add notes or comments..." className="min-h-[100px] bg-transparent border-none resize-none focus-visible:ring-0 focus-visible:ring-offset-0 placeholder:text-muted-foreground/50" />
+            <Textarea value={actualResponseValue || ''} onChange={e => handleValueChange(e.target.value)} placeholder="Add notes or comments..." className="min-h-[100px] bg-transparent border-none resize-none focus-visible:ring-0 focus-visible:ring-offset-0 placeholder:text-muted-foreground/50" />
           </div>;
       default:
         return null;
@@ -650,24 +722,48 @@ function SortableQuestionCard({
 
       {/* Footer with actions */}
       <div className="bg-muted/20 border-t border-border/40 rounded-b-lg">
-        {/* Notes display or input */}
-        {question.notes && !isEditingNote ? <div className="px-5 py-3 flex items-center justify-between">
-            <p className="text-sm text-foreground">{question.notes}</p>
-            <button onClick={() => {
-          setShowNotes(true);
-          setIsEditingNote(true);
-        }} className="text-muted-foreground hover:text-primary transition-colors">
-              <Pencil className="h-4 w-4" />
-            </button>
-          </div> : showNotes && <>
-            <div className="px-5 py-3">
-              <Input value={question.notes || ''} onChange={e => onUpdate(question.id, {
-            notes: e.target.value
-          })} placeholder="Add Notes" className="w-full text-sm text-muted-foreground border-none bg-transparent px-0 h-auto focus-visible:ring-0 focus-visible:ring-offset-0 placeholder:text-muted-foreground/40" />
-            </div>
-            {/* Separator */}
-            <div className="border-t border-border/40 mx-5" />
-          </>}
+        {/* Notes display or input - in preview mode, use previewNotes */}
+        {(() => {
+          const notesValue = previewMode ? previewNotes : question.notes;
+          const hasNotes = notesValue && notesValue.length > 0;
+          
+          if (hasNotes && !isEditingNote) {
+            return (
+              <div className="px-5 py-3 flex items-center justify-between">
+                <p className="text-sm text-foreground">{notesValue}</p>
+                <button onClick={() => {
+                  setShowNotes(true);
+                  setIsEditingNote(true);
+                }} className="text-muted-foreground hover:text-primary transition-colors">
+                  <Pencil className="h-4 w-4" />
+                </button>
+              </div>
+            );
+          } else if (showNotes) {
+            return (
+              <>
+                <div className="px-5 py-3">
+                  <Input 
+                    value={notesValue || ''} 
+                    onChange={e => {
+                      if (previewMode) {
+                        setPreviewNotes(e.target.value);
+                        updatePreviewResponse(undefined, e.target.value, undefined);
+                      } else {
+                        onUpdate(question.id, { notes: e.target.value });
+                      }
+                    }} 
+                    placeholder="Add Notes" 
+                    className="w-full text-sm text-muted-foreground border-none bg-transparent px-0 h-auto focus-visible:ring-0 focus-visible:ring-offset-0 placeholder:text-muted-foreground/40" 
+                  />
+                </div>
+                {/* Separator */}
+                <div className="border-t border-border/40 mx-5" />
+              </>
+            );
+          }
+          return null;
+        })()}
         
         {/* Media upload section */}
         {showMedia && <>
@@ -680,10 +776,16 @@ function SortableQuestionCard({
                   name: file.name,
                   url: URL.createObjectURL(file)
                 }));
-                const existingFiles = question.media_files || [];
-                onUpdate(question.id, {
-                  media_files: [...existingFiles, ...newFiles]
-                });
+                if (previewMode) {
+                  const updatedFiles = [...previewMediaFiles, ...newFiles];
+                  setPreviewMediaFiles(updatedFiles);
+                  updatePreviewResponse(undefined, undefined, updatedFiles);
+                } else {
+                  const existingFiles = question.media_files || [];
+                  onUpdate(question.id, {
+                    media_files: [...existingFiles, ...newFiles]
+                  });
+                }
                 setShowMedia(false);
               }
             }} className="hidden" id={`media-upload-${question.id}`} />
@@ -698,25 +800,39 @@ function SortableQuestionCard({
             <div className="border-t border-border/40 mx-5" />
           </>}
         
-        {/* Media files display */}
-        {question.media_files && question.media_files.length > 0 && <>
-            <div className="px-5 py-3 flex flex-wrap gap-2">
-              {question.media_files.map((file, index) => <div key={index} className="flex items-center gap-2 px-3 py-1.5 bg-primary/10 text-primary rounded-full text-sm">
-                  <File className="h-3.5 w-3.5" />
-                  <span className="max-w-[150px] truncate">{file.name}</span>
-                  <button onClick={() => {
-              const updatedFiles = question.media_files?.filter((_, i) => i !== index);
-              onUpdate(question.id, {
-                media_files: updatedFiles
-              });
-            }} className="hover:text-destructive transition-colors">
-                    <X className="h-3.5 w-3.5" />
-                  </button>
-                </div>)}
-            </div>
-            {/* Separator */}
-            <div className="border-t border-border/40 mx-5" />
-          </>}
+        {/* Media files display - in preview mode, use previewMediaFiles */}
+        {(() => {
+          const mediaFiles = previewMode ? previewMediaFiles : question.media_files;
+          if (mediaFiles && mediaFiles.length > 0) {
+            return (
+              <>
+                <div className="px-5 py-3 flex flex-wrap gap-2">
+                  {mediaFiles.map((file, index) => (
+                    <div key={index} className="flex items-center gap-2 px-3 py-1.5 bg-primary/10 text-primary rounded-full text-sm">
+                      <File className="h-3.5 w-3.5" />
+                      <span className="max-w-[150px] truncate">{file.name}</span>
+                      <button onClick={() => {
+                        if (previewMode) {
+                          const updatedFiles = previewMediaFiles.filter((_, i) => i !== index);
+                          setPreviewMediaFiles(updatedFiles);
+                          updatePreviewResponse(undefined, undefined, updatedFiles);
+                        } else {
+                          const updatedFiles = question.media_files?.filter((_, i) => i !== index);
+                          onUpdate(question.id, { media_files: updatedFiles });
+                        }
+                      }} className="hover:text-destructive transition-colors">
+                        <X className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+                {/* Separator */}
+                <div className="border-t border-border/40 mx-5" />
+              </>
+            );
+          }
+          return null;
+        })()}
         
         {/* Required and action buttons row - hidden for page breaks */}
         {question.question_type !== 'page_break' && <div className="flex items-center justify-between px-5 py-3">
@@ -756,22 +872,32 @@ function SortableQuestionCard({
             <div className="flex items-center gap-4">
               {!previewMode && !question.required}
               <button onClick={() => {
-            if (showNotes && question.notes) {
-              // Save the note
-              setShowNotes(false);
-              setIsEditingNote(false);
-            } else {
-              // Show the note input
-              setShowNotes(!showNotes);
-              setIsEditingNote(true);
-            }
-          }} className={cn("flex items-center gap-2 text-sm cursor-pointer transition-colors", showNotes ? "text-primary" : "text-muted-foreground hover:text-primary")}>
+                const notesValue = previewMode ? previewNotes : question.notes;
+                if (showNotes && notesValue) {
+                  // Save the note
+                  setShowNotes(false);
+                  setIsEditingNote(false);
+                } else {
+                  // Show the note input
+                  setShowNotes(!showNotes);
+                  setIsEditingNote(true);
+                }
+              }} className={cn("flex items-center gap-2 text-sm cursor-pointer transition-colors", showNotes ? "text-primary" : "text-muted-foreground hover:text-primary")}>
                 <MessageSquare className="h-4 w-4" />
-                {showNotes && question.notes ? "Save Note" : "Add Note"}
+                {(() => {
+                  const notesValue = previewMode ? previewNotes : question.notes;
+                  return showNotes && notesValue ? "Save Note" : "Add Note";
+                })()}
               </button>
-              <button onClick={() => setShowMedia(!showMedia)} className={cn("flex items-center gap-2 text-sm cursor-pointer transition-colors", showMedia || question.media_files && question.media_files.length > 0 ? "text-primary" : "text-muted-foreground hover:text-primary")}>
+              <button onClick={() => setShowMedia(!showMedia)} className={cn("flex items-center gap-2 text-sm cursor-pointer transition-colors", (() => {
+                const mediaFiles = previewMode ? previewMediaFiles : question.media_files;
+                return showMedia || (mediaFiles && mediaFiles.length > 0);
+              })() ? "text-primary" : "text-muted-foreground hover:text-primary")}>
                 <Image className="h-4 w-4" />
-                {question.media_files && question.media_files.length > 0 ? `Media (${question.media_files.length})` : "Add Media"}
+                {(() => {
+                  const mediaFiles = previewMode ? previewMediaFiles : question.media_files;
+                  return mediaFiles && mediaFiles.length > 0 ? `Media (${mediaFiles.length})` : "Add Media";
+                })()}
               </button>
               <button onClick={() => setShowActionPanel(true)} className="flex items-center gap-2 text-sm text-muted-foreground cursor-pointer hover:text-primary transition-colors">
                 <Plus className="h-4 w-4" />
@@ -1325,8 +1451,9 @@ export default function AuditTemplateBuilder() {
       const requiredQuestions = currentPageQuestionsToShow.filter(q => q.required);
       const errors: string[] = [];
       requiredQuestions.forEach(q => {
-        const value = previewResponses[q.id];
-        if (!value || typeof value === 'string' && value.trim() === '') {
+        const rawValue = previewResponses[q.id];
+        const value = getResponseActualValue(rawValue);
+        if (!value || (typeof value === 'string' && value.trim() === '')) {
           errors.push(q.id);
         }
       });
@@ -1957,8 +2084,9 @@ export default function AuditTemplateBuilder() {
                 const requiredQuestions = currentPageQuestions.filter(q => q.required);
                 const errors: string[] = [];
                 requiredQuestions.forEach(q => {
-                  const value = previewResponses[q.id];
-                  if (!value || typeof value === 'string' && value.trim() === '') {
+                  const rawValue = previewResponses[q.id];
+                  const value = getResponseActualValue(rawValue);
+                  if (!value || (typeof value === 'string' && value.trim() === '')) {
                     errors.push(q.id);
                   }
                 });
