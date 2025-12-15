@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { Search, Plus, Trash2, FileText, Calendar, Mail, Pencil } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -172,46 +173,47 @@ export default function ManageEmails() {
               <p className="text-lg font-medium">No emails found</p>
               <p className="text-sm text-muted-foreground">Try adjusting your search or create a new email</p>
             </CardContent>
-          </Card> : <div className="rounded-lg border border-border bg-card overflow-hidden">
+          </Card> : <div className="rounded-lg border bg-card shadow-lg overflow-hidden">
+            <div className="overflow-x-auto">
             <Table>
               <TableHeader>
-                <TableRow className="bg-muted/50 hover:bg-muted/50 border-b border-border">
-                  <TableHead className="font-semibold text-foreground border-r border-border">Name</TableHead>
-                  <TableHead className="font-semibold text-foreground border-r border-border">Description</TableHead>
-                  <TableHead className="font-semibold text-foreground border-r border-border">To</TableHead>
-                  <TableHead className="font-semibold text-foreground border-r border-border">Subject</TableHead>
-                  <TableHead className="font-semibold text-foreground border-r border-border">Files</TableHead>
-                  <TableHead className="font-semibold text-foreground border-r border-border text-center">Created By</TableHead>
-                  <TableHead className="font-semibold text-foreground text-right">Actions</TableHead>
+                <TableRow className="border-b-2 hover:bg-transparent">
+                  <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-r border-border/50 min-w-[250px]">Name</TableHead>
+                  <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-r border-border/50">Description</TableHead>
+                  <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-r border-border/50">To</TableHead>
+                  <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-r border-border/50">Subject</TableHead>
+                  <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-r border-border/50 text-center">Files</TableHead>
+                  <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-r border-border/50 text-center">Created By</TableHead>
+                  <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap text-center">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredEmails.map(email => <TableRow key={email.id} className="border-b border-border hover:bg-muted/30 cursor-pointer transition-colors" onClick={() => {
+                {filteredEmails.map((email, index) => <TableRow key={email.id} className={cn('group transition-all duration-200 border-b border-border/50 cursor-pointer', index % 2 === 0 ? 'bg-background' : 'bg-muted/20', 'hover:bg-primary/5 animate-fade-in')} onClick={() => {
               setEditingEmail(email);
               setCreateDialogOpen(true);
             }}>
                     {/* Name Column */}
-                    <TableCell className="py-4 border-r border-border whitespace-nowrap">
+                    <TableCell className="py-6 border-r border-border/50 whitespace-nowrap min-w-[250px]">
                       <div className="flex flex-col gap-1">
-                        <span className="text-sm font-medium text-foreground">
+                        <span className="font-semibold text-foreground">
                           {email.name || "Untitled"}
                         </span>
-                        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                          <Calendar className="h-3 w-3" />
-                          <span>{formatDate(email.created_at)}</span>
+                        <div className="flex items-center gap-1.5 text-[13px] text-muted-foreground">
+                          <Calendar className="h-3.5 w-3.5" />
+                          <span>Created: {formatDate(email.created_at)}</span>
                         </div>
                       </div>
                     </TableCell>
 
                     {/* Description Column */}
-                    <TableCell className="py-4 border-r border-border max-w-[200px]">
+                    <TableCell className="py-6 border-r border-border/50 max-w-[200px]">
                       <span className="text-sm text-muted-foreground truncate block">
                         {email.description || "-"}
                       </span>
                     </TableCell>
 
                     {/* To Column */}
-                    <TableCell className="py-4 border-r border-border">
+                    <TableCell className="py-6 border-r border-border/50 whitespace-nowrap">
                       <div className="flex items-center gap-2">
                         <Mail className="h-4 w-4 text-muted-foreground" />
                         <span className="text-sm text-muted-foreground">
@@ -221,14 +223,14 @@ export default function ManageEmails() {
                     </TableCell>
 
                     {/* Subject Column */}
-                    <TableCell className="py-4 border-r border-border">
+                    <TableCell className="py-6 border-r border-border/50 whitespace-nowrap">
                       <span className="text-sm text-foreground font-medium">
                         {email.subject || "-"}
                       </span>
                     </TableCell>
 
                     {/* Files Column */}
-                    <TableCell className="py-4 border-r border-border" onClick={e => e.stopPropagation()}>
+                    <TableCell className="py-6 border-r border-border/50 text-center whitespace-nowrap" onClick={e => e.stopPropagation()}>
                       {email.files && email.files.length > 0 ? (
                         <Badge 
                           className="bg-green-500/10 text-green-600 hover:bg-green-500/20 border border-green-600 text-[0.75rem] py-[2px] px-[0.625rem] rounded-[11px] font-medium cursor-pointer"
@@ -250,13 +252,13 @@ export default function ManageEmails() {
                     </TableCell>
 
                     {/* Created By Column */}
-                    <TableCell className="py-4 border-r border-border">
+                    <TableCell className="py-6 border-r border-border/50 text-center whitespace-nowrap">
                       {email.creator_name ? (
                         <TooltipProvider>
                           <Tooltip>
                             <TooltipTrigger asChild>
                               <div className="flex justify-center cursor-pointer">
-                                <Avatar className="h-9 w-9">
+                                <Avatar className="h-8 w-8">
                                   <AvatarImage src={email.creator_avatar || undefined} alt={email.creator_name} />
                                   <AvatarFallback className="bg-primary/10 text-primary text-xs">
                                     {email.creator_name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
@@ -270,32 +272,31 @@ export default function ManageEmails() {
                           </Tooltip>
                         </TooltipProvider>
                       ) : (
-                        <div className="flex justify-center">
-                          <span className="text-sm text-muted-foreground">-</span>
-                        </div>
+                        <span className="text-sm text-muted-foreground">-</span>
                       )}
                     </TableCell>
 
                     {/* Actions Column */}
-                    <TableCell className="text-right py-4" onClick={e => e.stopPropagation()}>
-                      <div className="flex items-center justify-end gap-1">
-                        <Button variant="ghost" size="sm" onClick={() => {
+                    <TableCell className="py-6 px-4 text-center whitespace-nowrap" onClick={e => e.stopPropagation()}>
+                      <div className="flex items-center justify-center gap-2">
+                        <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-muted" onClick={() => {
                     setEditingEmail(email);
                     setCreateDialogOpen(true);
-                  }} className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground hover:bg-muted">
-                          <Pencil className="h-4 w-4" />
+                  }}>
+                          <Pencil className="h-4 w-4 text-muted-foreground hover:text-foreground" />
                         </Button>
-                        <Button variant="ghost" size="sm" onClick={() => {
+                        <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-destructive/10" onClick={() => {
                     setSelectedEmailId(email.id);
                     setDeleteDialogOpen(true);
-                  }} className="h-8 w-8 p-0 text-destructive hover:text-destructive hover:bg-destructive/10">
-                          <Trash2 className="h-4 w-4" />
+                  }}>
+                          <Trash2 className="h-4 w-4 text-muted-foreground hover:text-destructive" />
                         </Button>
                       </div>
                     </TableCell>
                   </TableRow>)}
               </TableBody>
             </Table>
+            </div>
           </div>}
       </div>
 
