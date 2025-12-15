@@ -224,7 +224,7 @@ export default function ManageEmails() {
 
                     {/* Subject Column */}
                     <TableCell className="py-6 border-r border-border/50 whitespace-nowrap">
-                      <span className="text-sm text-foreground font-medium">
+                      <span className="text-sm text-muted-foreground">
                         {email.subject || "-"}
                       </span>
                     </TableCell>
