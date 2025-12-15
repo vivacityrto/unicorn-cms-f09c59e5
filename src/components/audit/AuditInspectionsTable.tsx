@@ -19,6 +19,8 @@ export interface AuditInspection {
   status: string;
   doc_number?: string;
   document_id?: number;
+  client_id?: string;
+  client_name?: string;
   compliance_score?: number;
   started_at?: string;
   completed_at?: string;
@@ -197,6 +199,9 @@ export function AuditInspectionsTable({
                   Doc Number
                 </TableHead>
                 <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-r border-border/50 text-center">
+                  Client
+                </TableHead>
+                <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-r border-border/50 text-center">
                   Score
                 </TableHead>
                 <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-r border-border/50 text-center">
@@ -221,13 +226,13 @@ export function AuditInspectionsTable({
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center py-12 text-muted-foreground">
+                  <TableCell colSpan={8} className="text-center py-12 text-muted-foreground">
                     Loading inspections...
                   </TableCell>
                 </TableRow>
               ) : filteredInspections.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center py-12">
+                  <TableCell colSpan={8} className="text-center py-12">
                     <FileText className="h-10 w-10 mx-auto mb-3 text-muted-foreground/50" />
                     <p className="text-muted-foreground">No inspections found</p>
                   </TableCell>
@@ -260,6 +265,9 @@ export function AuditInspectionsTable({
                       {inspection.doc_number 
                         ? `#${inspection.document_id || '-'} ${inspection.doc_number}` 
                         : '-'}
+                    </TableCell>
+                    <TableCell className="py-5 border-r border-border/50 text-center whitespace-nowrap">
+                      {inspection.client_name || <span className="text-muted-foreground">-</span>}
                     </TableCell>
                     <TableCell className="py-5 border-r border-border/50 text-center whitespace-nowrap">
                       {inspection.compliance_score !== undefined && inspection.compliance_score !== null ? (

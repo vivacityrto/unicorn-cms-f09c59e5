@@ -89,6 +89,7 @@ export default function Audits() {
           inspection_title,
           doc_number,
           document_id,
+          client_id,
           status,
           compliance_score,
           conducted_by,
@@ -117,12 +118,27 @@ export default function Audits() {
     enabled: !!profile?.tenant_id,
   });
 
+  // Fetch tenants for client display (clients dropdown uses tenants)
+  const { data: tenants } = useQuery({
+    queryKey: ["tenants_for_inspections"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("tenants")
+        .select("id, name");
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!profile?.tenant_id,
+  });
+
   // Transform inspections to display format
   const inspections: AuditInspection[] = useMemo(() => {
     if (!inspectionsData) return [];
     return inspectionsData.map((inspection) => {
       const template = templates?.find((t) => t.id === inspection.template_id?.toString());
       const user = users?.find((u) => u.user_uuid === inspection.conducted_by);
+      // client_id stores tenant ID as string from the clients dropdown
+      const tenant = tenants?.find((t) => t.id.toString() === inspection.client_id);
       return {
         id: inspection.id,
         template_id: inspection.template_id,
@@ -133,13 +149,15 @@ export default function Audits() {
         status: inspection.status,
         doc_number: inspection.doc_number || undefined,
         document_id: inspection.document_id || undefined,
+        client_id: inspection.client_id || undefined,
+        client_name: tenant?.name || undefined,
         compliance_score: inspection.compliance_score ? Number(inspection.compliance_score) : undefined,
         started_at: inspection.started_at || undefined,
         completed_at: inspection.completed_at || undefined,
         created_at: inspection.created_at,
       };
     });
-  }, [inspectionsData, templates, users]);
+  }, [inspectionsData, templates, users, tenants]);
   const handleCreateAudit = async () => {
     if (!selectedClient) return;
     await createAudit.mutateAsync({
