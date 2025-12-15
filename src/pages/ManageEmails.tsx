@@ -205,7 +205,7 @@ export default function ManageEmails() {
 
                     {/* Description Column */}
                     <TableCell className="py-4 border-r border-border max-w-[200px]">
-                      <span className="text-sm text-foreground truncate block">
+                      <span className="text-sm text-muted-foreground truncate block">
                         {email.description || "-"}
                       </span>
                     </TableCell>
