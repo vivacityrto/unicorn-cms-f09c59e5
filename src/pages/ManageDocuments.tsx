@@ -43,6 +43,12 @@ interface Document {
   uploaded_files?: string[] | null;
   file_names?: string[] | null;
   createdat?: string | null;
+  created_by?: string | null;
+  creator?: {
+    first_name: string | null;
+    last_name: string | null;
+    avatar_url: string | null;
+  } | null;
 }
 export default function ManageDocuments() {
   const {
@@ -376,7 +382,35 @@ export default function ManageDocuments() {
           console.error("Error fetching documents:", documentsError);
           throw documentsError;
         }
-        setDocuments(documentsData || []);
+
+        // Fetch creator info for documents with created_by
+        const creatorIds = [...new Set((documentsData || []).filter(d => d.created_by).map(d => d.created_by))];
+        let creatorsMap: Record<string, { first_name: string | null; last_name: string | null; avatar_url: string | null }> = {};
+        
+        if (creatorIds.length > 0) {
+          const { data: usersData } = await supabase
+            .from("users")
+            .select("user_uuid, first_name, last_name, avatar_url")
+            .in("user_uuid", creatorIds);
+          
+          if (usersData) {
+            usersData.forEach(user => {
+              creatorsMap[user.user_uuid] = {
+                first_name: user.first_name,
+                last_name: user.last_name,
+                avatar_url: user.avatar_url
+              };
+            });
+          }
+        }
+
+        // Enrich documents with creator info
+        const enrichedDocs = (documentsData || []).map(doc => ({
+          ...doc,
+          creator: doc.created_by ? creatorsMap[doc.created_by] || null : null
+        }));
+
+        setDocuments(enrichedDocs);
 
         // Calculate next order number
         if (documentsData && documentsData.length > 0) {
@@ -1551,7 +1585,7 @@ export default function ManageDocuments() {
                 </TableHead>
                 <TableHead className="font-semibold bg-muted/30 text-foreground min-w-[250px] h-14 whitespace-nowrap border-r">Description</TableHead>
                 <TableHead className="font-semibold bg-muted/30 text-foreground w-24 h-14 whitespace-nowrap border-r text-center">Files</TableHead>
-                <TableHead className="font-semibold bg-muted/30 text-foreground w-28 h-14 whitespace-nowrap border-r">Watermark</TableHead>
+                <TableHead className="font-semibold bg-muted/30 text-foreground w-28 h-14 whitespace-nowrap border-r text-center">Created By</TableHead>
                 <TableHead className="font-semibold bg-muted/30 text-foreground w-32 h-14 whitespace-nowrap border-r">
                   Version Date
                 </TableHead>
@@ -1612,9 +1646,35 @@ export default function ManageDocuments() {
                           </Badge> : <span className="text-sm text-muted-foreground">—</span>}
                       </TableCell>
                       <TableCell className="whitespace-nowrap py-6 border-r border-border/50">
-                        <Badge variant={doc.watermark ? "default" : "outline"} className="text-xs font-medium py-[3px] rounded-[9px]">
-                          {doc.watermark ? "Yes" : "No"}
-                        </Badge>
+                        <div className="flex items-center justify-center">
+                          {doc.creator ? (
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <div className="h-8 w-8 rounded-full overflow-hidden bg-muted flex items-center justify-center cursor-pointer border border-border">
+                                    {doc.creator.avatar_url ? (
+                                      <img 
+                                        src={doc.creator.avatar_url} 
+                                        alt={`${doc.creator.first_name || ''} ${doc.creator.last_name || ''}`}
+                                        className="h-full w-full object-cover"
+                                      />
+                                    ) : (
+                                      <span className="text-xs font-medium text-muted-foreground">
+                                        {(doc.creator.first_name?.[0] || '').toUpperCase()}
+                                        {(doc.creator.last_name?.[0] || '').toUpperCase()}
+                                      </span>
+                                    )}
+                                  </div>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>{doc.creator.first_name} {doc.creator.last_name}</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          ) : (
+                            <span className="text-sm text-muted-foreground">—</span>
+                          )}
+                        </div>
                       </TableCell>
                       <TableCell className="text-sm whitespace-nowrap py-6 text-muted-foreground border-r border-border/50">
                         {doc.versiondate ? format(new Date(doc.versiondate), "dd MMM yyyy") : "—"}
