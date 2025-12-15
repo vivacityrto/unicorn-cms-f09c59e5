@@ -185,7 +185,7 @@ export default function ManageEmails() {
                     {/* Name Column */}
                     <TableCell className="py-4 border-r border-border">
                       <div className="flex flex-col gap-1">
-                        <span className="text-sm font-medium text-foreground">
+                        <span className="text-sm font-medium text-foreground pb-[5px]">
                           {email.name || "Untitled"}
                         </span>
                         <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
