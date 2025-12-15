@@ -32,7 +32,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { Pencil, Trash2, Plus, Search, ArrowLeft, ChevronLeft, ChevronRight, Video } from 'lucide-react';
+import { Pencil, Trash2, Plus, Search, ArrowLeft, ChevronLeft, ChevronRight, Video, LinkIcon } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import {
   Pagination,
@@ -329,7 +329,8 @@ export default function ManageStages() {
                         </Badge>
                       </a>
                     ) : (
-                      <Badge variant="default" className="bg-muted/50 text-muted-foreground border border-muted-foreground/30 text-[0.75rem] py-[2px] px-[0.625rem] rounded-[11px]">
+                      <Badge variant="default" className="gap-1 bg-muted/50 text-muted-foreground border border-muted-foreground/30 text-[0.75rem] py-[2px] px-[0.625rem] rounded-[11px]">
+                        <LinkIcon className="h-3 w-3" />
                         No link
                       </Badge>
                     )}
