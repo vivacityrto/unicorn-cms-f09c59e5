@@ -1298,11 +1298,13 @@ export default function AuditTemplateBuilder() {
         );
         
         try {
-          // Find document question and get selected document name
+          // Find document question and get selected document name and ID
           const documentsQuestion = canvasQuestions.find(q => q.question_type === 'documents');
           let docNumber: string | null = null;
+          let documentId: number | null = null;
           if (documentsQuestion && previewResponses[documentsQuestion.id]) {
             const selectedDocId = previewResponses[documentsQuestion.id];
+            documentId = parseInt(selectedDocId, 10) || null;
             const { data: docData } = await supabase
               .from('documents')
               .select('title')
@@ -1329,6 +1331,7 @@ export default function AuditTemplateBuilder() {
                 template_id: templateIdParam ? parseInt(templateIdParam) : null,
                 inspection_title: templateName || 'Untitled Inspection',
                 doc_number: docNumber,
+                document_id: documentId,
                 status: 'completed',
                 compliance_score: hasScoringQuestions ? score : null,
                 conducted_by: profile.user_uuid,
