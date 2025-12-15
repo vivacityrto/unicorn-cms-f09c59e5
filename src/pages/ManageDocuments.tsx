@@ -57,7 +57,7 @@ export default function ManageDocuments() {
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [categorySearchQuery, setCategorySearchQuery] = useState("");
   const [sortField, setSortField] = useState<"title" | "id" | "versiondate">("id");
-  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
   const [nextOrderNumber, setNextOrderNumber] = useState<number | null>(null);
