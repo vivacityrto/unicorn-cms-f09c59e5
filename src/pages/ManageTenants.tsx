@@ -11,6 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { Building2, Users, Search, CheckCircle2, XCircle, Activity, Link as LinkIcon, AlertCircle, Calendar, Package2 } from "lucide-react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { AddTenantDialog } from "@/components/AddTenantDialog";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -26,6 +27,7 @@ interface Tenant {
   created_at: string;
   member_count: number;
   clo_name?: string | null;
+  clo_avatar?: string | null;
   package_name?: string | null;
   package_full_text?: string | null;
   package_id?: number | null;
@@ -177,15 +179,18 @@ export default function ManageTenants() {
         return acc;
       }, {} as Record<number, string>);
 
-      // Batch fetch all CLO user names
+      // Batch fetch all CLO user names and avatars
       const userUuids = Object.values(connectedMap).filter(Boolean);
       const {
         data: usersData
-      } = await supabase.from("users").select("user_uuid, first_name, last_name").in("user_uuid", userUuids);
-      const userNameMap = (usersData || []).reduce((acc, user) => {
-        acc[user.user_uuid] = `${user.first_name} ${user.last_name}`;
+      } = await supabase.from("users").select("user_uuid, first_name, last_name, avatar_url").in("user_uuid", userUuids);
+      const userDataMap = (usersData || []).reduce((acc, user) => {
+        acc[user.user_uuid] = {
+          name: `${user.first_name} ${user.last_name}`,
+          avatar: user.avatar_url
+        };
         return acc;
-      }, {} as Record<string, string>);
+      }, {} as Record<string, { name: string; avatar: string | null }>);
 
       // Fetch state from first admin user for each tenant with state name
       const {
@@ -216,7 +221,8 @@ export default function ManageTenants() {
       const tenantsWithCounts = tenantsData.map(tenant => ({
         ...tenant,
         member_count: memberCountMap[tenant.id] || 0,
-        clo_name: connectedMap[tenant.id] ? userNameMap[connectedMap[tenant.id]] : null,
+        clo_name: connectedMap[tenant.id] ? userDataMap[connectedMap[tenant.id]]?.name : null,
+        clo_avatar: connectedMap[tenant.id] ? userDataMap[connectedMap[tenant.id]]?.avatar : null,
         package_name: tenant.packages?.name || null,
         package_full_text: tenant.packages?.full_text || null,
         state: stateMap[tenant.id] || null
@@ -626,8 +632,8 @@ export default function ManageTenants() {
                   <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-r border-border/50 text-center">
                     Status
                   </TableHead>
-                  <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-r border-border/50">
-                    CLO
+                  <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-r border-border/50 text-center">
+                    CST
                   </TableHead>
                   <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-r border-border/50 text-center">
                     Members
@@ -675,9 +681,27 @@ export default function ManageTenants() {
                       </Badge>
                     </TableCell>
                     <TableCell className="py-6 border-r border-border/50 whitespace-nowrap">
-                      <span className="text-sm text-foreground">
-                        {tenant.clo_name || "Not Assigned"}
-                      </span>
+                      <div className="flex justify-center">
+                        {tenant.clo_name ? (
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Avatar className="h-8 w-8 cursor-pointer">
+                                  <AvatarImage src={tenant.clo_avatar || undefined} alt={tenant.clo_name} />
+                                  <AvatarFallback className="bg-primary/10 text-primary text-xs">
+                                    {tenant.clo_name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
+                                  </AvatarFallback>
+                                </Avatar>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>{tenant.clo_name}</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        ) : (
+                          <span className="text-sm text-muted-foreground">Not Assigned</span>
+                        )}
+                      </div>
                     </TableCell>
                     <TableCell className="py-6 border-r border-border/50 text-center whitespace-nowrap">
                       <span className="font-semibold">{tenant.member_count}</span>
