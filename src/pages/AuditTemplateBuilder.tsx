@@ -614,6 +614,12 @@ function SortableQuestionCard({
           <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
             {question.question_type.replace(/_/g, ' ')}
           </span>
+          {!previewMode && question.scoring_enabled && question.question_type === 'multiple_choice' && (
+            <span className="flex items-center gap-1 text-xs text-muted-foreground">
+              <CheckCircle className="h-3.5 w-3.5 text-green-600" />
+              Added for scoring
+            </span>
+          )}
         </div>
         {!previewMode && <Button variant="ghost" size="icon" className="h-8 w-8 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors" onClick={() => onDelete(question.id)}>
             <Trash2 className="h-4 w-4" />
