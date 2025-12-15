@@ -1,5 +1,5 @@
-import { useState, useMemo } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState, useMemo, useEffect } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { useAudits } from "@/hooks/useAudits";
 import { Button } from "@/components/ui/button";
@@ -17,9 +17,16 @@ import { toast } from "sonner";
 type AuditTab = "templates" | "inspections" | "schedules" | "analytics";
 export default function Audits() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { audits, isLoading, createAudit } = useAudits();
   const { profile } = useAuth();
-  const [activeTab, setActiveTab] = useState<AuditTab>("templates");
+  const [activeTab, setActiveTab] = useState<AuditTab>(() => {
+    const tabParam = searchParams.get('tab');
+    if (tabParam && ['templates', 'inspections', 'schedules', 'analytics'].includes(tabParam)) {
+      return tabParam as AuditTab;
+    }
+    return "templates";
+  });
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [selectedClient, setSelectedClient] = useState<string>("");
 
