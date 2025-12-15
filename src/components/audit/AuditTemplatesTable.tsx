@@ -25,6 +25,7 @@ export interface AuditTemplate {
   icon_url?: string;
   created_by?: string;
   creator?: AuditTemplateCreator | null;
+  has_inspections?: boolean;
 }
 interface AuditTemplatesTableProps {
   templates: AuditTemplate[];
@@ -79,7 +80,14 @@ export function AuditTemplatesTable({
     const option = statusOptions.find(o => o.value === statusFilter);
     return option?.label || 'All statuses';
   };
-  const getStatusBadge = (status: AuditTemplate['status']) => {
+  const getStatusBadge = (status: AuditTemplate['status'], hasInspections?: boolean) => {
+    // If template has inspections, show as "In Use" with green style
+    if (hasInspections) {
+      return <Badge className="bg-green-500/10 text-green-600 hover:bg-green-500/20 border border-green-600 text-[0.75rem] py-[2px] px-[0.625rem] rounded-[11px] gap-1">
+          <CheckCircle className="h-3 w-3" />
+          In Use
+        </Badge>;
+    }
     switch (status) {
       case 'active':
         return <Badge className="bg-green-500/10 text-green-600 hover:bg-green-500/20 border border-green-600 text-[0.75rem] py-[2px] px-[0.625rem] rounded-[11px] gap-1">
@@ -235,7 +243,7 @@ export function AuditTemplatesTable({
                       </div>
                     </TableCell>
                     <TableCell className="py-6 border-r border-border/50 text-center whitespace-nowrap">
-                      {getStatusBadge(template.status)}
+                      {getStatusBadge(template.status, template.has_inspections)}
                     </TableCell>
                     <TableCell className="py-6 border-r border-border/50 text-center whitespace-nowrap">
                       {(() => {
