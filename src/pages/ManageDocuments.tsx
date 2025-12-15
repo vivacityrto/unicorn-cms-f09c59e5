@@ -1266,64 +1266,95 @@ export default function ManageDocuments() {
                     <Input id="files" type="file" multiple onChange={handleFileUpload} className="cursor-pointer" />
                     
                     {/* Display existing files (edit mode) */}
-                    {existingFiles.length > 0 && <div className="flex flex-wrap gap-2 mt-2">
-                        {existingFiles.map((file, index) => <Badge key={`existing-${index}`} variant="secondary" className="gap-1 py-2 px-5">
-                            {file.name}
-                            <button
-                              type="button"
-                              onClick={async () => {
-                                try {
-                                  // Handle legacy full URLs and storage paths
-                                  if (file.url.startsWith("http")) {
-                                    const url = new URL(file.url);
-                                    const segments = url.pathname.split("/").filter(Boolean);
-                                    const publicIndex = segments.indexOf("public");
+                    {existingFiles.length > 0 && (
+                      <div className="space-y-1 mt-2">
+                        {existingFiles.map((file, index) => (
+                          <div
+                            key={`existing-${index}`}
+                            className="flex items-center justify-between border border-input rounded-md px-3 py-2"
+                          >
+                            <div className="flex items-center gap-2 min-w-0 flex-1">
+                              <FileText className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                              <span className="text-sm truncate">{file.name}</span>
+                            </div>
+                            <div className="flex items-center gap-1 flex-shrink-0 ml-2">
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={async () => {
+                                  try {
+                                    if (file.url.startsWith("http")) {
+                                      const url = new URL(file.url);
+                                      const segments = url.pathname.split("/").filter(Boolean);
+                                      const publicIndex = segments.indexOf("public");
 
-                                    if (publicIndex !== -1 && segments.length > publicIndex + 2) {
-                                      const bucket = segments[publicIndex + 1];
-                                      const objectPath = segments.slice(publicIndex + 2).join("/");
-                                      const { data } = supabase.storage.from(bucket).getPublicUrl(objectPath);
-                                      if (data.publicUrl) {
-                                        window.open(data.publicUrl, "_blank");
+                                      if (publicIndex !== -1 && segments.length > publicIndex + 2) {
+                                        const bucket = segments[publicIndex + 1];
+                                        const objectPath = segments.slice(publicIndex + 2).join("/");
+                                        const { data } = supabase.storage.from(bucket).getPublicUrl(objectPath);
+                                        if (data.publicUrl) {
+                                          window.open(data.publicUrl, "_blank");
+                                        } else {
+                                          window.open(file.url, "_blank");
+                                        }
                                       } else {
                                         window.open(file.url, "_blank");
                                       }
                                     } else {
-                                      window.open(file.url, "_blank");
+                                      const { data } = supabase.storage.from("document-files").getPublicUrl(file.url);
+                                      if (data.publicUrl) {
+                                        window.open(data.publicUrl, "_blank");
+                                      }
                                     }
-                                  } else {
-                                    const { data } = supabase.storage.from("document-files").getPublicUrl(file.url);
-                                    if (data.publicUrl) {
-                                      window.open(data.publicUrl, "_blank");
-                                    }
+                                  } catch {
+                                    window.open(file.url, "_blank");
                                   }
-                                } catch {
-                                  window.open(file.url, "_blank");
-                                }
-                              }}
-                              className="ml-1 text-primary border border-primary bg-primary/20 hover:bg-primary/30 rounded-full p-0.5"
-                            >
-                              <Eye className="h-3 w-3" />
-                            </button>
-                            <button 
-                              type="button" 
-                              onClick={() => setExistingFiles(prev => prev.filter((_, i) => i !== index))} 
-                              className="ml-1 text-destructive border border-destructive bg-destructive/20 hover:bg-destructive/30 rounded-full p-0.5"
-                            >
-                              <X className="h-3 w-3" />
-                            </button>
-                          </Badge>)}
-                      </div>}
+                                }}
+                                className="h-6 w-6 p-0 text-muted-foreground hover:text-primary"
+                              >
+                                <Eye className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => setExistingFiles(prev => prev.filter((_, i) => i !== index))}
+                                className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive"
+                              >
+                                <X className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
 
                     {/* Display new uploaded files */}
-                    {uploadedFiles.length > 0 && <div className="flex flex-wrap gap-2 mt-2">
-                        {uploadedFiles.map((file, index) => <Badge key={`new-${index}`} variant="secondary" className="gap-1 py-2 px-5">
-                            {file.name}
-                            <button type="button" onClick={() => handleRemoveFile(index)} className="ml-1 text-destructive border border-destructive bg-destructive/20 hover:bg-destructive/30 rounded-full p-0.5">
-                              <X className="h-3 w-3" />
-                            </button>
-                          </Badge>)}
-                      </div>}
+                    {uploadedFiles.length > 0 && (
+                      <div className="space-y-1 mt-2">
+                        {uploadedFiles.map((file, index) => (
+                          <div
+                            key={`new-${index}`}
+                            className="flex items-center justify-between border border-input rounded-md px-3 py-2"
+                          >
+                            <div className="flex items-center gap-2 min-w-0 flex-1">
+                              <FileText className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                              <span className="text-sm truncate">{file.name}</span>
+                            </div>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleRemoveFile(index)}
+                              className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive flex-shrink-0 ml-2"
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
 
                     {/* Display Selected Fields */}
                     {selectedFields.length > 0 && <div className="space-y-3 mt-4 pt-4 border-t">
