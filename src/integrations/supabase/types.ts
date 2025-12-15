@@ -382,6 +382,7 @@ export type Database = {
           conducted_by: string
           created_at: string
           doc_number: string | null
+          document_id: number | null
           id: number
           inspection_title: string
           responses: Json | null
@@ -398,6 +399,7 @@ export type Database = {
           conducted_by: string
           created_at?: string
           doc_number?: string | null
+          document_id?: number | null
           id?: number
           inspection_title: string
           responses?: Json | null
@@ -414,6 +416,7 @@ export type Database = {
           conducted_by?: string
           created_at?: string
           doc_number?: string | null
+          document_id?: number | null
           id?: number
           inspection_title?: string
           responses?: Json | null
@@ -436,6 +439,13 @@ export type Database = {
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "dashboard_client_snapshot"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "audit_inspection_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "documents"
             referencedColumns: ["id"]
           },
           {
