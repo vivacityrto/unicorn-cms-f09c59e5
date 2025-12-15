@@ -681,27 +681,29 @@ export default function ManageTenants() {
                       </Badge>
                     </TableCell>
                     <TableCell className="py-6 border-r border-border/50 whitespace-nowrap">
-                      <div className="flex justify-center">
-                        {tenant.clo_name ? (
-                          <TooltipProvider>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Avatar className="h-8 w-8 cursor-pointer">
+                      {tenant.clo_name ? (
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <div className="flex justify-center cursor-pointer">
+                                <Avatar className="h-9 w-9">
                                   <AvatarImage src={tenant.clo_avatar || undefined} alt={tenant.clo_name} />
                                   <AvatarFallback className="bg-primary/10 text-primary text-xs">
                                     {tenant.clo_name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
                                   </AvatarFallback>
                                 </Avatar>
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                <p>{tenant.clo_name}</p>
-                              </TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
-                        ) : (
+                              </div>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>{tenant.clo_name}</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      ) : (
+                        <div className="flex justify-center">
                           <span className="text-sm text-muted-foreground">Not Assigned</span>
-                        )}
-                      </div>
+                        </div>
+                      )}
                     </TableCell>
                     <TableCell className="py-6 border-r border-border/50 text-center whitespace-nowrap">
                       <span className="font-semibold">{tenant.member_count}</span>
