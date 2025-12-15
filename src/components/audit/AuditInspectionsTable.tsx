@@ -256,7 +256,7 @@ export function AuditInspectionsTable({
                       </div>
                     </TableCell>
                     <TableCell className="py-5 border-r border-border/50 text-center whitespace-nowrap text-muted-foreground">
-                      {inspection.doc_number || '-'}
+                      {inspection.doc_number ? `#${inspection.id} ${inspection.doc_number}` : '-'}
                     </TableCell>
                     <TableCell className="py-5 border-r border-border/50 text-center whitespace-nowrap">
                       {inspection.compliance_score !== undefined && inspection.compliance_score !== null ? (
