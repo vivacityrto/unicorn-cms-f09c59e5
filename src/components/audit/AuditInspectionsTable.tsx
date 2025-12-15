@@ -189,9 +189,6 @@ export function AuditInspectionsTable({
           <Table>
             <TableHeader>
               <TableRow className="border-b-2 hover:bg-transparent">
-                <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-r border-border/50 text-center w-12">
-                  #
-                </TableHead>
                 <TableHead className="bg-muted/30 font-semibold text-primary h-14 whitespace-nowrap border-r border-border/50 min-w-[250px]">
                   Inspection
                 </TableHead>
@@ -226,13 +223,13 @@ export function AuditInspectionsTable({
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center py-12 text-muted-foreground">
+                    <TableCell colSpan={7} className="text-center py-12 text-muted-foreground">
                     Loading inspections...
                   </TableCell>
                 </TableRow>
               ) : filteredInspections.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center py-12">
+                  <TableCell colSpan={7} className="text-center py-12">
                     <FileText className="h-10 w-10 mx-auto mb-3 text-muted-foreground/50" />
                     <p className="text-muted-foreground">No inspections found</p>
                   </TableCell>
@@ -247,9 +244,6 @@ export function AuditInspectionsTable({
                       'hover:bg-primary/5'
                     )}
                   >
-                    <TableCell className="py-5 border-r border-border/50 text-center text-muted-foreground font-medium">
-                      {index + 1}
-                    </TableCell>
                     <TableCell className="py-5 border-r border-border/50 min-w-[250px]">
                       <div>
                         <p className="font-semibold text-foreground">
