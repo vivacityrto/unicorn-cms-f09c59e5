@@ -38,6 +38,7 @@ interface Category {
   updated_at: string;
   created_by: string | null;
   creator_name?: string;
+  creator_avatar?: string | null;
 }
 
 export default function ManageCategories() {
@@ -66,17 +67,19 @@ export default function ManageCategories() {
           *,
           creator:created_by (
             first_name,
-            last_name
+            last_name,
+            profilephoto
           )
         `)
         .order('id', { ascending: true });
 
       if (error) throw error;
       
-      // Map the data to include creator_name
+      // Map the data to include creator_name and avatar
       const categoriesWithCreator = (data || []).map((cat: any) => ({
         ...cat,
         creator_name: cat.creator ? `${cat.creator.first_name} ${cat.creator.last_name}` : 'Unknown',
+        creator_avatar: cat.creator?.profilephoto || null,
         creator: undefined // Remove the nested object
       }));
       
@@ -325,7 +328,7 @@ export default function ManageCategories() {
                 <TableHead className="font-semibold bg-muted/30 text-foreground h-14 whitespace-nowrap border-r">Name</TableHead>
                 <TableHead className="font-semibold bg-muted/30 text-foreground h-14 whitespace-nowrap border-r">Description</TableHead>
                 <TableHead className="font-semibold bg-muted/30 text-foreground h-14 whitespace-nowrap border-r">Created</TableHead>
-                <TableHead className="font-semibold bg-muted/30 text-foreground h-14 whitespace-nowrap border-r">Created By</TableHead>
+                <TableHead className="font-semibold bg-muted/30 text-foreground h-14 whitespace-nowrap border-r text-center">Created By</TableHead>
                 <TableHead className="font-semibold bg-muted/30 text-foreground h-14 whitespace-nowrap text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -352,20 +355,23 @@ export default function ManageCategories() {
                     {new Date(category.created_at).toLocaleDateString()}
                   </TableCell>
                   <TableCell className="py-6 border-r border-border/50">
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Avatar className="h-8 w-8 cursor-pointer">
-                            <AvatarFallback className="bg-primary/10 text-primary text-xs">
-                              {category.creator_name ? category.creator_name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() : 'UN'}
-                            </AvatarFallback>
-                          </Avatar>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p>{category.creator_name || 'Unknown'}</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
+                    <div className="flex justify-center">
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Avatar className="h-8 w-8 cursor-pointer">
+                              <AvatarImage src={category.creator_avatar || undefined} alt={category.creator_name} />
+                              <AvatarFallback className="bg-primary/10 text-primary text-xs">
+                                {category.creator_name ? category.creator_name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() : 'UN'}
+                              </AvatarFallback>
+                            </Avatar>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>{category.creator_name || 'Unknown'}</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    </div>
                   </TableCell>
                   <TableCell className="text-right py-6">
                     <div className="flex justify-end gap-2">
