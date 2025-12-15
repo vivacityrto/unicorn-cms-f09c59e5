@@ -1822,6 +1822,7 @@ export type Database = {
       documents: {
         Row: {
           category: string | null
+          created_by: string | null
           createdat: string | null
           description: string | null
           due_date: string | null
@@ -1843,6 +1844,7 @@ export type Database = {
         }
         Insert: {
           category?: string | null
+          created_by?: string | null
           createdat?: string | null
           description?: string | null
           due_date?: string | null
@@ -1864,6 +1866,7 @@ export type Database = {
         }
         Update: {
           category?: string | null
+          created_by?: string | null
           createdat?: string | null
           description?: string | null
           due_date?: string | null
