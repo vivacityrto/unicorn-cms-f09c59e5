@@ -89,7 +89,7 @@ export default function Audits() {
           inspection_title,
           doc_number,
           document_id,
-          client_id,
+          selected_tenant_id,
           status,
           compliance_score,
           conducted_by,
@@ -137,8 +137,8 @@ export default function Audits() {
     return inspectionsData.map((inspection) => {
       const template = templates?.find((t) => t.id === inspection.template_id?.toString());
       const user = users?.find((u) => u.user_uuid === inspection.conducted_by);
-      // client_id stores tenant ID as string from the clients dropdown
-      const tenant = tenants?.find((t) => t.id.toString() === inspection.client_id);
+      // selected_tenant_id stores tenant ID from the clients dropdown
+      const tenant = tenants?.find((t) => t.id === inspection.selected_tenant_id);
       return {
         id: inspection.id,
         template_id: inspection.template_id,
@@ -149,7 +149,7 @@ export default function Audits() {
         status: inspection.status,
         doc_number: inspection.doc_number || undefined,
         document_id: inspection.document_id || undefined,
-        client_id: inspection.client_id || undefined,
+        selected_tenant_id: inspection.selected_tenant_id || undefined,
         client_name: tenant?.name || undefined,
         compliance_score: inspection.compliance_score ? Number(inspection.compliance_score) : undefined,
         started_at: inspection.started_at || undefined,

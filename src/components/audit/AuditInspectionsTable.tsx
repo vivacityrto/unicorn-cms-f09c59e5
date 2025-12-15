@@ -19,7 +19,7 @@ export interface AuditInspection {
   status: string;
   doc_number?: string;
   document_id?: number;
-  client_id?: string;
+  selected_tenant_id?: number;
   client_name?: string;
   compliance_score?: number;
   started_at?: string;

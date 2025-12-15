@@ -1313,21 +1313,18 @@ export default function AuditTemplateBuilder() {
             docNumber = docData?.title || null;
           }
           
-          // Get client_id from responses if clients question exists
+          // Get selected_tenant_id from responses if clients question exists
           const clientsQuestion = canvasQuestions.find(q => q.question_type === 'clients');
           const clientResponse = clientsQuestion ? previewResponses[clientsQuestion.id] : null;
-          const clientId = typeof clientResponse === 'string' ? clientResponse : null;
-
-          // Validate UUID format for client_id (avoid 22P02 errors)
-          const isValidUuid = (value: string | null) => !!value && /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(value);
-          const validClientId = isValidUuid(clientId) ? clientId : null;
+          const selectedTenantId = typeof clientResponse === 'string' && clientResponse ? parseInt(clientResponse, 10) : null;
+          
           
           if (profile?.tenant_id && profile?.user_uuid) {
             const { error: insertError } = await supabase
               .from('audit_inspection')
               .insert({
                 tenant_id: profile.tenant_id,
-                client_id: validClientId,
+                selected_tenant_id: selectedTenantId,
                 template_id: templateIdParam ? parseInt(templateIdParam) : null,
                 inspection_title: templateName || 'Untitled Inspection',
                 doc_number: docNumber,
