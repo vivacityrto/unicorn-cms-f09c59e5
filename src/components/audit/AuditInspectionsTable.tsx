@@ -273,12 +273,12 @@ export function AuditInspectionsTable({
                       {inspection.compliance_score !== undefined && inspection.compliance_score !== null ? (
                         <Badge 
                           className={cn(
-                            "text-[0.75rem] py-[2px] px-[0.625rem] rounded-[11px]",
+                            "text-[0.75rem] py-[2px] px-[0.625rem] rounded-[11px] hover:bg-transparent",
                             inspection.compliance_score >= 80 
-                              ? "bg-green-500/10 text-green-600 border border-green-600" 
+                              ? "bg-green-500/10 text-green-600 border border-green-600 hover:bg-green-500/10" 
                               : inspection.compliance_score >= 50 
-                                ? "bg-yellow-500/10 text-yellow-600 border border-yellow-600"
-                                : "bg-red-500/10 text-red-600 border border-red-600"
+                                ? "bg-yellow-500/10 text-yellow-600 border border-yellow-600 hover:bg-yellow-500/10"
+                                : "bg-red-500/10 text-red-600 border border-red-600 hover:bg-red-500/10"
                           )}
                         >
                           {inspection.compliance_score.toFixed(0)}%
