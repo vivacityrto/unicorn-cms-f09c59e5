@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Plus, Lightbulb, Search, FileText, Pencil, Trash2, User, Loader2, Calendar } from "lucide-react";
+import { Separator } from "@/components/ui/separator";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import {
   Dialog,
@@ -135,15 +136,19 @@ export default function RtoTips() {
                 Create Tip
               </Button>
             </DialogTrigger>
-          <DialogContent className="sm:max-w-[525px]">
+          <DialogContent className="sm:max-w-[600px] max-h-[85vh] overflow-hidden flex flex-col border-[3px] border-[#dfdfdf]">
             <DialogHeader>
-              <DialogTitle>Create New RTO Tip</DialogTitle>
+              <DialogTitle className="flex items-center gap-2">
+                <Plus className="h-5 w-5" />
+                Create New RTO Tip
+              </DialogTitle>
               <DialogDescription>
                 Add a new tip or best practice for RTO operations
               </DialogDescription>
             </DialogHeader>
-            <div className="grid gap-4 py-4">
-              <div className="grid gap-2">
+            <Separator />
+            <div className="flex-1 overflow-y-auto space-y-6 py-4 px-1">
+              <div className="space-y-2">
                 <Label htmlFor="title">Title *</Label>
                 <Input
                   id="title"
@@ -152,18 +157,20 @@ export default function RtoTips() {
                   onChange={(e) => setNewTip({ ...newTip, title: e.target.value })}
                 />
               </div>
-              <div className="grid gap-2">
+              <div className="space-y-2">
                 <Label htmlFor="details">Description *</Label>
                 <Textarea
                   id="details"
                   placeholder="Enter detailed description..."
-                  rows={4}
+                  rows={6}
+                  className="resize-none"
                   value={newTip.details}
                   onChange={(e) => setNewTip({ ...newTip, details: e.target.value })}
                 />
               </div>
+              <Separator className="my-1" />
               <div className="grid grid-cols-2 gap-4">
-                <div className="grid gap-2">
+                <div className="space-y-2">
                   <Label htmlFor="category">Category *</Label>
                   <Select
                     value={newTip.category}
@@ -182,7 +189,7 @@ export default function RtoTips() {
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="grid gap-2">
+                <div className="space-y-2">
                   <Label htmlFor="status">Status</Label>
                   <Select
                     value={newTip.status}
@@ -201,8 +208,9 @@ export default function RtoTips() {
                 </div>
               </div>
             </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setCreateDialogOpen(false)}>
+            <Separator className="my-1" />
+            <DialogFooter className="gap-3">
+              <Button variant="outline" onClick={() => setCreateDialogOpen(false)} className="hover:bg-[#40c6e524] hover:text-black">
                 Cancel
               </Button>
               <Button onClick={handleCreateTip} disabled={createTip.isPending}>
