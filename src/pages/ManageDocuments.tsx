@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { FileText, Search, ArrowUpDown, Plus, FolderTree, FileStack, ListTree, X, Download, Eye, Trash2, Send, Mail, Building2, Filter, ChevronDown, ChevronUp, Pencil } from "lucide-react";
+import { FileText, Search, ArrowUpDown, Plus, FolderTree, FileStack, ListTree, X, Download, Eye, Trash2, Send, Mail, Building2, Filter, ChevronDown, ChevronUp, Pencil, FolderOpen } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useAuth } from "@/hooks/useAuth";
 import { Combobox } from "@/components/ui/combobox";
@@ -1126,22 +1126,12 @@ export default function ManageDocuments() {
                     <Label htmlFor="category">Category</Label>
                     <Popover>
                       <PopoverTrigger asChild>
-                        <Button variant="outline" className="w-full justify-start min-h-[40px] h-auto hover:!bg-[hsl(196deg_100%_93.53%)] hover:!text-black" role="combobox">
-                          {formData.categories.length === 0 ? <span className="text-muted-foreground">Select categories...</span> : <div className="flex flex-wrap gap-1.5">
-                              {formData.categories.map(catId => {
-                          const category = categories.find(c => c.id.toString() === catId);
-                          return category ? <Badge key={catId} variant="secondary" className="text-xs px-2 py-0.5" onClick={e => {
-                            e.stopPropagation();
-                            setFormData({
-                              ...formData,
-                              categories: formData.categories.filter(id => id !== catId)
-                            });
-                          }}>
-                                    {category.name}
-                                    <X className="ml-1 h-3 w-3" />
-                                  </Badge> : null;
-                        })}
-                            </div>}
+                        <Button variant="outline" className="w-full justify-between min-h-[40px] h-auto hover:!bg-[hsl(196deg_100%_93.53%)] hover:!text-black" role="combobox">
+                          <span className="text-muted-foreground">
+                            {formData.categories.length === 0 
+                              ? "Select categories..." 
+                              : `${formData.categories.length} selected`}
+                          </span>
                           <ChevronDown className="ml-auto h-4 w-4 shrink-0 opacity-50" />
                         </Button>
                       </PopoverTrigger>
@@ -1193,6 +1183,30 @@ export default function ManageDocuments() {
                         </div>
                       </PopoverContent>
                     </Popover>
+                    {formData.categories.length > 0 && (
+                      <div className="flex flex-wrap gap-1.5 mt-1">
+                        {formData.categories.map(catId => {
+                          const category = categories.find(c => c.id.toString() === catId);
+                          return category ? (
+                            <Badge 
+                              key={catId} 
+                              variant="default"
+                              className="bg-primary/10 text-primary hover:bg-primary/20 border border-primary text-[0.75rem] py-[2px] px-[0.625rem] rounded-[11px] cursor-pointer"
+                              onClick={() => {
+                                setFormData({
+                                  ...formData,
+                                  categories: formData.categories.filter(id => id !== catId)
+                                });
+                              }}
+                            >
+                              <FolderOpen className="mr-1 h-3 w-3" />
+                              {category.name}
+                              <X className="ml-1 h-3 w-3" />
+                            </Badge>
+                          ) : null;
+                        })}
+                      </div>
+                    )}
                   </div>
 
                   <div className="grid gap-2">
