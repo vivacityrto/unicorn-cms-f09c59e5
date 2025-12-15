@@ -174,6 +174,27 @@ export default function ManageDocuments() {
       fetchDocuments();
     }
   }, [currentUserRole, currentUserTenantId]);
+
+  // Populate form when editing a document
+  useEffect(() => {
+    if (editingDocumentId && isCreateDialogOpen) {
+      const doc = documents.find(d => d.id === editingDocumentId);
+      if (doc) {
+        setFormData({
+          title: doc.title || "",
+          description: doc.description || "",
+          format: doc.format || "",
+          watermark: doc.watermark || false,
+          versiondate: doc.versiondate ? new Date(doc.versiondate) : undefined,
+          versionnumber: doc.versionnumber?.toString() || "",
+          versionlastupdated: doc.versionlastupdated ? new Date(doc.versionlastupdated) : undefined,
+          isclientdoc: doc.isclientdoc || false,
+          stage: doc.stage?.toString() || "",
+          categories: doc.category ? doc.category.split(",").map(c => c.trim()) : []
+        });
+      }
+    }
+  }, [editingDocumentId, isCreateDialogOpen, documents]);
   const fetchCategories = async () => {
     try {
       const {
@@ -917,7 +938,25 @@ export default function ManageDocuments() {
                 Send ({selectedDocuments.length})
               </Button>
             </>}
-          {(isSuperAdmin || isTeamLeader) && <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+          {(isSuperAdmin || isTeamLeader) && <Dialog open={isCreateDialogOpen} onOpenChange={(open) => {
+              setIsCreateDialogOpen(open);
+              if (!open) {
+                setEditingDocumentId(null);
+                setFormData({
+                  title: "",
+                  description: "",
+                  format: "",
+                  watermark: false,
+                  versiondate: undefined,
+                  versionnumber: "",
+                  versionlastupdated: undefined,
+                  isclientdoc: false,
+                  stage: "",
+                  categories: []
+                });
+                setUploadedFiles([]);
+              }
+            }}>
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
@@ -942,10 +981,10 @@ export default function ManageDocuments() {
                 <DialogHeader className="p-0 flex-shrink-0">
                   <DialogTitle className="flex items-center gap-2">
                     <FileText className="h-5 w-5" />
-                    Create New Document
+                    {editingDocumentId ? "Edit Document" : "Create New Document"}
                   </DialogTitle>
                   <DialogDescription>
-                    Create a new document by providing the required information below
+                    {editingDocumentId ? "Update the document information below" : "Create a new document by providing the required information below"}
                   </DialogDescription>
                 </DialogHeader>
                 <div className="flex-1 overflow-y-auto scrollbar-hide px-1 min-h-0">
