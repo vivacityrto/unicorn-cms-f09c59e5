@@ -10,6 +10,8 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import CreateEmailDialog from "@/components/CreateEmailDialog";
 type EmailRow = {
   id: number;
@@ -25,6 +27,7 @@ type EmailRow = {
   created_at: string | null;
   files: string[] | null;
   creator_name?: string | null;
+  creator_avatar?: string | null;
 };
 export default function ManageEmails() {
   const {
@@ -54,14 +57,18 @@ export default function ManageEmails() {
       if (creatorIds.length > 0) {
         const {
           data: usersData
-        } = await supabase.from("users").select("user_uuid, first_name, last_name").in("user_uuid", creatorIds);
-        const userNameMap = (usersData || []).reduce((acc, user) => {
-          acc[user.user_uuid] = `${user.first_name || ''} ${user.last_name || ''}`.trim() || 'Unknown';
+        } = await supabase.from("users").select("user_uuid, first_name, last_name, avatar_url").in("user_uuid", creatorIds);
+        const userDataMap = (usersData || []).reduce((acc, user) => {
+          acc[user.user_uuid] = {
+            name: `${user.first_name || ''} ${user.last_name || ''}`.trim() || 'Unknown',
+            avatar: user.avatar_url
+          };
           return acc;
-        }, {} as Record<string, string>);
+        }, {} as Record<string, { name: string; avatar: string | null }>);
         emailsData.forEach(email => {
-          if (email.created_by) {
-            email.creator_name = userNameMap[email.created_by] || 'Unknown';
+          if (email.created_by && userDataMap[email.created_by]) {
+            email.creator_name = userDataMap[email.created_by].name;
+            email.creator_avatar = userDataMap[email.created_by].avatar;
           }
         });
       }
@@ -174,6 +181,7 @@ export default function ManageEmails() {
                   <TableHead className="font-semibold text-foreground border-r border-border">To</TableHead>
                   <TableHead className="font-semibold text-foreground border-r border-border">Subject</TableHead>
                   <TableHead className="font-semibold text-foreground border-r border-border">Files</TableHead>
+                  <TableHead className="font-semibold text-foreground border-r border-border text-center">Created By</TableHead>
                   <TableHead className="font-semibold text-foreground text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -238,6 +246,33 @@ export default function ManageEmails() {
                         </Badge>
                       ) : (
                         <span className="text-sm text-muted-foreground">-</span>
+                      )}
+                    </TableCell>
+
+                    {/* Created By Column */}
+                    <TableCell className="py-4 border-r border-border">
+                      {email.creator_name ? (
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <div className="flex justify-center cursor-pointer">
+                                <Avatar className="h-9 w-9">
+                                  <AvatarImage src={email.creator_avatar || undefined} alt={email.creator_name} />
+                                  <AvatarFallback className="bg-primary/10 text-primary text-xs">
+                                    {email.creator_name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
+                                  </AvatarFallback>
+                                </Avatar>
+                              </div>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>{email.creator_name}</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      ) : (
+                        <div className="flex justify-center">
+                          <span className="text-sm text-muted-foreground">-</span>
+                        </div>
                       )}
                     </TableCell>
 
