@@ -198,13 +198,12 @@ export default function ManageEmails() {
 
                     {/* To Column */}
                     <TableCell className="py-4 border-r border-border">
-                      {email.to ? (
-                        <Badge className="bg-blue-500/10 text-blue-600 hover:bg-blue-500/20 border border-blue-600 text-[0.75rem] py-[2px] px-[0.625rem] rounded-[11px] font-medium">
-                          {email.to}
-                        </Badge>
-                      ) : (
-                        <span className="text-sm text-muted-foreground">Client</span>
-                      )}
+                      <div className="flex items-center gap-2">
+                        <Mail className="h-4 w-4 text-muted-foreground" />
+                        <span className="text-sm text-muted-foreground">
+                          {email.to || "Client"}
+                        </span>
+                      </div>
                     </TableCell>
 
                     {/* Subject Column */}
