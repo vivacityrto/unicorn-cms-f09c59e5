@@ -1093,16 +1093,22 @@ export default function AuditTemplateBuilder() {
         });
         if (questionsError) throw questionsError;
         if (questions && questions.length > 0) {
-          const loadedQuestions: CanvasQuestion[] = questions.map(q => ({
-            id: q.id.toString(),
-            question_type: q.question_type,
-            label: q.label,
-            order_index: q.order_index,
-            options: q.options as any[] || [],
-            required: q.required,
-            category: q.category,
-            description: ''
-          }));
+          const loadedQuestions: CanvasQuestion[] = questions.map(q => {
+            const options = q.options as any[] || [];
+            // Extract scoring_enabled from options metadata if present
+            const scoringMeta = options.find((opt: any) => opt._scoring_enabled !== undefined);
+            return {
+              id: q.id.toString(),
+              question_type: q.question_type,
+              label: q.label,
+              order_index: q.order_index,
+              options: options.filter((opt: any) => opt._scoring_enabled === undefined),
+              required: q.required,
+              category: q.category,
+              description: '',
+              scoring_enabled: scoringMeta?._scoring_enabled || false
+            };
+          });
           setCanvasQuestions(loadedQuestions);
         }
       } catch (error: any) {
@@ -1242,22 +1248,28 @@ export default function AuditTemplateBuilder() {
       // Save/update all questions
       for (const question of canvasQuestions) {
         if (question.tempId) {
-          // New question - insert it
+          // New question - insert it (include scoring_enabled in options)
+          const optionsWithScoring = question.scoring_enabled 
+            ? [...(question.options || []), { _scoring_enabled: true }]
+            : question.options;
           await addQuestion.mutateAsync({
             template_id: currentTemplateId!,
             question_type: question.question_type,
             label: question.label,
             order_index: question.order_index,
-            options: question.options,
+            options: optionsWithScoring,
             category: question.category,
             required: question.required || false
           });
         } else if (question.id) {
-          // Existing question - update it
+          // Existing question - update it (include scoring_enabled in options)
+          const optionsWithScoring = question.scoring_enabled 
+            ? [...(question.options || []).filter((opt: any) => opt._scoring_enabled === undefined), { _scoring_enabled: true }]
+            : (question.options || []).filter((opt: any) => opt._scoring_enabled === undefined);
           await supabase.from('audit_template_questions').update({
             label: question.label,
             order_index: question.order_index,
-            options: question.options,
+            options: optionsWithScoring,
             required: question.required || false,
             updated_at: new Date().toISOString()
           }).eq('id', parseInt(question.id));
