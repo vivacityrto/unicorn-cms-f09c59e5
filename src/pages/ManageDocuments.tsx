@@ -1536,7 +1536,10 @@ export default function ManageDocuments() {
               const categoryBadges = categoryIds.map(id => categories.find(c => c.id === parseInt(id.trim()))?.name).filter(Boolean);
               return <TableRow key={doc.id} className="group hover:bg-primary/5 transition-all duration-200 cursor-pointer border-b border-border/50 hover:border-primary/20 animate-fade-in" style={{
                 animationDelay: `${index * 30}ms`
-              }} onClick={() => navigate(`/document/${doc.id}`)}>
+              }} onClick={() => {
+                setEditingDocumentId(doc.id);
+                setIsCreateDialogOpen(true);
+              }}>
                       <TableCell className="py-6 border-r border-border/50 w-24">
                         <span className="font-semibold text-foreground">{doc.id}</span>
                       </TableCell>
