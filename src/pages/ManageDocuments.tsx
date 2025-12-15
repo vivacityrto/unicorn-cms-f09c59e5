@@ -135,7 +135,9 @@ export default function ManageDocuments() {
   const [bulkCricosFilter, setBulkCricosFilter] = useState<'all' | 'cricos' | 'non-cricos'>('all');
   const [bulkFrameworkFilter, setBulkFrameworkFilter] = useState<string>('');
   const [documentsCount, setDocumentsCount] = useState<number>(0);
-  const { profile } = useAuth();
+  const {
+    profile
+  } = useAuth();
   const isTeamLeader = profile?.unicorn_role === 'Team Leader';
 
   // Pagination state
@@ -146,7 +148,10 @@ export default function ManageDocuments() {
   const [editingDocumentId, setEditingDocumentId] = useState<number | null>(null);
   const [documentToDelete, setDocumentToDelete] = useState<number | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [existingFiles, setExistingFiles] = useState<{ url: string; name: string }[]>([]);
+  const [existingFiles, setExistingFiles] = useState<{
+    url: string;
+    name: string;
+  }[]>([]);
 
   // Form state
   const [formData, setFormData] = useState({
@@ -502,10 +507,11 @@ export default function ManageDocuments() {
       // Combine existing files with new uploads
       const allFileUrls = [...existingFiles.map(f => f.url), ...newFileUrls];
       const allFileNames = [...existingFiles.map(f => f.name), ...newFileNames];
-
       if (editingDocumentId) {
         // Update existing document
-        const { error } = await supabase.from("documents").update({
+        const {
+          error
+        } = await supabase.from("documents").update({
           title: formData.title,
           description: formData.description || null,
           format: formData.format || null,
@@ -526,7 +532,9 @@ export default function ManageDocuments() {
         });
       } else {
         // Insert new document
-        const { error } = await supabase.from("documents").insert({
+        const {
+          error
+        } = await supabase.from("documents").insert({
           title: formData.title,
           description: formData.description || null,
           format: formData.format || null,
@@ -978,47 +986,45 @@ export default function ManageDocuments() {
                 Send ({selectedDocuments.length})
               </Button>
             </>}
-          {(isSuperAdmin || isTeamLeader) && <Dialog open={isCreateDialogOpen} onOpenChange={(open) => {
-              setIsCreateDialogOpen(open);
-              if (!open) {
-                setEditingDocumentId(null);
-                setFormData({
-                  title: "",
-                  description: "",
-                  format: "",
-                  watermark: false,
-                  versiondate: undefined,
-                  versionnumber: "",
-                  versionlastupdated: undefined,
-                  isclientdoc: false,
-                  stage: "",
-                  categories: []
-                });
-                setUploadedFiles([]);
-                setExistingFiles([]);
-              }
-            }}>
+          {(isSuperAdmin || isTeamLeader) && <Dialog open={isCreateDialogOpen} onOpenChange={open => {
+          setIsCreateDialogOpen(open);
+          if (!open) {
+            setEditingDocumentId(null);
+            setFormData({
+              title: "",
+              description: "",
+              format: "",
+              watermark: false,
+              versiondate: undefined,
+              versionnumber: "",
+              versionlastupdated: undefined,
+              isclientdoc: false,
+              stage: "",
+              categories: []
+            });
+            setUploadedFiles([]);
+            setExistingFiles([]);
+          }
+        }}>
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <DialogTrigger asChild>
-                      <Button 
-                        className={isTeamLeader ? "bg-[#696969] hover:bg-[#696969] cursor-not-allowed" : "bg-[hsl(188_74%_51%)] hover:bg-[hsl(188_74%_51%)]/90"} 
-                        disabled={isTeamLeader}
-                      >
+                      <Button className={isTeamLeader ? "bg-[#696969] hover:bg-[#696969] cursor-not-allowed" : "bg-[hsl(188_74%_51%)] hover:bg-[hsl(188_74%_51%)]/90"} disabled={isTeamLeader}>
                         <Plus className="h-4 w-4 mr-2" />
                         Create Document
                       </Button>
                     </DialogTrigger>
                   </TooltipTrigger>
-                  {isTeamLeader && (
-                    <TooltipContent>
+                  {isTeamLeader && <TooltipContent>
                       <p>Please contact Super Admins.</p>
-                    </TooltipContent>
-                  )}
+                    </TooltipContent>}
                 </Tooltip>
               </TooltipProvider>
-              <DialogContent className="border-[3px] border-[#dfdfdf] flex flex-col max-h-[90vh]" style={{ width: '650px', maxWidth: '90vw' }}>
+              <DialogContent className="border-[3px] border-[#dfdfdf] flex flex-col max-h-[90vh]" style={{
+            width: '650px',
+            maxWidth: '90vw'
+          }}>
                 <DialogHeader className="p-0 flex-shrink-0">
                   <DialogTitle className="flex items-center gap-2">
                     <FileText className="h-5 w-5" />
@@ -1038,26 +1044,20 @@ export default function ManageDocuments() {
                   <div className="grid gap-2">
                     <Label htmlFor="title">Name *</Label>
                     <Input id="title" value={formData.title} onChange={e => setFormData({
-                  ...formData,
-                  title: e.target.value
-                })} required />
+                    ...formData,
+                    title: e.target.value
+                  })} required />
                   </div>
 
                   <div className="grid gap-2">
                     <Label htmlFor="description">Description</Label>
                     <Input id="description" value={formData.description} onChange={e => setFormData({
-                  ...formData,
-                  description: e.target.value
-                })} />
+                    ...formData,
+                    description: e.target.value
+                  })} />
                   </div>
 
-                  <div className="flex items-center gap-2">
-                    <Switch id="watermark" checked={formData.watermark} onCheckedChange={checked => setFormData({
-                  ...formData,
-                  watermark: checked
-                })} />
-                    <Label htmlFor="watermark">Watermark</Label>
-                  </div>
+                  
 
                   <div className="grid gap-2">
                     <Label>Version Date</Label>
@@ -1070,9 +1070,9 @@ export default function ManageDocuments() {
                       </PopoverTrigger>
                       <PopoverContent className="w-auto p-0 data-[side=bottom]:p-0 data-[side=top]:p-[10px]" align="start">
                         <Calendar mode="single" selected={formData.versiondate} onSelect={date => setFormData({
-                      ...formData,
-                      versiondate: date
-                    })} initialFocus className="pointer-events-auto" />
+                        ...formData,
+                        versiondate: date
+                      })} initialFocus className="pointer-events-auto" />
                       </PopoverContent>
                     </Popover>
                   </div>
@@ -1080,9 +1080,9 @@ export default function ManageDocuments() {
                   <div className="grid gap-2">
                     <Label htmlFor="versionnumber">Version Number</Label>
                     <Input id="versionnumber" type="number" value={formData.versionnumber} onChange={e => setFormData({
-                  ...formData,
-                  versionnumber: e.target.value
-                })} />
+                    ...formData,
+                    versionnumber: e.target.value
+                  })} />
                   </div>
 
                   <div className="grid gap-2">
@@ -1096,30 +1096,24 @@ export default function ManageDocuments() {
                       </PopoverTrigger>
                       <PopoverContent className="w-auto p-0 data-[side=bottom]:p-0 data-[side=top]:p-[10px]" align="start">
                         <Calendar mode="single" selected={formData.versionlastupdated} onSelect={date => setFormData({
-                      ...formData,
-                      versionlastupdated: date
-                    })} initialFocus className="pointer-events-auto" />
+                        ...formData,
+                        versionlastupdated: date
+                      })} initialFocus className="pointer-events-auto" />
                       </PopoverContent>
                     </Popover>
                   </div>
 
-                  <div className="flex items-center gap-2">
-                    <Switch id="isclientdoc" checked={formData.isclientdoc} onCheckedChange={checked => setFormData({
-                  ...formData,
-                  isclientdoc: checked
-                })} />
-                    <Label htmlFor="isclientdoc">Is Client Document</Label>
-                  </div>
+                  
 
                   <div className="grid gap-2">
                     <Label htmlFor="stage">Stage</Label>
                     <Combobox options={stages.map(stage => ({
-                  value: stage.id.toString(),
-                  label: stage.title
-                }))} value={formData.stage} onValueChange={value => setFormData({
-                  ...formData,
-                  stage: value
-                })} placeholder="Select stage..." searchPlaceholder="Search stages..." emptyText="No stages found." className="w-full" showAvatar={false} autoWidth />
+                    value: stage.id.toString(),
+                    label: stage.title
+                  }))} value={formData.stage} onValueChange={value => setFormData({
+                    ...formData,
+                    stage: value
+                  })} placeholder="Select stage..." searchPlaceholder="Search stages..." emptyText="No stages found." className="w-full" showAvatar={false} autoWidth />
                   </div>
 
                   <div className="grid gap-2">
@@ -1128,9 +1122,7 @@ export default function ManageDocuments() {
                       <PopoverTrigger asChild>
                         <Button variant="outline" className="w-full justify-between min-h-[40px] h-auto hover:!bg-[hsl(196deg_100%_93.53%)] hover:!text-black" role="combobox">
                           <span className="text-muted-foreground">
-                            {formData.categories.length === 0 
-                              ? "Select categories..." 
-                              : `${formData.categories.length} selected`}
+                            {formData.categories.length === 0 ? "Select categories..." : `${formData.categories.length} selected`}
                           </span>
                           <ChevronDown className="ml-auto h-4 w-4 shrink-0 opacity-50" />
                         </Button>
@@ -1139,74 +1131,49 @@ export default function ManageDocuments() {
                         <div className="p-2 border-b">
                           <div className="relative">
                             <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                            <Input 
-                              placeholder="Search categories..." 
-                              value={categorySearchQuery} 
-                              onChange={e => setCategorySearchQuery(e.target.value)} 
-                              className="pl-8 h-9"
-                            />
+                            <Input placeholder="Search categories..." value={categorySearchQuery} onChange={e => setCategorySearchQuery(e.target.value)} className="pl-8 h-9" />
                           </div>
                         </div>
                         <div className="max-h-[300px] overflow-y-auto">
-                          {filteredCategoriesForDropdown.length === 0 ? (
-                            <div className="py-6 text-center text-sm text-muted-foreground">
+                          {filteredCategoriesForDropdown.length === 0 ? <div className="py-6 text-center text-sm text-muted-foreground">
                               No categories found.
-                            </div>
-                          ) : (
-                            filteredCategoriesForDropdown.map((cat, index) => {
-                              const isSelected = formData.categories.includes(cat.id.toString());
-                              return <div 
-                                key={cat.id} 
-                                className={cn(
-                                  "flex items-center gap-3 px-3 py-2.5 cursor-pointer text-sm hover:bg-[hsl(196deg_100%_93.53%)] hover:text-black border-b border-border last:border-b-0",
-                                  isSelected && "bg-[hsl(196deg_100%_93.53%)] text-black"
-                                )} 
-                                onClick={() => {
-                                  if (isSelected) {
-                                    setFormData({
-                                      ...formData,
-                                      categories: formData.categories.filter(id => id !== cat.id.toString())
-                                    });
-                                  } else {
-                                    setFormData({
-                                      ...formData,
-                                      categories: [...formData.categories, cat.id.toString()]
-                                    });
-                                  }
-                                }}
-                              >
+                            </div> : filteredCategoriesForDropdown.map((cat, index) => {
+                          const isSelected = formData.categories.includes(cat.id.toString());
+                          return <div key={cat.id} className={cn("flex items-center gap-3 px-3 py-2.5 cursor-pointer text-sm hover:bg-[hsl(196deg_100%_93.53%)] hover:text-black border-b border-border last:border-b-0", isSelected && "bg-[hsl(196deg_100%_93.53%)] text-black")} onClick={() => {
+                            if (isSelected) {
+                              setFormData({
+                                ...formData,
+                                categories: formData.categories.filter(id => id !== cat.id.toString())
+                              });
+                            } else {
+                              setFormData({
+                                ...formData,
+                                categories: [...formData.categories, cat.id.toString()]
+                              });
+                            }
+                          }}>
                                 <Checkbox checked={isSelected} />
                                 <span className="font-medium">{cat.name}</span>
                               </div>;
-                            })
-                          )}
+                        })}
                         </div>
                       </PopoverContent>
                     </Popover>
-                    {formData.categories.length > 0 && (
-                      <div className="flex flex-wrap gap-1.5 mt-1">
+                    {formData.categories.length > 0 && <div className="flex flex-wrap gap-1.5 mt-1">
                         {formData.categories.map(catId => {
-                          const category = categories.find(c => c.id.toString() === catId);
-                          return category ? (
-                            <Badge 
-                              key={catId} 
-                              variant="default"
-                              className="bg-primary/10 text-primary hover:bg-primary/20 border border-primary text-[0.8125rem] py-1 px-3 rounded-[11px] cursor-pointer"
-                              onClick={() => {
-                                setFormData({
-                                  ...formData,
-                                  categories: formData.categories.filter(id => id !== catId)
-                                });
-                              }}
-                            >
+                      const category = categories.find(c => c.id.toString() === catId);
+                      return category ? <Badge key={catId} variant="default" className="bg-primary/10 text-primary hover:bg-primary/20 border border-primary text-[0.8125rem] py-1 px-3 rounded-[11px] cursor-pointer" onClick={() => {
+                        setFormData({
+                          ...formData,
+                          categories: formData.categories.filter(id => id !== catId)
+                        });
+                      }}>
                               <FolderOpen className="mr-1.5 h-3.5 w-3.5" />
                               {category.name}
                               <X className="ml-1.5 h-3.5 w-3.5" />
-                            </Badge>
-                          ) : null;
-                        })}
-                      </div>
-                    )}
+                            </Badge> : null;
+                    })}
+                      </div>}
                   </div>
 
                   <div className="grid gap-2">
@@ -1235,28 +1202,28 @@ export default function ManageDocuments() {
                                 </TableHeader>
                                 <TableBody>
                                   {filteredFieldsForSheet.map(field => {
-                              const isSelected = selectedFields.includes(field.id);
-                              return <TableRow key={field.id} className="cursor-pointer" onClick={() => {
-                                setSelectedFields(prev => prev.includes(field.id) ? prev.filter(f => f !== field.id) : [...prev, field.id]);
-                              }}>
+                                const isSelected = selectedFields.includes(field.id);
+                                return <TableRow key={field.id} className="cursor-pointer" onClick={() => {
+                                  setSelectedFields(prev => prev.includes(field.id) ? prev.filter(f => f !== field.id) : [...prev, field.id]);
+                                }}>
                                         <TableCell>
                                           <Checkbox checked={isSelected} onCheckedChange={() => {
-                                    setSelectedFields(prev => prev.includes(field.id) ? prev.filter(f => f !== field.id) : [...prev, field.id]);
-                                  }} />
+                                      setSelectedFields(prev => prev.includes(field.id) ? prev.filter(f => f !== field.id) : [...prev, field.id]);
+                                    }} />
                                         </TableCell>
                                         <TableCell className="font-medium">{field.label}</TableCell>
                                         <TableCell>
                                           <Badge variant="secondary" style={{
-                                    backgroundColor: "hsl(275deg 54% 41% / 8%)",
-                                    border: "1px solid hsl(275 54% 41%)",
-                                    fontSize: "12px",
-                                    color: "hsl(275 54% 41%)"
-                                  }}>
+                                      backgroundColor: "hsl(275deg 54% 41% / 8%)",
+                                      border: "1px solid hsl(275 54% 41%)",
+                                      fontSize: "12px",
+                                      color: "hsl(275 54% 41%)"
+                                    }}>
                                             {field.type}
                                           </Badge>
                                         </TableCell>
                                       </TableRow>;
-                            })}
+                              })}
                                 </TableBody>
                               </Table>
                             </div>}
@@ -1265,12 +1232,12 @@ export default function ManageDocuments() {
                               Cancel
                             </Button>
                             <Button onClick={() => {
-                          setIsFieldsSheetOpen(false);
-                          toast({
-                            title: "Fields Added",
-                            description: `${selectedFields.length} field(s) added to the document`
-                          });
-                        }}>
+                            setIsFieldsSheetOpen(false);
+                            toast({
+                              title: "Fields Added",
+                              description: `${selectedFields.length} field(s) added to the document`
+                            });
+                          }}>
                               Apply
                             </Button>
                           </div>
@@ -1280,103 +1247,74 @@ export default function ManageDocuments() {
                     <Input id="files" type="file" multiple onChange={handleFileUpload} className="cursor-pointer" />
                     
                     {/* Display existing files (edit mode) */}
-                    {existingFiles.length > 0 && (
-                      <div className="space-y-1 mt-2">
-                        {existingFiles.map((file, index) => (
-                          <div
-                            key={`existing-${index}`}
-                            className="flex items-center justify-between border border-input rounded-md px-3 py-2"
-                          >
+                    {existingFiles.length > 0 && <div className="space-y-1 mt-2">
+                        {existingFiles.map((file, index) => <div key={`existing-${index}`} className="flex items-center justify-between border border-input rounded-md px-3 py-2">
                             <div className="flex items-center gap-2 min-w-0 flex-1">
                               <FileText className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                               <span className="text-sm truncate">{file.name}</span>
                             </div>
                             <div className="flex items-center gap-1 flex-shrink-0 ml-2">
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="sm"
-                                onClick={async () => {
-                                  try {
-                                    if (file.url.startsWith("http")) {
-                                      const url = new URL(file.url);
-                                      const segments = url.pathname.split("/").filter(Boolean);
-                                      const publicIndex = segments.indexOf("public");
-
-                                      if (publicIndex !== -1 && segments.length > publicIndex + 2) {
-                                        const bucket = segments[publicIndex + 1];
-                                        const objectPath = segments.slice(publicIndex + 2).join("/");
-                                        const { data } = supabase.storage.from(bucket).getPublicUrl(objectPath);
-                                        if (data.publicUrl) {
-                                          window.open(data.publicUrl, "_blank");
-                                        } else {
-                                          window.open(file.url, "_blank");
-                                        }
-                                      } else {
-                                        window.open(file.url, "_blank");
-                                      }
-                                    } else {
-                                      const { data } = supabase.storage.from("document-files").getPublicUrl(file.url);
-                                      if (data.publicUrl) {
-                                        window.open(data.publicUrl, "_blank");
-                                      }
-                                    }
-                                  } catch {
-                                    window.open(file.url, "_blank");
-                                  }
-                                }}
-                                className="h-6 w-6 p-0 text-muted-foreground hover:text-primary"
-                              >
+                              <Button type="button" variant="ghost" size="sm" onClick={async () => {
+                          try {
+                            if (file.url.startsWith("http")) {
+                              const url = new URL(file.url);
+                              const segments = url.pathname.split("/").filter(Boolean);
+                              const publicIndex = segments.indexOf("public");
+                              if (publicIndex !== -1 && segments.length > publicIndex + 2) {
+                                const bucket = segments[publicIndex + 1];
+                                const objectPath = segments.slice(publicIndex + 2).join("/");
+                                const {
+                                  data
+                                } = supabase.storage.from(bucket).getPublicUrl(objectPath);
+                                if (data.publicUrl) {
+                                  window.open(data.publicUrl, "_blank");
+                                } else {
+                                  window.open(file.url, "_blank");
+                                }
+                              } else {
+                                window.open(file.url, "_blank");
+                              }
+                            } else {
+                              const {
+                                data
+                              } = supabase.storage.from("document-files").getPublicUrl(file.url);
+                              if (data.publicUrl) {
+                                window.open(data.publicUrl, "_blank");
+                              }
+                            }
+                          } catch {
+                            window.open(file.url, "_blank");
+                          }
+                        }} className="h-6 w-6 p-0 text-muted-foreground hover:text-primary">
                                 <Eye className="h-4 w-4" />
                               </Button>
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => setExistingFiles(prev => prev.filter((_, i) => i !== index))}
-                                className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive"
-                              >
+                              <Button type="button" variant="ghost" size="sm" onClick={() => setExistingFiles(prev => prev.filter((_, i) => i !== index))} className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive">
                                 <X className="h-4 w-4" />
                               </Button>
                             </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
+                          </div>)}
+                      </div>}
 
                     {/* Display new uploaded files */}
-                    {uploadedFiles.length > 0 && (
-                      <div className="space-y-1 mt-2">
-                        {uploadedFiles.map((file, index) => (
-                          <div
-                            key={`new-${index}`}
-                            className="flex items-center justify-between border border-input rounded-md px-3 py-2"
-                          >
+                    {uploadedFiles.length > 0 && <div className="space-y-1 mt-2">
+                        {uploadedFiles.map((file, index) => <div key={`new-${index}`} className="flex items-center justify-between border border-input rounded-md px-3 py-2">
                             <div className="flex items-center gap-2 min-w-0 flex-1">
                               <FileText className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                               <span className="text-sm truncate">{file.name}</span>
                             </div>
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleRemoveFile(index)}
-                              className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive flex-shrink-0 ml-2"
-                            >
+                            <Button type="button" variant="ghost" size="sm" onClick={() => handleRemoveFile(index)} className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive flex-shrink-0 ml-2">
                               <X className="h-4 w-4" />
                             </Button>
-                          </div>
-                        ))}
-                      </div>
-                    )}
+                          </div>)}
+                      </div>}
 
                     {/* Display Selected Fields */}
                     {selectedFields.length > 0 && <div className="space-y-3 mt-4 pt-4 border-t">
                         <Label className="text-sm font-medium">Document Fields</Label>
                         {selectedFields.map(fieldId => {
-                    const field = fields.find(f => f.id === fieldId);
-                    if (!field) return null;
-                    return <div key={field.id} className="grid gap-2">
+                      const field = fields.find(f => f.id === fieldId);
+                      if (!field) return null;
+                      return <div key={field.id} className="grid gap-2">
                               <Label htmlFor={`field-${field.id}`}>{field.label}</Label>
                               {field.type === "text" && <Input id={`field-${field.id}`} placeholder={`Enter ${field.label.toLowerCase()}`} />}
                               {field.type === "number" && <Input id={`field-${field.id}`} type="number" placeholder={`Enter ${field.label.toLowerCase()}`} />}
@@ -1416,7 +1354,7 @@ export default function ManageDocuments() {
                               {field.type === "color" && <Input id={`field-${field.id}`} type="color" className="h-10 w-20" />}
                               {field.type === "range" && <Input id={`field-${field.id}`} type="range" />}
                             </div>;
-                  })}
+                    })}
                       </div>}
                   </div>
                   </div>
@@ -1581,30 +1519,19 @@ export default function ManageDocuments() {
                 <Input placeholder="Search..." value={categorySearchQuery} onChange={e => setCategorySearchQuery(e.target.value)} className="pl-9 h-9 text-sm rounded-md" />
               </div>
               <div className="max-h-[200px] overflow-y-auto space-y-1">
-                <div 
-                  className={cn("px-4 py-2.5 text-sm font-medium cursor-pointer rounded-md transition-all", categoryFilter === "all" ? "bg-primary/10 text-primary" : "text-foreground hover:bg-muted")} 
-                  onClick={() => {
-                    setCategoryFilter("all");
-                    setCategorySearchQuery("");
-                  }}
-                >
+                <div className={cn("px-4 py-2.5 text-sm font-medium cursor-pointer rounded-md transition-all", categoryFilter === "all" ? "bg-primary/10 text-primary" : "text-foreground hover:bg-muted")} onClick={() => {
+                setCategoryFilter("all");
+                setCategorySearchQuery("");
+              }}>
                   All Categories
                 </div>
-                {filteredCategoriesForDropdown.map((cat) => (
-                  <div 
-                    key={cat.id} 
-                    className={cn("px-4 py-2.5 text-sm font-medium cursor-pointer rounded-md transition-all", categoryFilter === cat.id.toString() ? "bg-primary/10 text-primary" : "text-foreground hover:bg-muted")} 
-                    onClick={() => {
-                      setCategoryFilter(cat.id.toString());
-                      setCategorySearchQuery("");
-                    }}
-                  >
+                {filteredCategoriesForDropdown.map(cat => <div key={cat.id} className={cn("px-4 py-2.5 text-sm font-medium cursor-pointer rounded-md transition-all", categoryFilter === cat.id.toString() ? "bg-primary/10 text-primary" : "text-foreground hover:bg-muted")} onClick={() => {
+                setCategoryFilter(cat.id.toString());
+                setCategorySearchQuery("");
+              }}>
                     {cat.name}
-                  </div>
-                ))}
-                {filteredCategoriesForDropdown.length === 0 && categorySearchQuery && (
-                  <p className="text-xs text-muted-foreground text-center py-2">No categories found</p>
-                )}
+                  </div>)}
+                {filteredCategoriesForDropdown.length === 0 && categorySearchQuery && <p className="text-xs text-muted-foreground text-center py-2">No categories found</p>}
               </div>
             </PopoverContent>
           </Popover>
@@ -1642,30 +1569,30 @@ export default function ManageDocuments() {
                     No documents found
                   </TableCell>
                 </TableRow> : paginatedDocuments.map((doc, index) => {
-              const isNew = doc.sent_at && new Date().getTime() - new Date(doc.sent_at).getTime() < 24 * 60 * 60 * 1000;
-              const categoryIds = doc.category ? doc.category.split(',') : [];
-              const categoryBadges = categoryIds.map(id => categories.find(c => c.id === parseInt(id.trim()))?.name).filter(Boolean);
-              return <TableRow key={doc.id} className="group hover:bg-primary/5 transition-all duration-200 cursor-pointer border-b border-border/50 hover:border-primary/20 animate-fade-in" style={{
-                animationDelay: `${index * 30}ms`
-              }} onClick={() => {
-                setEditingDocumentId(doc.id);
-                setIsCreateDialogOpen(true);
-              }}>
+            const isNew = doc.sent_at && new Date().getTime() - new Date(doc.sent_at).getTime() < 24 * 60 * 60 * 1000;
+            const categoryIds = doc.category ? doc.category.split(',') : [];
+            const categoryBadges = categoryIds.map(id => categories.find(c => c.id === parseInt(id.trim()))?.name).filter(Boolean);
+            return <TableRow key={doc.id} className="group hover:bg-primary/5 transition-all duration-200 cursor-pointer border-b border-border/50 hover:border-primary/20 animate-fade-in" style={{
+              animationDelay: `${index * 30}ms`
+            }} onClick={() => {
+              setEditingDocumentId(doc.id);
+              setIsCreateDialogOpen(true);
+            }}>
                       <TableCell className="py-6 border-r border-border/50 w-24">
                         <span className="font-semibold text-foreground">{doc.id}</span>
                       </TableCell>
                       <TableCell className="py-6 border-r border-border/50" style={{
-                  minWidth: '200px'
-                }}>
+                minWidth: '200px'
+              }}>
                         <div className="flex flex-col gap-1">
                           <div className="flex items-center gap-2 whitespace-nowrap">
                             <span className="font-semibold text-foreground">{doc.title}</span>
                             {isNew && <Badge variant="outline" className="text-xs font-medium" style={{
-                        borderColor: "#22C55E",
-                        color: "#22C55E",
-                        backgroundColor: "#22C55E10",
-                        borderWidth: "1.5px"
-                      }}>
+                      borderColor: "#22C55E",
+                      color: "#22C55E",
+                      backgroundColor: "#22C55E10",
+                      borderWidth: "1.5px"
+                    }}>
                               New
                             </Badge>}
                           </div>
@@ -1679,16 +1606,10 @@ export default function ManageDocuments() {
                         <div className="truncate max-w-[230px]">{doc.description || "—"}</div>
                       </TableCell>
                       <TableCell className="whitespace-nowrap py-6 border-r border-border/50 text-center" onClick={e => e.stopPropagation()}>
-                        {doc.uploaded_files && doc.uploaded_files.length > 0 ? (
-                          <Badge 
-                            className="bg-green-500/10 text-green-600 hover:bg-green-500/20 border border-green-600 text-[0.75rem] py-[2px] px-[0.625rem] rounded-[11px] font-medium cursor-pointer"
-                          >
+                        {doc.uploaded_files && doc.uploaded_files.length > 0 ? <Badge className="bg-green-500/10 text-green-600 hover:bg-green-500/20 border border-green-600 text-[0.75rem] py-[2px] px-[0.625rem] rounded-[11px] font-medium cursor-pointer">
                             <FileText className="h-3 w-3 mr-1" />
                             {doc.uploaded_files.length} {doc.uploaded_files.length === 1 ? 'File' : 'Files'}
-                          </Badge>
-                        ) : (
-                          <span className="text-sm text-muted-foreground">—</span>
-                        )}
+                          </Badge> : <span className="text-sm text-muted-foreground">—</span>}
                       </TableCell>
                       <TableCell className="whitespace-nowrap py-6 border-r border-border/50">
                         <Badge variant={doc.watermark ? "default" : "outline"} className="text-xs font-medium py-[3px] rounded-[9px]">
@@ -1708,11 +1629,11 @@ export default function ManageDocuments() {
                       </TableCell>
                       <TableCell className="whitespace-nowrap py-6 border-r border-border/50 text-center">
                         <Badge variant="outline" className="text-xs font-medium py-[3px] rounded-[9px]" style={doc.isclientdoc ? {
-                    borderColor: "#3B82F6",
-                    color: "#3B82F6",
-                    backgroundColor: "#3B82F610",
-                    borderWidth: "1.5px"
-                  } : {}}>
+                  borderColor: "#3B82F6",
+                  color: "#3B82F6",
+                  backgroundColor: "#3B82F610",
+                  borderWidth: "1.5px"
+                } : {}}>
                           {doc.isclientdoc ? "Yes" : "No"}
                         </Badge>
                       </TableCell>
@@ -1720,108 +1641,73 @@ export default function ManageDocuments() {
                         {stages.find(s => s.id === doc.stage)?.title || "—"}
                       </TableCell>
                       <TableCell className="whitespace-nowrap py-6 text-muted-foreground text-sm border-r border-border/50">
-                        {categoryBadges.length > 0 ? (
-                          categoryBadges.length > 1 
-                            ? `${categoryBadges[0]} +${categoryBadges.length - 1}` 
-                            : categoryBadges[0]
-                        ) : "—"}
+                        {categoryBadges.length > 0 ? categoryBadges.length > 1 ? `${categoryBadges[0]} +${categoryBadges.length - 1}` : categoryBadges[0] : "—"}
                       </TableCell>
                       <TableCell className="whitespace-nowrap py-6">
                         <div className="flex items-center justify-center gap-1">
-                          <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            className="h-8 w-8 hover:bg-muted" 
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setEditingDocumentId(doc.id);
-                              setIsCreateDialogOpen(true);
-                            }}
-                          >
+                          <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-muted" onClick={e => {
+                    e.stopPropagation();
+                    setEditingDocumentId(doc.id);
+                    setIsCreateDialogOpen(true);
+                  }}>
                             <Pencil className="h-4 w-4 text-muted-foreground hover:text-foreground" />
                           </Button>
-                          <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            className="h-8 w-8 hover:bg-destructive/10" 
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setDocumentToDelete(doc.id);
-                              setIsDeleteDialogOpen(true);
-                            }}
-                          >
+                          <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-destructive/10" onClick={e => {
+                    e.stopPropagation();
+                    setDocumentToDelete(doc.id);
+                    setIsDeleteDialogOpen(true);
+                  }}>
                             <Trash2 className="h-4 w-4 text-muted-foreground hover:text-destructive" />
                           </Button>
                         </div>
                       </TableCell>
                     </TableRow>;
-            })}
+          })}
             </TableBody>
           </Table>
       </div>
 
       {/* Pagination */}
-      {filteredDocuments.length > 0 && (
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+      {filteredDocuments.length > 0 && <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div className="text-sm text-muted-foreground whitespace-nowrap">
             Showing {Math.min((currentPage - 1) * itemsPerPage + 1, filteredDocuments.length)}–{Math.min(currentPage * itemsPerPage, filteredDocuments.length)} of {filteredDocuments.length} results
           </div>
           <Pagination>
             <PaginationContent>
               <PaginationItem>
-                <PaginationPrevious 
-                  onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))} 
-                  className={currentPage === 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'} 
-                />
+                <PaginationPrevious onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))} className={currentPage === 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'} />
               </PaginationItem>
               
-              {Array.from({ length: totalPages }, (_, i) => i + 1)
-                .filter(page => {
-                  if (totalPages <= 7) return true;
-                  if (page === 1 || page === totalPages) return true;
-                  if (page >= currentPage - 1 && page <= currentPage + 1) return true;
-                  return false;
-                })
-                .map((page, index, array) => {
-                  if (index > 0 && array[index - 1] !== page - 1) {
-                    return [
-                      <PaginationItem key={`ellipsis-${page}`}>
+              {Array.from({
+            length: totalPages
+          }, (_, i) => i + 1).filter(page => {
+            if (totalPages <= 7) return true;
+            if (page === 1 || page === totalPages) return true;
+            if (page >= currentPage - 1 && page <= currentPage + 1) return true;
+            return false;
+          }).map((page, index, array) => {
+            if (index > 0 && array[index - 1] !== page - 1) {
+              return [<PaginationItem key={`ellipsis-${page}`}>
                         <span className="px-4">...</span>
-                      </PaginationItem>,
-                      <PaginationItem key={page}>
-                        <PaginationLink 
-                          onClick={() => setCurrentPage(page)} 
-                          isActive={currentPage === page} 
-                          className="cursor-pointer"
-                        >
+                      </PaginationItem>, <PaginationItem key={page}>
+                        <PaginationLink onClick={() => setCurrentPage(page)} isActive={currentPage === page} className="cursor-pointer">
                           {page}
                         </PaginationLink>
-                      </PaginationItem>
-                    ];
-                  }
-                  return (
-                    <PaginationItem key={page}>
-                      <PaginationLink 
-                        onClick={() => setCurrentPage(page)} 
-                        isActive={currentPage === page} 
-                        className="cursor-pointer"
-                      >
+                      </PaginationItem>];
+            }
+            return <PaginationItem key={page}>
+                      <PaginationLink onClick={() => setCurrentPage(page)} isActive={currentPage === page} className="cursor-pointer">
                         {page}
                       </PaginationLink>
-                    </PaginationItem>
-                  );
-                })}
+                    </PaginationItem>;
+          })}
               
               <PaginationItem>
-                <PaginationNext 
-                  onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))} 
-                  className={currentPage === totalPages ? 'pointer-events-none opacity-50' : 'cursor-pointer'} 
-                />
+                <PaginationNext onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))} className={currentPage === totalPages ? 'pointer-events-none opacity-50' : 'cursor-pointer'} />
               </PaginationItem>
             </PaginationContent>
           </Pagination>
-        </div>
-      )}
+        </div>}
 
       {/* Bulk Delete Dialog */}
       <AlertDialog open={isBulkDeleteDialogOpen} onOpenChange={setIsBulkDeleteDialogOpen}>
@@ -1852,29 +1738,28 @@ export default function ManageDocuments() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel className="hover:bg-muted hover:text-foreground">Cancel</AlertDialogCancel>
-            <AlertDialogAction 
-              onClick={async () => {
-                if (!documentToDelete) return;
-                try {
-                  const { error } = await supabase.from("documents").delete().eq("id", documentToDelete);
-                  if (error) throw error;
-                  toast({
-                    title: "Success",
-                    description: "Document deleted successfully"
-                  });
-                  setDocumentToDelete(null);
-                  setIsDeleteDialogOpen(false);
-                  fetchDocuments();
-                } catch (error: any) {
-                  toast({
-                    title: "Error",
-                    description: error.message,
-                    variant: "destructive"
-                  });
-                }
-              }} 
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
+            <AlertDialogAction onClick={async () => {
+            if (!documentToDelete) return;
+            try {
+              const {
+                error
+              } = await supabase.from("documents").delete().eq("id", documentToDelete);
+              if (error) throw error;
+              toast({
+                title: "Success",
+                description: "Document deleted successfully"
+              });
+              setDocumentToDelete(null);
+              setIsDeleteDialogOpen(false);
+              fetchDocuments();
+            } catch (error: any) {
+              toast({
+                title: "Error",
+                description: error.message,
+                variant: "destructive"
+              });
+            }
+          }} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
               Delete
             </AlertDialogAction>
           </AlertDialogFooter>
