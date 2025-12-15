@@ -41,6 +41,8 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from '@/components/ui/pagination';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface Stage {
   id: number;
@@ -52,6 +54,7 @@ interface Stage {
   updated_at: string;
   created_by: string | null;
   creator_name?: string;
+  creator_avatar?: string | null;
 }
 
 export default function ManageStages() {
@@ -86,17 +89,19 @@ export default function ManageStages() {
           *,
           creator:created_by (
             first_name,
-            last_name
+            last_name,
+            avatar_url
           )
         `)
         .order('title', { ascending: true });
 
       if (error) throw error;
       
-      // Map the data to include creator_name
+      // Map the data to include creator_name and avatar
       const stagesWithCreator = (data || []).map((stage: any) => ({
         ...stage,
         creator_name: stage.creator ? `${stage.creator.first_name} ${stage.creator.last_name}` : 'Unknown',
+        creator_avatar: stage.creator?.avatar_url || null,
         creator: undefined // Remove the nested object
       }));
       
@@ -282,7 +287,7 @@ export default function ManageStages() {
               <TableHead className="font-semibold bg-muted/30 text-foreground h-14 whitespace-nowrap border-r">Description</TableHead>
               <TableHead className="font-semibold bg-muted/30 text-foreground h-14 whitespace-nowrap border-r">Video URL</TableHead>
               <TableHead className="font-semibold bg-muted/30 text-foreground h-14 whitespace-nowrap border-r">Created</TableHead>
-              <TableHead className="font-semibold bg-muted/30 text-foreground h-14 whitespace-nowrap border-r">Created By</TableHead>
+              <TableHead className="font-semibold bg-muted/30 text-foreground h-14 whitespace-nowrap border-r text-center">Created By</TableHead>
               <TableHead className="font-semibold bg-muted/30 text-foreground h-14 whitespace-nowrap text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
@@ -307,7 +312,7 @@ export default function ManageStages() {
                     <span className="font-semibold text-foreground max-w-[200px] truncate whitespace-nowrap block">{stage.title}</span>
                   </TableCell>
                   <TableCell className="py-6 border-r border-border/50">
-                    <span className="text-muted-foreground text-sm max-w-xs truncate whitespace-nowrap block">{stage.description || '-'}</span>
+                    <span className="text-muted-foreground text-sm max-w-xs truncate whitespace-nowrap block">{stage.description || 'No description added'}</span>
                   </TableCell>
                   <TableCell className="py-6 border-r border-border/50">
                     {stage.video_url ? (
@@ -325,8 +330,24 @@ export default function ManageStages() {
                   <TableCell className="py-6 border-r border-border/50 text-muted-foreground text-sm whitespace-nowrap">
                     {new Date(stage.created_at).toLocaleDateString()}
                   </TableCell>
-                  <TableCell className="py-6 border-r border-border/50 text-muted-foreground text-sm whitespace-nowrap">
-                    {stage.creator_name || 'Unknown'}
+                  <TableCell className="py-6 border-r border-border/50">
+                    <div className="flex justify-center">
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Avatar className="h-8 w-8 cursor-pointer">
+                              <AvatarImage src={stage.creator_avatar || undefined} alt={stage.creator_name} />
+                              <AvatarFallback className="bg-primary/10 text-primary text-xs">
+                                {stage.creator_name ? stage.creator_name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() : 'UN'}
+                              </AvatarFallback>
+                            </Avatar>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>{stage.creator_name || 'Unknown'}</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    </div>
                   </TableCell>
                   <TableCell className="text-right py-6">
                     <div className="flex justify-end gap-2">
