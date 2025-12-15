@@ -1352,7 +1352,7 @@ export default function AuditTemplateBuilder() {
           setPreviewResponses({});
           setValidationErrors(new Set());
           setPreviewPage(0);
-          navigate('/audits');
+          navigate('/audits?tab=inspections');
         } catch (error) {
           console.error('Error submitting inspection:', error);
           toast.error('Failed to submit inspection');
