@@ -1269,12 +1269,21 @@ export default function ManageDocuments() {
                     {existingFiles.length > 0 && <div className="flex flex-wrap gap-2 mt-2">
                         {existingFiles.map((file, index) => <Badge key={`existing-${index}`} variant="secondary" className="gap-1 py-2 px-5">
                             {file.name}
-                            <button 
-                              type="button" 
+                            <button
+                              type="button"
                               onClick={async () => {
-                                const { data } = supabase.storage.from("document-files").getPublicUrl(file.url);
-                                window.open(data.publicUrl, "_blank");
-                              }} 
+                                // Support both legacy full URLs and new storage paths
+                                if (file.url.startsWith("http")) {
+                                  window.open(file.url, "_blank");
+                                } else {
+                                  const { data } = supabase.storage
+                                    .from("document-files")
+                                    .getPublicUrl(file.url);
+                                  if (data.publicUrl) {
+                                    window.open(data.publicUrl, "_blank");
+                                  }
+                                }
+                              }}
                               className="ml-1 text-primary border border-primary bg-primary/20 hover:bg-primary/30 rounded-full p-0.5"
                             >
                               <Eye className="h-3 w-3" />
