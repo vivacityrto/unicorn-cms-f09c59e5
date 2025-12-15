@@ -296,19 +296,24 @@ const calculateComplianceScore = (
   if (scorableQuestions.length === 0) return 100;
   
   let totalScore = 0;
-  let answeredCount = 0;
+  let countedQuestions = 0;
   
   scorableQuestions.forEach(q => {
     const response = responses[q.id];
     if (!response) return;
     
     const responseLower = response.toLowerCase();
-    answeredCount++;
     
-    // Compliant = 100%, N/A = 100% (doesn't affect score), Non-Compliant = 0%
+    // N/A = excluded from calculation (doesn't count)
     if (responseLower.includes('n/a') || responseLower === 'na' || responseLower === 'not applicable') {
-      totalScore += 100;
-    } else if (responseLower.includes('compliant') && !responseLower.includes('non')) {
+      // Skip - don't add to totalScore or countedQuestions
+      return;
+    }
+    
+    countedQuestions++;
+    
+    // Compliant = 100%, Non-Compliant = 0%
+    if (responseLower.includes('compliant') && !responseLower.includes('non')) {
       totalScore += 100;
     } else if (responseLower.includes('non-compliant') || responseLower.includes('noncompliant') || responseLower.includes('non compliant')) {
       totalScore += 0;
@@ -318,7 +323,7 @@ const calculateComplianceScore = (
     }
   });
   
-  return answeredCount > 0 ? Math.round(totalScore / answeredCount) : 100;
+  return countedQuestions > 0 ? Math.round(totalScore / countedQuestions) : 100;
 };
 function SortableQuestionCard({
   question,
