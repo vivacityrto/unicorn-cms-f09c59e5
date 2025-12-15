@@ -191,9 +191,9 @@ export default function ManageEmails() {
               setCreateDialogOpen(true);
             }}>
                     {/* Name Column */}
-                    <TableCell className="py-4 border-r border-border">
-                      <div className="flex flex-col gap-1">
-                        <span className="text-sm font-medium text-foreground pb-[5px]">
+                    <TableCell className="py-4 border-r border-border whitespace-nowrap">
+                      <div className="flex items-center gap-3">
+                        <span className="text-sm font-medium text-foreground">
                           {email.name || "Untitled"}
                         </span>
                         <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
@@ -204,8 +204,8 @@ export default function ManageEmails() {
                     </TableCell>
 
                     {/* Description Column */}
-                    <TableCell className="py-4 border-r border-border">
-                      <span className="text-sm text-foreground line-clamp-2">
+                    <TableCell className="py-4 border-r border-border max-w-[200px]">
+                      <span className="text-sm text-foreground truncate block">
                         {email.description || "-"}
                       </span>
                     </TableCell>
