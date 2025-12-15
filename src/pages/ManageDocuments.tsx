@@ -1102,18 +1102,18 @@ export default function ManageDocuments() {
                             />
                           </div>
                         </div>
-                        <div className="max-h-[300px] overflow-y-auto p-1">
+                        <div className="max-h-[300px] overflow-y-auto">
                           {filteredCategoriesForDropdown.length === 0 ? (
                             <div className="py-6 text-center text-sm text-muted-foreground">
                               No categories found.
                             </div>
                           ) : (
-                            filteredCategoriesForDropdown.map(cat => {
+                            filteredCategoriesForDropdown.map((cat, index) => {
                               const isSelected = formData.categories.includes(cat.id.toString());
                               return <div 
                                 key={cat.id} 
                                 className={cn(
-                                  "flex items-center gap-2 px-2 py-1.5 rounded-sm cursor-pointer text-sm hover:bg-[hsl(196deg_100%_93.53%)] hover:text-black",
+                                  "flex items-center gap-3 px-3 py-2.5 cursor-pointer text-sm hover:bg-[hsl(196deg_100%_93.53%)] hover:text-black border-b border-border last:border-b-0",
                                   isSelected && "bg-[hsl(196deg_100%_93.53%)] text-black"
                                 )} 
                                 onClick={() => {
@@ -1131,7 +1131,7 @@ export default function ManageDocuments() {
                                 }}
                               >
                                 <Checkbox checked={isSelected} />
-                                <span>{cat.name}</span>
+                                <span className="font-medium">{cat.name}</span>
                               </div>;
                             })
                           )}
