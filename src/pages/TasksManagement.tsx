@@ -525,16 +525,16 @@ export default function TasksManagement() {
                 </div>
               </div>
             </div>
-            <DialogFooter className="relative flex w-full justify-between items-center gap-4 px-1">
-              <div className="absolute left-0 flex items-center">
+            <DialogFooter className="flex w-full justify-between items-center px-1">
+              <div className="flex items-center">
                 {formData.tenant_id && (
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground ml-[11px]">
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
                     <ClipboardList className="h-4 w-4" />
                     <span>Package: {formData.package_name || "None"}</span>
                   </div>
                 )}
               </div>
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-3 ml-auto">
                 <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)} className="hover:bg-[#40c6e524] hover:text-black">
                   Cancel
                 </Button>
