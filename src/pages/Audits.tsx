@@ -111,7 +111,7 @@ export default function Audits() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("users")
-        .select("user_uuid, first_name, last_name, profile_photo");
+        .select("user_uuid, first_name, last_name, avatar_url");
       if (error) throw error;
       return data;
     },
@@ -145,7 +145,7 @@ export default function Audits() {
         template_name: template?.name || inspection.inspection_title || 'Unknown Template',
         conducted_by: inspection.conducted_by,
         conducted_by_name: user ? `${user.first_name || ''} ${user.last_name || ''}`.trim() || 'Unknown' : 'Unknown',
-        conducted_by_avatar: typeof user?.profile_photo === 'string' ? user.profile_photo : undefined,
+        conducted_by_avatar: typeof user?.avatar_url === 'string' ? user.avatar_url : undefined,
         status: inspection.status,
         doc_number: inspection.doc_number || undefined,
         document_id: inspection.document_id || undefined,
