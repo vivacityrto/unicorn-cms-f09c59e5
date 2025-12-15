@@ -263,7 +263,7 @@ export function AuditInspectionsTable({
                     </TableCell>
                     <TableCell className="py-5 border-r border-border/50 text-center whitespace-nowrap text-muted-foreground">
                       {inspection.doc_number 
-                        ? `#${inspection.document_id || '-'} ${inspection.doc_number}` 
+                        ? (inspection.document_id ? `#${inspection.document_id} ${inspection.doc_number}` : inspection.doc_number)
                         : '-'}
                     </TableCell>
                     <TableCell className="py-5 border-r border-border/50 text-center whitespace-nowrap">
