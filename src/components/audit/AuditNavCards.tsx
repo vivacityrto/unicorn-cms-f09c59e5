@@ -37,7 +37,7 @@ const navItems = [
   },
   {
     id: 'analytics' as const,
-    label: 'Analytics',
+    label: 'Captions',
     description: 'Reports & insights',
     icon: BarChart3,
     color: 'text-red-500',
