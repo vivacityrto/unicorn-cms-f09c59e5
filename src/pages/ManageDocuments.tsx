@@ -42,6 +42,7 @@ interface Document {
   is_sent?: boolean;
   uploaded_files?: string[] | null;
   file_names?: string[] | null;
+  createdat?: string | null;
 }
 export default function ManageDocuments() {
   const {
@@ -1503,16 +1504,21 @@ export default function ManageDocuments() {
                       <TableCell className="py-6 border-r border-border/50" style={{
                   minWidth: '200px'
                 }}>
-                        <div className="flex items-center gap-2 whitespace-nowrap">
-                          <span className="font-semibold text-foreground">{doc.title}</span>
-                          {isNew && <Badge variant="outline" className="text-xs font-medium" style={{
-                      borderColor: "#22C55E",
-                      color: "#22C55E",
-                      backgroundColor: "#22C55E10",
-                      borderWidth: "1.5px"
-                    }}>
-                            New
-                          </Badge>}
+                        <div className="flex flex-col gap-1">
+                          <div className="flex items-center gap-2 whitespace-nowrap">
+                            <span className="font-semibold text-foreground">{doc.title}</span>
+                            {isNew && <Badge variant="outline" className="text-xs font-medium" style={{
+                        borderColor: "#22C55E",
+                        color: "#22C55E",
+                        backgroundColor: "#22C55E10",
+                        borderWidth: "1.5px"
+                      }}>
+                              New
+                            </Badge>}
+                          </div>
+                          <span className="text-xs text-muted-foreground">
+                            Created: {doc.createdat ? format(new Date(doc.createdat), "MM/dd/yyyy") : "—"}
+                          </span>
                         </div>
                       </TableCell>
                       <TableCell className="text-muted-foreground text-sm whitespace-nowrap py-6 border-r border-border/50">
