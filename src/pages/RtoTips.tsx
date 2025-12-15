@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Lightbulb, Search, FileText, Pencil, Trash2, User, Loader2, Calendar } from "lucide-react";
+import { Plus, Lightbulb, Search, FileText, Pencil, Trash2, User, Loader2, Calendar, CheckCircle, XCircle } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import {
@@ -397,10 +397,14 @@ export default function RtoTips() {
                       {tip.category}
                     </Badge>
                     <Badge
-                      variant={tip.status === "active" ? "default" : "secondary"}
-                      className="capitalize text-[0.75rem] py-[2px] px-[0.625rem] rounded-[11px]"
+                      variant={tip.status === "active" ? "default" : "destructive"}
+                      className={tip.status === "active" 
+                        ? "bg-green-500/10 text-green-600 hover:bg-green-500/20 border border-green-600 text-[0.75rem] py-[2px] px-[0.625rem] rounded-[11px]"
+                        : "bg-red-500/10 text-red-600 hover:bg-red-500/20 border border-red-600 text-[0.75rem] py-[2px] px-[0.625rem] rounded-[11px]"
+                      }
                     >
-                      {tip.status}
+                      {tip.status === "active" ? <CheckCircle className="mr-1 h-3 w-3" /> : <XCircle className="mr-1 h-3 w-3" />}
+                      {tip.status === "active" ? "Active" : "Inactive"}
                     </Badge>
                   </div>
                   
