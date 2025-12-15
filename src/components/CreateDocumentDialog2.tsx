@@ -40,32 +40,38 @@ export function CreateDocumentDialog2({ open, onOpenChange, onSuccess, packageId
   useEffect(() => {
     if (open) {
       fetchCategories();
-      // Populate form if editing
-      if (editDocument) {
-        setFormData({
-          document_name: editDocument.document_name || "",
-          description: editDocument.description || "",
-          watermark: false,
-          release_to_client: editDocument.is_client_doc || false,
-          category_id: editDocument.categories_id || null,
-          is_active: editDocument.is_active !== undefined ? editDocument.is_active : true
-        });
-        setExistingFiles(editDocument.file_paths || []);
-      } else {
-        // Reset form for new document
-        setFormData({
-          document_name: "",
-          description: "",
-          watermark: false,
-          release_to_client: false,
-          category_id: null,
-          is_active: true
-        });
-        setUploadedFiles([]);
-        setExistingFiles([]);
-      }
     }
-  }, [open, editDocument]);
+  }, [open]);
+
+  // Separate effect to populate form when editDocument or categories change
+  useEffect(() => {
+    if (open && editDocument) {
+      // Map category name to category ID
+      const matchingCategory = categories.find(c => c.name === editDocument.category);
+      setFormData({
+        document_name: editDocument.title || "",
+        description: editDocument.description || "",
+        watermark: editDocument.watermark || false,
+        release_to_client: editDocument.isclientdoc || editDocument.is_released || false,
+        category_id: matchingCategory?.id || null,
+        is_active: editDocument.is_active !== undefined ? editDocument.is_active : true
+      });
+      setExistingFiles(editDocument.uploaded_files || []);
+      setUploadedFiles([]);
+    } else if (open && !editDocument) {
+      // Reset form for new document
+      setFormData({
+        document_name: "",
+        description: "",
+        watermark: false,
+        release_to_client: false,
+        category_id: null,
+        is_active: true
+      });
+      setUploadedFiles([]);
+      setExistingFiles([]);
+    }
+  }, [open, editDocument, categories]);
 
   const fetchCategories = async () => {
     try {
