@@ -1459,19 +1459,6 @@ export default function AuditTemplateBuilder() {
                 Back
               </Button>
               <div className="flex items-center gap-3">
-                {hasScoringQuestions && (
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm text-muted-foreground">Compliance Score:</span>
-                    <Badge className={cn(
-                      "text-sm font-semibold",
-                      liveComplianceScore >= 80 ? "bg-green-500/15 text-green-600 border-green-500/30" :
-                      liveComplianceScore >= 50 ? "bg-yellow-500/15 text-yellow-600 border-yellow-500/30" :
-                      "bg-red-500/15 text-red-600 border-red-500/30"
-                    )}>
-                      {liveComplianceScore}%
-                    </Badge>
-                  </div>
-                )}
                 {inspectionIdParam ? (
                   <Button 
                     size="sm" 
@@ -1548,11 +1535,24 @@ export default function AuditTemplateBuilder() {
           {/* Content Card */}
           <Card className="w-[70%]">
             {/* Form Header */}
-            <div className="px-6 pt-6 pb-4 border-b border-border/40">
+            <div className="px-6 pt-6 pb-4 border-b border-border/40 flex items-center justify-between">
               <p className="text-[hsl(0deg_0%_15.11%)] font-semibold flex items-center gap-2 text-lg">
                 <FileText className="h-5 w-5" />
                 {templateName || 'Untitled Template'}
               </p>
+              {hasScoringQuestions && (
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-muted-foreground">Compliance Score:</span>
+                  <Badge className={cn(
+                    "text-sm font-semibold",
+                    liveComplianceScore >= 80 ? "bg-green-500/15 text-green-600 border-green-500/30" :
+                    liveComplianceScore >= 50 ? "bg-yellow-500/15 text-yellow-600 border-yellow-500/30" :
+                    "bg-red-500/15 text-red-600 border-red-500/30"
+                  )}>
+                    {liveComplianceScore}%
+                  </Badge>
+                </div>
+              )}
             </div>
             <CardContent className="p-6" style={{ backgroundColor: '#7320810f' }}>
               {canvasQuestions.length === 0 || currentPageQuestionsToShow.length === 0 ? <div className="text-center py-12">
