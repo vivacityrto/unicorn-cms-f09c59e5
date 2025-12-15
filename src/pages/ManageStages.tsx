@@ -323,12 +323,16 @@ export default function ManageStages() {
                         rel="noopener noreferrer"
                         onClick={(e) => e.stopPropagation()}
                       >
-                        <Badge variant="secondary" className="gap-1 cursor-pointer hover:bg-secondary/80">
+                        <Badge variant="default" className="gap-1 cursor-pointer bg-blue-500/10 text-blue-600 hover:bg-blue-500/20 border border-blue-600 text-[0.75rem] py-[2px] px-[0.625rem] rounded-[11px]">
                           <Video className="h-3 w-3" />
                           Video Link
                         </Badge>
                       </a>
-                    ) : <span className="text-muted-foreground text-sm">No link</span>}
+                    ) : (
+                      <Badge variant="default" className="bg-muted/50 text-muted-foreground border border-muted-foreground/30 text-[0.75rem] py-[2px] px-[0.625rem] rounded-[11px]">
+                        No link
+                      </Badge>
+                    )}
                   </TableCell>
                   <TableCell className="py-6 border-r border-border/50 text-muted-foreground text-sm whitespace-nowrap">
                     {new Date(stage.created_at).toLocaleDateString()}
