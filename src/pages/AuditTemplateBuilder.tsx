@@ -1349,34 +1349,55 @@ export default function AuditTemplateBuilder() {
           
           
           if (profile?.tenant_id && profile?.user_uuid) {
-            const { error: insertError } = await supabase
-              .from('audit_inspection')
-              .insert({
-                tenant_id: profile.tenant_id,
-                selected_tenant_id: selectedTenantId,
-                template_id: templateIdParam ? parseInt(templateIdParam) : null,
-                inspection_title: templateName || 'Untitled Inspection',
-                doc_number: docNumber,
-                document_id: documentId,
-                status: 'completed',
-                compliance_score: hasScoringQuestions ? score : null,
-                conducted_by: profile.user_uuid,
-                started_at: new Date().toISOString(),
-                completed_at: new Date().toISOString(),
-                responses: previewResponses,
-              });
-            
-            if (insertError) {
-              console.error('Error saving inspection:', insertError);
-              toast.error('Failed to save inspection record');
-              return;
+            if (inspectionIdParam) {
+              // Update existing inspection
+              const { error: updateError } = await supabase
+                .from('audit_inspection')
+                .update({
+                  doc_number: docNumber,
+                  document_id: documentId,
+                  selected_tenant_id: selectedTenantId,
+                  compliance_score: hasScoringQuestions ? score : null,
+                  responses: previewResponses,
+                  updated_at: new Date().toISOString(),
+                })
+                .eq('id', parseInt(inspectionIdParam));
+              
+              if (updateError) {
+                console.error('Error updating inspection:', updateError);
+                toast.error('Failed to update inspection record');
+                return;
+              }
+            } else {
+              // Create new inspection with in_progress status
+              const { error: insertError } = await supabase
+                .from('audit_inspection')
+                .insert({
+                  tenant_id: profile.tenant_id,
+                  selected_tenant_id: selectedTenantId,
+                  template_id: templateIdParam ? parseInt(templateIdParam) : null,
+                  inspection_title: templateName || 'Untitled Inspection',
+                  doc_number: docNumber,
+                  document_id: documentId,
+                  status: 'in_progress',
+                  compliance_score: hasScoringQuestions ? score : null,
+                  conducted_by: profile.user_uuid,
+                  started_at: new Date().toISOString(),
+                  responses: previewResponses,
+                });
+              
+              if (insertError) {
+                console.error('Error saving inspection:', insertError);
+                toast.error('Failed to save inspection record');
+                return;
+              }
             }
           }
           
           if (hasScoringQuestions) {
-            toast.success(`Inspection submitted! Compliance Score: ${score}%`);
+            toast.success(inspectionIdParam ? `Inspection updated! Compliance Score: ${score}%` : `Inspection saved! Compliance Score: ${score}%`);
           } else {
-            toast.success('Inspection submitted successfully!');
+            toast.success(inspectionIdParam ? 'Inspection updated successfully!' : 'Inspection saved successfully!');
           }
           setPreviewResponses({});
           setValidationErrors(new Set());
@@ -1423,15 +1444,75 @@ export default function AuditTemplateBuilder() {
                     </Badge>
                   </div>
                 )}
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  className="gap-2 hover:bg-muted"
-                  onClick={() => navigate(`/audits/create-template/${templateIdParam}`)}
-                >
-                  <Pencil className="h-4 w-4" />
-                  Edit Template
-                </Button>
+                {inspectionIdParam ? (
+                  <Button 
+                    size="sm" 
+                    className="gap-2 bg-green-600 hover:bg-green-700 text-white"
+                    onClick={async () => {
+                      if (!validateCurrentPage()) return;
+                      
+                      const score = calculateComplianceScore(canvasQuestions, previewResponses);
+                      const hasScoringQuestions = canvasQuestions.some(
+                        q => q.scoring_enabled && q.question_type === 'multiple_choice' && hasComplianceOptions(q.options)
+                      );
+                      
+                      // Find document question and get selected document name and ID
+                      const documentsQuestion = canvasQuestions.find(q => q.question_type === 'documents');
+                      let docNumber: string | null = null;
+                      let documentId: number | null = null;
+                      if (documentsQuestion && previewResponses[documentsQuestion.id]) {
+                        const selectedDocId = previewResponses[documentsQuestion.id];
+                        documentId = parseInt(selectedDocId, 10) || null;
+                        const { data: docData } = await supabase
+                          .from('documents')
+                          .select('title')
+                          .eq('id', selectedDocId)
+                          .single();
+                        docNumber = docData?.title || null;
+                      }
+                      
+                      // Get selected_tenant_id from responses if clients question exists
+                      const clientsQuestion = canvasQuestions.find(q => q.question_type === 'clients');
+                      const clientResponse = clientsQuestion ? previewResponses[clientsQuestion.id] : null;
+                      const selectedTenantId = typeof clientResponse === 'string' && clientResponse ? parseInt(clientResponse, 10) : null;
+                      
+                      const { error } = await supabase
+                        .from('audit_inspection')
+                        .update({
+                          status: 'completed',
+                          completed_at: new Date().toISOString(),
+                          doc_number: docNumber,
+                          document_id: documentId,
+                          selected_tenant_id: selectedTenantId,
+                          compliance_score: hasScoringQuestions ? score : null,
+                          responses: previewResponses,
+                          updated_at: new Date().toISOString(),
+                        })
+                        .eq('id', parseInt(inspectionIdParam));
+                      
+                      if (error) {
+                        toast.error('Failed to mark as complete');
+                        return;
+                      }
+                      
+                      toast.success('Inspection marked as complete!');
+                      navigate('/audits?tab=inspections');
+                    }}
+                  >
+                    <CheckCircle className="h-4 w-4" />
+                    Mark as Complete
+                  </Button>
+                ) : (
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="gap-2 hover:bg-muted"
+                    onClick={() => navigate(`/audits/create-template/${templateIdParam}`)}
+                  >
+                    <Pencil className="h-4 w-4" />
+                    Edit Template
+                  </Button>
+                )}
               </div>
             </div>
           </div>
