@@ -255,7 +255,7 @@ export default function Settings() {
   const initials = `${formData.first_name?.[0] || ''}${formData.last_name?.[0] || ''}`.toUpperCase() || 'U';
 
   return (
-    <div className="p-6 space-y-6 animate-fade-in max-w-5xl mx-auto">
+    <div className="p-6 space-y-6 animate-fade-in w-full">
       <div>
         <h1 className="text-3xl font-bold">Settings</h1>
         <p className="text-muted-foreground">Manage your account settings and preferences</p>
