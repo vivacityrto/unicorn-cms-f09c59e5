@@ -436,7 +436,7 @@ export default function TenantDetail() {
 
       {/* Status Badge */}
       <div className="px-6 mb-2 flex justify-between items-center">
-        <Badge variant="secondary" className="bg-muted text-muted-foreground hover:bg-muted/80 border border-border text-[0.75rem] py-[2px] px-[0.625rem] rounded-[11px] cursor-pointer">
+        <Badge variant="default" className="bg-blue-500/10 text-blue-600 hover:bg-blue-500/20 border border-blue-600 text-[0.75rem] py-[2px] px-[0.625rem] rounded-[11px] cursor-pointer">
           <Eye className="mr-1 h-3 w-3" />
           View as Client
         </Badge>
