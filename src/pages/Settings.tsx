@@ -3,7 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
@@ -255,277 +255,282 @@ export default function Settings() {
   const initials = `${formData.first_name?.[0] || ''}${formData.last_name?.[0] || ''}`.toUpperCase() || 'U';
 
   return (
-    <div className="p-6 space-y-6 animate-fade-in w-full">
-      <div>
-        <h1 className="text-3xl font-bold">Settings</h1>
-        <p className="text-muted-foreground">Manage your account settings and preferences</p>
+    <div className="min-h-screen bg-background animate-fade-in">
+      {/* Header Card */}
+      <div className="px-6 pt-6">
+        <Card className="border-0 shadow-lg overflow-hidden">
+          <div className="px-6 py-4 border-b border-white/20" style={{
+            backgroundImage: 'linear-gradient(135deg, rgb(98 33 145) 0%, rgb(213 28 73 / 72%) 100%)'
+          }}>
+            <div className="flex items-center gap-4">
+              <div className="relative">
+                <Avatar className="h-16 w-16 border-2 border-white/30">
+                  <AvatarImage src={avatarUrl || undefined} />
+                  <AvatarFallback className="bg-white/20 text-white text-xl font-semibold">{initials}</AvatarFallback>
+                </Avatar>
+                <label htmlFor="avatar-upload" className="absolute bottom-0 right-0 cursor-pointer">
+                  <div className="bg-white text-primary rounded-full p-1.5 shadow-lg hover:bg-white/90 transition-colors">
+                    <Upload className="h-3 w-3" />
+                  </div>
+                  <input
+                    id="avatar-upload"
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={handleAvatarUpload}
+                    disabled={uploading}
+                  />
+                </label>
+              </div>
+              <div className="space-y-1">
+                <h1 className="text-xl font-semibold text-white">
+                  {formData.first_name} {formData.last_name}
+                </h1>
+                <p className="text-sm text-white/70">{formData.email}</p>
+                <p className="text-xs text-white/50">
+                  Manage your account settings and preferences
+                </p>
+              </div>
+            </div>
+          </div>
+        </Card>
       </div>
 
-      {/* Profile Settings */}
-      <Card className="animate-scale-in">
-        <CardHeader>
-          <CardTitle>Profile Information</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          {/* Avatar Section */}
-          <div className="flex items-center gap-6">
-            <div className="relative">
-              <Avatar className="h-24 w-24">
-                <AvatarImage src={avatarUrl || undefined} />
-                <AvatarFallback className="text-2xl">{initials}</AvatarFallback>
-              </Avatar>
-              <label htmlFor="avatar-upload" className="absolute bottom-0 right-0 cursor-pointer">
-                <div className="bg-primary text-primary-foreground rounded-full p-2 shadow-lg hover:bg-primary/90 transition-colors">
-                  <Upload className="h-4 w-4" />
-                </div>
-                <input
-                  id="avatar-upload"
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={handleAvatarUpload}
-                  disabled={uploading}
-                />
-              </label>
-            </div>
-            <div>
-              <h2 className="text-xl font-bold">
-                {formData.first_name} {formData.last_name}
-              </h2>
-              <p className="text-muted-foreground">{formData.email}</p>
-              <p className="text-sm text-muted-foreground mt-1">
-                Click the camera icon to upload a new photo
-              </p>
-            </div>
+      <div className="px-6 py-6 space-y-6">
+        {/* Profile Settings */}
+        <Card className="border-0 shadow-lg overflow-hidden animate-scale-in">
+          <div className="bg-muted/30 px-6 h-14 border-b border-border/50 flex items-center">
+            <h2 className="font-semibold">Profile Information</h2>
           </div>
-
-          {/* Form Fields */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="first_name">
-                <User className="inline h-4 w-4 mr-2" />
-                First Name
-              </Label>
-              <Input
-                id="first_name"
-                value={formData.first_name}
-                onChange={(e) => setFormData({ ...formData, first_name: e.target.value })}
-                placeholder="First name"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="last_name">
-                <User className="inline h-4 w-4 mr-2" />
-                Last Name
-              </Label>
-              <Input
-                id="last_name"
-                value={formData.last_name}
-                onChange={(e) => setFormData({ ...formData, last_name: e.target.value })}
-                placeholder="Last name"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="email">
-                <Mail className="inline h-4 w-4 mr-2" />
-                Email
-              </Label>
-              <Input
-                id="email"
-                type="email"
-                value={formData.email}
-                disabled
-                className="bg-muted"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="phone">
-                <Phone className="inline h-4 w-4 mr-2" />
-                Phone Number
-              </Label>
-              <Input
-                id="phone"
-                value={formData.phone}
-                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                placeholder="e.g., 0412 345 678"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="job_title">
-                <Briefcase className="inline h-4 w-4 mr-2" />
-                Job Title
-              </Label>
-              <Input
-                id="job_title"
-                value={formData.job_title}
-                onChange={(e) => setFormData({ ...formData, job_title: e.target.value })}
-                placeholder="e.g., Compliance Manager"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="timezone">
-                <Clock className="inline h-4 w-4 mr-2" />
-                Timezone
-              </Label>
-              <Select
-                value={formData.timezone}
-                onValueChange={(value) => setFormData({ ...formData, timezone: value })}
-              >
-                <SelectTrigger id="timezone">
-                  <SelectValue placeholder="Select timezone" />
-                </SelectTrigger>
-                <SelectContent>
-                  {TIMEZONES.map((tz) => (
-                    <SelectItem key={tz.value} value={tz.value}>
-                      {tz.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="bio">
-              <Globe className="inline h-4 w-4 mr-2" />
-              Bio
-            </Label>
-            <Textarea
-              id="bio"
-              value={formData.bio}
-              onChange={(e) => setFormData({ ...formData, bio: e.target.value })}
-              placeholder="Tell us about yourself..."
-              rows={4}
-            />
-          </div>
-
-          <div className="flex justify-end">
-            <Button onClick={handleSaveProfile} disabled={loading}>
-              <Save className="mr-2 h-4 w-4" />
-              {loading ? 'Saving...' : 'Save Changes'}
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Tenant Information */}
-      {tenantInfo && (
-        <Card className="animate-scale-in" style={{ animationDelay: '100ms' }}>
-          <CardHeader>
-            <CardTitle>Tenant Information</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="p-6 space-y-6">
+            {/* Form Fields */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>Tenant Name</Label>
-                <Input value={tenantInfo.name || 'N/A'} disabled className="bg-muted" />
+                <Label htmlFor="first_name">
+                  <User className="inline h-4 w-4 mr-2" />
+                  First Name
+                </Label>
+                <Input
+                  id="first_name"
+                  value={formData.first_name}
+                  onChange={(e) => setFormData({ ...formData, first_name: e.target.value })}
+                  placeholder="First name"
+                />
               </div>
 
               <div className="space-y-2">
-                <Label>Tenant ID</Label>
-                <Input value={tenantInfo.id || 'N/A'} disabled className="bg-muted" />
+                <Label htmlFor="last_name">
+                  <User className="inline h-4 w-4 mr-2" />
+                  Last Name
+                </Label>
+                <Input
+                  id="last_name"
+                  value={formData.last_name}
+                  onChange={(e) => setFormData({ ...formData, last_name: e.target.value })}
+                  placeholder="Last name"
+                />
               </div>
 
               <div className="space-y-2">
-                <Label>Status</Label>
-                <Input value={tenantInfo.status || 'N/A'} disabled className="bg-muted" />
+                <Label htmlFor="email">
+                  <Mail className="inline h-4 w-4 mr-2" />
+                  Email
+                </Label>
+                <Input
+                  id="email"
+                  type="email"
+                  value={formData.email}
+                  disabled
+                  className="bg-muted"
+                />
               </div>
 
               <div className="space-y-2">
-                <Label>Risk Level</Label>
-                <Input value={tenantInfo.risk_level || 'N/A'} disabled className="bg-muted" />
+                <Label htmlFor="phone">
+                  <Phone className="inline h-4 w-4 mr-2" />
+                  Phone Number
+                </Label>
+                <Input
+                  id="phone"
+                  value={formData.phone}
+                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                  placeholder="e.g., 0412 345 678"
+                />
               </div>
 
-              {tenantInfo.tenant_profiles?.[0] && (
-                <>
-                  {tenantInfo.tenant_profiles[0].legal_name && (
-                    <div className="space-y-2">
-                      <Label>Legal Name</Label>
-                      <Input value={tenantInfo.tenant_profiles[0].legal_name} disabled className="bg-muted" />
-                    </div>
-                  )}
+              <div className="space-y-2">
+                <Label htmlFor="job_title">
+                  <Briefcase className="inline h-4 w-4 mr-2" />
+                  Job Title
+                </Label>
+                <Input
+                  id="job_title"
+                  value={formData.job_title}
+                  onChange={(e) => setFormData({ ...formData, job_title: e.target.value })}
+                  placeholder="e.g., Compliance Manager"
+                />
+              </div>
 
-                  {tenantInfo.tenant_profiles[0].abn && (
-                    <div className="space-y-2">
-                      <Label>ABN</Label>
-                      <Input value={tenantInfo.tenant_profiles[0].abn} disabled className="bg-muted" />
-                    </div>
-                  )}
+              <div className="space-y-2">
+                <Label htmlFor="timezone">
+                  <Clock className="inline h-4 w-4 mr-2" />
+                  Timezone
+                </Label>
+                <Select
+                  value={formData.timezone}
+                  onValueChange={(value) => setFormData({ ...formData, timezone: value })}
+                >
+                  <SelectTrigger id="timezone">
+                    <SelectValue placeholder="Select timezone" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {TIMEZONES.map((tz) => (
+                      <SelectItem key={tz.value} value={tz.value}>
+                        {tz.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
 
-                  {tenantInfo.tenant_profiles[0].street_address && (
-                    <div className="space-y-2 md:col-span-2">
-                      <Label>Address</Label>
-                      <Input value={tenantInfo.tenant_profiles[0].street_address} disabled className="bg-muted" />
-                    </div>
-                  )}
+            <div className="space-y-2">
+              <Label htmlFor="bio">
+                <Globe className="inline h-4 w-4 mr-2" />
+                Bio
+              </Label>
+              <Textarea
+                id="bio"
+                value={formData.bio}
+                onChange={(e) => setFormData({ ...formData, bio: e.target.value })}
+                placeholder="Tell us about yourself..."
+                rows={4}
+              />
+            </div>
 
-                  {tenantInfo.tenant_profiles[0].state && (
-                    <div className="space-y-2">
-                      <Label>State</Label>
-                      <Input value={tenantInfo.tenant_profiles[0].state} disabled className="bg-muted" />
-                    </div>
-                  )}
-
-                  {tenantInfo.tenant_profiles[0].website && (
-                    <div className="space-y-2">
-                      <Label>Website</Label>
-                      <Input value={tenantInfo.tenant_profiles[0].website} disabled className="bg-muted" />
-                    </div>
-                  )}
-                </>
-              )}
+            <div className="flex justify-end">
+              <Button onClick={handleSaveProfile} disabled={loading}>
+                <Save className="mr-2 h-4 w-4" />
+                {loading ? 'Saving...' : 'Save Changes'}
+              </Button>
             </div>
           </CardContent>
         </Card>
-      )}
 
-      {/* Password Settings */}
-      <Card className="animate-scale-in" style={{ animationDelay: '200ms' }}>
-        <CardHeader>
-          <CardTitle>Change Password</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="newPassword">
-              <Lock className="inline h-4 w-4 mr-2" />
-              New Password
-            </Label>
-            <Input
-              id="newPassword"
-              type="password"
-              value={formData.newPassword}
-              onChange={(e) => setFormData({ ...formData, newPassword: e.target.value })}
-              placeholder="Enter new password"
-            />
-          </div>
+        {/* Tenant Information */}
+        {tenantInfo && (
+          <Card className="border-0 shadow-lg overflow-hidden animate-scale-in" style={{ animationDelay: '100ms' }}>
+            <div className="bg-muted/30 px-6 h-14 border-b border-border/50 flex items-center">
+              <h2 className="font-semibold">Tenant Information</h2>
+            </div>
+            <CardContent className="p-6 space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Tenant Name</Label>
+                  <Input value={tenantInfo.name || 'N/A'} disabled className="bg-muted" />
+                </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="confirmPassword">
-              <Lock className="inline h-4 w-4 mr-2" />
-              Confirm Password
-            </Label>
-            <Input
-              id="confirmPassword"
-              type="password"
-              value={formData.confirmPassword}
-              onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
-              placeholder="Confirm new password"
-            />
-          </div>
+                <div className="space-y-2">
+                  <Label>Tenant ID</Label>
+                  <Input value={tenantInfo.id || 'N/A'} disabled className="bg-muted" />
+                </div>
 
-          <div className="flex justify-end">
-            <Button onClick={handleChangePassword} disabled={loading}>
-              <Lock className="mr-2 h-4 w-4" />
-              {loading ? 'Changing...' : 'Change Password'}
-            </Button>
+                <div className="space-y-2">
+                  <Label>Status</Label>
+                  <Input value={tenantInfo.status || 'N/A'} disabled className="bg-muted" />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Risk Level</Label>
+                  <Input value={tenantInfo.risk_level || 'N/A'} disabled className="bg-muted" />
+                </div>
+
+                {tenantInfo.tenant_profiles?.[0] && (
+                  <>
+                    {tenantInfo.tenant_profiles[0].legal_name && (
+                      <div className="space-y-2">
+                        <Label>Legal Name</Label>
+                        <Input value={tenantInfo.tenant_profiles[0].legal_name} disabled className="bg-muted" />
+                      </div>
+                    )}
+
+                    {tenantInfo.tenant_profiles[0].abn && (
+                      <div className="space-y-2">
+                        <Label>ABN</Label>
+                        <Input value={tenantInfo.tenant_profiles[0].abn} disabled className="bg-muted" />
+                      </div>
+                    )}
+
+                    {tenantInfo.tenant_profiles[0].street_address && (
+                      <div className="space-y-2 md:col-span-2">
+                        <Label>Address</Label>
+                        <Input value={tenantInfo.tenant_profiles[0].street_address} disabled className="bg-muted" />
+                      </div>
+                    )}
+
+                    {tenantInfo.tenant_profiles[0].state && (
+                      <div className="space-y-2">
+                        <Label>State</Label>
+                        <Input value={tenantInfo.tenant_profiles[0].state} disabled className="bg-muted" />
+                      </div>
+                    )}
+
+                    {tenantInfo.tenant_profiles[0].website && (
+                      <div className="space-y-2">
+                        <Label>Website</Label>
+                        <Input value={tenantInfo.tenant_profiles[0].website} disabled className="bg-muted" />
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Password Settings */}
+        <Card className="border-0 shadow-lg overflow-hidden animate-scale-in" style={{ animationDelay: '200ms' }}>
+          <div className="bg-muted/30 px-6 h-14 border-b border-border/50 flex items-center">
+            <h2 className="font-semibold">Change Password</h2>
           </div>
-        </CardContent>
-      </Card>
+          <CardContent className="p-6 space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="newPassword">
+                <Lock className="inline h-4 w-4 mr-2" />
+                New Password
+              </Label>
+              <Input
+                id="newPassword"
+                type="password"
+                value={formData.newPassword}
+                onChange={(e) => setFormData({ ...formData, newPassword: e.target.value })}
+                placeholder="Enter new password"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="confirmPassword">
+                <Lock className="inline h-4 w-4 mr-2" />
+                Confirm Password
+              </Label>
+              <Input
+                id="confirmPassword"
+                type="password"
+                value={formData.confirmPassword}
+                onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
+                placeholder="Confirm new password"
+              />
+            </div>
+
+            <div className="flex justify-end">
+              <Button onClick={handleChangePassword} disabled={loading}>
+                <Lock className="mr-2 h-4 w-4" />
+                {loading ? 'Changing...' : 'Change Password'}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }
