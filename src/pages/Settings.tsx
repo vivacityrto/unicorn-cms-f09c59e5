@@ -7,7 +7,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
-import { Upload, Save, Lock, Mail, User, Phone, Briefcase, Clock, Globe, MapPin } from 'lucide-react';
+import { Upload, Save, Lock, Mail, User, Phone, Briefcase, Clock, Globe, MapPin, Check } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectSeparator } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 
@@ -398,11 +398,16 @@ export default function Settings() {
                         <div key={tz.value}>
                           <SelectItem 
                             value={tz.value} 
-                            className="cursor-pointer data-[state=checked]:bg-transparent focus:bg-transparent data-[state=checked]:text-[rgb(97_9_161)]"
+                            className="cursor-pointer data-[state=checked]:bg-transparent focus:bg-transparent"
                           >
-                            <div className="flex items-center gap-2">
-                              <MapPin className={`h-4 w-4 ${formData.timezone === tz.value ? 'text-[rgb(97_9_161)]' : ''}`} />
-                              <span>{tz.label}</span>
+                            <div className="flex items-center justify-between w-full">
+                              <div className="flex items-center gap-2">
+                                <MapPin className="h-4 w-4" />
+                                <span>{tz.label}</span>
+                              </div>
+                              {formData.timezone === tz.value && (
+                                <Check className="h-4 w-4 text-green-500 ml-2" />
+                              )}
                             </div>
                           </SelectItem>
                           {index < TIMEZONES.length - 1 && <SelectSeparator />}
