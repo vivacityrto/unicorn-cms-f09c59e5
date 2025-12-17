@@ -29,6 +29,7 @@ import {
   Mail,
   ClipboardCheck,
   Lightbulb,
+  Home,
 } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Link, useLocation } from "react-router-dom";
@@ -296,44 +297,56 @@ export const DashboardLayout = ({ children }: { children: React.ReactNode }) => 
         {/* Logo/Brand */}
         {/* Logo/Brand or User Profile */}
         {(profile?.unicorn_role === "Admin" || profile?.unicorn_role === "User") && sidebarOpen ? (
-          <div className="flex flex-col items-start py-6 px-4 border-b border-white/20">
-            <div className="relative mb-3">
-              <Avatar className="h-20 w-20 border-4 border-white/30">
-                <AvatarImage src={profile?.avatar_url || ""} alt={profile?.first_name || "User"} />
-                <AvatarFallback className="bg-white/20 text-white font-bold text-2xl">
-                  {profile?.first_name && profile?.last_name 
-                    ? `${profile.first_name[0]}${profile.last_name[0]}`.toUpperCase()
-                    : getInitials(profile?.email || "U")}
-                </AvatarFallback>
-              </Avatar>
+          <div className="flex flex-col items-center py-8 px-4 border-b border-white/20 relative">
+            {/* Close button */}
+            <button
+              onClick={() => setSidebarOpen(!sidebarOpen)}
+              className="absolute top-4 right-4 p-2 hover:bg-white/10 rounded-lg transition-colors text-white/70"
+            >
+              <X className="w-5 h-5" />
+            </button>
+            
+            {/* Welcome text */}
+            <span className="text-xs tracking-[0.3em] text-white/60 uppercase mb-4">Welcome!</span>
+            
+            {/* Avatar with ring */}
+            <div className="relative mb-4">
+              <div className="h-24 w-24 rounded-full p-1 bg-gradient-to-br from-emerald-400 to-teal-500">
+                <Avatar className="h-full w-full border-4 border-white">
+                  <AvatarImage src={profile?.avatar_url || ""} alt={profile?.first_name || "User"} />
+                  <AvatarFallback className="bg-gray-200 text-gray-600 font-bold text-2xl">
+                    {profile?.first_name && profile?.last_name 
+                      ? `${profile.first_name[0]}${profile.last_name[0]}`.toUpperCase()
+                      : getInitials(profile?.email || "U")}
+                  </AvatarFallback>
+                </Avatar>
+              </div>
               <span className="absolute bottom-1 right-1 h-4 w-4 bg-green-500 rounded-full border-2 border-white"></span>
             </div>
+            
+            {/* User name */}
+            <span className="text-xl font-semibold text-white mb-2">
+              {profile?.first_name && profile?.last_name 
+                ? `${profile.first_name} ${profile.last_name}`
+                : profile?.email?.split("@")[0] || "User"}
+            </span>
+            
+            {/* Role badge */}
             <Badge
-              className="px-3 py-1 mb-2 bg-white border-0"
+              className="px-4 py-1.5 mb-5 rounded-full border-2 border-emerald-400/50 bg-emerald-500/20"
               style={{
-                color: getRoleBadgeColor(profile?.unicorn_role || "User"),
-                fontWeight: "bold",
+                color: "#6ee7b7",
+                fontWeight: "500",
                 fontSize: "12px",
               }}
             >
               {profile?.unicorn_role || "User"}
             </Badge>
-            <span className="text-base font-bold text-white">
-              {profile?.first_name && profile?.last_name 
-                ? `${profile.first_name} ${profile.last_name}`
-                : profile?.email?.split("@")[0] || "User"}
-            </span>
-            <span className="text-sm text-white/70 mb-1">{profile?.unicorn_role || "User"}</span>
-            <div className="flex items-center gap-1 text-white/70 text-xs">
-              <Mail className="h-3 w-3" />
-              <span>{profile?.email || ""}</span>
+            
+            {/* Home icon */}
+            <div className="h-10 w-10 rounded-full bg-white/10 flex items-center justify-center">
+              <Home className="h-5 w-5 text-white/70" />
             </div>
-            <button
-              onClick={() => setSidebarOpen(!sidebarOpen)}
-              className="absolute top-4 right-4 p-2 hover:bg-white/10 rounded-lg transition-colors text-white"
-            >
-              <X className="w-5 h-5" />
-            </button>
           </div>
         ) : (
           <div className="h-16 flex items-center justify-between px-4 border-b border-white/20">
