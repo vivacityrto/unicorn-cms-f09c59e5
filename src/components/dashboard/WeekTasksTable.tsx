@@ -12,7 +12,6 @@ interface WeekTask {
   id: string;
   task_name: string;
   description: string | null;
-  priority: string | null;
   due_date: string | null;
   status: string | null;
   tenant_id: number;
@@ -34,7 +33,6 @@ export const WeekTasksTable = () => {
           id,
           task_name,
           description,
-          priority,
           due_date,
           status,
           tenant_id,
@@ -52,7 +50,6 @@ export const WeekTasksTable = () => {
         id: task.id,
         task_name: task.task_name,
         description: task.description,
-        priority: task.priority,
         due_date: task.due_date,
         status: task.status,
         tenant_id: task.tenant_id,
@@ -61,14 +58,14 @@ export const WeekTasksTable = () => {
     },
   });
 
-  const getPriorityBadge = (priority: string | null) => {
-    switch (priority?.toLowerCase()) {
-      case "high":
-        return <Badge variant="destructive" className="text-xs">High</Badge>;
-      case "medium":
-        return <Badge variant="default" className="text-xs bg-orange-500">Medium</Badge>;
-      case "low":
-        return <Badge variant="secondary" className="text-xs">Low</Badge>;
+  const getStatusBadge = (status: string | null) => {
+    switch (status?.toLowerCase()) {
+      case "in_progress":
+        return <Badge variant="default" className="text-xs bg-blue-500">In Progress</Badge>;
+      case "not_started":
+        return <Badge variant="secondary" className="text-xs">Not Started</Badge>;
+      case "completed":
+        return <Badge className="text-xs bg-green-500">Completed</Badge>;
       default:
         return <Badge variant="outline" className="text-xs">-</Badge>;
     }
@@ -133,7 +130,7 @@ export const WeekTasksTable = () => {
                 <TableHead className="w-[32px] pl-4"></TableHead>
                 <TableHead>Task</TableHead>
                 <TableHead>Client</TableHead>
-                <TableHead>Priority</TableHead>
+                <TableHead>Status</TableHead>
                 <TableHead className="pr-4">Due</TableHead>
               </TableRow>
             </TableHeader>
@@ -150,7 +147,7 @@ export const WeekTasksTable = () => {
                     {task.tenant_name || "-"}
                   </TableCell>
                   <TableCell>
-                    {getPriorityBadge(task.priority)}
+                    {getStatusBadge(task.status)}
                   </TableCell>
                   <TableCell className="text-muted-foreground text-sm pr-4">
                     {formatDueDate(task.due_date)}
