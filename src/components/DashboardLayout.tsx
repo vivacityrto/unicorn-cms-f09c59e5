@@ -48,6 +48,11 @@ import unicornLogo from "@/assets/unicorn-logo-full.png";
 import Footer from "@/components/layout/Footer";
 const baseMenuItems = [
   {
+    icon: LayoutDashboard,
+    label: "Dashboard",
+    path: "/dashboard",
+  },
+  {
     icon: FileText,
     label: "Documents",
     path: "/manage-documents",
