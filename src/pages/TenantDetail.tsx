@@ -97,8 +97,13 @@ export default function TenantDetail() {
   const {
     toast
   } = useToast();
-  const { profile } = useAuth();
-  const { isViewingAsClient, toggleViewAsClient } = useViewMode();
+  const {
+    profile
+  } = useAuth();
+  const {
+    isViewingAsClient,
+    toggleViewAsClient
+  } = useViewMode();
   const isAdminOrUser = profile?.unicorn_role === "Admin" || profile?.unicorn_role === "User";
 
   // Fetch tenant packages on mount
@@ -441,28 +446,7 @@ export default function TenantDetail() {
 
       {/* Status Badge */}
       <div className="px-6 mb-2 flex justify-between items-center">
-        {!isAdminOrUser && (
-          <Badge 
-            variant="default" 
-            className={`${isViewingAsClient 
-              ? "bg-purple-500/10 text-purple-600 hover:bg-purple-500/20 border border-purple-600" 
-              : "bg-blue-500/10 text-blue-600 hover:bg-blue-500/20 border border-blue-600"
-            } text-[0.75rem] py-[2px] px-[0.625rem] rounded-[11px] cursor-pointer`}
-            onClick={toggleViewAsClient}
-          >
-            {isViewingAsClient ? (
-              <>
-                <EyeOff className="mr-1 h-3 w-3" />
-                Exit Client View
-              </>
-            ) : (
-              <>
-                <Eye className="mr-1 h-3 w-3" />
-                View as Client
-              </>
-            )}
-          </Badge>
-        )}
+        {!isAdminOrUser}
         {isAdminOrUser && <div />}
         <Badge variant={tenantStatus === "active" ? "default" : "destructive"} className={tenantStatus === "active" ? "bg-green-500/20 text-green-600 hover:bg-green-500/30 border border-green-600 text-[0.75rem] py-[2px] px-[0.625rem] rounded-[11px]" : "bg-red-500/20 text-red-600 hover:bg-red-500/30 border border-red-600 text-[0.75rem] py-[2px] px-[0.625rem] rounded-[11px]"}>
           {tenantStatus === "active" ? <CheckCircle2 className="mr-1 h-3 w-3" /> : <XCircle className="mr-1 h-3 w-3" />}
@@ -846,8 +830,7 @@ export default function TenantDetail() {
             </Card>
 
             {/* Quick Note - Hidden for Admin/User roles */}
-            {!isAdminOrUser && (
-              <Card className="border-0 shadow-lg overflow-hidden">
+            {!isAdminOrUser && <Card className="border-0 shadow-lg overflow-hidden">
                 <div className="bg-muted/30 px-6 h-14 border-b border-border/50 flex items-center justify-between">
                   <h2 className="font-semibold text-foreground">Quick Note</h2>
                   <Button variant="link" className="text-primary text-sm p-0 h-auto" onClick={() => navigate(`/tenant/${tenantId}/notes`)}>
@@ -862,8 +845,7 @@ export default function TenantDetail() {
                     Add Note
                   </Button>
                 </div>
-              </Card>
-            )}
+              </Card>}
           </div>
         </div>
       </div>
