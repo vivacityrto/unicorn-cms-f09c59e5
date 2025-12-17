@@ -2,11 +2,12 @@ import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useViewMode } from "@/contexts/ViewModeContext";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, ChevronRight, ChevronDown, User, Phone, Mail, MapPin, Calendar, Users, FileText, TrendingUp, LogIn, Package as PackageIcon, CheckCircle2, Clock, AlertCircle, Globe, ExternalLink, Facebook, Instagram, Linkedin, ArrowLeft, Timer, Building2, XCircle, Eye } from "lucide-react";
+import { Plus, ChevronRight, ChevronDown, User, Phone, Mail, MapPin, Calendar, Users, FileText, TrendingUp, LogIn, Package as PackageIcon, CheckCircle2, Clock, AlertCircle, Globe, ExternalLink, Facebook, Instagram, Linkedin, ArrowLeft, Timer, Building2, XCircle, Eye, EyeOff } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Separator } from "@/components/ui/separator";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -97,6 +98,7 @@ export default function TenantDetail() {
     toast
   } = useToast();
   const { profile } = useAuth();
+  const { isViewingAsClient, toggleViewAsClient } = useViewMode();
   const isAdminOrUser = profile?.unicorn_role === "Admin" || profile?.unicorn_role === "User";
 
   // Fetch tenant packages on mount
@@ -440,9 +442,25 @@ export default function TenantDetail() {
       {/* Status Badge */}
       <div className="px-6 mb-2 flex justify-between items-center">
         {!isAdminOrUser && (
-          <Badge variant="default" className="bg-blue-500/10 text-blue-600 hover:bg-blue-500/20 border border-blue-600 text-[0.75rem] py-[2px] px-[0.625rem] rounded-[11px] cursor-pointer">
-            <Eye className="mr-1 h-3 w-3" />
-            View as Client
+          <Badge 
+            variant="default" 
+            className={`${isViewingAsClient 
+              ? "bg-purple-500/10 text-purple-600 hover:bg-purple-500/20 border border-purple-600" 
+              : "bg-blue-500/10 text-blue-600 hover:bg-blue-500/20 border border-blue-600"
+            } text-[0.75rem] py-[2px] px-[0.625rem] rounded-[11px] cursor-pointer`}
+            onClick={toggleViewAsClient}
+          >
+            {isViewingAsClient ? (
+              <>
+                <EyeOff className="mr-1 h-3 w-3" />
+                Exit Client View
+              </>
+            ) : (
+              <>
+                <Eye className="mr-1 h-3 w-3" />
+                View as Client
+              </>
+            )}
           </Badge>
         )}
         {isAdminOrUser && <div />}

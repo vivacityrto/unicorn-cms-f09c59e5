@@ -34,6 +34,7 @@ import {
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
+import { useViewMode } from "@/contexts/ViewModeContext";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -241,6 +242,7 @@ export const DashboardLayout = ({ children }: { children: React.ReactNode }) => 
   const location = useLocation();
   const navigate = useNavigate();
   const { profile, signOut } = useAuth();
+  const { isViewingAsClient } = useViewMode();
 
   // Check if nav content is scrollable
   const checkScrollable = (e: React.UIEvent<HTMLElement>) => {
@@ -250,9 +252,19 @@ export const DashboardLayout = ({ children }: { children: React.ReactNode }) => 
     setShowScrollIndicator(hasScroll && !isAtBottom);
   };
 
-  // Determine menu items and groups based on user role
-  const { menuItems, isGrouped } = useMemo(() => {
+  // Determine menu items and groups based on user role (or view mode)
+  const { menuItems, isGrouped, effectiveRole } = useMemo(() => {
     const role = (profile?.unicorn_role || "User") as any;
+    
+    // If Super Admin or Team Leader is viewing as client, show Admin menu
+    if (isViewingAsClient && (role === "Super Admin" || role === "Team Leader" || role === "Team Member")) {
+      return {
+        menuItems: adminMenuItems,
+        isGrouped: true,
+        effectiveRole: "Admin",
+      };
+    }
+    
     switch (role) {
       case "Super Admin":
       case "Team Leader":
@@ -260,19 +272,22 @@ export const DashboardLayout = ({ children }: { children: React.ReactNode }) => 
         return {
           menuItems: superAdminMenuItems,
           isGrouped: true,
+          effectiveRole: role,
         };
       case "Admin":
         return {
           menuItems: adminMenuItems,
           isGrouped: true,
+          effectiveRole: role,
         };
       default:
         return {
           menuItems: userMenuItems,
           isGrouped: true,
+          effectiveRole: role,
         };
     }
-  }, [profile?.unicorn_role]);
+  }, [profile?.unicorn_role, isViewingAsClient]);
   const getRoleBadgeColor = (role: string) => {
     switch (role) {
       case "Super Admin":
@@ -296,8 +311,8 @@ export const DashboardLayout = ({ children }: { children: React.ReactNode }) => 
         }}
       >
         {/* Logo/Brand */}
-        {/* Logo/Brand or User Profile */}
-        {(profile?.unicorn_role === "Admin" || profile?.unicorn_role === "User") && sidebarOpen ? (
+        {/* Logo/Brand or User Profile - Show user profile for Admin/User OR when viewing as client */}
+        {((profile?.unicorn_role === "Admin" || profile?.unicorn_role === "User") || isViewingAsClient) && sidebarOpen ? (
           <div className="relative px-3 pt-4 pb-6 border-b border-white/10">
             {/* Close button - top right */}
             <button
@@ -338,11 +353,20 @@ export const DashboardLayout = ({ children }: { children: React.ReactNode }) => 
                   
                   {/* Role badge - modern pill style */}
                   <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/10 border border-white/20">
-                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                    <span className={`h-1.5 w-1.5 rounded-full ${isViewingAsClient ? 'bg-purple-400' : 'bg-emerald-400'} animate-pulse`}></span>
                     <span className="text-xs font-medium text-white/90 uppercase tracking-wide">
-                      {profile?.unicorn_role || "User"}
+                      {isViewingAsClient ? "Client View" : (profile?.unicorn_role || "User")}
                     </span>
                   </div>
+                  
+                  {/* View as Client indicator */}
+                  {isViewingAsClient && (
+                    <div className="mt-2 inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-purple-500/20 border border-purple-400/30">
+                      <span className="text-[10px] font-medium text-purple-200">
+                        Viewing as Admin
+                      </span>
+                    </div>
+                  )}
                 </div>
               </div>
               
