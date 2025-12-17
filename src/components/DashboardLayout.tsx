@@ -296,7 +296,7 @@ export const DashboardLayout = ({ children }: { children: React.ReactNode }) => 
         {/* Logo/Brand */}
         {/* Logo/Brand or User Profile */}
         {(profile?.unicorn_role === "Admin" || profile?.unicorn_role === "User") && sidebarOpen ? (
-          <div className="flex flex-col items-center py-6 px-4 border-b border-white/20">
+          <div className="flex flex-col items-start py-6 px-4 border-b border-white/20">
             <div className="relative mb-3">
               <Avatar className="h-20 w-20 border-4 border-white/30">
                 <AvatarImage src={profile?.avatar_url || ""} alt={profile?.first_name || "User"} />
