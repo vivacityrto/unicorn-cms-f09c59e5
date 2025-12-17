@@ -326,7 +326,7 @@ export default function Settings() {
               </div>
               <div className="text-right">
                 <div className="flex items-center justify-end gap-2 text-sm text-white/80">
-                  <Calendar className="h-4 w-4" />
+                  <Calendar className="h-4 w-4 -mt-[3px]" />
                   <span className="font-mono">{liveTime}</span>
                 </div>
                 <p className="text-[0.6rem] text-white/50 mt-0.5">
