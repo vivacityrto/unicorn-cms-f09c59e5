@@ -297,129 +297,175 @@ export default function Settings() {
       </div>
 
       <div className="px-6 py-6 space-y-6">
-        {/* Profile Settings */}
-        <Card className="border-0 shadow-lg overflow-hidden animate-scale-in">
-          <div className="bg-muted/30 px-6 h-14 border-b border-border/50 flex items-center">
-            <h2 className="font-semibold">Profile Information</h2>
-          </div>
-          <CardContent className="p-6 space-y-6">
-            {/* Form Fields */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="first_name">
-                  <User className="inline h-4 w-4 mr-2" />
-                  First Name
-                </Label>
-                <Input
-                  id="first_name"
-                  value={formData.first_name}
-                  onChange={(e) => setFormData({ ...formData, first_name: e.target.value })}
-                  placeholder="First name"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="last_name">
-                  <User className="inline h-4 w-4 mr-2" />
-                  Last Name
-                </Label>
-                <Input
-                  id="last_name"
-                  value={formData.last_name}
-                  onChange={(e) => setFormData({ ...formData, last_name: e.target.value })}
-                  placeholder="Last name"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="email">
-                  <Mail className="inline h-4 w-4 mr-2" />
-                  Email
-                </Label>
-                <Input
-                  id="email"
-                  type="email"
-                  value={formData.email}
-                  disabled
-                  className="bg-muted"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="phone">
-                  <Phone className="inline h-4 w-4 mr-2" />
-                  Phone Number
-                </Label>
-                <Input
-                  id="phone"
-                  value={formData.phone}
-                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                  placeholder="e.g., 0412 345 678"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="job_title">
-                  <Briefcase className="inline h-4 w-4 mr-2" />
-                  Job Title
-                </Label>
-                <Input
-                  id="job_title"
-                  value={formData.job_title}
-                  onChange={(e) => setFormData({ ...formData, job_title: e.target.value })}
-                  placeholder="e.g., Compliance Manager"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="timezone">
-                  <Clock className="inline h-4 w-4 mr-2" />
-                  Timezone
-                </Label>
-                <Select
-                  value={formData.timezone}
-                  onValueChange={(value) => setFormData({ ...formData, timezone: value })}
-                >
-                  <SelectTrigger id="timezone">
-                    <SelectValue placeholder="Select timezone" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {TIMEZONES.map((tz) => (
-                      <SelectItem key={tz.value} value={tz.value}>
-                        {tz.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+        {/* Profile and Password Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Profile Settings */}
+          <Card className="border-0 shadow-lg overflow-hidden animate-scale-in lg:col-span-2">
+            <div className="bg-muted/30 px-6 h-14 border-b border-border/50 flex items-center">
+              <h2 className="font-semibold">Profile Information</h2>
             </div>
+            <CardContent className="p-6 space-y-6">
+              {/* Form Fields */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="first_name">
+                    <User className="inline h-4 w-4 mr-2" />
+                    First Name
+                  </Label>
+                  <Input
+                    id="first_name"
+                    value={formData.first_name}
+                    onChange={(e) => setFormData({ ...formData, first_name: e.target.value })}
+                    placeholder="First name"
+                  />
+                </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="bio">
-                <Globe className="inline h-4 w-4 mr-2" />
-                Bio
-              </Label>
-              <Textarea
-                id="bio"
-                value={formData.bio}
-                onChange={(e) => setFormData({ ...formData, bio: e.target.value })}
-                placeholder="Tell us about yourself..."
-                rows={4}
-              />
-            </div>
+                <div className="space-y-2">
+                  <Label htmlFor="last_name">
+                    <User className="inline h-4 w-4 mr-2" />
+                    Last Name
+                  </Label>
+                  <Input
+                    id="last_name"
+                    value={formData.last_name}
+                    onChange={(e) => setFormData({ ...formData, last_name: e.target.value })}
+                    placeholder="Last name"
+                  />
+                </div>
 
-            <div className="flex justify-end">
-              <Button onClick={handleSaveProfile} disabled={loading}>
-                <Save className="mr-2 h-4 w-4" />
-                {loading ? 'Saving...' : 'Save Changes'}
-              </Button>
+                <div className="space-y-2">
+                  <Label htmlFor="email">
+                    <Mail className="inline h-4 w-4 mr-2" />
+                    Email
+                  </Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    value={formData.email}
+                    disabled
+                    className="bg-muted"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="phone">
+                    <Phone className="inline h-4 w-4 mr-2" />
+                    Phone Number
+                  </Label>
+                  <Input
+                    id="phone"
+                    value={formData.phone}
+                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                    placeholder="e.g., 0412 345 678"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="job_title">
+                    <Briefcase className="inline h-4 w-4 mr-2" />
+                    Job Title
+                  </Label>
+                  <Input
+                    id="job_title"
+                    value={formData.job_title}
+                    onChange={(e) => setFormData({ ...formData, job_title: e.target.value })}
+                    placeholder="e.g., Compliance Manager"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="timezone">
+                    <Clock className="inline h-4 w-4 mr-2" />
+                    Timezone
+                  </Label>
+                  <Select
+                    value={formData.timezone}
+                    onValueChange={(value) => setFormData({ ...formData, timezone: value })}
+                  >
+                    <SelectTrigger id="timezone">
+                      <SelectValue placeholder="Select timezone" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {TIMEZONES.map((tz) => (
+                        <SelectItem key={tz.value} value={tz.value}>
+                          {tz.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="bio">
+                  <Globe className="inline h-4 w-4 mr-2" />
+                  Bio
+                </Label>
+                <Textarea
+                  id="bio"
+                  value={formData.bio}
+                  onChange={(e) => setFormData({ ...formData, bio: e.target.value })}
+                  placeholder="Tell us about yourself..."
+                  rows={4}
+                />
+              </div>
+
+              <div className="flex justify-end">
+                <Button onClick={handleSaveProfile} disabled={loading}>
+                  <Save className="mr-2 h-4 w-4" />
+                  {loading ? 'Saving...' : 'Save Changes'}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Password Settings */}
+          <Card className="border-0 shadow-lg overflow-hidden animate-scale-in h-fit" style={{ animationDelay: '100ms' }}>
+            <div className="bg-muted/30 px-6 h-14 border-b border-border/50 flex items-center">
+              <h2 className="font-semibold">Change Password</h2>
             </div>
-          </CardContent>
-        </Card>
+            <CardContent className="p-6 space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="newPassword">
+                  <Lock className="inline h-4 w-4 mr-2" />
+                  New Password
+                </Label>
+                <Input
+                  id="newPassword"
+                  type="password"
+                  value={formData.newPassword}
+                  onChange={(e) => setFormData({ ...formData, newPassword: e.target.value })}
+                  placeholder="Enter new password"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="confirmPassword">
+                  <Lock className="inline h-4 w-4 mr-2" />
+                  Confirm Password
+                </Label>
+                <Input
+                  id="confirmPassword"
+                  type="password"
+                  value={formData.confirmPassword}
+                  onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
+                  placeholder="Confirm new password"
+                />
+              </div>
+
+              <div className="flex justify-end">
+                <Button onClick={handleChangePassword} disabled={loading}>
+                  <Lock className="mr-2 h-4 w-4" />
+                  {loading ? 'Changing...' : 'Change Password'}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
 
         {/* Tenant Information */}
         {tenantInfo && (
-          <Card className="border-0 shadow-lg overflow-hidden animate-scale-in" style={{ animationDelay: '100ms' }}>
+          <Card className="border-0 shadow-lg overflow-hidden animate-scale-in" style={{ animationDelay: '200ms' }}>
             <div className="bg-muted/30 px-6 h-14 border-b border-border/50 flex items-center">
               <h2 className="font-semibold">Tenant Information</h2>
             </div>
@@ -487,49 +533,6 @@ export default function Settings() {
             </CardContent>
           </Card>
         )}
-
-        {/* Password Settings */}
-        <Card className="border-0 shadow-lg overflow-hidden animate-scale-in" style={{ animationDelay: '200ms' }}>
-          <div className="bg-muted/30 px-6 h-14 border-b border-border/50 flex items-center">
-            <h2 className="font-semibold">Change Password</h2>
-          </div>
-          <CardContent className="p-6 space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="newPassword">
-                <Lock className="inline h-4 w-4 mr-2" />
-                New Password
-              </Label>
-              <Input
-                id="newPassword"
-                type="password"
-                value={formData.newPassword}
-                onChange={(e) => setFormData({ ...formData, newPassword: e.target.value })}
-                placeholder="Enter new password"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="confirmPassword">
-                <Lock className="inline h-4 w-4 mr-2" />
-                Confirm Password
-              </Label>
-              <Input
-                id="confirmPassword"
-                type="password"
-                value={formData.confirmPassword}
-                onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
-                placeholder="Confirm new password"
-              />
-            </div>
-
-            <div className="flex justify-end">
-              <Button onClick={handleChangePassword} disabled={loading}>
-                <Lock className="mr-2 h-4 w-4" />
-                {loading ? 'Changing...' : 'Change Password'}
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
       </div>
     </div>
   );
