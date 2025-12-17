@@ -19,6 +19,7 @@ export default function Settings() {
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [tenantInfo, setTenantInfo] = useState<any>(null);
   const [liveTimes, setLiveTimes] = useState({ sydney: '', manila: '' });
+  const [timezoneOptions, setTimezoneOptions] = useState<{ value: string; label: string }[]>([]);
   const [formData, setFormData] = useState({
     first_name: '',
     last_name: '',
@@ -32,15 +33,24 @@ export default function Settings() {
     confirmPassword: '',
   });
 
-  const TIMEZONES = [
-    { value: 'Australia/Sydney', label: 'Sydney (AEDT/AEST)' },
-    { value: 'Australia/Melbourne', label: 'Melbourne (AEDT/AEST)' },
-    { value: 'Australia/Brisbane', label: 'Brisbane (AEST)' },
-    { value: 'Australia/Perth', label: 'Perth (AWST)' },
-    { value: 'Australia/Adelaide', label: 'Adelaide (ACDT/ACST)' },
-    { value: 'Australia/Darwin', label: 'Darwin (ACST)' },
-    { value: 'Asia/Manila', label: 'Philippines (PHT)' },
-  ];
+  // Fetch timezone options from database
+  useEffect(() => {
+    const fetchTimezones = async () => {
+      const { data, error } = await supabase
+        .from('timezone_options')
+        .select('timezone_value, timezone_label')
+        .eq('is_active', true)
+        .order('id');
+      
+      if (!error && data) {
+        setTimezoneOptions(data.map(tz => ({
+          value: tz.timezone_value,
+          label: tz.timezone_label
+        })));
+      }
+    };
+    fetchTimezones();
+  }, []);
 
   // Live time update effect
   useEffect(() => {
@@ -429,13 +439,13 @@ export default function Settings() {
                         {formData.timezone && (
                           <div className="flex items-center gap-2">
                             <MapPin className="h-4 w-4" />
-                            <span>{TIMEZONES.find(tz => tz.value === formData.timezone)?.label}</span>
+                            <span>{timezoneOptions.find(tz => tz.value === formData.timezone)?.label || formData.timezone}</span>
                           </div>
                         )}
                       </SelectValue>
                     </SelectTrigger>
                     <SelectContent className="bg-background w-[var(--radix-select-trigger-width)]">
-                      {TIMEZONES.map((tz, index) => (
+                      {timezoneOptions.map((tz, index) => (
                         <div key={tz.value}>
                           <SelectItem 
                             value={tz.value} 
@@ -446,7 +456,7 @@ export default function Settings() {
                               <span className="text-foreground">{tz.label}</span>
                             </div>
                           </SelectItem>
-                          {index < TIMEZONES.length - 1 && <SelectSeparator />}
+                          {index < timezoneOptions.length - 1 && <SelectSeparator />}
                         </div>
                       ))}
                     </SelectContent>
