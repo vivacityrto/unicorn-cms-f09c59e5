@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, ChevronRight, ChevronDown, User, Phone, Mail, MapPin, Calendar, Users, FileText, TrendingUp, LogIn, Package as PackageIcon, CheckCircle2, Clock, AlertCircle, Globe, ExternalLink, Facebook, Instagram, Linkedin, ArrowLeft, Timer, Building2, XCircle } from "lucide-react";
+import { Plus, ChevronRight, ChevronDown, User, Phone, Mail, MapPin, Calendar, Users, FileText, TrendingUp, LogIn, Package as PackageIcon, CheckCircle2, Clock, AlertCircle, Globe, ExternalLink, Facebook, Instagram, Linkedin, ArrowLeft, Timer, Building2, XCircle, Eye } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Separator } from "@/components/ui/separator";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -447,7 +447,11 @@ export default function TenantDetail() {
       </div>
 
       {/* Status Badge */}
-      <div className="px-6 mb-2 flex justify-end">
+      <div className="px-6 mb-2 flex justify-between items-center">
+        <Badge variant="secondary" className="bg-muted text-muted-foreground hover:bg-muted/80 border border-border text-[0.75rem] py-[2px] px-[0.625rem] rounded-[11px] cursor-pointer">
+          <Eye className="mr-1 h-3 w-3" />
+          View as Client
+        </Badge>
         <Badge variant={tenantStatus === "active" ? "default" : "destructive"} className={tenantStatus === "active" ? "bg-green-500/20 text-green-600 hover:bg-green-500/30 border border-green-600 text-[0.75rem] py-[2px] px-[0.625rem] rounded-[11px]" : "bg-red-500/20 text-red-600 hover:bg-red-500/30 border border-red-600 text-[0.75rem] py-[2px] px-[0.625rem] rounded-[11px]"}>
           {tenantStatus === "active" ? <CheckCircle2 className="mr-1 h-3 w-3" /> : <XCircle className="mr-1 h-3 w-3" />}
           {tenantStatus === "active" ? "Active" : "Inactive"}
