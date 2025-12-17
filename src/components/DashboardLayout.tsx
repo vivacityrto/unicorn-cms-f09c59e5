@@ -439,9 +439,8 @@ export const DashboardLayout = ({ children }: { children: React.ReactNode }) => 
                       <Link
                         key={item.path}
                         to={item.path}
-                        className={`flex items-center gap-2 px-4 mx-2 mb-1 transition-colors text-sm ${isActive ? "bg-white/20 text-white shadow-sm" : "text-white/80 hover:bg-white/10 hover:text-white"}`}
+                        className={`flex items-center gap-2 px-4 mx-2 mb-1 transition-colors text-sm rounded-full ${isActive ? "bg-white/10 border border-white/20 text-white" : "text-white/80 hover:bg-white/10 hover:text-white"}`}
                         style={{
-                          borderRadius: "7px",
                           paddingTop: "10px",
                           paddingBottom: "10px",
                         }}
@@ -479,9 +478,8 @@ export const DashboardLayout = ({ children }: { children: React.ReactNode }) => 
                         <Link
                           key={item.path}
                           to={item.path}
-                          className={`flex items-center gap-2 px-4 mx-2 mb-1 transition-colors text-sm ${isActive ? "bg-white/20 text-white shadow-sm" : "text-white/80 hover:bg-white/10 hover:text-white"}`}
+                          className={`flex items-center gap-2 px-4 mx-2 mb-1 transition-colors text-sm rounded-full ${isActive ? "bg-white/10 border border-white/20 text-white" : "text-white/80 hover:bg-white/10 hover:text-white"}`}
                           style={{
-                            borderRadius: "7px",
                             paddingTop: "10px",
                             paddingBottom: "10px",
                           }}
@@ -523,9 +521,8 @@ export const DashboardLayout = ({ children }: { children: React.ReactNode }) => 
                           <Link
                             key={item.path}
                             to={item.path}
-                            className={`flex items-center gap-2 px-4 mx-2 mb-1 transition-colors text-sm ${isActive ? "bg-white/20 text-white shadow-sm" : "text-white/80 hover:bg-white/10 hover:text-white"}`}
+                            className={`flex items-center gap-2 px-4 mx-2 mb-1 transition-colors text-sm rounded-full ${isActive ? "bg-white/10 border border-white/20 text-white" : "text-white/80 hover:bg-white/10 hover:text-white"}`}
                             style={{
-                              borderRadius: "7px",
                               paddingTop: "10px",
                               paddingBottom: "10px",
                             }}
@@ -564,9 +561,8 @@ export const DashboardLayout = ({ children }: { children: React.ReactNode }) => 
                         <Link
                           key={item.path}
                           to={item.path}
-                          className={`flex items-center gap-2 px-4 mx-2 mb-1 transition-colors text-sm ${isActive ? "bg-white/20 text-white shadow-sm" : "text-white/80 hover:bg-white/10 hover:text-white"}`}
+                          className={`flex items-center gap-2 px-4 mx-2 mb-1 transition-colors text-sm rounded-full ${isActive ? "bg-white/10 border border-white/20 text-white" : "text-white/80 hover:bg-white/10 hover:text-white"}`}
                           style={{
-                            borderRadius: "7px",
                             paddingTop: "10px",
                             paddingBottom: "10px",
                           }}
@@ -605,9 +601,8 @@ export const DashboardLayout = ({ children }: { children: React.ReactNode }) => 
                         <Link
                           key={item.path}
                           to={item.path}
-                          className={`flex items-center gap-2 px-4 mx-2 mb-1 transition-colors text-sm ${isActive ? "bg-white/20 text-white shadow-sm" : "text-white/80 hover:bg-white/10 hover:text-white"}`}
+                          className={`flex items-center gap-2 px-4 mx-2 mb-1 transition-colors text-sm rounded-full ${isActive ? "bg-white/10 border border-white/20 text-white" : "text-white/80 hover:bg-white/10 hover:text-white"}`}
                           style={{
-                            borderRadius: "7px",
                             paddingTop: "10px",
                             paddingBottom: "10px",
                           }}
