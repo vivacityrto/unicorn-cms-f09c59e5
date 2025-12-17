@@ -398,18 +398,11 @@ export default function Settings() {
                         <div key={tz.value}>
                           <SelectItem 
                             value={tz.value} 
-                            className="cursor-pointer data-[state=checked]:bg-transparent focus:bg-transparent data-[state=checked]:text-foreground pr-3"
+                            className="cursor-pointer data-[state=checked]:bg-transparent focus:bg-transparent data-[state=checked]:text-foreground"
                           >
-                            <div className="flex items-center w-full">
-                              <div className="flex items-center gap-2 text-foreground flex-1">
-                                <MapPin className="h-4 w-4 text-foreground" />
-                                <span className="text-foreground">{tz.label}</span>
-                              </div>
-                              {formData.timezone === tz.value && (
-                                <div className="h-5 w-5 rounded-full bg-green-500 flex items-center justify-center flex-shrink-0">
-                                  <Check className="h-3 w-3 text-white" />
-                                </div>
-                              )}
+                            <div className="flex items-center gap-2">
+                              <MapPin className={`h-4 w-4 ${formData.timezone === tz.value ? 'text-green-500' : 'text-foreground'}`} />
+                              <span className="text-foreground">{tz.label}</span>
                             </div>
                           </SelectItem>
                           {index < TIMEZONES.length - 1 && <SelectSeparator />}
