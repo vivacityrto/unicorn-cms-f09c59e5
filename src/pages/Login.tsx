@@ -164,17 +164,15 @@ const Login = () => {
       className="min-h-screen w-full flex items-center justify-center p-4"
       style={{ backgroundImage: "linear-gradient(135deg, rgb(97 9 161) 0%, rgb(213 28 73) 100%)" }}
     >
-      <div className="w-full max-w-md space-y-4">
-        {/* Logo Section */}
-        <div className="bg-white/10 backdrop-blur-sm rounded-xl flex items-center justify-center">
-          <img src={unicornLogo} alt="Unicorn Compliance Management System" className="w-full h-auto max-w-[18rem]" />
-        </div>
-
+      <div className="w-full max-w-md">
         {/* Login Form Card - Matching Settings page style */}
         <Card className="border-0 shadow-lg overflow-hidden">
-          <div className="bg-muted/30 px-6 h-14 border-b border-border/50 flex items-center gap-2">
-            {getHeaderIcon()}
-            <h2 className="font-semibold">{getHeaderTitle()}</h2>
+          <div className="bg-muted/30 px-6 py-4 border-b border-border/50 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              {getHeaderIcon()}
+              <h2 className="font-semibold">{getHeaderTitle()}</h2>
+            </div>
+            <img src={unicornLogo} alt="Unicorn" className="h-10 w-auto" />
           </div>
           <CardContent className="p-6">
             {!showForgotPassword && !showMagicLink ? (
