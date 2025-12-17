@@ -40,6 +40,8 @@ interface ClientData {
   clickup_url: string;
   accountable_person: string;
   qto_name: string;
+  profilephoto: string | null;
+  logo_url: string | null;
 }
 interface Package {
   id: number;
@@ -285,7 +287,9 @@ export default function TenantDetail() {
           keap_url: userData.keap_url || "",
           clickup_url: userData.clickup_url || "",
           accountable_person: userData.accountable_person || "",
-          qto_name: ""
+          qto_name: "",
+          profilephoto: userData.avatar_url || null,
+          logo_url: null
         });
         if (userData.last_sign_in_at) {
           const loginDate = new Date(userData.last_sign_in_at);
@@ -458,9 +462,12 @@ export default function TenantDetail() {
         }}>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-4">
-                <Avatar className="h-12 w-12">
+                <Avatar className="h-12 w-12 border-2 border-white/30">
+                  <AvatarImage src={clientData.profilephoto || clientData.logo_url || ''} alt={clientData.companyname} />
                   <AvatarFallback className="bg-white/20 text-white text-lg font-semibold">
-                    {clientData.companyname?.substring(0, 2).toUpperCase() || 'TN'}
+                    {clientData.contactname 
+                      ? clientData.contactname.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()
+                      : clientData.companyname?.substring(0, 2).toUpperCase() || 'TN'}
                   </AvatarFallback>
                 </Avatar>
                 <div className="space-y-1">
