@@ -38,6 +38,7 @@ export default function Settings() {
     { value: 'Australia/Perth', label: 'Perth (AWST)' },
     { value: 'Australia/Adelaide', label: 'Adelaide (ACDT/ACST)' },
     { value: 'Australia/Darwin', label: 'Darwin (ACST)' },
+    { value: 'Asia/Manila', label: 'Philippines (PHT)' },
   ];
 
   useEffect(() => {
@@ -395,7 +396,7 @@ export default function Settings() {
                     <SelectContent className="bg-background w-[var(--radix-select-trigger-width)]">
                       {TIMEZONES.map((tz, index) => (
                         <div key={tz.value}>
-                          <SelectItem value={tz.value} className="cursor-pointer">
+                          <SelectItem value={tz.value} className="cursor-pointer data-[state=checked]:bg-transparent focus:bg-transparent">
                             <div className="flex items-center gap-2">
                               <MapPin className="h-4 w-4" />
                               <span>{tz.label}</span>
