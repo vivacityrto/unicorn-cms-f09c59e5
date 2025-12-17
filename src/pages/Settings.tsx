@@ -410,12 +410,12 @@ export default function Settings() {
                 />
               </div>
 
-              <div className="flex justify-end">
-                <Button onClick={handleSaveProfile} disabled={loading}>
-                  <Save className="mr-2 h-4 w-4" />
-                  {loading ? 'Saving...' : 'Save Changes'}
-                </Button>
-              </div>
+            <div className="flex justify-end">
+              <Button onClick={handleSaveProfile} disabled={loading} className="bg-[hsl(188_74%_51%)] hover:bg-[hsl(188_74%_51%)]/90">
+                <Save className="mr-2 h-4 w-4" />
+                {loading ? 'Saving...' : 'Save Changes'}
+              </Button>
+            </div>
             </CardContent>
           </Card>
 
@@ -454,7 +454,7 @@ export default function Settings() {
               </div>
 
               <div className="flex justify-end">
-                <Button onClick={handleChangePassword} disabled={loading}>
+                <Button onClick={handleChangePassword} disabled={loading} className="bg-[hsl(188_74%_51%)] hover:bg-[hsl(188_74%_51%)]/90">
                   <Lock className="mr-2 h-4 w-4" />
                   {loading ? 'Changing...' : 'Change Password'}
                 </Button>
