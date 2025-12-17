@@ -32,7 +32,7 @@ import {
   Home,
 } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -239,6 +239,7 @@ export const DashboardLayout = ({ children }: { children: React.ReactNode }) => 
     advanced: false,
   });
   const location = useLocation();
+  const navigate = useNavigate();
   const { profile, signOut } = useAuth();
 
   // Check if nav content is scrollable
@@ -345,12 +346,26 @@ export const DashboardLayout = ({ children }: { children: React.ReactNode }) => 
                 </div>
               </div>
               
-              {/* User email */}
-              <div className="mt-4 pt-4 border-t border-white/10 flex justify-center">
-                <div className="flex items-center gap-2 text-white/60 text-xs">
-                  <Mail className="h-3.5 w-3.5" />
-                  <span className="truncate max-w-[180px]">{profile?.email || ""}</span>
-                </div>
+              {/* Settings and Logout */}
+              <div className="mt-4 pt-4 border-t border-white/10 flex justify-center gap-2">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => navigate("/settings")}
+                  className="text-white/70 hover:text-white hover:bg-white/10 text-xs gap-1.5"
+                >
+                  <Settings className="h-3.5 w-3.5" />
+                  Settings
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={signOut}
+                  className="text-white/70 hover:text-white hover:bg-white/10 text-xs gap-1.5"
+                >
+                  <LogOut className="h-3.5 w-3.5" />
+                  Logout
+                </Button>
               </div>
             </div>
           </div>
