@@ -202,17 +202,17 @@ export const DashboardLayout = ({
   }, []);
 
   // Scroll active menu item into view on route changes
+  // Scroll active menu item into view immediately on route changes
   useLayoutEffect(() => {
-    // Small delay to ensure DOM is ready
-    const timer = setTimeout(() => {
-      if (navRef.current) {
-        const activeItem = navRef.current.querySelector('[data-active="true"]');
-        if (activeItem) {
+    if (navRef.current) {
+      const activeItem = navRef.current.querySelector('[data-active="true"]');
+      if (activeItem) {
+        // Use requestAnimationFrame to batch with paint, avoiding flash
+        requestAnimationFrame(() => {
           activeItem.scrollIntoView({ block: 'center', behavior: 'instant' });
-        }
+        });
       }
-    }, 50);
-    return () => clearTimeout(timer);
+    }
   }, [location.pathname]);
 
   // Check if nav content is scrollable
