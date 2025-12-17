@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
 import {
   LayoutDashboard,
   FileText,
@@ -244,6 +244,16 @@ export const DashboardLayout = ({ children }: { children: React.ReactNode }) => 
   const navigate = useNavigate();
   const { profile, signOut } = useAuth();
   const { isViewingAsClient } = useViewMode();
+  const navRef = useRef<HTMLElement>(null);
+  const scrollPositionRef = useRef<number>(0);
+
+  // Preserve sidebar scroll position on route changes
+  useEffect(() => {
+    // Restore scroll position after route change
+    if (navRef.current) {
+      navRef.current.scrollTop = scrollPositionRef.current;
+    }
+  }, [location.pathname]);
 
   // Check if nav content is scrollable
   const checkScrollable = (e: React.UIEvent<HTMLElement>) => {
@@ -251,6 +261,8 @@ export const DashboardLayout = ({ children }: { children: React.ReactNode }) => 
     const hasScroll = element.scrollHeight > element.clientHeight;
     const isAtBottom = element.scrollHeight - element.scrollTop <= element.clientHeight + 10;
     setShowScrollIndicator(hasScroll && !isAtBottom);
+    // Save scroll position
+    scrollPositionRef.current = element.scrollTop;
   };
 
   // Determine menu items and groups based on user role (or view mode)
@@ -413,7 +425,7 @@ export const DashboardLayout = ({ children }: { children: React.ReactNode }) => 
         )}
 
         {/* Menu Items */}
-        <nav className="flex-1 py-4 overflow-y-auto scrollbar-hide relative" onScroll={checkScrollable}>
+        <nav ref={navRef} className="flex-1 py-4 overflow-y-auto scrollbar-hide relative" onScroll={checkScrollable}>
           {isGrouped && typeof menuItems === "object" && "main" in menuItems ? (
             <>
               {/* Main Section */}
