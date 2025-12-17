@@ -246,6 +246,29 @@ export const DashboardLayout = ({ children }: { children: React.ReactNode }) => 
   const { isViewingAsClient } = useViewMode();
   const navRef = useRef<HTMLElement>(null);
   const scrollPositionRef = useRef<number>(0);
+  const [currentTime, setCurrentTime] = useState<string>('');
+
+  // Real-time Australian clock
+  useEffect(() => {
+    const updateTime = () => {
+      const now = new Date();
+      const australianTime = now.toLocaleString('en-AU', {
+        timeZone: 'Australia/Sydney',
+        weekday: 'short',
+        day: 'numeric',
+        month: 'short',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: true,
+      });
+      setCurrentTime(australianTime);
+    };
+    
+    updateTime();
+    const interval = setInterval(updateTime, 1000);
+    return () => clearInterval(interval);
+  }, []);
 
   // Preserve sidebar scroll position on route changes
   useLayoutEffect(() => {
@@ -661,6 +684,11 @@ export const DashboardLayout = ({ children }: { children: React.ReactNode }) => 
           </div>
 
           <div className="flex items-center gap-4">
+            {/* Real-time Australian Clock */}
+            <div className="text-sm font-medium text-muted-foreground tabular-nums">
+              {currentTime}
+            </div>
+
             {/* Notification Bell */}
             <NotificationDropdown />
 
