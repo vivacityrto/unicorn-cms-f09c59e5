@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
-import { CheckCircle2, Clock, AlertTriangle, Search, Calendar, CheckCheck, X, Plus, AlertCircle, ListTodo, CalendarIcon, ClipboardList, CalendarClock, Upload, File as FileIcon, Building, Download, User, UserCheck, Pencil, Trash2 } from "lucide-react";
+import { CheckCircle2, Clock, AlertTriangle, Search, Calendar, CheckCheck, X, Plus, AlertCircle, ListTodo, CalendarIcon, ClipboardList, CalendarClock, Upload, File as FileIcon, Building, Download, User, UserCheck, Pencil, Trash2, Users } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Combobox } from "@/components/ui/combobox";
@@ -13,6 +13,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from "@/components/ui/pagination";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar as CalendarPicker } from "@/components/ui/calendar";
@@ -31,7 +32,7 @@ interface Task {
   status: string | null;
   completed: boolean | null;
   created_by: string | null;
-  assigned_to: string | null;
+  followers: string[];
   created_at: string | null;
   updated_at?: string | null;
   tenant_name?: string;
@@ -39,7 +40,7 @@ interface Task {
   package_created_at?: string | null;
   package_full_text?: string | null;
   created_by_name?: string;
-  assigned_to_name?: string;
+  follower_users?: Array<{ user_uuid: string; first_name: string; last_name: string; avatar_url: string | null }>;
   file_paths?: string[];
 }
 type TaskStatus = "pending" | "in_progress" | "completed" | "overdue" | "extended";
@@ -64,10 +65,10 @@ export default function TasksManagement() {
     due_date: "",
     tenant_id: "",
     package_id: "",
-    assigned_to: "",
     package_name: "",
     status: "not_started"
   });
+  const [followers, setFollowers] = useState<string[]>([]);
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
   const itemsPerPage = 20;
   const {
@@ -136,7 +137,7 @@ export default function TasksManagement() {
           status,
           completed,
           created_by,
-          assigned_to,
+          followers,
           created_at,
           updated_at,
           file_paths,
@@ -147,19 +148,19 @@ export default function TasksManagement() {
       });
       if (tasksError) throw tasksError;
 
-      // Get unique creator and assignee user IDs
+      // Get unique creator and follower user IDs
       const creatorIds = [...new Set(tasksData?.map((task: any) => task.created_by).filter(Boolean))] as string[];
-      const assigneeIds = [...new Set(tasksData?.map((task: any) => task.assigned_to).filter(Boolean))] as string[];
-      const allUserIds = [...new Set([...creatorIds, ...assigneeIds])];
+      const followerIds = [...new Set(tasksData?.flatMap((task: any) => task.followers || []).filter(Boolean))] as string[];
+      const allUserIds = [...new Set([...creatorIds, ...followerIds])];
 
-      // Fetch user names if there are any
-      let usersMap = new Map<string, string>();
+      // Fetch user data if there are any
+      let usersMap = new Map<string, { user_uuid: string; first_name: string; last_name: string; avatar_url: string | null }>();
       if (allUserIds.length > 0) {
         const {
           data: usersData
-        } = await supabase.from("users").select("user_uuid, first_name, last_name").in("user_uuid", allUserIds);
+        } = await supabase.from("users").select("user_uuid, first_name, last_name, avatar_url").in("user_uuid", allUserIds);
         if (usersData) {
-          usersMap = new Map(usersData.map(user => [user.user_uuid, `${user.first_name || ''} ${user.last_name || ''}`.trim() || "Unknown"]));
+          usersMap = new Map(usersData.map(user => [user.user_uuid, user]));
         }
       }
 
@@ -174,7 +175,7 @@ export default function TasksManagement() {
         status: task.status,
         completed: task.completed,
         created_by: task.created_by,
-        assigned_to: task.assigned_to,
+        followers: task.followers || [],
         created_at: task.created_at,
         updated_at: task.updated_at,
         file_paths: task.file_paths || [],
@@ -182,8 +183,8 @@ export default function TasksManagement() {
         package_name: task.packages?.name || null,
         package_created_at: task.packages?.created_at || null,
         package_full_text: task.packages?.full_text || null,
-        created_by_name: task.created_by ? usersMap.get(task.created_by) || "Unknown" : "Unknown",
-        assigned_to_name: task.assigned_to ? usersMap.get(task.assigned_to) || "Unassigned" : "Unassigned"
+        created_by_name: task.created_by ? `${usersMap.get(task.created_by)?.first_name || ''} ${usersMap.get(task.created_by)?.last_name || ''}`.trim() || "Unknown" : "Unknown",
+        follower_users: (task.followers || []).map((id: string) => usersMap.get(id)).filter(Boolean)
       })) || [];
       setTasks(transformedTasks);
       setFilteredTasks(transformedTasks);
@@ -466,16 +467,58 @@ export default function TasksManagement() {
                 </div>
 
                 <div className="grid gap-2">
-                  <Label htmlFor="assignee">Assignee</Label>
-                  <Combobox options={users.map(user => ({
-                  value: user.user_uuid,
-                  label: `${user.first_name || ''} ${user.last_name || ''}`.trim() || user.email,
-                  secondaryLabel: user.email,
-                  group: user.unicorn_role || 'Users'
-                }))} value={formData.assigned_to} onValueChange={value => setFormData({
-                  ...formData,
-                  assigned_to: value
-                })} placeholder="Choose..." searchPlaceholder="Search assignee..." emptyText="No users found." className="w-full" />
+                  <Label className="text-primary font-semibold">Followers</Label>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    {followers.map(userId => {
+                      const user = users.find((u: any) => u.user_uuid === userId);
+                      if (!user) return null;
+                      return (
+                        <div key={userId} className="relative group">
+                          <Avatar className="h-10 w-10 border-2 border-background shadow-sm cursor-pointer" onClick={() => setFollowers(prev => prev.filter(id => id !== userId))}>
+                            {user.avatar_url && <AvatarImage src={user.avatar_url} />}
+                            <AvatarFallback className="text-xs bg-primary/10 text-primary">
+                              {user.first_name?.[0]}{user.last_name?.[0]}
+                            </AvatarFallback>
+                          </Avatar>
+                          <button 
+                            onClick={() => setFollowers(prev => prev.filter(id => id !== userId))}
+                            className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-destructive text-destructive-foreground opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
+                          >
+                            <X className="h-2.5 w-2.5" />
+                          </button>
+                        </div>
+                      );
+                    })}
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <button className="h-10 w-10 rounded-full border-2 border-dashed border-muted-foreground/40 flex items-center justify-center hover:border-primary hover:bg-primary/5 transition-colors cursor-pointer">
+                          <Plus className="h-4 w-4 text-muted-foreground" />
+                        </button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-64 p-2 z-[80]" align="start">
+                        <div className="space-y-1 max-h-48 overflow-y-auto">
+                          {users.filter((user: any) => !followers.includes(user.user_uuid)).map((user: any) => (
+                            <div
+                              key={user.user_uuid}
+                              onClick={() => setFollowers(prev => [...prev, user.user_uuid])}
+                              className="flex items-center gap-2 px-2 py-1.5 rounded-md cursor-pointer hover:bg-muted transition-colors"
+                            >
+                              <Avatar className="h-7 w-7">
+                                {user.avatar_url && <AvatarImage src={user.avatar_url} />}
+                                <AvatarFallback className="text-[10px] bg-primary/10 text-primary">
+                                  {user.first_name?.[0]}{user.last_name?.[0]}
+                                </AvatarFallback>
+                              </Avatar>
+                              <span className="text-sm">{user.first_name} {user.last_name}</span>
+                            </div>
+                          ))}
+                          {users.filter((user: any) => !followers.includes(user.user_uuid)).length === 0 && (
+                            <p className="text-sm text-muted-foreground text-center py-2">All team members added</p>
+                          )}
+                        </div>
+                      </PopoverContent>
+                    </Popover>
+                  </div>
                 </div>
 
                 <div className="grid gap-2">
@@ -549,7 +592,7 @@ export default function TasksManagement() {
                       description: formData.description || null,
                       due_date: formData.due_date,
                       created_by: user.id,
-                      assigned_to: formData.assigned_to || null,
+                      followers: followers.length > 0 ? followers : [],
                       status: formData.status || 'not_started',
                       completed: false
                     }).select().single();
@@ -598,10 +641,10 @@ export default function TasksManagement() {
                       due_date: "",
                       tenant_id: "",
                       package_id: "",
-                      assigned_to: "",
                       package_name: "",
                       status: "not_started"
                     });
+                    setFollowers([]);
                     setUploadedFiles([]);
                     fetchTasks();
                   } catch (error: any) {
@@ -701,16 +744,58 @@ export default function TasksManagement() {
                 </div>
 
                 <div className="grid gap-2">
-                  <Label htmlFor="edit_assignee">Assignee</Label>
-                  <Combobox options={users.map(user => ({
-                    value: user.user_uuid,
-                    label: `${user.first_name || ''} ${user.last_name || ''}`.trim() || user.email,
-                    secondaryLabel: user.email,
-                    group: user.unicorn_role || 'Users'
-                  }))} value={formData.assigned_to} onValueChange={value => setFormData({
-                    ...formData,
-                    assigned_to: value
-                  })} placeholder="Choose..." searchPlaceholder="Search assignee..." emptyText="No users found." className="w-full" />
+                  <Label className="text-primary font-semibold">Followers</Label>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    {followers.map(userId => {
+                      const user = users.find((u: any) => u.user_uuid === userId);
+                      if (!user) return null;
+                      return (
+                        <div key={userId} className="relative group">
+                          <Avatar className="h-10 w-10 border-2 border-background shadow-sm cursor-pointer" onClick={() => setFollowers(prev => prev.filter(id => id !== userId))}>
+                            {user.avatar_url && <AvatarImage src={user.avatar_url} />}
+                            <AvatarFallback className="text-xs bg-primary/10 text-primary">
+                              {user.first_name?.[0]}{user.last_name?.[0]}
+                            </AvatarFallback>
+                          </Avatar>
+                          <button 
+                            onClick={() => setFollowers(prev => prev.filter(id => id !== userId))}
+                            className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-destructive text-destructive-foreground opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
+                          >
+                            <X className="h-2.5 w-2.5" />
+                          </button>
+                        </div>
+                      );
+                    })}
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <button className="h-10 w-10 rounded-full border-2 border-dashed border-muted-foreground/40 flex items-center justify-center hover:border-primary hover:bg-primary/5 transition-colors cursor-pointer">
+                          <Plus className="h-4 w-4 text-muted-foreground" />
+                        </button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-64 p-2 z-[80]" align="start">
+                        <div className="space-y-1 max-h-48 overflow-y-auto">
+                          {users.filter((user: any) => !followers.includes(user.user_uuid)).map((user: any) => (
+                            <div
+                              key={user.user_uuid}
+                              onClick={() => setFollowers(prev => [...prev, user.user_uuid])}
+                              className="flex items-center gap-2 px-2 py-1.5 rounded-md cursor-pointer hover:bg-muted transition-colors"
+                            >
+                              <Avatar className="h-7 w-7">
+                                {user.avatar_url && <AvatarImage src={user.avatar_url} />}
+                                <AvatarFallback className="text-[10px] bg-primary/10 text-primary">
+                                  {user.first_name?.[0]}{user.last_name?.[0]}
+                                </AvatarFallback>
+                              </Avatar>
+                              <span className="text-sm">{user.first_name} {user.last_name}</span>
+                            </div>
+                          ))}
+                          {users.filter((user: any) => !followers.includes(user.user_uuid)).length === 0 && (
+                            <p className="text-sm text-muted-foreground text-center py-2">All team members added</p>
+                          )}
+                        </div>
+                      </PopoverContent>
+                    </Popover>
+                  </div>
                 </div>
 
               </div>
@@ -727,7 +812,7 @@ export default function TasksManagement() {
                     task_name: formData.task_name,
                     description: formData.description,
                     due_date: formData.due_date,
-                    assigned_to: formData.assigned_to || null,
+                    followers: followers,
                     status: formData.status || 'not_started',
                     updated_at: new Date().toISOString()
                   };
@@ -754,14 +839,9 @@ export default function TasksManagement() {
                   setIsEditDialogOpen(false);
                   fetchTasks();
                 } catch (error: any) {
-                  let errorMessage = error.message;
-                  // Handle foreign key constraint error for assigned_to
-                  if (error.message?.includes('tasks_tenants_assigned_to_fkey')) {
-                    errorMessage = 'The selected assignee is no longer a valid user. Please select a different assignee or leave it unassigned.';
-                  }
                   toast({
                     title: "Error",
-                    description: errorMessage,
+                    description: error.message,
                     variant: "destructive"
                   });
                 }
@@ -855,7 +935,7 @@ export default function TasksManagement() {
                 <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-r border-border/50">
                   Due Date
                 </TableHead>
-                <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-r border-border/50">Assigned To</TableHead>
+                <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-r border-border/50">Followers</TableHead>
                 <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-r border-border/50">Files</TableHead>
                 <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap">Actions</TableHead>
               </TableRow>
@@ -907,7 +987,23 @@ export default function TasksManagement() {
                       </div>
                     </TableCell>
                     <TableCell className="py-6 border-r border-border/50 whitespace-nowrap">
-                      <div className="text-muted-foreground">{task.assigned_to_name || "Unassigned"}</div>
+                      <div className="flex items-center gap-1">
+                        {task.follower_users && task.follower_users.length > 0 ? (
+                          task.follower_users.slice(0, 3).map((follower) => (
+                            <Avatar key={follower.user_uuid} className="h-7 w-7 border border-background">
+                              {follower.avatar_url && <AvatarImage src={follower.avatar_url} />}
+                              <AvatarFallback className="text-[10px] bg-primary/10 text-primary">
+                                {follower.first_name?.[0]}{follower.last_name?.[0]}
+                              </AvatarFallback>
+                            </Avatar>
+                          ))
+                        ) : (
+                          <span className="text-muted-foreground text-sm">No followers</span>
+                        )}
+                        {task.follower_users && task.follower_users.length > 3 && (
+                          <span className="text-xs text-muted-foreground ml-1">+{task.follower_users.length - 3}</span>
+                        )}
+                      </div>
                     </TableCell>
                     <TableCell className="py-6 border-r border-border/50 text-center whitespace-nowrap" onClick={e => e.stopPropagation()}>
                       {task.file_paths && task.file_paths.length > 0 ? (
@@ -958,10 +1054,10 @@ export default function TasksManagement() {
                               due_date: task.due_date,
                               tenant_id: task.tenant_id.toString(),
                               package_id: task.package_id?.toString() || "",
-                              assigned_to: task.assigned_to || "",
                               package_name: task.package_name || "",
                               status: task.status || "not_started"
                             });
+                            setFollowers(task.followers || []);
                             setIsEditDialogOpen(true);
                           }}
                           className="h-8 w-8 hover:bg-primary/10 hover:text-primary"
@@ -1132,13 +1228,26 @@ export default function TasksManagement() {
 
                 <Separator />
 
-                {/* Assigned To */}
+                {/* Followers */}
                 <div className="space-y-2">
                   <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground flex items-center gap-2">
-                    <UserCheck className="h-3.5 w-3.5" />
-                    Assigned To
+                    <Users className="h-3.5 w-3.5" />
+                    Followers
                   </label>
-                  <p className="text-sm leading-relaxed">{selectedTask.created_by_name || "Unassigned"}</p>
+                  <div className="flex items-center gap-1 flex-wrap">
+                    {selectedTask.follower_users && selectedTask.follower_users.length > 0 ? (
+                      selectedTask.follower_users.map((follower) => (
+                        <Avatar key={follower.user_uuid} className="h-8 w-8 border border-background">
+                          {follower.avatar_url && <AvatarImage src={follower.avatar_url} />}
+                          <AvatarFallback className="text-[10px] bg-primary/10 text-primary">
+                            {follower.first_name?.[0]}{follower.last_name?.[0]}
+                          </AvatarFallback>
+                        </Avatar>
+                      ))
+                    ) : (
+                      <p className="text-sm text-muted-foreground">No followers</p>
+                    )}
+                  </div>
                 </div>
 
                 {/* Attachments */}
