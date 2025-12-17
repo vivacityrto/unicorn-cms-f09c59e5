@@ -14,7 +14,7 @@ import Footer from "@/components/layout/Footer";
 const baseMenuItems = [{
   icon: LayoutDashboard,
   label: "Dashboard",
-  path: "/dashboard"
+  path: "/manage-packages"
 }, {
   icon: FileText,
   label: "Documents",
@@ -35,7 +35,7 @@ const baseMenuItems = [{
 const baseMenuItemsWithoutDocs = [{
   icon: Package2,
   label: "Dashboard",
-  path: "/dashboard"
+  path: "/manage-packages"
 }, {
   icon: Building2,
   label: "Clients",
