@@ -7,8 +7,8 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
-import { Upload, Save, Lock, Mail, User, Phone, Briefcase, Clock, Globe } from 'lucide-react';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Upload, Save, Lock, Mail, User, Phone, Briefcase, Clock, Globe, MapPin } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectSeparator } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 
 export default function Settings() {
@@ -382,14 +382,27 @@ export default function Settings() {
                     value={formData.timezone}
                     onValueChange={(value) => setFormData({ ...formData, timezone: value })}
                   >
-                    <SelectTrigger id="timezone">
-                      <SelectValue placeholder="Select timezone" />
+                    <SelectTrigger id="timezone" className="w-full h-11 rounded-lg border-0 bg-muted/50 ring-1 ring-border/50 hover:ring-border focus:ring-2 focus:ring-primary/30">
+                      <SelectValue placeholder="Select timezone">
+                        {formData.timezone && (
+                          <div className="flex items-center gap-2">
+                            <MapPin className="h-4 w-4 text-[hsl(188_74%_51%)]" />
+                            <span>{TIMEZONES.find(tz => tz.value === formData.timezone)?.label}</span>
+                          </div>
+                        )}
+                      </SelectValue>
                     </SelectTrigger>
-                    <SelectContent>
-                      {TIMEZONES.map((tz) => (
-                        <SelectItem key={tz.value} value={tz.value}>
-                          {tz.label}
-                        </SelectItem>
+                    <SelectContent className="bg-background w-[var(--radix-select-trigger-width)]">
+                      {TIMEZONES.map((tz, index) => (
+                        <div key={tz.value}>
+                          <SelectItem value={tz.value} className="cursor-pointer">
+                            <div className="flex items-center gap-2">
+                              <MapPin className="h-4 w-4 text-[hsl(188_74%_51%)]" />
+                              <span>{tz.label}</span>
+                            </div>
+                          </SelectItem>
+                          {index < TIMEZONES.length - 1 && <SelectSeparator />}
+                        </div>
                       ))}
                     </SelectContent>
                   </Select>
