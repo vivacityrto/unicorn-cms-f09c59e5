@@ -671,7 +671,7 @@ export const DashboardLayout = ({ children }: { children: React.ReactNode }) => 
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="bg-white hover:bg-white/90"
+                    className="bg-white transition-all duration-200 hover:bg-white hover:scale-105 hover:shadow-md"
                     style={{ boxShadow: 'rgba(0, 0, 0, 0.02) 0px 1px 3px 0px, rgba(27, 31, 35, 0.15) 0px 0px 0px 1px' }}
                   >
                     <Settings className="h-4 w-4" />
@@ -700,7 +700,7 @@ export const DashboardLayout = ({ children }: { children: React.ReactNode }) => 
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="bg-white hover:bg-white/90"
+                    className="bg-white transition-all duration-200 hover:bg-white hover:scale-105 hover:shadow-md"
                     style={{ boxShadow: 'rgba(0, 0, 0, 0.02) 0px 1px 3px 0px, rgba(27, 31, 35, 0.15) 0px 0px 0px 1px' }}
                   >
                     <Settings className="h-4 w-4" />
