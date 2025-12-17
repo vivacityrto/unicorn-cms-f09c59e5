@@ -18,6 +18,7 @@ export default function Settings() {
   const [uploading, setUploading] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [tenantInfo, setTenantInfo] = useState<any>(null);
+  const [liveTimes, setLiveTimes] = useState({ sydney: '', manila: '' });
   const [formData, setFormData] = useState({
     first_name: '',
     last_name: '',
@@ -40,6 +41,36 @@ export default function Settings() {
     { value: 'Australia/Darwin', label: 'Darwin (ACST)' },
     { value: 'Asia/Manila', label: 'Philippines (PHT)' },
   ];
+
+  // Live time update effect
+  useEffect(() => {
+    const updateTimes = () => {
+      const now = new Date();
+      const sydneyTime = now.toLocaleString('en-AU', {
+        timeZone: 'Australia/Sydney',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: true,
+        day: '2-digit',
+        month: 'short',
+      });
+      const manilaTime = now.toLocaleString('en-PH', {
+        timeZone: 'Asia/Manila',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: true,
+        day: '2-digit',
+        month: 'short',
+      });
+      setLiveTimes({ sydney: sydneyTime, manila: manilaTime });
+    };
+    
+    updateTimes();
+    const interval = setInterval(updateTimes, 1000);
+    return () => clearInterval(interval);
+  }, []);
 
   useEffect(() => {
     if (user && profile) {
@@ -283,7 +314,7 @@ export default function Settings() {
                   />
                 </label>
               </div>
-              <div className="space-y-1">
+              <div className="space-y-1 flex-1">
                 <h1 className="text-xl font-semibold text-white">
                   {formData.first_name} {formData.last_name}
                 </h1>
@@ -291,6 +322,16 @@ export default function Settings() {
                 <p className="text-xs text-white/50">
                   Manage your account settings and preferences
                 </p>
+              </div>
+              <div className="text-right space-y-1">
+                <div className="flex items-center justify-end gap-2 text-[0.65rem] text-white/70">
+                  <span className="text-white/50">AU</span>
+                  <span className="font-mono">{liveTimes.sydney}</span>
+                </div>
+                <div className="flex items-center justify-end gap-2 text-[0.65rem] text-white/70">
+                  <span className="text-white/50">PH</span>
+                  <span className="font-mono">{liveTimes.manila}</span>
+                </div>
               </div>
             </div>
           </div>
