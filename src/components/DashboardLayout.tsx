@@ -35,7 +35,7 @@ const baseMenuItems = [{
 const baseMenuItemsWithoutDocs = [{
   icon: Package2,
   label: "Dashboard",
-  path: "/manage-packages"
+  path: "/dashboard"
 }, {
   icon: Building2,
   label: "Clients",
