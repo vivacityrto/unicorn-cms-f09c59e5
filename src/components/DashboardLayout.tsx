@@ -623,7 +623,7 @@ export const DashboardLayout = ({ children }: { children: React.ReactNode }) => 
                   <Button
                     variant="outline"
                     size="sm"
-                    className="bg-transparent border-white/20 text-foreground hover:bg-white/10 gap-2"
+                    className="bg-transparent border-white/20 text-foreground hover:bg-transparent hover:border-white/20 gap-2"
                   >
                     <Settings className="h-4 w-4" />
                     Settings
@@ -644,7 +644,7 @@ export const DashboardLayout = ({ children }: { children: React.ReactNode }) => 
                   </Link>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem 
-                    className="cursor-pointer bg-red-500/10 text-red-500 focus:bg-red-500/20 focus:text-red-500" 
+                    className="cursor-pointer text-red-500 focus:text-red-500 focus:bg-transparent" 
                     onClick={signOut}
                   >
                     <LogOut className="mr-2 h-4 w-4" />
