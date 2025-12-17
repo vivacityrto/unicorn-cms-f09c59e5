@@ -618,15 +618,40 @@ export const DashboardLayout = ({ children }: { children: React.ReactNode }) => 
 
             {/* User Menu with Dropdown */}
             {(profile?.unicorn_role === "Admin" || profile?.unicorn_role === "User") ? (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={signOut}
-                className="bg-red-500/10 border-red-500/50 text-red-500 hover:bg-red-500/20 hover:text-red-500 hover:border-red-500/70 gap-2"
-              >
-                <LogOut className="h-4 w-4" />
-                Logout
-              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="bg-transparent border-white/20 text-foreground hover:bg-white/10 gap-2"
+                  >
+                    <Settings className="h-4 w-4" />
+                    Settings
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56">
+                  <Link to="/user-profile">
+                    <DropdownMenuItem className="cursor-pointer">
+                      <User className="mr-2 h-4 w-4" />
+                      <span>My Profile</span>
+                    </DropdownMenuItem>
+                  </Link>
+                  <Link to="/settings?tab=security">
+                    <DropdownMenuItem className="cursor-pointer">
+                      <Settings className="mr-2 h-4 w-4" />
+                      <span>Change Password</span>
+                    </DropdownMenuItem>
+                  </Link>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem 
+                    className="cursor-pointer bg-red-500/10 text-red-500 focus:bg-red-500/20 focus:text-red-500" 
+                    onClick={signOut}
+                  >
+                    <LogOut className="mr-2 h-4 w-4" />
+                    <span>Logout</span>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             ) : (
               <DropdownMenu>
                 <DropdownMenuTrigger className="flex items-center gap-3 focus:outline-none">
