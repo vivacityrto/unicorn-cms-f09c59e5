@@ -297,55 +297,71 @@ export const DashboardLayout = ({ children }: { children: React.ReactNode }) => 
         {/* Logo/Brand */}
         {/* Logo/Brand or User Profile */}
         {(profile?.unicorn_role === "Admin" || profile?.unicorn_role === "User") && sidebarOpen ? (
-          <div className="flex flex-col items-center py-8 px-4 border-b border-white/20 relative">
-            {/* Close button */}
+          <div className="relative px-3 pt-4 pb-6 border-b border-white/10">
+            {/* Close button - top right */}
             <button
               onClick={() => setSidebarOpen(!sidebarOpen)}
-              className="absolute top-4 right-4 p-2 hover:bg-white/10 rounded-lg transition-colors text-white/70"
+              className="absolute top-3 right-3 p-1.5 hover:bg-white/10 rounded-full transition-all duration-200 text-white/50 hover:text-white"
             >
-              <X className="w-5 h-5" />
+              <X className="w-4 h-4" />
             </button>
             
-            {/* Welcome text */}
-            <span className="text-xs tracking-[0.3em] text-white/60 uppercase mb-4">Welcome!</span>
-            
-            {/* Avatar with ring */}
-            <div className="relative mb-4">
-              <div className="h-24 w-24 rounded-full p-1 bg-gradient-to-br from-emerald-400 to-teal-500">
-                <Avatar className="h-full w-full border-4 border-white">
-                  <AvatarImage src={profile?.avatar_url || ""} alt={profile?.first_name || "User"} />
-                  <AvatarFallback className="bg-gray-200 text-gray-600 font-bold text-2xl">
+            {/* Glass card container */}
+            <div className="mt-6 rounded-2xl bg-white/[0.07] backdrop-blur-sm border border-white/10 p-5 shadow-lg">
+              {/* Avatar section */}
+              <div className="flex flex-col items-center">
+                <div className="relative group">
+                  {/* Animated ring */}
+                  <div className="absolute -inset-1 rounded-full bg-gradient-to-r from-pink-500 via-purple-500 to-cyan-500 opacity-75 blur-sm group-hover:opacity-100 transition-opacity duration-300"></div>
+                  <div className="relative h-20 w-20 rounded-full p-[3px] bg-gradient-to-br from-pink-500 via-purple-400 to-cyan-400">
+                    <Avatar className="h-full w-full border-2 border-white/90 shadow-inner">
+                      <AvatarImage src={profile?.avatar_url || ""} alt={profile?.first_name || "User"} className="object-cover" />
+                      <AvatarFallback className="bg-gradient-to-br from-slate-100 to-slate-200 text-slate-600 font-semibold text-xl">
+                        {profile?.first_name && profile?.last_name 
+                          ? `${profile.first_name[0]}${profile.last_name[0]}`.toUpperCase()
+                          : getInitials(profile?.email || "U")}
+                      </AvatarFallback>
+                    </Avatar>
+                  </div>
+                  {/* Online indicator */}
+                  <span className="absolute bottom-0.5 right-0.5 h-4 w-4 bg-emerald-400 rounded-full border-[3px] border-white shadow-md"></span>
+                </div>
+                
+                {/* User info */}
+                <div className="mt-4 text-center space-y-2">
+                  <h3 className="text-lg font-semibold text-white tracking-tight">
                     {profile?.first_name && profile?.last_name 
-                      ? `${profile.first_name[0]}${profile.last_name[0]}`.toUpperCase()
-                      : getInitials(profile?.email || "U")}
-                  </AvatarFallback>
-                </Avatar>
+                      ? `${profile.first_name} ${profile.last_name}`
+                      : profile?.email?.split("@")[0] || "User"}
+                  </h3>
+                  
+                  {/* Role badge - modern pill style */}
+                  <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/10 border border-white/20">
+                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                    <span className="text-xs font-medium text-white/90 uppercase tracking-wide">
+                      {profile?.unicorn_role || "User"}
+                    </span>
+                  </div>
+                </div>
               </div>
-              <span className="absolute bottom-1 right-1 h-4 w-4 bg-green-500 rounded-full border-2 border-white"></span>
-            </div>
-            
-            {/* User name */}
-            <span className="text-xl font-semibold text-white mb-2">
-              {profile?.first_name && profile?.last_name 
-                ? `${profile.first_name} ${profile.last_name}`
-                : profile?.email?.split("@")[0] || "User"}
-            </span>
-            
-            {/* Role badge */}
-            <Badge
-              className="px-4 py-1.5 mb-5 rounded-full border-2 border-emerald-400/50 bg-emerald-500/20"
-              style={{
-                color: "#6ee7b7",
-                fontWeight: "500",
-                fontSize: "12px",
-              }}
-            >
-              {profile?.unicorn_role || "User"}
-            </Badge>
-            
-            {/* Home icon */}
-            <div className="h-10 w-10 rounded-full bg-white/10 flex items-center justify-center">
-              <Home className="h-5 w-5 text-white/70" />
+              
+              {/* Quick stats / actions */}
+              <div className="mt-5 pt-4 border-t border-white/10 flex justify-center gap-3">
+                <Link 
+                  to="/profile" 
+                  className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 transition-all duration-200 text-white/80 hover:text-white text-xs font-medium"
+                >
+                  <Home className="h-3.5 w-3.5" />
+                  <span>Profile</span>
+                </Link>
+                <Link 
+                  to="/settings" 
+                  className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 transition-all duration-200 text-white/80 hover:text-white text-xs font-medium"
+                >
+                  <Settings className="h-3.5 w-3.5" />
+                  <span>Settings</span>
+                </Link>
+              </div>
             </div>
           </div>
         ) : (
