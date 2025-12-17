@@ -20,7 +20,7 @@ export const NotificationDropdown = () => {
         <Button
           variant="outline"
           size="icon"
-          className="relative bg-transparent border-white/20 hover:bg-transparent hover:border-white/30 rounded-full h-9 w-9"
+          className="relative bg-transparent border border-border hover:bg-transparent hover:border-border/80 rounded-full h-9 w-9"
         >
           <Bell className="w-4 h-4 text-foreground" />
           {unreadCount > 0 && (
