@@ -81,45 +81,35 @@ interface DashboardStatsProps {
 }
 
 export const DashboardStats = ({ stats, activities = [] }: DashboardStatsProps) => {
-  // Fetch task-specific stats
-  const { data: taskStats } = useQuery({
-    queryKey: ["dashboard-task-stats"],
+  // Fetch overall app stats
+  const { data: appStats } = useQuery({
+    queryKey: ["dashboard-app-stats"],
     queryFn: async () => {
-      const today = new Date().toISOString().split('T')[0];
-      const weekAgo = new Date();
-      weekAgo.setDate(weekAgo.getDate() - 7);
-      const weekAgoStr = weekAgo.toISOString().split('T')[0];
-
-      // Total pending tasks
-      const { count: pendingCount } = await supabase
-        .from("tasks_tenants")
-        .select("*", { count: "exact", head: true })
-        .neq("status", "completed");
-
-      // Overdue tasks
-      const { count: overdueCount } = await supabase
-        .from("tasks_tenants")
-        .select("*", { count: "exact", head: true })
-        .lt("due_date", today)
-        .neq("status", "completed");
-
-      // Completed this week
-      const { count: completedCount } = await supabase
-        .from("tasks_tenants")
-        .select("*", { count: "exact", head: true })
-        .eq("status", "completed")
-        .gte("updated_at", weekAgoStr);
-
-      // Total clients
+      // Total clients/tenants
       const { count: clientsCount } = await supabase
         .from("tenants")
         .select("*", { count: "exact", head: true });
 
+      // Total packages
+      const { count: packagesCount } = await supabase
+        .from("packages")
+        .select("*", { count: "exact", head: true });
+
+      // Total users
+      const { count: usersCount } = await supabase
+        .from("users")
+        .select("*", { count: "exact", head: true });
+
+      // Total documents
+      const { count: documentsCount } = await supabase
+        .from("documents")
+        .select("*", { count: "exact", head: true });
+
       return {
-        pending: pendingCount || 0,
-        overdue: overdueCount || 0,
-        completedThisWeek: completedCount || 0,
         totalClients: clientsCount || 0,
+        totalPackages: packagesCount || 0,
+        totalUsers: usersCount || 0,
+        totalDocuments: documentsCount || 0,
       };
     },
   });
@@ -129,32 +119,32 @@ export const DashboardStats = ({ stats, activities = [] }: DashboardStatsProps) 
       {/* Top Stats Row - 4 cards */}
       <div className="grid grid-cols-4 gap-4">
         <StatCard
-          title="Total Tasks"
-          value={taskStats?.pending || 0}
-          subtitle="In progress & pending"
-          icon={<FileText className="h-6 w-6" />}
-          color="blue"
-        />
-        <StatCard
-          title="Overdue Tasks"
-          value={taskStats?.overdue || 0}
-          subtitle="Needs attention"
-          icon={<AlertTriangle className="h-6 w-6" />}
-          color="red"
-        />
-        <StatCard
-          title="Completed"
-          value={taskStats?.completedThisWeek || 0}
-          subtitle="This week"
-          icon={<CheckCircle2 className="h-6 w-6" />}
-          color="green"
-        />
-        <StatCard
           title="Total Clients"
-          value={taskStats?.totalClients || stats.totalClients}
+          value={appStats?.totalClients || stats.totalClients}
           subtitle="All tenants"
           icon={<Users className="h-6 w-6" />}
           color="purple"
+        />
+        <StatCard
+          title="Packages"
+          value={appStats?.totalPackages || stats.activePackages}
+          subtitle="Active packages"
+          icon={<CheckCircle2 className="h-6 w-6" />}
+          color="blue"
+        />
+        <StatCard
+          title="Team Members"
+          value={appStats?.totalUsers || stats.totalUsers}
+          subtitle="All users"
+          icon={<Users className="h-6 w-6" />}
+          color="green"
+        />
+        <StatCard
+          title="Documents"
+          value={appStats?.totalDocuments || stats.documentsCount}
+          subtitle="Total documents"
+          icon={<FileText className="h-6 w-6" />}
+          color="orange"
         />
       </div>
       
