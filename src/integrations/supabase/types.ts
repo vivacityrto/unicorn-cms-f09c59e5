@@ -6316,6 +6316,33 @@ export type Database = {
           },
         ]
       }
+      user_timezone: {
+        Row: {
+          created_at: string
+          id: string
+          realtime_display: Json
+          timezone: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          realtime_display?: Json
+          timezone?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          realtime_display?: Json
+          timezone?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       users: {
         Row: {
           abn: string | null
