@@ -28,8 +28,10 @@ import {
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
-import { Users, UserCheck, UserX, Search, ArrowUpDown, Edit, Trash2, UserX as UserXIcon, Save, UserPlus, Building2, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Users, UserCheck, UserX, Search, ArrowUpDown, Edit, Trash2, UserX as UserXIcon, Save, UserPlus, Building2, ChevronLeft, ChevronRight, Filter, UsersRound, UserMinus } from 'lucide-react';
 import { Combobox } from '@/components/ui/combobox';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { cn } from '@/lib/utils';
 import {
   Pagination,
   PaginationContent,
@@ -102,6 +104,36 @@ export default function ManageUsers() {
   const isTeamLeader = profile?.unicorn_role === 'Team Leader';
   const isAdmin = profile?.unicorn_role === 'Admin';
   const [isAdminInviteDialogOpen, setIsAdminInviteDialogOpen] = useState(false);
+  const [filterSearchQuery, setFilterSearchQuery] = useState('');
+
+  const filterOptions = [
+    { value: 'all', label: 'All Types', icon: Filter, color: '' },
+    { value: 'Vivacity Team', label: 'Vivacity Team', icon: Building2, color: 'text-purple-600' },
+    { value: 'Client Parent', label: 'Client Parent', icon: UsersRound, color: 'text-blue-600' },
+    { value: 'Client Child', label: 'Client Child', icon: Users, color: 'text-cyan-600' },
+    { value: 'active', label: 'Active', icon: UserCheck, color: 'text-green-600' },
+    { value: 'inactive', label: 'Inactive', icon: UserMinus, color: 'text-red-600' }
+  ];
+
+  const filteredFilterOptions = filterOptions.filter(option => 
+    option.label.toLowerCase().includes(filterSearchQuery.toLowerCase())
+  );
+
+  const getCurrentFilterLabel = () => {
+    if (statusFilter !== 'all') {
+      return filterOptions.find(o => o.value === statusFilter)?.label || 'All Types';
+    }
+    if (userTypeFilter !== 'all') {
+      return filterOptions.find(o => o.value === userTypeFilter)?.label || 'All Types';
+    }
+    return 'All Types';
+  };
+
+  const getCurrentFilterValue = () => {
+    if (statusFilter !== 'all') return statusFilter;
+    if (userTypeFilter !== 'all') return userTypeFilter;
+    return 'all';
+  };
 
   useEffect(() => {
     fetchUsers();
@@ -643,31 +675,60 @@ export default function ManageUsers() {
           />
         </div>
 
-        <Combobox
-          options={[
-            { value: 'all', label: 'All Types' },
-            { value: 'Vivacity Team', label: 'Vivacity Team' },
-            { value: 'Client Parent', label: 'Client Parent' },
-            { value: 'Client Child', label: 'Client Child' },
-            { value: 'active', label: 'Active' },
-            { value: 'inactive', label: 'Inactive' }
-          ]}
-          value={userTypeFilter === 'all' && statusFilter === 'all' ? 'all' : 
-                 statusFilter !== 'all' ? statusFilter : userTypeFilter}
-          onValueChange={(value) => {
-            if (value === 'active' || value === 'inactive') {
-              setStatusFilter(value);
-              setUserTypeFilter('all');
-            } else {
-              setUserTypeFilter(value);
-              setStatusFilter('all');
-            }
-          }}
-          placeholder="Filter by type or status..."
-          searchPlaceholder="Search filters..."
-          emptyText="No filters found."
-          className="w-full md:w-[220px] h-[48px]"
-        />
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button variant="outline" className="w-full md:w-[220px] h-12 bg-card border-border/50 hover:bg-muted hover:border-primary/30 font-semibold rounded-lg shadow-sm justify-between">
+              <span className="text-foreground">{getCurrentFilterLabel()}</span>
+              <ArrowUpDown className="ml-2 h-4 w-4 text-muted-foreground/60" />
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="p-2 min-w-[220px] rounded-lg shadow-lg border-border/50 bg-popover z-50" align="start">
+            <div className="relative mb-2">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input 
+                placeholder="Search..." 
+                value={filterSearchQuery} 
+                onChange={e => setFilterSearchQuery(e.target.value)} 
+                className="pl-9 h-9 text-sm rounded-md" 
+              />
+            </div>
+            <div className="max-h-[200px] overflow-y-auto">
+              {filteredFilterOptions.map((option, index) => {
+                const Icon = option.icon;
+                const isSelected = getCurrentFilterValue() === option.value;
+                return (
+                  <div key={option.value}>
+                    <div 
+                      className={cn(
+                        "px-4 py-2.5 text-sm font-medium cursor-pointer rounded-md transition-all flex items-center gap-2",
+                        isSelected ? "bg-primary/10 text-primary" : "text-foreground hover:bg-muted"
+                      )} 
+                      onClick={() => {
+                        if (option.value === 'active' || option.value === 'inactive') {
+                          setStatusFilter(option.value);
+                          setUserTypeFilter('all');
+                        } else {
+                          setUserTypeFilter(option.value);
+                          setStatusFilter('all');
+                        }
+                        setFilterSearchQuery("");
+                      }}
+                    >
+                      {Icon && <Icon className={cn("h-4 w-4", option.color)} />}
+                      {option.label}
+                    </div>
+                    {index < filteredFilterOptions.length - 1 && (
+                      <div className="mx-2 my-1 border-b border-border/50" />
+                    )}
+                  </div>
+                );
+              })}
+              {filteredFilterOptions.length === 0 && filterSearchQuery && (
+                <p className="text-xs text-muted-foreground text-center py-2">No filters found</p>
+              )}
+            </div>
+          </PopoverContent>
+        </Popover>
       </div>
 
       {/* Users Table */}
