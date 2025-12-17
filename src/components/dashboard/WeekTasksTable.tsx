@@ -30,10 +30,17 @@ interface OverdueTask {
 }
 
 export const WeekTasksTable = () => {
-  const { data: tasks = [], isLoading } = useQuery({
+  const { data: queryResult, isLoading } = useQuery({
     queryKey: ["dashboard-overdue-tasks"],
     queryFn: async () => {
       const today = new Date().toISOString().split('T')[0];
+
+      // Get total count of overdue tasks
+      const { count: totalCount } = await supabase
+        .from("tasks_tenants")
+        .select("*", { count: "exact", head: true })
+        .lt("due_date", today)
+        .neq("status", "completed");
 
       const { data, error } = await supabase
         .from("tasks_tenants")
@@ -67,7 +74,7 @@ export const WeekTasksTable = () => {
         followerUsers = usersData || [];
       }
 
-      return (data || []).map((task: any) => ({
+      const tasks = (data || []).map((task: any) => ({
         id: task.id,
         task_name: task.task_name,
         description: task.description,
@@ -80,8 +87,13 @@ export const WeekTasksTable = () => {
           followerUsers.find(u => u.user_uuid === fid)
         ).filter(Boolean),
       }));
+
+      return { tasks, totalCount: totalCount || 0 };
     },
   });
+
+  const tasks = queryResult?.tasks || [];
+  const totalCount = queryResult?.totalCount || 0;
 
   const getStatusBadge = (status: string | null, dueDate: string | null) => {
     const isOverdue = dueDate && isPast(new Date(dueDate)) && status !== "completed";
@@ -155,7 +167,7 @@ export const WeekTasksTable = () => {
           to="/tasks" 
           className="text-sm text-primary hover:text-primary/80 transition-colors"
         >
-          View More ({tasks.length})
+          View More ({totalCount})
         </Link>
       </CardHeader>
       <CardContent className="p-0">
