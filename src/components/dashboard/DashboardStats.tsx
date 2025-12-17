@@ -1,3 +1,4 @@
+import * as React from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Users, Package, FileText, CheckCircle2, Clock, TrendingUp, Building2, AlertCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
