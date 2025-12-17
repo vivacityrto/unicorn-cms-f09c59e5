@@ -169,9 +169,9 @@ export const DashboardStats = ({ stats, activities = [] }: DashboardStatsProps) 
               <CardTitle className="text-lg font-semibold">Recent Activity</CardTitle>
             </CardHeader>
             <CardContent className="p-0 px-4 pb-4">
-              <ScrollArea className="h-[280px]">
+              <ScrollArea className="h-[300px]">
                 <div className="space-y-3">
-                  {activities.length > 0 ? activities.slice(0, 8).map((activity) => (
+                  {activities.length > 0 ? activities.slice(0, 5).map((activity) => (
                     <div key={activity.id} className="flex gap-3 items-start p-2 rounded-lg hover:bg-muted/50 transition-colors">
                       <div className={`p-1.5 rounded-lg shrink-0 ${activityColors[activity.type]}`}>
                         <FileText className="h-3 w-3" />
