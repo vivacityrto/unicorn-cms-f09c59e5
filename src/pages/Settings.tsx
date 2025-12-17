@@ -400,13 +400,15 @@ export default function Settings() {
                             value={tz.value} 
                             className="cursor-pointer data-[state=checked]:bg-transparent focus:bg-transparent data-[state=checked]:text-foreground"
                           >
-                            <div className="flex items-center justify-between w-full">
+                            <div className="flex items-center justify-between w-full gap-4">
                               <div className="flex items-center gap-2 text-foreground">
                                 <MapPin className="h-4 w-4 text-foreground" />
                                 <span className="text-foreground">{tz.label}</span>
                               </div>
                               {formData.timezone === tz.value && (
-                                <Check className="h-4 w-4 text-green-500 ml-2" />
+                                <span className="ml-auto flex items-center gap-1 rounded-full bg-green-500/10 px-2 py-0.5 text-xs font-medium text-green-600 border border-green-500/20">
+                                  <Check className="h-3 w-3" />
+                                </span>
                               )}
                             </div>
                           </SelectItem>
