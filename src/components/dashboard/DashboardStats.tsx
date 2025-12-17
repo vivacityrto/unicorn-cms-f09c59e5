@@ -115,7 +115,7 @@ export const DashboardStats = ({ stats, activities = [] }: DashboardStatsProps) 
   });
 
   return (
-    <div className="grid grid-cols-4 gap-4">
+    <div className="grid grid-cols-4 gap-4 pb-6">
       {/* Left side: Stats + Overdue Tasks */}
       <div className="col-span-3 space-y-6">
         {/* Top Stats Row - 3 stat cards */}
