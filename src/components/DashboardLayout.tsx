@@ -685,7 +685,8 @@ export const DashboardLayout = ({ children }: { children: React.ReactNode }) => 
 
           <div className="flex items-center gap-4">
             {/* Real-time Australian Clock */}
-            <div className="text-sm font-medium text-muted-foreground tabular-nums">
+            <div className="flex items-center gap-1.5 text-xs text-muted-foreground tabular-nums">
+              <Calendar className="h-3.5 w-3.5" />
               {currentTime}
             </div>
 
