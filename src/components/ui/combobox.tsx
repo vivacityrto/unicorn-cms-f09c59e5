@@ -60,7 +60,7 @@ export function Combobox({
   disabled = false,
   showColorDots = false,
   hideCheck = false,
-  showAvatar = true,
+  showAvatar = false,
   showCreatedAt = false,
   autoWidth = false,
 }: ComboboxProps) {
