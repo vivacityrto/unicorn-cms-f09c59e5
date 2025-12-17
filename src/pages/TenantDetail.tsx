@@ -827,23 +827,25 @@ export default function TenantDetail() {
               </div>
             </Card>
 
-            {/* Quick Note */}
-            <Card className="border-0 shadow-lg overflow-hidden">
-              <div className="bg-muted/30 px-6 h-14 border-b border-border/50 flex items-center justify-between">
-                <h2 className="font-semibold text-foreground">Quick Note</h2>
-                <Button variant="link" className="text-primary text-sm p-0 h-auto" onClick={() => navigate(`/tenant/${tenantId}/notes`)}>
-                  View All
-                </Button>
-              </div>
-              
-              <div className="p-6">
-                <Textarea placeholder="Write a message..." value={newNote} onChange={e => setNewNote(e.target.value)} className="min-h-[100px] mb-4 text-sm border-border/40 focus:border-primary/50 transition-colors" />
-                <Button onClick={handleAddNote} disabled={!newNote.trim() || loading} className="w-full gap-2">
-                  <Plus className="h-4 w-4" />
-                  Add Note
-                </Button>
-              </div>
-            </Card>
+            {/* Quick Note - Hidden for Admin/User roles */}
+            {!isAdminOrUser && (
+              <Card className="border-0 shadow-lg overflow-hidden">
+                <div className="bg-muted/30 px-6 h-14 border-b border-border/50 flex items-center justify-between">
+                  <h2 className="font-semibold text-foreground">Quick Note</h2>
+                  <Button variant="link" className="text-primary text-sm p-0 h-auto" onClick={() => navigate(`/tenant/${tenantId}/notes`)}>
+                    View All
+                  </Button>
+                </div>
+                
+                <div className="p-6">
+                  <Textarea placeholder="Write a message..." value={newNote} onChange={e => setNewNote(e.target.value)} className="min-h-[100px] mb-4 text-sm border-border/40 focus:border-primary/50 transition-colors" />
+                  <Button onClick={handleAddNote} disabled={!newNote.trim() || loading} className="w-full gap-2">
+                    <Plus className="h-4 w-4" />
+                    Add Note
+                  </Button>
+                </div>
+              </Card>
+            )}
           </div>
         </div>
       </div>
