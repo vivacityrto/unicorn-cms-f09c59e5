@@ -3,10 +3,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { CalendarDays, CheckCircle2, Clock, AlertTriangle } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Clock } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { isPast, startOfWeek } from "date-fns";
+import { isPast } from "date-fns";
 import { Skeleton } from "@/components/ui/skeleton";
 
 interface FollowerUser {
@@ -16,7 +16,7 @@ interface FollowerUser {
   avatar_url: string | null;
 }
 
-interface WeekTask {
+interface OverdueTask {
   id: string;
   task_name: string;
   description: string | null;
@@ -30,12 +30,9 @@ interface WeekTask {
 
 export const WeekTasksTable = () => {
   const { data: tasks = [], isLoading } = useQuery({
-    queryKey: ["dashboard-week-tasks"],
+    queryKey: ["dashboard-overdue-tasks"],
     queryFn: async () => {
-      const now = new Date();
-      const weekStart = startOfWeek(now, { weekStartsOn: 1 });
-      const weekEnd = new Date(weekStart);
-      weekEnd.setDate(weekEnd.getDate() + 7);
+      const today = new Date().toISOString().split('T')[0];
 
       const { data, error } = await supabase
         .from("tasks_tenants")
@@ -49,8 +46,7 @@ export const WeekTasksTable = () => {
           followers,
           tenants (name)
         `)
-        .gte("due_date", weekStart.toISOString().split('T')[0])
-        .lte("due_date", weekEnd.toISOString().split('T')[0])
+        .lt("due_date", today)
         .neq("status", "completed")
         .order("due_date", { ascending: true })
         .limit(8);
@@ -132,8 +128,8 @@ export const WeekTasksTable = () => {
       <Card className="border-0 shadow-lg h-full">
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2 text-lg">
-            <CalendarDays className="h-5 w-5 text-primary" />
-            Week Tasks
+            <AlertTriangle className="h-5 w-5 text-red-500" />
+            Overdue Tasks
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -151,15 +147,15 @@ export const WeekTasksTable = () => {
     <Card className="border-0 shadow-lg h-full">
       <CardHeader className="pb-3">
         <CardTitle className="flex items-center gap-2 text-lg">
-          <CalendarDays className="h-5 w-5 text-primary" />
-          Week Tasks
+          <AlertTriangle className="h-5 w-5 text-red-500" />
+          Overdue Tasks
         </CardTitle>
       </CardHeader>
       <CardContent className="p-0">
         {tasks.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-8 text-center px-6">
             <CheckCircle2 className="h-10 w-10 text-green-500/50 mb-2" />
-            <p className="text-sm text-muted-foreground">No pending tasks this week</p>
+            <p className="text-sm text-muted-foreground">No overdue tasks</p>
           </div>
         ) : (
           <Table>
@@ -187,9 +183,9 @@ export const WeekTasksTable = () => {
                     <div className="flex items-center gap-1">
                       {task.follower_users && task.follower_users.length > 0 ? (
                         task.follower_users.slice(0, 3).map((follower) => (
-                          <Avatar key={follower.user_uuid} className="h-7 w-7 border border-background">
+                          <Avatar key={follower.user_uuid} className="h-8 w-8 border border-background">
                             {follower.avatar_url && <AvatarImage src={follower.avatar_url} />}
-                            <AvatarFallback className="text-[10px] bg-primary/10 text-primary">
+                            <AvatarFallback className="text-[11px] bg-primary/10 text-primary">
                               {follower.first_name?.[0]}{follower.last_name?.[0]}
                             </AvatarFallback>
                           </Avatar>
