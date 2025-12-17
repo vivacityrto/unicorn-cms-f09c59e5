@@ -543,7 +543,7 @@ export const DashboardLayout = ({
                   <Link to="/settings?tab=security">
                     <DropdownMenuItem className="cursor-pointer">
                       <User className="mr-2 h-4 w-4" />
-                      <span>My Profile</span>
+                      <span>Profile</span>
                     </DropdownMenuItem>
                   </Link>
                   <DropdownMenuSeparator />
