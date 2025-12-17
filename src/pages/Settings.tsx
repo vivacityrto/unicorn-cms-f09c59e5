@@ -386,7 +386,7 @@ export default function Settings() {
                       <SelectValue placeholder="Select timezone">
                         {formData.timezone && (
                           <div className="flex items-center gap-2">
-                            <MapPin className="h-4 w-4 text-[hsl(188_74%_51%)]" />
+                            <MapPin className="h-4 w-4" />
                             <span>{TIMEZONES.find(tz => tz.value === formData.timezone)?.label}</span>
                           </div>
                         )}
@@ -397,7 +397,7 @@ export default function Settings() {
                         <div key={tz.value}>
                           <SelectItem value={tz.value} className="cursor-pointer">
                             <div className="flex items-center gap-2">
-                              <MapPin className="h-4 w-4 text-[hsl(188_74%_51%)]" />
+                              <MapPin className="h-4 w-4" />
                               <span>{tz.label}</span>
                             </div>
                           </SelectItem>
