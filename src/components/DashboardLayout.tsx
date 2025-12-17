@@ -674,7 +674,7 @@ export const DashboardLayout = ({ children }: { children: React.ReactNode }) => 
                     className="group bg-white transition-all duration-200 hover:bg-white hover:scale-105 hover:shadow-md"
                     style={{ boxShadow: 'rgba(0, 0, 0, 0.02) 0px 1px 3px 0px, rgba(27, 31, 35, 0.15) 0px 0px 0px 1px' }}
                   >
-                    <Settings className="h-4 w-4 text-foreground transition-transform duration-500 group-hover:rotate-90" />
+                    <Settings className="h-4 w-4 text-foreground animate-[spin_3s_linear_infinite]" />
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-56">
@@ -703,7 +703,7 @@ export const DashboardLayout = ({ children }: { children: React.ReactNode }) => 
                     className="group bg-white transition-all duration-200 hover:bg-white hover:scale-105 hover:shadow-md"
                     style={{ boxShadow: 'rgba(0, 0, 0, 0.02) 0px 1px 3px 0px, rgba(27, 31, 35, 0.15) 0px 0px 0px 1px' }}
                   >
-                    <Settings className="h-4 w-4 text-foreground transition-transform duration-500 group-hover:rotate-90" />
+                    <Settings className="h-4 w-4 text-foreground animate-[spin_3s_linear_infinite]" />
                   </Button>
                 </DropdownMenuTrigger>
 
