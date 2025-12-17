@@ -669,12 +669,12 @@ export const DashboardLayout = ({ children }: { children: React.ReactNode }) => 
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button
-                    variant="outline"
-                    size="sm"
-                    className="bg-transparent border-white/20 text-foreground hover:bg-transparent hover:border-white/20 hover:text-black gap-2"
+                    variant="ghost"
+                    size="icon"
+                    className="bg-white hover:bg-white/90"
+                    style={{ boxShadow: 'rgba(0, 0, 0, 0.02) 0px 1px 3px 0px, rgba(27, 31, 35, 0.15) 0px 0px 0px 1px' }}
                   >
                     <Settings className="h-4 w-4" />
-                    Settings
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-56">
@@ -698,12 +698,12 @@ export const DashboardLayout = ({ children }: { children: React.ReactNode }) => 
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button
-                    variant="outline"
-                    size="sm"
-                    className="bg-transparent border-white/20 text-foreground hover:bg-transparent hover:border-white/20 hover:text-black gap-2"
+                    variant="ghost"
+                    size="icon"
+                    className="bg-white hover:bg-white/90"
+                    style={{ boxShadow: 'rgba(0, 0, 0, 0.02) 0px 1px 3px 0px, rgba(27, 31, 35, 0.15) 0px 0px 0px 1px' }}
                   >
                     <Settings className="h-4 w-4" />
-                    Settings
                   </Button>
                 </DropdownMenuTrigger>
 
