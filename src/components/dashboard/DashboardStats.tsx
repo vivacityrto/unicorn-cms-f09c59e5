@@ -115,70 +115,71 @@ export const DashboardStats = ({ stats, activities = [] }: DashboardStatsProps) 
   });
 
   return (
-    <div className="space-y-6">
-      {/* Top Stats Row - 3 stat cards */}
-      <div className="grid grid-cols-3 gap-4">
-        <StatCard
-          title="Total Clients"
-          value={appStats?.totalClients || stats.totalClients}
-          subtitle="All tenants"
-          icon={<Users className="h-6 w-6" />}
-          color="purple"
-        />
-        <StatCard
-          title="Packages"
-          value={appStats?.totalPackages || stats.activePackages}
-          subtitle="Active packages"
-          icon={<CheckCircle2 className="h-6 w-6" />}
-          color="blue"
-        />
-        <StatCard
-          title="Team Members"
-          value={appStats?.totalUsers || stats.totalUsers}
-          subtitle="All users"
-          icon={<Users className="h-6 w-6" />}
-          color="green"
-        />
+    <div className="grid grid-cols-4 gap-4">
+      {/* Left column - Stats + Overdue Tasks */}
+      <div className="col-span-3 space-y-4">
+        {/* Top Stats Row - 3 stat cards */}
+        <div className="grid grid-cols-3 gap-4">
+          <StatCard
+            title="Total Clients"
+            value={appStats?.totalClients || stats.totalClients}
+            subtitle="All tenants"
+            icon={<Users className="h-6 w-6" />}
+            color="purple"
+          />
+          <StatCard
+            title="Packages"
+            value={appStats?.totalPackages || stats.activePackages}
+            subtitle="Active packages"
+            icon={<CheckCircle2 className="h-6 w-6" />}
+            color="blue"
+          />
+          <StatCard
+            title="Team Members"
+            value={appStats?.totalUsers || stats.totalUsers}
+            subtitle="All users"
+            icon={<Users className="h-6 w-6" />}
+            color="green"
+          />
+        </div>
+        
+        {/* Overdue Tasks Table */}
+        <WeekTasksTable />
       </div>
       
-      {/* Overdue Tasks Table + Recent Activity side by side */}
-      <div className="grid grid-cols-4 gap-4">
-        <div className="col-span-3">
-          <WeekTasksTable />
-        </div>
-        <div className="col-span-1">
-          <Card className="border-0 shadow-lg h-full">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-lg font-semibold">Recent Activity</CardTitle>
-            </CardHeader>
-            <CardContent className="p-0 px-4 pb-4">
-              <ScrollArea className="h-[280px]">
-                <div className="space-y-3">
-                  {activities.length > 0 ? activities.slice(0, 8).map((activity) => (
-                    <div key={activity.id} className="flex gap-3 items-start p-2 rounded-lg hover:bg-muted/50 transition-colors">
-                      <div className={`p-1.5 rounded-lg shrink-0 ${activityColors[activity.type]}`}>
-                        <FileText className="h-3 w-3" />
-                      </div>
-                      <div className="flex-1 min-w-0 space-y-0.5">
-                        <p className="text-sm font-medium truncate">{activity.title}</p>
-                        <p className="text-xs text-muted-foreground truncate">{activity.description}</p>
-                        <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
-                          <Clock className="h-2.5 w-2.5" />
-                          {formatDistanceToNow(activity.timestamp, { addSuffix: true })}
-                        </div>
+      {/* Right column - Recent Activity */}
+      <div className="col-span-1">
+        <Card className="border-0 shadow-lg h-full">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-lg font-semibold">Recent Activity</CardTitle>
+          </CardHeader>
+          <CardContent className="p-0 px-4 pb-4">
+            <ScrollArea className="h-[400px]">
+              <div className="space-y-3">
+                {activities.length > 0 ? activities.slice(0, 10).map((activity) => (
+                  <div key={activity.id} className="flex gap-3 items-start p-2 rounded-lg hover:bg-muted/50 transition-colors">
+                    <div className={`p-1.5 rounded-lg shrink-0 ${activityColors[activity.type]}`}>
+                      <FileText className="h-3 w-3" />
+                    </div>
+                    <div className="flex-1 min-w-0 space-y-0.5">
+                      <p className="text-sm font-medium truncate">{activity.title}</p>
+                      <p className="text-xs text-muted-foreground truncate">{activity.description}</p>
+                      <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
+                        <Clock className="h-2.5 w-2.5" />
+                        {formatDistanceToNow(activity.timestamp, { addSuffix: true })}
                       </div>
                     </div>
-                  )) : (
-                    <div className="flex flex-col items-center justify-center py-8 text-center">
-                      <Clock className="h-8 w-8 text-muted-foreground/50 mb-2" />
-                      <p className="text-sm text-muted-foreground">No recent activity</p>
-                    </div>
-                  )}
-                </div>
-              </ScrollArea>
-            </CardContent>
-          </Card>
-        </div>
+                  </div>
+                )) : (
+                  <div className="flex flex-col items-center justify-center py-8 text-center">
+                    <Clock className="h-8 w-8 text-muted-foreground/50 mb-2" />
+                    <p className="text-sm text-muted-foreground">No recent activity</p>
+                  </div>
+                )}
+              </div>
+            </ScrollArea>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
