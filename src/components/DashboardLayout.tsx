@@ -623,7 +623,7 @@ export const DashboardLayout = ({ children }: { children: React.ReactNode }) => 
                   <Button
                     variant="outline"
                     size="sm"
-                    className="bg-transparent border-white/20 text-foreground hover:bg-transparent hover:border-white/20 gap-2"
+                    className="bg-transparent border-white/20 text-foreground hover:bg-transparent hover:border-white/20 hover:text-black gap-2"
                   >
                     <Settings className="h-4 w-4" />
                     Settings
