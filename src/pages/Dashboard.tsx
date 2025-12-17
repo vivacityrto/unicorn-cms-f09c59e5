@@ -29,7 +29,7 @@ const Dashboard = () => {
   if (isSuperAdmin || isTeamLeader) {
     return (
       <DashboardLayout>
-        <div className="space-y-8">
+        <div className="p-6 space-y-6 w-full">
           {/* Header */}
           <div className="flex items-center justify-between">
             <div>
