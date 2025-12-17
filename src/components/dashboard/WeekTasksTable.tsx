@@ -8,6 +8,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { isPast } from "date-fns";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Link } from "react-router-dom";
 
 interface FollowerUser {
   user_uuid: string;
@@ -145,11 +146,17 @@ export const WeekTasksTable = () => {
 
   return (
     <Card className="border-0 shadow-lg h-full">
-      <CardHeader className="pb-3">
+      <CardHeader className="pb-3 flex flex-row items-center justify-between">
         <CardTitle className="flex items-center gap-2 text-lg">
           <AlertTriangle className="h-5 w-5 text-red-500" />
           Overdue Tasks
         </CardTitle>
+        <Link 
+          to="/tasks" 
+          className="text-sm text-muted-foreground hover:text-primary transition-colors"
+        >
+          View More ({tasks.length})
+        </Link>
       </CardHeader>
       <CardContent className="p-0">
         {tasks.length === 0 ? (
