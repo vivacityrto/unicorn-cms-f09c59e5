@@ -61,14 +61,14 @@ interface DashboardStatsProps {
 
 export const DashboardStats = ({ stats }: DashboardStatsProps) => {
   return (
-    <div className="flex gap-4">
-      {/* Week Tasks Table */}
-      <div className="flex-1 min-w-0">
+    <div className="grid grid-cols-4 gap-4">
+      {/* Week Tasks Table - spans 3 columns */}
+      <div className="col-span-3">
         <WeekTasksTable />
       </div>
       
-      {/* 4 stat cards in 2x2 grid */}
-      <div className="grid grid-cols-2 gap-3 w-[320px] shrink-0">
+      {/* 4 stat cards stacked in 1 column */}
+      <div className="col-span-1 grid grid-rows-4 gap-3">
         <StatCard
           title="Team Members"
           value={stats.totalUsers}
