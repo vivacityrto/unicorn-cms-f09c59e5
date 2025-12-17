@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -95,6 +96,8 @@ export default function TenantDetail() {
   const {
     toast
   } = useToast();
+  const { profile } = useAuth();
+  const isAdminOrUser = profile?.unicorn_role === "Admin" || profile?.unicorn_role === "User";
 
   // Fetch tenant packages on mount
   useEffect(() => {
@@ -436,10 +439,13 @@ export default function TenantDetail() {
 
       {/* Status Badge */}
       <div className="px-6 mb-2 flex justify-between items-center">
-        <Badge variant="default" className="bg-blue-500/10 text-blue-600 hover:bg-blue-500/20 border border-blue-600 text-[0.75rem] py-[2px] px-[0.625rem] rounded-[11px] cursor-pointer">
-          <Eye className="mr-1 h-3 w-3" />
-          View as Client
-        </Badge>
+        {!isAdminOrUser && (
+          <Badge variant="default" className="bg-blue-500/10 text-blue-600 hover:bg-blue-500/20 border border-blue-600 text-[0.75rem] py-[2px] px-[0.625rem] rounded-[11px] cursor-pointer">
+            <Eye className="mr-1 h-3 w-3" />
+            View as Client
+          </Badge>
+        )}
+        {isAdminOrUser && <div />}
         <Badge variant={tenantStatus === "active" ? "default" : "destructive"} className={tenantStatus === "active" ? "bg-green-500/20 text-green-600 hover:bg-green-500/30 border border-green-600 text-[0.75rem] py-[2px] px-[0.625rem] rounded-[11px]" : "bg-red-500/20 text-red-600 hover:bg-red-500/30 border border-red-600 text-[0.75rem] py-[2px] px-[0.625rem] rounded-[11px]"}>
           {tenantStatus === "active" ? <CheckCircle2 className="mr-1 h-3 w-3" /> : <XCircle className="mr-1 h-3 w-3" />}
           {tenantStatus === "active" ? "Active" : "Inactive"}
