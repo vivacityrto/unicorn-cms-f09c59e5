@@ -926,9 +926,9 @@ export default function TasksManagement() {
           <Table>
             <TableHeader>
               <TableRow className="border-b-2 hover:bg-transparent">
+                <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-r border-border/50">Task</TableHead>
                 <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-r border-border/50">Client</TableHead>
                 <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-r border-border/50">Package</TableHead>
-                <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-r border-border/50">Task</TableHead>
                 <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-r border-border/50">
                   Status
                 </TableHead>
@@ -945,6 +945,13 @@ export default function TasksManagement() {
               const taskStatus = getTaskStatus(task);
               const isOverdue = taskStatus === "overdue";
               return <TableRow key={task.id} onClick={() => handleRowClick(task)} className="hover:bg-muted/50 transition-colors border-b border-border/50 cursor-pointer">
+                    <TableCell className="py-6 border-r border-border/50 min-w-[200px] whitespace-nowrap">
+                      <div className="font-semibold text-foreground pb-[10px] truncate">{task.task_name}</div>
+                      <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
+                        <User className="w-3 h-3" />
+                        <span>{task.created_by_name || "Unknown"}</span>
+                      </div>
+                    </TableCell>
                     <TableCell className="py-6 border-r border-border/50 min-w-[200px] whitespace-nowrap">
                       <div className="font-semibold text-foreground pb-[10px]">{task.tenant_name}</div>
                       <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
@@ -963,13 +970,6 @@ export default function TasksManagement() {
                           <ClipboardList className="w-3 h-3" />
                           <span>{task.package_full_text || "No Package Added"}</span>
                         </div>
-                      </div>
-                    </TableCell>
-                    <TableCell className="py-6 border-r border-border/50 min-w-[200px] whitespace-nowrap">
-                      <div className="font-semibold text-foreground pb-[10px] truncate">{task.task_name}</div>
-                      <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
-                        <User className="w-3 h-3" />
-                        <span>{task.created_by_name || "Unknown"}</span>
                       </div>
                     </TableCell>
                     <TableCell className="py-6 border-r border-border/50 text-center whitespace-nowrap">
