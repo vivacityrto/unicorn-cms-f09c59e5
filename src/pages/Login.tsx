@@ -167,12 +167,12 @@ const Login = () => {
       <div className="w-full max-w-md">
         {/* Login Form Card - Matching Settings page style */}
         <Card className="border-0 shadow-lg overflow-hidden">
-          <div className="bg-muted/30 px-6 py-4 border-b border-border/50 flex items-center justify-between">
+          <div className="bg-muted/30 px-6 h-[70px] border-b border-border/50 flex items-center justify-between">
+            <img src={unicornLogo} alt="Unicorn" className="h-12 w-auto" />
             <div className="flex items-center gap-2">
               {getHeaderIcon()}
               <h2 className="font-semibold">{getHeaderTitle()}</h2>
             </div>
-            <img src={unicornLogo} alt="Unicorn" className="h-10 w-auto" />
           </div>
           <CardContent className="p-6">
             {!showForgotPassword && !showMagicLink ? (
