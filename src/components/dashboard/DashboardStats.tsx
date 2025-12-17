@@ -116,8 +116,8 @@ export const DashboardStats = ({ stats, activities = [] }: DashboardStatsProps) 
 
   return (
     <div className="space-y-6">
-      {/* Top Stats Row - 3 stat cards + Recent Activity */}
-      <div className="grid grid-cols-4 gap-4">
+      {/* Top Stats Row - 3 stat cards */}
+      <div className="grid grid-cols-3 gap-4">
         <StatCard
           title="Total Clients"
           value={appStats?.totalClients || stats.totalClients}
@@ -139,35 +139,47 @@ export const DashboardStats = ({ stats, activities = [] }: DashboardStatsProps) 
           icon={<Users className="h-6 w-6" />}
           color="green"
         />
-        {/* Recent Activity Card */}
-        <Card className="border-0 shadow-md hover:shadow-lg transition-all duration-300">
-          <CardHeader className="pb-2 pt-4 px-5">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Recent Activity</CardTitle>
-          </CardHeader>
-          <CardContent className="p-0 px-5 pb-4">
-            <ScrollArea className="h-[72px]">
-              <div className="space-y-2">
-                {activities.length > 0 ? activities.slice(0, 3).map((activity) => (
-                  <div key={activity.id} className="flex gap-2 items-center">
-                    <div className={`p-1 rounded shrink-0 ${activityColors[activity.type]}`}>
-                      <FileText className="h-2.5 w-2.5" />
-                    </div>
-                    <p className="text-xs truncate flex-1">{activity.title}</p>
-                  </div>
-                )) : (
-                  <div className="flex items-center gap-2 text-muted-foreground">
-                    <Clock className="h-4 w-4" />
-                    <p className="text-xs">No recent activity</p>
-                  </div>
-                )}
-              </div>
-            </ScrollArea>
-          </CardContent>
-        </Card>
       </div>
       
-      {/* Overdue Tasks Table - Full Width */}
-      <WeekTasksTable />
+      {/* Overdue Tasks Table + Recent Activity side by side */}
+      <div className="grid grid-cols-4 gap-4">
+        <div className="col-span-3">
+          <WeekTasksTable />
+        </div>
+        <div className="col-span-1">
+          <Card className="border-0 shadow-lg h-full">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg font-semibold">Recent Activity</CardTitle>
+            </CardHeader>
+            <CardContent className="p-0 px-4 pb-4">
+              <ScrollArea className="h-[280px]">
+                <div className="space-y-3">
+                  {activities.length > 0 ? activities.slice(0, 8).map((activity) => (
+                    <div key={activity.id} className="flex gap-3 items-start p-2 rounded-lg hover:bg-muted/50 transition-colors">
+                      <div className={`p-1.5 rounded-lg shrink-0 ${activityColors[activity.type]}`}>
+                        <FileText className="h-3 w-3" />
+                      </div>
+                      <div className="flex-1 min-w-0 space-y-0.5">
+                        <p className="text-sm font-medium truncate">{activity.title}</p>
+                        <p className="text-xs text-muted-foreground truncate">{activity.description}</p>
+                        <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
+                          <Clock className="h-2.5 w-2.5" />
+                          {formatDistanceToNow(activity.timestamp, { addSuffix: true })}
+                        </div>
+                      </div>
+                    </div>
+                  )) : (
+                    <div className="flex flex-col items-center justify-center py-8 text-center">
+                      <Clock className="h-8 w-8 text-muted-foreground/50 mb-2" />
+                      <p className="text-sm text-muted-foreground">No recent activity</p>
+                    </div>
+                  )}
+                </div>
+              </ScrollArea>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
     </div>
   );
 };
