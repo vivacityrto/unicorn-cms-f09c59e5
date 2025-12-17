@@ -1542,30 +1542,40 @@ export default function ManageDocuments() {
           <Popover>
             <PopoverTrigger asChild>
               <Button variant="outline" className="w-full h-12 bg-card border-border/50 hover:bg-muted hover:border-primary/30 justify-between font-semibold rounded-lg shadow-sm transition-all">
-                <span className="text-foreground">
+                <span className="text-foreground truncate">
                   {categoryFilter === "all" ? "All Categories" : categories.find(c => c.id.toString() === categoryFilter)?.name || "Category"}
                 </span>
-                <ArrowUpDown className="ml-2 h-4 w-4 text-muted-foreground/60" />
+                <ArrowUpDown className="ml-2 h-4 w-4 text-muted-foreground/60 shrink-0" />
               </Button>
             </PopoverTrigger>
-            <PopoverContent className="p-2 min-w-[240px] rounded-lg shadow-lg border-border/50" align="start">
+            <PopoverContent className="p-2 min-w-[240px] rounded-lg shadow-lg border-border/50 bg-popover z-50" align="start">
               <div className="relative mb-2">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input placeholder="Search..." value={categorySearchQuery} onChange={e => setCategorySearchQuery(e.target.value)} className="pl-9 h-9 text-sm rounded-md" />
               </div>
-              <div className="max-h-[200px] overflow-y-auto space-y-1">
-                <div className={cn("px-4 py-2.5 text-sm font-medium cursor-pointer rounded-md transition-all", categoryFilter === "all" ? "bg-primary/10 text-primary" : "text-foreground hover:bg-muted")} onClick={() => {
-                setCategoryFilter("all");
-                setCategorySearchQuery("");
-              }}>
+              <div className="max-h-[200px] overflow-y-auto">
+                <div className={cn("px-4 py-2.5 text-sm font-medium cursor-pointer rounded-md transition-all flex items-center gap-2 whitespace-nowrap", categoryFilter === "all" ? "bg-primary/10 text-primary" : "text-foreground hover:bg-muted")} onClick={() => {
+                  setCategoryFilter("all");
+                  setCategorySearchQuery("");
+                }}>
+                  <FolderOpen className="h-4 w-4 text-muted-foreground shrink-0" />
                   All Categories
                 </div>
-                {filteredCategoriesForDropdown.map(cat => <div key={cat.id} className={cn("px-4 py-2.5 text-sm font-medium cursor-pointer rounded-md transition-all", categoryFilter === cat.id.toString() ? "bg-primary/10 text-primary" : "text-foreground hover:bg-muted")} onClick={() => {
-                setCategoryFilter(cat.id.toString());
-                setCategorySearchQuery("");
-              }}>
-                    {cat.name}
-                  </div>)}
+                <div className="mx-2 my-1 border-b border-border/50" />
+                {filteredCategoriesForDropdown.map((cat, index) => (
+                  <div key={cat.id}>
+                    <div className={cn("px-4 py-2.5 text-sm font-medium cursor-pointer rounded-md transition-all flex items-center gap-2 whitespace-nowrap", categoryFilter === cat.id.toString() ? "bg-primary/10 text-primary" : "text-foreground hover:bg-muted")} onClick={() => {
+                      setCategoryFilter(cat.id.toString());
+                      setCategorySearchQuery("");
+                    }}>
+                      <FolderOpen className={cn("h-4 w-4 shrink-0", categoryFilter === cat.id.toString() ? "text-primary" : "text-blue-600")} />
+                      <span className="truncate">{cat.name}</span>
+                    </div>
+                    {index < filteredCategoriesForDropdown.length - 1 && (
+                      <div className="mx-2 my-1 border-b border-border/50" />
+                    )}
+                  </div>
+                ))}
                 {filteredCategoriesForDropdown.length === 0 && categorySearchQuery && <p className="text-xs text-muted-foreground text-center py-2">No categories found</p>}
               </div>
             </PopoverContent>
