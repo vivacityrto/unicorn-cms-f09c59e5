@@ -681,15 +681,14 @@ export const DashboardLayout = ({ children }: { children: React.ReactNode }) => 
         <header className="h-16 bg-card border-b border-border flex items-center justify-between px-6 sticky top-0 z-20">
           <div className="flex items-center gap-4">
             <img src={unicornLogo} alt="Unicorn 2.0" className="h-16" />
-          </div>
-
-          <div className="flex items-center gap-4">
             {/* Real-time Australian Clock */}
             <div className="flex items-center gap-1.5 text-xs text-muted-foreground tabular-nums">
               <Calendar className="h-3.5 w-3.5" />
               {currentTime}
             </div>
+          </div>
 
+          <div className="flex items-center gap-4">
             {/* Notification Bell */}
             <NotificationDropdown />
 
