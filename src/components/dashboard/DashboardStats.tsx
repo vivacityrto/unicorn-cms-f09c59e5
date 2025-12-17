@@ -144,7 +144,9 @@ export const DashboardStats = ({ stats, activities = [] }: DashboardStatsProps) 
         </div>
         
         {/* Overdue Tasks Table */}
-        <WeekTasksTable />
+        <div className="pb-4">
+          <WeekTasksTable />
+        </div>
       </div>
       
       {/* Right column - Recent Activity */}
