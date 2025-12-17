@@ -44,7 +44,7 @@ const Dashboard = () => {
           </div>
 
           {/* Stats Grid */}
-          <DashboardStats stats={stats} />
+          <DashboardStats stats={stats} activities={activities} />
 
           {/* Charts */}
           <DashboardCharts 
@@ -56,8 +56,8 @@ const Dashboard = () => {
             ]} 
           />
 
-          {/* Recent Activity */}
-          <RecentActivity activities={activities} recentClients={recentClients} />
+          {/* Recent Clients */}
+          <RecentActivity activities={[]} recentClients={recentClients} />
         </div>
       </DashboardLayout>
     );
