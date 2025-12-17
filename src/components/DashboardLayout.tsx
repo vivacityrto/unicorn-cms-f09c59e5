@@ -178,7 +178,6 @@ export const DashboardLayout = ({
     isViewingAsClient
   } = useViewMode();
   const navRef = useRef<HTMLElement>(null);
-  const scrollPositionRef = useRef<number>(0);
   const [currentTime, setCurrentTime] = useState<string>('');
 
   // Real-time Australian clock
@@ -202,20 +201,19 @@ export const DashboardLayout = ({
     return () => clearInterval(interval);
   }, []);
 
-  // Preserve sidebar scroll position on route changes
+  // Scroll active menu item into view on route changes
   useLayoutEffect(() => {
-    // Restore scroll position synchronously after render
-    if (navRef.current && scrollPositionRef.current > 0) {
-      navRef.current.scrollTop = scrollPositionRef.current;
-    }
+    // Small delay to ensure DOM is ready
+    const timer = setTimeout(() => {
+      if (navRef.current) {
+        const activeItem = navRef.current.querySelector('[data-active="true"]');
+        if (activeItem) {
+          activeItem.scrollIntoView({ block: 'center', behavior: 'instant' });
+        }
+      }
+    }, 50);
+    return () => clearTimeout(timer);
   }, [location.pathname]);
-
-  // Save scroll position before navigation
-  const saveScrollPosition = () => {
-    if (navRef.current) {
-      scrollPositionRef.current = navRef.current.scrollTop;
-    }
-  };
 
   // Check if nav content is scrollable
   const checkScrollable = (e: React.UIEvent<HTMLElement>) => {
@@ -378,7 +376,7 @@ export const DashboardLayout = ({
                   {menuItems.main.map(item => {
                 const Icon = item.icon;
                 const isActive = location.pathname === item.path;
-                return <Link key={item.path} to={item.path} onClick={saveScrollPosition} className={`flex items-center gap-2 px-4 mx-2 mb-1 transition-colors text-sm rounded-full ${isActive ? "bg-white/10 border border-white/20 text-white" : "text-white/80 hover:bg-white/10 hover:text-white"}`} style={{
+                return <Link key={item.path} to={item.path} data-active={isActive} className={`flex items-center gap-2 px-4 mx-2 mb-1 transition-colors text-sm rounded-full ${isActive ? "bg-white/10 border border-white/20 text-white" : "text-white/80 hover:bg-white/10 hover:text-white"}`} style={{
                   paddingTop: "10px",
                   paddingBottom: "10px"
                 }}>
@@ -402,7 +400,7 @@ export const DashboardLayout = ({
                     {menuItems.team.map((item: any) => {
                 const Icon = item.icon;
                 const isActive = location.pathname === item.path;
-                return <Link key={item.path} to={item.path} onClick={saveScrollPosition} className={`flex items-center gap-2 px-4 mx-2 mb-1 transition-colors text-sm rounded-full ${isActive ? "bg-white/10 border border-white/20 text-white" : "text-white/80 hover:bg-white/10 hover:text-white"}`} style={{
+                return <Link key={item.path} to={item.path} data-active={isActive} className={`flex items-center gap-2 px-4 mx-2 mb-1 transition-colors text-sm rounded-full ${isActive ? "bg-white/10 border border-white/20 text-white" : "text-white/80 hover:bg-white/10 hover:text-white"}`} style={{
                   paddingTop: "10px",
                   paddingBottom: "10px"
                 }}>
@@ -426,7 +424,7 @@ export const DashboardLayout = ({
                       {menuItems.admin.map((item: any) => {
                 const Icon = item.icon;
                 const isActive = location.pathname === item.path;
-                return <Link key={item.path} to={item.path} onClick={saveScrollPosition} className={`flex items-center gap-2 px-4 mx-2 mb-1 transition-colors text-sm rounded-full ${isActive ? "bg-white/10 border border-white/20 text-white" : "text-white/80 hover:bg-white/10 hover:text-white"}`} style={{
+                return <Link key={item.path} to={item.path} data-active={isActive} className={`flex items-center gap-2 px-4 mx-2 mb-1 transition-colors text-sm rounded-full ${isActive ? "bg-white/10 border border-white/20 text-white" : "text-white/80 hover:bg-white/10 hover:text-white"}`} style={{
                   paddingTop: "10px",
                   paddingBottom: "10px"
                 }}>
@@ -450,7 +448,7 @@ export const DashboardLayout = ({
                     {menuItems.eos.map((item: any) => {
                 const Icon = item.icon;
                 const isActive = location.pathname === item.path;
-                return <Link key={item.path} to={item.path} onClick={saveScrollPosition} className={`flex items-center gap-2 px-4 mx-2 mb-1 transition-colors text-sm rounded-full ${isActive ? "bg-white/10 border border-white/20 text-white" : "text-white/80 hover:bg-white/10 hover:text-white"}`} style={{
+                return <Link key={item.path} to={item.path} data-active={isActive} className={`flex items-center gap-2 px-4 mx-2 mb-1 transition-colors text-sm rounded-full ${isActive ? "bg-white/10 border border-white/20 text-white" : "text-white/80 hover:bg-white/10 hover:text-white"}`} style={{
                   paddingTop: "10px",
                   paddingBottom: "10px"
                 }}>
@@ -474,7 +472,7 @@ export const DashboardLayout = ({
                     {menuItems.advanced.map((item: any) => {
                 const Icon = item.icon;
                 const isActive = location.pathname === item.path;
-                return <Link key={item.path} to={item.path} onClick={saveScrollPosition} className={`flex items-center gap-2 px-4 mx-2 mb-1 transition-colors text-sm rounded-full ${isActive ? "bg-white/10 border border-white/20 text-white" : "text-white/80 hover:bg-white/10 hover:text-white"}`} style={{
+                return <Link key={item.path} to={item.path} data-active={isActive} className={`flex items-center gap-2 px-4 mx-2 mb-1 transition-colors text-sm rounded-full ${isActive ? "bg-white/10 border border-white/20 text-white" : "text-white/80 hover:bg-white/10 hover:text-white"}`} style={{
                   paddingTop: "10px",
                   paddingBottom: "10px"
                 }}>
