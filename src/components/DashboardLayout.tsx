@@ -294,61 +294,72 @@ export const DashboardLayout = ({ children }: { children: React.ReactNode }) => 
         }}
       >
         {/* Logo/Brand */}
-        <div className="h-16 flex items-center justify-between px-4 border-b border-white/20">
-          {sidebarOpen ? (
-            <div className="flex items-center gap-3">
-              {(profile?.unicorn_role === "Admin" || profile?.unicorn_role === "User") ? (
-                <>
-                  <Avatar className="h-10 w-10 border-2 border-white/30">
-                    <AvatarImage src={profile?.avatar_url || ""} alt={profile?.first_name || "User"} />
-                    <AvatarFallback className="bg-white/20 text-white font-semibold">
-                      {profile?.first_name && profile?.last_name 
-                        ? `${profile.first_name[0]}${profile.last_name[0]}`.toUpperCase()
-                        : getInitials(profile?.email || "U")}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="flex flex-col">
-                    <span className="text-sm font-semibold text-white">
-                      {profile?.first_name && profile?.last_name 
-                        ? `${profile.first_name} ${profile.last_name}`
-                        : profile?.email?.split("@")[0] || "User"}
-                    </span>
-                    <Badge
-                      className="px-2 py-0.5 w-fit bg-white border-0"
-                      style={{
-                        color: getRoleBadgeColor(profile?.unicorn_role || "User"),
-                        fontWeight: "bold",
-                        fontSize: "11px",
-                      }}
-                    >
-                      {profile?.unicorn_role || "User"}
-                    </Badge>
-                  </div>
-                </>
-              ) : (
-                <div className="flex flex-col gap-1">
-                  <h1 className="text-xl font-bold text-white">Unicorn 2.0</h1>
-                  <Badge
-                    className="px-2 py-0.5 w-fit bg-white border-0"
-                    style={{
-                      color: getRoleBadgeColor(profile?.unicorn_role || "User"),
-                      fontWeight: "bold",
-                      fontSize: "11px",
-                    }}
-                  >
-                    {profile?.unicorn_role || "User"}
-                  </Badge>
-                </div>
-              )}
+        {/* Logo/Brand or User Profile */}
+        {(profile?.unicorn_role === "Admin" || profile?.unicorn_role === "User") && sidebarOpen ? (
+          <div className="flex flex-col items-center py-6 px-4 border-b border-white/20">
+            <div className="relative mb-3">
+              <Avatar className="h-20 w-20 border-4 border-white/30">
+                <AvatarImage src={profile?.avatar_url || ""} alt={profile?.first_name || "User"} />
+                <AvatarFallback className="bg-white/20 text-white font-bold text-2xl">
+                  {profile?.first_name && profile?.last_name 
+                    ? `${profile.first_name[0]}${profile.last_name[0]}`.toUpperCase()
+                    : getInitials(profile?.email || "U")}
+                </AvatarFallback>
+              </Avatar>
+              <span className="absolute bottom-1 right-1 h-4 w-4 bg-green-500 rounded-full border-2 border-white"></span>
             </div>
-          ) : null}
-          <button
-            onClick={() => setSidebarOpen(!sidebarOpen)}
-            className="p-2 hover:bg-white/10 rounded-lg transition-colors text-white"
-          >
-            {sidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-          </button>
-        </div>
+            <Badge
+              className="px-3 py-1 mb-2 bg-white border-0"
+              style={{
+                color: getRoleBadgeColor(profile?.unicorn_role || "User"),
+                fontWeight: "bold",
+                fontSize: "12px",
+              }}
+            >
+              {profile?.unicorn_role || "User"}
+            </Badge>
+            <span className="text-base font-bold text-white">
+              {profile?.first_name && profile?.last_name 
+                ? `${profile.first_name} ${profile.last_name}`
+                : profile?.email?.split("@")[0] || "User"}
+            </span>
+            <span className="text-sm text-white/70 mb-1">{profile?.unicorn_role || "User"}</span>
+            <div className="flex items-center gap-1 text-white/70 text-xs">
+              <Mail className="h-3 w-3" />
+              <span>{profile?.email || ""}</span>
+            </div>
+            <button
+              onClick={() => setSidebarOpen(!sidebarOpen)}
+              className="absolute top-4 right-4 p-2 hover:bg-white/10 rounded-lg transition-colors text-white"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+        ) : (
+          <div className="h-16 flex items-center justify-between px-4 border-b border-white/20">
+            {sidebarOpen ? (
+              <div className="flex flex-col gap-1">
+                <h1 className="text-xl font-bold text-white">Unicorn 2.0</h1>
+                <Badge
+                  className="px-2 py-0.5 w-fit bg-white border-0"
+                  style={{
+                    color: getRoleBadgeColor(profile?.unicorn_role || "User"),
+                    fontWeight: "bold",
+                    fontSize: "11px",
+                  }}
+                >
+                  {profile?.unicorn_role || "User"}
+                </Badge>
+              </div>
+            ) : null}
+            <button
+              onClick={() => setSidebarOpen(!sidebarOpen)}
+              className="p-2 hover:bg-white/10 rounded-lg transition-colors text-white"
+            >
+              {sidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+            </button>
+          </div>
+        )}
 
         {/* Menu Items */}
         <nav className="flex-1 py-4 overflow-y-auto scrollbar-hide relative" onScroll={checkScrollable}>
