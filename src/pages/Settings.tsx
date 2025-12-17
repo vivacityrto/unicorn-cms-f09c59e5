@@ -18,7 +18,7 @@ export default function Settings() {
   const [uploading, setUploading] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [tenantInfo, setTenantInfo] = useState<any>(null);
-  const [liveTimes, setLiveTimes] = useState({ sydney: '', manila: '' });
+  const [liveTime, setLiveTime] = useState('');
   const [timezoneOptions, setTimezoneOptions] = useState<{ value: string; label: string }[]>([]);
   const [formData, setFormData] = useState({
     first_name: '',
@@ -52,12 +52,12 @@ export default function Settings() {
     fetchTimezones();
   }, []);
 
-  // Live time update effect
+  // Live time update effect - based on user's selected timezone
   useEffect(() => {
-    const updateTimes = () => {
+    const updateTime = () => {
       const now = new Date();
-      const sydneyTime = now.toLocaleString('en-AU', {
-        timeZone: 'Australia/Sydney',
+      const userTime = now.toLocaleString('en-AU', {
+        timeZone: formData.timezone || 'Australia/Sydney',
         hour: '2-digit',
         minute: '2-digit',
         second: '2-digit',
@@ -65,22 +65,13 @@ export default function Settings() {
         day: '2-digit',
         month: 'short',
       });
-      const manilaTime = now.toLocaleString('en-PH', {
-        timeZone: 'Asia/Manila',
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit',
-        hour12: true,
-        day: '2-digit',
-        month: 'short',
-      });
-      setLiveTimes({ sydney: sydneyTime, manila: manilaTime });
+      setLiveTime(userTime);
     };
     
-    updateTimes();
-    const interval = setInterval(updateTimes, 1000);
+    updateTime();
+    const interval = setInterval(updateTime, 1000);
     return () => clearInterval(interval);
-  }, []);
+  }, [formData.timezone]);
 
   useEffect(() => {
     if (user && profile) {
@@ -333,15 +324,18 @@ export default function Settings() {
                   Manage your account settings and preferences
                 </p>
               </div>
-              <div className="text-right space-y-1">
-                <div className="flex items-center justify-end gap-2 text-[0.65rem] text-white/70">
-                  <span className="text-white/50">AU</span>
-                  <span className="font-mono">{liveTimes.sydney}</span>
+              <div className="text-right">
+                <div className="flex items-center justify-end gap-2 text-xs text-white/80">
+                  {formData.timezone?.includes('Manila') ? (
+                    <span className="text-lg">🇵🇭</span>
+                  ) : (
+                    <span className="text-lg">🇦🇺</span>
+                  )}
+                  <span className="font-mono">{liveTime}</span>
                 </div>
-                <div className="flex items-center justify-end gap-2 text-[0.65rem] text-white/70">
-                  <span className="text-white/50">PH</span>
-                  <span className="font-mono">{liveTimes.manila}</span>
-                </div>
+                <p className="text-[0.6rem] text-white/50 mt-0.5">
+                  {timezoneOptions.find(tz => tz.value === formData.timezone)?.label || formData.timezone}
+                </p>
               </div>
             </div>
           </div>
