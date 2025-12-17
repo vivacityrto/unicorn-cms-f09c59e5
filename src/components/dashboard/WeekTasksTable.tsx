@@ -2,11 +2,19 @@ import * as React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { CalendarDays, CheckCircle2, Clock, AlertCircle } from "lucide-react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { CalendarDays, CheckCircle2, Clock, AlertTriangle } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { format, isToday, isTomorrow, isPast, startOfWeek } from "date-fns";
+import { isPast, startOfWeek } from "date-fns";
 import { Skeleton } from "@/components/ui/skeleton";
+
+interface FollowerUser {
+  user_uuid: string;
+  first_name: string | null;
+  last_name: string | null;
+  avatar_url: string | null;
+}
 
 interface WeekTask {
   id: string;
@@ -16,6 +24,8 @@ interface WeekTask {
   status: string | null;
   tenant_id: number;
   tenant_name?: string;
+  followers: string[];
+  follower_users?: FollowerUser[];
 }
 
 export const WeekTasksTable = () => {
@@ -36,6 +46,7 @@ export const WeekTasksTable = () => {
           due_date,
           status,
           tenant_id,
+          followers,
           tenants (name)
         `)
         .gte("due_date", weekStart.toISOString().split('T')[0])
@@ -46,6 +57,19 @@ export const WeekTasksTable = () => {
 
       if (error) throw error;
 
+      // Get all unique follower IDs
+      const allFollowerIds = [...new Set((data || []).flatMap((t: any) => t.followers || []))];
+      
+      // Fetch follower user details
+      let followerUsers: FollowerUser[] = [];
+      if (allFollowerIds.length > 0) {
+        const { data: usersData } = await supabase
+          .from("users")
+          .select("user_uuid, first_name, last_name, avatar_url")
+          .in("user_uuid", allFollowerIds);
+        followerUsers = usersData || [];
+      }
+
       return (data || []).map((task: any) => ({
         id: task.id,
         task_name: task.task_name,
@@ -54,46 +78,53 @@ export const WeekTasksTable = () => {
         status: task.status,
         tenant_id: task.tenant_id,
         tenant_name: task.tenants?.name,
+        followers: task.followers || [],
+        follower_users: (task.followers || []).map((fid: string) => 
+          followerUsers.find(u => u.user_uuid === fid)
+        ).filter(Boolean),
       }));
     },
   });
 
-  const getStatusBadge = (status: string | null) => {
-    const variants: Record<string, { label: string; className: string }> = {
+  const getStatusBadge = (status: string | null, dueDate: string | null) => {
+    const isOverdue = dueDate && isPast(new Date(dueDate)) && status !== "completed";
+    
+    if (isOverdue) {
+      return (
+        <div className="flex items-center gap-1.5">
+          <AlertTriangle className="h-4 w-4 text-red-600" />
+          <Badge variant="outline" className="bg-red-500/10 text-red-600 border-red-500/20 text-[0.75rem] py-[2px] px-[0.625rem] rounded-[11px]">
+            Overdue
+          </Badge>
+        </div>
+      );
+    }
+
+    const variants: Record<string, { label: string; className: string; icon: React.ReactNode }> = {
       completed: {
         label: "Completed",
-        className: "bg-emerald-500/10 text-emerald-600 border-emerald-500/30 text-[0.75rem] py-[2px] px-[0.625rem] rounded-[11px] font-medium"
+        className: "bg-emerald-500/10 text-emerald-600 border-emerald-500/30 text-[0.75rem] py-[2px] px-[0.625rem] rounded-[11px] font-medium",
+        icon: <CheckCircle2 className="h-4 w-4 text-emerald-600" />
       },
       in_progress: {
         label: "In Progress",
-        className: "bg-yellow-500/10 text-yellow-600 border-yellow-500/20 text-[0.75rem] py-[2px] px-[0.625rem] rounded-[11px]"
+        className: "bg-yellow-500/10 text-yellow-600 border-yellow-500/20 text-[0.75rem] py-[2px] px-[0.625rem] rounded-[11px]",
+        icon: <Clock className="h-4 w-4 text-yellow-600" />
       },
       not_started: {
         label: "Not Started",
-        className: "bg-muted text-muted-foreground border-border text-[0.75rem] py-[2px] px-[0.625rem] rounded-[11px]"
+        className: "bg-muted text-muted-foreground border-border text-[0.75rem] py-[2px] px-[0.625rem] rounded-[11px]",
+        icon: <Clock className="h-4 w-4 text-muted-foreground" />
       }
     };
     const key = status?.toLowerCase() || "not_started";
-    const { label, className } = variants[key] || variants.not_started;
-    return <Badge variant="outline" className={className}>{label}</Badge>;
-  };
-
-  const getStatusIcon = (status: string | null, dueDate: string | null) => {
-    if (status === "completed") {
-      return <CheckCircle2 className="h-4 w-4 text-green-500" />;
-    }
-    if (dueDate && isPast(new Date(dueDate))) {
-      return <AlertCircle className="h-4 w-4 text-orange-500" />;
-    }
-    return <Clock className="h-4 w-4 text-muted-foreground" />;
-  };
-
-  const formatDueDate = (date: string | null) => {
-    if (!date) return "No date";
-    const d = new Date(date + 'T00:00:00');
-    if (isToday(d)) return "Today";
-    if (isTomorrow(d)) return "Tomorrow";
-    return format(d, "MMM d");
+    const { label, className, icon } = variants[key] || variants.not_started;
+    return (
+      <div className="flex items-center gap-1.5">
+        {icon}
+        <Badge variant="outline" className={className}>{label}</Badge>
+      </div>
+    );
   };
 
   if (isLoading) {
@@ -134,19 +165,15 @@ export const WeekTasksTable = () => {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="w-[32px] pl-4"></TableHead>
                 <TableHead>Task</TableHead>
                 <TableHead>Client</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead className="pr-4">Due</TableHead>
+                <TableHead className="pr-4">Followers</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
             {tasks.map((task) => (
                 <TableRow key={task.id}>
-                  <TableCell className="pl-4">
-                    {getStatusIcon(task.status, task.due_date)}
-                  </TableCell>
                   <TableCell className="font-medium max-w-[180px] truncate">
                     {task.task_name || "Untitled task"}
                   </TableCell>
@@ -154,10 +181,26 @@ export const WeekTasksTable = () => {
                     {task.tenant_name || "-"}
                   </TableCell>
                   <TableCell>
-                    {getStatusBadge(task.status)}
+                    {getStatusBadge(task.status, task.due_date)}
                   </TableCell>
-                  <TableCell className="text-muted-foreground text-sm pr-4">
-                    {formatDueDate(task.due_date)}
+                  <TableCell className="pr-4">
+                    <div className="flex items-center gap-1">
+                      {task.follower_users && task.follower_users.length > 0 ? (
+                        task.follower_users.slice(0, 3).map((follower) => (
+                          <Avatar key={follower.user_uuid} className="h-7 w-7 border border-background">
+                            {follower.avatar_url && <AvatarImage src={follower.avatar_url} />}
+                            <AvatarFallback className="text-[10px] bg-primary/10 text-primary">
+                              {follower.first_name?.[0]}{follower.last_name?.[0]}
+                            </AvatarFallback>
+                          </Avatar>
+                        ))
+                      ) : (
+                        <span className="text-muted-foreground text-sm">-</span>
+                      )}
+                      {task.follower_users && task.follower_users.length > 3 && (
+                        <span className="text-xs text-muted-foreground ml-1">+{task.follower_users.length - 3}</span>
+                      )}
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}
