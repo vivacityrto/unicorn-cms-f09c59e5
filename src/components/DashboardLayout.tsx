@@ -654,16 +654,10 @@ export const DashboardLayout = ({ children }: { children: React.ReactNode }) => 
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-56">
-                  <Link to="/user-profile">
+                  <Link to="/settings?tab=security">
                     <DropdownMenuItem className="cursor-pointer">
                       <User className="mr-2 h-4 w-4" />
                       <span>My Profile</span>
-                    </DropdownMenuItem>
-                  </Link>
-                  <Link to="/settings?tab=security">
-                    <DropdownMenuItem className="cursor-pointer">
-                      <Settings className="mr-2 h-4 w-4" />
-                      <span>Change Password</span>
                     </DropdownMenuItem>
                   </Link>
                   <DropdownMenuSeparator />
