@@ -23,22 +23,22 @@ const colorClasses = {
 };
 
 const StatCard = ({ title, value, subtitle, icon, trend, color }: StatCardProps) => (
-  <Card className="border-0 shadow-lg hover:shadow-xl transition-all duration-300 overflow-hidden group">
-    <CardContent className="p-6">
-      <div className="flex items-start justify-between">
-        <div className="space-y-2">
-          <p className="text-sm font-medium text-muted-foreground">{title}</p>
-          <div className="flex items-baseline gap-2">
-            <p className="text-3xl font-bold tracking-tight">{value}</p>
+  <Card className="border-0 shadow-md hover:shadow-lg transition-all duration-300 overflow-hidden group">
+    <CardContent className="p-4">
+      <div className="flex items-start justify-between gap-2">
+        <div className="space-y-1 min-w-0">
+          <p className="text-xs font-medium text-muted-foreground truncate">{title}</p>
+          <div className="flex items-baseline gap-1">
+            <p className="text-2xl font-bold tracking-tight">{value}</p>
             {trend && (
               <span className={cn("text-xs font-semibold", trend.isPositive ? "text-green-600" : "text-red-600")}>
                 {trend.isPositive ? "+" : ""}{trend.value}%
               </span>
             )}
           </div>
-          {subtitle && <p className="text-xs text-muted-foreground">{subtitle}</p>}
+          {subtitle && <p className="text-[10px] text-muted-foreground truncate">{subtitle}</p>}
         </div>
-        <div className={cn("p-3 rounded-xl transition-transform group-hover:scale-110", colorClasses[color])}>
+        <div className={cn("p-2 rounded-lg transition-transform group-hover:scale-110 shrink-0", colorClasses[color])}>
           {icon}
         </div>
       </div>
@@ -61,39 +61,43 @@ interface DashboardStatsProps {
 
 export const DashboardStats = ({ stats }: DashboardStatsProps) => {
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-      {/* Week Tasks Table - spans 2 columns */}
-      <WeekTasksTable />
+    <div className="flex gap-4">
+      {/* Week Tasks Table */}
+      <div className="flex-1 min-w-0">
+        <WeekTasksTable />
+      </div>
       
-      {/* Remaining 4 stat cards */}
-      <StatCard
-        title="Team Members"
-        value={stats.totalUsers}
-        subtitle="Across all tenants"
-        icon={<Users className="h-6 w-6" />}
-        color="blue"
-      />
-      <StatCard
-        title="Documents"
-        value={stats.documentsCount}
-        subtitle="Total managed"
-        icon={<FileText className="h-6 w-6" />}
-        color="green"
-      />
-      <StatCard
-        title="Active Inspections"
-        value={stats.activeInspections}
-        subtitle="In progress"
-        icon={<AlertCircle className="h-6 w-6" />}
-        color="red"
-      />
-      <StatCard
-        title="Upcoming Meetings"
-        value={stats.upcomingMeetings}
-        subtitle="Next 7 days"
-        icon={<TrendingUp className="h-6 w-6" />}
-        color="blue"
-      />
+      {/* 4 stat cards in 2x2 grid */}
+      <div className="grid grid-cols-2 gap-3 w-[320px] shrink-0">
+        <StatCard
+          title="Team Members"
+          value={stats.totalUsers}
+          subtitle="All tenants"
+          icon={<Users className="h-5 w-5" />}
+          color="blue"
+        />
+        <StatCard
+          title="Documents"
+          value={stats.documentsCount}
+          subtitle="Total managed"
+          icon={<FileText className="h-5 w-5" />}
+          color="green"
+        />
+        <StatCard
+          title="Inspections"
+          value={stats.activeInspections}
+          subtitle="In progress"
+          icon={<AlertCircle className="h-5 w-5" />}
+          color="red"
+        />
+        <StatCard
+          title="Meetings"
+          value={stats.upcomingMeetings}
+          subtitle="Next 7 days"
+          icon={<TrendingUp className="h-5 w-5" />}
+          color="blue"
+        />
+      </div>
     </div>
   );
 };

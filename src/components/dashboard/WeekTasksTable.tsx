@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { CalendarDays, CheckCircle2, Clock, AlertCircle } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { format, isToday, isTomorrow, isPast, startOfWeek, endOfWeek } from "date-fns";
+import { format, isToday, isTomorrow, isPast, startOfWeek } from "date-fns";
 import { Skeleton } from "@/components/ui/skeleton";
 
 interface WeekTask {
@@ -25,7 +25,6 @@ export const WeekTasksTable = () => {
     queryFn: async () => {
       const now = new Date();
       const weekStart = startOfWeek(now, { weekStartsOn: 1 });
-      const weekEnd = endOfWeek(now, { weekStartsOn: 1 });
 
       const { data, error } = await supabase
         .from("documents_notes")
@@ -42,7 +41,7 @@ export const WeekTasksTable = () => {
         .or(`started_date.gte.${weekStart.toISOString()},started_date.is.null`)
         .is("completed_date", null)
         .order("started_date", { ascending: true })
-        .limit(10);
+        .limit(8);
 
       if (error) throw error;
 
@@ -92,7 +91,7 @@ export const WeekTasksTable = () => {
 
   if (isLoading) {
     return (
-      <Card className="col-span-full lg:col-span-2 border-0 shadow-lg">
+      <Card className="border-0 shadow-lg h-full">
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2 text-lg">
             <CalendarDays className="h-5 w-5 text-primary" />
@@ -102,7 +101,7 @@ export const WeekTasksTable = () => {
         <CardContent>
           <div className="space-y-2">
             {[...Array(5)].map((_, i) => (
-              <Skeleton key={i} className="h-12 w-full" />
+              <Skeleton key={i} className="h-10 w-full" />
             ))}
           </div>
         </CardContent>
@@ -111,46 +110,46 @@ export const WeekTasksTable = () => {
   }
 
   return (
-    <Card className="col-span-full lg:col-span-2 border-0 shadow-lg">
+    <Card className="border-0 shadow-lg h-full">
       <CardHeader className="pb-3">
         <CardTitle className="flex items-center gap-2 text-lg">
           <CalendarDays className="h-5 w-5 text-primary" />
           Week Tasks
         </CardTitle>
       </CardHeader>
-      <CardContent>
+      <CardContent className="p-0">
         {tasks.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-8 text-center">
-            <CheckCircle2 className="h-12 w-12 text-green-500/50 mb-3" />
-            <p className="text-muted-foreground">No pending tasks this week</p>
+          <div className="flex flex-col items-center justify-center py-8 text-center px-6">
+            <CheckCircle2 className="h-10 w-10 text-green-500/50 mb-2" />
+            <p className="text-sm text-muted-foreground">No pending tasks this week</p>
           </div>
         ) : (
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="w-[40px]"></TableHead>
+                <TableHead className="w-[32px] pl-4"></TableHead>
                 <TableHead>Task</TableHead>
                 <TableHead>Client</TableHead>
                 <TableHead>Priority</TableHead>
-                <TableHead>Due</TableHead>
+                <TableHead className="pr-4">Due</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {tasks.map((task) => (
                 <TableRow key={task.id}>
-                  <TableCell>
+                  <TableCell className="pl-4">
                     {getStatusIcon(task.started_date, task.completed_date)}
                   </TableCell>
-                  <TableCell className="font-medium max-w-[200px] truncate">
+                  <TableCell className="font-medium max-w-[180px] truncate">
                     {task.note_details || "Untitled task"}
                   </TableCell>
-                  <TableCell className="text-muted-foreground">
+                  <TableCell className="text-muted-foreground text-sm">
                     {task.tenant_name || "-"}
                   </TableCell>
                   <TableCell>
                     {getPriorityBadge(task.priority)}
                   </TableCell>
-                  <TableCell className="text-muted-foreground">
+                  <TableCell className="text-muted-foreground text-sm pr-4">
                     {formatDueDate(task.started_date)}
                   </TableCell>
                 </TableRow>
