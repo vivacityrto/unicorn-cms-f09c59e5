@@ -169,14 +169,12 @@ const Login = () => {
         <Card className="border-0 shadow-lg overflow-hidden">
           <div className="bg-muted/30 px-6 py-0 h-[70px] border-b border-border/50 flex items-center justify-between">
             <img src={unicornLogo} alt="Unicorn" className="h-16 w-auto" />
-            <div className="flex items-center gap-2">
-              {getHeaderIcon()}
-              <h2 className="font-semibold">{getHeaderTitle()}</h2>
-            </div>
+            {getHeaderIcon()}
           </div>
           <CardContent className="p-6">
             {!showForgotPassword && !showMagicLink ? (
               <>
+                <h2 className="font-semibold text-lg mb-1">{getHeaderTitle()}</h2>
                 <p className="text-muted-foreground text-sm mb-6">Sign in to access your compliance system</p>
 
                 <form onSubmit={handleLogin} className="space-y-4">
