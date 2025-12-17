@@ -314,13 +314,16 @@ export const DashboardLayout = ({ children }: { children: React.ReactNode }) => 
         {/* Logo/Brand or User Profile - Show user profile for Admin/User OR when viewing as client */}
         {sidebarOpen ? (
           <div className="relative px-3 pt-4 pb-6 border-b border-white/10">
-            {/* Close button - top right */}
-            <button
-              onClick={() => setSidebarOpen(!sidebarOpen)}
-              className="absolute top-3 right-3 p-1.5 hover:bg-white/10 rounded-full transition-all duration-200 text-white/50 hover:text-white"
-            >
-              <X className="w-4 h-4" />
-            </button>
+            {/* Top bar with version and close button */}
+            <div className="flex items-center justify-between">
+              <span className="text-white/60 text-xs">Version 2.0</span>
+              <button
+                onClick={() => setSidebarOpen(!sidebarOpen)}
+                className="p-1.5 hover:bg-white/10 rounded-full transition-all duration-200 text-white/50 hover:text-white"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
             
             {/* Glass card container */}
             <div className="mt-6">
