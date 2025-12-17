@@ -329,7 +329,7 @@ export default function Settings() {
                   <Calendar className="h-4 w-4 -mt-[3px]" />
                   <span className="font-mono">{liveTime}</span>
                 </div>
-                <p className="text-[0.6rem] text-white/50 mt-0.5">
+                <p className="text-xs text-white/50 mt-0.5">
                   {timezoneOptions.find(tz => tz.value === formData.timezone)?.label || formData.timezone}
                 </p>
               </div>
