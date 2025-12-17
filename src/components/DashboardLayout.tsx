@@ -30,6 +30,7 @@ import {
   ClipboardCheck,
   Lightbulb,
   Home,
+  Sparkles,
 } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Link, useLocation, useNavigate } from "react-router-dom";
@@ -313,10 +314,13 @@ export const DashboardLayout = ({ children }: { children: React.ReactNode }) => 
         {/* Logo/Brand */}
         {/* Logo/Brand or User Profile - Show user profile for Admin/User OR when viewing as client */}
         {sidebarOpen ? (
-          <div className="relative px-3 pt-4 pb-6 border-b border-white/10">
+          <div className="relative px-3 pt-0 pb-6 border-b border-white/10">
             {/* Top bar with version and close button */}
-            <div className="flex items-center justify-between">
-              <span className="text-white/60 text-xs">Version 2.0</span>
+            <div className="flex items-center justify-between pt-3">
+              <div className="flex items-center gap-1.5 text-white/60 text-xs">
+                <Sparkles className="h-3 w-3" />
+                <span>Version 2.0</span>
+              </div>
               <button
                 onClick={() => setSidebarOpen(!sidebarOpen)}
                 className="p-1.5 hover:bg-white/10 rounded-full transition-all duration-200 text-white/50 hover:text-white"
