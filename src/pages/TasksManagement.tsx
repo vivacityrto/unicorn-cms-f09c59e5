@@ -990,9 +990,9 @@ export default function TasksManagement() {
                       <div className="flex items-center gap-1">
                         {task.follower_users && task.follower_users.length > 0 ? (
                           task.follower_users.slice(0, 3).map((follower) => (
-                            <Avatar key={follower.user_uuid} className="h-7 w-7 border border-background">
+                            <Avatar key={follower.user_uuid} className="h-9 w-9 border border-background">
                               {follower.avatar_url && <AvatarImage src={follower.avatar_url} />}
-                              <AvatarFallback className="text-[10px] bg-primary/10 text-primary">
+                              <AvatarFallback className="text-xs bg-primary/10 text-primary">
                                 {follower.first_name?.[0]}{follower.last_name?.[0]}
                               </AvatarFallback>
                             </Avatar>
