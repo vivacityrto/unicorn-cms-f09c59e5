@@ -1320,10 +1320,10 @@ export default function ManageDocuments() {
                           } catch {
                             window.open(file.url, "_blank");
                           }
-                        }} className="h-6 w-6 p-0 text-muted-foreground hover:text-primary">
+                        }} className="h-6 w-6 p-0 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded">
                                 <Eye className="h-4 w-4" />
                               </Button>
-                              <Button type="button" variant="ghost" size="sm" onClick={() => setExistingFiles(prev => prev.filter((_, i) => i !== index))} className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive">
+                              <Button type="button" variant="ghost" size="sm" onClick={() => setExistingFiles(prev => prev.filter((_, i) => i !== index))} className="h-6 w-6 p-0 text-destructive/60 hover:text-destructive hover:bg-destructive/10 rounded">
                                 <X className="h-4 w-4" />
                               </Button>
                             </div>
@@ -1337,7 +1337,7 @@ export default function ManageDocuments() {
                               <FileText className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                               <span className="text-sm truncate">{file.name}</span>
                             </div>
-                            <Button type="button" variant="ghost" size="sm" onClick={() => handleRemoveFile(index)} className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive flex-shrink-0 ml-2">
+                            <Button type="button" variant="ghost" size="sm" onClick={() => handleRemoveFile(index)} className="h-6 w-6 p-0 text-destructive/60 hover:text-destructive hover:bg-destructive/10 rounded flex-shrink-0 ml-2">
                               <X className="h-4 w-4" />
                             </Button>
                           </div>)}
