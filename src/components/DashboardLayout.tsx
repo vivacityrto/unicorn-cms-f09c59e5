@@ -672,21 +672,15 @@ export const DashboardLayout = ({ children }: { children: React.ReactNode }) => 
               </DropdownMenu>
             ) : (
               <DropdownMenu>
-                <DropdownMenuTrigger className="flex items-center gap-3 focus:outline-none">
-                  <Avatar className="h-9 w-9 cursor-pointer ring-2 ring-transparent hover:ring-primary/20 transition-all">
-                    <AvatarImage src={profile?.avatar_url || undefined} />
-                    <AvatarFallback className="bg-primary text-primary-foreground text-xs">
-                      {getInitials(profile?.email || "U")}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="hidden md:block text-left">
-                    <p className="text-sm font-medium">
-                      {profile?.first_name || profile?.last_name
-                        ? `${profile.first_name || ""} ${profile.last_name || ""}`.trim()
-                        : profile?.email?.split("@")[0] || "User"}
-                    </p>
-                    <p className="text-xs text-muted-foreground">{profile?.email || ""}</p>
-                  </div>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="bg-transparent border-white/20 text-foreground hover:bg-transparent hover:border-white/20 hover:text-black gap-2"
+                  >
+                    <Settings className="h-4 w-4" />
+                    Settings
+                  </Button>
                 </DropdownMenuTrigger>
 
                 <DropdownMenuContent align="end" className="w-56">
