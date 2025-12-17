@@ -4,9 +4,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import unicornLogo from "@/assets/unicorn-logo-login.png";
+import { LogIn, KeyRound, Sparkles } from "lucide-react";
 
 const Login = () => {
   const navigate = useNavigate();
@@ -145,6 +147,18 @@ const Login = () => {
     setPassword("password123");
   };
 
+  const getHeaderTitle = () => {
+    if (showForgotPassword) return "Reset Password";
+    if (showMagicLink) return "Magic Link";
+    return "Welcome Back";
+  };
+
+  const getHeaderIcon = () => {
+    if (showForgotPassword) return <KeyRound className="h-5 w-5" />;
+    if (showMagicLink) return <Sparkles className="h-5 w-5" />;
+    return <LogIn className="h-5 w-5" />;
+  };
+
   return (
     <div
       className="min-h-screen w-full flex items-center justify-center p-4"
@@ -156,192 +170,189 @@ const Login = () => {
           <img src={unicornLogo} alt="Unicorn Compliance Management System" className="w-full h-auto max-w-[18rem]" />
         </div>
 
-        {/* Login Form */}
-        <div className="bg-white rounded-xl p-6 shadow-2xl">
-          {!showForgotPassword && !showMagicLink ? (
-            <>
-              <div className="text-center mb-4">
-                <h2 className="text-2xl font-bold text-foreground mb-1">Welcome Back</h2>
-                <p className="text-muted-foreground">Sign in to access your compliance system</p>
-              </div>
+        {/* Login Form Card - Matching Settings page style */}
+        <Card className="border-0 shadow-lg overflow-hidden">
+          <div className="bg-muted/30 px-6 h-14 border-b border-border/50 flex items-center gap-2">
+            {getHeaderIcon()}
+            <h2 className="font-semibold">{getHeaderTitle()}</h2>
+          </div>
+          <CardContent className="p-6">
+            {!showForgotPassword && !showMagicLink ? (
+              <>
+                <p className="text-muted-foreground text-sm mb-6">Sign in to access your compliance system</p>
 
-              <form onSubmit={handleLogin} className="space-y-4">
+                <form onSubmit={handleLogin} className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="email" className="text-foreground font-medium">
+                      Email Address
+                    </Label>
+                    <Input
+                      id="email"
+                      type="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      placeholder="Enter your email address"
+                      className="h-11 rounded-lg border-0 bg-muted/50 ring-1 ring-border/50 hover:ring-border focus:ring-2 focus:ring-primary/30"
+                      required
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="password" className="text-foreground font-medium">
+                      Password
+                    </Label>
+                    <Input
+                      id="password"
+                      type="password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder="Enter your password"
+                      className="h-11 rounded-lg border-0 bg-muted/50 ring-1 ring-border/50 hover:ring-border focus:ring-2 focus:ring-primary/30"
+                      required
+                    />
+                  </div>
+
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="remember"
+                      checked={rememberMe}
+                      onCheckedChange={(checked) => setRememberMe(checked as boolean)}
+                      className="border-secondary data-[state=checked]:bg-secondary data-[state=checked]:border-secondary"
+                    />
+                    <label
+                      htmlFor="remember"
+                      className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                    >
+                      Remember me
+                    </label>
+                  </div>
+
+                  <Button
+                    type="submit"
+                    className="w-full h-11 rounded-lg bg-[hsl(188_74%_51%)] hover:bg-[hsl(188_74%_51%)]/90 text-white font-semibold"
+                    disabled={isLoading}
+                  >
+                    {isLoading ? "Signing in..." : "Log In"}
+                  </Button>
+                </form>
+
+                {/* Alternative Login Options */}
+                <div className="mt-4 flex gap-2">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    className="flex-1 text-[hsl(188_74%_51%)] hover:text-[hsl(188_74%_41%)] hover:bg-transparent font-semibold text-sm"
+                    onClick={() => setShowForgotPassword(true)}
+                  >
+                    Forgot Password?
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    className="flex-1 text-[hsl(188_74%_51%)] hover:text-[hsl(188_74%_41%)] hover:bg-transparent font-semibold text-sm"
+                    onClick={() => setShowMagicLink(true)}
+                  >
+                    Send Magic Link
+                  </Button>
+                </div>
+
+                {/* Demo Login Info */}
+                <div className="mt-4 bg-muted/50 rounded-lg p-3 text-center ring-1 ring-border/50">
+                  <p className="text-foreground font-medium text-sm mb-1">Demo Login:</p>
+                  <p className="text-xs text-muted-foreground">
+                    Email:{" "}
+                    <button
+                      type="button"
+                      onClick={fillDemoCredentials}
+                      className="text-foreground hover:text-[hsl(188_74%_51%)] underline transition-colors"
+                    >
+                      angela@vivacity.com.au
+                    </button>
+                  </p>
+                  <p className="text-xs text-muted-foreground">Password: password123</p>
+                </div>
+              </>
+            ) : showForgotPassword ? (
+              <div className="space-y-6">
+                <p className="text-muted-foreground text-sm">Enter your email to receive a password reset link</p>
+
                 <div className="space-y-2">
-                  <Label htmlFor="email" className="text-foreground font-semibold">
+                  <Label htmlFor="reset-email" className="text-foreground font-medium">
                     Email Address
                   </Label>
                   <Input
-                    id="email"
+                    id="reset-email"
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="Enter your email address"
-                    className="h-12 rounded-xl"
+                    className="h-11 rounded-lg border-0 bg-muted/50 ring-1 ring-border/50 hover:ring-border focus:ring-2 focus:ring-primary/30"
                     required
                   />
                 </div>
+
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="flex-1 h-11 rounded-lg"
+                    onClick={() => setShowForgotPassword(false)}
+                    disabled={isLoading}
+                  >
+                    Back
+                  </Button>
+                  <Button
+                    type="button"
+                    className="flex-1 h-11 rounded-lg bg-[hsl(188_74%_51%)] hover:bg-[hsl(188_74%_51%)]/90 text-white"
+                    onClick={handleForgotPassword}
+                    disabled={isLoading}
+                  >
+                    {isLoading ? "Sending..." : "Send Reset Link"}
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-6">
+                <p className="text-muted-foreground text-sm">Enter your email to receive a passwordless login link</p>
 
                 <div className="space-y-2">
-                  <Label htmlFor="password" className="text-foreground font-semibold">
-                    Password
+                  <Label htmlFor="magic-email" className="text-foreground font-medium">
+                    Email Address
                   </Label>
                   <Input
-                    id="password"
-                    type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="Enter your password"
-                    className="h-12 rounded-xl"
+                    id="magic-email"
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="Enter your email address"
+                    className="h-11 rounded-lg border-0 bg-muted/50 ring-1 ring-border/50 hover:ring-border focus:ring-2 focus:ring-primary/30"
                     required
                   />
                 </div>
 
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id="remember"
-                    checked={rememberMe}
-                    onCheckedChange={(checked) => setRememberMe(checked as boolean)}
-                    className="border-secondary data-[state=checked]:bg-secondary data-[state=checked]:border-secondary"
-                  />
-                  <label
-                    htmlFor="remember"
-                    className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
-                  >
-                    Remember me
-                  </label>
-                </div>
-
-                <Button
-                  type="submit"
-                  className="w-full h-12 rounded-xl bg-[hsl(188_74%_51%)] hover:bg-[hsl(188_74%_51%)]/90 text-white font-semibold"
-                  disabled={isLoading}
-                >
-                  {isLoading ? "Signing in..." : "Log In"}
-                </Button>
-              </form>
-
-              {/* Alternative Login Options */}
-              <div className="mt-4 flex gap-2">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  className="flex-1 text-[hsl(188_74%_51%)] hover:text-[hsl(188_74%_41%)] hover:bg-transparent font-semibold"
-                  onClick={() => setShowForgotPassword(true)}
-                >
-                  Forgot Password?
-                </Button>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  className="flex-1 text-[hsl(188_74%_51%)] hover:text-[hsl(188_74%_41%)] hover:bg-transparent font-semibold"
-                  onClick={() => setShowMagicLink(true)}
-                >
-                  Send Magic Link
-                </Button>
-              </div>
-
-              {/* Demo Login Info */}
-              <div className="mt-4 bg-muted rounded-xl p-3 text-center">
-                <p className="text-foreground font-semibold mb-2">Demo Login:</p>
-                <p className="text-sm text-muted-foreground">
-                  Email:{" "}
-                  <button
+                <div className="flex gap-2">
+                  <Button
                     type="button"
-                    onClick={fillDemoCredentials}
-                    className="text-foreground hover:text-[hsl(188_74%_51%)] underline transition-colors"
+                    variant="outline"
+                    className="flex-1 h-11 rounded-lg"
+                    onClick={() => setShowMagicLink(false)}
+                    disabled={isLoading}
                   >
-                    angela@vivacity.com.au
-                  </button>
-                </p>
-                <p className="text-sm text-muted-foreground">Password: password123</p>
+                    Back
+                  </Button>
+                  <Button
+                    type="button"
+                    className="flex-1 h-11 rounded-lg bg-[hsl(188_74%_51%)] hover:bg-[hsl(188_74%_51%)]/90 text-white"
+                    onClick={handleMagicLink}
+                    disabled={isLoading}
+                  >
+                    {isLoading ? "Sending..." : "Send Magic Link"}
+                  </Button>
+                </div>
               </div>
-            </>
-          ) : showForgotPassword ? (
-            <div className="space-y-6">
-              <div className="text-center mb-8">
-                <h2 className="text-3xl font-bold text-foreground mb-2">Reset Password</h2>
-                <p className="text-muted-foreground">Enter your email to receive a password reset link</p>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="reset-email" className="text-foreground font-semibold">
-                  Email Address
-                </Label>
-                <Input
-                  id="reset-email"
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="Enter your email address"
-                  className="h-12 rounded-xl"
-                  required
-                />
-              </div>
-
-              <div className="flex gap-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="flex-1 h-12 rounded-xl"
-                  onClick={() => setShowForgotPassword(false)}
-                  disabled={isLoading}
-                >
-                  Back
-                </Button>
-                <Button
-                  type="button"
-                  className="flex-1 h-12 rounded-xl bg-[hsl(188_74%_51%)] hover:bg-[hsl(188_74%_51%)]/90 text-white"
-                  onClick={handleForgotPassword}
-                  disabled={isLoading}
-                >
-                  {isLoading ? "Sending..." : "Send Reset Link"}
-                </Button>
-              </div>
-            </div>
-          ) : (
-            <div className="space-y-6">
-              <div className="text-center mb-8">
-                <h2 className="text-3xl font-bold text-foreground mb-2">Magic Link</h2>
-                <p className="text-muted-foreground">Enter your email to receive a passwordless login link</p>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="magic-email" className="text-foreground font-semibold">
-                  Email Address
-                </Label>
-                <Input
-                  id="magic-email"
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="Enter your email address"
-                  className="h-12 rounded-xl"
-                  required
-                />
-              </div>
-
-              <div className="flex gap-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="flex-1 h-12 rounded-xl"
-                  onClick={() => setShowMagicLink(false)}
-                  disabled={isLoading}
-                >
-                  Back
-                </Button>
-                <Button
-                  type="button"
-                  className="flex-1 h-12 rounded-xl bg-[hsl(188_74%_51%)] hover:bg-[hsl(188_74%_51%)]/90 text-white"
-                  onClick={handleMagicLink}
-                  disabled={isLoading}
-                >
-                  {isLoading ? "Sending..." : "Send Magic Link"}
-                </Button>
-              </div>
-            </div>
-          )}
-        </div>
+            )}
+          </CardContent>
+        </Card>
 
         {/* Powered by Vivacity Footer */}
         <div className="text-center text-white mt-3">
