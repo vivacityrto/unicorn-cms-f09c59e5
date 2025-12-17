@@ -146,16 +146,21 @@ export function AuditTemplatesTable({
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input placeholder="Search..." value={statusSearchQuery} onChange={e => setStatusSearchQuery(e.target.value)} className="pl-9 h-9 text-sm rounded-md" />
               </div>
-              <div className="max-h-[200px] overflow-y-auto space-y-1">
-                {filteredStatusOptions.map(option => {
+              <div className="max-h-[200px] overflow-y-auto">
+                {filteredStatusOptions.map((option, index) => {
                 const Icon = option.icon;
-                return <div key={option.value} className={cn("px-4 py-2.5 text-sm font-medium cursor-pointer rounded-md transition-all flex items-center gap-2", statusFilter === option.value ? "bg-primary/10 text-primary" : "text-foreground hover:bg-muted")} onClick={() => {
-                  setStatusFilter(option.value as 'all' | 'active' | 'locked' | 'draft');
-                  setStatusSearchQuery("");
-                }}>
+                return <div key={option.value}>
+                    <div className={cn("px-4 py-2.5 text-sm font-medium cursor-pointer rounded-md transition-all flex items-center gap-2", statusFilter === option.value ? "bg-primary/10 text-primary" : "text-foreground hover:bg-muted")} onClick={() => {
+                      setStatusFilter(option.value as 'all' | 'active' | 'locked' | 'draft');
+                      setStatusSearchQuery("");
+                    }}>
                       {Icon && <Icon className={cn("h-4 w-4", option.color)} />}
                       {option.label}
-                    </div>;
+                    </div>
+                    {index < filteredStatusOptions.length - 1 && (
+                      <div className="mx-2 my-1 border-b border-border/50" />
+                    )}
+                  </div>;
               })}
                 {filteredStatusOptions.length === 0 && statusSearchQuery && <p className="text-xs text-muted-foreground text-center py-2">No statuses found</p>}
               </div>
