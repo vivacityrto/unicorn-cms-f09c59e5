@@ -345,22 +345,12 @@ export const DashboardLayout = ({ children }: { children: React.ReactNode }) => 
                 </div>
               </div>
               
-              {/* Quick stats / actions */}
-              <div className="mt-5 pt-4 border-t border-white/10 flex justify-center gap-3">
-                <Link 
-                  to="/profile" 
-                  className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 transition-all duration-200 text-white/80 hover:text-white text-xs font-medium"
-                >
-                  <Home className="h-3.5 w-3.5" />
-                  <span>Profile</span>
-                </Link>
-                <Link 
-                  to="/settings" 
-                  className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 transition-all duration-200 text-white/80 hover:text-white text-xs font-medium"
-                >
-                  <Settings className="h-3.5 w-3.5" />
-                  <span>Settings</span>
-                </Link>
+              {/* User email */}
+              <div className="mt-4 pt-4 border-t border-white/10 flex justify-center">
+                <div className="flex items-center gap-2 text-white/60 text-xs">
+                  <Mail className="h-3.5 w-3.5" />
+                  <span className="truncate max-w-[180px]">{profile?.email || ""}</span>
+                </div>
               </div>
             </div>
           </div>
