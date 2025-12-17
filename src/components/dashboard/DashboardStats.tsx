@@ -1,7 +1,8 @@
 import * as React from "react";
 import { Card, CardContent } from "@/components/ui/card";
-import { Users, Package, FileText, CheckCircle2, Clock, TrendingUp, Building2, AlertCircle } from "lucide-react";
+import { Users, FileText, TrendingUp, AlertCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { WeekTasksTable } from "./WeekTasksTable";
 
 interface StatCardProps {
   title: string;
@@ -61,21 +62,10 @@ interface DashboardStatsProps {
 export const DashboardStats = ({ stats }: DashboardStatsProps) => {
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-      <StatCard
-        title="Total Clients"
-        value={stats.totalClients}
-        subtitle="Active tenants"
-        icon={<Building2 className="h-6 w-6" />}
-        color="primary"
-        trend={{ value: 12, isPositive: true }}
-      />
-      <StatCard
-        title="Active Packages"
-        value={stats.activePackages}
-        subtitle="In progress"
-        icon={<Package className="h-6 w-6" />}
-        color="purple"
-      />
+      {/* Week Tasks Table - spans 2 columns */}
+      <WeekTasksTable />
+      
+      {/* Remaining 4 stat cards */}
       <StatCard
         title="Team Members"
         value={stats.totalUsers}
@@ -88,20 +78,6 @@ export const DashboardStats = ({ stats }: DashboardStatsProps) => {
         value={stats.documentsCount}
         subtitle="Total managed"
         icon={<FileText className="h-6 w-6" />}
-        color="green"
-      />
-      <StatCard
-        title="Pending Tasks"
-        value={stats.pendingTasks}
-        subtitle="Awaiting action"
-        icon={<Clock className="h-6 w-6" />}
-        color="orange"
-      />
-      <StatCard
-        title="Completed This Month"
-        value={stats.completedThisMonth}
-        subtitle="Tasks finished"
-        icon={<CheckCircle2 className="h-6 w-6" />}
         color="green"
       />
       <StatCard
