@@ -59,16 +59,23 @@ export const WeekTasksTable = () => {
   });
 
   const getStatusBadge = (status: string | null) => {
-    switch (status?.toLowerCase()) {
-      case "in_progress":
-        return <Badge variant="default" className="text-xs bg-blue-500">In Progress</Badge>;
-      case "not_started":
-        return <Badge variant="secondary" className="text-xs">Not Started</Badge>;
-      case "completed":
-        return <Badge className="text-xs bg-green-500">Completed</Badge>;
-      default:
-        return <Badge variant="outline" className="text-xs">-</Badge>;
-    }
+    const variants: Record<string, { label: string; className: string }> = {
+      completed: {
+        label: "Completed",
+        className: "bg-emerald-500/10 text-emerald-600 border-emerald-500/30 text-[0.75rem] py-[2px] px-[0.625rem] rounded-[11px] font-medium"
+      },
+      in_progress: {
+        label: "In Progress",
+        className: "bg-yellow-500/10 text-yellow-600 border-yellow-500/20 text-[0.75rem] py-[2px] px-[0.625rem] rounded-[11px]"
+      },
+      not_started: {
+        label: "Not Started",
+        className: "bg-muted text-muted-foreground border-border text-[0.75rem] py-[2px] px-[0.625rem] rounded-[11px]"
+      }
+    };
+    const key = status?.toLowerCase() || "not_started";
+    const { label, className } = variants[key] || variants.not_started;
+    return <Badge variant="outline" className={className}>{label}</Badge>;
   };
 
   const getStatusIcon = (status: string | null, dueDate: string | null) => {
