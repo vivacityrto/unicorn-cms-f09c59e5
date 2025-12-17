@@ -10,11 +10,11 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 interface WeekTask {
   id: string;
-  note_details: string;
-  note_type: string | null;
+  task_name: string;
+  description: string | null;
   priority: string | null;
-  started_date: string | null;
-  completed_date: string | null;
+  due_date: string | null;
+  status: string | null;
   tenant_id: number;
   tenant_name?: string;
 }
@@ -25,33 +25,36 @@ export const WeekTasksTable = () => {
     queryFn: async () => {
       const now = new Date();
       const weekStart = startOfWeek(now, { weekStartsOn: 1 });
+      const weekEnd = new Date(weekStart);
+      weekEnd.setDate(weekEnd.getDate() + 7);
 
       const { data, error } = await supabase
-        .from("documents_notes")
+        .from("tasks_tenants")
         .select(`
           id,
-          note_details,
-          note_type,
+          task_name,
+          description,
           priority,
-          started_date,
-          completed_date,
+          due_date,
+          status,
           tenant_id,
           tenants (name)
         `)
-        .or(`started_date.gte.${weekStart.toISOString()},started_date.is.null`)
-        .is("completed_date", null)
-        .order("started_date", { ascending: true })
+        .gte("due_date", weekStart.toISOString().split('T')[0])
+        .lte("due_date", weekEnd.toISOString().split('T')[0])
+        .neq("status", "completed")
+        .order("due_date", { ascending: true })
         .limit(8);
 
       if (error) throw error;
 
       return (data || []).map((task: any) => ({
         id: task.id,
-        note_details: task.note_details,
-        note_type: task.note_type,
+        task_name: task.task_name,
+        description: task.description,
         priority: task.priority,
-        started_date: task.started_date,
-        completed_date: task.completed_date,
+        due_date: task.due_date,
+        status: task.status,
         tenant_id: task.tenant_id,
         tenant_name: task.tenants?.name,
       }));
@@ -71,11 +74,11 @@ export const WeekTasksTable = () => {
     }
   };
 
-  const getStatusIcon = (startedDate: string | null, completedDate: string | null) => {
-    if (completedDate) {
+  const getStatusIcon = (status: string | null, dueDate: string | null) => {
+    if (status === "completed") {
       return <CheckCircle2 className="h-4 w-4 text-green-500" />;
     }
-    if (startedDate && isPast(new Date(startedDate))) {
+    if (dueDate && isPast(new Date(dueDate))) {
       return <AlertCircle className="h-4 w-4 text-orange-500" />;
     }
     return <Clock className="h-4 w-4 text-muted-foreground" />;
@@ -83,7 +86,7 @@ export const WeekTasksTable = () => {
 
   const formatDueDate = (date: string | null) => {
     if (!date) return "No date";
-    const d = new Date(date);
+    const d = new Date(date + 'T00:00:00');
     if (isToday(d)) return "Today";
     if (isTomorrow(d)) return "Tomorrow";
     return format(d, "MMM d");
@@ -135,13 +138,13 @@ export const WeekTasksTable = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {tasks.map((task) => (
+            {tasks.map((task) => (
                 <TableRow key={task.id}>
                   <TableCell className="pl-4">
-                    {getStatusIcon(task.started_date, task.completed_date)}
+                    {getStatusIcon(task.status, task.due_date)}
                   </TableCell>
                   <TableCell className="font-medium max-w-[180px] truncate">
-                    {task.note_details || "Untitled task"}
+                    {task.task_name || "Untitled task"}
                   </TableCell>
                   <TableCell className="text-muted-foreground text-sm">
                     {task.tenant_name || "-"}
@@ -150,7 +153,7 @@ export const WeekTasksTable = () => {
                     {getPriorityBadge(task.priority)}
                   </TableCell>
                   <TableCell className="text-muted-foreground text-sm pr-4">
-                    {formatDueDate(task.started_date)}
+                    {formatDueDate(task.due_date)}
                   </TableCell>
                 </TableRow>
               ))}
