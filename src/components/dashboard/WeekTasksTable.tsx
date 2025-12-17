@@ -153,7 +153,7 @@ export const WeekTasksTable = () => {
         </CardTitle>
         <Link 
           to="/tasks" 
-          className="text-sm text-muted-foreground hover:text-primary transition-colors"
+          className="text-sm text-primary hover:text-primary/80 transition-colors"
         >
           View More ({tasks.length})
         </Link>
