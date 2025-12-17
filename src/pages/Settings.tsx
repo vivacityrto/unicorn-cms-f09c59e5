@@ -172,22 +172,26 @@ export default function Settings() {
         throw new Error(errorMsg);
       }
 
-      // Get public URL
+      // Get public URL with cache-busting parameter
       const { data: { publicUrl } } = supabase.storage
         .from('avatars')
         .getPublicUrl(filePath);
 
+      // Add cache-busting timestamp to force browser to reload the image
+      const cacheBustedUrl = `${publicUrl}?t=${Date.now()}`;
+
       // Update avatar_url in users table directly
       const { error: updateError } = await supabase
         .from('users')
-        .update({ avatar_url: publicUrl })
+        .update({ avatar_url: cacheBustedUrl })
         .eq('user_uuid', user.id);
 
       if (updateError) {
         console.error('Failed to update avatar URL:', updateError);
       }
 
-      setAvatarUrl(publicUrl);
+      // Immediately update local state to show the new avatar
+      setAvatarUrl(cacheBustedUrl);
       toast({
         title: 'Success',
         description: 'Profile photo updated successfully',
