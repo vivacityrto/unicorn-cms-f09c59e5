@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef, useEffect } from "react";
+import { useState, useMemo, useRef, useEffect, useLayoutEffect } from "react";
 import {
   LayoutDashboard,
   FileText,
@@ -248,12 +248,19 @@ export const DashboardLayout = ({ children }: { children: React.ReactNode }) => 
   const scrollPositionRef = useRef<number>(0);
 
   // Preserve sidebar scroll position on route changes
-  useEffect(() => {
-    // Restore scroll position after route change
-    if (navRef.current) {
+  useLayoutEffect(() => {
+    // Restore scroll position synchronously after render
+    if (navRef.current && scrollPositionRef.current > 0) {
       navRef.current.scrollTop = scrollPositionRef.current;
     }
   }, [location.pathname]);
+
+  // Save scroll position before navigation
+  const saveScrollPosition = () => {
+    if (navRef.current) {
+      scrollPositionRef.current = navRef.current.scrollTop;
+    }
+  };
 
   // Check if nav content is scrollable
   const checkScrollable = (e: React.UIEvent<HTMLElement>) => {
@@ -261,8 +268,6 @@ export const DashboardLayout = ({ children }: { children: React.ReactNode }) => 
     const hasScroll = element.scrollHeight > element.clientHeight;
     const isAtBottom = element.scrollHeight - element.scrollTop <= element.clientHeight + 10;
     setShowScrollIndicator(hasScroll && !isAtBottom);
-    // Save scroll position
-    scrollPositionRef.current = element.scrollTop;
   };
 
   // Determine menu items and groups based on user role (or view mode)
@@ -451,6 +456,7 @@ export const DashboardLayout = ({ children }: { children: React.ReactNode }) => 
                       <Link
                         key={item.path}
                         to={item.path}
+                        onClick={saveScrollPosition}
                         className={`flex items-center gap-2 px-4 mx-2 mb-1 transition-colors text-sm rounded-full ${isActive ? "bg-white/10 border border-white/20 text-white" : "text-white/80 hover:bg-white/10 hover:text-white"}`}
                         style={{
                           paddingTop: "10px",
@@ -490,6 +496,7 @@ export const DashboardLayout = ({ children }: { children: React.ReactNode }) => 
                         <Link
                           key={item.path}
                           to={item.path}
+                          onClick={saveScrollPosition}
                           className={`flex items-center gap-2 px-4 mx-2 mb-1 transition-colors text-sm rounded-full ${isActive ? "bg-white/10 border border-white/20 text-white" : "text-white/80 hover:bg-white/10 hover:text-white"}`}
                           style={{
                             paddingTop: "10px",
@@ -533,6 +540,7 @@ export const DashboardLayout = ({ children }: { children: React.ReactNode }) => 
                           <Link
                             key={item.path}
                             to={item.path}
+                            onClick={saveScrollPosition}
                             className={`flex items-center gap-2 px-4 mx-2 mb-1 transition-colors text-sm rounded-full ${isActive ? "bg-white/10 border border-white/20 text-white" : "text-white/80 hover:bg-white/10 hover:text-white"}`}
                             style={{
                               paddingTop: "10px",
@@ -573,6 +581,7 @@ export const DashboardLayout = ({ children }: { children: React.ReactNode }) => 
                         <Link
                           key={item.path}
                           to={item.path}
+                          onClick={saveScrollPosition}
                           className={`flex items-center gap-2 px-4 mx-2 mb-1 transition-colors text-sm rounded-full ${isActive ? "bg-white/10 border border-white/20 text-white" : "text-white/80 hover:bg-white/10 hover:text-white"}`}
                           style={{
                             paddingTop: "10px",
@@ -613,6 +622,7 @@ export const DashboardLayout = ({ children }: { children: React.ReactNode }) => 
                         <Link
                           key={item.path}
                           to={item.path}
+                          onClick={saveScrollPosition}
                           className={`flex items-center gap-2 px-4 mx-2 mb-1 transition-colors text-sm rounded-full ${isActive ? "bg-white/10 border border-white/20 text-white" : "text-white/80 hover:bg-white/10 hover:text-white"}`}
                           style={{
                             paddingTop: "10px",
