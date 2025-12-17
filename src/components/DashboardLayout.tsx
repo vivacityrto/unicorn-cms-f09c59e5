@@ -698,12 +698,11 @@ export const DashboardLayout = ({ children }: { children: React.ReactNode }) => 
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button
-                    variant="outline"
-                    size="sm"
-                    className="bg-transparent border-white/20 text-foreground hover:bg-transparent hover:border-white/20 hover:text-black gap-2"
+                    variant="ghost"
+                    size="icon"
+                    className="relative bg-white border border-black/[0.22] hover:bg-white/90"
                   >
-                    <Settings className="h-4 w-4" />
-                    Settings
+                    <Settings className="w-5 h-5 text-foreground" />
                   </Button>
                 </DropdownMenuTrigger>
 
