@@ -312,7 +312,7 @@ export const DashboardLayout = ({ children }: { children: React.ReactNode }) => 
       >
         {/* Logo/Brand */}
         {/* Logo/Brand or User Profile - Show user profile for Admin/User OR when viewing as client */}
-        {((profile?.unicorn_role === "Admin" || profile?.unicorn_role === "User") || isViewingAsClient) && sidebarOpen ? (
+        {sidebarOpen ? (
           <div className="relative px-3 pt-4 pb-6 border-b border-white/10">
             {/* Close button - top right */}
             <button
