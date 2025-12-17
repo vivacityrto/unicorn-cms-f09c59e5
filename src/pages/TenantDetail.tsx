@@ -432,19 +432,7 @@ export default function TenantDetail() {
   }
   return <div className="min-h-screen bg-background">
       {/* Back Button, Package Tabs and Status Header */}
-      <div className="px-6 pt-6 pb-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            
-            
-            {/* Packages Card - matching Package Details header style */}
-            {tenantPackages.length > 0 && <Card className="border-0 shadow-lg overflow-hidden">
-                
-                
-              </Card>}
-          </div>
-        </div>
-      </div>
+      
 
       {/* Status Badge */}
       <div className="px-6 mb-2 flex justify-between items-center">
@@ -469,9 +457,7 @@ export default function TenantDetail() {
                 <Avatar className="h-12 w-12 border-2 border-white/30">
                   <AvatarImage src={clientData.profilephoto || clientData.logo_url || ''} alt={clientData.companyname} />
                   <AvatarFallback className="bg-white/20 text-white text-lg font-semibold">
-                    {clientData.contactname 
-                      ? clientData.contactname.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()
-                      : clientData.companyname?.substring(0, 2).toUpperCase() || 'TN'}
+                    {clientData.contactname ? clientData.contactname.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() : clientData.companyname?.substring(0, 2).toUpperCase() || 'TN'}
                   </AvatarFallback>
                 </Avatar>
                 <div className="space-y-1">
