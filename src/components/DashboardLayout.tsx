@@ -308,7 +308,7 @@ export const DashboardLayout = ({ children }: { children: React.ReactNode }) => 
             </button>
             
             {/* Glass card container */}
-            <div className="mt-6 pt-5 px-5 pb-0">
+            <div className="mt-6">
               {/* Avatar section */}
               <div className="flex flex-col items-center">
                 <div className="relative group">
