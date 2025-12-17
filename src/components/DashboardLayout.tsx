@@ -296,18 +296,50 @@ export const DashboardLayout = ({ children }: { children: React.ReactNode }) => 
         {/* Logo/Brand */}
         <div className="h-16 flex items-center justify-between px-4 border-b border-white/20">
           {sidebarOpen ? (
-            <div className="flex flex-col gap-1">
-              <h1 className="text-xl font-bold text-white">Unicorn 2.0</h1>
-              <Badge
-                className="px-2 py-0.5 w-fit bg-white border-0"
-                style={{
-                  color: getRoleBadgeColor(profile?.unicorn_role || "User"),
-                  fontWeight: "bold",
-                  fontSize: "11px",
-                }}
-              >
-                {profile?.unicorn_role || "User"}
-              </Badge>
+            <div className="flex items-center gap-3">
+              {(profile?.unicorn_role === "Admin" || profile?.unicorn_role === "User") ? (
+                <>
+                  <Avatar className="h-10 w-10 border-2 border-white/30">
+                    <AvatarImage src={profile?.avatar_url || ""} alt={profile?.first_name || "User"} />
+                    <AvatarFallback className="bg-white/20 text-white font-semibold">
+                      {profile?.first_name && profile?.last_name 
+                        ? `${profile.first_name[0]}${profile.last_name[0]}`.toUpperCase()
+                        : getInitials(profile?.email || "U")}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="flex flex-col">
+                    <span className="text-sm font-semibold text-white">
+                      {profile?.first_name && profile?.last_name 
+                        ? `${profile.first_name} ${profile.last_name}`
+                        : profile?.email?.split("@")[0] || "User"}
+                    </span>
+                    <Badge
+                      className="px-2 py-0.5 w-fit bg-white border-0"
+                      style={{
+                        color: getRoleBadgeColor(profile?.unicorn_role || "User"),
+                        fontWeight: "bold",
+                        fontSize: "11px",
+                      }}
+                    >
+                      {profile?.unicorn_role || "User"}
+                    </Badge>
+                  </div>
+                </>
+              ) : (
+                <div className="flex flex-col gap-1">
+                  <h1 className="text-xl font-bold text-white">Unicorn 2.0</h1>
+                  <Badge
+                    className="px-2 py-0.5 w-fit bg-white border-0"
+                    style={{
+                      color: getRoleBadgeColor(profile?.unicorn_role || "User"),
+                      fontWeight: "bold",
+                      fontSize: "11px",
+                    }}
+                  >
+                    {profile?.unicorn_role || "User"}
+                  </Badge>
+                </div>
+              )}
             </div>
           ) : null}
           <button
