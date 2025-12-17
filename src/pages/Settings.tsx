@@ -396,9 +396,12 @@ export default function Settings() {
                     <SelectContent className="bg-background w-[var(--radix-select-trigger-width)]">
                       {TIMEZONES.map((tz, index) => (
                         <div key={tz.value}>
-                          <SelectItem value={tz.value} className="cursor-pointer data-[state=checked]:bg-transparent focus:bg-transparent">
+                          <SelectItem 
+                            value={tz.value} 
+                            className="cursor-pointer data-[state=checked]:bg-transparent focus:bg-transparent data-[state=checked]:text-[rgb(97_9_161)]"
+                          >
                             <div className="flex items-center gap-2">
-                              <MapPin className="h-4 w-4" />
+                              <MapPin className={`h-4 w-4 ${formData.timezone === tz.value ? 'text-[rgb(97_9_161)]' : ''}`} />
                               <span>{tz.label}</span>
                             </div>
                           </SelectItem>
