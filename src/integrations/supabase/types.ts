@@ -5583,7 +5583,6 @@ export type Database = {
       }
       tasks_tenants: {
         Row: {
-          assigned_to: string | null
           completed: boolean
           created_at: string
           created_by: string | null
@@ -5591,6 +5590,7 @@ export type Database = {
           due_date: string
           escalated_at: string | null
           file_paths: string[] | null
+          followers: string[] | null
           id: string
           last_reminder_at: string | null
           package_id: number | null
@@ -5605,7 +5605,6 @@ export type Database = {
           updated_at: string
         }
         Insert: {
-          assigned_to?: string | null
           completed?: boolean
           created_at?: string
           created_by?: string | null
@@ -5613,6 +5612,7 @@ export type Database = {
           due_date: string
           escalated_at?: string | null
           file_paths?: string[] | null
+          followers?: string[] | null
           id?: string
           last_reminder_at?: string | null
           package_id?: number | null
@@ -5627,7 +5627,6 @@ export type Database = {
           updated_at?: string
         }
         Update: {
-          assigned_to?: string | null
           completed?: boolean
           created_at?: string
           created_by?: string | null
@@ -5635,6 +5634,7 @@ export type Database = {
           due_date?: string
           escalated_at?: string | null
           file_paths?: string[] | null
+          followers?: string[] | null
           id?: string
           last_reminder_at?: string | null
           package_id?: number | null
