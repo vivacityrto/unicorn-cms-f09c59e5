@@ -407,6 +407,7 @@ export default function Settings() {
                   onChange={(e) => setFormData({ ...formData, bio: e.target.value })}
                   placeholder="Tell us about yourself..."
                   rows={4}
+                  className="bg-[hsl(188deg_74%_51%_/_8%)]"
                 />
               </div>
 
