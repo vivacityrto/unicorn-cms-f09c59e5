@@ -7,7 +7,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
-import { Upload, Save, Lock, Mail, User, Phone, Briefcase, Clock, Globe, MapPin, Check } from 'lucide-react';
+import { Upload, Save, Lock, Mail, User, Phone, Briefcase, Clock, Globe, MapPin, Check, Calendar } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectSeparator } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 
@@ -325,12 +325,8 @@ export default function Settings() {
                 </p>
               </div>
               <div className="text-right">
-                <div className="flex items-center justify-end gap-2 text-xs text-white/80">
-                  {formData.timezone?.includes('Manila') ? (
-                    <span className="text-lg">🇵🇭</span>
-                  ) : (
-                    <span className="text-lg">🇦🇺</span>
-                  )}
+                <div className="flex items-center justify-end gap-2 text-sm text-white/80">
+                  <Calendar className="h-4 w-4" />
                   <span className="font-mono">{liveTime}</span>
                 </div>
                 <p className="text-[0.6rem] text-white/50 mt-0.5">
