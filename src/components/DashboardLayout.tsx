@@ -617,38 +617,50 @@ export const DashboardLayout = ({ children }: { children: React.ReactNode }) => 
             <NotificationDropdown />
 
             {/* User Menu with Dropdown */}
-            <DropdownMenu>
-              <DropdownMenuTrigger className="flex items-center gap-3 focus:outline-none">
-                <Avatar className="h-9 w-9 cursor-pointer ring-2 ring-transparent hover:ring-primary/20 transition-all">
-                  <AvatarImage src={profile?.avatar_url || undefined} />
-                  <AvatarFallback className="bg-primary text-primary-foreground text-xs">
-                    {getInitials(profile?.email || "U")}
-                  </AvatarFallback>
-                </Avatar>
-                <div className="hidden md:block text-left">
-                  <p className="text-sm font-medium">
-                    {profile?.first_name || profile?.last_name
-                      ? `${profile.first_name || ""} ${profile.last_name || ""}`.trim()
-                      : profile?.email?.split("@")[0] || "User"}
-                  </p>
-                  <p className="text-xs text-muted-foreground">{profile?.email || ""}</p>
-                </div>
-              </DropdownMenuTrigger>
+            {(profile?.unicorn_role === "Admin" || profile?.unicorn_role === "User") ? (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={signOut}
+                className="bg-red-500/10 border-red-500/50 text-red-500 hover:bg-red-500/20 hover:text-red-500 hover:border-red-500/70 gap-2"
+              >
+                <LogOut className="h-4 w-4" />
+                Logout
+              </Button>
+            ) : (
+              <DropdownMenu>
+                <DropdownMenuTrigger className="flex items-center gap-3 focus:outline-none">
+                  <Avatar className="h-9 w-9 cursor-pointer ring-2 ring-transparent hover:ring-primary/20 transition-all">
+                    <AvatarImage src={profile?.avatar_url || undefined} />
+                    <AvatarFallback className="bg-primary text-primary-foreground text-xs">
+                      {getInitials(profile?.email || "U")}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="hidden md:block text-left">
+                    <p className="text-sm font-medium">
+                      {profile?.first_name || profile?.last_name
+                        ? `${profile.first_name || ""} ${profile.last_name || ""}`.trim()
+                        : profile?.email?.split("@")[0] || "User"}
+                    </p>
+                    <p className="text-xs text-muted-foreground">{profile?.email || ""}</p>
+                  </div>
+                </DropdownMenuTrigger>
 
-              <DropdownMenuContent align="end" className="w-56">
-                <Link to="/settings">
-                  <DropdownMenuItem className="cursor-pointer">
-                    <Settings className="mr-2 h-4 w-4" />
-                    <span>Settings</span>
+                <DropdownMenuContent align="end" className="w-56">
+                  <Link to="/settings">
+                    <DropdownMenuItem className="cursor-pointer">
+                      <Settings className="mr-2 h-4 w-4" />
+                      <span>Settings</span>
+                    </DropdownMenuItem>
+                  </Link>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem className="cursor-pointer text-destructive focus:text-destructive" onClick={signOut}>
+                    <LogOut className="mr-2 h-4 w-4" />
+                    <span>Sign Out</span>
                   </DropdownMenuItem>
-                </Link>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem className="cursor-pointer text-destructive focus:text-destructive" onClick={signOut}>
-                  <LogOut className="mr-2 h-4 w-4" />
-                  <span>Sign Out</span>
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
           </div>
         </header>
 
