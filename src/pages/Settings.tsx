@@ -155,22 +155,37 @@ export default function Settings() {
       const fileName = `profile.${fileExt}`;
       const filePath = `${user.id}/${fileName}`;
 
+      // First, try to remove old avatar if exists
+      await supabase.storage
+        .from('avatars')
+        .remove([filePath]);
+
+      // Upload new avatar
       const { error: uploadError } = await supabase.storage
         .from('avatars')
-        .upload(filePath, file, { upsert: true });
+        .upload(filePath, file);
 
       if (uploadError) {
-        // Provide clear error messages for common issues
-        const errorMsg = uploadError.message.includes('new row violates row-level security') 
+        const errorMsg = uploadError.message.includes('row-level security') 
           ? 'Permission denied: Unable to upload avatar. Please contact support.'
           : uploadError.message || 'Failed to upload avatar';
         throw new Error(errorMsg);
       }
 
-      // Database trigger automatically updates profile and audit log
+      // Get public URL
       const { data: { publicUrl } } = supabase.storage
         .from('avatars')
         .getPublicUrl(filePath);
+
+      // Update avatar_url in users table directly
+      const { error: updateError } = await supabase
+        .from('users')
+        .update({ avatar_url: publicUrl })
+        .eq('user_uuid', user.id);
+
+      if (updateError) {
+        console.error('Failed to update avatar URL:', updateError);
+      }
 
       setAvatarUrl(publicUrl);
       toast({
