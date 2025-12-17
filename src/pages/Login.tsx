@@ -24,7 +24,7 @@ const Login = () => {
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) {
-        navigate("/dashboard");
+        navigate("/manage-packages");
       }
     });
   }, [navigate]);
@@ -46,7 +46,7 @@ const Login = () => {
         description: "Redirecting...",
       });
 
-      navigate("/dashboard");
+      navigate("/manage-packages");
     } catch (error: any) {
       toast({
         title: "Login failed",
@@ -120,7 +120,7 @@ const Login = () => {
       const { error } = await supabase.auth.signInWithOtp({
         email,
         options: {
-          emailRedirectTo: `${window.location.origin}/dashboard`,
+          emailRedirectTo: `${window.location.origin}/manage-packages`,
         },
       });
 
