@@ -20,7 +20,7 @@ export const NotificationDropdown = () => {
         <Button
           variant="ghost"
           size="icon"
-          className="relative bg-white hover:bg-white/90"
+          className="relative bg-white transition-all duration-200 hover:bg-white hover:scale-105 hover:shadow-md"
           style={{ boxShadow: 'rgba(0, 0, 0, 0.02) 0px 1px 3px 0px, rgba(27, 31, 35, 0.15) 0px 0px 0px 1px' }}
         >
           <Bell className="w-5 h-5 text-foreground" />
