@@ -43,6 +43,7 @@ import { InviteUserDialog } from '@/components/InviteUserDialog';
 import { AdminInviteUserDialog } from '@/components/AdminInviteUserDialog';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useAuth } from '@/hooks/useAuth';
+import { UserProfileCard } from '@/components/UserProfileCard';
 
 interface User {
   user_uuid: string;
@@ -669,177 +670,222 @@ export default function ManageUsers() {
         />
       </div>
 
-      {/* Users Table */}
-      <div className="rounded-lg border-0 bg-card shadow-lg overflow-hidden">
-        <Table>
-          <TableHeader>
-            <TableRow className="border-b-2 hover:bg-transparent">
-              <TableHead className="font-semibold bg-muted/30 text-foreground h-14 whitespace-nowrap border-r">Role</TableHead>
-              <TableHead className="font-semibold bg-muted/30 text-foreground h-14 whitespace-nowrap border-r">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-8 px-2 hover:bg-transparent"
-                  onClick={() => toggleSort('name')}
-                >
-                  Full Name
-                  <ArrowUpDown className="ml-2 h-4 w-4" />
-                </Button>
-              </TableHead>
-              <TableHead className="font-semibold bg-muted/30 text-foreground h-14 whitespace-nowrap border-r">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-8 px-2 hover:bg-transparent"
-                  onClick={() => toggleSort('email')}
-                >
-                  Email
-                  <ArrowUpDown className="ml-2 h-4 w-4" />
-                </Button>
-              </TableHead>
-              <TableHead className="font-semibold bg-muted/30 text-foreground h-14 whitespace-nowrap border-r">Tenant</TableHead>
-              <TableHead className="font-semibold bg-muted/30 text-foreground h-14 whitespace-nowrap border-r">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-8 px-2 hover:bg-transparent"
-                  onClick={() => toggleSort('user_type')}
-                >
-                  User Type
-                  <ArrowUpDown className="ml-2 h-4 w-4" />
-                </Button>
-              </TableHead>
-              <TableHead className="font-semibold bg-muted/30 text-foreground h-14 whitespace-nowrap border-r">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-8 px-2 hover:bg-transparent"
-                  onClick={() => toggleSort('mobile_phone')}
-                >
-                  Mobile Phone
-                  <ArrowUpDown className="ml-2 h-4 w-4" />
-                </Button>
-              </TableHead>
-              <TableHead className="font-semibold bg-muted/30 text-foreground h-14 whitespace-nowrap border-r">Status</TableHead>
-              <TableHead className="font-semibold bg-muted/30 text-foreground h-14 whitespace-nowrap text-right">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filteredUsers.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
-                  No users found
-                </TableCell>
-              </TableRow>
-            ) : (
-              filteredUsers.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage).map((user, index) => (
-                 <TableRow 
-                  key={user.user_uuid}
-                  className="group hover:bg-primary/5 transition-all duration-200 cursor-pointer border-b border-border/50 hover:border-primary/20 animate-fade-in"
-                  style={{ animationDelay: `${index * 30}ms` }}
-                  onClick={() => navigate(`/user-profile/${user.user_uuid}`)}
-                >
-                  <TableCell onClick={(e) => e.stopPropagation()} className="py-6 border-r border-border/50">
-                    {currentUserRole === 'Super Admin' ? (
-                      <Combobox
-                        options={[
-                          { value: 'Super Admin', label: 'Super Admin' },
-                          { value: 'Team Leader', label: 'Team Leader' },
-                          { value: 'Team Member', label: 'Team Member' },
-                          { value: 'Admin', label: 'Admin' },
-                          { value: 'User', label: 'User' }
-                        ]}
-                        value={user.unicorn_role}
-                        onValueChange={(newRole) => handleRoleChange(user.user_uuid, newRole as 'Super Admin' | 'Team Leader' | 'Team Member' | 'Admin' | 'User')}
-                        placeholder="Select role..."
-                        searchPlaceholder="Search roles..."
-                        emptyText="No roles found."
-                        className="w-[160px]"
-                      />
-                    ) : (
-                      <Badge variant={getRoleBadgeVariant(user.unicorn_role)}>
-                        {user.unicorn_role}
-                      </Badge>
-                    )}
-                  </TableCell>
-                  <TableCell className="font-semibold text-foreground whitespace-nowrap py-6 border-r border-border/50">
-                    {user.first_name || user.last_name ? `${user.first_name} ${user.last_name}`.trim() : ''}
-                  </TableCell>
-                  <TableCell className="text-muted-foreground text-sm py-6 border-r border-border/50">
-                    {user.email}
-                  </TableCell>
-                  <TableCell className="text-muted-foreground text-sm py-6 border-r border-border/50">
-                    <div className="truncate max-w-[200px]">{user.tenant_name || '—'}</div>
-                  </TableCell>
-                  <TableCell className="py-6 border-r border-border/50">
-                    <Badge variant={getUserTypeBadgeVariant(user.user_type)}>
-                      {user.user_type}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-muted-foreground text-sm py-6 border-r border-border/50">
-                    {user.mobile_phone || '—'}
-                  </TableCell>
-                  <TableCell className="py-6 border-r border-border/50">
-                    {user.disabled || user.archived ? (
-                      <Badge 
-                        variant="outline"
-                        className="text-[0.75rem] font-medium py-[2px] px-[0.625rem] rounded-[11px]"
-                        style={{
-                          borderColor: '#DC2626',
-                          color: '#DC2626',
-                          backgroundColor: '#DC262610',
-                          borderWidth: '1.5px'
-                        }}
-                      >
-                        Inactive
-                      </Badge>
-                    ) : (
-                      <Badge 
-                        variant="outline" 
-                        className="text-[0.75rem] font-medium py-[2px] px-[0.625rem] rounded-[11px]"
-                        style={{
-                          borderColor: '#16A34A',
-                          color: '#16A34A',
-                          backgroundColor: '#16A34A10',
-                          borderWidth: '1.5px'
-                        }}
-                      >
-                        Active
-                      </Badge>
-                    )}
-                  </TableCell>
-                  <TableCell className="py-6 px-4 text-center whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
-                    <div className="flex items-center justify-center gap-2">
+      {/* Client Parent/Child Users - Card Layout */}
+      {(() => {
+        const cardUsers = filteredUsers
+          .slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
+          .filter(user => user.user_type === 'Client Parent' || user.user_type === 'Client Child');
+        
+        if (cardUsers.length > 0) {
+          return (
+            <div className="mb-6">
+              <h3 className="text-lg font-semibold mb-4 text-foreground">Client Users</h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                {cardUsers.map((user, index) => (
+                  <UserProfileCard
+                    key={user.user_uuid}
+                    user={user}
+                    onEdit={handleEditUser}
+                    onDelete={handleDeleteUser}
+                    animationDelay={index * 50}
+                  />
+                ))}
+              </div>
+            </div>
+          );
+        }
+        return null;
+      })()}
+
+      {/* Other Users - Table Layout */}
+      {(() => {
+        const tableUsers = filteredUsers
+          .slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
+          .filter(user => user.user_type !== 'Client Parent' && user.user_type !== 'Client Child');
+        
+        if (tableUsers.length > 0 || filteredUsers.filter(u => u.user_type !== 'Client Parent' && u.user_type !== 'Client Child').length > 0) {
+          return (
+            <div className="rounded-lg border-0 bg-card shadow-lg overflow-hidden">
+              <Table>
+                <TableHeader>
+                  <TableRow className="border-b-2 hover:bg-transparent">
+                    <TableHead className="font-semibold bg-muted/30 text-foreground h-14 whitespace-nowrap border-r">Role</TableHead>
+                    <TableHead className="font-semibold bg-muted/30 text-foreground h-14 whitespace-nowrap border-r">
                       <Button
                         variant="ghost"
-                        size="icon"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleEditUser(user);
-                        }}
-                        className="h-8 w-8 hover:bg-primary/10 hover:text-primary"
+                        size="sm"
+                        className="h-8 px-2 hover:bg-transparent"
+                        onClick={() => toggleSort('name')}
                       >
-                        <Edit className="h-4 w-4" />
+                        Full Name
+                        <ArrowUpDown className="ml-2 h-4 w-4" />
                       </Button>
+                    </TableHead>
+                    <TableHead className="font-semibold bg-muted/30 text-foreground h-14 whitespace-nowrap border-r">
                       <Button
                         variant="ghost"
-                        size="icon"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleDeleteUser(user.user_uuid, `${user.first_name} ${user.last_name}`.trim());
-                        }}
-                        className="h-8 w-8 hover:bg-destructive/10 hover:text-destructive"
+                        size="sm"
+                        className="h-8 px-2 hover:bg-transparent"
+                        onClick={() => toggleSort('email')}
                       >
-                        <Trash2 className="h-4 w-4" />
+                        Email
+                        <ArrowUpDown className="ml-2 h-4 w-4" />
                       </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </div>
+                    </TableHead>
+                    <TableHead className="font-semibold bg-muted/30 text-foreground h-14 whitespace-nowrap border-r">Tenant</TableHead>
+                    <TableHead className="font-semibold bg-muted/30 text-foreground h-14 whitespace-nowrap border-r">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 px-2 hover:bg-transparent"
+                        onClick={() => toggleSort('user_type')}
+                      >
+                        User Type
+                        <ArrowUpDown className="ml-2 h-4 w-4" />
+                      </Button>
+                    </TableHead>
+                    <TableHead className="font-semibold bg-muted/30 text-foreground h-14 whitespace-nowrap border-r">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 px-2 hover:bg-transparent"
+                        onClick={() => toggleSort('mobile_phone')}
+                      >
+                        Mobile Phone
+                        <ArrowUpDown className="ml-2 h-4 w-4" />
+                      </Button>
+                    </TableHead>
+                    <TableHead className="font-semibold bg-muted/30 text-foreground h-14 whitespace-nowrap border-r">Status</TableHead>
+                    <TableHead className="font-semibold bg-muted/30 text-foreground h-14 whitespace-nowrap text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {tableUsers.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                        No users found
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    tableUsers.map((user, index) => (
+                       <TableRow 
+                        key={user.user_uuid}
+                        className="group hover:bg-primary/5 transition-all duration-200 cursor-pointer border-b border-border/50 hover:border-primary/20 animate-fade-in"
+                        style={{ animationDelay: `${index * 30}ms` }}
+                        onClick={() => navigate(`/user-profile/${user.user_uuid}`)}
+                      >
+                        <TableCell onClick={(e) => e.stopPropagation()} className="py-6 border-r border-border/50">
+                          {currentUserRole === 'Super Admin' ? (
+                            <Combobox
+                              options={[
+                                { value: 'Super Admin', label: 'Super Admin' },
+                                { value: 'Team Leader', label: 'Team Leader' },
+                                { value: 'Team Member', label: 'Team Member' },
+                                { value: 'Admin', label: 'Admin' },
+                                { value: 'User', label: 'User' }
+                              ]}
+                              value={user.unicorn_role}
+                              onValueChange={(newRole) => handleRoleChange(user.user_uuid, newRole as 'Super Admin' | 'Team Leader' | 'Team Member' | 'Admin' | 'User')}
+                              placeholder="Select role..."
+                              searchPlaceholder="Search roles..."
+                              emptyText="No roles found."
+                              className="w-[160px]"
+                            />
+                          ) : (
+                            <Badge variant={getRoleBadgeVariant(user.unicorn_role)}>
+                              {user.unicorn_role}
+                            </Badge>
+                          )}
+                        </TableCell>
+                        <TableCell className="font-semibold text-foreground whitespace-nowrap py-6 border-r border-border/50">
+                          {user.first_name || user.last_name ? `${user.first_name} ${user.last_name}`.trim() : ''}
+                        </TableCell>
+                        <TableCell className="text-muted-foreground text-sm py-6 border-r border-border/50">
+                          {user.email}
+                        </TableCell>
+                        <TableCell className="text-muted-foreground text-sm py-6 border-r border-border/50">
+                          <div className="truncate max-w-[200px]">{user.tenant_name || '—'}</div>
+                        </TableCell>
+                        <TableCell className="py-6 border-r border-border/50">
+                          <Badge variant={getUserTypeBadgeVariant(user.user_type)}>
+                            {user.user_type}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-muted-foreground text-sm py-6 border-r border-border/50">
+                          {user.mobile_phone || '—'}
+                        </TableCell>
+                        <TableCell className="py-6 border-r border-border/50">
+                          {user.disabled || user.archived ? (
+                            <Badge 
+                              variant="outline"
+                              className="text-[0.75rem] font-medium py-[2px] px-[0.625rem] rounded-[11px]"
+                              style={{
+                                borderColor: '#DC2626',
+                                color: '#DC2626',
+                                backgroundColor: '#DC262610',
+                                borderWidth: '1.5px'
+                              }}
+                            >
+                              Inactive
+                            </Badge>
+                          ) : (
+                            <Badge 
+                              variant="outline" 
+                              className="text-[0.75rem] font-medium py-[2px] px-[0.625rem] rounded-[11px]"
+                              style={{
+                                borderColor: '#16A34A',
+                                color: '#16A34A',
+                                backgroundColor: '#16A34A10',
+                                borderWidth: '1.5px'
+                              }}
+                            >
+                              Active
+                            </Badge>
+                          )}
+                        </TableCell>
+                        <TableCell className="py-6 px-4 text-center whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
+                          <div className="flex items-center justify-center gap-2">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleEditUser(user);
+                              }}
+                              className="h-8 w-8 hover:bg-primary/10 hover:text-primary"
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDeleteUser(user.user_uuid, `${user.first_name} ${user.last_name}`.trim());
+                              }}
+                              className="h-8 w-8 hover:bg-destructive/10 hover:text-destructive"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          );
+        }
+        return null;
+      })()}
+
+      {/* Empty State */}
+      {filteredUsers.length === 0 && (
+        <div className="rounded-lg border-0 bg-card shadow-lg p-8 text-center">
+          <p className="text-muted-foreground">No users found</p>
+        </div>
+      )}
 
       {/* Pagination */}
       {filteredUsers.length > 0 && (
