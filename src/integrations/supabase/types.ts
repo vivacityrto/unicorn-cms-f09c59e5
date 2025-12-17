@@ -5998,6 +5998,33 @@ export type Database = {
           },
         ]
       }
+      timezone_options: {
+        Row: {
+          country_code: string
+          created_at: string
+          id: number
+          is_active: boolean
+          timezone_label: string
+          timezone_value: string
+        }
+        Insert: {
+          country_code: string
+          created_at?: string
+          id?: never
+          is_active?: boolean
+          timezone_label: string
+          timezone_value: string
+        }
+        Update: {
+          country_code?: string
+          created_at?: string
+          id?: never
+          is_active?: boolean
+          timezone_label?: string
+          timezone_value?: string
+        }
+        Relationships: []
+      }
       trainer_training_products: {
         Row: {
           trainer_id: string
@@ -6319,25 +6346,28 @@ export type Database = {
       user_timezone: {
         Row: {
           created_at: string
-          id: string
+          id: number
           realtime_display: Json
           timezone: string
+          timezone_label: string | null
           updated_at: string
           user_id: string
         }
         Insert: {
           created_at?: string
-          id?: string
+          id?: never
           realtime_display?: Json
           timezone?: string
+          timezone_label?: string | null
           updated_at?: string
           user_id: string
         }
         Update: {
           created_at?: string
-          id?: string
+          id?: never
           realtime_display?: Json
           timezone?: string
+          timezone_label?: string | null
           updated_at?: string
           user_id?: string
         }
