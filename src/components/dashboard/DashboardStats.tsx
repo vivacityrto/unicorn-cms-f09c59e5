@@ -1,8 +1,10 @@
 import * as React from "react";
 import { Card, CardContent } from "@/components/ui/card";
-import { Users, FileText, TrendingUp, AlertCircle } from "lucide-react";
+import { Users, FileText, CheckCircle2, AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { WeekTasksTable } from "./WeekTasksTable";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 
 interface StatCardProps {
   title: string;
@@ -24,21 +26,21 @@ const colorClasses = {
 
 const StatCard = ({ title, value, subtitle, icon, trend, color }: StatCardProps) => (
   <Card className="border-0 shadow-md hover:shadow-lg transition-all duration-300 overflow-hidden group">
-    <CardContent className="p-4">
+    <CardContent className="p-5">
       <div className="flex items-start justify-between gap-2">
         <div className="space-y-1 min-w-0">
-          <p className="text-xs font-medium text-muted-foreground truncate">{title}</p>
-          <div className="flex items-baseline gap-1">
-            <p className="text-2xl font-bold tracking-tight">{value}</p>
+          <p className="text-sm font-medium text-muted-foreground truncate">{title}</p>
+          <div className="flex items-baseline gap-2">
+            <p className="text-3xl font-bold tracking-tight">{value}</p>
             {trend && (
               <span className={cn("text-xs font-semibold", trend.isPositive ? "text-green-600" : "text-red-600")}>
                 {trend.isPositive ? "+" : ""}{trend.value}%
               </span>
             )}
           </div>
-          {subtitle && <p className="text-[10px] text-muted-foreground truncate">{subtitle}</p>}
+          {subtitle && <p className="text-xs text-muted-foreground truncate">{subtitle}</p>}
         </div>
-        <div className={cn("p-2 rounded-lg transition-transform group-hover:scale-110 shrink-0", colorClasses[color])}>
+        <div className={cn("p-3 rounded-xl transition-transform group-hover:scale-110 shrink-0", colorClasses[color])}>
           {icon}
         </div>
       </div>
@@ -60,44 +62,85 @@ interface DashboardStatsProps {
 }
 
 export const DashboardStats = ({ stats }: DashboardStatsProps) => {
+  // Fetch task-specific stats
+  const { data: taskStats } = useQuery({
+    queryKey: ["dashboard-task-stats"],
+    queryFn: async () => {
+      const today = new Date().toISOString().split('T')[0];
+      const weekAgo = new Date();
+      weekAgo.setDate(weekAgo.getDate() - 7);
+      const weekAgoStr = weekAgo.toISOString().split('T')[0];
+
+      // Total pending tasks
+      const { count: pendingCount } = await supabase
+        .from("tasks_tenants")
+        .select("*", { count: "exact", head: true })
+        .neq("status", "completed");
+
+      // Overdue tasks
+      const { count: overdueCount } = await supabase
+        .from("tasks_tenants")
+        .select("*", { count: "exact", head: true })
+        .lt("due_date", today)
+        .neq("status", "completed");
+
+      // Completed this week
+      const { count: completedCount } = await supabase
+        .from("tasks_tenants")
+        .select("*", { count: "exact", head: true })
+        .eq("status", "completed")
+        .gte("updated_at", weekAgoStr);
+
+      // Total clients
+      const { count: clientsCount } = await supabase
+        .from("tenants")
+        .select("*", { count: "exact", head: true });
+
+      return {
+        pending: pendingCount || 0,
+        overdue: overdueCount || 0,
+        completedThisWeek: completedCount || 0,
+        totalClients: clientsCount || 0,
+      };
+    },
+  });
+
   return (
-    <div className="grid grid-cols-4 gap-4">
-      {/* Week Tasks Table - spans 3 columns */}
-      <div className="col-span-3">
-        <WeekTasksTable />
-      </div>
-      
-      {/* 4 stat cards stacked in 1 column */}
-      <div className="col-span-1 grid grid-rows-4 gap-3">
+    <div className="space-y-6">
+      {/* Top Stats Row - 4 cards */}
+      <div className="grid grid-cols-4 gap-4">
         <StatCard
-          title="Team Members"
-          value={stats.totalUsers}
-          subtitle="All tenants"
-          icon={<Users className="h-5 w-5" />}
+          title="Total Tasks"
+          value={taskStats?.pending || 0}
+          subtitle="In progress & pending"
+          icon={<FileText className="h-6 w-6" />}
           color="blue"
         />
         <StatCard
-          title="Documents"
-          value={stats.documentsCount}
-          subtitle="Total managed"
-          icon={<FileText className="h-5 w-5" />}
-          color="green"
-        />
-        <StatCard
-          title="Inspections"
-          value={stats.activeInspections}
-          subtitle="In progress"
-          icon={<AlertCircle className="h-5 w-5" />}
+          title="Overdue Tasks"
+          value={taskStats?.overdue || 0}
+          subtitle="Needs attention"
+          icon={<AlertTriangle className="h-6 w-6" />}
           color="red"
         />
         <StatCard
-          title="Meetings"
-          value={stats.upcomingMeetings}
-          subtitle="Next 7 days"
-          icon={<TrendingUp className="h-5 w-5" />}
-          color="blue"
+          title="Completed"
+          value={taskStats?.completedThisWeek || 0}
+          subtitle="This week"
+          icon={<CheckCircle2 className="h-6 w-6" />}
+          color="green"
+        />
+        <StatCard
+          title="Total Clients"
+          value={taskStats?.totalClients || stats.totalClients}
+          subtitle="All tenants"
+          icon={<Users className="h-6 w-6" />}
+          color="purple"
         />
       </div>
+      
+      {/* Overdue Tasks Table - full width */}
+      <WeekTasksTable />
     </div>
   );
 };
