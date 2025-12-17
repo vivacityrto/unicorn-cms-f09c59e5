@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -211,11 +212,20 @@ const mockClients = {
 };
 const Dashboard = () => {
   const { profile } = useAuth();
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [sortBy, setSortBy] = useState("name");
   const isSuperAdmin = profile?.unicorn_role === "Super Admin";
   const isTeamLeader = profile?.unicorn_role === "Team Leader";
+  const isAdminOrUser = profile?.unicorn_role === "Admin" || profile?.unicorn_role === "User";
+
+  // Redirect Admin/User roles to their tenant detail page
+  useEffect(() => {
+    if (isAdminOrUser && profile?.tenant_id) {
+      navigate(`/tenant/${profile.tenant_id}`, { replace: true });
+    }
+  }, [isAdminOrUser, profile?.tenant_id, navigate]);
 
   // Fetch tenant info to get package_id
   const { data: tenant } = useQuery({
@@ -551,184 +561,11 @@ const Dashboard = () => {
     );
   }
 
-  // Fetch tenant details for Admin/User roles
-  const { data: userTenant, isLoading: tenantLoading } = useQuery({
-    queryKey: ["user-tenant-details", profile?.tenant_id],
-    queryFn: async () => {
-      if (!profile?.tenant_id) return null;
-      const { data, error } = await supabase
-        .from("tenants")
-        .select("*")
-        .eq("id", profile.tenant_id)
-        .single();
-      if (error) throw error;
-      return data;
-    },
-    enabled: !!profile?.tenant_id && !isSuperAdmin && !isTeamLeader,
-  });
-
-  // Fetch tenant's package info
-  const { data: tenantPackages } = useQuery({
-    queryKey: ["user-tenant-packages", userTenant?.package_ids],
-    queryFn: async () => {
-      if (!userTenant?.package_ids || userTenant.package_ids.length === 0) return [];
-      const { data, error } = await supabase
-        .from("packages")
-        .select("*")
-        .in("id", userTenant.package_ids);
-      if (error) throw error;
-      return data || [];
-    },
-    enabled: !!userTenant?.package_ids && userTenant.package_ids.length > 0,
-  });
-
-  // Fetch tenant members count
-  const { data: membersCount } = useQuery({
-    queryKey: ["tenant-members-count", profile?.tenant_id],
-    queryFn: async () => {
-      if (!profile?.tenant_id) return 0;
-      const { count, error } = await supabase
-        .from("users")
-        .select("*", { count: "exact", head: true })
-        .eq("tenant_id", profile.tenant_id);
-      if (error) throw error;
-      return count || 0;
-    },
-    enabled: !!profile?.tenant_id && !isSuperAdmin && !isTeamLeader,
-  });
-
-  // Admin/User dashboard - show their tenant details
-  if (tenantLoading) {
-    return (
-      <DashboardLayout>
-        <div className="flex items-center justify-center h-96">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        </div>
-      </DashboardLayout>
-    );
-  }
-
+  // Admin/User - show loading while redirecting to tenant detail page
   return (
     <DashboardLayout>
-      <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
-          <p className="text-muted-foreground">Welcome to your organisation dashboard</p>
-        </div>
-
-        {/* Tenant Overview Card */}
-        <Card className="border-0 shadow-lg">
-          <CardContent className="p-6">
-            <div className="flex items-start justify-between">
-              <div className="space-y-1">
-                <h2 className="text-2xl font-bold text-foreground">{userTenant?.name || "Your Organisation"}</h2>
-                <p className="text-muted-foreground">{userTenant?.slug || ""}</p>
-              </div>
-              <Badge 
-                variant={userTenant?.status === "active" ? "default" : "secondary"}
-                className={cn(
-                  "capitalize",
-                  userTenant?.status === "active" && "bg-green-500/10 text-green-600 border-green-500/20"
-                )}
-              >
-                {userTenant?.status || "Active"}
-              </Badge>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <Card className="border-0 shadow-md">
-            <CardContent className="p-6">
-              <div className="space-y-2">
-                <p className="text-sm font-medium text-muted-foreground">Team Members</p>
-                <p className="text-3xl font-bold text-foreground">{membersCount || 0}</p>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="border-0 shadow-md">
-            <CardContent className="p-6">
-              <div className="space-y-2">
-                <p className="text-sm font-medium text-muted-foreground">Active Packages</p>
-                <p className="text-3xl font-bold text-foreground">{tenantPackages?.length || 0}</p>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="border-0 shadow-md">
-            <CardContent className="p-6">
-              <div className="space-y-2">
-                <p className="text-sm font-medium text-muted-foreground">Member Since</p>
-                <p className="text-3xl font-bold text-foreground">
-                  {userTenant?.created_at 
-                    ? format(new Date(userTenant.created_at), "MMM yyyy")
-                    : "-"}
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Packages Section */}
-        {tenantPackages && tenantPackages.length > 0 && (
-          <Card className="border-0 shadow-lg">
-            <CardContent className="p-6">
-              <h3 className="text-lg font-semibold mb-4">Your Packages</h3>
-              <div className="space-y-3">
-                {tenantPackages.map((pkg) => (
-                  <div 
-                    key={pkg.id} 
-                    className="flex items-center justify-between p-4 rounded-lg bg-muted/30 border border-border/50"
-                  >
-                    <div className="space-y-1">
-                      <p className="font-medium text-foreground">{pkg.name}</p>
-                      {pkg.details && (
-                        <p className="text-sm text-muted-foreground line-clamp-1">{pkg.details}</p>
-                      )}
-                    </div>
-                    <Badge 
-                      variant="outline" 
-                      className="bg-primary/10 text-primary border-primary/20"
-                    >
-                      {pkg.status || "Active"}
-                    </Badge>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Organisation Details */}
-        <Card className="border-0 shadow-lg">
-          <CardContent className="p-6">
-            <h3 className="text-lg font-semibold mb-4">Organisation Details</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-1">
-                <p className="text-sm text-muted-foreground">Organisation Name</p>
-                <p className="font-medium text-foreground">{userTenant?.name || "-"}</p>
-              </div>
-              <div className="space-y-1">
-                <p className="text-sm text-muted-foreground">Status</p>
-                <p className="font-medium text-foreground capitalize">{userTenant?.status || "Active"}</p>
-              </div>
-              <div className="space-y-1">
-                <p className="text-sm text-muted-foreground">Created</p>
-                <p className="font-medium text-foreground">
-                  {userTenant?.created_at 
-                    ? format(new Date(userTenant.created_at), "MMMM d, yyyy")
-                    : "-"}
-                </p>
-              </div>
-              <div className="space-y-1">
-                <p className="text-sm text-muted-foreground">Your Role</p>
-                <p className="font-medium text-foreground">{profile?.unicorn_role || "-"}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+      <div className="flex items-center justify-center h-96">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     </DashboardLayout>
   );
