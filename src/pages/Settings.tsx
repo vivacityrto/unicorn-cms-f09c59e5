@@ -306,7 +306,7 @@ export default function Settings() {
             </div>
             <CardContent className="p-6 space-y-6">
               {/* Form Fields */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
                   <Label htmlFor="first_name">
                     <User className="inline h-4 w-4 mr-2" />
