@@ -57,7 +57,7 @@ export const WeekTasksTable = () => {
         .lt("due_date", today)
         .neq("status", "completed")
         .order("due_date", { ascending: true })
-        .limit(5);
+        .limit(7);
 
       if (error) throw error;
 
@@ -170,7 +170,7 @@ export const WeekTasksTable = () => {
           View More ({totalCount})
         </Link>
       </CardHeader>
-      <CardContent className="p-0 h-[280px] overflow-auto">
+      <CardContent className="p-0">
         {tasks.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-8 text-center px-6">
             <CheckCircle2 className="h-10 w-10 text-green-500/50 mb-2" />

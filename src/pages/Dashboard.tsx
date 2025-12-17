@@ -8,35 +8,27 @@ import { DashboardStats } from "@/components/dashboard/DashboardStats";
 import { DashboardCharts } from "@/components/dashboard/DashboardCharts";
 import { RecentActivity } from "@/components/dashboard/RecentActivity";
 import { useDashboardData } from "@/hooks/useDashboardData";
+
 const Dashboard = () => {
-  const {
-    profile
-  } = useAuth();
+  const { profile } = useAuth();
   const navigate = useNavigate();
   const isSuperAdmin = profile?.unicorn_role === "Super Admin";
   const isTeamLeader = profile?.unicorn_role === "Team Leader";
   const isAdminOrUser = profile?.unicorn_role === "Admin" || profile?.unicorn_role === "User";
-  const {
-    stats,
-    packageData,
-    monthlyData,
-    statusData,
-    activities,
-    recentClients
-  } = useDashboardData();
+
+  const { stats, packageData, monthlyData, statusData, activities, recentClients } = useDashboardData();
 
   // Redirect Admin/User roles to their tenant detail page
   useEffect(() => {
     if (isAdminOrUser && profile?.tenant_id) {
-      navigate(`/tenant/${profile.tenant_id}`, {
-        replace: true
-      });
+      navigate(`/tenant/${profile.tenant_id}`, { replace: true });
     }
   }, [isAdminOrUser, profile?.tenant_id, navigate]);
 
   // Show modern dashboard for Super Admin and Team Leader
   if (isSuperAdmin || isTeamLeader) {
-    return <DashboardLayout>
+    return (
+      <DashboardLayout>
         <div className="p-6 space-y-6 w-full">
           {/* Header */}
           <div className="flex items-center justify-between">
@@ -55,19 +47,30 @@ const Dashboard = () => {
           <DashboardStats stats={stats} activities={activities} />
 
           {/* Charts */}
-          
+          <DashboardCharts 
+            packageData={packageData} 
+            monthlyData={monthlyData} 
+            statusData={statusData.length > 0 ? statusData : [
+              { name: "Active", value: 10, color: "hsl(142, 76%, 36%)" },
+              { name: "Pending", value: 3, color: "hsl(38, 92%, 50%)" },
+            ]} 
+          />
 
           {/* Recent Clients */}
-          
+          <RecentActivity activities={[]} recentClients={recentClients} />
         </div>
-      </DashboardLayout>;
+      </DashboardLayout>
+    );
   }
 
   // Admin/User - show loading while redirecting to tenant detail page
-  return <DashboardLayout>
+  return (
+    <DashboardLayout>
       <div className="flex items-center justify-center h-96">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
-    </DashboardLayout>;
+    </DashboardLayout>
+  );
 };
+
 export default Dashboard;
