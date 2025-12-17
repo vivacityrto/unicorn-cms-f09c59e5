@@ -57,7 +57,7 @@ export const WeekTasksTable = () => {
         .lt("due_date", today)
         .neq("status", "completed")
         .order("due_date", { ascending: true })
-        .limit(7);
+        .limit(5);
 
       if (error) throw error;
 
