@@ -526,71 +526,77 @@ export default function AdminManagePackages() {
 
       {/* Stat Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card 
+        <div 
           className={cn(
-            "animate-scale-in cursor-pointer hover:shadow-lg transition-all",
-            activeTab === 'packages' && "shadow-lg"
+            "p-4 rounded-lg border bg-card hover:shadow-md transition-all cursor-pointer group animate-scale-in",
+            activeTab === 'packages' && "shadow-md"
           )} 
           style={{ animationDelay: "0ms" }}
           onClick={() => setActiveTab('packages')}
         >
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Packages</CardTitle>
-            <Package className="h-[22px] w-[22px] text-primary" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{packages.length}</div>
-            <p className="text-xs text-muted-foreground">All packages in system</p>
-          </CardContent>
-        </Card>
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-sm font-medium text-muted-foreground">Total Packages</span>
+            <div className="p-2 bg-blue-500/10 rounded-lg group-hover:bg-blue-500/20 transition-colors">
+              <Package className="h-5 w-5 text-blue-500" />
+            </div>
+          </div>
+          <p className="text-2xl font-bold mb-1">{packages.length}</p>
+          <p className="text-xs text-muted-foreground">All packages in system</p>
+        </div>
 
-        <Card 
-          className={cn("animate-scale-in cursor-pointer hover:shadow-lg transition-all", statusFilter === 'active' && "shadow-lg")}
+        <div 
+          className={cn(
+            "p-4 rounded-lg border bg-card hover:shadow-md transition-all cursor-pointer group animate-scale-in",
+            statusFilter === 'active' && "shadow-md"
+          )}
           style={{ animationDelay: "50ms" }}
           onClick={() => { setActiveTab('packages'); setStatusFilter(statusFilter === 'active' ? 'all' : 'active'); }}
         >
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Active</CardTitle>
-            <CheckCircle2 className="h-[22px] w-[22px] text-green-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{packages.filter(p => p.status === 'active').length}</div>
-            <p className="text-xs text-muted-foreground">Active packages</p>
-          </CardContent>
-        </Card>
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-sm font-medium text-muted-foreground">Active</span>
+            <div className="p-2 bg-green-500/10 rounded-lg group-hover:bg-green-500/20 transition-colors">
+              <CheckCircle2 className="h-5 w-5 text-green-500" />
+            </div>
+          </div>
+          <p className="text-2xl font-bold mb-1">{packages.filter(p => p.status === 'active').length}</p>
+          <p className="text-xs text-muted-foreground">Active packages</p>
+        </div>
 
-        <Card 
+        <div 
           className={cn(
-            "animate-scale-in cursor-pointer hover:shadow-lg transition-all",
-            activeTab === 'stages' && "shadow-lg"
+            "p-4 rounded-lg border bg-card hover:shadow-md transition-all cursor-pointer group animate-scale-in",
+            activeTab === 'stages' && "shadow-md"
           )}
           style={{ animationDelay: "100ms" }}
           onClick={() => setActiveTab('stages')}
         >
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Stages</CardTitle>
-            <Layers className="h-[22px] w-[22px] text-yellow-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{documentStages.length}</div>
-            <p className="text-xs text-muted-foreground">Reusable stages in library</p>
-          </CardContent>
-        </Card>
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-sm font-medium text-muted-foreground">Total Stages</span>
+            <div className="p-2 bg-amber-500/10 rounded-lg group-hover:bg-amber-500/20 transition-colors">
+              <Layers className="h-5 w-5 text-amber-500" />
+            </div>
+          </div>
+          <p className="text-2xl font-bold mb-1">{documentStages.length}</p>
+          <p className="text-xs text-muted-foreground">Reusable stages in library</p>
+        </div>
 
-        <Card 
-          className={cn("animate-scale-in cursor-pointer hover:shadow-lg transition-all", statusFilter === 'inactive' && "shadow-lg")}
+        <div 
+          className={cn(
+            "p-4 rounded-lg border bg-card hover:shadow-md transition-all cursor-pointer group animate-scale-in",
+            statusFilter === 'inactive' && "shadow-md"
+          )}
           style={{ animationDelay: "150ms" }}
           onClick={() => { setActiveTab('packages'); setStatusFilter(statusFilter === 'inactive' ? 'all' : 'inactive'); }}
         >
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Inactive</CardTitle>
-            <Clock className="h-[22px] w-[22px] text-orange-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{packages.filter(p => p.status !== 'active').length}</div>
-            <p className="text-xs text-muted-foreground">Inactive packages</p>
-          </CardContent>
-        </Card>
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-sm font-medium text-muted-foreground">Inactive</span>
+            <div className="p-2 bg-orange-500/10 rounded-lg group-hover:bg-orange-500/20 transition-colors">
+              <Clock className="h-5 w-5 text-orange-500" />
+            </div>
+          </div>
+          <p className="text-2xl font-bold mb-1">{packages.filter(p => p.status !== 'active').length}</p>
+          <p className="text-xs text-muted-foreground">Inactive packages</p>
+        </div>
       </div>
 
       {/* Tab Content */}

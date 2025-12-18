@@ -590,76 +590,76 @@ export default function ManageUsers() {
 
       {/* Statistics Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card 
-          className="animate-scale-in cursor-pointer hover:shadow-lg transition-all"
+        <div 
           onClick={() => {
             setStatusFilter('all');
             setUserTypeFilter('all');
           }}
+          className="p-4 rounded-lg border bg-card hover:shadow-md transition-all cursor-pointer group animate-scale-in"
         >
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Users</CardTitle>
-            <Users className="h-[22px] w-[22px] text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{totalUsers}</div>
-            <p className="text-xs text-muted-foreground">Registered users</p>
-          </CardContent>
-        </Card>
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-sm font-medium text-muted-foreground">Total Users</span>
+            <div className="p-2 bg-blue-500/10 rounded-lg group-hover:bg-blue-500/20 transition-colors">
+              <Users className="h-5 w-5 text-blue-500" />
+            </div>
+          </div>
+          <p className="text-2xl font-bold mb-1">{totalUsers}</p>
+          <p className="text-xs text-muted-foreground">Registered users</p>
+        </div>
 
-        <Card 
-          className="animate-scale-in cursor-pointer hover:shadow-lg transition-all" 
-          style={{ animationDelay: '50ms' }}
+        <div 
           onClick={() => {
             setStatusFilter('active');
             setUserTypeFilter('all');
           }}
+          className="p-4 rounded-lg border bg-card hover:shadow-md transition-all cursor-pointer group animate-scale-in"
+          style={{ animationDelay: '50ms' }}
         >
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Active</CardTitle>
-            <UserCheck className="h-[22px] w-[22px] text-green-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{activeUsers}</div>
-            <p className="text-xs text-muted-foreground">Currently active</p>
-          </CardContent>
-        </Card>
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-sm font-medium text-muted-foreground">Active</span>
+            <div className="p-2 bg-green-500/10 rounded-lg group-hover:bg-green-500/20 transition-colors">
+              <UserCheck className="h-5 w-5 text-green-500" />
+            </div>
+          </div>
+          <p className="text-2xl font-bold mb-1">{activeUsers}</p>
+          <p className="text-xs text-muted-foreground">Currently active</p>
+        </div>
 
-        <Card 
-          className="animate-scale-in cursor-pointer hover:shadow-lg transition-all" 
-          style={{ animationDelay: '100ms' }}
+        <div 
           onClick={() => {
             setStatusFilter('inactive');
             setUserTypeFilter('all');
           }}
+          className="p-4 rounded-lg border bg-card hover:shadow-md transition-all cursor-pointer group animate-scale-in"
+          style={{ animationDelay: '100ms' }}
         >
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Inactive</CardTitle>
-            <UserX className="h-[22px] w-[22px] text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{inactiveUsers}</div>
-            <p className="text-xs text-muted-foreground">Deactivated users</p>
-          </CardContent>
-        </Card>
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-sm font-medium text-muted-foreground">Inactive</span>
+            <div className="p-2 bg-red-500/10 rounded-lg group-hover:bg-red-500/20 transition-colors">
+              <UserX className="h-5 w-5 text-red-500" />
+            </div>
+          </div>
+          <p className="text-2xl font-bold mb-1">{inactiveUsers}</p>
+          <p className="text-xs text-muted-foreground">Deactivated users</p>
+        </div>
 
-        <Card 
-          className="animate-scale-in cursor-pointer hover:shadow-lg transition-all" 
-          style={{ animationDelay: '150ms' }}
+        <div 
           onClick={() => {
             setUserTypeFilter('Vivacity Team');
             setStatusFilter('all');
           }}
+          className="p-4 rounded-lg border bg-card hover:shadow-md transition-all cursor-pointer group animate-scale-in"
+          style={{ animationDelay: '150ms' }}
         >
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Vivacity Users</CardTitle>
-            <Building2 className="h-[22px] w-[22px] text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{vivacityUsers}</div>
-            <p className="text-xs text-muted-foreground">Team members</p>
-          </CardContent>
-        </Card>
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-sm font-medium text-muted-foreground">Vivacity Users</span>
+            <div className="p-2 bg-purple-500/10 rounded-lg group-hover:bg-purple-500/20 transition-colors">
+              <Building2 className="h-5 w-5 text-purple-500" />
+            </div>
+          </div>
+          <p className="text-2xl font-bold mb-1">{vivacityUsers}</p>
+          <p className="text-xs text-muted-foreground">Team members</p>
+        </div>
       </div>
 
       {/* Search and Filters */}
