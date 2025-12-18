@@ -212,20 +212,21 @@ export default function TenantDetail() {
       }).eq("tenant_id", parseInt(tenantId));
       setMemberCount(memberCountData || 0);
 
-      // Always fetch package-specific documents when a package is selected
-      if (currentPackageId) {
+      // Always fetch documents using tenant's actual package_id for accurate counting
+      const tenantActualPackageId = tenantData.package_id;
+      if (tenantActualPackageId) {
         const {
           data: docsData,
           count: docCountData
         } = await supabase.from("documents").select("*", {
           count: 'exact'
-        }).eq("package_id", currentPackageId).eq("is_released", true).order("createdat", {
+        }).eq("package_id", tenantActualPackageId).eq("is_released", true).order("createdat", {
           ascending: false
         }).limit(3);
         setDocumentCount(docCountData || 0);
         setRecentDocuments(docsData || []);
       } else {
-        // Fallback to tenant-specific documents if no package selected
+        // Fallback to tenant-specific documents if no package assigned
         const {
           data: tenantDocsData,
           count: tenantDocCountData
