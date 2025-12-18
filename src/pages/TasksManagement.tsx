@@ -855,61 +855,70 @@ export default function TasksManagement() {
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card className="animate-scale-in cursor-pointer hover:shadow-lg transition-all" onClick={() => {
-          setStatusFilter("all");
-          setSearchQuery("");
-        }}>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Tasks</CardTitle>
-            <ListTodo className="h-[22px] w-[22px] text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{tasks.length}</div>
-            <p className="text-xs text-muted-foreground">All tasks in system</p>
-          </CardContent>
-        </Card>
+        <div 
+          onClick={() => {
+            setStatusFilter("all");
+            setSearchQuery("");
+          }}
+          className="p-4 rounded-lg border bg-card hover:shadow-md transition-all cursor-pointer group animate-scale-in"
+        >
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-sm font-medium text-muted-foreground">Total Tasks</span>
+            <div className="p-2 bg-blue-500/10 rounded-lg group-hover:bg-blue-500/20 transition-colors">
+              <ListTodo className="h-5 w-5 text-blue-500" />
+            </div>
+          </div>
+          <p className="text-2xl font-bold mb-1">{tasks.length}</p>
+          <p className="text-xs text-muted-foreground">All tasks in system</p>
+        </div>
 
-        <Card className="animate-scale-in cursor-pointer hover:shadow-lg transition-all" style={{
-        animationDelay: "50ms"
-      }} onClick={() => setStatusFilter("completed")}>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Completed</CardTitle>
-            <CheckCircle2 className="h-[22px] w-[22px] text-green-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{tasks.filter(t => getTaskStatus(t) === "completed").length}</div>
-            <p className="text-xs text-muted-foreground">Tasks finished</p>
-          </CardContent>
-        </Card>
+        <div 
+          onClick={() => setStatusFilter("completed")}
+          className="p-4 rounded-lg border bg-card hover:shadow-md transition-all cursor-pointer group animate-scale-in"
+          style={{ animationDelay: "50ms" }}
+        >
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-sm font-medium text-muted-foreground">Completed</span>
+            <div className="p-2 bg-green-500/10 rounded-lg group-hover:bg-green-500/20 transition-colors">
+              <CheckCircle2 className="h-5 w-5 text-green-500" />
+            </div>
+          </div>
+          <p className="text-2xl font-bold mb-1">{tasks.filter(t => getTaskStatus(t) === "completed").length}</p>
+          <p className="text-xs text-muted-foreground">Tasks finished</p>
+        </div>
 
-        <Card className="animate-scale-in cursor-pointer hover:shadow-lg transition-all" style={{
-        animationDelay: "100ms"
-      }} onClick={() => setStatusFilter("overdue")}>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Overdue</CardTitle>
-            <AlertCircle className="h-[22px] w-[22px] text-red-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{tasks.filter(t => getTaskStatus(t) === "overdue").length}</div>
-            <p className="text-xs text-muted-foreground">Past due date</p>
-          </CardContent>
-        </Card>
+        <div 
+          onClick={() => setStatusFilter("overdue")}
+          className="p-4 rounded-lg border bg-card hover:shadow-md transition-all cursor-pointer group animate-scale-in"
+          style={{ animationDelay: "100ms" }}
+        >
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-sm font-medium text-muted-foreground">Overdue</span>
+            <div className="p-2 bg-red-500/10 rounded-lg group-hover:bg-red-500/20 transition-colors">
+              <AlertCircle className="h-5 w-5 text-red-500" />
+            </div>
+          </div>
+          <p className="text-2xl font-bold mb-1">{tasks.filter(t => getTaskStatus(t) === "overdue").length}</p>
+          <p className="text-xs text-muted-foreground">Past due date</p>
+        </div>
 
-        <Card className="animate-scale-in cursor-pointer hover:shadow-lg transition-all" style={{
-        animationDelay: "150ms"
-      }} onClick={() => setStatusFilter("in_progress")}>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">In Progress</CardTitle>
-            <Clock className="h-[22px] w-[22px] text-yellow-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{tasks.filter(t => {
-              const status = getTaskStatus(t);
-              return status === "pending" || status === "in_progress";
-            }).length}</div>
-            <p className="text-xs text-muted-foreground">Awaiting action</p>
-          </CardContent>
-        </Card>
+        <div 
+          onClick={() => setStatusFilter("in_progress")}
+          className="p-4 rounded-lg border bg-card hover:shadow-md transition-all cursor-pointer group animate-scale-in"
+          style={{ animationDelay: "150ms" }}
+        >
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-sm font-medium text-muted-foreground">In Progress</span>
+            <div className="p-2 bg-amber-500/10 rounded-lg group-hover:bg-amber-500/20 transition-colors">
+              <Clock className="h-5 w-5 text-amber-500" />
+            </div>
+          </div>
+          <p className="text-2xl font-bold mb-1">{tasks.filter(t => {
+            const status = getTaskStatus(t);
+            return status === "pending" || status === "in_progress";
+          }).length}</p>
+          <p className="text-xs text-muted-foreground">Awaiting action</p>
+        </div>
       </div>
 
       {/* Search */}
