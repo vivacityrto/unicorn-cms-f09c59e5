@@ -51,26 +51,26 @@ export default function TenantDocuments() {
     try {
       setLoading(true);
 
-      // Fetch tenant info and package_id
+      // Fetch tenant info and package_ids
       const { data: tenantData } = await supabase
         .from("tenants")
-        .select("name, package_id")
+        .select("name, package_id, package_ids")
         .eq("id", parseInt(tenantId!))
         .single();
 
       if (tenantData) {
         setTenantName(tenantData.name);
         
-        // Always use tenant's actual package_id for querying released documents
-        const activePackageId = tenantData.package_id;
-        setPackageId(activePackageId);
+        // Use all package_ids for querying released documents
+        const tenantPackageIds = (tenantData as any).package_ids || (tenantData.package_id ? [tenantData.package_id] : []);
+        setPackageId(tenantData.package_id);
         
-        // Fetch documents from documents table matching the tenant's package_id (only released documents)
-        if (activePackageId) {
+        // Fetch documents from documents table matching any of the tenant's package_ids (only released documents)
+        if (tenantPackageIds.length > 0) {
           const { data: documentsData, error } = await supabase
             .from("documents")
             .select("*, packages:package_id(name)")
-            .eq("package_id", activePackageId)
+            .in("package_id", tenantPackageIds)
             .eq("is_released", true)
             .order("createdat", { ascending: false });
 
