@@ -520,64 +520,72 @@ export default function ManageTenants() {
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card className="animate-scale-in cursor-pointer hover:shadow-lg transition-all" onClick={() => {
-        setStatusFilter("all");
-        setSearchQuery("");
-      }}>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Clients</CardTitle>
-            <Building2 className="h-[22px] w-[22px] text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.total}</div>
-            <p className="text-xs text-muted-foreground">Organizations registered</p>
-          </CardContent>
-        </Card>
+        <div 
+          onClick={() => {
+            setStatusFilter("all");
+            setSearchQuery("");
+          }}
+          className="p-4 rounded-lg border bg-card hover:shadow-md transition-all cursor-pointer group animate-scale-in"
+        >
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-sm font-medium text-muted-foreground">Total Clients</span>
+            <div className="p-2 bg-blue-500/10 rounded-lg group-hover:bg-blue-500/20 transition-colors">
+              <Building2 className="h-5 w-5 text-blue-500" />
+            </div>
+          </div>
+          <p className="text-2xl font-bold mb-1">{stats.total}</p>
+          <p className="text-xs text-muted-foreground">Organizations registered</p>
+        </div>
 
-        <Card className="animate-scale-in cursor-pointer hover:shadow-lg transition-all" style={{
-        animationDelay: "50ms"
-      }} onClick={() => {
-        setStatusFilter("active");
-        setSearchQuery("");
-      }}>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Active</CardTitle>
-            <CheckCircle2 className="h-[22px] w-[22px] text-green-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.active}</div>
-            <p className="text-xs text-muted-foreground">Currently active clients</p>
-          </CardContent>
-        </Card>
+        <div 
+          onClick={() => {
+            setStatusFilter("active");
+            setSearchQuery("");
+          }}
+          className="p-4 rounded-lg border bg-card hover:shadow-md transition-all cursor-pointer group animate-scale-in"
+          style={{ animationDelay: "50ms" }}
+        >
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-sm font-medium text-muted-foreground">Active</span>
+            <div className="p-2 bg-green-500/10 rounded-lg group-hover:bg-green-500/20 transition-colors">
+              <CheckCircle2 className="h-5 w-5 text-green-500" />
+            </div>
+          </div>
+          <p className="text-2xl font-bold mb-1">{stats.active}</p>
+          <p className="text-xs text-muted-foreground">Currently active clients</p>
+        </div>
 
-        <Card className="animate-scale-in cursor-pointer hover:shadow-lg transition-all" style={{
-        animationDelay: "100ms"
-      }} onClick={() => {
-        setStatusFilter("inactive");
-        setSearchQuery("");
-      }}>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Inactive</CardTitle>
-            <XCircle className="h-[22px] w-[22px] text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.inactive}</div>
-            <p className="text-xs text-muted-foreground">Deactivated clients</p>
-          </CardContent>
-        </Card>
+        <div 
+          onClick={() => {
+            setStatusFilter("inactive");
+            setSearchQuery("");
+          }}
+          className="p-4 rounded-lg border bg-card hover:shadow-md transition-all cursor-pointer group animate-scale-in"
+          style={{ animationDelay: "100ms" }}
+        >
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-sm font-medium text-muted-foreground">Inactive</span>
+            <div className="p-2 bg-red-500/10 rounded-lg group-hover:bg-red-500/20 transition-colors">
+              <XCircle className="h-5 w-5 text-red-500" />
+            </div>
+          </div>
+          <p className="text-2xl font-bold mb-1">{stats.inactive}</p>
+          <p className="text-xs text-muted-foreground">Deactivated clients</p>
+        </div>
 
-        <Card className="animate-scale-in" style={{
-        animationDelay: "150ms"
-      }}>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Members</CardTitle>
-            <Users className="h-[22px] w-[22px] text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.totalMembers}</div>
-            <p className="text-xs text-muted-foreground">Across all clients</p>
-          </CardContent>
-        </Card>
+        <div 
+          className="p-4 rounded-lg border bg-card hover:shadow-md transition-all cursor-pointer group animate-scale-in"
+          style={{ animationDelay: "150ms" }}
+        >
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-sm font-medium text-muted-foreground">Total Members</span>
+            <div className="p-2 bg-purple-500/10 rounded-lg group-hover:bg-purple-500/20 transition-colors">
+              <Users className="h-5 w-5 text-purple-500" />
+            </div>
+          </div>
+          <p className="text-2xl font-bold mb-1">{stats.totalMembers}</p>
+          <p className="text-xs text-muted-foreground">Across all clients</p>
+        </div>
       </div>
 
       {/* Filters and Search */}
