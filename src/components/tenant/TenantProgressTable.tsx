@@ -77,23 +77,24 @@ export default function TenantProgressTable({
     return { calculatedExpiryDate: null, isExpired: false };
   }, [packageDate]);
   const fetchStages = async () => {
-    if (!tenantId) {
+    if (!tenantId || !packageId) {
       setLoading(false);
       return;
     }
     try {
-      // First, get the tenant's stage_ids array
-      const { data: tenantData, error: tenantError } = await supabase
-        .from('tenants')
-        .select('stage_ids')
-        .eq('id', tenantId)
-        .single();
+      // Get stage IDs that belong to this package (via documents)
+      const { data: packageDocs, error: docsError } = await supabase
+        .from('documents')
+        .select('stage')
+        .eq('package_id', packageId)
+        .not('stage', 'is', null);
       
-      if (tenantError) throw tenantError;
+      if (docsError) throw docsError;
       
-      const stageIds = tenantData?.stage_ids || [];
+      // Get unique stage IDs from documents
+      const stageIdsFromDocs = [...new Set((packageDocs || []).map(d => d.stage).filter(Boolean))] as number[];
       
-      if (stageIds.length === 0) {
+      if (stageIdsFromDocs.length === 0) {
         setStages([]);
         setLoading(false);
         return;
@@ -103,7 +104,7 @@ export default function TenantProgressTable({
       const { data, error } = await supabase
         .from('documents_stages')
         .select('id, title, short_name, description, video_url, status')
-        .in('id', stageIds)
+        .in('id', stageIdsFromDocs)
         .order('id', { ascending: true });
       
       if (error) throw error;
@@ -134,7 +135,7 @@ export default function TenantProgressTable({
   };
   useEffect(() => {
     fetchStages();
-  }, [tenantId]);
+  }, [tenantId, packageId]);
   const handleRowClick = (stage: Stage) => {
     setSelectedStage(stage.rawData);
     setEditDialogOpen(true);
