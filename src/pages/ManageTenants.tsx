@@ -587,17 +587,29 @@ export default function ManageTenants() {
           <Input placeholder="Search clients by name or slug..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="pl-10 h-[48px]" />
         </div>
 
-        <Combobox options={[{
-          value: "all",
-          label: "All Packages",
-        }, ...packages.map(pkg => {
-          const isNew = pkg.created_at && new Date().getTime() - new Date(pkg.created_at).getTime() < 7 * 24 * 60 * 60 * 1000;
-          return {
-            value: pkg.id.toString(),
-            label: pkg.name,
-            badge: isNew ? "NEW" : undefined
-          };
-        })]} value={packageFilter} onValueChange={setPackageFilter} placeholder="Filter by package..." searchPlaceholder="Search packages..." emptyText="No packages found." className="w-full md:w-[220px] h-[48px]" />
+        <Combobox 
+          options={[
+            { value: "all", label: "All Packages", icon: Package2, iconColor: "text-muted-foreground" },
+            ...packages.map(pkg => {
+              const isNew = pkg.created_at && new Date().getTime() - new Date(pkg.created_at).getTime() < 7 * 24 * 60 * 60 * 1000;
+              return {
+                value: pkg.id.toString(),
+                label: pkg.name,
+                badge: isNew ? "NEW" : undefined,
+                icon: Package2,
+                iconColor: "text-blue-600"
+              };
+            })
+          ]} 
+          value={packageFilter} 
+          onValueChange={setPackageFilter} 
+          placeholder="Filter by package..." 
+          searchPlaceholder="Search packages..." 
+          emptyText="No packages found." 
+          className="w-full md:w-[220px] h-[48px]"
+          showIcons
+          showSeparators
+        />
 
         <Combobox 
           options={[

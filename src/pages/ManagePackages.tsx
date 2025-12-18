@@ -7,7 +7,7 @@ import { Combobox } from "@/components/ui/combobox";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
-import { Package2, Search, Plus, Users, ArrowUpDown, FileText, User, Calendar, Pencil, Edit, Save, X, UserPlus, CheckCircle2 } from "lucide-react";
+import { Package2, Search, Plus, Users, ArrowUpDown, FileText, User, Calendar, Pencil, Edit, Save, X, UserPlus, CheckCircle2, XCircle, Activity, MapPin } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -454,23 +454,20 @@ export default function ManagePackages() {
     const allTenants = tenantsByPackage[packageId] || [];
     const activeCount = allTenants.filter(t => t.status === "active").length;
     const inactiveCount = allTenants.filter(t => t.status === "inactive").length;
-    const statusOptions = [{
-      value: "all",
-      label: "All Status"
-    }, {
-      value: "active",
-      label: `Active (${activeCount})`
-    }, {
-      value: "inactive", 
-      label: `Inactive (${inactiveCount})`
-    }];
-    const stateOptions = [{
-      value: "all",
-      label: "All States"
-    }, ...allAvailableStates.map(state => ({
-      value: state,
-      label: state
-    }))];
+    const statusOptions = [
+      { value: "all", label: "All Status", icon: Activity, iconColor: "text-muted-foreground" },
+      { value: "active", label: `Active (${activeCount})`, icon: CheckCircle2, iconColor: "text-green-600" },
+      { value: "inactive", label: `Inactive (${inactiveCount})`, icon: XCircle, iconColor: "text-red-600" }
+    ];
+    const stateOptions = [
+      { value: "all", label: "All States", icon: MapPin, iconColor: "text-muted-foreground" },
+      ...allAvailableStates.map(state => ({
+        value: state,
+        label: state,
+        icon: MapPin,
+        iconColor: "text-blue-600"
+      }))
+    ];
     return <div className="space-y-4 animate-fade-in" key={`content-${packageId}`}>
         {/* Filters and Actions */}
         <div className="flex flex-col md:flex-row gap-4">
@@ -483,14 +480,34 @@ export default function ManagePackages() {
           </div>
 
           <div className="flex gap-2 w-full md:w-auto">
-            <Combobox options={statusOptions} value={cloFilters[packageId] || "all"} onValueChange={value => setCloFilters(prev => ({
-            ...prev,
-            [packageId]: value
-          }))} placeholder="Filter by Status" searchPlaceholder="Search status or client..." emptyText="No results found." className="w-full md:w-[200px] h-12 bg-card border-border/50 hover:bg-muted hover:border-primary/30 font-semibold rounded-lg shadow-sm" />
-            <Combobox options={stateOptions} value={stateFilters[packageId] || "all"} onValueChange={value => setStateFilters(prev => ({
-            ...prev,
-            [packageId]: value
-          }))} placeholder="Sort By State" searchPlaceholder="Search State..." emptyText="No states found." className="w-full md:w-[200px] h-12 bg-card border-border/50 hover:bg-muted hover:border-primary/30 font-semibold rounded-lg shadow-sm" />
+            <Combobox 
+              options={statusOptions} 
+              value={cloFilters[packageId] || "all"} 
+              onValueChange={value => setCloFilters(prev => ({
+                ...prev,
+                [packageId]: value
+              }))} 
+              placeholder="Filter by Status" 
+              searchPlaceholder="Search status or client..." 
+              emptyText="No results found." 
+              className="w-full md:w-[200px] h-12 bg-card border-border/50 hover:bg-muted hover:border-primary/30 font-semibold rounded-lg shadow-sm"
+              showIcons
+              showSeparators
+            />
+            <Combobox 
+              options={stateOptions} 
+              value={stateFilters[packageId] || "all"} 
+              onValueChange={value => setStateFilters(prev => ({
+                ...prev,
+                [packageId]: value
+              }))} 
+              placeholder="Sort By State" 
+              searchPlaceholder="Search State..." 
+              emptyText="No states found." 
+              className="w-full md:w-[200px] h-12 bg-card border-border/50 hover:bg-muted hover:border-primary/30 font-semibold rounded-lg shadow-sm"
+              showIcons
+              showSeparators
+            />
           </div>
         </div>
 
