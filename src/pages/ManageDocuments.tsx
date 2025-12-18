@@ -1444,57 +1444,64 @@ export default function ManageDocuments() {
 
       {/* Statistics Cards - Only for Super Admins */}
       {isSuperAdmin && <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <Card className="animate-fade-in cursor-pointer hover:shadow-lg transition-all" onClick={() => {
-        setFormatFilter("all");
-      }}>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Documents</CardTitle>
-              <FileText className="h-[22px] w-[22px] text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{documentsCount}</div>
-              <p className="text-xs text-muted-foreground mt-1 cursor-pointer hover:text-primary">Click to manage</p>
-            </CardContent>
-          </Card>
+          <div 
+            onClick={() => setFormatFilter("all")}
+            className="p-4 rounded-lg border bg-card hover:shadow-md transition-all cursor-pointer group animate-scale-in"
+          >
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm font-medium text-muted-foreground">Documents</span>
+              <div className="p-2 bg-blue-500/10 rounded-lg group-hover:bg-blue-500/20 transition-colors">
+                <FileText className="h-5 w-5 text-blue-500" />
+              </div>
+            </div>
+            <p className="text-2xl font-bold mb-1">{documentsCount}</p>
+            <p className="text-xs text-muted-foreground">Click to manage</p>
+          </div>
 
-          <Card className="animate-fade-in cursor-pointer hover:shadow-lg transition-all" style={{
-        animationDelay: "100ms"
-      }} onClick={() => navigate("/manage-categories")}>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Categories</CardTitle>
-              <FolderTree className="h-[22px] w-[22px] text-blue-500" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{categoriesCount}</div>
-              <p className="text-xs text-muted-foreground mt-1 cursor-pointer hover:text-primary">Click to manage</p>
-            </CardContent>
-          </Card>
+          <div 
+            onClick={() => navigate("/manage-categories")}
+            className="p-4 rounded-lg border bg-card hover:shadow-md transition-all cursor-pointer group animate-scale-in"
+            style={{ animationDelay: "50ms" }}
+          >
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm font-medium text-muted-foreground">Categories</span>
+              <div className="p-2 bg-purple-500/10 rounded-lg group-hover:bg-purple-500/20 transition-colors">
+                <FolderTree className="h-5 w-5 text-purple-500" />
+              </div>
+            </div>
+            <p className="text-2xl font-bold mb-1">{categoriesCount}</p>
+            <p className="text-xs text-muted-foreground">Click to manage</p>
+          </div>
 
-          <Card className="animate-fade-in cursor-pointer hover:shadow-lg transition-all" style={{
-        animationDelay: "200ms"
-      }} onClick={() => navigate("/manage-stages")}>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Stages</CardTitle>
-              <ListTree className="h-[22px] w-[22px] text-green-500" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stagesCount}</div>
-              <p className="text-xs text-muted-foreground mt-1 cursor-pointer hover:text-primary">Click to manage</p>
-            </CardContent>
-          </Card>
+          <div 
+            onClick={() => navigate("/manage-stages")}
+            className="p-4 rounded-lg border bg-card hover:shadow-md transition-all cursor-pointer group animate-scale-in"
+            style={{ animationDelay: "100ms" }}
+          >
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm font-medium text-muted-foreground">Stages</span>
+              <div className="p-2 bg-green-500/10 rounded-lg group-hover:bg-green-500/20 transition-colors">
+                <ListTree className="h-5 w-5 text-green-500" />
+              </div>
+            </div>
+            <p className="text-2xl font-bold mb-1">{stagesCount}</p>
+            <p className="text-xs text-muted-foreground">Click to manage</p>
+          </div>
 
-          <Card className="animate-fade-in cursor-pointer hover:shadow-lg transition-all" style={{
-        animationDelay: "300ms"
-      }} onClick={() => navigate("/manage-fields")}>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Fields</CardTitle>
-              <FileStack className="h-[22px] w-[22px] text-purple-500" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{fieldsCount}</div>
-              <p className="text-xs text-muted-foreground mt-1 cursor-pointer hover:text-primary">Click to manage</p>
-            </CardContent>
-          </Card>
+          <div 
+            onClick={() => navigate("/manage-fields")}
+            className="p-4 rounded-lg border bg-card hover:shadow-md transition-all cursor-pointer group animate-scale-in"
+            style={{ animationDelay: "150ms" }}
+          >
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm font-medium text-muted-foreground">Fields</span>
+              <div className="p-2 bg-amber-500/10 rounded-lg group-hover:bg-amber-500/20 transition-colors">
+                <FileStack className="h-5 w-5 text-amber-500" />
+              </div>
+            </div>
+            <p className="text-2xl font-bold mb-1">{fieldsCount}</p>
+            <p className="text-xs text-muted-foreground">Click to manage</p>
+          </div>
         </div>}
 
       {/* Search and Filters */}
