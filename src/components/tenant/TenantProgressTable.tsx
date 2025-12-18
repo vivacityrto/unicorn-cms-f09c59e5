@@ -186,7 +186,7 @@ export default function TenantProgressTable({
                 <Button 
                   variant="outline" 
                   size="sm" 
-                  className="text-xs h-7"
+                  className="text-xs h-7 hover:bg-white hover:text-black"
                   onClick={() => navigate(`/admin/package/${packageId}/tenant/${tenantId}`)}
                 >
                   View Data

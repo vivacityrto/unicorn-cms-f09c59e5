@@ -218,7 +218,7 @@ export default function TenantDetail() {
         const {
           data: docsData,
           count: docCountData
-        } = await supabase.from("documents").select("*", {
+        } = await supabase.from("documents").select("*, packages:package_id(name)", {
           count: 'exact'
         }).eq("package_id", tenantActualPackageId).eq("is_released", true).order("createdat", {
           ascending: false
@@ -569,6 +569,7 @@ export default function TenantDetail() {
                     const categoryName = doc.documents_categories?.name || doc.category || 'Document';
                     const fileCount = doc.file_names?.length || doc.uploaded_files?.length || doc.file_paths?.length || 0;
                     const isReleased = doc.is_released_to_client ?? doc.isclientdoc ?? false;
+                    const packageName = doc.packages?.name || null;
                     return <TableRow key={doc.id}>
                           <TableCell className="border-r">
                             <div className="flex items-center gap-2">
@@ -585,7 +586,7 @@ export default function TenantDetail() {
                               {fileCount} file{fileCount !== 1 ? 's' : ''}
                             </span>
                           </TableCell>
-                          <TableCell>
+                          <TableCell className="border-r">
                             {isReleased ? <Badge variant="default" className="gap-1">
                                 <CheckCircle2 className="h-3 w-3" />
                                 Released
@@ -594,9 +595,18 @@ export default function TenantDetail() {
                                 Pending
                               </Badge>}
                           </TableCell>
+                          <TableCell>
+                            {packageName ? (
+                              <Badge variant="outline" className="text-xs font-medium py-[3px] rounded-[9px] whitespace-nowrap">
+                                {packageName}
+                              </Badge>
+                            ) : (
+                              <span className="text-muted-foreground text-sm">—</span>
+                            )}
+                          </TableCell>
                         </TableRow>;
                   }) : <TableRow>
-                        <TableCell colSpan={3} className="text-center py-12">
+                        <TableCell colSpan={4} className="text-center py-12">
                           <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-3 opacity-50" />
                           <p className="text-sm text-muted-foreground">No documents yet</p>
                         </TableCell>
