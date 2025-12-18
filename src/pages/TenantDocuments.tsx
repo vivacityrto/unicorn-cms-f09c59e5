@@ -60,11 +60,11 @@ export default function TenantDocuments() {
       if (tenantData) {
         setTenantName(tenantData.name);
         
-        // Use URL param packageId if provided, otherwise fall back to tenant's package_id
-        const activePackageId = urlPackageId ? parseInt(urlPackageId) : tenantData.package_id;
+        // Always use tenant's actual package_id for querying released documents
+        const activePackageId = tenantData.package_id;
         setPackageId(activePackageId);
         
-        // Fetch documents from package_documents matching the active package_id (only released documents)
+        // Fetch documents from documents table matching the tenant's package_id (only released documents)
         if (activePackageId) {
           const { data: documentsData, error } = await supabase
             .from("documents")
