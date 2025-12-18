@@ -753,13 +753,13 @@ export default function ManageInvites() {
                           <span className="text-muted-foreground">System</span>
                         )}
                       </TableCell>
-                      <TableCell className="text-sm text-muted-foreground py-6 border-r border-border/50">
+                      <TableCell className="text-sm text-foreground font-medium py-6 border-r border-border/50">
                         <div className="flex items-center gap-1.5">
                           <Calendar className="h-4 w-4 text-muted-foreground" />
                           {createdDate.toLocaleDateString()}
                         </div>
                       </TableCell>
-                      <TableCell className="text-sm text-muted-foreground py-6 border-r border-border/50">
+                      <TableCell className="text-sm text-foreground font-medium py-6 border-r border-border/50">
                         <div className="flex items-center gap-1.5">
                           <Clock className="h-4 w-4 text-muted-foreground" />
                           {createdDate.toLocaleTimeString()}
