@@ -1585,9 +1585,17 @@ export default function ManageDocuments() {
 
       {/* Documents Table */}
       <div className="rounded-lg border-0 bg-card shadow-lg overflow-x-auto">
-          <Table className="min-w-[2000px]">
+          <Table className="min-w-[2100px]">
             <TableHeader>
               <TableRow className="border-b-2 hover:bg-transparent">
+                {isSuperAdmin && (
+                  <TableHead className="font-semibold bg-muted/30 text-foreground h-14 whitespace-nowrap border-r w-12 text-center">
+                    <Checkbox 
+                      checked={selectedDocuments.length === filteredDocuments.length && filteredDocuments.length > 0}
+                      onCheckedChange={toggleSelectAll}
+                    />
+                  </TableHead>
+                )}
                 <TableHead className="font-semibold bg-muted/30 text-foreground h-14 whitespace-nowrap border-r w-24">
                   ID
                 </TableHead>
@@ -1610,19 +1618,28 @@ export default function ManageDocuments() {
             </TableHeader>
             <TableBody>
               {filteredDocuments.length === 0 ? <TableRow>
-                  <TableCell colSpan={12} className="text-center py-16 text-muted-foreground">
+                  <TableCell colSpan={isSuperAdmin ? 13 : 12} className="text-center py-16 text-muted-foreground">
                     No documents found
                   </TableCell>
                 </TableRow> : paginatedDocuments.map((doc, index) => {
             const isNew = doc.sent_at && new Date().getTime() - new Date(doc.sent_at).getTime() < 24 * 60 * 60 * 1000;
             const categoryIds = doc.category ? doc.category.split(',') : [];
             const categoryBadges = categoryIds.map(id => categories.find(c => c.id === parseInt(id.trim()))?.name).filter(Boolean);
-            return <TableRow key={doc.id} className="group hover:bg-primary/5 transition-all duration-200 cursor-pointer border-b border-border/50 hover:border-primary/20 animate-fade-in" style={{
+            const isSelected = selectedDocuments.includes(doc.id);
+            return <TableRow key={doc.id} className={cn("group hover:bg-primary/5 transition-all duration-200 cursor-pointer border-b border-border/50 hover:border-primary/20 animate-fade-in", isSelected && "bg-primary/5")} style={{
               animationDelay: `${index * 30}ms`
             }} onClick={() => {
               setEditingDocumentId(doc.id);
               setIsCreateDialogOpen(true);
             }}>
+                      {isSuperAdmin && (
+                        <TableCell className="py-6 border-r border-border/50 w-12 text-center" onClick={e => e.stopPropagation()}>
+                          <Checkbox 
+                            checked={isSelected}
+                            onCheckedChange={() => toggleSelectDocument(doc.id)}
+                          />
+                        </TableCell>
+                      )}
                       <TableCell className="py-6 border-r border-border/50 w-24">
                         <span className="font-semibold text-foreground">{doc.id}</span>
                       </TableCell>
