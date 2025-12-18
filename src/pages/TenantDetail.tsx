@@ -595,10 +595,10 @@ export default function TenantDetail() {
                             </span>
                           </TableCell>
                           <TableCell className="border-r">
-                            {isReleased ? <Badge variant="default" className="gap-1">
+                            {isReleased ? <Badge variant="default" className="gap-1 bg-green-500/10 text-green-600 hover:bg-green-500/20 border border-green-600 text-[0.75rem] py-[2px] px-[0.625rem] rounded-[11px]">
                                 <CheckCircle2 className="h-3 w-3" />
                                 Released
-                              </Badge> : <Badge variant="secondary" className="gap-1">
+                              </Badge> : <Badge variant="default" className="gap-1 bg-blue-500/10 text-blue-600 hover:bg-blue-500/20 border border-blue-600 text-[0.75rem] py-[2px] px-[0.625rem] rounded-[11px]">
                                 <Clock className="h-3 w-3" />
                                 Pending
                               </Badge>}
