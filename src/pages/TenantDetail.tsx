@@ -607,7 +607,7 @@ export default function TenantDetail() {
             </Card>
 
             {/* Package & Progress Combined - Use activePackageId */}
-            <TenantProgressTable key={`progress-${activePackageId}`} packageId={activePackageId || undefined} packageName={tenantPackages.find(p => p.id === activePackageId)?.name || packages[0]?.name} packageDate={packages[0]?.date} documentCount={documentCount} memberCount={memberCount} />
+            <TenantProgressTable key={`progress-${activePackageId}-${tenantId}`} packageId={activePackageId || undefined} tenantId={tenantId ? parseInt(tenantId) : undefined} packageName={tenantPackages.find(p => p.id === activePackageId)?.name || packages[0]?.name} packageDate={packages[0]?.date} documentCount={documentCount} memberCount={memberCount} />
           </div>
 
           {/* Right: Package Details */}
