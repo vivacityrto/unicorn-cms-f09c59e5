@@ -1743,7 +1743,7 @@ export default function AuditTemplateBuilder() {
               Cancel
             </Button>
           <div>
-              <Input value={templateName} onChange={e => setTemplateName(e.target.value)} className="text-xl font-semibold border-none bg-transparent p-0 h-auto focus-visible:ring-0 focus-visible:ring-offset-0 cursor-text" placeholder="Template name" />
+              <Input value={templateName} onChange={e => setTemplateName(e.target.value)} className="font-semibold border-none bg-transparent p-0 h-auto focus-visible:ring-0 focus-visible:ring-offset-0 cursor-text" style={{ fontSize: '17px' }} placeholder="Template name" />
               <p className="text-sm text-muted-foreground">
                 {canvasQuestions.length} question{canvasQuestions.length !== 1 ? 's' : ''} added
               </p>
