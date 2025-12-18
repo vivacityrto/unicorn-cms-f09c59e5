@@ -696,7 +696,7 @@ export default function ManageInvites() {
                   <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-r">Tenant (RTO)</TableHead>
                   <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-r">Role</TableHead>
                   <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-r">Status</TableHead>
-                  <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap">Invited By</TableHead>
+                  <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap text-center">Invited By</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -750,7 +750,7 @@ export default function ManageInvites() {
                           </Badge>
                         </div>
                       </TableCell>
-                      <TableCell className="text-sm font-medium text-foreground py-6">
+                      <TableCell className="text-sm font-medium text-foreground py-6 text-center">
                         {invite.invited_by ? (
                           (() => {
                             const inviter = inviterData.get(invite.invited_by);
@@ -759,7 +759,7 @@ export default function ManageInvites() {
                               <TooltipProvider>
                                 <Tooltip>
                                   <TooltipTrigger asChild>
-                                    <div className="w-8 h-8 rounded-full flex items-center justify-center overflow-hidden cursor-pointer bg-primary/10 border border-border">
+                                    <div className="w-10 h-10 rounded-full flex items-center justify-center overflow-hidden cursor-pointer bg-primary/10 border border-border mx-auto">
                                       {inviter.avatar_url ? (
                                         <img src={inviter.avatar_url} alt={inviter.name} className="w-full h-full object-cover" />
                                       ) : (
