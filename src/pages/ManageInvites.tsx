@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { CheckCircle, Clock, Mail, XCircle, Users, Search, RefreshCw, AlertCircle, Filter, Trash2, Activity, Send, ShieldCheck } from "lucide-react";
+import { CheckCircle, Clock, Mail, XCircle, Users, Search, RefreshCw, AlertCircle, Filter, Trash2, Activity, Send, ShieldCheck, Calendar } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -690,13 +690,23 @@ export default function ManageInvites() {
                       className="!border-[hsl(0deg_0%_43.45%)] !rounded-[5px]"
                     />
                   </TableHead>
-                  <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-r">Date</TableHead>
-                  <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-r">Time</TableHead>
+                  <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap text-center border-r">Invited By</TableHead>
+                  <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-r">
+                    <div className="flex items-center gap-1.5">
+                      <Calendar className="h-4 w-4 text-muted-foreground" />
+                      Date
+                    </div>
+                  </TableHead>
+                  <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-r">
+                    <div className="flex items-center gap-1.5">
+                      <Clock className="h-4 w-4 text-muted-foreground" />
+                      Time
+                    </div>
+                  </TableHead>
                   <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-r">Email</TableHead>
                   <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-r">Tenant (RTO)</TableHead>
                   <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-r">Role</TableHead>
-                  <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-r">Status</TableHead>
-                  <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap text-center">Invited By</TableHead>
+                  <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap">Status</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -725,32 +735,7 @@ export default function ManageInvites() {
                           className="!border-[hsl(0deg_0%_43.45%)] !rounded-[5px]"
                         />
                       </TableCell>
-                      <TableCell className="text-sm text-foreground font-medium py-6 border-r border-border/50">
-                        {createdDate.toLocaleDateString()}
-                      </TableCell>
-                      <TableCell className="text-sm text-foreground font-medium py-6 border-r border-border/50">
-                        {createdDate.toLocaleTimeString()}
-                      </TableCell>
-                      <TableCell className="text-sm text-muted-foreground py-6 border-r border-border/50">{invite.email}</TableCell>
-                      <TableCell className="py-6 border-r border-border/50">
-                        <div className="max-w-[200px] truncate text-sm text-muted-foreground" title={tenantName}>
-                          {tenantName}
-                        </div>
-                      </TableCell>
-                      <TableCell className="py-6 border-r border-border/50">
-                        <Badge variant="outline" className="text-xs">
-                          {userStatus?.unicorn_role || labelForRole(invite.unicorn_role)}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="py-6 border-r border-border/50">
-                        <div className="badge-container">
-                          <Badge variant={statusBadge.variant} className={statusBadge.color}>
-                            <StatusBadgeIcon className="mr-1 h-3 w-3" />
-                            {statusBadge.label}
-                          </Badge>
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-sm font-medium text-foreground py-6 text-center">
+                      <TableCell className="text-sm font-medium text-foreground py-6 text-center border-r border-border/50">
                         {invite.invited_by ? (
                           (() => {
                             const inviter = inviterData.get(invite.invited_by);
@@ -777,6 +762,31 @@ export default function ManageInvites() {
                         ) : (
                           <span className="text-muted-foreground">System</span>
                         )}
+                      </TableCell>
+                      <TableCell className="text-sm text-foreground font-medium py-6 border-r border-border/50">
+                        {createdDate.toLocaleDateString()}
+                      </TableCell>
+                      <TableCell className="text-sm text-foreground font-medium py-6 border-r border-border/50">
+                        {createdDate.toLocaleTimeString()}
+                      </TableCell>
+                      <TableCell className="text-sm text-muted-foreground py-6 border-r border-border/50">{invite.email}</TableCell>
+                      <TableCell className="py-6 border-r border-border/50">
+                        <div className="max-w-[200px] truncate text-sm text-muted-foreground" title={tenantName}>
+                          {tenantName}
+                        </div>
+                      </TableCell>
+                      <TableCell className="py-6 border-r border-border/50">
+                        <Badge variant="outline" className="text-xs">
+                          {userStatus?.unicorn_role || labelForRole(invite.unicorn_role)}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="py-6">
+                        <div className="badge-container">
+                          <Badge variant={statusBadge.variant} className={statusBadge.color}>
+                            <StatusBadgeIcon className="mr-1 h-3 w-3" />
+                            {statusBadge.label}
+                          </Badge>
+                        </div>
                       </TableCell>
                     </TableRow>
                   );
