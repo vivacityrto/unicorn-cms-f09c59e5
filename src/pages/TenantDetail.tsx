@@ -208,6 +208,7 @@ export default function TenantDetail() {
           name,
           status,
           package_id,
+          package_ids,
           package_added_at,
           packages (
             id,
@@ -243,18 +244,18 @@ export default function TenantDetail() {
         ascending: false
       }).limit(5);
 
-      // Also fetch package documents if tenant has a package
-      const tenantActualPackageId = tenantData.package_id;
+      // Also fetch package documents for all packages the tenant has
+      const tenantPackageIds = tenantData.package_ids || (tenantData.package_id ? [tenantData.package_id] : []);
       let packageDocs: any[] = [];
       let packageDocCount = 0;
       
-      if (tenantActualPackageId) {
+      if (tenantPackageIds.length > 0) {
         const {
           data: docsData,
           count: docCountData
         } = await supabase.from("documents").select("*, packages:package_id(name)", {
           count: 'exact'
-        }).eq("package_id", tenantActualPackageId).eq("is_released", true).order("createdat", {
+        }).in("package_id", tenantPackageIds).eq("is_released", true).order("createdat", {
           ascending: false
         }).limit(5);
         packageDocs = docsData || [];
