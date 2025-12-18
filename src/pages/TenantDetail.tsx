@@ -563,6 +563,14 @@ export default function TenantDetail() {
 
               <CardContent className="p-0">
                 <Table>
+                  <TableHeader>
+                    <TableRow className="border-b hover:bg-transparent">
+                      <TableHead className="bg-muted/20 h-12 font-semibold text-foreground whitespace-nowrap border-r min-w-[200px]">Document Name</TableHead>
+                      <TableHead className="bg-muted/20 h-12 font-semibold text-foreground whitespace-nowrap border-r w-24">Files</TableHead>
+                      <TableHead className="bg-muted/20 h-12 font-semibold text-foreground whitespace-nowrap border-r w-28">Status</TableHead>
+                      <TableHead className="bg-muted/20 h-12 font-semibold text-foreground whitespace-nowrap w-32">Package</TableHead>
+                    </TableRow>
+                  </TableHeader>
                 <TableBody>
                     {recentDocuments && recentDocuments.length > 0 ? recentDocuments.map(doc => {
                     const docTitle = doc.title || doc.document_name || 'Untitled Document';
