@@ -77,32 +77,52 @@ export default function TenantProgressTable({
     return { calculatedExpiryDate: null, isExpired: false };
   }, [packageDate]);
   const fetchStages = async () => {
-    if (!packageId) {
+    if (!tenantId) {
       setLoading(false);
       return;
     }
     try {
-      const {
-        data,
-        error
-      } = await (supabase.from('package_stages' as any).select('id, stage_name, short_name, stage_description, video_url, order_number, is_active').eq('package_id', packageId).eq('is_active', true).order('order_number', {
-        ascending: true
-      }) as any);
+      // First, get the tenant's stage_ids array
+      const { data: tenantData, error: tenantError } = await supabase
+        .from('tenants')
+        .select('stage_ids')
+        .eq('id', tenantId)
+        .single();
+      
+      if (tenantError) throw tenantError;
+      
+      const stageIds = tenantData?.stage_ids || [];
+      
+      if (stageIds.length === 0) {
+        setStages([]);
+        setLoading(false);
+        return;
+      }
+      
+      // Fetch stages from documents_stages table
+      const { data, error } = await supabase
+        .from('documents_stages')
+        .select('id, title, short_name, description, video_url, status')
+        .in('id', stageIds)
+        .order('id', { ascending: true });
+      
       if (error) throw error;
+      
       const mappedStages: Stage[] = (data || []).map((stage: any, index: number) => ({
-        id: stage.order_number || index + 1,
-        name: stage.stage_name || 'Unnamed Stage',
-        status: "Not Started" as const,
+        id: index + 1,
+        name: stage.title || 'Unnamed Stage',
+        status: (stage.status as Stage["status"]) || "Not Started",
         paymentStatus: "N/A" as const,
-        order_number: stage.order_number || index + 1,
+        order_number: index + 1,
         rawData: {
           id: stage.id,
-          stage_name: stage.stage_name || '',
+          stage_name: stage.title || '',
           short_name: stage.short_name,
-          stage_description: stage.stage_description,
+          stage_description: stage.description,
           video_url: stage.video_url,
-          order_number: stage.order_number,
-          is_active: stage.is_active ?? true
+          order_number: index + 1,
+          is_active: true,
+          status: stage.status
         }
       }));
       setStages(mappedStages);
@@ -114,7 +134,7 @@ export default function TenantProgressTable({
   };
   useEffect(() => {
     fetchStages();
-  }, [packageId]);
+  }, [tenantId]);
   const handleRowClick = (stage: Stage) => {
     setSelectedStage(stage.rawData);
     setEditDialogOpen(true);
