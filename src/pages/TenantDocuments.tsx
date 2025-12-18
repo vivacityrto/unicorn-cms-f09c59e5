@@ -22,6 +22,7 @@ interface Document {
   category: string | null;
   createdat: string | null;
   isclientdoc: boolean | null;
+  package_name?: string | null;
 }
 
 export default function TenantDocuments() {
@@ -68,14 +69,20 @@ export default function TenantDocuments() {
         if (activePackageId) {
           const { data: documentsData, error } = await supabase
             .from("documents")
-            .select("*")
+            .select("*, packages:package_id(name)")
             .eq("package_id", activePackageId)
             .eq("is_released", true)
             .order("createdat", { ascending: false });
 
           if (error) throw error;
           
-          setDocuments(documentsData || []);
+          // Map package name from joined data
+          const docsWithPackage = (documentsData || []).map((doc: any) => ({
+            ...doc,
+            package_name: doc.packages?.name || null
+          }));
+          
+          setDocuments(docsWithPackage);
         }
       }
     } catch (error: any) {
@@ -198,6 +205,7 @@ export default function TenantDocuments() {
               <TableHead className="font-semibold bg-muted/30 text-foreground h-14 whitespace-nowrap border-r min-w-[200px]">Document Name</TableHead>
               <TableHead className="font-semibold bg-muted/30 text-foreground h-14 whitespace-nowrap border-r min-w-[250px]">Description</TableHead>
               <TableHead className="font-semibold bg-muted/30 text-foreground h-14 whitespace-nowrap border-r w-32">Category</TableHead>
+              <TableHead className="font-semibold bg-muted/30 text-foreground h-14 whitespace-nowrap border-r w-40">Package</TableHead>
               <TableHead className="font-semibold bg-muted/30 text-foreground h-14 whitespace-nowrap border-r w-24">Released</TableHead>
               <TableHead className="font-semibold bg-muted/30 text-foreground h-14 whitespace-nowrap border-r min-w-[180px]">Files</TableHead>
               <TableHead className="font-semibold bg-muted/30 text-foreground h-14 whitespace-nowrap border-r w-32">Created</TableHead>
@@ -207,13 +215,13 @@ export default function TenantDocuments() {
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={8} className="text-center py-16 text-muted-foreground">
+                <TableCell colSpan={9} className="text-center py-16 text-muted-foreground">
                   Loading...
                 </TableCell>
               </TableRow>
             ) : filteredDocuments.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={8} className="text-center py-16 text-muted-foreground">
+                <TableCell colSpan={9} className="text-center py-16 text-muted-foreground">
                   No documents found
                 </TableCell>
               </TableRow>
@@ -241,6 +249,15 @@ export default function TenantDocuments() {
                     {doc.category ? (
                       <Badge variant="secondary" className="text-xs font-medium py-[3px] rounded-[9px] whitespace-nowrap">
                         {doc.category}
+                      </Badge>
+                    ) : (
+                      <span className="text-muted-foreground text-sm">—</span>
+                    )}
+                  </TableCell>
+                  <TableCell className="py-6 border-r border-border/50 whitespace-nowrap">
+                    {doc.package_name ? (
+                      <Badge variant="outline" className="text-xs font-medium py-[3px] rounded-[9px] whitespace-nowrap">
+                        {doc.package_name}
                       </Badge>
                     ) : (
                       <span className="text-muted-foreground text-sm">—</span>
