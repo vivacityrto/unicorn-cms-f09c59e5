@@ -67,6 +67,7 @@ interface TenantPackage {
   full_text: string | null;
   duration_months: number | null;
   total_hours: number | null;
+  stage_count?: number;
 }
 export default function TenantDetail() {
   const {
@@ -130,17 +131,33 @@ export default function TenantDetail() {
       if (tenantError) throw tenantError;
       const packageIds = tenantData?.package_ids || (tenantData?.package_id ? [tenantData.package_id] : []);
       if (packageIds.length > 0) {
-        // Fetch package details
-        const {
-          data: packagesData,
-          error: packagesError
-        } = await supabase.from("packages").select("id, name, slug, full_text, duration_months, total_hours").in("id", packageIds).order("name");
-        if (packagesError) throw packagesError;
-        setTenantPackages(packagesData || []);
+        // Fetch package details and stage counts
+        const [packagesResult, stageCountsResult] = await Promise.all([
+          supabase.from("packages").select("id, name, slug, full_text, duration_months, total_hours").in("id", packageIds).order("name"),
+          supabase.from('package_stages' as any).select('package_id').in('package_id', packageIds) as any
+        ]);
+        
+        if (packagesResult.error) throw packagesResult.error;
+        
+        // Count stages per package
+        const stageCounts: Record<number, number> = {};
+        if (stageCountsResult.data) {
+          stageCountsResult.data.forEach((row: { package_id: number }) => {
+            stageCounts[row.package_id] = (stageCounts[row.package_id] || 0) + 1;
+          });
+        }
+        
+        // Add stage counts to packages
+        const packagesWithCounts = (packagesResult.data || []).map(pkg => ({
+          ...pkg,
+          stage_count: stageCounts[pkg.id] || 0
+        }));
+        
+        setTenantPackages(packagesWithCounts);
 
         // Set the first package as active if not already set
-        if (packagesData && packagesData.length > 0 && activePackageId === null) {
-          setActivePackageId(packagesData[0].id);
+        if (packagesWithCounts.length > 0 && activePackageId === null) {
+          setActivePackageId(packagesWithCounts[0].id);
         }
       } else {
         // No packages, still fetch data
@@ -696,7 +713,7 @@ export default function TenantDetail() {
                                   <div className={`h-7 w-7 rounded-full flex items-center justify-center ${pkg.id === activePackageId ? 'bg-primary/20' : 'bg-muted'}`}>
                                     <FileText className="h-3.5 w-3.5" />
                                   </div>
-                                  <span className="flex-1 font-medium text-sm">{pkg.name}</span>
+                                  <span className="flex-1 font-medium text-sm">{pkg.name} ({pkg.stage_count || 0})</span>
                                   {pkg.id === activePackageId && <CheckCircle2 className="h-4 w-4 text-primary" />}
                                 </DropdownMenuItem>
                                 {index < tenantPackages.length - 1 && <div className="mx-2 my-1 h-px bg-gradient-to-r from-transparent via-border to-transparent" />}
