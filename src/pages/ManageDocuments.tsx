@@ -1630,7 +1630,7 @@ export default function ManageDocuments() {
               setIsCreateDialogOpen(true);
             }}>
                       {isSuperAdmin && (
-                        <TableCell className="py-6 border-r border-border/50" onClick={e => e.stopPropagation()}>
+                        <TableCell className="py-6 pr-4 border-r border-border/50" onClick={e => e.stopPropagation()}>
                           <Checkbox 
                             checked={isSelected}
                             onCheckedChange={() => toggleSelectDocument(doc.id)}
