@@ -199,12 +199,13 @@ export function AddExistingDocumentDialog({
         return;
       }
 
-      // Update documents to link them to this package/stage (no duplication - just update their package_id and stage)
+      // Update documents to link them to this package/stage and auto-release (no duplication - just update their package_id and stage)
       const updatePromises = newDocuments.map(selectedDoc => 
         supabase.from('documents')
           .update({
             package_id: packageId,
             stage: stageId,
+            is_released: true,
           })
           .eq('id', selectedDoc.id)
       );
