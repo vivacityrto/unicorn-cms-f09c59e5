@@ -1585,10 +1585,11 @@ export default function ManageDocuments() {
             <TableHeader>
               <TableRow className="border-b-2 hover:bg-transparent">
                 {isSuperAdmin && (
-                  <TableHead className="font-semibold bg-muted/30 text-foreground h-14 whitespace-nowrap border-r w-12 text-center">
+                  <TableHead className="w-12 bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-r">
                     <Checkbox 
                       checked={selectedDocuments.length === filteredDocuments.length && filteredDocuments.length > 0}
                       onCheckedChange={toggleSelectAll}
+                      className="!border-[hsl(0deg_0%_43.45%)] !rounded-[5px]"
                     />
                   </TableHead>
                 )}
@@ -1629,10 +1630,11 @@ export default function ManageDocuments() {
               setIsCreateDialogOpen(true);
             }}>
                       {isSuperAdmin && (
-                        <TableCell className="py-6 border-r border-border/50 w-12 text-center" onClick={e => e.stopPropagation()}>
+                        <TableCell className="py-6 border-r border-border/50" onClick={e => e.stopPropagation()}>
                           <Checkbox 
                             checked={isSelected}
                             onCheckedChange={() => toggleSelectDocument(doc.id)}
+                            className="!border-[hsl(0deg_0%_43.45%)] !rounded-[5px]"
                           />
                         </TableCell>
                       )}
