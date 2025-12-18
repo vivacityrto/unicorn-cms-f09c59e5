@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { CheckCircle, Clock, Mail, XCircle, Users, Search, RefreshCw, AlertCircle, Filter, Trash2 } from "lucide-react";
+import { CheckCircle, Clock, Mail, XCircle, Users, Search, RefreshCw, AlertCircle, Filter, Trash2, Activity, Send, ShieldCheck } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -609,8 +609,8 @@ export default function ManageInvites() {
 
           <Popover>
             <PopoverTrigger asChild>
-              <Button variant="outline" className="w-full md:w-[180px] h-12 bg-background justify-between">
-                <span>
+              <Button variant="outline" className="w-full md:w-[180px] h-12 bg-card border-border/50 hover:bg-muted hover:border-primary/30 justify-between font-semibold rounded-lg shadow-sm">
+                <span className="whitespace-nowrap">
                   {statusFilter === "all" && "All Statuses"}
                   {statusFilter === "pending" && "Pending"}
                   {statusFilter === "sent" && "Sent"}
@@ -618,44 +618,45 @@ export default function ManageInvites() {
                   {statusFilter === "verified" && "Verified"}
                   {statusFilter === "failed" && "Failed"}
                 </span>
-                <Filter className="h-4 w-4 ml-2 opacity-50" />
+                <Filter className="h-4 w-4 ml-2 text-muted-foreground/60 shrink-0" />
               </Button>
             </PopoverTrigger>
-            <PopoverContent className="w-[220px] p-0" align="start">
-              <div className="p-2">
-                <div className="relative mb-2">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Search filters..."
-                    className="pl-9 h-9"
-                  />
-                </div>
-                <div className="space-y-0">
-                  {[
-                    { value: "all", label: "All Statuses" },
-                    { value: "pending", label: "Pending" },
-                    { value: "sent", label: "Sent" },
-                    { value: "expired", label: "Expired" },
-                    { value: "verified", label: "Verified" },
-                    { value: "failed", label: "Failed" },
-                  ].map((option, index, array) => (
+            <PopoverContent className="w-[220px] p-2 rounded-lg shadow-lg border-border/50 bg-popover z-[100]" align="start">
+              <div className="relative mb-2">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search filters..."
+                  className="pl-9 h-9 text-sm rounded-md"
+                />
+              </div>
+              <div className="max-h-[280px] overflow-y-auto">
+                {[
+                  { value: "all", label: "All Statuses", icon: Activity, iconColor: "text-muted-foreground" },
+                  { value: "pending", label: "Pending", icon: Clock, iconColor: "text-yellow-600" },
+                  { value: "sent", label: "Sent", icon: Send, iconColor: "text-blue-600" },
+                  { value: "expired", label: "Expired", icon: AlertCircle, iconColor: "text-orange-600" },
+                  { value: "verified", label: "Verified", icon: ShieldCheck, iconColor: "text-green-600" },
+                  { value: "failed", label: "Failed", icon: XCircle, iconColor: "text-red-600" },
+                ].map((option, index, array) => {
+                  const Icon = option.icon;
+                  const isSelected = statusFilter === option.value;
+                  return (
                     <div key={option.value}>
-                      <button
+                      <div
                         onClick={() => setStatusFilter(option.value)}
-                        className={`w-full text-left px-3 py-2 transition-colors text-[15px] rounded-[10px] ${
-                          statusFilter === option.value
-                            ? "bg-[hsl(196,100%,93.53%)] text-black"
-                            : "hover:bg-[hsl(196,100%,93.53%)] hover:text-black"
+                        className={`px-4 py-2.5 text-sm font-medium cursor-pointer rounded-md transition-all flex items-center gap-2 whitespace-nowrap ${
+                          isSelected ? "bg-primary/10 text-primary" : "text-foreground hover:bg-muted"
                         }`}
                       >
-                        {option.label}
-                      </button>
+                        <Icon className={`h-4 w-4 shrink-0 ${option.iconColor}`} />
+                        <span>{option.label}</span>
+                      </div>
                       {index < array.length - 1 && (
-                        <div className="h-px bg-border my-1" />
+                        <div className="mx-2 my-1 border-b border-border/50" />
                       )}
                     </div>
-                  ))}
-                </div>
+                  );
+                })}
               </div>
             </PopoverContent>
           </Popover>
