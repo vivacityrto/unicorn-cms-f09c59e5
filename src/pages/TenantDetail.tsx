@@ -131,26 +131,29 @@ export default function TenantDetail() {
       if (tenantError) throw tenantError;
       const packageIds = tenantData?.package_ids || (tenantData?.package_id ? [tenantData.package_id] : []);
       if (packageIds.length > 0) {
-        // Fetch package details and stage counts
+        // Fetch package details and stage counts from documents
         const [packagesResult, stageCountsResult] = await Promise.all([
           supabase.from("packages").select("id, name, slug, full_text, duration_months, total_hours").in("id", packageIds).order("name"),
-          supabase.from('package_stages' as any).select('package_id').in('package_id', packageIds) as any
+          supabase.from('documents').select('package_id, stage').in('package_id', packageIds).not('stage', 'is', null)
         ]);
         
         if (packagesResult.error) throw packagesResult.error;
         
-        // Count stages per package
-        const stageCounts: Record<number, number> = {};
+        // Count distinct stages per package
+        const stageCounts: Record<number, Set<number>> = {};
         if (stageCountsResult.data) {
-          stageCountsResult.data.forEach((row: { package_id: number }) => {
-            stageCounts[row.package_id] = (stageCounts[row.package_id] || 0) + 1;
+          stageCountsResult.data.forEach((row: { package_id: number; stage: number }) => {
+            if (!stageCounts[row.package_id]) {
+              stageCounts[row.package_id] = new Set();
+            }
+            stageCounts[row.package_id].add(row.stage);
           });
         }
         
         // Add stage counts to packages
         const packagesWithCounts = (packagesResult.data || []).map(pkg => ({
           ...pkg,
-          stage_count: stageCounts[pkg.id] || 0
+          stage_count: stageCounts[pkg.id]?.size || 0
         }));
         
         setTenantPackages(packagesWithCounts);
