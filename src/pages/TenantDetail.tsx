@@ -234,17 +234,7 @@ export default function TenantDetail() {
       }).eq("tenant_id", parseInt(tenantId));
       setMemberCount(memberCountData || 0);
 
-      // Fetch tenant-specific documents from documents_tenants
-      const {
-        data: tenantDocsData,
-        count: tenantDocCountData
-      } = await supabase.from("documents_tenants").select("*", {
-        count: 'exact'
-      }).eq("tenant_id", parseInt(tenantId)).order("created_at", {
-        ascending: false
-      }).limit(5);
-
-      // Also fetch package documents for all packages the tenant has
+      // Fetch released package documents only
       const tenantPackageIds = tenantData.package_ids || (tenantData.package_id ? [tenantData.package_id] : []);
       let packageDocs: any[] = [];
       let packageDocCount = 0;
@@ -262,15 +252,8 @@ export default function TenantDetail() {
         packageDocCount = docCountData || 0;
       }
 
-      // Combine both sources - tenant-specific docs take priority
-      const allDocs = [
-        ...(tenantDocsData || []).map(doc => ({ ...doc, source: 'tenant' })),
-        ...packageDocs.map(doc => ({ ...doc, source: 'package' }))
-      ].slice(0, 5);
-      
-      const totalDocCount = (tenantDocCountData || 0) + packageDocCount;
-      setDocumentCount(totalDocCount);
-      setRecentDocuments(allDocs);
+      setDocumentCount(packageDocCount);
+      setRecentDocuments(packageDocs);
 
       // Fetch total logins from user_activity for users in this tenant
       const {
