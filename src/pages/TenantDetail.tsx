@@ -233,8 +233,21 @@ export default function TenantDetail() {
       }).eq("tenant_id", parseInt(tenantId));
       setMemberCount(memberCountData || 0);
 
-      // Always fetch documents using tenant's actual package_id for accurate counting
+      // Fetch tenant-specific documents from documents_tenants
+      const {
+        data: tenantDocsData,
+        count: tenantDocCountData
+      } = await supabase.from("documents_tenants").select("*, sent_by_user:sent_by(first_name, last_name, avatar_url)", {
+        count: 'exact'
+      }).eq("tenant_id", parseInt(tenantId)).order("created_at", {
+        ascending: false
+      }).limit(5);
+
+      // Also fetch package documents if tenant has a package
       const tenantActualPackageId = tenantData.package_id;
+      let packageDocs: any[] = [];
+      let packageDocCount = 0;
+      
       if (tenantActualPackageId) {
         const {
           data: docsData,
@@ -243,22 +256,20 @@ export default function TenantDetail() {
           count: 'exact'
         }).eq("package_id", tenantActualPackageId).eq("is_released", true).order("createdat", {
           ascending: false
-        }).limit(3);
-        setDocumentCount(docCountData || 0);
-        setRecentDocuments(docsData || []);
-      } else {
-        // Fallback to tenant-specific documents if no package assigned
-        const {
-          data: tenantDocsData,
-          count: tenantDocCountData
-        } = await supabase.from("documents_tenants").select("*", {
-          count: 'exact'
-        }).eq("tenant_id", parseInt(tenantId)).order("created_at", {
-          ascending: false
-        }).limit(3);
-        setDocumentCount(tenantDocCountData || 0);
-        setRecentDocuments(tenantDocsData || []);
+        }).limit(5);
+        packageDocs = docsData || [];
+        packageDocCount = docCountData || 0;
       }
+
+      // Combine both sources - tenant-specific docs take priority
+      const allDocs = [
+        ...(tenantDocsData || []).map(doc => ({ ...doc, source: 'tenant' })),
+        ...packageDocs.map(doc => ({ ...doc, source: 'package' }))
+      ].slice(0, 5);
+      
+      const totalDocCount = (tenantDocCountData || 0) + packageDocCount;
+      setDocumentCount(totalDocCount);
+      setRecentDocuments(allDocs);
 
       // Fetch total logins from user_activity for users in this tenant
       const {
@@ -594,13 +605,19 @@ export default function TenantDetail() {
                     </TableRow>
                   </TableHeader>
                 <TableBody>
-                    {recentDocuments && recentDocuments.length > 0 ? recentDocuments.map(doc => {
+                    {recentDocuments && recentDocuments.length > 0 ? recentDocuments.map((doc: any) => {
                     const docTitle = doc.title || doc.document_name || 'Untitled Document';
                     const categoryName = doc.documents_categories?.name || doc.category || 'Document';
                     const fileCount = doc.file_names?.length || doc.uploaded_files?.length || doc.file_paths?.length || 0;
-                    const isReleased = doc.is_released_to_client ?? doc.isclientdoc ?? false;
+                    // For tenant docs, they are always released; for package docs, check is_released
+                    const isReleased = doc.source === 'tenant' ? true : (doc.is_released ?? false);
                     const packageName = doc.packages?.name || null;
-                    return <TableRow key={doc.id}>
+                    // Handle both creator (package docs) and sent_by_user (tenant docs)
+                    const releaser = doc.source === 'tenant' ? doc.sent_by_user : doc.creator;
+                    const releaserName = releaser ? `${releaser.first_name || ''} ${releaser.last_name || ''}`.trim() : null;
+                    const releaserInitials = releaserName ? releaserName.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2) : '??';
+                    
+                    return <TableRow key={`${doc.source}-${doc.id}`}>
                           <TableCell className="border-r">
                             <div className="flex items-center gap-2">
                               <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
@@ -626,33 +643,32 @@ export default function TenantDetail() {
                               </Badge>}
                           </TableCell>
                           <TableCell className="border-r">
-                            {(() => {
-                              const creator = doc.creator;
-                              const creatorName = creator ? `${creator.first_name || ''} ${creator.last_name || ''}`.trim() : null;
-                              const creatorInitials = creatorName ? creatorName.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2) : '??';
-                              return creator ? (
-                                <TooltipProvider>
-                                  <Tooltip>
-                                    <TooltipTrigger asChild>
-                                      <Avatar className="h-8 w-8 cursor-pointer">
-                                        <AvatarImage src={creator.avatar_url || ''} alt={creatorName || 'User'} />
-                                        <AvatarFallback className="bg-primary/10 text-primary text-xs font-semibold">
-                                          {creatorInitials}
-                                        </AvatarFallback>
-                                      </Avatar>
-                                    </TooltipTrigger>
-                                    <TooltipContent>
-                                      <p>{creatorName || 'Unknown'}</p>
-                                    </TooltipContent>
-                                  </Tooltip>
-                                </TooltipProvider>
-                              ) : (
-                                <span className="text-muted-foreground text-sm">—</span>
-                              );
-                            })()}
+                            {releaser ? (
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Avatar className="h-8 w-8 cursor-pointer">
+                                      <AvatarImage src={releaser.avatar_url || ''} alt={releaserName || 'User'} />
+                                      <AvatarFallback className="bg-primary/10 text-primary text-xs font-semibold">
+                                        {releaserInitials}
+                                      </AvatarFallback>
+                                    </Avatar>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>{releaserName || 'Unknown'}</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            ) : (
+                              <span className="text-muted-foreground text-sm">—</span>
+                            )}
                           </TableCell>
                           <TableCell>
-                            {packageName ? (
+                            {doc.source === 'tenant' ? (
+                              <Badge variant="outline" className="text-xs font-medium py-[3px] rounded-[9px] whitespace-nowrap bg-amber-500/10 text-amber-600 border-amber-600">
+                                Sent to Tenant
+                              </Badge>
+                            ) : packageName ? (
                               <Badge variant="outline" className="text-xs font-medium py-[3px] rounded-[9px] whitespace-nowrap">
                                 {packageName}
                               </Badge>
