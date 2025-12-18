@@ -599,16 +599,21 @@ export default function ManageTenants() {
           };
         })]} value={packageFilter} onValueChange={setPackageFilter} placeholder="Filter by package..." searchPlaceholder="Search packages..." emptyText="No packages found." className="w-full md:w-[220px] h-[48px]" />
 
-        <Combobox options={[{
-        value: "all",
-        label: "All Status"
-      }, {
-        value: "active",
-        label: "Active"
-      }, {
-        value: "inactive",
-        label: "Inactive"
-      }]} value={statusFilter} onValueChange={setStatusFilter} placeholder="Filter by status..." searchPlaceholder="Search filters..." emptyText="No filters found." className="w-full md:w-[220px] h-[48px]" />
+        <Combobox 
+          options={[
+            { value: "all", label: "All Status", icon: Activity, iconColor: "text-muted-foreground" },
+            { value: "active", label: "Active", icon: CheckCircle2, iconColor: "text-green-600" },
+            { value: "inactive", label: "Inactive", icon: XCircle, iconColor: "text-red-600" }
+          ]} 
+          value={statusFilter} 
+          onValueChange={setStatusFilter} 
+          placeholder="Filter by status..." 
+          searchPlaceholder="Search filters..." 
+          emptyText="No filters found." 
+          className="w-full md:w-[220px] h-[48px]"
+          showIcons
+          showSeparators
+        />
       </div>
 
       {/* Clients Table */}
