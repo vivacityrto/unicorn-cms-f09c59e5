@@ -1011,16 +1011,12 @@ export default function ManageDocuments() {
           </p>
         </div>
         <div className="flex gap-2">
-          {isSuperAdmin && selectedDocuments.length > 0 && <>
+          {isSuperAdmin && selectedDocuments.length > 0 && (
               <Button variant="destructive" className="gap-2" onClick={() => setIsBulkDeleteDialogOpen(true)}>
                 <Trash2 className="h-4 w-4" />
                 Delete ({selectedDocuments.length})
               </Button>
-              <Button variant="outline" className="gap-2" onClick={() => setIsBulkSendDialogOpen(true)}>
-                <Send className="h-4 w-4" />
-                Send ({selectedDocuments.length})
-              </Button>
-            </>}
+            )}
           {(isSuperAdmin || isTeamLeader) && <Dialog open={isCreateDialogOpen} onOpenChange={open => {
           setIsCreateDialogOpen(open);
           if (!open) {
