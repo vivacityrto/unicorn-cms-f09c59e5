@@ -13,6 +13,7 @@ import { Separator } from "@/components/ui/separator";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card, CardContent } from "@/components/ui/card";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import TenantProgressTable from "@/components/tenant/TenantProgressTable";
 interface ClientData {
   id: string;
@@ -238,7 +239,7 @@ export default function TenantDetail() {
         const {
           data: docsData,
           count: docCountData
-        } = await supabase.from("documents").select("*, packages:package_id(name)", {
+        } = await supabase.from("documents").select("*, packages:package_id(name), creator:created_by(first_name, last_name, avatar_url)", {
           count: 'exact'
         }).eq("package_id", tenantActualPackageId).eq("is_released", true).order("createdat", {
           ascending: false
@@ -588,6 +589,7 @@ export default function TenantDetail() {
                       <TableHead className="bg-muted/20 h-12 font-semibold text-foreground whitespace-nowrap border-r min-w-[200px]">Document Name</TableHead>
                       <TableHead className="bg-muted/20 h-12 font-semibold text-foreground whitespace-nowrap border-r w-24">Files</TableHead>
                       <TableHead className="bg-muted/20 h-12 font-semibold text-foreground whitespace-nowrap border-r w-28">Status</TableHead>
+                      <TableHead className="bg-muted/20 h-12 font-semibold text-foreground whitespace-nowrap border-r w-28">Released By</TableHead>
                       <TableHead className="bg-muted/20 h-12 font-semibold text-foreground whitespace-nowrap w-32">Package</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -623,6 +625,32 @@ export default function TenantDetail() {
                                 Pending
                               </Badge>}
                           </TableCell>
+                          <TableCell className="border-r">
+                            {(() => {
+                              const creator = doc.creator;
+                              const creatorName = creator ? `${creator.first_name || ''} ${creator.last_name || ''}`.trim() : null;
+                              const creatorInitials = creatorName ? creatorName.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2) : '??';
+                              return creator ? (
+                                <TooltipProvider>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <Avatar className="h-8 w-8 cursor-pointer">
+                                        <AvatarImage src={creator.avatar_url || ''} alt={creatorName || 'User'} />
+                                        <AvatarFallback className="bg-primary/10 text-primary text-xs font-semibold">
+                                          {creatorInitials}
+                                        </AvatarFallback>
+                                      </Avatar>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                      <p>{creatorName || 'Unknown'}</p>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
+                              ) : (
+                                <span className="text-muted-foreground text-sm">—</span>
+                              );
+                            })()}
+                          </TableCell>
                           <TableCell>
                             {packageName ? (
                               <Badge variant="outline" className="text-xs font-medium py-[3px] rounded-[9px] whitespace-nowrap">
@@ -634,7 +662,7 @@ export default function TenantDetail() {
                           </TableCell>
                         </TableRow>;
                   }) : <TableRow>
-                        <TableCell colSpan={4} className="text-center py-12">
+                        <TableCell colSpan={5} className="text-center py-12">
                           <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-3 opacity-50" />
                           <p className="text-sm text-muted-foreground">No documents yet</p>
                         </TableCell>
