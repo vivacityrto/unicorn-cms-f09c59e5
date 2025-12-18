@@ -267,34 +267,9 @@ export default function TenantDetail() {
         ...packageDocs.map(doc => ({ ...doc, source: 'package' }))
       ].slice(0, 5);
       
-      // Fetch user details for releasers
-      const releaserIds = allDocs
-        .map(doc => doc.source === 'tenant' ? doc.sent_by : doc.created_by)
-        .filter(Boolean);
-      
-      let userMap: Record<string, any> = {};
-      if (releaserIds.length > 0) {
-        const { data: usersData } = await supabase
-          .from("users")
-          .select("user_uuid, first_name, last_name, avatar_url")
-          .in("user_uuid", releaserIds);
-        if (usersData) {
-          userMap = usersData.reduce((acc, user) => {
-            acc[user.user_uuid] = user;
-            return acc;
-          }, {} as Record<string, any>);
-        }
-      }
-      
-      // Attach user data to documents
-      const docsWithUsers = allDocs.map(doc => {
-        const releaserId = doc.source === 'tenant' ? doc.sent_by : doc.created_by;
-        return { ...doc, releaser: releaserId ? userMap[releaserId] : null };
-      });
-      
       const totalDocCount = (tenantDocCountData || 0) + packageDocCount;
       setDocumentCount(totalDocCount);
-      setRecentDocuments(docsWithUsers);
+      setRecentDocuments(allDocs);
 
       // Fetch total logins from user_activity for users in this tenant
       const {
@@ -625,7 +600,6 @@ export default function TenantDetail() {
                       <TableHead className="bg-muted/20 h-12 font-semibold text-foreground whitespace-nowrap border-r min-w-[200px]">Document Name</TableHead>
                       <TableHead className="bg-muted/20 h-12 font-semibold text-foreground whitespace-nowrap border-r w-24">Files</TableHead>
                       <TableHead className="bg-muted/20 h-12 font-semibold text-foreground whitespace-nowrap border-r w-28">Status</TableHead>
-                      <TableHead className="bg-muted/20 h-12 font-semibold text-foreground whitespace-nowrap border-r w-28">Released By</TableHead>
                       <TableHead className="bg-muted/20 h-12 font-semibold text-foreground whitespace-nowrap w-32">Package</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -634,12 +608,8 @@ export default function TenantDetail() {
                     const docTitle = doc.title || doc.document_name || 'Untitled Document';
                     const categoryName = doc.documents_categories?.name || doc.category || 'Document';
                     const fileCount = doc.file_names?.length || doc.uploaded_files?.length || doc.file_paths?.length || 0;
-                    // For tenant docs, they are always released; for package docs, check is_released
                     const isReleased = doc.source === 'tenant' ? true : (doc.is_released ?? false);
                     const packageName = doc.packages?.name || null;
-                    const releaser = doc.releaser;
-                    const releaserName = releaser ? `${releaser.first_name || ''} ${releaser.last_name || ''}`.trim() : null;
-                    const releaserInitials = releaserName ? releaserName.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2) : '??';
                     
                     return <TableRow key={`${doc.source}-${doc.id}`}>
                           <TableCell className="border-r">
@@ -666,27 +636,6 @@ export default function TenantDetail() {
                                 Pending
                               </Badge>}
                           </TableCell>
-                          <TableCell className="border-r">
-                            {releaser ? (
-                              <TooltipProvider>
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                    <Avatar className="h-8 w-8 cursor-pointer">
-                                      <AvatarImage src={releaser.avatar_url || ''} alt={releaserName || 'User'} />
-                                      <AvatarFallback className="bg-primary/10 text-primary text-xs font-semibold">
-                                        {releaserInitials}
-                                      </AvatarFallback>
-                                    </Avatar>
-                                  </TooltipTrigger>
-                                  <TooltipContent>
-                                    <p>{releaserName || 'Unknown'}</p>
-                                  </TooltipContent>
-                                </Tooltip>
-                              </TooltipProvider>
-                            ) : (
-                              <span className="text-muted-foreground text-sm">—</span>
-                            )}
-                          </TableCell>
                           <TableCell>
                             {doc.source === 'tenant' ? (
                               <Badge variant="outline" className="text-xs font-medium py-[3px] rounded-[9px] whitespace-nowrap bg-amber-500/10 text-amber-600 border-amber-600">
@@ -702,7 +651,7 @@ export default function TenantDetail() {
                           </TableCell>
                         </TableRow>;
                   }) : <TableRow>
-                        <TableCell colSpan={5} className="text-center py-12">
+                        <TableCell colSpan={4} className="text-center py-12">
                           <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-3 opacity-50" />
                           <p className="text-sm text-muted-foreground">No documents yet</p>
                         </TableCell>
