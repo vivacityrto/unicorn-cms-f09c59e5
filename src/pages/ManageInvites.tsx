@@ -44,7 +44,7 @@ export default function ManageInvites() {
   const [invites, setInvites] = useState<InviteRow[]>([]);
   const [userStatuses, setUserStatuses] = useState<Map<string, UserStatus>>(new Map());
   const [tenantNames, setTenantNames] = useState<Map<number, string>>(new Map());
-  const [inviterNames, setInviterNames] = useState<Map<string, string>>(new Map());
+  const [inviterData, setInviterData] = useState<Map<string, { name: string; avatar_url: string | null; initials: string }>>(new Map());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
@@ -156,18 +156,19 @@ export default function ManageInvites() {
     try {
       const { data: usersData, error: usersError } = await supabase
         .from('users')
-        .select('user_uuid, first_name, last_name')
+        .select('user_uuid, first_name, last_name, avatar_url')
         .in('user_uuid', inviterIds);
       
       if (usersError) throw usersError;
 
-      const namesMap = new Map<string, string>();
+      const dataMap = new Map<string, { name: string; avatar_url: string | null; initials: string }>();
       usersData?.forEach(user => {
         const fullName = `${user.first_name || ''} ${user.last_name || ''}`.trim() || 'Unknown';
-        namesMap.set(user.user_uuid, fullName);
+        const initials = `${(user.first_name || '?')[0]}${(user.last_name || '?')[0]}`.toUpperCase();
+        dataMap.set(user.user_uuid, { name: fullName, avatar_url: user.avatar_url, initials });
       });
 
-      setInviterNames(namesMap);
+      setInviterData(dataMap);
     } catch (e: any) {
       console.error("Failed to fetch inviter names:", e);
     }
@@ -645,7 +646,7 @@ export default function ManageInvites() {
                       <div
                         onClick={() => setStatusFilter(option.value)}
                         className={`px-4 py-2.5 text-sm font-medium cursor-pointer rounded-md transition-all flex items-center gap-2 whitespace-nowrap ${
-                          isSelected ? "bg-primary/10 text-primary" : "text-foreground hover:bg-muted"
+                          isSelected ? "bg-primary/10 text-primary" : "text-foreground hover:bg-muted hover:text-black"
                         }`}
                       >
                         <Icon className={`h-4 w-4 shrink-0 ${option.iconColor}`} />
@@ -751,7 +752,28 @@ export default function ManageInvites() {
                       </TableCell>
                       <TableCell className="text-sm font-medium text-foreground py-6">
                         {invite.invited_by ? (
-                          inviterNames.get(invite.invited_by) || 'Loading...'
+                          (() => {
+                            const inviter = inviterData.get(invite.invited_by);
+                            if (!inviter) return <span className="text-muted-foreground">Loading...</span>;
+                            return (
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <div className="w-8 h-8 rounded-full flex items-center justify-center overflow-hidden cursor-pointer bg-primary/10 border border-border">
+                                      {inviter.avatar_url ? (
+                                        <img src={inviter.avatar_url} alt={inviter.name} className="w-full h-full object-cover" />
+                                      ) : (
+                                        <span className="text-xs font-medium text-primary">{inviter.initials}</span>
+                                      )}
+                                    </div>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>{inviter.name}</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            );
+                          })()
                         ) : (
                           <span className="text-muted-foreground">System</span>
                         )}
