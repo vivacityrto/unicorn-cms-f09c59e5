@@ -1,5 +1,4 @@
 import { FileText, ClipboardCheck, Calendar, BarChart3 } from 'lucide-react';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 
 interface AuditNavCardsProps {
@@ -19,7 +18,9 @@ const navItems = [
     label: 'Templates',
     description: 'Audit question banks',
     icon: FileText,
-    color: 'text-primary',
+    color: 'text-blue-500',
+    bgColor: 'bg-blue-500/10',
+    hoverBgColor: 'group-hover:bg-blue-500/20',
   },
   {
     id: 'inspections' as const,
@@ -27,13 +28,17 @@ const navItems = [
     description: 'Active & completed',
     icon: ClipboardCheck,
     color: 'text-green-500',
+    bgColor: 'bg-green-500/10',
+    hoverBgColor: 'group-hover:bg-green-500/20',
   },
   {
     id: 'schedules' as const,
     label: 'Schedules',
     description: 'Upcoming audits',
     icon: Calendar,
-    color: 'text-yellow-500',
+    color: 'text-amber-500',
+    bgColor: 'bg-amber-500/10',
+    hoverBgColor: 'group-hover:bg-amber-500/20',
   },
   {
     id: 'analytics' as const,
@@ -41,6 +46,8 @@ const navItems = [
     description: 'Reports & insights',
     icon: BarChart3,
     color: 'text-red-500',
+    bgColor: 'bg-red-500/10',
+    hoverBgColor: 'group-hover:bg-red-500/20',
   },
 ];
 
@@ -53,26 +60,24 @@ export function AuditNavCards({ activeTab, onTabChange, counts }: AuditNavCardsP
         const count = counts?.[item.id] ?? 0;
 
         return (
-          <Card
+          <div
             key={item.id}
             className={cn(
-              'animate-scale-in cursor-pointer transition-all',
-              isActive 
-                ? 'shadow-lg' 
-                : 'hover:shadow-lg'
+              'p-4 rounded-lg border bg-card hover:shadow-md transition-all cursor-pointer group animate-scale-in',
+              isActive && 'shadow-md'
             )}
             style={{ animationDelay: `${index * 50}ms` }}
             onClick={() => onTabChange(item.id)}
           >
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">{item.label}</CardTitle>
-              <Icon className={cn('h-[22px] w-[22px]', item.color)} />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{count}</div>
-              <p className="text-xs text-muted-foreground">{item.description}</p>
-            </CardContent>
-          </Card>
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm font-medium text-muted-foreground">{item.label}</span>
+              <div className={cn('p-2 rounded-lg transition-colors', item.bgColor, item.hoverBgColor)}>
+                <Icon className={cn('h-5 w-5', item.color)} />
+              </div>
+            </div>
+            <p className="text-2xl font-bold mb-1">{count}</p>
+            <p className="text-xs text-muted-foreground">{item.description}</p>
+          </div>
         );
       })}
     </div>
