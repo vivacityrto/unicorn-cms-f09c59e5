@@ -691,18 +691,8 @@ export default function ManageInvites() {
                     />
                   </TableHead>
                   <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap text-center border-r">Invited By</TableHead>
-                  <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-r">
-                    <div className="flex items-center gap-1.5">
-                      <Calendar className="h-4 w-4 text-muted-foreground" />
-                      Date
-                    </div>
-                  </TableHead>
-                  <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-r">
-                    <div className="flex items-center gap-1.5">
-                      <Clock className="h-4 w-4 text-muted-foreground" />
-                      Time
-                    </div>
-                  </TableHead>
+                  <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-r">Date</TableHead>
+                  <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-r">Time</TableHead>
                   <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-r">Email</TableHead>
                   <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-r">Tenant (RTO)</TableHead>
                   <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-r">Role</TableHead>
@@ -764,10 +754,16 @@ export default function ManageInvites() {
                         )}
                       </TableCell>
                       <TableCell className="text-sm text-foreground font-medium py-6 border-r border-border/50">
-                        {createdDate.toLocaleDateString()}
+                        <div className="flex items-center gap-1.5">
+                          <Calendar className="h-4 w-4 text-muted-foreground" />
+                          {createdDate.toLocaleDateString()}
+                        </div>
                       </TableCell>
                       <TableCell className="text-sm text-foreground font-medium py-6 border-r border-border/50">
-                        {createdDate.toLocaleTimeString()}
+                        <div className="flex items-center gap-1.5">
+                          <Clock className="h-4 w-4 text-muted-foreground" />
+                          {createdDate.toLocaleTimeString()}
+                        </div>
                       </TableCell>
                       <TableCell className="text-sm text-muted-foreground py-6 border-r border-border/50">{invite.email}</TableCell>
                       <TableCell className="py-6 border-r border-border/50">
