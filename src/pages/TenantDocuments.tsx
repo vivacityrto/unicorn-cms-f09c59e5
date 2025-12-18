@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Search, FileText, Download, Calendar, Trash2, GripVertical, CheckCircle2, XCircle } from "lucide-react";
+import { ArrowLeft, Search, FileText, Download, Calendar, Trash2, GripVertical, CheckCircle2, XCircle, Tag } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { CreateDocumentDialog2 } from "@/components/CreateDocumentDialog2";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -247,7 +247,8 @@ export default function TenantDocuments() {
                   </TableCell>
                   <TableCell className="py-6 border-r border-border/50 whitespace-nowrap">
                     {doc.category ? (
-                      <Badge variant="secondary" className="text-xs font-medium py-[3px] rounded-[9px] whitespace-nowrap">
+                      <Badge variant="default" className="bg-blue-500/10 text-blue-600 hover:bg-blue-500/20 border border-blue-600 text-[0.75rem] py-[2px] px-[0.625rem] rounded-[11px]">
+                        <Tag className="mr-1 h-3 w-3" />
                         {doc.category}
                       </Badge>
                     ) : (
