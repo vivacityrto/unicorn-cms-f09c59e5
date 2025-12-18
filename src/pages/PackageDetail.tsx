@@ -221,6 +221,8 @@ const PackageDetail = () => {
   const [editingDocument, setEditingDocument] = useState<any | null>(null);
   const [isAddExistingDocDialogOpen, setIsAddExistingDocDialogOpen] = useState(false);
   const [isAddExistingStageDialogOpen, setIsAddExistingStageDialogOpen] = useState(false);
+  const [isRemoveTenantDialogOpen, setIsRemoveTenantDialogOpen] = useState(false);
+  const [tenantToRemove, setTenantToRemove] = useState<TenantData | null>(null);
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -269,6 +271,58 @@ const PackageDetail = () => {
         // Revert on error
         fetchPackageData();
       }
+    }
+  };
+
+  const handleRemoveTenantFromPackage = async () => {
+    if (!tenantToRemove || !id) return;
+    
+    try {
+      // Get current package_ids
+      const { data: tenantData, error: fetchError } = await supabase
+        .from("tenants")
+        .select("package_ids, package_id")
+        .eq("id", tenantToRemove.id)
+        .single();
+      
+      if (fetchError) throw fetchError;
+      
+      const currentPackageIds: number[] = tenantData?.package_ids || [];
+      const packageIdNum = parseInt(id);
+      
+      // Remove this package ID from the array
+      const updatedPackageIds = currentPackageIds.filter(pid => pid !== packageIdNum);
+      
+      // Update package_id to null if it matches, or to the last remaining package
+      const newPackageId = tenantData?.package_id === packageIdNum 
+        ? (updatedPackageIds.length > 0 ? updatedPackageIds[updatedPackageIds.length - 1] : null)
+        : tenantData?.package_id;
+      
+      const { error: updateError } = await supabase
+        .from("tenants")
+        .update({ 
+          package_ids: updatedPackageIds,
+          package_id: newPackageId
+        })
+        .eq("id", tenantToRemove.id);
+      
+      if (updateError) throw updateError;
+      
+      toast({
+        title: "Success",
+        description: `${tenantToRemove.name} has been removed from this package`,
+      });
+      
+      setIsRemoveTenantDialogOpen(false);
+      setTenantToRemove(null);
+      fetchPackageData();
+    } catch (error: any) {
+      console.error("Error removing tenant from package:", error);
+      toast({
+        title: "Error",
+        description: "Failed to remove client from package",
+        variant: "destructive",
+      });
     }
   };
   
@@ -787,15 +841,18 @@ const PackageDetail = () => {
                           <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-r border-border/50 text-center">
                             Risk Level
                           </TableHead>
-                          <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-border/50">
+                          <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-r border-border/50">
                             Date Added
+                          </TableHead>
+                          <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-border/50 text-center">
+                            Actions
                           </TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
                         {filteredTenants.length === 0 ? (
                           <TableRow>
-                            <TableCell colSpan={6} className="text-center py-12 text-muted-foreground">
+                            <TableCell colSpan={7} className="text-center py-12 text-muted-foreground">
                               {searchQuery ? "No clients match your search" : "No clients have been added to this package yet."}
                             </TableCell>
                           </TableRow>
@@ -866,11 +923,25 @@ const PackageDetail = () => {
                                   {tenant.risk_level || "low"}
                                 </Badge>
                               </TableCell>
-                              <TableCell className="py-6 whitespace-nowrap">
+                              <TableCell className="py-6 border-r border-border/50 whitespace-nowrap">
                                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
                                   <Calendar className="h-4 w-4" />
                                   {new Date(tenant.created_at).toLocaleDateString()}
                                 </div>
+                              </TableCell>
+                              <TableCell className="py-6 whitespace-nowrap text-center">
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setTenantToRemove(tenant);
+                                    setIsRemoveTenantDialogOpen(true);
+                                  }}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
                               </TableCell>
                             </TableRow>
                           ))
@@ -1441,6 +1512,30 @@ const PackageDetail = () => {
     }} packageId={Number(id)} tenantId={tenantId ? Number(tenantId) : undefined} />
 
       <EditPackageDialog open={isEditPackageDialogOpen} onOpenChange={setIsEditPackageDialogOpen} onSuccess={fetchPackageData} packageData={packageInfo} />
+
+      {/* Remove Tenant from Package Confirmation Dialog */}
+      <Dialog open={isRemoveTenantDialogOpen} onOpenChange={setIsRemoveTenantDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Remove Client from Package</DialogTitle>
+            <DialogDescription className="pt-4">
+              Are you sure you want to remove <strong>{tenantToRemove?.name}</strong> from this package? 
+              This will only remove the association, not delete the client.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => {
+              setIsRemoveTenantDialogOpen(false);
+              setTenantToRemove(null);
+            }}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={handleRemoveTenantFromPackage}>
+              Remove
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>;
 };
 export default PackageDetail;
