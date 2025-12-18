@@ -159,9 +159,9 @@ export function Combobox({
                     </Avatar>
                   )}
                   <div className="flex flex-col flex-1 min-w-0">
-                    <span>{option.label}</span>
+                    <span className="whitespace-nowrap">{option.label}</span>
                     {option.secondaryLabel && (
-                      <span className="text-xs text-muted-foreground">{option.secondaryLabel}</span>
+                      <span className="text-xs text-muted-foreground whitespace-nowrap">{option.secondaryLabel}</span>
                     )}
                     {option.email && (
                       <span className="text-xs text-muted-foreground/70 flex items-center gap-1">
