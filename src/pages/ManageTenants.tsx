@@ -676,7 +676,18 @@ export default function ManageTenants() {
                       </div>
                     </TableCell>
                     <TableCell className="py-6 border-r border-border/50 text-center whitespace-nowrap">
-                      <Badge variant={tenant.status === "active" ? "default" : "secondary"} className="py-[3px] rounded-[9px]">
+                      <Badge 
+                        variant={tenant.status === "active" ? "default" : "destructive"} 
+                        className={tenant.status === "active" 
+                          ? "bg-green-500/10 text-green-600 hover:bg-green-500/20 border border-green-600 text-[0.75rem] py-[2px] px-[0.625rem] rounded-[11px]"
+                          : "bg-red-500/10 text-red-600 hover:bg-red-500/20 border border-red-600 text-[0.75rem] py-[2px] px-[0.625rem] rounded-[11px]"
+                        }
+                      >
+                        {tenant.status === "active" ? (
+                          <CheckCircle2 className="mr-1 h-3 w-3" />
+                        ) : (
+                          <XCircle className="mr-1 h-3 w-3" />
+                        )}
                         {tenant.status}
                       </Badge>
                     </TableCell>
