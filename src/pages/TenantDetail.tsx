@@ -237,7 +237,7 @@ export default function TenantDetail() {
       const {
         data: tenantDocsData,
         count: tenantDocCountData
-      } = await supabase.from("documents_tenants").select("*, sent_by_user:sent_by(first_name, last_name, avatar_url)", {
+      } = await supabase.from("documents_tenants").select("*", {
         count: 'exact'
       }).eq("tenant_id", parseInt(tenantId)).order("created_at", {
         ascending: false
@@ -252,7 +252,7 @@ export default function TenantDetail() {
         const {
           data: docsData,
           count: docCountData
-        } = await supabase.from("documents").select("*, packages:package_id(name), creator:created_by(first_name, last_name, avatar_url)", {
+        } = await supabase.from("documents").select("*, packages:package_id(name)", {
           count: 'exact'
         }).eq("package_id", tenantActualPackageId).eq("is_released", true).order("createdat", {
           ascending: false
@@ -612,10 +612,8 @@ export default function TenantDetail() {
                     // For tenant docs, they are always released; for package docs, check is_released
                     const isReleased = doc.source === 'tenant' ? true : (doc.is_released ?? false);
                     const packageName = doc.packages?.name || null;
-                    // Handle both creator (package docs) and sent_by_user (tenant docs)
-                    const releaser = doc.source === 'tenant' ? doc.sent_by_user : doc.creator;
-                    const releaserName = releaser ? `${releaser.first_name || ''} ${releaser.last_name || ''}`.trim() : null;
-                    const releaserInitials = releaserName ? releaserName.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2) : '??';
+                    // Since there's no FK relationship, we show created_by UUID or sent_by UUID if available
+                    const releaserId = doc.source === 'tenant' ? doc.sent_by : doc.created_by;
                     
                     return <TableRow key={`${doc.source}-${doc.id}`}>
                           <TableCell className="border-r">
@@ -643,22 +641,12 @@ export default function TenantDetail() {
                               </Badge>}
                           </TableCell>
                           <TableCell className="border-r">
-                            {releaser ? (
-                              <TooltipProvider>
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                    <Avatar className="h-8 w-8 cursor-pointer">
-                                      <AvatarImage src={releaser.avatar_url || ''} alt={releaserName || 'User'} />
-                                      <AvatarFallback className="bg-primary/10 text-primary text-xs font-semibold">
-                                        {releaserInitials}
-                                      </AvatarFallback>
-                                    </Avatar>
-                                  </TooltipTrigger>
-                                  <TooltipContent>
-                                    <p>{releaserName || 'Unknown'}</p>
-                                  </TooltipContent>
-                                </Tooltip>
-                              </TooltipProvider>
+                            {releaserId ? (
+                              <Avatar className="h-8 w-8">
+                                <AvatarFallback className="bg-primary/10 text-primary text-xs font-semibold">
+                                  U
+                                </AvatarFallback>
+                              </Avatar>
                             ) : (
                               <span className="text-muted-foreground text-sm">—</span>
                             )}
