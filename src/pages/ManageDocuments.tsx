@@ -762,41 +762,27 @@ export default function ManageDocuments() {
       } = await supabase.auth.getUser();
       if (!currentUser) throw new Error("Not authenticated");
 
-      // Send each selected document
+      // Release each selected document by setting is_released = true
       for (const docId of selectedDocuments) {
         const doc = documents.find(d => d.id === docId);
         if (!doc) continue;
-        const {
-          data: insertedDoc,
-          error
-        } = await supabase.from("documents_tenants").insert({
-          tenant_id: userData.tenant_id,
-          title: doc.title,
-          description: doc.description,
-          format: doc.format,
-          watermark: doc.watermark,
-          versiondate: doc.versiondate,
-          versionnumber: doc.versionnumber,
-          versionlastupdated: doc.versionlastupdated,
-          isclientdoc: doc.isclientdoc,
-          stage: doc.stage,
-          category: doc.category,
-          uploaded_files: doc.uploaded_files,
-          file_names: doc.file_names,
-          sent_by: currentUser.user?.id
-        }).select().single();
+        
+        // Update the document to mark it as released
+        const { error } = await supabase
+          .from("documents")
+          .update({ is_released: true })
+          .eq("id", docId);
+        
         if (error) throw error;
 
-        // Create notification
-        if (insertedDoc) {
-          await supabase.from("notification_tenants").insert({
-            tenant_id: userData.tenant_id,
-            document_id: insertedDoc.id,
-            message: `New document received: ${doc.title}`,
-            is_read: false,
-            type: "Document Received"
-          });
-        }
+        // Create notification for the tenant
+        await supabase.from("notification_tenants").insert({
+          tenant_id: userData.tenant_id,
+          document_id: docId,
+          message: `New document received: ${doc.title}`,
+          is_read: false,
+          type: "Document Received"
+        });
       }
       toast({
         title: "Success",
@@ -836,52 +822,36 @@ export default function ManageDocuments() {
       let successCount = 0;
       let errorCount = 0;
 
-      // For each selected tenant
-      for (const tenantId of bulkSelectedTenants) {
-        const tenant = bulkTenants.find(t => t.id === tenantId);
-        if (!tenant) continue;
+      // Release each selected document by setting is_released = true
+      for (const docId of selectedDocuments) {
+        const doc = documents.find(d => d.id === docId);
+        if (!doc) continue;
+        try {
+          // Update the document to mark it as released
+          const { error } = await supabase
+            .from("documents")
+            .update({ is_released: true })
+            .eq("id", docId);
+          
+          if (error) throw error;
 
-        // Send each selected document to this tenant
-        for (const docId of selectedDocuments) {
-          const doc = documents.find(d => d.id === docId);
-          if (!doc) continue;
-          try {
-            const {
-              data: insertedDoc,
-              error
-            } = await supabase.from("documents_tenants").insert({
+          // Create notifications for each selected tenant
+          for (const tenantId of bulkSelectedTenants) {
+            const tenant = bulkTenants.find(t => t.id === tenantId);
+            if (!tenant) continue;
+            
+            await supabase.from("notification_tenants").insert({
               tenant_id: tenant.tenant_id,
-              title: doc.title,
-              description: doc.description,
-              format: doc.format,
-              watermark: doc.watermark,
-              versiondate: doc.versiondate,
-              versionnumber: doc.versionnumber,
-              versionlastupdated: doc.versionlastupdated,
-              isclientdoc: doc.isclientdoc,
-              stage: doc.stage,
-              category: doc.category,
-              uploaded_files: doc.uploaded_files,
-              file_names: doc.file_names,
-              sent_by: currentUser.user?.id
-            }).select().single();
-            if (error) throw error;
-
-            // Create notification
-            if (insertedDoc) {
-              await supabase.from("notification_tenants").insert({
-                tenant_id: tenant.tenant_id,
-                document_id: insertedDoc.id,
-                message: `New document received: ${doc.title}`,
-                is_read: false,
-                type: "Document Received"
-              });
-            }
-            successCount++;
-          } catch (error) {
-            console.error(`Error sending document ${doc.id} to tenant ${tenant.companyname}:`, error);
-            errorCount++;
+              document_id: docId,
+              message: `New document received: ${doc.title}`,
+              is_read: false,
+              type: "Document Received"
+            });
           }
+          successCount++;
+        } catch (error) {
+          console.error(`Error releasing document ${docId}:`, error);
+          errorCount++;
         }
       }
       if (successCount > 0) {

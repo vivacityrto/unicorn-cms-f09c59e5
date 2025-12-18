@@ -372,51 +372,33 @@ export default function DocumentDetail() {
       let successCount = 0;
       let errorCount = 0;
 
+      // Update document to mark it as released
+      const { error: updateError } = await supabase
+        .from('documents')
+        .update({ is_released: true })
+        .eq('id', document.id);
+
+      if (updateError) throw updateError;
+
+      // Create notifications for each selected tenant
       for (const tenantId of selectedTenants) {
         const tenant = tenants.find(t => t.id === tenantId);
         if (!tenant) continue;
 
         try {
-          // Insert into documents_tenants
-          const { data: insertedDoc, error } = await supabase
-            .from('documents_tenants')
+          await supabase
+            .from('notification_tenants')
             .insert({
               tenant_id: tenant.tenant_id,
-              title: document.title,
-              description: document.description,
-              format: document.format,
-              watermark: document.watermark,
-              versiondate: document.versiondate,
-              versionnumber: document.versionnumber,
-              versionlastupdated: document.versionlastupdated,
-              isclientdoc: document.isclientdoc,
-              stage: document.stage,
-              category: document.category,
-              uploaded_files: document.uploaded_files,
-              file_names: document.file_names,
-              sent_by: currentUser?.id,
-            })
-            .select()
-            .single();
-
-          if (error) throw error;
-
-          // Create notification for the tenant
-          if (insertedDoc) {
-            await supabase
-              .from('notification_tenants')
-              .insert({
-                tenant_id: tenant.tenant_id,
-                document_id: insertedDoc.id,
-                message: `New document received: ${document.title}`,
-                is_read: false,
-                type: 'Document Received',
-              });
-          }
+              document_id: document.id,
+              message: `New document received: ${document.title}`,
+              is_read: false,
+              type: 'Document Received',
+            });
 
           successCount++;
         } catch (error) {
-          console.error(`Error sending to tenant ${tenant.companyname}:`, error);
+          console.error(`Error creating notification for tenant ${tenant.companyname}:`, error);
           errorCount++;
         }
       }
