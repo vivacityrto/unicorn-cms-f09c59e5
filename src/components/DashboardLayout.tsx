@@ -1,5 +1,5 @@
 import { useState, useMemo, useRef, useEffect, useLayoutEffect } from "react";
-import { LayoutDashboard, FileText, BarChart3, Calendar, MessageSquare, Settings, LogOut, Menu, X, Users, Building2, Package2, Wrench, FileCode, Blocks, ScrollText, Flag, AlertTriangle, Heart, ChevronDown, ChevronRight, Bell, Target, TrendingUp, ListTodo, User, Mail, ClipboardCheck, Lightbulb, Home, Sparkles } from "lucide-react";
+import { LayoutDashboard, FileText, BarChart3, Calendar, MessageSquare, Settings, LogOut, Menu, X, Users, Building2, Package2, Wrench, FileCode, Blocks, ScrollText, Flag, AlertTriangle, Heart, ChevronDown, ChevronRight, Bell, Target, TrendingUp, ListTodo, User, Mail, ClipboardCheck, Lightbulb, Home, Sparkles, Library, CheckSquare, ClipboardList, Search, Video, BookOpen, Clock } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
@@ -152,6 +152,55 @@ const superAdminMenuItems = {
     icon: Wrench,
     label: "Tools",
     path: "/tools"
+  }],
+  resourceHub: [{
+    icon: Library,
+    label: "Dashboard",
+    path: "/resource-hub"
+  }, {
+    icon: FileText,
+    label: "Templates",
+    path: "/resource-hub/templates"
+  }, {
+    icon: CheckSquare,
+    label: "Checklists",
+    path: "/resource-hub/checklists"
+  }, {
+    icon: ClipboardList,
+    label: "Registers & Forms",
+    path: "/resource-hub/registers-forms"
+  }, {
+    icon: Search,
+    label: "Audit & Evidence",
+    path: "/resource-hub/audit-evidence"
+  }, {
+    icon: Video,
+    label: "Training & Webinars",
+    path: "/resource-hub/training-webinars"
+  }, {
+    icon: BookOpen,
+    label: "Guides & How-To",
+    path: "/resource-hub/guides-howto"
+  }, {
+    icon: TrendingUp,
+    label: "CI Tools",
+    path: "/resource-hub/ci-tools"
+  }, {
+    icon: Clock,
+    label: "Recently Added",
+    path: "/resource-hub/recently-added"
+  }, {
+    icon: BarChart3,
+    label: "Most Used",
+    path: "/resource-hub/most-used"
+  }, {
+    icon: Heart,
+    label: "Favourites",
+    path: "/resource-hub/favourites"
+  }, {
+    icon: ScrollText,
+    label: "Updates Log",
+    path: "/resource-hub/updates"
   }]
 };
 export const DashboardLayout = ({
@@ -166,7 +215,8 @@ export const DashboardLayout = ({
     team: true,
     admin: true,
     eos: true,
-    advanced: false
+    advanced: false,
+    resourceHub: true
   });
   const location = useLocation();
   const navigate = useNavigate();
@@ -470,6 +520,30 @@ export const DashboardLayout = ({
                     </CollapsibleTrigger>}
                   <CollapsibleContent>
                     {menuItems.advanced.map((item: any) => {
+                const Icon = item.icon;
+                const isActive = location.pathname === item.path;
+                return <Link key={item.path} to={item.path} data-active={isActive} className={`flex items-center gap-2 px-4 mx-2 mb-1 transition-colors text-sm rounded-full ${isActive ? "bg-white/10 border border-white/20 text-white" : "text-white/80 hover:bg-white/10 hover:text-white"}`} style={{
+                  paddingTop: "10px",
+                  paddingBottom: "10px"
+                }}>
+                          <Icon className="w-4 h-4 flex-shrink-0" />
+                          {sidebarOpen && <span className="font-medium">{item.label}</span>}
+                        </Link>;
+              })}
+                  </CollapsibleContent>
+                </Collapsible>}
+
+              {/* Resource Hub Section */}
+              {"resourceHub" in menuItems && Array.isArray(menuItems.resourceHub) && menuItems.resourceHub.length > 0 && <Collapsible open={sectionsOpen.resourceHub} onOpenChange={open => setSectionsOpen(prev => ({
+            ...prev,
+            resourceHub: open
+          }))} className="mt-6">
+                  {sidebarOpen && <CollapsibleTrigger className="flex items-center justify-between w-full px-4 mb-2 hover:bg-white/5 py-2 rounded transition-colors">
+                      <p className="text-xs font-semibold text-white/70 uppercase tracking-wider">Resource Hub</p>
+                      {sectionsOpen.resourceHub ? <ChevronDown className="w-3 h-3 text-white/70" /> : <ChevronRight className="w-3 h-3 text-white/70" />}
+                    </CollapsibleTrigger>}
+                  <CollapsibleContent>
+                    {menuItems.resourceHub.map((item: any) => {
                 const Icon = item.icon;
                 const isActive = location.pathname === item.path;
                 return <Link key={item.path} to={item.path} data-active={isActive} className={`flex items-center gap-2 px-4 mx-2 mb-1 transition-colors text-sm rounded-full ${isActive ? "bg-white/10 border border-white/20 text-white" : "text-white/80 hover:bg-white/10 hover:text-white"}`} style={{
