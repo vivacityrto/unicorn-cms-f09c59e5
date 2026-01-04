@@ -4226,6 +4226,321 @@ export type Database = {
         }
         Relationships: []
       }
+      membership_activity: {
+        Row: {
+          activity_type: string
+          created_at: string
+          description: string | null
+          id: string
+          metadata: Json | null
+          package_id: number
+          tenant_id: number
+          title: string
+          user_id: string | null
+        }
+        Insert: {
+          activity_type: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          metadata?: Json | null
+          package_id: number
+          tenant_id: number
+          title: string
+          user_id?: string | null
+        }
+        Update: {
+          activity_type?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          metadata?: Json | null
+          package_id?: number
+          tenant_id?: number
+          title?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "membership_activity_package_id_fkey"
+            columns: ["package_id"]
+            isOneToOne: false
+            referencedRelation: "packages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "membership_activity_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      membership_ai_suggestions: {
+        Row: {
+          actioned_at: string | null
+          actioned_by: string | null
+          content: string
+          created_at: string
+          id: string
+          metadata: Json | null
+          package_id: number
+          priority: string
+          status: string
+          suggestion_type: string
+          tenant_id: number
+          title: string
+        }
+        Insert: {
+          actioned_at?: string | null
+          actioned_by?: string | null
+          content: string
+          created_at?: string
+          id?: string
+          metadata?: Json | null
+          package_id: number
+          priority?: string
+          status?: string
+          suggestion_type: string
+          tenant_id: number
+          title: string
+        }
+        Update: {
+          actioned_at?: string | null
+          actioned_by?: string | null
+          content?: string
+          created_at?: string
+          id?: string
+          metadata?: Json | null
+          package_id?: number
+          priority?: string
+          status?: string
+          suggestion_type?: string
+          tenant_id?: number
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "membership_ai_suggestions_package_id_fkey"
+            columns: ["package_id"]
+            isOneToOne: false
+            referencedRelation: "packages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "membership_ai_suggestions_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      membership_entitlements: {
+        Row: {
+          created_at: string
+          csc_user_id: string | null
+          health_check_delivered_at: string | null
+          health_check_scheduled_date: string | null
+          health_check_status: string
+          hours_included_monthly: number
+          hours_used_current_month: number
+          id: string
+          last_activity_at: string | null
+          membership_started_at: string
+          membership_state: string
+          month_start_date: string
+          package_id: number
+          setup_complete: boolean
+          setup_completed_at: string | null
+          setup_completed_by: string | null
+          tenant_id: number
+          updated_at: string
+          validation_delivered_at: string | null
+          validation_scheduled_date: string | null
+          validation_status: string
+        }
+        Insert: {
+          created_at?: string
+          csc_user_id?: string | null
+          health_check_delivered_at?: string | null
+          health_check_scheduled_date?: string | null
+          health_check_status?: string
+          hours_included_monthly?: number
+          hours_used_current_month?: number
+          id?: string
+          last_activity_at?: string | null
+          membership_started_at?: string
+          membership_state?: string
+          month_start_date?: string
+          package_id: number
+          setup_complete?: boolean
+          setup_completed_at?: string | null
+          setup_completed_by?: string | null
+          tenant_id: number
+          updated_at?: string
+          validation_delivered_at?: string | null
+          validation_scheduled_date?: string | null
+          validation_status?: string
+        }
+        Update: {
+          created_at?: string
+          csc_user_id?: string | null
+          health_check_delivered_at?: string | null
+          health_check_scheduled_date?: string | null
+          health_check_status?: string
+          hours_included_monthly?: number
+          hours_used_current_month?: number
+          id?: string
+          last_activity_at?: string | null
+          membership_started_at?: string
+          membership_state?: string
+          month_start_date?: string
+          package_id?: number
+          setup_complete?: boolean
+          setup_completed_at?: string | null
+          setup_completed_by?: string | null
+          tenant_id?: number
+          updated_at?: string
+          validation_delivered_at?: string | null
+          validation_scheduled_date?: string | null
+          validation_status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "membership_entitlements_package_id_fkey"
+            columns: ["package_id"]
+            isOneToOne: false
+            referencedRelation: "packages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "membership_entitlements_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      membership_notes: {
+        Row: {
+          content: string
+          created_at: string
+          created_by: string
+          id: string
+          note_type: string
+          package_id: number
+          tenant_id: number
+          updated_at: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          created_by: string
+          id?: string
+          note_type?: string
+          package_id: number
+          tenant_id: number
+          updated_at?: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          created_by?: string
+          id?: string
+          note_type?: string
+          package_id?: number
+          tenant_id?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "membership_notes_package_id_fkey"
+            columns: ["package_id"]
+            isOneToOne: false
+            referencedRelation: "packages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "membership_notes_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      membership_tasks: {
+        Row: {
+          assigned_to: string | null
+          completed_at: string | null
+          completed_by: string | null
+          created_at: string
+          created_by: string
+          description: string | null
+          due_date: string | null
+          id: string
+          package_id: number
+          priority: string
+          status: string
+          task_type: string
+          tenant_id: number
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          assigned_to?: string | null
+          completed_at?: string | null
+          completed_by?: string | null
+          created_at?: string
+          created_by: string
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          package_id: number
+          priority?: string
+          status?: string
+          task_type?: string
+          tenant_id: number
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          assigned_to?: string | null
+          completed_at?: string | null
+          completed_by?: string | null
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          package_id?: number
+          priority?: string
+          status?: string
+          task_type?: string
+          tenant_id?: number
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "membership_tasks_package_id_fkey"
+            columns: ["package_id"]
+            isOneToOne: false
+            referencedRelation: "packages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "membership_tasks_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       messages: {
         Row: {
           body: string
@@ -6609,6 +6924,10 @@ export type Database = {
         }[]
       }
       advance_segment: { Args: { p_meeting_id: string }; Returns: string }
+      calculate_membership_health: {
+        Args: { p_package_id: number; p_tenant_id: number }
+        Returns: Json
+      }
       can_access_qc: {
         Args: { _qc_id: string; _user_id: string }
         Returns: boolean
