@@ -6588,6 +6588,7 @@ export type Database = {
         }
         Returns: number
       }
+      add_favourite: { Args: { p_resource_id: string }; Returns: undefined }
       add_package_to_tenant: {
         Args: { p_package_id: number; p_tenant_id: number }
         Returns: undefined
@@ -6705,6 +6706,24 @@ export type Database = {
         Args: { p_meeting_id: string }
         Returns: string
       }
+      get_all_resources: {
+        Args: never
+        Returns: {
+          access_level: string
+          category: string
+          created_at: string
+          description: string
+          file_url: string
+          id: string
+          is_favourite: boolean
+          tags: string[]
+          title: string
+          updated_at: string
+          usage_count: number
+          version: string
+          video_url: string
+        }[]
+      }
       get_all_users_with_tenants: {
         Args: never
         Returns: {
@@ -6743,16 +6762,15 @@ export type Database = {
           category: string
           created_at: string
           description: string
-          download_count: number
           file_url: string
           id: string
           is_favourite: boolean
           tags: string[]
           title: string
           updated_at: string
+          usage_count: number
           version: string
           video_url: string
-          view_count: number
         }[]
       }
       get_package_stats: {
@@ -6762,6 +6780,24 @@ export type Database = {
           all_clients: number
         }[]
       }
+      get_recently_added_resources: {
+        Args: { p_limit?: number }
+        Returns: {
+          access_level: string
+          category: string
+          created_at: string
+          description: string
+          file_url: string
+          id: string
+          is_favourite: boolean
+          tags: string[]
+          title: string
+          updated_at: string
+          usage_count: number
+          version: string
+          video_url: string
+        }[]
+      }
       get_resources_by_category: {
         Args: { p_category: string }
         Returns: {
@@ -6769,16 +6805,33 @@ export type Database = {
           category: string
           created_at: string
           description: string
-          download_count: number
           file_url: string
           id: string
           is_favourite: boolean
           tags: string[]
           title: string
           updated_at: string
+          usage_count: number
           version: string
           video_url: string
-          view_count: number
+        }[]
+      }
+      get_user_favourites: {
+        Args: never
+        Returns: {
+          access_level: string
+          category: string
+          created_at: string
+          description: string
+          file_url: string
+          id: string
+          is_favourite: boolean
+          tags: string[]
+          title: string
+          updated_at: string
+          usage_count: number
+          version: string
+          video_url: string
         }[]
       }
       get_user_notification_prefs: { Args: never; Returns: Json }
@@ -6911,7 +6964,26 @@ export type Database = {
       }
       record_resource_usage: {
         Args: { p_downloaded?: boolean; p_resource_id: string }
-        Returns: string
+        Returns: undefined
+      }
+      remove_favourite: { Args: { p_resource_id: string }; Returns: undefined }
+      search_resources: {
+        Args: { p_category?: string; p_search_term: string; p_tags?: string[] }
+        Returns: {
+          access_level: string
+          category: string
+          created_at: string
+          description: string
+          file_url: string
+          id: string
+          is_favourite: boolean
+          tags: string[]
+          title: string
+          updated_at: string
+          usage_count: number
+          version: string
+          video_url: string
+        }[]
       }
       seed_default_meeting_templates: { Args: never; Returns: undefined }
       seed_default_qc_template: { Args: never; Returns: undefined }
