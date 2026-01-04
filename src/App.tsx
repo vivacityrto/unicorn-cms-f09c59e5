@@ -59,6 +59,12 @@ import AuditReport from "./pages/AuditReport";
 import AuditTemplateBuilder from "./pages/AuditTemplateBuilder";
 import TasksManagementWrapper from "./pages/TasksManagementWrapper";
 import RtoTipsWrapper from "./pages/RtoTipsWrapper";
+import ResourceHubDashboard from "./pages/ResourceHubDashboard";
+import ResourceCategoryPage from "./pages/ResourceCategoryPage";
+import ResourceRecentlyAdded from "./pages/ResourceRecentlyAdded";
+import ResourceMostUsed from "./pages/ResourceMostUsed";
+import ResourceFavourites from "./pages/ResourceFavourites";
+import ResourceUpdatesLog from "./pages/ResourceUpdatesLog";
 
 const queryClient = new QueryClient();
 
@@ -507,6 +513,19 @@ const App = () => (
                 </ProtectedRoute>
               } 
             />
+            {/* Resource Hub Routes */}
+            <Route path="/resource-hub" element={<ProtectedRoute><ResourceHubDashboard /></ProtectedRoute>} />
+            <Route path="/resource-hub/templates" element={<ProtectedRoute><ResourceCategoryPage categoryId="templates" /></ProtectedRoute>} />
+            <Route path="/resource-hub/checklists" element={<ProtectedRoute><ResourceCategoryPage categoryId="checklists" /></ProtectedRoute>} />
+            <Route path="/resource-hub/registers-forms" element={<ProtectedRoute><ResourceCategoryPage categoryId="registers-forms" /></ProtectedRoute>} />
+            <Route path="/resource-hub/audit-evidence" element={<ProtectedRoute><ResourceCategoryPage categoryId="audit-evidence" /></ProtectedRoute>} />
+            <Route path="/resource-hub/training-webinars" element={<ProtectedRoute><ResourceCategoryPage categoryId="training-webinars" /></ProtectedRoute>} />
+            <Route path="/resource-hub/guides-howto" element={<ProtectedRoute><ResourceCategoryPage categoryId="guides-howto" /></ProtectedRoute>} />
+            <Route path="/resource-hub/ci-tools" element={<ProtectedRoute><ResourceCategoryPage categoryId="ci-tools" /></ProtectedRoute>} />
+            <Route path="/resource-hub/recently-added" element={<ProtectedRoute><ResourceRecentlyAdded /></ProtectedRoute>} />
+            <Route path="/resource-hub/most-used" element={<ProtectedRoute><ResourceMostUsed /></ProtectedRoute>} />
+            <Route path="/resource-hub/favourites" element={<ProtectedRoute><ResourceFavourites /></ProtectedRoute>} />
+            <Route path="/resource-hub/updates" element={<ProtectedRoute><ResourceUpdatesLog /></ProtectedRoute>} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
