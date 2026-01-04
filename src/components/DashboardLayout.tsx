@@ -69,7 +69,11 @@ const adminMenuItems = {
   }]
 };
 const superAdminMenuItems = {
-  main: [...baseMenuItemsWithoutDocs],
+  main: [...baseMenuItemsWithoutDocs, {
+    icon: Sparkles,
+    label: "Memberships",
+    path: "/membership-dashboard"
+  }],
   admin: [{
     icon: Users,
     label: "Manage Users",

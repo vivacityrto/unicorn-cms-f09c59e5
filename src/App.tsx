@@ -65,7 +65,7 @@ import ResourceRecentlyAdded from "./pages/ResourceRecentlyAdded";
 import ResourceMostUsed from "./pages/ResourceMostUsed";
 import ResourceFavourites from "./pages/ResourceFavourites";
 import ResourceUpdatesLog from "./pages/ResourceUpdatesLog";
-
+import MembershipDashboardWrapper from "./pages/MembershipDashboardWrapper";
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -526,6 +526,8 @@ const App = () => (
             <Route path="/resource-hub/most-used" element={<ProtectedRoute><ResourceMostUsed /></ProtectedRoute>} />
             <Route path="/resource-hub/favourites" element={<ProtectedRoute><ResourceFavourites /></ProtectedRoute>} />
             <Route path="/resource-hub/updates" element={<ProtectedRoute><ResourceUpdatesLog /></ProtectedRoute>} />
+            {/* Membership Dashboard */}
+            <Route path="/membership-dashboard" element={<ProtectedRoute><MembershipDashboardWrapper /></ProtectedRoute>} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
