@@ -33,9 +33,9 @@ const baseMenuItems = [{
   path: "/messages"
 }];
 const baseMenuItemsWithoutDocs = [{
-  icon: Package2,
+  icon: LayoutDashboard,
   label: "Dashboard",
-  path: "/manage-packages"
+  path: "/"
 }, {
   icon: Building2,
   label: "Clients",
@@ -56,6 +56,10 @@ const baseMenuItemsWithoutDocs = [{
   icon: Lightbulb,
   label: "RTO Tips",
   path: "/rto-tips"
+}, {
+  icon: Package2,
+  label: "Packages",
+  path: "/manage-packages"
 }];
 const userMenuItems = {
   main: [...baseMenuItems]
@@ -69,11 +73,7 @@ const adminMenuItems = {
   }]
 };
 const superAdminMenuItems = {
-  main: [...baseMenuItemsWithoutDocs, {
-    icon: Sparkles,
-    label: "Memberships",
-    path: "/membership-dashboard"
-  }],
+  main: [...baseMenuItemsWithoutDocs],
   admin: [{
     icon: Users,
     label: "Manage Users",
