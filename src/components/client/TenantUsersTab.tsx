@@ -47,9 +47,14 @@ interface TenantUser {
   first_name: string | null;
   last_name: string | null;
   avatar_url: string | null;
-  tenant_role: string | null;
-  unicorn_role: string;
   created_at: string;
+}
+
+interface TenantMemberInfo {
+  user_id: string;
+  role: 'Admin' | 'General User';
+  joined_at: string;
+  users: TenantUser;
 }
 
 interface PendingInvite {
@@ -69,38 +74,50 @@ interface TenantUsersTabProps {
 }
 
 export function TenantUsersTab({ tenantId, tenantName }: TenantUsersTabProps) {
-  const { profile } = useAuth();
-  const [users, setUsers] = useState<TenantUser[]>([]);
+  const { profile, isSuperAdmin, hasTenantAdmin } = useAuth();
+  const [members, setMembers] = useState<TenantMemberInfo[]>([]);
   const [pendingInvites, setPendingInvites] = useState<PendingInvite[]>([]);
   const [loading, setLoading] = useState(true);
   const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
-  const [userToRemove, setUserToRemove] = useState<TenantUser | null>(null);
+  const [userToRemove, setUserToRemove] = useState<TenantMemberInfo | null>(null);
   const [updatingRole, setUpdatingRole] = useState<string | null>(null);
 
-  const isSuperAdmin = profile?.unicorn_role === 'Super Admin';
-  const isTenantAdmin = profile?.tenant_id === tenantId && 
-    (profile?.unicorn_role === 'Admin' || (profile as any)?.tenant_role === 'admin');
-  const canManageUsers = isSuperAdmin || isTenantAdmin;
-  const canChangeRoles = isSuperAdmin || isTenantAdmin;
+  // RBAC: Check permissions using helper functions
+  const canManageUsers = isSuperAdmin() || hasTenantAdmin(tenantId);
+  const canChangeRoles = isSuperAdmin() || hasTenantAdmin(tenantId);
 
   useEffect(() => {
-    fetchUsers();
+    fetchMembers();
     fetchPendingInvites();
   }, [tenantId]);
 
-  const fetchUsers = async () => {
+  const fetchMembers = async () => {
     try {
       setLoading(true);
+      // Fetch tenant_members with user details
       const { data, error } = await supabase
-        .from('users')
-        .select('user_uuid, email, first_name, last_name, avatar_url, tenant_role, unicorn_role, created_at')
+        .from('tenant_members')
+        .select(`
+          user_id,
+          role,
+          joined_at,
+          users!inner (
+            user_uuid,
+            email,
+            first_name,
+            last_name,
+            avatar_url,
+            created_at
+          )
+        `)
         .eq('tenant_id', tenantId)
-        .order('created_at', { ascending: false });
+        .eq('status', 'active')
+        .order('joined_at', { ascending: false });
 
       if (error) throw error;
-      setUsers(data || []);
+      setMembers((data || []) as unknown as TenantMemberInfo[]);
     } catch (error) {
-      console.error('Error fetching users:', error);
+      console.error('Error fetching members:', error);
       toast.error('Failed to load users');
     } finally {
       setLoading(false);
@@ -124,20 +141,21 @@ export function TenantUsersTab({ tenantId, tenantName }: TenantUsersTabProps) {
     }
   };
 
-  const handleRoleChange = async (userId: string, newRole: string) => {
+  const handleRoleChange = async (userId: string, newRole: 'Admin' | 'General User') => {
     if (!canChangeRoles) return;
     
     setUpdatingRole(userId);
     try {
       const { error } = await supabase
-        .from('users')
-        .update({ tenant_role: newRole })
-        .eq('user_uuid', userId);
+        .from('tenant_members')
+        .update({ role: newRole })
+        .eq('tenant_id', tenantId)
+        .eq('user_id', userId);
 
       if (error) throw error;
       
-      setUsers(prev => prev.map(u => 
-        u.user_uuid === userId ? { ...u, tenant_role: newRole } : u
+      setMembers(prev => prev.map(m => 
+        m.user_id === userId ? { ...m, role: newRole } : m
       ));
       toast.success('Role updated successfully');
     } catch (error) {
@@ -152,15 +170,16 @@ export function TenantUsersTab({ tenantId, tenantName }: TenantUsersTabProps) {
     if (!userToRemove) return;
     
     try {
-      // Remove user from tenant by setting tenant_id to null
+      // Remove user from tenant_members
       const { error } = await supabase
-        .from('users')
-        .update({ tenant_id: null, tenant_role: null })
-        .eq('user_uuid', userToRemove.user_uuid);
+        .from('tenant_members')
+        .delete()
+        .eq('tenant_id', tenantId)
+        .eq('user_id', userToRemove.user_id);
 
       if (error) throw error;
       
-      setUsers(prev => prev.filter(u => u.user_uuid !== userToRemove.user_uuid));
+      setMembers(prev => prev.filter(m => m.user_id !== userToRemove.user_id));
       toast.success('User removed from tenant');
     } catch (error) {
       console.error('Error removing user:', error);
@@ -222,7 +241,7 @@ export function TenantUsersTab({ tenantId, tenantName }: TenantUsersTabProps) {
         <div>
           <h3 className="text-lg font-semibold">Team Members</h3>
           <p className="text-sm text-muted-foreground">
-            {users.length} user{users.length !== 1 ? 's' : ''} in this organisation
+            {members.length} user{members.length !== 1 ? 's' : ''} in this organisation
           </p>
         </div>
         {canManageUsers && (
@@ -285,7 +304,7 @@ export function TenantUsersTab({ tenantId, tenantName }: TenantUsersTabProps) {
       {/* Users List */}
       <Card>
         <CardContent className="p-0">
-          {users.length === 0 ? (
+          {members.length === 0 ? (
             <div className="p-8 text-center text-muted-foreground">
               <UserIcon className="h-12 w-12 mx-auto mb-3 opacity-50" />
               <p>No users in this organisation yet</p>
@@ -302,97 +321,100 @@ export function TenantUsersTab({ tenantId, tenantName }: TenantUsersTabProps) {
             </div>
           ) : (
             <div className="divide-y">
-              {users.map(user => (
-                <div
-                  key={user.user_uuid}
-                  className="flex items-center justify-between p-4 hover:bg-muted/50 transition-colors"
-                >
-                  <div className="flex items-center gap-3">
-                    <Avatar className="h-10 w-10">
-                      <AvatarImage src={user.avatar_url || undefined} />
-                      <AvatarFallback>
-                        {getInitials(user.first_name, user.last_name, user.email)}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <p className="font-medium">
-                          {user.first_name} {user.last_name}
-                        </p>
+              {members.map(member => {
+                const user = member.users;
+                return (
+                  <div
+                    key={member.user_id}
+                    className="flex items-center justify-between p-4 hover:bg-muted/50 transition-colors"
+                  >
+                    <div className="flex items-center gap-3">
+                      <Avatar className="h-10 w-10">
+                        <AvatarImage src={user.avatar_url || undefined} />
+                        <AvatarFallback>
+                          {getInitials(user.first_name, user.last_name, user.email)}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <p className="font-medium">
+                            {user.first_name} {user.last_name}
+                          </p>
+                        </div>
+                        <p className="text-sm text-muted-foreground">{user.email}</p>
                       </div>
-                      <p className="text-sm text-muted-foreground">{user.email}</p>
+                    </div>
+
+                    <div className="flex items-center gap-3">
+                      {/* Role Badge/Selector */}
+                      {canChangeRoles && member.user_id !== profile?.user_uuid ? (
+                        <Select
+                          value={member.role}
+                          onValueChange={(value) => handleRoleChange(member.user_id, value as 'Admin' | 'General User')}
+                          disabled={updatingRole === member.user_id}
+                        >
+                          <SelectTrigger className="w-32">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="Admin">
+                              <div className="flex items-center gap-2">
+                                <Shield className="h-3 w-3" />
+                                Admin
+                              </div>
+                            </SelectItem>
+                            <SelectItem value="General User">
+                              <div className="flex items-center gap-2">
+                                <UserIcon className="h-3 w-3" />
+                                General User
+                              </div>
+                            </SelectItem>
+                          </SelectContent>
+                        </Select>
+                      ) : (
+                        <Badge
+                          variant="outline"
+                          className={
+                            member.role === 'Admin'
+                              ? 'bg-purple-500/10 text-purple-700 border-purple-500/30'
+                              : 'bg-muted'
+                          }
+                        >
+                          {member.role === 'Admin' ? (
+                            <><Shield className="h-3 w-3 mr-1" /> Admin</>
+                          ) : (
+                            <><UserIcon className="h-3 w-3 mr-1" /> General User</>
+                          )}
+                        </Badge>
+                      )}
+
+                      <span className="text-xs text-muted-foreground min-w-20">
+                        Joined {formatDate(member.joined_at)}
+                      </span>
+
+                      {/* Actions Menu */}
+                      {canManageUsers && member.user_id !== profile?.user_uuid && (
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon">
+                              <MoreVertical className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem
+                              className="text-destructive"
+                              onClick={() => setUserToRemove(member)}
+                            >
+                              <Trash2 className="h-4 w-4 mr-2" />
+                              Remove from tenant
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      )}
                     </div>
                   </div>
-
-                  <div className="flex items-center gap-3">
-                    {/* Role Badge/Selector */}
-                    {canChangeRoles && user.user_uuid !== profile?.user_uuid ? (
-                      <Select
-                        value={user.tenant_role || 'user'}
-                        onValueChange={(value) => handleRoleChange(user.user_uuid, value)}
-                        disabled={updatingRole === user.user_uuid}
-                      >
-                        <SelectTrigger className="w-28">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="admin">
-                            <div className="flex items-center gap-2">
-                              <Shield className="h-3 w-3" />
-                              Admin
-                            </div>
-                          </SelectItem>
-                          <SelectItem value="user">
-                            <div className="flex items-center gap-2">
-                              <UserIcon className="h-3 w-3" />
-                              User
-                            </div>
-                          </SelectItem>
-                        </SelectContent>
-                      </Select>
-                    ) : (
-                      <Badge
-                        variant="outline"
-                        className={
-                          user.tenant_role === 'admin'
-                            ? 'bg-purple-500/10 text-purple-700 border-purple-500/30'
-                            : 'bg-muted'
-                        }
-                      >
-                        {user.tenant_role === 'admin' ? (
-                          <><Shield className="h-3 w-3 mr-1" /> Admin</>
-                        ) : (
-                          <><UserIcon className="h-3 w-3 mr-1" /> User</>
-                        )}
-                      </Badge>
-                    )}
-
-                    <span className="text-xs text-muted-foreground min-w-20">
-                      Joined {formatDate(user.created_at)}
-                    </span>
-
-                    {/* Actions Menu */}
-                    {canManageUsers && user.user_uuid !== profile?.user_uuid && (
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon">
-                            <MoreVertical className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem
-                            className="text-destructive"
-                            onClick={() => setUserToRemove(user)}
-                          >
-                            <Trash2 className="h-4 w-4 mr-2" />
-                            Remove from tenant
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    )}
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </CardContent>
@@ -416,7 +438,7 @@ export function TenantUsersTab({ tenantId, tenantName }: TenantUsersTabProps) {
             <AlertDialogTitle>Remove User</AlertDialogTitle>
             <AlertDialogDescription>
               Are you sure you want to remove{' '}
-              <strong>{userToRemove?.first_name} {userToRemove?.last_name}</strong>{' '}
+              <strong>{userToRemove?.users?.first_name} {userToRemove?.users?.last_name}</strong>{' '}
               from this organisation? They will lose access to all tenant resources.
             </AlertDialogDescription>
           </AlertDialogHeader>
