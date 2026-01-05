@@ -5,3 +5,6 @@ verify_jwt = false
 
 [functions.tga-sync]
 verify_jwt = false
+
+[functions.tga-rto-import]
+verify_jwt = false

@@ -3,6 +3,9 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Skeleton } from '@/components/ui/skeleton';
 import { 
   Link2, 
   ExternalLink, 
@@ -11,9 +14,17 @@ import {
   AlertCircle, 
   Clock,
   Unlink,
-  Loader2
+  Loader2,
+  Building2,
+  Users,
+  MapPin,
+  GraduationCap,
+  Layers,
+  BookOpen,
+  Award
 } from 'lucide-react';
 import { ClientProfile, RegistryLink } from '@/hooks/useClientManagement';
+import { useTgaRtoData } from '@/hooks/useTgaRtoData';
 
 interface ClientIntegrationsTabProps {
   profile: ClientProfile | null;
@@ -62,19 +73,32 @@ export function ClientIntegrationsTab({
   const hasRtoNumber = !!profile?.rto_number;
   const currentStatus = registryLink?.link_status || 'not_linked';
   const statusConfig = STATUS_CONFIG[currentStatus] || STATUS_CONFIG.not_linked;
+  const isLinked = currentStatus === 'linked';
 
-  // Link to TGA - uses RPC with role-based auto-verification
+  // Fetch TGA data when linked
+  const tgaData = useTgaRtoData(
+    isLinked ? profile?.tenant_id ?? null : null,
+    isLinked ? profile?.rto_number ?? null : null
+  );
+
   const handleLinkToTGA = async () => {
     if (!profile?.rto_number) return;
     setUpdating(true);
-    await onSetTgaLink(profile.rto_number);
+    const result = await onSetTgaLink(profile.rto_number);
+    
+    // If auto-verified, trigger the import
+    if (result.autoVerified && result.success) {
+      await tgaData.triggerSync();
+    }
     setUpdating(false);
   };
 
-  // Manual verification for pending links (Admin-only)
   const handleMarkLinked = async () => {
     setUpdating(true);
-    await onVerifyTgaLink();
+    const success = await onVerifyTgaLink();
+    if (success) {
+      await tgaData.triggerSync();
+    }
     setUpdating(false);
   };
 
@@ -85,10 +109,7 @@ export function ClientIntegrationsTab({
   };
 
   const handleSyncNow = async () => {
-    setUpdating(true);
-    // For now, just show a message that integration is not yet enabled
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    setUpdating(false);
+    await tgaData.triggerSync();
   };
 
   return (
@@ -116,24 +137,18 @@ export function ClientIntegrationsTab({
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
-          {/* RTO Number Status */}
           {!hasRtoNumber ? (
             <Alert>
               <AlertCircle className="h-4 w-4" />
               <AlertTitle>TGA link unavailable</AlertTitle>
               <AlertDescription className="mt-2">
                 <p className="mb-2">
-                  This client does not have an RTO number configured. TGA linking requires a valid RTO number.
-                </p>
-                <p className="text-sm text-muted-foreground">
-                  <strong>Note:</strong> KickStart clients may not have an RTO number until they complete 
-                  their registration submission. You can set a planned RTO number in the Overview tab once known.
+                  This client does not have an RTO number configured.
                 </p>
               </AlertDescription>
             </Alert>
           ) : (
             <>
-              {/* RTO Number Display */}
               <div className="flex items-center justify-between p-4 rounded-lg border bg-muted/30">
                 <div>
                   <p className="text-sm text-muted-foreground">RTO Number</p>
@@ -150,7 +165,6 @@ export function ClientIntegrationsTab({
                 </a>
               </div>
 
-              {/* Link Status Actions */}
               {currentStatus === 'not_linked' && (
                 <div className="flex gap-2">
                   <Button onClick={handleLinkToTGA} disabled={updating}>
@@ -171,8 +185,8 @@ export function ClientIntegrationsTab({
                     <AlertTitle className="text-amber-600">Link Pending</AlertTitle>
                     <AlertDescription>
                       {canVerify 
-                        ? 'TGA link has been initiated. You can verify and mark as linked.'
-                        : 'TGA link has been initiated. An admin must verify and mark as linked.'}
+                        ? 'TGA link has been initiated. Click below to verify and import data.'
+                        : 'TGA link has been initiated. An admin must verify and import data.'}
                     </AlertDescription>
                   </Alert>
                   <div className="flex gap-2">
@@ -183,7 +197,7 @@ export function ClientIntegrationsTab({
                         ) : (
                           <CheckCircle2 className="h-4 w-4 mr-2" />
                         )}
-                        Mark as Linked
+                        Verify & Import Data
                       </Button>
                     )}
                     <Button onClick={handleUnlink} variant="outline" disabled={updating}>
@@ -208,8 +222,8 @@ export function ClientIntegrationsTab({
                     </AlertDescription>
                   </Alert>
                   <div className="flex gap-2">
-                    <Button onClick={handleSyncNow} variant="outline" disabled={updating}>
-                      {updating ? (
+                    <Button onClick={handleSyncNow} variant="outline" disabled={tgaData.syncing}>
+                      {tgaData.syncing ? (
                         <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                       ) : (
                         <RefreshCw className="h-4 w-4 mr-2" />
@@ -220,9 +234,6 @@ export function ClientIntegrationsTab({
                       Unlink
                     </Button>
                   </div>
-                  <p className="text-xs text-muted-foreground">
-                    Note: Automatic TGA sync is not yet enabled. Manual verification is recommended.
-                  </p>
                 </div>
               )}
 
@@ -255,7 +266,305 @@ export function ClientIntegrationsTab({
         </CardContent>
       </Card>
 
-      {/* Future Integrations Placeholder */}
+      {/* TGA Data Tabs - only show when linked */}
+      {isLinked && hasRtoNumber && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Building2 className="h-5 w-5" />
+              TGA Data
+            </CardTitle>
+            <CardDescription>
+              Data imported from Training.gov.au for RTO {profile?.rto_number}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {tgaData.loading ? (
+              <div className="space-y-4">
+                <Skeleton className="h-10 w-full" />
+                <Skeleton className="h-32 w-full" />
+              </div>
+            ) : !tgaData.hasData ? (
+              <Alert>
+                <AlertCircle className="h-4 w-4" />
+                <AlertTitle>No data imported yet</AlertTitle>
+                <AlertDescription>
+                  Click "Sync Now" above to import data from Training.gov.au
+                </AlertDescription>
+              </Alert>
+            ) : (
+              <Tabs defaultValue="summary" className="w-full">
+                <TabsList className="grid w-full grid-cols-7">
+                  <TabsTrigger value="summary" className="text-xs">
+                    <Building2 className="h-3 w-3 mr-1" />
+                    Summary
+                  </TabsTrigger>
+                  <TabsTrigger value="contacts" className="text-xs">
+                    <Users className="h-3 w-3 mr-1" />
+                    Contacts
+                  </TabsTrigger>
+                  <TabsTrigger value="addresses" className="text-xs">
+                    <MapPin className="h-3 w-3 mr-1" />
+                    Addresses
+                  </TabsTrigger>
+                  <TabsTrigger value="qualifications" className="text-xs">
+                    <GraduationCap className="h-3 w-3 mr-1" />
+                    Quals ({tgaData.qualifications.length})
+                  </TabsTrigger>
+                  <TabsTrigger value="skillsets" className="text-xs">
+                    <Layers className="h-3 w-3 mr-1" />
+                    Skills ({tgaData.skillsets.length})
+                  </TabsTrigger>
+                  <TabsTrigger value="units" className="text-xs">
+                    <BookOpen className="h-3 w-3 mr-1" />
+                    Units ({tgaData.units.length})
+                  </TabsTrigger>
+                  <TabsTrigger value="courses" className="text-xs">
+                    <Award className="h-3 w-3 mr-1" />
+                    Courses ({tgaData.courses.length})
+                  </TabsTrigger>
+                </TabsList>
+
+                <TabsContent value="summary" className="mt-4">
+                  {tgaData.summary ? (
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-1">
+                        <p className="text-sm text-muted-foreground">Legal Name</p>
+                        <p className="font-medium">{tgaData.summary.legal_name || '-'}</p>
+                      </div>
+                      <div className="space-y-1">
+                        <p className="text-sm text-muted-foreground">Trading Name</p>
+                        <p className="font-medium">{tgaData.summary.trading_name || '-'}</p>
+                      </div>
+                      <div className="space-y-1">
+                        <p className="text-sm text-muted-foreground">ABN</p>
+                        <p className="font-medium">{tgaData.summary.abn || '-'}</p>
+                      </div>
+                      <div className="space-y-1">
+                        <p className="text-sm text-muted-foreground">Status</p>
+                        <Badge variant={tgaData.summary.status === 'Registered' ? 'default' : 'secondary'}>
+                          {tgaData.summary.status || 'Unknown'}
+                        </Badge>
+                      </div>
+                      <div className="space-y-1">
+                        <p className="text-sm text-muted-foreground">Registration Start</p>
+                        <p className="font-medium">{tgaData.summary.registration_start_date || '-'}</p>
+                      </div>
+                      <div className="space-y-1">
+                        <p className="text-sm text-muted-foreground">Registration End</p>
+                        <p className="font-medium">{tgaData.summary.registration_end_date || '-'}</p>
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="text-muted-foreground text-sm">No summary data available</p>
+                  )}
+                </TabsContent>
+
+                <TabsContent value="contacts" className="mt-4">
+                  {tgaData.contacts.length > 0 ? (
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Type</TableHead>
+                          <TableHead>Name</TableHead>
+                          <TableHead>Position</TableHead>
+                          <TableHead>Phone</TableHead>
+                          <TableHead>Email</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {tgaData.contacts.map((contact) => (
+                          <TableRow key={contact.id}>
+                            <TableCell>{contact.contact_type || '-'}</TableCell>
+                            <TableCell className="font-medium">{contact.name || '-'}</TableCell>
+                            <TableCell>{contact.position || '-'}</TableCell>
+                            <TableCell>{contact.phone || '-'}</TableCell>
+                            <TableCell>{contact.email || '-'}</TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  ) : (
+                    <p className="text-muted-foreground text-sm">No contacts found</p>
+                  )}
+                </TabsContent>
+
+                <TabsContent value="addresses" className="mt-4">
+                  <div className="space-y-4">
+                    {tgaData.addresses.length > 0 && (
+                      <div>
+                        <h4 className="font-medium mb-2">Registered Addresses</h4>
+                        {tgaData.addresses.map((address) => (
+                          <div key={address.id} className="p-3 border rounded-lg mb-2">
+                            <Badge variant="outline" className="mb-2">{address.address_type}</Badge>
+                            <p>{address.address_line_1}</p>
+                            {address.address_line_2 && <p>{address.address_line_2}</p>}
+                            <p>{address.suburb}, {address.state} {address.postcode}</p>
+                            {address.phone && <p className="text-sm text-muted-foreground mt-1">Phone: {address.phone}</p>}
+                            {address.email && <p className="text-sm text-muted-foreground">Email: {address.email}</p>}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    {tgaData.deliveryLocations.length > 0 && (
+                      <div>
+                        <h4 className="font-medium mb-2">Delivery Locations ({tgaData.deliveryLocations.length})</h4>
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>Location</TableHead>
+                              <TableHead>Address</TableHead>
+                              <TableHead>Suburb</TableHead>
+                              <TableHead>State</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {tgaData.deliveryLocations.map((loc) => (
+                              <TableRow key={loc.id}>
+                                <TableCell className="font-medium">{loc.location_name || '-'}</TableCell>
+                                <TableCell>{loc.address_line_1 || '-'}</TableCell>
+                                <TableCell>{loc.suburb || '-'}</TableCell>
+                                <TableCell>{loc.state || '-'}</TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    )}
+                    {tgaData.addresses.length === 0 && tgaData.deliveryLocations.length === 0 && (
+                      <p className="text-muted-foreground text-sm">No addresses found</p>
+                    )}
+                  </div>
+                </TabsContent>
+
+                <TabsContent value="qualifications" className="mt-4">
+                  {tgaData.qualifications.length > 0 ? (
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Code</TableHead>
+                          <TableHead>Title</TableHead>
+                          <TableHead>Package</TableHead>
+                          <TableHead>Status</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {tgaData.qualifications.map((qual) => (
+                          <TableRow key={qual.id}>
+                            <TableCell className="font-mono text-sm">{qual.qualification_code}</TableCell>
+                            <TableCell className="font-medium">{qual.qualification_title || '-'}</TableCell>
+                            <TableCell>{qual.training_package_code || '-'}</TableCell>
+                            <TableCell>
+                              <Badge variant={qual.is_current ? 'default' : 'secondary'}>
+                                {qual.status || (qual.is_current ? 'Current' : 'Not Current')}
+                              </Badge>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  ) : (
+                    <p className="text-muted-foreground text-sm">No qualifications found</p>
+                  )}
+                </TabsContent>
+
+                <TabsContent value="skillsets" className="mt-4">
+                  {tgaData.skillsets.length > 0 ? (
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Code</TableHead>
+                          <TableHead>Title</TableHead>
+                          <TableHead>Package</TableHead>
+                          <TableHead>Status</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {tgaData.skillsets.map((skill) => (
+                          <TableRow key={skill.id}>
+                            <TableCell className="font-mono text-sm">{skill.skillset_code}</TableCell>
+                            <TableCell className="font-medium">{skill.skillset_title || '-'}</TableCell>
+                            <TableCell>{skill.training_package_code || '-'}</TableCell>
+                            <TableCell>
+                              <Badge variant={skill.is_current ? 'default' : 'secondary'}>
+                                {skill.status || (skill.is_current ? 'Current' : 'Not Current')}
+                              </Badge>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  ) : (
+                    <p className="text-muted-foreground text-sm">No skill sets found</p>
+                  )}
+                </TabsContent>
+
+                <TabsContent value="units" className="mt-4">
+                  {tgaData.units.length > 0 ? (
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Code</TableHead>
+                          <TableHead>Title</TableHead>
+                          <TableHead>Package</TableHead>
+                          <TableHead>Status</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {tgaData.units.map((unit) => (
+                          <TableRow key={unit.id}>
+                            <TableCell className="font-mono text-sm">{unit.unit_code}</TableCell>
+                            <TableCell className="font-medium">{unit.unit_title || '-'}</TableCell>
+                            <TableCell>{unit.training_package_code || '-'}</TableCell>
+                            <TableCell>
+                              <Badge variant={unit.is_current ? 'default' : 'secondary'}>
+                                {unit.status || (unit.is_current ? 'Current' : 'Not Current')}
+                              </Badge>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  ) : (
+                    <p className="text-muted-foreground text-sm">No explicit units found</p>
+                  )}
+                </TabsContent>
+
+                <TabsContent value="courses" className="mt-4">
+                  {tgaData.courses.length > 0 ? (
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Code</TableHead>
+                          <TableHead>Title</TableHead>
+                          <TableHead>Status</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {tgaData.courses.map((course) => (
+                          <TableRow key={course.id}>
+                            <TableCell className="font-mono text-sm">{course.course_code}</TableCell>
+                            <TableCell className="font-medium">{course.course_title || '-'}</TableCell>
+                            <TableCell>
+                              <Badge variant={course.is_current ? 'default' : 'secondary'}>
+                                {course.status || (course.is_current ? 'Current' : 'Not Current')}
+                              </Badge>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  ) : (
+                    <p className="text-muted-foreground text-sm">No accredited courses found</p>
+                  )}
+                </TabsContent>
+              </Tabs>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Future Integrations */}
       <Card className="border-dashed">
         <CardContent className="flex flex-col items-center justify-center py-8 text-center">
           <Link2 className="h-8 w-8 text-muted-foreground mb-3" />
