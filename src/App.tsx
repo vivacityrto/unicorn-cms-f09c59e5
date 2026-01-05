@@ -66,7 +66,7 @@ import ResourceMostUsed from "./pages/ResourceMostUsed";
 import ResourceFavourites from "./pages/ResourceFavourites";
 import ResourceUpdatesLog from "./pages/ResourceUpdatesLog";
 import MembershipDashboardWrapper from "./pages/MembershipDashboardWrapper";
-import ClientDetail from "./pages/ClientDetail";
+import ClientDetailWrapper from "./pages/ClientDetailWrapper";
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -530,7 +530,7 @@ const App = () => (
             {/* Membership Dashboard */}
             <Route path="/membership-dashboard" element={<ProtectedRoute><MembershipDashboardWrapper /></ProtectedRoute>} />
             {/* Client Detail (new client-first view) */}
-            <Route path="/clients/:tenantId" element={<ProtectedRoute><ClientDetail /></ProtectedRoute>} />
+            <Route path="/clients/:tenantId" element={<ProtectedRoute><ClientDetailWrapper /></ProtectedRoute>} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
