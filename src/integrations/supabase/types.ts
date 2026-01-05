@@ -1308,6 +1308,70 @@ export type Database = {
           },
         ]
       }
+      client_tga_snapshot: {
+        Row: {
+          client_id: string
+          last_sync_at: string | null
+          quals_total: number
+          registration_end: string | null
+          rto_number: string
+          rto_status: string | null
+          scope_total: number
+          skill_sets_total: number
+          source_import_id: string | null
+          units_total: number
+          updated_at: string
+        }
+        Insert: {
+          client_id: string
+          last_sync_at?: string | null
+          quals_total?: number
+          registration_end?: string | null
+          rto_number: string
+          rto_status?: string | null
+          scope_total?: number
+          skill_sets_total?: number
+          source_import_id?: string | null
+          units_total?: number
+          updated_at?: string
+        }
+        Update: {
+          client_id?: string
+          last_sync_at?: string | null
+          quals_total?: number
+          registration_end?: string | null
+          rto_number?: string
+          rto_status?: string | null
+          scope_total?: number
+          skill_sets_total?: number
+          source_import_id?: string | null
+          units_total?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_tga_snapshot_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: true
+            referencedRelation: "clients_legacy"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_tga_snapshot_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: true
+            referencedRelation: "dashboard_client_snapshot"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_tga_snapshot_source_import_id_fkey"
+            columns: ["source_import_id"]
+            isOneToOne: false
+            referencedRelation: "tga_import_runs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       clientfields: {
         Row: {
           client_id: number
@@ -6910,6 +6974,125 @@ export type Database = {
           },
         ]
       }
+      tga_import_runs: {
+        Row: {
+          created_by: string | null
+          error_message: string | null
+          finished_at: string | null
+          id: string
+          records_processed: number
+          run_type: string
+          source_checksum: string | null
+          source_ref: string | null
+          started_at: string
+          status: string
+        }
+        Insert: {
+          created_by?: string | null
+          error_message?: string | null
+          finished_at?: string | null
+          id?: string
+          records_processed?: number
+          run_type: string
+          source_checksum?: string | null
+          source_ref?: string | null
+          started_at?: string
+          status?: string
+        }
+        Update: {
+          created_by?: string | null
+          error_message?: string | null
+          finished_at?: string | null
+          id?: string
+          records_processed?: number
+          run_type?: string
+          source_checksum?: string | null
+          source_ref?: string | null
+          started_at?: string
+          status?: string
+        }
+        Relationships: []
+      }
+      tga_import_state: {
+        Row: {
+          id: number
+          latest_success_import_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          id?: number
+          latest_success_import_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          id?: number
+          latest_success_import_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tga_import_state_latest_success_import_id_fkey"
+            columns: ["latest_success_import_id"]
+            isOneToOne: false
+            referencedRelation: "tga_import_runs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tga_links: {
+        Row: {
+          client_id: string
+          created_at: string
+          id: string
+          is_linked: boolean
+          last_sync_at: string | null
+          last_sync_error: string | null
+          last_sync_status: string | null
+          link_status: string
+          rto_number: string
+          updated_at: string
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          id?: string
+          is_linked?: boolean
+          last_sync_at?: string | null
+          last_sync_error?: string | null
+          last_sync_status?: string | null
+          link_status?: string
+          rto_number: string
+          updated_at?: string
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          id?: string
+          is_linked?: boolean
+          last_sync_at?: string | null
+          last_sync_error?: string | null
+          last_sync_status?: string | null
+          link_status?: string
+          rto_number?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tga_links_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: true
+            referencedRelation: "clients_legacy"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tga_links_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: true
+            referencedRelation: "dashboard_client_snapshot"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tga_organisations: {
         Row: {
           abn: string | null
@@ -7295,6 +7478,65 @@ export type Database = {
           },
         ]
       }
+      tga_rtos: {
+        Row: {
+          abn: string | null
+          address_json: Json | null
+          cricos_provider_number: string | null
+          email: string | null
+          last_seen_in_import_id: string | null
+          legal_name: string | null
+          phone: string | null
+          registration_end: string | null
+          registration_start: string | null
+          rto_number: string
+          status: string | null
+          trading_name: string | null
+          updated_at: string
+          website: string | null
+        }
+        Insert: {
+          abn?: string | null
+          address_json?: Json | null
+          cricos_provider_number?: string | null
+          email?: string | null
+          last_seen_in_import_id?: string | null
+          legal_name?: string | null
+          phone?: string | null
+          registration_end?: string | null
+          registration_start?: string | null
+          rto_number: string
+          status?: string | null
+          trading_name?: string | null
+          updated_at?: string
+          website?: string | null
+        }
+        Update: {
+          abn?: string | null
+          address_json?: Json | null
+          cricos_provider_number?: string | null
+          email?: string | null
+          last_seen_in_import_id?: string | null
+          legal_name?: string | null
+          phone?: string | null
+          registration_end?: string | null
+          registration_start?: string | null
+          rto_number?: string
+          status?: string | null
+          trading_name?: string | null
+          updated_at?: string
+          website?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tga_rtos_last_seen_in_import_id_fkey"
+            columns: ["last_seen_in_import_id"]
+            isOneToOne: false
+            referencedRelation: "tga_import_runs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tga_scope_courses: {
         Row: {
           course_code: string
@@ -7345,6 +7587,60 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["id"]
+          },
+        ]
+      }
+      tga_scope_items: {
+        Row: {
+          code: string
+          created_at: string
+          currency_end: string | null
+          currency_start: string | null
+          id: string
+          import_id: string | null
+          rto_number: string
+          status: string | null
+          title: string | null
+          type: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          currency_end?: string | null
+          currency_start?: string | null
+          id?: string
+          import_id?: string | null
+          rto_number: string
+          status?: string | null
+          title?: string | null
+          type: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          currency_end?: string | null
+          currency_start?: string | null
+          id?: string
+          import_id?: string | null
+          rto_number?: string
+          status?: string | null
+          title?: string | null
+          type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tga_scope_items_import_id_fkey"
+            columns: ["import_id"]
+            isOneToOne: false
+            referencedRelation: "tga_import_runs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tga_scope_items_rto_number_fkey"
+            columns: ["rto_number"]
+            isOneToOne: false
+            referencedRelation: "tga_rtos"
+            referencedColumns: ["rto_number"]
           },
         ]
       }
@@ -8868,6 +9164,8 @@ export type Database = {
         Args: { p_package_id: number; p_tenant_id: number }
         Returns: boolean
       }
+      tga_get_client_data: { Args: { p_client_id: string }; Returns: Json }
+      tga_get_tenant_data: { Args: { p_tenant_id: number }; Returns: Json }
       tga_health_check:
         | { Args: never; Returns: Json }
         | {
@@ -8878,10 +9176,18 @@ export type Database = {
         Args: { p_codes: string[]; p_tenant_id: number }
         Returns: Json
       }
+      tga_sync_client: {
+        Args: { p_client_id: string; p_rto_number?: string }
+        Returns: Json
+      }
       tga_sync_delta: { Args: { p_since?: string }; Returns: Json }
       tga_sync_full: { Args: never; Returns: Json }
       tga_sync_status: { Args: never; Returns: Json }
-      tga_trigger_sync: { Args: { p_tenant_id: number }; Returns: Json }
+      tga_sync_tenant: {
+        Args: { p_rto_number?: string; p_tenant_id: number }
+        Returns: Json
+      }
+      tga_unlink_client: { Args: { p_client_id: string }; Returns: Json }
       toggle_favourite: { Args: { p_resource_id: string }; Returns: boolean }
       transition_stage_state: {
         Args: {
