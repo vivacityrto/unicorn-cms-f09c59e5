@@ -238,9 +238,11 @@ export function useTgaRtoData(tenantId: number | null, rtoCode: string | null) {
          const actionUsed = parsed?.action_used as string | undefined;
 
          const message =
-           stage === 'soap.endpoint_not_found'
+           stage === 'soap.endpoint_not_found' || stage === 'soap.endpoint.error'
              ? 'TGA endpoint misconfigured. Contact support.'
-             : parsed?.message || parsed?.error || res.statusText || 'Request failed';
+             : stage === 'soap.auth.error'
+               ? 'TGA authentication failed. Check credentials.'
+               : parsed?.message || parsed?.error || res.statusText || 'Request failed';
 
          const snippet = !parsed && text ? text.slice(0, 300) : undefined;
 
@@ -278,9 +280,11 @@ export function useTgaRtoData(tenantId: number | null, rtoCode: string | null) {
          const actionUsed = parsed.action_used as string | undefined;
 
          const message =
-           stage === 'soap.endpoint_not_found'
+           stage === 'soap.endpoint_not_found' || stage === 'soap.endpoint.error'
              ? 'TGA endpoint misconfigured. Contact support.'
-             : parsed.message || parsed.error || 'Import failed';
+             : stage === 'soap.auth.error'
+               ? 'TGA authentication failed. Check credentials.'
+               : parsed.message || parsed.error || 'Import failed';
 
          toast({
            title: 'Import Failed',
