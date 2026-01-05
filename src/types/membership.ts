@@ -58,10 +58,35 @@ export const MEMBERSHIP_TIERS: Record<string, MembershipTier> = {
 export const SUPERHERO_PACKAGE_IDS = [29, 16, 3, 22, 39, 13, 5, 24, 40]; // M-AM, M-GR, M-RR, M-SAR, M-DR, M-GC, M-RC, M-SAC, M-DC
 
 // Risk flag definitions
+export type RiskFlagCode = 'OVERDUE_TASKS' | 'MISSING_CSC' | 'NO_ACTIVITY' | 'WAITING_TOO_LONG' | 'SUBMISSION_RISK' | 'HOURS_AT_RISK';
+export type RiskFlagSeverity = 'info' | 'warn' | 'critical';
+
 export interface RiskFlag {
-  type: 'overdue_tasks' | 'no_activity' | 'waiting_too_long' | 'no_csc' | 'hours_critical' | 'hours_warning';
+  code: RiskFlagCode;
+  severity: RiskFlagSeverity;
   message: string;
-  severity: 'warning' | 'critical';
+  source: 'task' | 'stage' | 'activity' | 'system';
+}
+
+// Next action computed by server
+export interface NextAction {
+  title: string;
+  due_at: string | null;
+  owner_id: string | null;
+  source: 'task' | 'system';
+  reason: string;
+}
+
+// Dashboard rollup from RPC
+export interface MembershipRollup {
+  tenant_id: number;
+  package_id: number;
+  next_action_title: string;
+  next_action_due_at: string | null;
+  next_action_owner_id: string | null;
+  next_action_source: string;
+  next_action_reason: string;
+  risk_flags: RiskFlag[] | null;
 }
 
 export interface MembershipEntitlement {
@@ -153,6 +178,9 @@ export interface MembershipWithDetails extends MembershipEntitlement {
   health_score: MembershipHealthScore;
   overdue_tasks_count: number;
   pending_tasks_count: number;
+  // Computed from RPC
+  next_action: NextAction | null;
+  risk_flags: RiskFlag[];
 }
 
 export interface KPIStats {
