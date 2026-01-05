@@ -26,8 +26,8 @@ interface Tenant {
   risk_level: string;
   created_at: string;
   member_count: number;
-  clo_name?: string | null;
-  clo_avatar?: string | null;
+  csc_name?: string | null;
+  csc_avatar?: string | null;
   package_name?: string | null;
   package_full_text?: string | null;
   package_id?: number | null;
@@ -168,7 +168,7 @@ export default function ManageTenants() {
         return acc;
       }, {} as Record<number, number>);
 
-      // Batch fetch all connected CLO data
+      // Batch fetch all connected CSC data
       const {
         data: connectedData
       } = await supabase.from("connected_tenants").select("tenant_id, user_uuid").in("tenant_id", tenantIds);
@@ -179,7 +179,7 @@ export default function ManageTenants() {
         return acc;
       }, {} as Record<number, string>);
 
-      // Batch fetch all CLO user names and avatars
+      // Batch fetch all CSC user names and avatars
       const userUuids = Object.values(connectedMap).filter(Boolean);
       const {
         data: usersData
@@ -221,8 +221,8 @@ export default function ManageTenants() {
       const tenantsWithCounts = tenantsData.map(tenant => ({
         ...tenant,
         member_count: memberCountMap[tenant.id] || 0,
-        clo_name: connectedMap[tenant.id] ? userDataMap[connectedMap[tenant.id]]?.name : null,
-        clo_avatar: connectedMap[tenant.id] ? userDataMap[connectedMap[tenant.id]]?.avatar : null,
+        csc_name: connectedMap[tenant.id] ? userDataMap[connectedMap[tenant.id]]?.name : null,
+        csc_avatar: connectedMap[tenant.id] ? userDataMap[connectedMap[tenant.id]]?.avatar : null,
         package_name: tenant.packages?.name || null,
         package_full_text: tenant.packages?.full_text || null,
         state: stateMap[tenant.id] || null
@@ -283,7 +283,7 @@ export default function ManageTenants() {
     };
   }, []);
 
-  // Subscribe to connected_tenants changes for real-time CLO updates
+  // Subscribe to connected_tenants changes for real-time CSC updates
   useEffect(() => {
     const connectionsChannel = supabase
       .channel('connected-tenants-changes')
@@ -393,7 +393,7 @@ export default function ManageTenants() {
       });
       if (error) throw error;
       setConnectedTenantIds(prev => [...prev, tenant.id]);
-      // Refresh tenants so CLO column updates immediately
+      // Refresh tenants so CSC column updates immediately
       fetchTenants();
       toast({
         title: "Connected",
@@ -717,21 +717,21 @@ export default function ManageTenants() {
                       </Badge>
                     </TableCell>
                     <TableCell className="py-6 border-r border-border/50 whitespace-nowrap">
-                      {tenant.clo_name ? (
+                      {tenant.csc_name ? (
                         <TooltipProvider>
                           <Tooltip>
                             <TooltipTrigger asChild>
                               <div className="flex justify-center cursor-pointer">
                                 <Avatar className="h-9 w-9">
-                                  <AvatarImage src={tenant.clo_avatar || undefined} alt={tenant.clo_name} />
+                                  <AvatarImage src={tenant.csc_avatar || undefined} alt={tenant.csc_name} />
                                   <AvatarFallback className="bg-primary/10 text-primary text-xs">
-                                    {tenant.clo_name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
+                                    {tenant.csc_name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
                                   </AvatarFallback>
                                 </Avatar>
                               </div>
                             </TooltipTrigger>
                             <TooltipContent>
-                              <p>{tenant.clo_name}</p>
+                              <p>{tenant.csc_name}</p>
                             </TooltipContent>
                           </Tooltip>
                         </TooltipProvider>

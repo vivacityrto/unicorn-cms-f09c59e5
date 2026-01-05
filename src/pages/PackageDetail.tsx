@@ -60,8 +60,8 @@ interface TenantData {
   created_at: string;
   user_count?: number;
   package_id?: number | null;
-  clo_name?: string | null;
-  clo_avatar_url?: string | null;
+  csc_name?: string | null;
+  csc_avatar_url?: string | null;
   risk_level?: string | null;
   state?: string | null;
 }
@@ -651,7 +651,7 @@ const PackageDetail = () => {
         return acc;
       }, {});
 
-      // Batch fetch CLO data
+      // Batch fetch CSC data
       const { data: connectedData } = await supabase.from("connected_tenants").select("tenant_id, user_uuid").in("tenant_id", tenantIds);
       const connectedMap = (connectedData || []).reduce((acc: Record<number, string>, conn: any) => {
         if (!acc[conn.tenant_id]) {
@@ -660,7 +660,7 @@ const PackageDetail = () => {
         return acc;
       }, {});
 
-      // Batch fetch CLO user names
+      // Batch fetch CSC user names
       const userUuids = Object.values(connectedMap).filter(Boolean);
       const { data: usersData } = await supabase.from("users").select("user_uuid, first_name, last_name, avatar_url").in("user_uuid", userUuids);
       const userDataMap = (usersData || []).reduce((acc: Record<string, { name: string; avatar_url: string | null }>, user: any) => {
@@ -690,8 +690,8 @@ const PackageDetail = () => {
       const tenantsWithCounts = (tenantsData || []).map((tenant: any) => ({
         ...tenant,
         user_count: memberCountMap[tenant.id] || 0,
-        clo_name: connectedMap[tenant.id] ? userDataMap[connectedMap[tenant.id]]?.name : null,
-        clo_avatar_url: connectedMap[tenant.id] ? userDataMap[connectedMap[tenant.id]]?.avatar_url : null,
+        csc_name: connectedMap[tenant.id] ? userDataMap[connectedMap[tenant.id]]?.name : null,
+        csc_avatar_url: connectedMap[tenant.id] ? userDataMap[connectedMap[tenant.id]]?.avatar_url : null,
         state: stateMap[tenant.id] || null
       }));
 
@@ -833,7 +833,7 @@ const PackageDetail = () => {
                             Status
                           </TableHead>
                           <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-r border-border/50 text-center">
-                            CLO
+                            CSC
                           </TableHead>
                           <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-r border-border/50 text-center">
                             Members
@@ -893,21 +893,21 @@ const PackageDetail = () => {
                                 </Badge>
                               </TableCell>
                               <TableCell className="py-6 border-r border-border/50 whitespace-nowrap text-center">
-                                {tenant.clo_name ? (
+                                {tenant.csc_name ? (
                                   <TooltipProvider>
                                     <Tooltip>
                                       <TooltipTrigger asChild>
                                         <div className="flex items-center justify-center">
                                           <Avatar className="h-10 w-10 cursor-pointer">
-                                            <AvatarImage src={tenant.clo_avatar_url || undefined} alt={tenant.clo_name} />
+                                            <AvatarImage src={tenant.csc_avatar_url || undefined} alt={tenant.csc_name} />
                                             <AvatarFallback className="bg-primary/10 text-primary text-sm font-medium">
-                                              {tenant.clo_name.split(' ').map((n: string) => n[0]).join('').substring(0, 2).toUpperCase()}
+                                              {tenant.csc_name.split(' ').map((n: string) => n[0]).join('').substring(0, 2).toUpperCase()}
                                             </AvatarFallback>
                                           </Avatar>
                                         </div>
                                       </TooltipTrigger>
                                       <TooltipContent>
-                                        <p>{tenant.clo_name}</p>
+                                        <p>{tenant.csc_name}</p>
                                       </TooltipContent>
                                     </Tooltip>
                                   </TooltipProvider>

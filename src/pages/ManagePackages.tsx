@@ -35,7 +35,7 @@ interface TenantData {
   created_at: string;
   user_count?: number;
   package_id?: number | null;
-  clo_name?: string | null;
+  csc_name?: string | null;
   state?: string | null;
   setup?: boolean;
   biz_plan?: boolean;
@@ -179,21 +179,21 @@ export default function ManagePackages() {
         // Fetch state directly from tenants table if not found in clients_legacy
         const tenantState = clientData?.state || tenant.state;
 
-        // Fetch connected CLO user from connected_tenants
+        // Fetch connected CSC user from connected_tenants
         const {
           data: connectedData
         } = await supabase.from("connected_tenants").select("user_uuid").eq("tenant_id", tenant.id).limit(1).single();
-        let cloName = null;
+        let cscName = null;
         if (connectedData?.user_uuid) {
           const {
             data: userData
           } = await supabase.from("users").select("first_name, last_name").eq("user_uuid", connectedData.user_uuid).single();
-          cloName = userData ? `${userData.first_name} ${userData.last_name}` : null;
+          cscName = userData ? `${userData.first_name} ${userData.last_name}` : null;
         }
         return {
           ...tenant,
           user_count: count || 0,
-          clo_name: cloName,
+          csc_name: cscName,
           state: tenantState || null
         };
       }));
@@ -450,7 +450,7 @@ export default function ManagePackages() {
     const isLoading = tenantsLoading[packageId] || !tenantsByPackage[packageId];
     const filteredTenants = getFilteredAndSortedTenants(packageId);
 
-    // Get unique CLO names and states for filters
+    // Get unique CSC names and states for filters
     const allTenants = tenantsByPackage[packageId] || [];
     const activeCount = allTenants.filter(t => t.status === "active").length;
     const inactiveCount = allTenants.filter(t => t.status === "inactive").length;
@@ -551,7 +551,7 @@ export default function ManagePackages() {
                       Client
                     </TableHead>
                     <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-r border-border/50">
-                      CLO
+                      CSC
                     </TableHead>
                     <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-r border-border/50 text-center">
                       Setup
@@ -611,7 +611,7 @@ export default function ManagePackages() {
                         <TableCell className="py-6 border-r border-border/50 min-w-[200px] pr-8">
                           <div>
                             <div className="font-medium text-foreground pb-[10px] whitespace-nowrap">
-                              {tenant.clo_name || "-"}
+                              {tenant.csc_name || "-"}
                             </div>
                             <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1 whitespace-nowrap">
                               <Calendar className="w-3 h-3" />

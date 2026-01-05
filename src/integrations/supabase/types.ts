@@ -2056,9 +2056,11 @@ export type Database = {
         Row: {
           created_at: string
           created_by: string | null
+          dashboard_visible: boolean | null
           description: string | null
           id: number
           short_name: string | null
+          stage_type: string | null
           status: string | null
           title: string
           updated_at: string
@@ -2067,9 +2069,11 @@ export type Database = {
         Insert: {
           created_at?: string
           created_by?: string | null
+          dashboard_visible?: boolean | null
           description?: string | null
           id?: never
           short_name?: string | null
+          stage_type?: string | null
           status?: string | null
           title: string
           updated_at?: string
@@ -2078,9 +2082,11 @@ export type Database = {
         Update: {
           created_at?: string
           created_by?: string | null
+          dashboard_visible?: boolean | null
           description?: string | null
           id?: never
           short_name?: string | null
+          stage_type?: string | null
           status?: string | null
           title?: string
           updated_at?: string
@@ -4982,6 +4988,8 @@ export type Database = {
           full_text: string | null
           id: number
           name: string | null
+          package_type: string | null
+          progress_mode: string | null
           slug: string | null
           status: string
           total_hours: number | null
@@ -4993,6 +5001,8 @@ export type Database = {
           full_text?: string | null
           id?: never
           name?: string | null
+          package_type?: string | null
+          progress_mode?: string | null
           slug?: string | null
           status?: string
           total_hours?: number | null
@@ -5004,6 +5014,8 @@ export type Database = {
           full_text?: string | null
           id?: never
           name?: string | null
+          package_type?: string | null
+          progress_mode?: string | null
           slug?: string | null
           status?: string
           total_hours?: number | null
