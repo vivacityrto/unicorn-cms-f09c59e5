@@ -233,6 +233,9 @@ export function useTgaRtoData(tenantId: number | null, rtoCode: string | null) {
        if (!res.ok) {
          const stage = parsed?.stage as string | undefined;
          const correlationId = parsed?.correlation_id as string | undefined;
+         const httpStatus = parsed?.http_status as number | undefined;
+         const endpointUsed = parsed?.endpoint_used as string | undefined;
+         const actionUsed = parsed?.action_used as string | undefined;
 
          const message =
            stage === 'soap.endpoint_not_found'
@@ -247,6 +250,9 @@ export function useTgaRtoData(tenantId: number | null, rtoCode: string | null) {
              <div className="space-y-1">
                <p>{message}</p>
                {stage && <p className="text-xs text-muted-foreground">Stage: {stage}</p>}
+               {httpStatus && <p className="text-xs text-muted-foreground">HTTP: {httpStatus}</p>}
+               {endpointUsed && <p className="text-xs text-muted-foreground">Endpoint: {endpointUsed}</p>}
+               {actionUsed && <p className="text-xs text-muted-foreground">Action: {actionUsed}</p>}
                {correlationId && (
                  <button
                    onClick={() => navigator.clipboard.writeText(correlationId)}
@@ -264,30 +270,41 @@ export function useTgaRtoData(tenantId: number | null, rtoCode: string | null) {
          return { success: false, error: message, correlationId, stage };
        }
 
-      if (parsed?.ok === false) {
-        const message = parsed.message || 'Import failed';
-        const stage = parsed.stage;
-        const correlationId = parsed.correlation_id;
-        toast({
-          title: 'Import Failed',
-          description: (
-            <div className="space-y-1">
-              <p>{message}</p>
-              {stage && <p className="text-xs text-muted-foreground">Stage: {stage}</p>}
-              {correlationId && (
-                <button
-                  onClick={() => navigator.clipboard.writeText(correlationId)}
-                  className="text-xs underline text-muted-foreground hover:text-foreground"
-                >
-                  Copy ref: {correlationId}
-                </button>
-              )}
-            </div>
-          ),
-          variant: 'destructive'
-        });
-        return { success: false, error: message, correlationId, stage };
-      }
+       if (parsed?.ok === false) {
+         const stage = parsed.stage as string | undefined;
+         const correlationId = parsed.correlation_id as string | undefined;
+         const httpStatus = parsed.http_status as number | undefined;
+         const endpointUsed = parsed.endpoint_used as string | undefined;
+         const actionUsed = parsed.action_used as string | undefined;
+
+         const message =
+           stage === 'soap.endpoint_not_found'
+             ? 'TGA endpoint misconfigured. Contact support.'
+             : parsed.message || parsed.error || 'Import failed';
+
+         toast({
+           title: 'Import Failed',
+           description: (
+             <div className="space-y-1">
+               <p>{message}</p>
+               {stage && <p className="text-xs text-muted-foreground">Stage: {stage}</p>}
+               {httpStatus && <p className="text-xs text-muted-foreground">HTTP: {httpStatus}</p>}
+               {endpointUsed && <p className="text-xs text-muted-foreground">Endpoint: {endpointUsed}</p>}
+               {actionUsed && <p className="text-xs text-muted-foreground">Action: {actionUsed}</p>}
+               {correlationId && (
+                 <button
+                   onClick={() => navigator.clipboard.writeText(correlationId)}
+                   className="text-xs underline text-muted-foreground hover:text-foreground"
+                 >
+                   Copy ref: {correlationId}
+                 </button>
+               )}
+             </div>
+           ),
+           variant: 'destructive'
+         });
+         return { success: false, error: message, correlationId, stage };
+       }
 
       // Success!
       const imported = parsed?.imported;

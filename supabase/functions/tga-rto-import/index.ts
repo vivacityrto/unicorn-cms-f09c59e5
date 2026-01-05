@@ -24,6 +24,26 @@ const TGA_NS = 'http://training.gov.au/services/13/';
 // Request timeout
 const REQUEST_TIMEOUT_MS = 30000;
 
+// --- WSDL-derived contract cache (in-memory) ---
+type SoapVersion = '1.2' | '1.1';
+
+interface WsdlContract {
+  fetched_at: number;
+  endpoint: string;
+  target_namespace: string;
+  soap_version: SoapVersion;
+  operation: string;
+  soap_action: string | null;
+  request_root_element: string;
+  request_wrapper_element: string | null;
+  code_element: string;
+}
+
+let WSDL_CONTRACT_CACHE: Record<string, WsdlContract> = {};
+let WSDL_TEXT_CACHE: { fetched_at: number; text: string } | null = null;
+let WSDL_FETCH_INFLIGHT: Promise<string> | null = null;
+const WSDL_CACHE_TTL_MS = 5 * 60 * 1000;
+
 function generateCorrelationId(): string {
   return `tga-${crypto.randomUUID()}`;
 }
@@ -88,18 +108,124 @@ function validateOrgEndpoint(): { ok: boolean; reason?: string } {
   return { ok: true };
 }
 
-// Build SOAP 1.2 envelope with Basic Auth approach
-// TGA uses HTTP Basic Auth + SOAP 1.2 action in Content-Type
-function buildSoap12Envelope(operation: string, bodyContent: string): string {
+async function fetchWsdlText(correlationId: string): Promise<string> {
+  const now = Date.now();
+  if (WSDL_TEXT_CACHE && now - WSDL_TEXT_CACHE.fetched_at < WSDL_CACHE_TTL_MS) {
+    return WSDL_TEXT_CACHE.text;
+  }
+
+  if (WSDL_FETCH_INFLIGHT) return WSDL_FETCH_INFLIGHT;
+
+  const wsdlUrl = `${ORG_ENDPOINT}?wsdl`;
+  logStage(correlationId, 'wsdl.fetch', { endpoint_used: ORG_ENDPOINT, url: wsdlUrl });
+
+  WSDL_FETCH_INFLIGHT = (async () => {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
+    try {
+      const res = await fetch(wsdlUrl, {
+        method: 'GET',
+        headers: { Accept: 'text/xml, application/xml' },
+        signal: controller.signal,
+      });
+      const text = await res.text();
+      logStage(correlationId, 'wsdl.fetch.result', {
+        http_status: res.status,
+        response_snippet: text.slice(0, 300),
+      });
+      if (res.status !== 200) {
+        throw new Error(`WSDL fetch failed: HTTP ${res.status}`);
+      }
+      WSDL_TEXT_CACHE = { fetched_at: Date.now(), text };
+      return text;
+    } finally {
+      clearTimeout(timeoutId);
+    }
+  })();
+
+  try {
+    return await WSDL_FETCH_INFLIGHT;
+  } finally {
+    WSDL_FETCH_INFLIGHT = null;
+  }
+}
+
+function parseWsdlContract(wsdl: string, operationCandidates: string[]): WsdlContract {
+  const now = Date.now();
+
+  const targetNs =
+    wsdl.match(/targetNamespace\s*=\s*"([^"]+)"/i)?.[1] ||
+    // Fallback aligned to existing known-good tga-sync implementation
+    'http://training.gov.au/services/Organisation';
+
+  const hasSoap12 = /\bsoap12:binding\b|\/wsdl\/soap12\b/i.test(wsdl);
+  const soapVersion: SoapVersion = hasSoap12 ? '1.2' : '1.1';
+
+  const op = operationCandidates.find((c) => new RegExp(`<[^:>]*:?operation[^>]+name="${c}"`, 'i').test(wsdl));
+  const operation = op || operationCandidates[0];
+
+  const opBlockMatch = wsdl.match(new RegExp(`(<[^:>]*:?operation[^>]+name="${operation}"[\\s\\S]{0,1500}?</[^:>]*:?operation>)`, 'i'));
+  const opBlock = opBlockMatch?.[1] || '';
+  const soapAction =
+    opBlock.match(/soap12:operation[^>]+soapAction\s*=\s*"([^"]+)"/i)?.[1] ||
+    opBlock.match(/soap:operation[^>]+soapAction\s*=\s*"([^"]+)"/i)?.[1] ||
+    null;
+
+  let requestWrapper: string | null = null;
+  let codeElement = 'Code';
+
+  const schemaEl = wsdl.match(new RegExp(`<[^:>]*:?element[^>]+name="${operation}"[\\s\\S]{0,2000}?</[^:>]*:?element>`, 'i'))?.[0] || '';
+  if (/name\s*=\s*"request"/i.test(schemaEl)) requestWrapper = 'request';
+  if (/name\s*=\s*"code"/i.test(schemaEl) && !/name\s*=\s*"Code"/i.test(schemaEl)) codeElement = 'code';
+
+  return {
+    fetched_at: now,
+    endpoint: ORG_ENDPOINT,
+    target_namespace: targetNs,
+    soap_version: soapVersion,
+    operation,
+    soap_action: soapAction,
+    request_root_element: operation,
+    request_wrapper_element: requestWrapper,
+    code_element: codeElement,
+  };
+}
+
+async function getWsdlContract(operationKey: string, operationCandidates: string[], correlationId: string): Promise<WsdlContract> {
+  const cached = WSDL_CONTRACT_CACHE[operationKey];
+  if (cached && Date.now() - cached.fetched_at < WSDL_CACHE_TTL_MS) return cached;
+
+  const wsdlText = await fetchWsdlText(correlationId);
+  const contract = parseWsdlContract(wsdlText, operationCandidates);
+  WSDL_CONTRACT_CACHE[operationKey] = contract;
+
+  logStage(correlationId, 'wsdl.contract', {
+    endpoint_used: ORG_ENDPOINT,
+    soap_version: contract.soap_version,
+    operation: contract.operation,
+    action_used: contract.soap_action,
+    request_root_element: contract.request_root_element,
+    target_namespace: contract.target_namespace,
+  });
+
+  return contract;
+}
+
+function buildSoapEnvelope(contract: WsdlContract, inner: string): string {
+  const soapNs = contract.soap_version === '1.2'
+    ? 'http://www.w3.org/2003/05/soap-envelope'
+    : 'http://schemas.xmlsoap.org/soap/envelope/';
+
+  const soapPrefix = contract.soap_version === '1.2' ? 'soap12' : 'soap';
+
   return `<?xml version="1.0" encoding="utf-8"?>
-<soap:Envelope xmlns:soap="http://www.w3.org/2003/05/soap-envelope" 
-               xmlns:tns="${TGA_NS}">
-  <soap:Body>
-    <tns:${operation}>
-      ${bodyContent}
-    </tns:${operation}>
-  </soap:Body>
-</soap:Envelope>`;
+<${soapPrefix}:Envelope xmlns:${soapPrefix}="${soapNs}" xmlns:svc="${contract.target_namespace}">
+  <${soapPrefix}:Body>
+    <svc:${contract.request_root_element}>
+      ${inner}
+    </svc:${contract.request_root_element}>
+  </${soapPrefix}:Body>
+</${soapPrefix}:Envelope>`;
 }
 
 // Parse SOAP fault
@@ -149,15 +275,17 @@ interface SoapResult {
   authOk: boolean;
   endpointOk: boolean;
   endpointUsed: string;
+  soapVersion?: SoapVersion;
+  actionUsed?: string | null;
+  requestRootElement?: string;
 }
 
-// Make SOAP 1.2 request with HTTP Basic Auth
+// Make SOAP request (SOAP 1.2 preferred if WSDL indicates it; falls back to SOAP 1.1 only if required)
 async function makeSoapRequest(
   endpoint: string,
-  operation: string,
-  soapAction: string,
-  bodyContent: string,
-  correlationId: string
+  contract: WsdlContract,
+  innerBodyXml: string,
+  correlationId: string,
 ): Promise<SoapResult> {
   const config = validateConfig();
   if (!config.ok) {
@@ -169,24 +297,28 @@ async function makeSoapRequest(
       authOk: false,
       endpointOk: false,
       endpointUsed: endpoint,
+      soapVersion: contract.soap_version,
+      actionUsed: contract.soap_action,
+      requestRootElement: contract.request_root_element,
     };
   }
 
-  const soapEnvelope = buildSoap12Envelope(operation, bodyContent);
-  
-  // Basic Auth header
-  const basicAuth = btoa(`${TGA_USERNAME}:${TGA_PASSWORD}`);
-  
-  // SOAP 1.2 uses action in Content-Type header
-  const contentType = `application/soap+xml; charset=utf-8; action="${soapAction}"`;
-  
   const endpointUrl = new URL(endpoint);
-  
+
+  const soapEnvelope = buildSoapEnvelope(contract, innerBodyXml);
+  const basicAuth = btoa(`${TGA_USERNAME}:${TGA_PASSWORD}`);
+
+  const contentType = contract.soap_version === '1.2'
+    ? (contract.soap_action
+        ? `application/soap+xml; charset=utf-8; action="${contract.soap_action}"`
+        : 'application/soap+xml; charset=utf-8')
+    : 'text/xml; charset=utf-8';
+
   logStage(correlationId, 'soap.request.build', {
-    endpoint_host: endpointUrl.host,
-    endpoint_path: endpointUrl.pathname,
-    operation,
-    soap_action: soapAction,
+    endpoint_used: `${endpointUrl.host}${endpointUrl.pathname}`,
+    soap_version: contract.soap_version,
+    action_used: contract.soap_action,
+    request_root_element: contract.request_root_element,
     content_type_sent: contentType,
   });
 
@@ -194,14 +326,20 @@ async function makeSoapRequest(
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
 
+    const headers: Record<string, string> = {
+      'Content-Type': contentType,
+      Accept: 'application/soap+xml, text/xml',
+      Authorization: `Basic ${basicAuth}`,
+      'User-Agent': 'Unicorn2.0/1.0',
+    };
+
+    if (contract.soap_version === '1.1' && contract.soap_action) {
+      headers['SOAPAction'] = `"${contract.soap_action}"`;
+    }
+
     const response = await fetch(endpoint, {
       method: 'POST',
-      headers: {
-        'Content-Type': contentType,
-        'Accept': 'application/soap+xml, text/xml',
-        'Authorization': `Basic ${basicAuth}`,
-        'User-Agent': 'Unicorn2.0/1.0',
-      },
+      headers,
       body: soapEnvelope,
       signal: controller.signal,
     });
@@ -212,24 +350,28 @@ async function makeSoapRequest(
     logStage(correlationId, 'soap.fetch', {
       endpoint_used: `${endpointUrl.host}${endpointUrl.pathname}`,
       http_status: response.status,
+      soap_version: contract.soap_version,
+      action_used: contract.soap_action,
+      request_root_element: contract.request_root_element,
       content_type_sent: contentType,
-      response_snippet: responseText.slice(0, 500),
+      response_snippet: responseText.slice(0, 300),
     });
 
-    // 404 - endpoint not found
     if (response.status === 404) {
       return {
         xml: '',
-        error: `Endpoint not found: ${endpoint}`,
+        error: `Endpoint or action not found: ${endpoint}`,
         fault: null,
         httpStatus: 404,
-        authOk: true, // 404 means we reached the server
+        authOk: true,
         endpointOk: false,
         endpointUsed: endpoint,
+        soapVersion: contract.soap_version,
+        actionUsed: contract.soap_action,
+        requestRootElement: contract.request_root_element,
       };
     }
 
-    // 401/403 - auth failure
     if (response.status === 401 || response.status === 403) {
       const fault = parseSoapFault(responseText);
       return {
@@ -240,45 +382,15 @@ async function makeSoapRequest(
         authOk: false,
         endpointOk: true,
         endpointUsed: endpoint,
+        soapVersion: contract.soap_version,
+        actionUsed: contract.soap_action,
+        requestRootElement: contract.request_root_element,
       };
     }
 
-    // Check for SOAP fault in response
     if (containsSoapFault(responseText)) {
       const fault = parseSoapFault(responseText);
       logStage(correlationId, 'soap.fault', { fault, http_status: response.status });
-      
-      // Auth errors in SOAP fault
-      if (fault.faultstring?.includes('Unknown user') || 
-          fault.faultstring?.includes('incorrect password') ||
-          responseText.includes('InvalidSecurity') ||
-          responseText.includes('FailedAuthentication')) {
-        return {
-          xml: '',
-          error: `TGA authentication failed: ${fault.faultstring || 'Invalid credentials'}`,
-          fault,
-          httpStatus: response.status,
-          authOk: false,
-          endpointOk: true,
-          endpointUsed: endpoint,
-        };
-      }
-      
-      // ActionNotSupported - wrong operation
-      if (fault.faultcode?.includes('ActionNotSupported') || 
-          fault.faultstring?.includes('ContractFilter') ||
-          fault.faultstring?.includes('does not match')) {
-        return {
-          xml: '',
-          error: `SOAP action not supported: ${soapAction}`,
-          fault,
-          httpStatus: response.status,
-          authOk: true,
-          endpointOk: true,
-          endpointUsed: endpoint,
-        };
-      }
-      
       return {
         xml: '',
         error: fault.faultstring || `SOAP Fault: ${fault.faultcode}`,
@@ -287,15 +399,18 @@ async function makeSoapRequest(
         authOk: true,
         endpointOk: true,
         endpointUsed: endpoint,
+        soapVersion: contract.soap_version,
+        actionUsed: contract.soap_action,
+        requestRootElement: contract.request_root_element,
       };
     }
 
-    // Success
     if (response.ok) {
-      logStage(correlationId, 'soap.response.parse', { 
-        http_status: response.status, 
-        response_length: responseText.length 
+      logStage(correlationId, 'soap.response.parse', {
+        http_status: response.status,
+        response_length: responseText.length,
       });
+
       return {
         xml: responseText,
         error: null,
@@ -304,10 +419,12 @@ async function makeSoapRequest(
         authOk: true,
         endpointOk: true,
         endpointUsed: endpoint,
+        soapVersion: contract.soap_version,
+        actionUsed: contract.soap_action,
+        requestRootElement: contract.request_root_element,
       };
     }
 
-    // Other error
     return {
       xml: '',
       error: `HTTP ${response.status}: ${response.statusText}`,
@@ -316,12 +433,14 @@ async function makeSoapRequest(
       authOk: true,
       endpointOk: true,
       endpointUsed: endpoint,
+      soapVersion: contract.soap_version,
+      actionUsed: contract.soap_action,
+      requestRootElement: contract.request_root_element,
     };
-
   } catch (error) {
     const errorMsg = error instanceof Error ? error.message : String(error);
     logStage(correlationId, 'soap.error', { error: errorMsg });
-    
+
     if (error instanceof Error && error.name === 'AbortError') {
       return {
         xml: '',
@@ -330,9 +449,12 @@ async function makeSoapRequest(
         authOk: true,
         endpointOk: true,
         endpointUsed: endpoint,
+        soapVersion: contract.soap_version,
+        actionUsed: contract.soap_action,
+        requestRootElement: contract.request_root_element,
       };
     }
-    
+
     return {
       xml: '',
       error: errorMsg,
@@ -340,6 +462,9 @@ async function makeSoapRequest(
       authOk: true,
       endpointOk: false,
       endpointUsed: endpoint,
+      soapVersion: contract.soap_version,
+      actionUsed: contract.soap_action,
+      requestRootElement: contract.request_root_element,
     };
   }
 }
@@ -356,34 +481,39 @@ async function fetchOrganisationDetails(rtoCode: string, correlationId: string):
   authOk: boolean;
   endpointOk: boolean;
   endpointUsed: string;
+  soapVersion?: SoapVersion;
+  actionUsed?: string | null;
+  requestRootElement?: string;
 }> {
   logStage(correlationId, 'soap.org_details', { rto_code: rtoCode });
 
-  const bodyContent = `<tns:code>${escapeXml(rtoCode)}</tns:code>`;
-  
-  // SOAP Action for GetOrganisation - from WSDL
-  const soapAction = `${TGA_NS}IOrganisationService/GetOrganisation`;
-
-  const result = await makeSoapRequest(
-    ORG_ENDPOINT,
-    'GetOrganisation',
-    soapAction,
-    bodyContent,
-    correlationId
+  const contract = await getWsdlContract(
+    'org_details',
+    ['GetOrganisation', 'GetDetails'],
+    correlationId,
   );
+
+  const innerBody = contract.request_wrapper_element
+    ? `<svc:${contract.request_wrapper_element}><svc:${contract.code_element}>${escapeXml(rtoCode)}</svc:${contract.code_element}></svc:${contract.request_wrapper_element}>`
+    : `<svc:${contract.code_element}>${escapeXml(rtoCode)}</svc:${contract.code_element}>`;
+
+  const result = await makeSoapRequest(ORG_ENDPOINT, contract, innerBody, correlationId);
   
   if (result.error) {
-    return { 
-      summary: null, 
-      contacts: [], 
-      addresses: [], 
-      deliveryLocations: [], 
+    return {
+      summary: null,
+      contacts: [],
+      addresses: [],
+      deliveryLocations: [],
       error: result.error,
       fault: result.fault,
       httpStatus: result.httpStatus,
       authOk: result.authOk,
       endpointOk: result.endpointOk,
       endpointUsed: result.endpointUsed,
+      soapVersion: result.soapVersion,
+      actionUsed: result.actionUsed,
+      requestRootElement: result.requestRootElement,
     };
   }
 
@@ -436,16 +566,19 @@ async function fetchOrganisationDetails(rtoCode: string, correlationId: string):
     country: extractValue(block, 'Country'),
   })).filter(l => l.suburb || l.location_name);
 
-  return { 
-    summary: summary.legal_name ? summary : null, 
-    contacts, 
-    addresses, 
+  return {
+    summary: summary.legal_name ? summary : null,
+    contacts,
+    addresses,
     deliveryLocations,
     error: null,
     httpStatus: result.httpStatus,
     authOk: result.authOk,
     endpointOk: result.endpointOk,
     endpointUsed: result.endpointUsed,
+    soapVersion: result.soapVersion,
+    actionUsed: result.actionUsed,
+    requestRootElement: result.requestRootElement,
   };
 }
 
@@ -459,16 +592,17 @@ async function fetchOrganisationScope(rtoCode: string, correlationId: string): P
 }> {
   logStage(correlationId, 'soap.scope', { rto_code: rtoCode });
   
-  const bodyContent = `<tns:code>${escapeXml(rtoCode)}</tns:code>`;
-  const soapAction = `${TGA_NS}IOrganisationService/GetRtoScope`;
-  
-  const result = await makeSoapRequest(
-    ORG_ENDPOINT,
-    'GetRtoScope',
-    soapAction,
-    bodyContent,
-    correlationId
+  const contract = await getWsdlContract(
+    'org_scope',
+    ['GetRtoScope', 'GetScope'],
+    correlationId,
   );
+
+  const innerBody = contract.request_wrapper_element
+    ? `<svc:${contract.request_wrapper_element}><svc:${contract.code_element}>${escapeXml(rtoCode)}</svc:${contract.code_element}></svc:${contract.request_wrapper_element}>`
+    : `<svc:${contract.code_element}>${escapeXml(rtoCode)}</svc:${contract.code_element}>`;
+
+  const result = await makeSoapRequest(ORG_ENDPOINT, contract, innerBody, correlationId);
   
   if (result.error) {
     return { qualifications: [], skillsets: [], units: [], courses: [], error: result.error };
@@ -580,7 +714,7 @@ serve(async (req) => {
 
     const url = new URL(req.url);
 
-    // GET ?probe=1 - WSDL connectivity check
+    // GET ?probe=1&rto=91020 - WSDL + real org lookup (no DB writes)
     if (req.method === 'GET' && url.searchParams.get('probe') === '1') {
       const endpointCheck = validateOrgEndpoint();
       if (!endpointCheck.ok) {
@@ -597,8 +731,8 @@ serve(async (req) => {
         );
       }
 
+      // 1) WSDL check
       const wsdlResult = await probeWsdl(correlationId);
-
       if (!wsdlResult.ok) {
         return jsonResponse(
           {
@@ -614,14 +748,38 @@ serve(async (req) => {
         );
       }
 
+      // 2) Parse WSDL + perform one real org call
+      const rto = url.searchParams.get('rto') || '91020';
+      const contract = await getWsdlContract('org_details', ['GetOrganisation', 'GetDetails'], correlationId);
+      const innerBody = contract.request_wrapper_element
+        ? `<svc:${contract.request_wrapper_element}><svc:${contract.code_element}>${escapeXml(rto)}</svc:${contract.code_element}></svc:${contract.request_wrapper_element}>`
+        : `<svc:${contract.code_element}>${escapeXml(rto)}</svc:${contract.code_element}>`;
+
+      const soapResult = await makeSoapRequest(ORG_ENDPOINT, contract, innerBody, correlationId);
+
+      const minimal = soapResult.xml
+        ? {
+            legal_name: extractValue(soapResult.xml, 'LegalName') || extractValue(soapResult.xml, 'Name'),
+            trading_name: extractValue(soapResult.xml, 'TradingName'),
+            abn: extractValue(soapResult.xml, 'ABN'),
+            status: extractValue(soapResult.xml, 'Status'),
+          }
+        : null;
+
       return jsonResponse(
         {
-          ok: true,
+          ok: !soapResult.error && !!minimal?.legal_name,
           correlation_id: correlationId,
-          stage: 'wsdl.ok',
-          http_status: 200,
+          stage: 'probe.complete',
           endpoint_used: ORG_ENDPOINT,
-          response_snippet: wsdlResult.response_snippet,
+          wsdl_ok: true,
+          soap_version: contract.soap_version,
+          action_used: contract.soap_action,
+          request_root_element: contract.request_root_element,
+          http_status: soapResult.httpStatus,
+          summary_found: !!minimal?.legal_name,
+          summary: minimal,
+          error: soapResult.error,
         },
         200,
       );
@@ -773,6 +931,9 @@ serve(async (req) => {
         auth_ok: orgResult.authOk,
         endpoint_ok: orgResult.endpointOk,
         endpoint_used: ORG_ENDPOINT,
+        soap_version: orgResult.soapVersion,
+        action_used: orgResult.actionUsed,
+        request_root_element: orgResult.requestRootElement,
       }, statusCode);
     }
 
