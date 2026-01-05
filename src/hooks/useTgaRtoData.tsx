@@ -217,13 +217,15 @@ export function useTgaRtoData(tenantId: number | null, rtoCode: string | null) {
 
       // Check if the edge function returned an error
       if (response.data?.error) {
-        console.error('Import error:', response.data.error);
+        const errorMsg = response.data.message || response.data.error;
+        const corrId = response.data.correlation_id;
+        console.error('Import error:', errorMsg, corrId ? `(${corrId})` : '');
         toast({
           title: 'Import Failed',
-          description: response.data.error,
+          description: corrId ? `${errorMsg} (Ref: ${corrId})` : errorMsg,
           variant: 'destructive'
         });
-        return { success: false, error: response.data.error };
+        return { success: false, error: errorMsg };
       }
 
       toast({
