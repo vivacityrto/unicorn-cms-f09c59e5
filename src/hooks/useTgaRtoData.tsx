@@ -230,34 +230,39 @@ export function useTgaRtoData(tenantId: number | null, rtoCode: string | null) {
         parsed = null;
       }
 
-      if (!res.ok) {
-        const message = parsed?.message || parsed?.error || res.statusText || 'Request failed';
-        const stage = parsed?.stage;
-        const correlationId = parsed?.correlation_id;
-        const snippet = !parsed && text ? text.slice(0, 300) : undefined;
+       if (!res.ok) {
+         const stage = parsed?.stage as string | undefined;
+         const correlationId = parsed?.correlation_id as string | undefined;
 
-        toast({
-          title: 'Import Failed',
-          description: (
-            <div className="space-y-1">
-              <p>{message}</p>
-              {stage && <p className="text-xs text-muted-foreground">Stage: {stage}</p>}
-              {correlationId && (
-                <button
-                  onClick={() => navigator.clipboard.writeText(correlationId)}
-                  className="text-xs underline text-muted-foreground hover:text-foreground"
-                >
-                  Copy ref: {correlationId}
-                </button>
-              )}
-              {snippet && <p className="text-xs text-muted-foreground">{snippet}</p>}
-            </div>
-          ),
-          variant: 'destructive'
-        });
+         const message =
+           stage === 'soap.endpoint_not_found'
+             ? 'TGA endpoint misconfigured. Contact support.'
+             : parsed?.message || parsed?.error || res.statusText || 'Request failed';
 
-        return { success: false, error: message, correlationId, stage };
-      }
+         const snippet = !parsed && text ? text.slice(0, 300) : undefined;
+
+         toast({
+           title: 'Import Failed',
+           description: (
+             <div className="space-y-1">
+               <p>{message}</p>
+               {stage && <p className="text-xs text-muted-foreground">Stage: {stage}</p>}
+               {correlationId && (
+                 <button
+                   onClick={() => navigator.clipboard.writeText(correlationId)}
+                   className="text-xs underline text-muted-foreground hover:text-foreground"
+                 >
+                   Copy ref: {correlationId}
+                 </button>
+               )}
+               {snippet && <p className="text-xs text-muted-foreground">{snippet}</p>}
+             </div>
+           ),
+           variant: 'destructive'
+         });
+
+         return { success: false, error: message, correlationId, stage };
+       }
 
       if (parsed?.ok === false) {
         const message = parsed.message || 'Import failed';
