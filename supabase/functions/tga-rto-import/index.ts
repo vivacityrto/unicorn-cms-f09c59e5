@@ -7,12 +7,13 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// TGA SOAP Endpoint - using sandbox with /Organisation suffix like the working function
-const TGA_ORG_ENDPOINT = 'https://ws.sandbox.training.gov.au/Deewr.Tga.Webservices/OrganisationServiceV13.svc/Organisation';
+// TGA SOAP Endpoint - use production by default, can override with TGA_WS_BASE secret
+const TGA_WS_BASE = Deno.env.get('TGA_WS_BASE') || 'https://ws.training.gov.au';
+const TGA_ORG_ENDPOINT = `${TGA_WS_BASE}/Deewr.Tga.Webservices/OrganisationServiceV13.svc/Organisation`;
 
-// Use sandbox credentials (matching the working get-organisation-details function)
-const TGA_USERNAME = Deno.env.get('TGA_SANDBOX_USERNAME') || Deno.env.get('TGA_WS_USERNAME') || '';
-const TGA_PASSWORD = Deno.env.get('TGA_SANDBOX_PASSWORD') || Deno.env.get('TGA_WS_PASSWORD') || '';
+// Use production credentials (TGA_WS_*) as primary, sandbox as fallback
+const TGA_USERNAME = Deno.env.get('TGA_WS_USERNAME') || Deno.env.get('TGA_SANDBOX_USERNAME') || '';
+const TGA_PASSWORD = Deno.env.get('TGA_WS_PASSWORD') || Deno.env.get('TGA_SANDBOX_PASSWORD') || '';
 
 function escapeXml(unsafe: string): string {
   return unsafe
@@ -74,7 +75,7 @@ async function makeSoapRequest(action: string, body: string): Promise<{ xml: str
   
   if (!TGA_USERNAME || !TGA_PASSWORD) {
     console.error('[TGA RTO Import] Missing TGA credentials');
-    return { xml: '', error: 'TGA SOAP credentials not configured. Set TGA_SANDBOX_USERNAME and TGA_SANDBOX_PASSWORD.' };
+    return { xml: '', error: 'TGA SOAP credentials not configured. Set TGA_WS_USERNAME and TGA_WS_PASSWORD secrets.' };
   }
 
   const soapEnvelope = buildSoapEnvelope(body, action);

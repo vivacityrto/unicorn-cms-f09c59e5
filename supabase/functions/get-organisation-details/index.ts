@@ -1,9 +1,12 @@
 import { corsHeaders } from '../_shared/cors.ts';
 
-const SANDBOX_URL = 'https://ws.sandbox.training.gov.au/Deewr.Tga.Webservices/OrganisationServiceV13.svc/Organisation';
+// Use production endpoint - fallback to sandbox if TGA_WS_BASE is set to sandbox
+const TGA_WS_BASE = Deno.env.get('TGA_WS_BASE') || 'https://ws.training.gov.au';
+const TGA_ENDPOINT = `${TGA_WS_BASE}/Deewr.Tga.Webservices/OrganisationServiceV13.svc/Organisation`;
 
-const SANDBOX_USERNAME = Deno.env.get('TGA_SANDBOX_USERNAME') || '';
-const SANDBOX_PASSWORD = Deno.env.get('TGA_SANDBOX_PASSWORD') || '';
+// Use production credentials (TGA_WS_*) as primary, sandbox as fallback
+const TGA_USERNAME = Deno.env.get('TGA_WS_USERNAME') || Deno.env.get('TGA_SANDBOX_USERNAME') || '';
+const TGA_PASSWORD = Deno.env.get('TGA_WS_PASSWORD') || Deno.env.get('TGA_SANDBOX_PASSWORD') || '';
 
 // RTO code validation regex (typically numeric, 4-5 digits)
 const RTO_CODE_PATTERN = /^\d{4,5}$/;
@@ -48,12 +51,12 @@ Deno.serve(async (req) => {
     }
 
     // Build SOAP envelope with WS-Security
-    const securityHeader = SANDBOX_USERNAME && SANDBOX_PASSWORD ? `
+    const securityHeader = TGA_USERNAME && TGA_PASSWORD ? `
   <soap:Header>
     <wsse:Security xmlns:wsse="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-secext-1.0.xsd">
       <wsse:UsernameToken>
-        <wsse:Username>${escapeXml(SANDBOX_USERNAME)}</wsse:Username>
-        <wsse:Password Type="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-username-token-profile-1.0#PasswordText">${escapeXml(SANDBOX_PASSWORD)}</wsse:Password>
+        <wsse:Username>${escapeXml(TGA_USERNAME)}</wsse:Username>
+        <wsse:Password Type="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-username-token-profile-1.0#PasswordText">${escapeXml(TGA_PASSWORD)}</wsse:Password>
       </wsse:UsernameToken>
     </wsse:Security>
   </soap:Header>` : '';
@@ -69,10 +72,10 @@ Deno.serve(async (req) => {
   </soap:Body>
 </soap:Envelope>`;
 
-    console.log(`Fetching organisation details for RTO code: ${sanitizedCode}`);
+    console.log(`Fetching organisation details for RTO code: ${sanitizedCode} from ${TGA_ENDPOINT}`);
     
     // Call SOAP service
-    const response = await fetch(SANDBOX_URL, {
+    const response = await fetch(TGA_ENDPOINT, {
       method: 'POST',
       headers: {
         'Content-Type': 'text/xml; charset=utf-8',
@@ -86,10 +89,10 @@ Deno.serve(async (req) => {
       console.error('SOAP Error:', errorText);
       
       // Check for authentication errors
-      if (errorText.includes('InvalidSecurity')) {
+      if (errorText.includes('InvalidSecurity') || errorText.includes('Unknown user')) {
         return new Response(
           JSON.stringify({ 
-            error: 'Authentication required. Please configure TGA_SANDBOX_USERNAME and TGA_SANDBOX_PASSWORD.',
+            error: 'Authentication failed. Please check TGA_WS_USERNAME and TGA_WS_PASSWORD secrets.',
             organisation: null,
             hint: 'Register at training.gov.au for sandbox credentials'
           }),
