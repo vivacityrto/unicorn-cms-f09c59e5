@@ -109,10 +109,18 @@ function isValidEndpoint(url: string): boolean {
   return true;
 }
 
+function normalizeEndpoint(url: string): string {
+  // Fix common casing issues - Training.gov.au uses "WebServices" not "Webservices"
+  return url
+    .replace(/Deewr\.Tga\.Webservices/gi, 'Deewr.Tga.WebServices')
+    .replace(/webservices/gi, 'WebServices');
+}
+
 function getOrgEndpoint(): string {
   const customEndpoint = Deno.env.get('TGA_ORG_ENDPOINT');
   if (customEndpoint && isValidEndpoint(customEndpoint)) {
-    return customEndpoint;
+    // Always normalize the endpoint to fix casing issues
+    return normalizeEndpoint(customEndpoint);
   }
   return TGA_ORG_ENDPOINT;
 }
