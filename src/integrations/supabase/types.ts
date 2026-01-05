@@ -6388,6 +6388,50 @@ export type Database = {
           },
         ]
       }
+      tenant_members: {
+        Row: {
+          created_at: string
+          id: string
+          invited_at: string | null
+          joined_at: string | null
+          role: string
+          status: string
+          tenant_id: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          invited_at?: string | null
+          joined_at?: string | null
+          role?: string
+          status?: string
+          tenant_id: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          invited_at?: string | null
+          joined_at?: string | null
+          role?: string
+          status?: string
+          tenant_id?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tenant_members_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tenant_notes: {
         Row: {
           assignees: string[] | null
@@ -7165,6 +7209,7 @@ export type Database = {
           email: string
           email_address: string | null
           first_name: string
+          global_role: string | null
           head_office_address: string | null
           is_team: boolean | null
           job_title: string | null
@@ -7227,6 +7272,7 @@ export type Database = {
           email: string
           email_address?: string | null
           first_name: string
+          global_role?: string | null
           head_office_address?: string | null
           is_team?: boolean | null
           job_title?: string | null
@@ -7289,6 +7335,7 @@ export type Database = {
           email?: string
           email_address?: string | null
           first_name?: string
+          global_role?: string | null
           head_office_address?: string | null
           is_team?: boolean | null
           job_title?: string | null
@@ -7701,6 +7748,8 @@ export type Database = {
         Args: { _meeting_id: string; _roles: string[]; _user_id: string }
         Returns: boolean
       }
+      has_tenant_access: { Args: { _tenant_id: number }; Returns: boolean }
+      has_tenant_admin: { Args: { _tenant_id: number }; Returns: boolean }
       invite_user: {
         Args: { p_email: string; p_role?: string; p_tenant_id: string }
         Returns: string

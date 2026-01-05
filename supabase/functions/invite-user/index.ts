@@ -7,7 +7,7 @@ type UnicornRole =
   | "Team Leader"
   | "Team Member"
   | "Admin"
-  | "User";
+  | "General User";
 
 type Payload = {
   email: string;
@@ -24,7 +24,7 @@ const VIVACITY_ROLES: UnicornRole[] = [
   "Team Leader",
   "Team Member",
 ];
-const CLIENT_ROLES: UnicornRole[] = ["Admin", "User"];
+const CLIENT_ROLES: UnicornRole[] = ["Admin", "General User"];
 
 function isValidEmail(e: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
@@ -80,7 +80,7 @@ serve(async (req) => {
     // 3. Get caller's profile and verify permissions
     const { data: callerProfile, error: roleErr } = await supabase
       .from("users")
-      .select("unicorn_role, tenant_id, tenant_role")
+      .select("unicorn_role, global_role, tenant_id, tenant_role")
       .eq("user_uuid", callerUser.user.id)
       .maybeSingle();
 
@@ -113,7 +113,8 @@ serve(async (req) => {
     }
 
     // Check permissions: Super Admin can invite anyone, Tenant Admins can invite to their own tenant
-    const isSuperAdmin = ["Super Admin", "SuperAdmin"].includes(callerProfile.unicorn_role);
+    // Check global_role for SuperAdmin status
+    const isSuperAdmin = callerProfile.global_role === 'SuperAdmin';
     const isTenantAdmin = callerProfile.tenant_id === payload.tenant_id && 
       (callerProfile.unicorn_role === 'Admin' || callerProfile.tenant_role === 'admin');
 
