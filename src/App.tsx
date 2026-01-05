@@ -67,6 +67,7 @@ import ResourceFavourites from "./pages/ResourceFavourites";
 import ResourceUpdatesLog from "./pages/ResourceUpdatesLog";
 import MembershipDashboardWrapper from "./pages/MembershipDashboardWrapper";
 import ClientDetailWrapper from "./pages/ClientDetailWrapper";
+import AdminTgaIntegrationWrapper from "./pages/AdminTgaIntegrationWrapper";
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -531,6 +532,8 @@ const App = () => (
             <Route path="/membership-dashboard" element={<ProtectedRoute><MembershipDashboardWrapper /></ProtectedRoute>} />
             {/* Client Detail (new client-first view) */}
             <Route path="/clients/:tenantId" element={<ProtectedRoute><ClientDetailWrapper /></ProtectedRoute>} />
+            {/* Admin Integrations */}
+            <Route path="/admin/integrations/tga" element={<ProtectedRoute><AdminTgaIntegrationWrapper /></ProtectedRoute>} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

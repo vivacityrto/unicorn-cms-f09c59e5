@@ -6795,6 +6795,115 @@ export type Database = {
           },
         ]
       }
+      tga_cache: {
+        Row: {
+          created_at: string
+          fetched_at: string
+          id: string
+          product_code: string
+          product_type: string
+          release_version: string | null
+          source_hash: string
+          source_payload: Json | null
+          status: string | null
+          superseded_by: string | null
+          tenant_id: number
+          title: string
+          training_package: string | null
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          created_at?: string
+          fetched_at?: string
+          id?: string
+          product_code: string
+          product_type: string
+          release_version?: string | null
+          source_hash: string
+          source_payload?: Json | null
+          status?: string | null
+          superseded_by?: string | null
+          tenant_id: number
+          title: string
+          training_package?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          created_at?: string
+          fetched_at?: string
+          id?: string
+          product_code?: string
+          product_type?: string
+          release_version?: string | null
+          source_hash?: string
+          source_payload?: Json | null
+          status?: string | null
+          superseded_by?: string | null
+          tenant_id?: number
+          title?: string
+          training_package?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tga_cache_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tga_import_jobs: {
+        Row: {
+          codes: string[]
+          created_at: string
+          created_by: string
+          error: string | null
+          id: string
+          results: Json | null
+          rows_upserted: number | null
+          status: string
+          tenant_id: number
+          updated_at: string
+        }
+        Insert: {
+          codes: string[]
+          created_at?: string
+          created_by: string
+          error?: string | null
+          id?: string
+          results?: Json | null
+          rows_upserted?: number | null
+          status?: string
+          tenant_id: number
+          updated_at?: string
+        }
+        Update: {
+          codes?: string[]
+          created_at?: string
+          created_by?: string
+          error?: string | null
+          id?: string
+          results?: Json | null
+          rows_upserted?: number | null
+          status?: string
+          tenant_id?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tga_import_jobs_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       time_tracking: {
         Row: {
           client_id: string | null
@@ -7886,6 +7995,14 @@ export type Database = {
       tenant_has_package: {
         Args: { p_package_id: number; p_tenant_id: number }
         Returns: boolean
+      }
+      tga_health_check: {
+        Args: { p_sample_codes?: string[]; p_tenant_id: number }
+        Returns: Json
+      }
+      tga_queue_sync: {
+        Args: { p_codes: string[]; p_tenant_id: number }
+        Returns: Json
       }
       toggle_favourite: { Args: { p_resource_id: string }; Returns: boolean }
       transition_stage_state: {
