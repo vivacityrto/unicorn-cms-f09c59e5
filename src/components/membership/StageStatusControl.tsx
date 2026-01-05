@@ -77,37 +77,21 @@ export function StageStatusControl({ stageState, onStatusChange, compact = false
   const transitionStatus = async (newStatus: StageStatus, statusReason?: string) => {
     setIsSubmitting(true);
     try {
-      // Use raw SQL query since table isn't in generated types yet
-      const updateData = {
-        status: newStatus,
-        updated_at: new Date().toISOString(),
-        updated_by: profile?.user_uuid,
-        blocked_at: newStatus === 'blocked' ? new Date().toISOString() : null,
-        blocked_reason: newStatus === 'blocked' ? statusReason : null,
-        waiting_at: newStatus === 'waiting' ? new Date().toISOString() : null,
-        waiting_reason: newStatus === 'waiting' ? statusReason : null,
-        completed_at: newStatus === 'complete' || newStatus === 'skipped' ? new Date().toISOString() : null,
-        started_at: newStatus === 'in_progress' && !stageState.started_at ? new Date().toISOString() : stageState.started_at,
-      };
-      
+      // Call the transition_stage_state RPC
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { error } = await (supabase as any)
-        .from('client_package_stage_state')
-        .update(updateData)
-        .eq('id', stageState.id);
-
-      // Also insert audit log
-      await (supabase as any)
-        .from('stage_state_audit_log')
-        .insert({
-          client_package_stage_state_id: stageState.id,
-          previous_status: stageState.status,
-          new_status: newStatus,
-          reason: statusReason || null,
-          changed_by: profile?.user_uuid,
-        });
+      const { data, error } = await (supabase as any).rpc('transition_stage_state', {
+        p_stage_state_id: stageState.id,
+        p_new_status: newStatus,
+        p_reason: statusReason || null,
+        p_user_id: profile?.user_uuid,
+      });
 
       if (error) throw error;
+      
+      // Check RPC result
+      if (data && !data.success) {
+        throw new Error(data.error || 'Transition failed');
+      }
 
       toast({
         title: 'Stage updated',
