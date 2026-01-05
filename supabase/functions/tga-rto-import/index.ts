@@ -8,27 +8,35 @@ const corsHeaders = {
 };
 
 // ============================================================================
-// TGA Production SOAP Endpoints - EXACT URLs from working tga-sync function
-// CRITICAL: "WebServices" casing must be uppercase S - this is proven working
+// SECRET RESOLUTION - Backward compatible across naming schemes
 // ============================================================================
-const TGA_ENDPOINTS = {
-  organisation: 'https://ws.training.gov.au/Deewr.Tga.WebServices/OrganisationServiceV13.svc',
-  training: 'https://ws.training.gov.au/Deewr.Tga.WebServices/TrainingComponentServiceV13.svc',
-};
 
-// Credentials from env (same as tga-sync)
-const TGA_WS_USERNAME = Deno.env.get('TGA_WS_USERNAME');
-const TGA_WS_PASSWORD = Deno.env.get('TGA_WS_PASSWORD');
+function getSecret(nameList: string[]): string | undefined {
+  for (const name of nameList) {
+    const value = Deno.env.get(name);
+    if (value && value.trim()) {
+      return value.trim();
+    }
+  }
+  return undefined;
+}
 
-// SOAP namespaces - EXACT match with tga-sync
+// Backward-compatible secret names (Unicorn + ComplyHub)
+const TGA_WS_USERNAME = getSecret(['TGA_WS_USERNAME', 'TGA_USERNAME']);
+const TGA_WS_PASSWORD = getSecret(['TGA_WS_PASSWORD', 'TGA_PASSWORD']);
+const TGA_ORG_ENDPOINT_OVERRIDE = getSecret(['TGA_ORG_ENDPOINT']);
+const TGA_COMPONENT_ENDPOINT_OVERRIDE = getSecret(['TGA_COMPONENT_ENDPOINT', 'TGA_COMP_ENDPOINT']);
+const TGA_TIMEOUT_MS = parseInt(getSecret(['TGA_TIMEOUT_MS']) || '30000', 10);
+
+// Default base URL
+const DEFAULT_TGA_BASE = 'https://ws.training.gov.au/Deewr.Tga.WebServices';
+
+// SOAP namespaces
 const SOAP_NS = {
   soap: 'http://www.w3.org/2003/05/soap-envelope',
   org: 'http://training.gov.au/services/Organisation',
   tc: 'http://training.gov.au/services/TrainingComponent',
 };
-
-// Request timeout
-const REQUEST_TIMEOUT_MS = 30000;
 
 function generateCorrelationId(): string {
   return `tga-${crypto.randomUUID()}`;
@@ -61,10 +69,163 @@ function jsonResponse(body: Record<string, unknown>, status = 200): Response {
 }
 
 // ============================================================================
-// SOAP LAYER - DIRECTLY FROM WORKING tga-sync IMPLEMENTATION
+// WSDL ENDPOINT DISCOVERY
 // ============================================================================
 
-// Build Basic Auth header - EXACT copy from tga-sync
+interface EndpointDiscoveryResult {
+  ok: boolean;
+  serviceEndpoint: string | null;
+  wsdlUrl: string | null;
+  candidatesTried: string[];
+  httpStatus: number;
+  error?: string;
+}
+
+function normalizeOrgBase(endpoint: string | undefined): string {
+  if (!endpoint) {
+    return DEFAULT_TGA_BASE;
+  }
+  
+  let base = endpoint.trim();
+  
+  // Strip ?wsdl if present
+  if (base.endsWith('?wsdl')) {
+    base = base.slice(0, -5);
+  }
+  
+  // If it already ends with .svc, return parent directory
+  if (base.endsWith('.svc')) {
+    const lastSlash = base.lastIndexOf('/');
+    if (lastSlash > 0) {
+      return base.slice(0, lastSlash);
+    }
+  }
+  
+  // Remove trailing slash
+  if (base.endsWith('/')) {
+    base = base.slice(0, -1);
+  }
+  
+  return base;
+}
+
+function buildWsdlCandidates(orgBase: string): string[] {
+  const candidates: string[] = [];
+  
+  // V13 first (preferred), then non-versioned
+  candidates.push(`${orgBase}/OrganisationServiceV13.svc?wsdl`);
+  candidates.push(`${orgBase}/OrganisationService.svc?wsdl`);
+  
+  return candidates;
+}
+
+async function discoverEndpointFromWsdl(
+  correlationId: string
+): Promise<EndpointDiscoveryResult> {
+  const orgBase = normalizeOrgBase(TGA_ORG_ENDPOINT_OVERRIDE);
+  const candidates = buildWsdlCandidates(orgBase);
+  const candidatesTried: string[] = [];
+  
+  logStage(correlationId, 'config.resolve', {
+    org_base: orgBase,
+    candidates: candidates,
+    has_endpoint_override: !!TGA_ORG_ENDPOINT_OVERRIDE,
+  });
+
+  for (const wsdlUrl of candidates) {
+    candidatesTried.push(wsdlUrl);
+    
+    try {
+      logStage(correlationId, 'wsdl.fetch', { wsdl_url: wsdlUrl });
+      
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), TGA_TIMEOUT_MS);
+      
+      const response = await fetch(wsdlUrl, {
+        method: 'GET',
+        headers: { 'Accept': 'text/xml, application/xml' },
+        signal: controller.signal,
+      });
+      
+      clearTimeout(timeoutId);
+      
+      if (response.status !== 200) {
+        logStage(correlationId, 'wsdl.fetch.fail', {
+          wsdl_url: wsdlUrl,
+          http_status: response.status,
+        });
+        continue;
+      }
+      
+      const wsdlXml = await response.text();
+      logStage(correlationId, 'wsdl.parse', {
+        wsdl_url: wsdlUrl,
+        wsdl_length: wsdlXml.length,
+      });
+      
+      // Extract SOAP 1.2 address first, then SOAP 1.1
+      let serviceEndpoint = extractSoapAddress(wsdlXml, 'soap12');
+      if (!serviceEndpoint) {
+        serviceEndpoint = extractSoapAddress(wsdlXml, 'soap');
+      }
+      
+      if (serviceEndpoint) {
+        logStage(correlationId, 'wsdl.discovered', {
+          wsdl_url: wsdlUrl,
+          service_endpoint: serviceEndpoint,
+        });
+        
+        return {
+          ok: true,
+          serviceEndpoint,
+          wsdlUrl,
+          candidatesTried,
+          httpStatus: 200,
+        };
+      } else {
+        logStage(correlationId, 'wsdl.parse.no_address', { wsdl_url: wsdlUrl });
+      }
+    } catch (err) {
+      const errorMsg = err instanceof Error ? err.message : String(err);
+      logStage(correlationId, 'wsdl.fetch.error', {
+        wsdl_url: wsdlUrl,
+        error: errorMsg,
+      });
+    }
+  }
+  
+  // All candidates failed
+  return {
+    ok: false,
+    serviceEndpoint: null,
+    wsdlUrl: null,
+    candidatesTried,
+    httpStatus: 404,
+    error: `No valid WSDL found. Tried: ${candidatesTried.join(', ')}`,
+  };
+}
+
+function extractSoapAddress(wsdlXml: string, prefix: string): string | null {
+  // Match <soap12:address location="..." /> or <soap:address location="..." />
+  const patterns = [
+    new RegExp(`<${prefix}:address[^>]+location=["']([^"']+)["']`, 'i'),
+    new RegExp(`<wsdl:port[^>]*>[\\s\\S]*?<${prefix}:address[^>]+location=["']([^"']+)["']`, 'i'),
+  ];
+  
+  for (const pattern of patterns) {
+    const match = wsdlXml.match(pattern);
+    if (match && match[1]) {
+      return match[1];
+    }
+  }
+  
+  return null;
+}
+
+// ============================================================================
+// SOAP LAYER - Using discovered endpoint
+// ============================================================================
+
 function getBasicAuthHeader(): string {
   if (!TGA_WS_USERNAME || !TGA_WS_PASSWORD) {
     throw new Error('TGA SOAP credentials not configured');
@@ -73,7 +234,6 @@ function getBasicAuthHeader(): string {
   return `Basic ${credentials}`;
 }
 
-// Build SOAP envelope for Organisation service - EXACT copy from tga-sync
 function buildOrgSoapRequest(action: string, body: string): string {
   return `<?xml version="1.0" encoding="utf-8"?>
 <soap12:Envelope xmlns:soap12="${SOAP_NS.soap}" xmlns:org="${SOAP_NS.org}">
@@ -81,18 +241,6 @@ function buildOrgSoapRequest(action: string, body: string): string {
     <org:${action}>
       ${body}
     </org:${action}>
-  </soap12:Body>
-</soap12:Envelope>`;
-}
-
-// Build SOAP envelope for Training Component service - EXACT copy from tga-sync
-function buildTCSoapRequest(action: string, body: string): string {
-  return `<?xml version="1.0" encoding="utf-8"?>
-<soap12:Envelope xmlns:soap12="${SOAP_NS.soap}" xmlns:tc="${SOAP_NS.tc}">
-  <soap12:Body>
-    <tc:${action}>
-      ${body}
-    </tc:${action}>
   </soap12:Body>
 </soap12:Envelope>`;
 }
@@ -105,14 +253,13 @@ interface SoapRequestResult {
   responseSnippet?: string;
 }
 
-// Make SOAP request - BASED ON tga-sync with added diagnostics for tga-rto-import
 async function makeSoapRequest(
   endpoint: string,
   soapAction: string,
   body: string,
   correlationId: string
 ): Promise<SoapRequestResult> {
-  logStage(correlationId, 'soap.request.build', {
+  logStage(correlationId, 'soap.post', {
     endpoint_used: endpoint,
     soap_action: soapAction,
     body_length: body.length,
@@ -120,7 +267,7 @@ async function makeSoapRequest(
 
   try {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+    const timeoutId = setTimeout(() => controller.abort(), TGA_TIMEOUT_MS);
 
     const response = await fetch(endpoint, {
       method: 'POST',
@@ -135,7 +282,7 @@ async function makeSoapRequest(
     clearTimeout(timeoutId);
     const xmlResponse = await response.text();
 
-    logStage(correlationId, 'soap.fetch', {
+    logStage(correlationId, 'soap.response', {
       endpoint_used: endpoint,
       http_status: response.status,
       response_length: xmlResponse.length,
@@ -173,7 +320,7 @@ async function makeSoapRequest(
 }
 
 // ============================================================================
-// XML PARSING HELPERS - EXACT copy from tga-sync
+// XML PARSING HELPERS
 // ============================================================================
 
 function extractValue(xml: string, tagName: string): string | null {
@@ -188,19 +335,6 @@ function extractValue(xml: string, tagName: string): string | null {
   return null;
 }
 
-function extractMultiple(xml: string, containerTag: string, itemTag: string): string[] {
-  const containerMatch = xml.match(new RegExp(`<(?:a:)?${containerTag}[^>]*>([\\s\\S]*?)<\\/(?:a:)?${containerTag}>`, 'i'));
-  if (!containerMatch) return [];
-  
-  const items: string[] = [];
-  const itemPattern = new RegExp(`<(?:a:)?${itemTag}[^>]*>([\\s\\S]*?)<\\/(?:a:)?${itemTag}>`, 'gi');
-  let match;
-  while ((match = itemPattern.exec(containerMatch[1])) !== null) {
-    items.push(match[1]);
-  }
-  return items;
-}
-
 function extractMultipleBlocks(xml: string, tagName: string): string[] {
   const pattern = new RegExp(`<a:${tagName}[^>]*>[\\s\\S]*?</a:${tagName}>`, 'gi');
   const matches = xml.match(pattern) || [];
@@ -212,7 +346,7 @@ function extractMultipleBlocks(xml: string, tagName: string): string[] {
 }
 
 // ============================================================================
-// ORGANISATION DATA FETCHING - USING tga-sync LOGIC
+// ORGANISATION DATA FETCHING
 // ============================================================================
 
 interface OrganisationSummary {
@@ -268,22 +402,48 @@ interface FetchOrgResult {
   units: ScopeItem[];
   courses: string[];
   httpStatus: number;
+  endpointUsed: string;
+  wsdlUrlUsed: string | null;
   error?: string;
   responseSnippet?: string;
 }
 
-async function fetchOrganisationDetails(rtoCode: string, correlationId: string): Promise<FetchOrgResult> {
+async function fetchOrganisationDetails(
+  rtoCode: string,
+  correlationId: string
+): Promise<FetchOrgResult> {
   logStage(correlationId, 'soap.org_details', { rto_code: rtoCode });
 
-  // Use EXACT format from tga-sync
+  // First, discover the endpoint via WSDL
+  const discovery = await discoverEndpointFromWsdl(correlationId);
+  
+  if (!discovery.ok || !discovery.serviceEndpoint) {
+    return {
+      ok: false,
+      summary: null,
+      contacts: [],
+      addresses: [],
+      scopeItems: [],
+      qualifications: [],
+      skillSets: [],
+      units: [],
+      courses: [],
+      httpStatus: discovery.httpStatus,
+      endpointUsed: discovery.candidatesTried.join(', '),
+      wsdlUrlUsed: null,
+      error: discovery.error || 'WSDL discovery failed',
+    };
+  }
+
+  const endpoint = discovery.serviceEndpoint;
   const body = buildOrgSoapRequest('GetDetails', `<org:request><org:Code>${rtoCode}</org:Code></org:request>`);
-  const result = await makeSoapRequest(TGA_ENDPOINTS.organisation, 'GetDetails', body, correlationId);
+  const result = await makeSoapRequest(endpoint, 'GetDetails', body, correlationId);
 
   if (!result.ok) {
     logStage(correlationId, 'soap.org_details.error', {
       error: result.error,
       http_status: result.httpStatus,
-      endpoint_used: TGA_ENDPOINTS.organisation,
+      endpoint_used: endpoint,
     });
 
     return {
@@ -297,13 +457,15 @@ async function fetchOrganisationDetails(rtoCode: string, correlationId: string):
       units: [],
       courses: [],
       httpStatus: result.httpStatus,
+      endpointUsed: endpoint,
+      wsdlUrlUsed: discovery.wsdlUrl,
       error: result.error,
       responseSnippet: result.responseSnippet,
     };
   }
 
   const xml = result.xml;
-  logStage(correlationId, 'soap.response.parse', { response_length: xml.length });
+  logStage(correlationId, 'soap.parse', { response_length: xml.length });
 
   // Parse summary
   const summary: OrganisationSummary = {
@@ -394,31 +556,46 @@ async function fetchOrganisationDetails(rtoCode: string, correlationId: string):
     units,
     courses,
     httpStatus: result.httpStatus,
+    endpointUsed: endpoint,
+    wsdlUrlUsed: discovery.wsdlUrl,
   };
 }
 
 // ============================================================================
-// PROBE MODE - Simple diagnostic endpoint
+// PROBE MODE
 // ============================================================================
 
 async function handleProbe(rtoCode: string, correlationId: string): Promise<Response> {
   logStage(correlationId, 'probe.start', { rto_code: rtoCode });
 
-  // Test WSDL fetch
-  let wsdlOk = false;
-  try {
-    const wsdlUrl = `${TGA_ENDPOINTS.organisation}?wsdl`;
-    const wsdlRes = await fetch(wsdlUrl, {
-      method: 'GET',
-      headers: { Accept: 'text/xml, application/xml' },
+  // Test credentials configured
+  const credentialsConfigured = !!(TGA_WS_USERNAME && TGA_WS_PASSWORD);
+  if (!credentialsConfigured) {
+    return jsonResponse({
+      ok: false,
+      correlation_id: correlationId,
+      stage: 'config.auth_failed',
+      error: 'TGA credentials not configured. Set TGA_WS_USERNAME and TGA_WS_PASSWORD.',
+      credentials_configured: false,
     });
-    wsdlOk = wsdlRes.status === 200;
-    logStage(correlationId, 'probe.wsdl', { wsdl_ok: wsdlOk, http_status: wsdlRes.status });
-  } catch (e) {
-    logStage(correlationId, 'probe.wsdl.error', { error: String(e) });
   }
 
-  // Test auth by making org details call
+  // Discover endpoint
+  const discovery = await discoverEndpointFromWsdl(correlationId);
+  
+  if (!discovery.ok) {
+    return jsonResponse({
+      ok: false,
+      correlation_id: correlationId,
+      stage: 'config.endpoint_not_found',
+      error: discovery.error,
+      candidates_tried: discovery.candidatesTried,
+      wsdl_ok: false,
+      auth_ok: credentialsConfigured,
+    });
+  }
+
+  // Fetch org details
   const orgResult = await fetchOrganisationDetails(rtoCode, correlationId);
 
   const authOk = orgResult.httpStatus !== 401 && orgResult.httpStatus !== 403;
@@ -426,20 +603,35 @@ async function handleProbe(rtoCode: string, correlationId: string): Promise<Resp
   const summaryFound = !!orgResult.summary?.legalName;
 
   logStage(correlationId, 'probe.complete', {
-    wsdl_ok: wsdlOk,
+    wsdl_ok: !!discovery.wsdlUrl,
     auth_ok: authOk,
     endpoint_ok: endpointOk,
     summary_found: summaryFound,
     http_status: orgResult.httpStatus,
+    endpoint_used: orgResult.endpointUsed,
+    wsdl_url_used: orgResult.wsdlUrlUsed,
   });
+
+  // Determine error stage if not ok
+  let stage = 'probe.complete';
+  if (!orgResult.ok) {
+    if (orgResult.httpStatus === 401 || orgResult.httpStatus === 403) {
+      stage = 'config.auth_failed';
+    } else if (orgResult.httpStatus === 404) {
+      stage = 'config.endpoint_not_found';
+    } else {
+      stage = 'soap.error';
+    }
+  }
 
   return jsonResponse({
     ok: orgResult.ok,
     correlation_id: correlationId,
-    stage: 'probe.complete',
-    endpoint_used: TGA_ENDPOINTS.organisation,
+    stage,
+    endpoint_used: orgResult.endpointUsed,
+    wsdl_url_used: orgResult.wsdlUrlUsed,
     http_status: orgResult.httpStatus,
-    wsdl_ok: wsdlOk,
+    wsdl_ok: !!discovery.wsdlUrl,
     auth_ok: authOk,
     endpoint_ok: endpointOk,
     summary_found: summaryFound,
@@ -490,8 +682,9 @@ serve(async (req) => {
         ok: true,
         correlation_id: correlationId,
         stage: 'health',
-        endpoint: TGA_ENDPOINTS.organisation,
         credentials_configured: !!(TGA_WS_USERNAME && TGA_WS_PASSWORD),
+        default_base: DEFAULT_TGA_BASE,
+        has_endpoint_override: !!TGA_ORG_ENDPOINT_OVERRIDE,
       });
     }
 
@@ -532,11 +725,10 @@ serve(async (req) => {
 
       // Update job status to running
       await supabase
-        .from('tga_import_jobs')
+        .from('tga_rto_import_jobs')
         .update({ 
           status: 'running', 
           started_at: new Date().toISOString(),
-          correlation_id: correlationId,
         })
         .eq('id', job_id);
 
@@ -547,24 +739,17 @@ serve(async (req) => {
         // Determine error type
         let stage = 'soap.error';
         if (orgResult.httpStatus === 404) {
-          stage = 'soap.endpoint.error';
+          stage = 'config.endpoint_not_found';
         } else if (orgResult.httpStatus === 401 || orgResult.httpStatus === 403) {
-          stage = 'soap.auth.error';
+          stage = 'config.auth_failed';
         }
 
         await supabase
-          .from('tga_import_jobs')
+          .from('tga_rto_import_jobs')
           .update({
             status: 'failed',
             completed_at: new Date().toISOString(),
             error_message: orgResult.error,
-            result_data: {
-              correlation_id: correlationId,
-              stage,
-              http_status: orgResult.httpStatus,
-              endpoint_used: TGA_ENDPOINTS.organisation,
-              response_snippet: orgResult.responseSnippet,
-            },
           })
           .eq('id', job_id);
 
@@ -573,7 +758,8 @@ serve(async (req) => {
           correlation_id: correlationId,
           stage,
           http_status: orgResult.httpStatus,
-          endpoint_used: TGA_ENDPOINTS.organisation,
+          endpoint_used: orgResult.endpointUsed,
+          wsdl_url_used: orgResult.wsdlUrlUsed,
           error: orgResult.error,
           response_snippet: orgResult.responseSnippet,
         });
@@ -592,12 +778,13 @@ serve(async (req) => {
 
       // Upsert organisation summary
       if (orgResult.summary) {
-        logStage(correlationId, 'db.upsert_org', { rto_code });
+        logStage(correlationId, 'db.upsert_summary', { rto_code });
         
-        const { error: orgError } = await supabase
-          .from('tga_organisations')
+        const { error: summaryError } = await supabase
+          .from('tga_rto_summary')
           .upsert({
-            code: orgResult.summary.code,
+            rto_code: orgResult.summary.code,
+            tenant_id: tenant_id,
             legal_name: orgResult.summary.legalName,
             trading_name: orgResult.summary.tradingName,
             organisation_type: orgResult.summary.organisationType,
@@ -608,13 +795,11 @@ serve(async (req) => {
             phone: orgResult.summary.phone,
             email: orgResult.summary.email,
             website: orgResult.summary.website,
-            tenant_id: tenant_id,
             fetched_at: new Date().toISOString(),
-            source_payload: orgResult.summary,
-          }, { onConflict: 'code,tenant_id' });
+          }, { onConflict: 'rto_code,tenant_id' });
 
-        if (orgError) {
-          logStage(correlationId, 'db.upsert_org.error', { error: orgError.message });
+        if (summaryError) {
+          logStage(correlationId, 'db.upsert_summary.error', { error: summaryError.message });
         } else {
           counts.org = 1;
         }
@@ -624,8 +809,15 @@ serve(async (req) => {
       if (orgResult.contacts.length > 0) {
         logStage(correlationId, 'db.upsert_contacts', { count: orgResult.contacts.length });
         
+        // Delete existing contacts first to handle count changes
+        await supabase
+          .from('tga_rto_contacts')
+          .delete()
+          .eq('rto_code', rto_code)
+          .eq('tenant_id', tenant_id);
+        
         const contactRecords = orgResult.contacts.map((c, idx) => ({
-          organisation_code: rto_code,
+          rto_code: rto_code,
           tenant_id: tenant_id,
           contact_index: idx,
           first_name: c.firstName,
@@ -636,8 +828,8 @@ serve(async (req) => {
         }));
 
         const { error: contactError } = await supabase
-          .from('tga_organisation_contacts')
-          .upsert(contactRecords, { onConflict: 'organisation_code,tenant_id,contact_index' });
+          .from('tga_rto_contacts')
+          .insert(contactRecords);
 
         if (contactError) {
           logStage(correlationId, 'db.upsert_contacts.error', { error: contactError.message });
@@ -650,8 +842,15 @@ serve(async (req) => {
       if (orgResult.addresses.length > 0) {
         logStage(correlationId, 'db.upsert_addresses', { count: orgResult.addresses.length });
         
+        // Delete existing addresses first
+        await supabase
+          .from('tga_rto_addresses')
+          .delete()
+          .eq('rto_code', rto_code)
+          .eq('tenant_id', tenant_id);
+        
         const addressRecords = orgResult.addresses.map((a, idx) => ({
-          organisation_code: rto_code,
+          rto_code: rto_code,
           tenant_id: tenant_id,
           address_index: idx,
           address_type: a.addressType,
@@ -664,8 +863,8 @@ serve(async (req) => {
         }));
 
         const { error: addrError } = await supabase
-          .from('tga_organisation_addresses')
-          .upsert(addressRecords, { onConflict: 'organisation_code,tenant_id,address_index' });
+          .from('tga_rto_addresses')
+          .insert(addressRecords);
 
         if (addrError) {
           logStage(correlationId, 'db.upsert_addresses.error', { error: addrError.message });
@@ -674,16 +873,15 @@ serve(async (req) => {
         }
       }
 
-      // Upsert scope items (qualifications, skill sets, units)
+      // Upsert qualifications
       if (orgResult.qualifications.length > 0) {
         logStage(correlationId, 'db.upsert_qualifications', { count: orgResult.qualifications.length });
         
         const qualRecords = orgResult.qualifications.map(q => ({
-          organisation_code: rto_code,
+          rto_code: rto_code,
           tenant_id: tenant_id,
-          code: q.code,
+          qualification_code: q.code,
           title: q.title,
-          component_type: q.componentType,
           is_implicit: q.isImplicit,
           start_date: q.startDate,
           end_date: q.endDate,
@@ -692,7 +890,7 @@ serve(async (req) => {
 
         const { error: qualError } = await supabase
           .from('tga_scope_qualifications')
-          .upsert(qualRecords, { onConflict: 'organisation_code,tenant_id,code' });
+          .upsert(qualRecords, { onConflict: 'rto_code,tenant_id,qualification_code' });
 
         if (qualError) {
           logStage(correlationId, 'db.upsert_qualifications.error', { error: qualError.message });
@@ -701,15 +899,15 @@ serve(async (req) => {
         }
       }
 
+      // Upsert skill sets
       if (orgResult.skillSets.length > 0) {
         logStage(correlationId, 'db.upsert_skillsets', { count: orgResult.skillSets.length });
         
         const ssRecords = orgResult.skillSets.map(s => ({
-          organisation_code: rto_code,
+          rto_code: rto_code,
           tenant_id: tenant_id,
-          code: s.code,
+          skillset_code: s.code,
           title: s.title,
-          component_type: s.componentType,
           is_implicit: s.isImplicit,
           start_date: s.startDate,
           end_date: s.endDate,
@@ -718,7 +916,7 @@ serve(async (req) => {
 
         const { error: ssError } = await supabase
           .from('tga_scope_skillsets')
-          .upsert(ssRecords, { onConflict: 'organisation_code,tenant_id,code' });
+          .upsert(ssRecords, { onConflict: 'rto_code,tenant_id,skillset_code' });
 
         if (ssError) {
           logStage(correlationId, 'db.upsert_skillsets.error', { error: ssError.message });
@@ -727,15 +925,15 @@ serve(async (req) => {
         }
       }
 
+      // Upsert units
       if (orgResult.units.length > 0) {
         logStage(correlationId, 'db.upsert_units', { count: orgResult.units.length });
         
         const unitRecords = orgResult.units.map(u => ({
-          organisation_code: rto_code,
+          rto_code: rto_code,
           tenant_id: tenant_id,
-          code: u.code,
+          unit_code: u.code,
           title: u.title,
-          component_type: u.componentType,
           is_implicit: u.isImplicit,
           start_date: u.startDate,
           end_date: u.endDate,
@@ -744,7 +942,7 @@ serve(async (req) => {
 
         const { error: unitError } = await supabase
           .from('tga_scope_units')
-          .upsert(unitRecords, { onConflict: 'organisation_code,tenant_id,code' });
+          .upsert(unitRecords, { onConflict: 'rto_code,tenant_id,unit_code' });
 
         if (unitError) {
           logStage(correlationId, 'db.upsert_units.error', { error: unitError.message });
@@ -753,19 +951,19 @@ serve(async (req) => {
         }
       }
 
-      // Upsert courses if present
+      // Upsert courses
       if (orgResult.courses.length > 0) {
         logStage(correlationId, 'db.upsert_courses', { count: orgResult.courses.length });
         
         const courseRecords = orgResult.courses.map(code => ({
-          organisation_code: rto_code,
+          rto_code: rto_code,
           tenant_id: tenant_id,
-          code,
+          course_code: code,
         }));
 
         const { error: courseError } = await supabase
           .from('tga_scope_courses')
-          .upsert(courseRecords, { onConflict: 'organisation_code,tenant_id,code' });
+          .upsert(courseRecords, { onConflict: 'rto_code,tenant_id,course_code' });
 
         if (courseError) {
           logStage(correlationId, 'db.upsert_courses.error', { error: courseError.message });
@@ -774,17 +972,20 @@ serve(async (req) => {
         }
       }
 
-      // Update job as completed
+      // Update job status
       await supabase
-        .from('tga_import_jobs')
+        .from('tga_rto_import_jobs')
         .update({
           status: 'completed',
           completed_at: new Date().toISOString(),
-          result_data: {
-            correlation_id: correlationId,
-            counts,
-            org_name: orgResult.summary?.legalName,
-          },
+          summary_fetched: !!orgResult.summary,
+          contacts_fetched: counts.contacts > 0,
+          addresses_fetched: counts.addresses > 0,
+          scope_fetched: counts.qualifications > 0 || counts.skillsets > 0 || counts.units > 0,
+          qualifications_count: counts.qualifications,
+          skillsets_count: counts.skillsets,
+          units_count: counts.units,
+          courses_count: counts.courses,
         })
         .eq('id', job_id);
 
@@ -799,6 +1000,8 @@ serve(async (req) => {
         correlation_id: correlationId,
         stage: 'done',
         org_name: orgResult.summary?.legalName,
+        endpoint_used: orgResult.endpointUsed,
+        wsdl_url_used: orgResult.wsdlUrlUsed,
         counts,
       });
     }
