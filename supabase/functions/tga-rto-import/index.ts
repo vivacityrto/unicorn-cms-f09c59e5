@@ -8,12 +8,9 @@ const corsHeaders = {
 };
 
 // TGA SOAP Endpoints - production URLs
-// Prefer env overrides so it can match the verified working endpoint configuration.
-const TGA_WS_BASE = Deno.env.get('TGA_WS_BASE') || 'https://ws.training.gov.au';
-
-// Production endpoint - V13 (default), overridable via env to avoid hardcoding a potentially incorrect path.
-const TGA_ORG_ENDPOINT = Deno.env.get('TGA_ORG_ENDPOINT') ||
-  `${TGA_WS_BASE}/Deewr.Tga.WebServices/OrganisationServiceV13.svc`;
+// CRITICAL: Use correct casing for path: WebServices (capital S), not Webservices
+const TGA_WS_BASE = 'https://ws.training.gov.au';
+const TGA_ORG_ENDPOINT = `${TGA_WS_BASE}/Deewr.Tga.WebServices/OrganisationServiceV13.svc`;
 
 // Production credentials
 const TGA_USERNAME = Deno.env.get('TGA_WS_USERNAME') || '';
@@ -24,10 +21,10 @@ const MAX_RETRIES = 2;
 const RETRY_DELAYS = [500, 1500];
 const REQUEST_TIMEOUT_MS = 30000;
 
-// TGA V13 namespace - CORRECT namespace per WSDL (matches get-organisation-details)
+// TGA V13 namespace
 const TGA_V13_NAMESPACE = 'http://training.gov.au/services/13/';
 
-// SOAP action patterns to try (ordered by likelihood) - matches get-organisation-details
+// SOAP action patterns to try (ordered by likelihood)
 const SOAP_ACTION_PATTERNS = [
   (op: string) => `"${TGA_V13_NAMESPACE}IOrganisationService/${op}"`,
   (op: string) => `${TGA_V13_NAMESPACE}IOrganisationService/${op}`,
@@ -48,33 +45,19 @@ function escapeXml(unsafe: string): string {
     .replace(/'/g, '&apos;');
 }
 
-// Staged logging helper
+// Structured logging helper
 interface StageLogData {
-  endpoint_host?: string;
-  endpoint_path?: string;
-  soap_action?: string;
-  http_status?: number;
-  response_snippet?: string;
-  count?: number;
-  error?: string;
-  fault?: { faultcode: string | null; faultstring: string | null } | null;
   [key: string]: unknown;
 }
 
 function logStage(correlationId: string, stage: string, data: StageLogData = {}) {
   const sanitized: Record<string, unknown> = { correlation_id: correlationId, stage };
   
-  if (data.endpoint_host) sanitized.endpoint_host = data.endpoint_host;
-  if (data.endpoint_path) sanitized.endpoint_path = data.endpoint_path;
-  if (data.soap_action) sanitized.soap_action = data.soap_action;
-  if (data.http_status !== undefined) sanitized.http_status = data.http_status;
-  if (data.response_snippet) sanitized.response_snippet = data.response_snippet.slice(0, 500);
-  if (data.count !== undefined) sanitized.count = data.count;
-  if (data.error) sanitized.error = data.error;
-  if (data.fault) sanitized.fault = data.fault;
-  
+  // Copy safe data, truncate long strings
   for (const [k, v] of Object.entries(data)) {
-    if (!['endpoint_host', 'endpoint_path', 'soap_action', 'http_status', 'response_snippet', 'count', 'error', 'fault'].includes(k)) {
+    if (typeof v === 'string' && v.length > 500) {
+      sanitized[k] = v.slice(0, 500) + '...';
+    } else {
       sanitized[k] = v;
     }
   }
@@ -82,14 +65,21 @@ function logStage(correlationId: string, stage: string, data: StageLogData = {})
   console.log(`[TGA] [${correlationId}] STAGE=${stage}`, JSON.stringify(sanitized));
 }
 
-function validateSecrets(): { ok: boolean; missing: string[] } {
+// Config validation
+interface ConfigValidation {
+  ok: boolean;
+  missing: string[];
+  endpoint: string;
+}
+
+function validateConfig(): ConfigValidation {
   const missing: string[] = [];
   if (!TGA_USERNAME) missing.push('TGA_WS_USERNAME');
   if (!TGA_PASSWORD) missing.push('TGA_WS_PASSWORD');
-  return { ok: missing.length === 0, missing };
+  return { ok: missing.length === 0, missing, endpoint: TGA_ORG_ENDPOINT };
 }
 
-// Build SOAP 1.1 envelope with WS-Security (matches get-organisation-details)
+// Build SOAP 1.1 envelope with WS-Security
 function buildSoap11Envelope(operation: string, bodyContent: string): string {
   const now = new Date();
   const expires = new Date(now.getTime() + 5 * 60 * 1000);
@@ -164,22 +154,27 @@ interface SoapResult {
   fault: { faultcode: string | null; faultstring: string | null } | null;
   correlationId: string;
   actionUsed?: string;
+  httpStatus?: number;
+  authOk?: boolean;
+  endpointOk?: boolean;
 }
 
-// Make SOAP 1.1 request with WS-Security (matches get-organisation-details)
+// Make SOAP 1.1 request with WS-Security
 async function makeSoapRequest(
   operation: string,
   bodyContent: string,
   correlationId: string
 ): Promise<SoapResult> {
-  const secretsCheck = validateSecrets();
-  if (!secretsCheck.ok) {
-    logStage(correlationId, 'config.validate', { error: 'Missing secrets', missing: secretsCheck.missing });
+  const config = validateConfig();
+  if (!config.ok) {
+    logStage(correlationId, 'config.missing_secret', { missing: config.missing });
     return {
       xml: '',
-      error: `TGA credentials not configured. Missing: ${secretsCheck.missing.join(', ')}`,
+      error: `TGA credentials not configured. Missing: ${config.missing.join(', ')}`,
       fault: null,
       correlationId,
+      authOk: false,
+      endpointOk: false,
     };
   }
 
@@ -193,9 +188,11 @@ async function makeSoapRequest(
 
   let lastError: Error | null = null;
   let lastFault: { faultcode: string | null; faultstring: string | null } | null = null;
-  let successAction: string | null = null;
+  let lastHttpStatus: number | undefined;
+  let authOk = true;
+  let endpointOk = true;
 
-  // Try each SOAPAction pattern (matches get-organisation-details approach)
+  // Try each SOAPAction pattern
   for (let actionIdx = 0; actionIdx < SOAP_ACTION_PATTERNS.length; actionIdx++) {
     const soapAction = SOAP_ACTION_PATTERNS[actionIdx](operation);
     
@@ -212,7 +209,6 @@ async function makeSoapRequest(
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
 
-        // SOAP 1.1 format with text/xml Content-Type and SOAPAction header
         const response = await fetch(TGA_ORG_ENDPOINT, {
           method: 'POST',
           headers: {
@@ -227,10 +223,11 @@ async function makeSoapRequest(
 
         clearTimeout(timeoutId);
         const responseText = await response.text();
+        lastHttpStatus = response.status;
 
         logStage(correlationId, 'soap.response.parse', {
           http_status: response.status,
-          response_snippet: responseText,
+          response_snippet: responseText.slice(0, 500),
           soap_action: soapAction,
         });
 
@@ -251,11 +248,15 @@ async function makeSoapRequest(
             if (fault.faultstring?.includes('Unknown user') || 
                 fault.faultstring?.includes('incorrect password') ||
                 responseText.includes('InvalidSecurity')) {
+              authOk = false;
               return {
                 xml: '',
                 error: `TGA authentication failed: ${fault.faultstring || 'Invalid credentials'}`,
                 fault,
                 correlationId,
+                httpStatus: response.status,
+                authOk: false,
+                endpointOk: true,
               };
             }
             
@@ -264,12 +265,23 @@ async function makeSoapRequest(
               error: fault.faultstring || `SOAP Fault: ${fault.faultcode}`,
               fault,
               correlationId,
+              httpStatus: response.status,
+              authOk: true,
+              endpointOk: true,
             };
           }
           
-          successAction = soapAction;
           console.log(`[TGA] [${correlationId}] Success with action: ${soapAction}, received ${responseText.length} bytes`);
-          return { xml: responseText, error: null, fault: null, correlationId, actionUsed: successAction };
+          return { 
+            xml: responseText, 
+            error: null, 
+            fault: null, 
+            correlationId, 
+            actionUsed: soapAction,
+            httpStatus: response.status,
+            authOk: true,
+            endpointOk: true,
+          };
         }
 
         // Non-OK response
@@ -277,6 +289,22 @@ async function makeSoapRequest(
         
         const fault = parseSoapFault(responseText);
         lastFault = fault;
+
+        // Check for auth errors in non-OK response
+        if (fault.faultstring?.includes('Unknown user') || 
+            fault.faultstring?.includes('incorrect password') ||
+            responseText.includes('InvalidSecurity')) {
+          authOk = false;
+          return {
+            xml: '',
+            error: `TGA authentication failed: ${fault.faultstring || 'Invalid credentials'}`,
+            fault,
+            correlationId,
+            httpStatus: response.status,
+            authOk: false,
+            endpointOk: true,
+          };
+        }
 
         // ActionNotSupported on non-OK response - try next pattern
         if (fault.faultcode?.includes('ActionNotSupported') || 
@@ -286,20 +314,9 @@ async function makeSoapRequest(
           break; // Try next action pattern
         }
 
-        // Auth errors
-        if (fault.faultstring?.includes('Unknown user') || 
-            fault.faultstring?.includes('incorrect password') ||
-            responseText.includes('InvalidSecurity')) {
-          return {
-            xml: '',
-            error: `TGA authentication failed: ${fault.faultstring || 'Invalid credentials'}`,
-            fault,
-            correlationId,
-          };
-        }
-
         // 404 - endpoint/action not found - try next pattern
         if (response.status === 404) {
+          endpointOk = false;
           console.log(`[TGA] [${correlationId}] 404 received, trying next action pattern...`);
           break; // Try next action pattern
         }
@@ -316,6 +333,9 @@ async function makeSoapRequest(
           error: `HTTP ${response.status} - ${fault.faultstring || 'endpoint or action not found'}`,
           fault,
           correlationId,
+          httpStatus: response.status,
+          authOk,
+          endpointOk: response.status !== 404,
         };
 
       } catch (error) {
@@ -338,10 +358,13 @@ async function makeSoapRequest(
     error: lastError?.message || lastFault?.faultstring || 'SOAP request failed after all action patterns',
     fault: lastFault,
     correlationId,
+    httpStatus: lastHttpStatus,
+    authOk,
+    endpointOk,
   };
 }
 
-// Fetch organisation details using GetOrganisation (matches get-organisation-details)
+// Fetch organisation details using GetOrganisation
 async function fetchOrganisationDetails(rtoCode: string, correlationId: string): Promise<{
   summary: Record<string, unknown> | null;
   contacts: Record<string, unknown>[];
@@ -350,10 +373,12 @@ async function fetchOrganisationDetails(rtoCode: string, correlationId: string):
   error: string | null;
   correlationId: string;
   fault?: { faultcode: string | null; faultstring: string | null } | null;
+  httpStatus?: number;
+  authOk?: boolean;
+  endpointOk?: boolean;
 }> {
   console.log(`[TGA] [${correlationId}] Fetching org details for RTO ${rtoCode}`);
 
-  // Body format matches get-organisation-details
   const bodyContent = `<tns:code>${escapeXml(rtoCode)}</tns:code>`;
 
   const result = await makeSoapRequest('GetOrganisation', bodyContent, correlationId);
@@ -366,7 +391,10 @@ async function fetchOrganisationDetails(rtoCode: string, correlationId: string):
       deliveryLocations: [], 
       error: result.error,
       correlationId,
-      fault: result.fault 
+      fault: result.fault,
+      httpStatus: result.httpStatus,
+      authOk: result.authOk,
+      endpointOk: result.endpointOk,
     };
   }
 
@@ -425,7 +453,10 @@ async function fetchOrganisationDetails(rtoCode: string, correlationId: string):
     addresses, 
     deliveryLocations,
     error: null,
-    correlationId
+    correlationId,
+    httpStatus: result.httpStatus,
+    authOk: result.authOk,
+    endpointOk: result.endpointOk,
   };
 }
 
@@ -439,7 +470,6 @@ async function fetchOrganisationScope(rtoCode: string, correlationId: string): P
 }> {
   console.log(`[TGA] [${correlationId}] Fetching scope for RTO ${rtoCode}`);
   
-  // Body format for GetRtoScope
   const bodyContent = `<tns:code>${escapeXml(rtoCode)}</tns:code>`;
   
   const result = await makeSoapRequest('GetRtoScope', bodyContent, correlationId);
@@ -503,83 +533,139 @@ async function fetchOrganisationScope(rtoCode: string, correlationId: string): P
   return { qualifications, skillsets, units, courses, error: null };
 }
 
+// JSON response helper
+function jsonResponse(data: Record<string, unknown>, status = 200): Response {
+  return new Response(JSON.stringify(data), {
+    status,
+    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+  });
+}
+
 serve(async (req) => {
   const correlationId = generateCorrelationId();
   
+  // Handle CORS preflight
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
-  // Handle probe request for testing (GET with ?probe=1&rto=XXXX or POST with {probe:true})
-  const url = new URL(req.url);
-  if (req.method === 'GET' && url.searchParams.get('probe') === '1') {
-    const rto = url.searchParams.get('rto') || '91020';
-    
-    logStage(correlationId, 'input.validate', { rto_code: rto, mode: 'probe_get' });
-    
-    try {
+  try {
+    // Validate config upfront
+    const config = validateConfig();
+    if (!config.ok) {
+      logStage(correlationId, 'config.missing_secret', { missing: config.missing });
+      return jsonResponse({
+        ok: false,
+        correlation_id: correlationId,
+        stage: 'config.missing_secret',
+        error: `TGA credentials not configured`,
+        missing: config.missing,
+      }, 400);
+    }
+
+    // Handle GET probe request
+    const url = new URL(req.url);
+    if (req.method === 'GET' && url.searchParams.get('probe') === '1') {
+      const rto = url.searchParams.get('rto') || '91020';
+      
+      logStage(correlationId, 'input.validate', { rto_code: rto, mode: 'probe_get' });
+      
+      // Check auth header
       const authHeader = req.headers.get('Authorization');
       if (!authHeader) {
         logStage(correlationId, 'auth.resolve', { error: 'Missing authorization' });
-        return new Response(JSON.stringify({
+        return jsonResponse({
           ok: false,
           correlation_id: correlationId,
           stage: 'auth',
-          error: 'Missing authorization header'
-        }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+          error: 'Missing authorization header',
+        }, 401);
       }
       
-      // Fetch org details as probe
+      // Fetch org details as probe (no DB writes)
       logStage(correlationId, 'soap.org_details', { rto_code: rto });
       const orgResult = await fetchOrganisationDetails(rto, correlationId);
       
       if (orgResult.error) {
-        logStage(correlationId, 'soap.org_details.error', { error: orgResult.error, fault: orgResult.fault });
-        return new Response(JSON.stringify({
+        logStage(correlationId, 'soap.org_details.error', { 
+          error: orgResult.error, 
+          fault: orgResult.fault,
+          auth_ok: orgResult.authOk,
+          endpoint_ok: orgResult.endpointOk,
+        });
+        
+        // Return diagnostic info, NOT 502
+        const statusCode = orgResult.authOk === false ? 401 : 
+                          orgResult.endpointOk === false ? 404 : 500;
+        
+        return jsonResponse({
           ok: false,
           correlation_id: correlationId,
           stage: 'soap.org_details',
+          mode: 'probe',
+          rto_code: rto,
           error: orgResult.error,
-          fault: orgResult.fault
-        }), { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+          fault: orgResult.fault,
+          http_status: orgResult.httpStatus,
+          auth_ok: orgResult.authOk,
+          endpoint_ok: orgResult.endpointOk,
+          endpoint_used: TGA_ORG_ENDPOINT,
+        }, statusCode);
       }
       
       logStage(correlationId, 'soap.org_details.success', { 
         has_summary: !!orgResult.summary,
         contacts_count: orgResult.contacts.length,
         addresses_count: orgResult.addresses.length,
-        delivery_locations_count: orgResult.deliveryLocations.length
+        delivery_locations_count: orgResult.deliveryLocations.length,
       });
       
-      return new Response(JSON.stringify({
+      return jsonResponse({
         ok: true,
         correlation_id: correlationId,
         mode: 'probe',
         rto_code: rto,
+        auth_ok: true,
+        endpoint_ok: true,
+        http_status: orgResult.httpStatus,
         summary: orgResult.summary,
         counts: {
           contacts: orgResult.contacts.length,
           addresses: orgResult.addresses.length,
-          delivery_locations: orgResult.deliveryLocations.length
-        }
-      }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
-      
-    } catch (error) {
-      const errorMsg = error instanceof Error ? error.message : String(error);
-      logStage(correlationId, 'probe.error', { error: errorMsg });
-      return new Response(JSON.stringify({
+          delivery_locations: orgResult.deliveryLocations.length,
+        },
+        endpoint_used: TGA_ORG_ENDPOINT,
+      });
+    }
+
+    // POST request - full import or probe
+    if (req.method !== 'POST') {
+      return jsonResponse({
         ok: false,
         correlation_id: correlationId,
-        stage: 'probe',
-        error: errorMsg
-      }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+        stage: 'input.validate',
+        error: 'Method not allowed. Use POST for import or GET with ?probe=1&rto=XXXXX for diagnostics.',
+      }, 405);
     }
-  }
 
-  // POST request - full import or probe
-  try {
-    const body = await req.json();
-    const { job_id, tenant_id, rto_code, probe } = body;
+    let body: Record<string, unknown>;
+    try {
+      body = await req.json();
+    } catch {
+      return jsonResponse({
+        ok: false,
+        correlation_id: correlationId,
+        stage: 'input.validate',
+        error: 'Invalid JSON body',
+      }, 400);
+    }
+
+    const { job_id, tenant_id, rto_code, probe } = body as {
+      job_id?: string;
+      tenant_id?: number;
+      rto_code?: string;
+      probe?: boolean;
+    };
     
     // Handle probe via POST
     if (probe === true) {
@@ -589,63 +675,91 @@ serve(async (req) => {
       const orgResult = await fetchOrganisationDetails(rto, correlationId);
       
       if (orgResult.error) {
-        logStage(correlationId, 'soap.org_details.error', { error: orgResult.error, fault: orgResult.fault });
-        return new Response(JSON.stringify({
+        logStage(correlationId, 'soap.org_details.error', { 
+          error: orgResult.error, 
+          fault: orgResult.fault,
+          auth_ok: orgResult.authOk,
+          endpoint_ok: orgResult.endpointOk,
+        });
+        
+        const statusCode = orgResult.authOk === false ? 401 : 
+                          orgResult.endpointOk === false ? 404 : 500;
+        
+        return jsonResponse({
           ok: false,
           correlation_id: correlationId,
           stage: 'soap.org_details',
+          mode: 'probe',
+          rto_code: rto,
           error: orgResult.error,
-          fault: orgResult.fault
-        }), { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+          fault: orgResult.fault,
+          http_status: orgResult.httpStatus,
+          auth_ok: orgResult.authOk,
+          endpoint_ok: orgResult.endpointOk,
+          endpoint_used: TGA_ORG_ENDPOINT,
+        }, statusCode);
       }
       
-      return new Response(JSON.stringify({
+      return jsonResponse({
         ok: true,
         correlation_id: correlationId,
         mode: 'probe',
         rto_code: rto,
+        auth_ok: true,
+        endpoint_ok: true,
         summary: orgResult.summary,
         counts: {
           contacts: orgResult.contacts.length,
           addresses: orgResult.addresses.length,
-          delivery_locations: orgResult.deliveryLocations.length
-        }
-      }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+          delivery_locations: orgResult.deliveryLocations.length,
+        },
+      });
     }
 
     // Full import - validate required params
     logStage(correlationId, 'input.validate', { job_id, tenant_id, rto_code });
     
     if (!job_id || !tenant_id || !rto_code) {
-      return new Response(JSON.stringify({
+      return jsonResponse({
         ok: false,
         correlation_id: correlationId,
         stage: 'input.validate',
-        error: 'Missing required params: job_id, tenant_id, rto_code'
-      }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+        error: 'Missing required params: job_id, tenant_id, rto_code',
+      }, 400);
     }
 
     // Get auth token for Supabase
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
-      return new Response(JSON.stringify({
+      return jsonResponse({
         ok: false,
         correlation_id: correlationId,
         stage: 'auth',
-        error: 'Missing authorization header'
-      }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+        error: 'Missing authorization header',
+      }, 401);
     }
 
     // Initialize Supabase client
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const supabaseUrl = Deno.env.get('SUPABASE_URL');
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+    
+    if (!supabaseUrl || !supabaseServiceKey) {
+      logStage(correlationId, 'config.missing_secret', { missing: ['SUPABASE_URL', 'SUPABASE_SERVICE_ROLE_KEY'].filter(k => !Deno.env.get(k)) });
+      return jsonResponse({
+        ok: false,
+        correlation_id: correlationId,
+        stage: 'config.missing_secret',
+        error: 'Supabase configuration missing',
+      }, 500);
+    }
+    
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     // Update job status to running
     await supabase.from('tga_rto_import_jobs').update({
       status: 'running',
       started_at: new Date().toISOString(),
-      correlation_id: correlationId
+      correlation_id: correlationId,
     }).eq('id', job_id);
 
     const imported = {
@@ -656,217 +770,210 @@ serve(async (req) => {
       qualifications: 0,
       skill_sets: 0,
       units_explicit: 0,
-      courses: 0
+      courses: 0,
     };
 
-    try {
-      // Stage 1: Fetch organisation details
-      logStage(correlationId, 'soap.org_details', { rto_code });
-      const orgResult = await fetchOrganisationDetails(rto_code, correlationId);
-      
-      if (orgResult.error) {
-        logStage(correlationId, 'soap.org_details.error', { error: orgResult.error, fault: orgResult.fault });
-        
-        await supabase.from('tga_rto_import_jobs').update({
-          status: 'failed',
-          error_message: orgResult.error,
-          completed_at: new Date().toISOString()
-        }).eq('id', job_id);
-        
-        return new Response(JSON.stringify({
-          ok: false,
-          correlation_id: correlationId,
-          stage: 'soap.org_details',
-          error: orgResult.error,
-          fault: orgResult.fault
-        }), { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
-      }
-
-      // Store summary
-      if (orgResult.summary) {
-        const { error: summaryError } = await supabase.from('tga_rto_summary').upsert({
-          tenant_id,
-          rto_code,
-          ...orgResult.summary,
-          updated_at: new Date().toISOString()
-        }, { onConflict: 'tenant_id,rto_code' });
-        
-        if (!summaryError) imported.summary = 1;
-        logStage(correlationId, 'db.upsert.summary', { count: imported.summary, error: summaryError?.message });
-      }
-
-      // Store contacts
-      if (orgResult.contacts.length > 0) {
-        // Delete existing contacts for this tenant/rto
-        await supabase.from('tga_rto_contacts').delete().eq('tenant_id', tenant_id).eq('rto_code', rto_code);
-        
-        const contactRows = orgResult.contacts.map(c => ({
-          tenant_id,
-          rto_code,
-          ...c,
-          updated_at: new Date().toISOString()
-        }));
-        
-        const { error: contactsError } = await supabase.from('tga_rto_contacts').insert(contactRows);
-        if (!contactsError) imported.contacts = orgResult.contacts.length;
-        logStage(correlationId, 'db.insert.contacts', { count: imported.contacts, error: contactsError?.message });
-      }
-
-      // Store addresses
-      if (orgResult.addresses.length > 0) {
-        await supabase.from('tga_rto_addresses').delete().eq('tenant_id', tenant_id).eq('rto_code', rto_code);
-        
-        const addressRows = orgResult.addresses.map(a => ({
-          tenant_id,
-          rto_code,
-          ...a,
-          updated_at: new Date().toISOString()
-        }));
-        
-        const { error: addressError } = await supabase.from('tga_rto_addresses').insert(addressRows);
-        if (!addressError) imported.addresses = orgResult.addresses.length;
-        logStage(correlationId, 'db.insert.addresses', { count: imported.addresses, error: addressError?.message });
-      }
-
-      // Store delivery locations
-      if (orgResult.deliveryLocations.length > 0) {
-        await supabase.from('tga_rto_delivery_locations').delete().eq('tenant_id', tenant_id).eq('rto_code', rto_code);
-        
-        const locationRows = orgResult.deliveryLocations.map(l => ({
-          tenant_id,
-          rto_code,
-          ...l,
-          updated_at: new Date().toISOString()
-        }));
-        
-        const { error: locError } = await supabase.from('tga_rto_delivery_locations').insert(locationRows);
-        if (!locError) imported.delivery_locations = orgResult.deliveryLocations.length;
-        logStage(correlationId, 'db.insert.delivery_locations', { count: imported.delivery_locations, error: locError?.message });
-      }
-
-      // Stage 2: Fetch scope
-      logStage(correlationId, 'soap.scope', { rto_code });
-      const scopeResult = await fetchOrganisationScope(rto_code, correlationId);
-      
-      if (!scopeResult.error) {
-        // Store qualifications
-        if (scopeResult.qualifications.length > 0) {
-          await supabase.from('tga_scope_qualifications').delete().eq('tenant_id', tenant_id).eq('rto_code', rto_code);
-          
-          const qualRows = scopeResult.qualifications.map(q => ({
-            tenant_id,
-            rto_code,
-            ...q,
-            updated_at: new Date().toISOString()
-          }));
-          
-          const { error: qualError } = await supabase.from('tga_scope_qualifications').insert(qualRows);
-          if (!qualError) imported.qualifications = scopeResult.qualifications.length;
-          logStage(correlationId, 'db.insert.qualifications', { count: imported.qualifications, error: qualError?.message });
-        }
-
-        // Store skill sets
-        if (scopeResult.skillsets.length > 0) {
-          await supabase.from('tga_scope_skillsets').delete().eq('tenant_id', tenant_id).eq('rto_code', rto_code);
-          
-          const skillRows = scopeResult.skillsets.map(s => ({
-            tenant_id,
-            rto_code,
-            ...s,
-            updated_at: new Date().toISOString()
-          }));
-          
-          const { error: skillError } = await supabase.from('tga_scope_skillsets').insert(skillRows);
-          if (!skillError) imported.skill_sets = scopeResult.skillsets.length;
-          logStage(correlationId, 'db.insert.skill_sets', { count: imported.skill_sets, error: skillError?.message });
-        }
-
-        // Store units
-        if (scopeResult.units.length > 0) {
-          await supabase.from('tga_scope_units').delete().eq('tenant_id', tenant_id).eq('rto_code', rto_code);
-          
-          const unitRows = scopeResult.units.map(u => ({
-            tenant_id,
-            rto_code,
-            ...u,
-            updated_at: new Date().toISOString()
-          }));
-          
-          const { error: unitError } = await supabase.from('tga_scope_units').insert(unitRows);
-          if (!unitError) imported.units_explicit = scopeResult.units.length;
-          logStage(correlationId, 'db.insert.units', { count: imported.units_explicit, error: unitError?.message });
-        }
-
-        // Store courses
-        if (scopeResult.courses.length > 0) {
-          await supabase.from('tga_scope_courses').delete().eq('tenant_id', tenant_id).eq('rto_code', rto_code);
-          
-          const courseRows = scopeResult.courses.map(c => ({
-            tenant_id,
-            rto_code,
-            ...c,
-            updated_at: new Date().toISOString()
-          }));
-          
-          const { error: courseError } = await supabase.from('tga_scope_courses').insert(courseRows);
-          if (!courseError) imported.courses = scopeResult.courses.length;
-          logStage(correlationId, 'db.insert.courses', { count: imported.courses, error: courseError?.message });
-        }
-      } else {
-        logStage(correlationId, 'soap.scope.error', { error: scopeResult.error });
-      }
-
-      // Update job status to completed
-      await supabase.from('tga_rto_import_jobs').update({
-        status: 'completed',
-        completed_at: new Date().toISOString(),
-        imported_counts: imported
-      }).eq('id', job_id);
-
-      // Log audit event
-      await supabase.from('audit_events').insert({
-        entity: 'tga_import',
-        entity_id: job_id,
-        action: 'import_completed',
-        details: { correlation_id: correlationId, rto_code, imported }
+    // Stage 1: Fetch organisation details
+    logStage(correlationId, 'soap.org_details', { rto_code });
+    const orgResult = await fetchOrganisationDetails(rto_code, correlationId);
+    
+    if (orgResult.error) {
+      logStage(correlationId, 'soap.org_details.error', { 
+        error: orgResult.error, 
+        fault: orgResult.fault,
+        auth_ok: orgResult.authOk,
+        endpoint_ok: orgResult.endpointOk,
       });
-
-      logStage(correlationId, 'import.complete', { imported });
-
-      return new Response(JSON.stringify({
-        ok: true,
-        correlation_id: correlationId,
-        rto_code,
-        imported
-      }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
-
-    } catch (error) {
-      const errorMsg = error instanceof Error ? error.message : String(error);
-      logStage(correlationId, 'import.error', { error: errorMsg });
       
       await supabase.from('tga_rto_import_jobs').update({
         status: 'failed',
-        error_message: errorMsg,
-        completed_at: new Date().toISOString()
+        error_message: orgResult.error,
+        completed_at: new Date().toISOString(),
       }).eq('id', job_id);
       
-      return new Response(JSON.stringify({
+      const statusCode = orgResult.authOk === false ? 401 : 
+                        orgResult.endpointOk === false ? 404 : 500;
+      
+      return jsonResponse({
         ok: false,
         correlation_id: correlationId,
-        stage: 'import',
-        error: errorMsg
-      }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+        stage: 'soap.org_details',
+        error: orgResult.error,
+        fault: orgResult.fault,
+        http_status: orgResult.httpStatus,
+        auth_ok: orgResult.authOk,
+        endpoint_ok: orgResult.endpointOk,
+      }, statusCode);
     }
+
+    // Store summary
+    if (orgResult.summary) {
+      const { error: summaryError } = await supabase.from('tga_rto_summary').upsert({
+        tenant_id,
+        rto_code,
+        ...orgResult.summary,
+        fetched_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      }, { onConflict: 'tenant_id,rto_code' });
+      
+      if (!summaryError) imported.summary = 1;
+      logStage(correlationId, 'db.upsert.summary', { count: imported.summary, error: summaryError?.message });
+    }
+
+    // Store contacts
+    if (orgResult.contacts.length > 0) {
+      await supabase.from('tga_rto_contacts').delete().eq('tenant_id', tenant_id).eq('rto_code', rto_code);
+      
+      const contactRows = orgResult.contacts.map(c => ({
+        tenant_id,
+        rto_code,
+        ...c,
+        updated_at: new Date().toISOString(),
+      }));
+      
+      const { error: contactsError } = await supabase.from('tga_rto_contacts').insert(contactRows);
+      if (!contactsError) imported.contacts = orgResult.contacts.length;
+      logStage(correlationId, 'db.insert.contacts', { count: imported.contacts, error: contactsError?.message });
+    }
+
+    // Store addresses
+    if (orgResult.addresses.length > 0) {
+      await supabase.from('tga_rto_addresses').delete().eq('tenant_id', tenant_id).eq('rto_code', rto_code);
+      
+      const addressRows = orgResult.addresses.map(a => ({
+        tenant_id,
+        rto_code,
+        ...a,
+        updated_at: new Date().toISOString(),
+      }));
+      
+      const { error: addressError } = await supabase.from('tga_rto_addresses').insert(addressRows);
+      if (!addressError) imported.addresses = orgResult.addresses.length;
+      logStage(correlationId, 'db.insert.addresses', { count: imported.addresses, error: addressError?.message });
+    }
+
+    // Store delivery locations
+    if (orgResult.deliveryLocations.length > 0) {
+      await supabase.from('tga_rto_delivery_locations').delete().eq('tenant_id', tenant_id).eq('rto_code', rto_code);
+      
+      const locationRows = orgResult.deliveryLocations.map(l => ({
+        tenant_id,
+        rto_code,
+        ...l,
+        updated_at: new Date().toISOString(),
+      }));
+      
+      const { error: locError } = await supabase.from('tga_rto_delivery_locations').insert(locationRows);
+      if (!locError) imported.delivery_locations = orgResult.deliveryLocations.length;
+      logStage(correlationId, 'db.insert.delivery_locations', { count: imported.delivery_locations, error: locError?.message });
+    }
+
+    // Stage 2: Fetch scope
+    logStage(correlationId, 'soap.scope', { rto_code });
+    const scopeResult = await fetchOrganisationScope(rto_code, correlationId);
+    
+    if (!scopeResult.error) {
+      // Store qualifications
+      if (scopeResult.qualifications.length > 0) {
+        await supabase.from('tga_scope_qualifications').delete().eq('tenant_id', tenant_id).eq('rto_code', rto_code);
+        
+        const qualRows = scopeResult.qualifications.map(q => ({
+          tenant_id,
+          rto_code,
+          ...q,
+          updated_at: new Date().toISOString(),
+        }));
+        
+        const { error: qualError } = await supabase.from('tga_scope_qualifications').insert(qualRows);
+        if (!qualError) imported.qualifications = scopeResult.qualifications.length;
+        logStage(correlationId, 'db.insert.qualifications', { count: imported.qualifications, error: qualError?.message });
+      }
+
+      // Store skill sets
+      if (scopeResult.skillsets.length > 0) {
+        await supabase.from('tga_scope_skillsets').delete().eq('tenant_id', tenant_id).eq('rto_code', rto_code);
+        
+        const skillRows = scopeResult.skillsets.map(s => ({
+          tenant_id,
+          rto_code,
+          ...s,
+          updated_at: new Date().toISOString(),
+        }));
+        
+        const { error: skillError } = await supabase.from('tga_scope_skillsets').insert(skillRows);
+        if (!skillError) imported.skill_sets = scopeResult.skillsets.length;
+        logStage(correlationId, 'db.insert.skill_sets', { count: imported.skill_sets, error: skillError?.message });
+      }
+
+      // Store units
+      if (scopeResult.units.length > 0) {
+        await supabase.from('tga_scope_units').delete().eq('tenant_id', tenant_id).eq('rto_code', rto_code);
+        
+        const unitRows = scopeResult.units.map(u => ({
+          tenant_id,
+          rto_code,
+          ...u,
+          updated_at: new Date().toISOString(),
+        }));
+        
+        const { error: unitError } = await supabase.from('tga_scope_units').insert(unitRows);
+        if (!unitError) imported.units_explicit = scopeResult.units.length;
+        logStage(correlationId, 'db.insert.units', { count: imported.units_explicit, error: unitError?.message });
+      }
+
+      // Store courses
+      if (scopeResult.courses.length > 0) {
+        await supabase.from('tga_scope_courses').delete().eq('tenant_id', tenant_id).eq('rto_code', rto_code);
+        
+        const courseRows = scopeResult.courses.map(c => ({
+          tenant_id,
+          rto_code,
+          ...c,
+          updated_at: new Date().toISOString(),
+        }));
+        
+        const { error: courseError } = await supabase.from('tga_scope_courses').insert(courseRows);
+        if (!courseError) imported.courses = scopeResult.courses.length;
+        logStage(correlationId, 'db.insert.courses', { count: imported.courses, error: courseError?.message });
+      }
+    } else {
+      logStage(correlationId, 'soap.scope.error', { error: scopeResult.error });
+    }
+
+    // Update job status to completed
+    await supabase.from('tga_rto_import_jobs').update({
+      status: 'completed',
+      completed_at: new Date().toISOString(),
+      imported_counts: imported,
+    }).eq('id', job_id);
+
+    // Log audit event
+    await supabase.from('audit_events').insert({
+      entity: 'tga_import',
+      entity_id: job_id,
+      action: 'import_completed',
+      details: { correlation_id: correlationId, rto_code, imported },
+    });
+
+    logStage(correlationId, 'import.complete', { imported });
+
+    return jsonResponse({
+      ok: true,
+      correlation_id: correlationId,
+      stage: 'done',
+      rto_code,
+      imported,
+    });
 
   } catch (error) {
     const errorMsg = error instanceof Error ? error.message : String(error);
     logStage(correlationId, 'request.error', { error: errorMsg });
     
-    return new Response(JSON.stringify({
+    return jsonResponse({
       ok: false,
       correlation_id: correlationId,
       stage: 'request',
-      error: errorMsg
-    }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+      error: errorMsg,
+    }, 500);
   }
 });
