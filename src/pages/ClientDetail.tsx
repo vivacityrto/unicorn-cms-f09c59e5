@@ -24,6 +24,7 @@ import {
 import { ClientProfileForm } from '@/components/client/ClientProfileForm';
 import { ClientPackagesTab } from '@/components/client/ClientPackagesTab';
 import { ClientIntegrationsTab } from '@/components/client/ClientIntegrationsTab';
+import { ClientDocumentsTab } from '@/components/client/ClientDocumentsTab';
 
 interface TenantBasic {
   id: number;
@@ -226,7 +227,6 @@ export default function ClientDetail() {
             <TabsTrigger
               value="documents"
               className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none bg-transparent px-1 pb-3"
-              onClick={() => navigate(`/tenant/${tenantId}/documents`)}
             >
               <FileText className="h-4 w-4 mr-2" />
               Documents
@@ -276,6 +276,13 @@ export default function ClientDetail() {
               tenantId={tenantIdNum!}
               packages={packages}
               loading={packagesLoading}
+            />
+          </TabsContent>
+
+          <TabsContent value="documents" className="mt-0">
+            <ClientDocumentsTab
+              tenantId={tenantIdNum!}
+              packages={packages}
             />
           </TabsContent>
 
