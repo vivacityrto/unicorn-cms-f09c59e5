@@ -15,7 +15,7 @@ import {
   Building2, 
   CheckCircle2, 
   XCircle, 
-  User, 
+  Users, 
   Package2, 
   FileText, 
   Settings,
@@ -26,6 +26,7 @@ import { ClientProfileForm } from '@/components/client/ClientProfileForm';
 import { ClientPackagesTab } from '@/components/client/ClientPackagesTab';
 import { ClientIntegrationsTab } from '@/components/client/ClientIntegrationsTab';
 import { ClientDocumentsTab } from '@/components/client/ClientDocumentsTab';
+import { TenantUsersTab } from '@/components/client/TenantUsersTab';
 
 interface TenantBasic {
   id: number;
@@ -233,6 +234,13 @@ export default function ClientDetail() {
               Documents
             </TabsTrigger>
             <TabsTrigger
+              value="users"
+              className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none bg-transparent px-1 pb-3"
+            >
+              <Users className="h-4 w-4 mr-2" />
+              Users
+            </TabsTrigger>
+            <TabsTrigger
               value="notes"
               className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none bg-transparent px-1 pb-3"
             >
@@ -284,6 +292,10 @@ export default function ClientDetail() {
               tenantId={tenantIdNum!}
               packages={packages}
             />
+          </TabsContent>
+
+          <TabsContent value="users" className="mt-0">
+            <TenantUsersTab tenantId={tenantIdNum!} tenantName={tenant.name} />
           </TabsContent>
 
           <TabsContent value="notes" className="mt-0">

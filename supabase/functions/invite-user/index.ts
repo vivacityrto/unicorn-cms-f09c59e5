@@ -77,10 +77,10 @@ serve(async (req) => {
       });
     }
 
-    // 3. Verify caller is Super Admin
+    // 3. Get caller's profile and verify permissions
     const { data: callerProfile, error: roleErr } = await supabase
       .from("users")
-      .select("unicorn_role")
+      .select("unicorn_role, tenant_id, tenant_role")
       .eq("user_uuid", callerUser.user.id)
       .maybeSingle();
 
@@ -92,15 +92,15 @@ serve(async (req) => {
       });
     }
 
-    if (!callerProfile || !["Super Admin", "SuperAdmin"].includes(callerProfile.unicorn_role)) {
+    if (!callerProfile) {
       return jsonResponse(403, {
         ok: false,
         code: "FORBIDDEN",
-        detail: "Only Super Admins can invite users",
+        detail: "User profile not found",
       });
     }
 
-    // 4. Parse and validate payload
+    // Parse payload early to check tenant_id for permission check
     let payload: Payload;
     try {
       payload = await req.json();
@@ -111,6 +111,39 @@ serve(async (req) => {
         detail: "Request body must be valid JSON",
       });
     }
+
+    // Check permissions: Super Admin can invite anyone, Tenant Admins can invite to their own tenant
+    const isSuperAdmin = ["Super Admin", "SuperAdmin"].includes(callerProfile.unicorn_role);
+    const isTenantAdmin = callerProfile.tenant_id === payload.tenant_id && 
+      (callerProfile.unicorn_role === 'Admin' || callerProfile.tenant_role === 'admin');
+
+    if (!isSuperAdmin && !isTenantAdmin) {
+      return jsonResponse(403, {
+        ok: false,
+        code: "FORBIDDEN",
+        detail: "You don't have permission to invite users to this tenant",
+      });
+    }
+
+    // Tenant admins can only invite to their own tenant
+    if (!isSuperAdmin && callerProfile.tenant_id !== payload.tenant_id) {
+      return jsonResponse(403, {
+        ok: false,
+        code: "FORBIDDEN",
+        detail: "You can only invite users to your own organisation",
+      });
+    }
+
+    // Tenant admins can only assign Admin or User roles (not Super Admin, Team Leader, etc.)
+    if (!isSuperAdmin && !CLIENT_ROLES.includes(payload.unicorn_role)) {
+      return jsonResponse(403, {
+        ok: false,
+        code: "FORBIDDEN",
+        detail: "You can only assign Admin or User roles",
+      });
+    }
+
+    // 4. Validate payload fields
 
     if (!payload.email || !payload.first_name || !payload.unicorn_role || typeof payload.tenant_id !== "number") {
       return jsonResponse(422, {

@@ -7196,6 +7196,7 @@ export type Database = {
           suburb: string | null
           tenant_id: number | null
           tenant_name: string | null
+          tenant_role: string | null
           timezone: string | null
           title: string | null
           training_facility_address: string | null
@@ -7257,6 +7258,7 @@ export type Database = {
           suburb?: string | null
           tenant_id?: number | null
           tenant_name?: string | null
+          tenant_role?: string | null
           timezone?: string | null
           title?: string | null
           training_facility_address?: string | null
@@ -7318,6 +7320,7 @@ export type Database = {
           suburb?: string | null
           tenant_id?: number | null
           tenant_name?: string | null
+          tenant_role?: string | null
           timezone?: string | null
           title?: string | null
           training_facility_address?: string | null
@@ -7718,7 +7721,9 @@ export type Database = {
       is_super_admin_by_role: { Args: never; Returns: boolean }
       is_super_admin_member: { Args: never; Returns: boolean }
       is_superadmin: { Args: never; Returns: boolean }
-      is_tenant_admin: { Args: { tid: number }; Returns: boolean }
+      is_tenant_admin:
+        | { Args: { _tenant_id: number; _user_id: string }; Returns: boolean }
+        | { Args: { tid: number }; Returns: boolean }
       is_user_super_admin: { Args: { user_id: string }; Returns: boolean }
       is_vivacity: { Args: never; Returns: boolean }
       is_vivacity_super_admin: { Args: never; Returns: boolean }
