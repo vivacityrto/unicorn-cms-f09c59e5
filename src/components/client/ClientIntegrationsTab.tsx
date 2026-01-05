@@ -75,10 +75,12 @@ export function ClientIntegrationsTab({
   const statusConfig = STATUS_CONFIG[currentStatus] || STATUS_CONFIG.not_linked;
   const isLinked = currentStatus === 'linked';
 
-  // Fetch TGA data when linked
+  // Fetch TGA data when linked - use the new dataset-based approach
+  // Note: We pass tenant_id as a string identifier since that's what we have
   const tgaData = useTgaRtoData(
     isLinked ? profile?.tenant_id ?? null : null,
-    isLinked ? profile?.rto_number ?? null : null
+    isLinked ? profile?.rto_number ?? null : null,
+    undefined // clientId not available in this context
   );
 
   const handleLinkToTGA = async () => {

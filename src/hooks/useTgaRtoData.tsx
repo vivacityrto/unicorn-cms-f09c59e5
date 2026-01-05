@@ -2,6 +2,48 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
+// Types for the new TGA data model
+export interface TGARtoData {
+  legal_name: string | null;
+  trading_name: string | null;
+  abn: string | null;
+  status: string | null;
+  registration_start: string | null;
+  registration_end: string | null;
+  phone: string | null;
+  email: string | null;
+  website: string | null;
+  address: Record<string, unknown> | null;
+}
+
+export interface TGASnapshot {
+  scope_total: number;
+  quals_total: number;
+  units_total: number;
+  skill_sets_total: number;
+  last_sync_at: string | null;
+  import_id: string | null;
+}
+
+export interface TGAScopeItem {
+  code: string;
+  type: string;
+  title: string | null;
+  status: string | null;
+}
+
+export interface TGAClientData {
+  linked: boolean;
+  link_status: string;
+  rto_number?: string;
+  last_sync_at?: string;
+  last_sync_status?: string;
+  rto_data?: TGARtoData;
+  snapshot?: TGASnapshot;
+  scope_items?: TGAScopeItem[];
+}
+
+// Legacy types for backwards compatibility
 export interface TGASummary {
   id: string;
   tenant_id: number;
@@ -96,7 +138,8 @@ export interface TGAImportJob {
   error_message: string | null;
 }
 
-export function useTgaRtoData(tenantId: number | null, rtoCode: string | null) {
+export function useTgaRtoData(tenantId: number | null, rtoCode: string | null, clientId?: string | null) {
+  const [clientData, setClientData] = useState<TGAClientData | null>(null);
   const [summary, setSummary] = useState<TGASummary | null>(null);
   const [contacts, setContacts] = useState<TGAContact[]>([]);
   const [addresses, setAddresses] = useState<TGAAddress[]>([]);
@@ -111,7 +154,7 @@ export function useTgaRtoData(tenantId: number | null, rtoCode: string | null) {
   const { toast } = useToast();
 
   const fetchData = useCallback(async () => {
-    if (!tenantId || !rtoCode) {
+    if (!clientId && (!tenantId || !rtoCode)) {
       setLoading(false);
       return;
     }
@@ -119,56 +162,138 @@ export function useTgaRtoData(tenantId: number | null, rtoCode: string | null) {
     try {
       setLoading(true);
 
-      const [
-        summaryRes,
-        contactsRes,
-        addressesRes,
-        locationsRes,
-        qualsRes,
-        skillsRes,
-        unitsRes,
-        coursesRes,
-        jobRes
-      ] = await Promise.all([
-        supabase.from('tga_rto_summary').select('*').eq('tenant_id', tenantId).eq('rto_code', rtoCode).maybeSingle(),
-        supabase.from('tga_rto_contacts').select('*').eq('tenant_id', tenantId).eq('rto_code', rtoCode),
-        supabase.from('tga_rto_addresses').select('*').eq('tenant_id', tenantId).eq('rto_code', rtoCode),
-        supabase.from('tga_rto_delivery_locations').select('*').eq('tenant_id', tenantId).eq('rto_code', rtoCode),
-        supabase.from('tga_scope_qualifications').select('*').eq('tenant_id', tenantId).eq('rto_code', rtoCode).order('qualification_code'),
-        supabase.from('tga_scope_skillsets').select('*').eq('tenant_id', tenantId).eq('rto_code', rtoCode).order('skillset_code'),
-        supabase.from('tga_scope_units').select('*').eq('tenant_id', tenantId).eq('rto_code', rtoCode).order('unit_code'),
-        supabase.from('tga_scope_courses').select('*').eq('tenant_id', tenantId).eq('rto_code', rtoCode).order('course_code'),
-        supabase.from('tga_rto_import_jobs').select('*').eq('tenant_id', tenantId).eq('rto_code', rtoCode).order('created_at', { ascending: false }).limit(1).maybeSingle()
-      ]);
+      // If we have a clientId, use the new RPC function
+      if (clientId) {
+        const { data, error } = await supabase.rpc('tga_get_client_data', {
+          p_client_id: clientId
+        });
 
-      setSummary(summaryRes.data);
-      setContacts(contactsRes.data || []);
-      setAddresses(addressesRes.data || []);
-      setDeliveryLocations(locationsRes.data || []);
-      setQualifications(qualsRes.data || []);
-      setSkillsets(skillsRes.data || []);
-      setUnits(unitsRes.data || []);
-      setCourses(coursesRes.data || []);
-      setLatestJob(jobRes.data);
+        if (error) {
+          console.error('Error fetching TGA data via RPC:', error);
+        } else if (data) {
+          const typedData = data as unknown as TGAClientData;
+          setClientData(typedData);
+          
+          // Map to legacy format for backwards compatibility
+          if (typedData.linked && typedData.rto_data) {
+            setSummary({
+              id: clientId,
+              tenant_id: tenantId || 0,
+              rto_code: typedData.rto_number || rtoCode || '',
+              legal_name: typedData.rto_data.legal_name,
+              trading_name: typedData.rto_data.trading_name,
+              organisation_type: null,
+              abn: typedData.rto_data.abn,
+              status: typedData.rto_data.status,
+              registration_start_date: typedData.rto_data.registration_start,
+              registration_end_date: typedData.rto_data.registration_end,
+              fetched_at: typedData.last_sync_at || new Date().toISOString(),
+            });
 
+            // Map scope items to qualifications/units/skillsets
+            if (typedData.scope_items) {
+              const quals = typedData.scope_items
+                .filter(item => item.type === 'qualification')
+                .map((item, idx) => ({
+                  id: `qual-${idx}`,
+                  qualification_code: item.code,
+                  qualification_title: item.title,
+                  training_package_code: null,
+                  status: item.status,
+                  is_current: item.status === 'current',
+                }));
+              setQualifications(quals);
+
+              const unitItems = typedData.scope_items
+                .filter(item => item.type === 'unit')
+                .map((item, idx) => ({
+                  id: `unit-${idx}`,
+                  unit_code: item.code,
+                  unit_title: item.title,
+                  training_package_code: null,
+                  status: item.status,
+                  is_current: item.status === 'current',
+                }));
+              setUnits(unitItems);
+
+              const skillItems = typedData.scope_items
+                .filter(item => item.type === 'skill_set')
+                .map((item, idx) => ({
+                  id: `skill-${idx}`,
+                  skillset_code: item.code,
+                  skillset_title: item.title,
+                  training_package_code: null,
+                  status: item.status,
+                  is_current: item.status === 'current',
+                }));
+              setSkillsets(skillItems);
+
+              const courseItems = typedData.scope_items
+                .filter(item => item.type === 'accredited_course' || item.type === 'short_course')
+                .map((item, idx) => ({
+                  id: `course-${idx}`,
+                  course_code: item.code,
+                  course_title: item.title,
+                  status: item.status,
+                  is_current: item.status === 'current',
+                }));
+              setCourses(courseItems);
+            }
+          }
+        }
+      } else {
+        // Fallback to legacy table queries for backwards compatibility
+        const [
+          summaryRes,
+          contactsRes,
+          addressesRes,
+          locationsRes,
+          qualsRes,
+          skillsRes,
+          unitsRes,
+          coursesRes,
+          jobRes
+        ] = await Promise.all([
+          supabase.from('tga_rto_summary').select('*').eq('tenant_id', tenantId).eq('rto_code', rtoCode).maybeSingle(),
+          supabase.from('tga_rto_contacts').select('*').eq('tenant_id', tenantId).eq('rto_code', rtoCode),
+          supabase.from('tga_rto_addresses').select('*').eq('tenant_id', tenantId).eq('rto_code', rtoCode),
+          supabase.from('tga_rto_delivery_locations').select('*').eq('tenant_id', tenantId).eq('rto_code', rtoCode),
+          supabase.from('tga_scope_qualifications').select('*').eq('tenant_id', tenantId).eq('rto_code', rtoCode).order('qualification_code'),
+          supabase.from('tga_scope_skillsets').select('*').eq('tenant_id', tenantId).eq('rto_code', rtoCode).order('skillset_code'),
+          supabase.from('tga_scope_units').select('*').eq('tenant_id', tenantId).eq('rto_code', rtoCode).order('unit_code'),
+          supabase.from('tga_scope_courses').select('*').eq('tenant_id', tenantId).eq('rto_code', rtoCode).order('course_code'),
+          supabase.from('tga_rto_import_jobs').select('*').eq('tenant_id', tenantId).eq('rto_code', rtoCode).order('created_at', { ascending: false }).limit(1).maybeSingle()
+        ]);
+
+        setSummary(summaryRes.data as TGASummary | null);
+        setContacts((contactsRes.data || []) as TGAContact[]);
+        setAddresses((addressesRes.data || []) as TGAAddress[]);
+        setDeliveryLocations((locationsRes.data || []) as TGADeliveryLocation[]);
+        setQualifications((qualsRes.data || []) as TGAQualification[]);
+        setSkillsets((skillsRes.data || []) as TGASkillset[]);
+        setUnits((unitsRes.data || []) as TGAUnit[]);
+        setCourses((coursesRes.data || []) as TGACourse[]);
+        setLatestJob(jobRes.data as TGAImportJob | null);
+      }
     } catch (error: unknown) {
       console.error('Error fetching TGA data:', error);
     } finally {
       setLoading(false);
     }
-  }, [tenantId, rtoCode]);
+  }, [tenantId, rtoCode, clientId]);
 
   const triggerSync = useCallback(async (): Promise<{ success: boolean; error?: string; correlationId?: string; stage?: string }> => {
-    if (!tenantId || !rtoCode) {
-      return { success: false, error: 'Missing tenant or RTO code' };
+    if (!tenantId) {
+      return { success: false, error: 'Missing tenant ID' };
     }
 
     try {
       setSyncing(true);
 
-      // Call RPC to create job
-      const { data, error } = await supabase.rpc('tga_trigger_sync', {
-        p_tenant_id: tenantId
+      // Call the new RPC function to sync tenant data from local dataset
+      const { data, error } = await supabase.rpc('tga_sync_tenant', {
+        p_tenant_id: tenantId,
+        p_rto_number: rtoCode
       });
 
       if (error) {
@@ -181,140 +306,33 @@ export function useTgaRtoData(tenantId: number | null, rtoCode: string | null) {
         return { success: false, error: error.message };
       }
 
-      const result = data as { success: boolean; import_job_id: string; rto_number: string };
+      const result = data as unknown as { 
+        success: boolean; 
+        error?: string;
+        rto_number?: string;
+        rto_data?: TGARtoData;
+        scope_counts?: {
+          total: number;
+          qualifications: number;
+          units: number;
+          skill_sets: number;
+        };
+      };
 
       if (!result.success) {
         toast({
           title: 'Sync Failed',
-          description: 'Failed to trigger sync job',
+          description: result.error || 'Failed to sync TGA data',
           variant: 'destructive'
         });
-        return { success: false, error: 'Failed to trigger sync job' };
+        return { success: false, error: result.error };
       }
-
-      // Call edge function to run the import (use fetch so we can read body text on non-2xx)
-      const { data: session } = await supabase.auth.getSession();
-      const accessToken = session?.session?.access_token;
-
-      if (!accessToken) {
-        toast({
-          title: 'Import Failed',
-          description: 'Missing session token',
-          variant: 'destructive'
-        });
-        return { success: false, error: 'Missing session token' };
-      }
-
-      const FUNCTION_URL = 'https://yxkgdalkbrriasiyyrwk.supabase.co/functions/v1/tga-rto-import';
-      const ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl4a2dkYWxrYnJyaWFzaXl5cndrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDc2MjQwMzEsImV4cCI6MjA2MzIwMDAzMX0.bBFTaO-6Afko1koQqx-PWdzl2mu5qmE0xWNTvneqyqY';
-
-      const res = await fetch(FUNCTION_URL, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          apikey: ANON_KEY,
-          Authorization: `Bearer ${accessToken}`,
-        },
-        body: JSON.stringify({
-          job_id: result.import_job_id,
-          tenant_id: tenantId,
-          rto_code: result.rto_number,
-        }),
-      });
-
-      const text = await res.text();
-      let parsed: any = null;
-      try {
-        parsed = text ? JSON.parse(text) : null;
-      } catch {
-        parsed = null;
-      }
-
-       if (!res.ok) {
-         const stage = parsed?.stage as string | undefined;
-         const correlationId = parsed?.correlation_id as string | undefined;
-         const httpStatus = parsed?.http_status as number | undefined;
-         const endpointUsed = parsed?.endpoint_used as string | undefined;
-         const actionUsed = parsed?.action_used as string | undefined;
-
-         const message =
-           stage === 'soap.endpoint_not_found' || stage === 'soap.endpoint.error'
-             ? 'TGA endpoint misconfigured. Contact support.'
-             : stage === 'soap.auth.error'
-               ? 'TGA authentication failed. Check credentials.'
-               : parsed?.message || parsed?.error || res.statusText || 'Request failed';
-
-         const snippet = !parsed && text ? text.slice(0, 300) : undefined;
-
-         toast({
-           title: 'Import Failed',
-           description: (
-             <div className="space-y-1">
-               <p>{message}</p>
-               {stage && <p className="text-xs text-muted-foreground">Stage: {stage}</p>}
-               {httpStatus && <p className="text-xs text-muted-foreground">HTTP: {httpStatus}</p>}
-               {endpointUsed && <p className="text-xs text-muted-foreground">Endpoint: {endpointUsed}</p>}
-               {actionUsed && <p className="text-xs text-muted-foreground">Action: {actionUsed}</p>}
-               {correlationId && (
-                 <button
-                   onClick={() => navigator.clipboard.writeText(correlationId)}
-                   className="text-xs underline text-muted-foreground hover:text-foreground"
-                 >
-                   Copy ref: {correlationId}
-                 </button>
-               )}
-               {snippet && <p className="text-xs text-muted-foreground">{snippet}</p>}
-             </div>
-           ),
-           variant: 'destructive'
-         });
-
-         return { success: false, error: message, correlationId, stage };
-       }
-
-       if (parsed?.ok === false) {
-         const stage = parsed.stage as string | undefined;
-         const correlationId = parsed.correlation_id as string | undefined;
-         const httpStatus = parsed.http_status as number | undefined;
-         const endpointUsed = parsed.endpoint_used as string | undefined;
-         const actionUsed = parsed.action_used as string | undefined;
-
-         const message =
-           stage === 'soap.endpoint_not_found' || stage === 'soap.endpoint.error'
-             ? 'TGA endpoint misconfigured. Contact support.'
-             : stage === 'soap.auth.error'
-               ? 'TGA authentication failed. Check credentials.'
-               : parsed.message || parsed.error || 'Import failed';
-
-         toast({
-           title: 'Import Failed',
-           description: (
-             <div className="space-y-1">
-               <p>{message}</p>
-               {stage && <p className="text-xs text-muted-foreground">Stage: {stage}</p>}
-               {httpStatus && <p className="text-xs text-muted-foreground">HTTP: {httpStatus}</p>}
-               {endpointUsed && <p className="text-xs text-muted-foreground">Endpoint: {endpointUsed}</p>}
-               {actionUsed && <p className="text-xs text-muted-foreground">Action: {actionUsed}</p>}
-               {correlationId && (
-                 <button
-                   onClick={() => navigator.clipboard.writeText(correlationId)}
-                   className="text-xs underline text-muted-foreground hover:text-foreground"
-                 >
-                   Copy ref: {correlationId}
-                 </button>
-               )}
-             </div>
-           ),
-           variant: 'destructive'
-         });
-         return { success: false, error: message, correlationId, stage };
-       }
 
       // Success!
-      const imported = parsed?.imported;
-      const summaryText = imported
-        ? `Imported: org ${imported.summary || 0}, contacts ${imported.contacts || 0}, quals ${imported.qualifications || 0}, units ${imported.units || 0}`
-        : 'Data has been imported from Training.gov.au';
+      const counts = result.scope_counts;
+      const summaryText = counts
+        ? `Synced: ${counts.qualifications} quals, ${counts.units} units, ${counts.skill_sets} skill sets`
+        : 'Data has been synced from TGA dataset';
 
       toast({
         title: 'TGA Sync Complete',
@@ -341,9 +359,10 @@ export function useTgaRtoData(tenantId: number | null, rtoCode: string | null) {
     fetchData();
   }, [fetchData]);
 
-  const hasData = summary !== null || qualifications.length > 0;
+  const hasData = summary !== null || qualifications.length > 0 || (clientData?.linked && clientData?.snapshot);
 
   return {
+    clientData,
     summary,
     contacts,
     addresses,
