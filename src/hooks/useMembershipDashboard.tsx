@@ -117,8 +117,10 @@ export function useMembershipDashboard() {
           const cscUserId = entitlement?.csc_user_id || cscMap.get(tenant.id);
           const cscUser = staffUsers.find(u => u.user_uuid === cscUserId);
 
-          // Calculate health score
-          const healthScore: MembershipHealthScore = calculateHealthScore(entitlement, tier);
+          // Calculate health score with overdue tasks and CSC assignment status
+          const overdueCount = overdueMap.get(key) || 0;
+          const hasCscAssigned = !!cscUserId;
+          const healthScore: MembershipHealthScore = calculateHealthScore(entitlement, tier, overdueCount, hasCscAssigned);
 
           membershipList.push({
             id: entitlement?.id || `temp-${key}`,
@@ -163,13 +165,24 @@ export function useMembershipDashboard() {
     }
   }, [staffUsers, toast]);
 
-  // Calculate health score
-  const calculateHealthScore = (entitlement: MembershipEntitlement | undefined, tier: typeof MEMBERSHIP_TIERS[string]): MembershipHealthScore => {
+  // Calculate health score with comprehensive risk factors
+  const calculateHealthScore = (
+    entitlement: MembershipEntitlement | undefined, 
+    tier: typeof MEMBERSHIP_TIERS[string],
+    overdueTasksCount: number = 0,
+    hasCscAssigned: boolean = false
+  ): MembershipHealthScore => {
     let score = 100;
     const riskFactors: Array<{ type: string; message: string }> = [];
 
     if (!entitlement) {
       return { score: 80, status: 'healthy', risk_factors: [{ type: 'new', message: 'New membership - no entitlement record' }] };
+    }
+
+    // Overdue tasks check
+    if (overdueTasksCount > 0) {
+      score -= Math.min(25, overdueTasksCount * 5);
+      riskFactors.push({ type: 'overdue_tasks', message: `${overdueTasksCount} overdue task${overdueTasksCount > 1 ? 's' : ''}` });
     }
 
     // Hours check
@@ -184,16 +197,22 @@ export function useMembershipDashboard() {
       }
     }
 
-    // Activity check
+    // Activity check (no activity in X days)
     if (entitlement.last_activity_at) {
       const daysSince = Math.floor((Date.now() - new Date(entitlement.last_activity_at).getTime()) / (1000 * 60 * 60 * 24));
       if (daysSince > 21) {
         score -= 20;
-        riskFactors.push({ type: 'inactivity', message: `No activity in ${daysSince} days` });
+        riskFactors.push({ type: 'no_activity', message: `No activity in ${daysSince} days` });
       }
     } else {
       score -= 10;
       riskFactors.push({ type: 'no_activity', message: 'No recorded activity' });
+    }
+
+    // Missing CSC assignment check
+    if (!hasCscAssigned) {
+      score -= 10;
+      riskFactors.push({ type: 'no_csc', message: 'No CSC assigned' });
     }
 
     // Obligations check
