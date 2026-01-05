@@ -32,6 +32,40 @@ function generateCorrelationId(): string {
   return `tga-${crypto.randomUUID()}`;
 }
 
+// ========== STAGED LOGGING HELPER ==========
+// Logs structured diagnostic info for each stage (sanitized - no credentials)
+interface StageLogData {
+  endpoint_host?: string;
+  endpoint_path?: string;
+  soap_action?: string;
+  http_status?: number;
+  response_snippet?: string;
+  count?: number;
+  error?: string;
+  [key: string]: unknown;
+}
+
+function logStage(correlationId: string, stage: string, data: StageLogData = {}) {
+  const sanitized: Record<string, unknown> = { correlation_id: correlationId, stage };
+  
+  if (data.endpoint_host) sanitized.endpoint_host = data.endpoint_host;
+  if (data.endpoint_path) sanitized.endpoint_path = data.endpoint_path;
+  if (data.soap_action) sanitized.soap_action = data.soap_action;
+  if (data.http_status !== undefined) sanitized.http_status = data.http_status;
+  if (data.response_snippet) sanitized.response_snippet = data.response_snippet.slice(0, 500);
+  if (data.count !== undefined) sanitized.count = data.count;
+  if (data.error) sanitized.error = data.error;
+  
+  // Add other non-sensitive keys
+  for (const [k, v] of Object.entries(data)) {
+    if (!['endpoint_host', 'endpoint_path', 'soap_action', 'http_status', 'response_snippet', 'count', 'error'].includes(k)) {
+      sanitized[k] = v;
+    }
+  }
+  
+  console.log(`[TGA] [${correlationId}] STAGE=${stage}`, JSON.stringify(sanitized));
+}
+
 function escapeXml(unsafe: string): string {
   return unsafe
     .replace(/&/g, '&amp;')
@@ -140,6 +174,14 @@ async function makeSoapRequest(
     };
   }
 
+  // Log soap.request.build stage
+  const endpointUrl = new URL(endpoint);
+  logStage(correlationId, 'soap.request.build', {
+    endpoint_host: endpointUrl.host,
+    endpoint_path: endpointUrl.pathname,
+    operation,
+  });
+  
   const soapEnvelope = buildSoapEnvelope(body);
   
   let lastError: Error | null = null;
@@ -149,7 +191,12 @@ async function makeSoapRequest(
   for (let actionIdx = 0; actionIdx < SOAP_ACTION_PATTERNS.length; actionIdx++) {
     const soapAction = SOAP_ACTION_PATTERNS[actionIdx](operation);
     
-    console.log(`[TGA] [${correlationId}] Trying SOAP action pattern ${actionIdx + 1}: ${soapAction}`);
+    logStage(correlationId, 'soap.fetch', {
+      endpoint_host: endpointUrl.host,
+      endpoint_path: endpointUrl.pathname,
+      soap_action: soapAction,
+      attempt: actionIdx + 1,
+    });
     
     // Retry loop for each action pattern
     for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
@@ -177,6 +224,13 @@ async function makeSoapRequest(
 
         clearTimeout(timeoutId);
         const responseText = await response.text();
+        
+        // Log soap.response.parse stage
+        logStage(correlationId, 'soap.response.parse', {
+          http_status: response.status,
+          response_snippet: responseText,
+          soap_action: soapAction,
+        });
         
         if (response.ok) {
           console.log(`[TGA] [${correlationId}] Success with action: ${soapAction}, received ${responseText.length} bytes`);
@@ -422,17 +476,25 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
-  // Handle probe request for testing (GET with ?probe=1)
+  // Handle probe request for testing (GET with ?probe=1&rto=XXXX or POST with {probe:true})
   const url = new URL(req.url);
   if (req.method === 'GET' && url.searchParams.get('probe') === '1') {
     const rto = url.searchParams.get('rto') || '91020';
     
-    console.log(`[TGA] [${correlationId}] Probe request for RTO ${rto}`);
+    logStage(correlationId, 'input.validate', { rto_code: rto, mode: 'probe_get' });
     
     try {
       const authHeader = req.headers.get('Authorization');
       if (!authHeader) {
-        return new Response(JSON.stringify({ error: 'Missing authorization' }), {
+        logStage(correlationId, 'auth.resolve', { error: 'Missing authorization' });
+        return new Response(JSON.stringify({
+          ok: false,
+          correlation_id: correlationId,
+          stage: 'auth.resolve',
+          error_code: 'auth.missing_token',
+          message: 'Missing authorization',
+          details: {}
+        }), {
           status: 401,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
@@ -446,7 +508,15 @@ serve(async (req) => {
       const { data: { user }, error: authError } = await supabase.auth.getUser(token);
       
       if (authError || !user) {
-        return new Response(JSON.stringify({ error: 'Invalid token' }), {
+        logStage(correlationId, 'auth.resolve', { error: 'Invalid token' });
+        return new Response(JSON.stringify({
+          ok: false,
+          correlation_id: correlationId,
+          stage: 'auth.resolve',
+          error_code: 'auth.invalid_token',
+          message: 'Invalid token',
+          details: {}
+        }), {
           status: 401,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
@@ -460,16 +530,63 @@ serve(async (req) => {
         .single();
 
       if (userProfile?.global_role !== 'SuperAdmin' && userProfile?.global_role !== 'Admin') {
-        return new Response(JSON.stringify({ error: 'Admin access required' }), {
+        logStage(correlationId, 'auth.resolve', { error: 'Admin access required' });
+        return new Response(JSON.stringify({
+          ok: false,
+          correlation_id: correlationId,
+          stage: 'auth.resolve',
+          error_code: 'auth.forbidden',
+          message: 'Admin access required',
+          details: {}
+        }), {
           status: 403,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
       }
 
+      logStage(correlationId, 'auth.resolve', { user_id: user.id, role: userProfile?.global_role });
+
+      // Check credentials are configured
+      if (!TGA_USERNAME || !TGA_PASSWORD) {
+        logStage(correlationId, 'soap.org_details', { error: 'config.missing_secret', missing: ['TGA_WS_USERNAME', 'TGA_WS_PASSWORD'] });
+        return new Response(JSON.stringify({
+          ok: false,
+          correlation_id: correlationId,
+          stage: 'soap.org_details',
+          error_code: 'config.missing_secret',
+          message: 'TGA credentials not configured',
+          details: { missing_secrets: ['TGA_WS_USERNAME', 'TGA_WS_PASSWORD'] }
+        }), {
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      logStage(correlationId, 'soap.org_details', { rto_code: rto, endpoint_host: new URL(TGA_ORG_ENDPOINT).host });
       const result = await fetchOrganisationDetails(rto, correlationId);
       
+      if (result.error) {
+        logStage(correlationId, 'done', { ok: false, error: result.error });
+        return new Response(JSON.stringify({
+          ok: false,
+          probe: true,
+          correlation_id: correlationId,
+          stage: 'soap.org_details',
+          error_code: result.error.includes('auth') ? 'tga.auth_error' : 'tga.soap_error',
+          message: result.error,
+          details: {
+            endpoint: TGA_ORG_ENDPOINT,
+            namespace: TGA_V13_NAMESPACE,
+          }
+        }), {
+          status: 502,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+      
+      logStage(correlationId, 'done', { ok: true, summary: !!result.summary, contacts: result.contacts.length });
       return new Response(JSON.stringify({
-        success: !result.error,
+        ok: true,
         probe: true,
         correlation_id: correlationId,
         rto_code: rto,
@@ -478,17 +595,22 @@ serve(async (req) => {
         summary: result.summary,
         contacts_count: result.contacts.length,
         addresses_count: result.addresses.length,
-        error: result.error
+        delivery_locations_count: result.deliveryLocations.length,
       }), {
-        status: result.error ? 500 : 200,
+        status: 200,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
       
     } catch (error) {
-      console.error(`[TGA] [${correlationId}] Probe error:`, error);
-      return new Response(JSON.stringify({ 
-        error: error instanceof Error ? error.message : 'Probe failed',
-        correlation_id: correlationId
+      logStage(correlationId, 'done', { ok: false, error: error instanceof Error ? error.message : 'Probe failed' });
+      return new Response(JSON.stringify({
+        ok: false,
+        probe: true,
+        correlation_id: correlationId,
+        stage: 'handler',
+        error_code: 'tga.probe_error',
+        message: error instanceof Error ? error.message : 'Probe failed',
+        details: {}
       }), {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -566,23 +688,29 @@ serve(async (req) => {
 
     // Probe mode (POST body.probe === true): SOAP-only org details, no DB writes.
     if (probe === true) {
-      console.log(`[TGA] [${correlationId}] Probe request (POST) for RTO ${rto_code}`);
+      logStage(correlationId, 'input.validate', { rto_code, mode: 'probe_post' });
+      logStage(correlationId, 'soap.org_details', { rto_code, endpoint_host: new URL(TGA_ORG_ENDPOINT).host });
+      
       const orgResult = await fetchOrganisationDetails(rto_code, correlationId);
       if (orgResult.error) {
+        logStage(correlationId, 'done', { ok: false, error: orgResult.error });
         return new Response(JSON.stringify({
           ok: false,
+          probe: true,
           correlation_id: correlationId,
           stage: 'soap.org_details',
           error_code: orgResult.error.includes('auth') ? 'tga.auth_error' : 'tga.soap_error',
           message: orgResult.error,
-          details: {}
+          details: { endpoint: TGA_ORG_ENDPOINT }
         }), {
           status: 502,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
       }
+      logStage(correlationId, 'done', { ok: true, summary: !!orgResult.summary, contacts: orgResult.contacts.length });
       return new Response(JSON.stringify({
         ok: true,
+        probe: true,
         correlation_id: correlationId,
         rto_number: rto_code,
         imported: { org: orgResult.summary ? 1 : 0 },
@@ -595,7 +723,7 @@ serve(async (req) => {
       });
     }
 
-    console.log(`[TGA] [${correlationId}] Starting import for tenant ${tenant_id}, RTO ${rto_code}, job ${job_id}`);
+    logStage(correlationId, 'input.validate', { job_id, tenant_id, rto_code, mode: 'full_import' });
 
     // Mark job as running
     await supabase
@@ -629,8 +757,8 @@ serve(async (req) => {
       await logAudit('sync_started', { stage: 'init' });
 
       // 1. Fetch organisation details
-      errorStage = 'org_details';
-      console.log(`[TGA] [${correlationId}] Stage: ${errorStage}`);
+      errorStage = 'soap.org_details';
+      logStage(correlationId, errorStage, { rto_code, endpoint_host: new URL(TGA_ORG_ENDPOINT).host });
       const orgResult = await fetchOrganisationDetails(rto_code, correlationId);
       
       if (orgResult.error) {
@@ -639,9 +767,9 @@ serve(async (req) => {
       }
 
       // Upsert summary
-      errorStage = 'db_upsert_summary';
+      errorStage = 'db.upsert_summary';
       if (orgResult.summary) {
-        console.log(`[TGA] [${correlationId}] Stage: ${errorStage} - upserting summary`);
+        logStage(correlationId, errorStage, { count: 1 });
         const { error: summaryErr } = await supabase.from('tga_rto_summary').upsert({
           tenant_id,
           rto_code,
@@ -657,10 +785,10 @@ serve(async (req) => {
       }
 
       // Delete old contacts and insert new
-      errorStage = 'db_upsert_contacts';
+      errorStage = 'db.upsert_contacts';
       await supabase.from('tga_rto_contacts').delete().eq('tenant_id', tenant_id).eq('rto_code', rto_code);
       if (orgResult.contacts.length > 0) {
-        console.log(`[TGA] [${correlationId}] Stage: ${errorStage} - inserting ${orgResult.contacts.length} contacts`);
+        logStage(correlationId, errorStage, { count: orgResult.contacts.length });
         const { error: contactsErr } = await supabase.from('tga_rto_contacts').insert(
           orgResult.contacts.map(c => ({
             tenant_id,
@@ -677,10 +805,10 @@ serve(async (req) => {
       }
 
       // Delete old addresses and insert new
-      errorStage = 'db_upsert_addresses';
+      errorStage = 'db.upsert_addresses';
       await supabase.from('tga_rto_addresses').delete().eq('tenant_id', tenant_id).eq('rto_code', rto_code);
       if (orgResult.addresses.length > 0) {
-        console.log(`[TGA] [${correlationId}] Stage: ${errorStage} - inserting ${orgResult.addresses.length} addresses`);
+        logStage(correlationId, errorStage, { count: orgResult.addresses.length });
         const { error: addrErr } = await supabase.from('tga_rto_addresses').insert(
           orgResult.addresses.map(a => ({
             tenant_id,
@@ -697,10 +825,10 @@ serve(async (req) => {
       }
 
       // Delete old delivery locations and insert new
-      errorStage = 'db_upsert_locations';
+      errorStage = 'db.upsert_locations';
       await supabase.from('tga_rto_delivery_locations').delete().eq('tenant_id', tenant_id).eq('rto_code', rto_code);
       if (orgResult.deliveryLocations.length > 0) {
-        console.log(`[TGA] [${correlationId}] Stage: ${errorStage} - inserting ${orgResult.deliveryLocations.length} delivery locations`);
+        logStage(correlationId, errorStage, { count: orgResult.deliveryLocations.length });
         const { error: locErr } = await supabase.from('tga_rto_delivery_locations').insert(
           orgResult.deliveryLocations.map(l => ({
             tenant_id,
@@ -724,16 +852,16 @@ serve(async (req) => {
       }).eq('id', job_id);
 
       // 2. Fetch scope
-      errorStage = 'scope';
-      console.log(`[TGA] [${correlationId}] Stage: ${errorStage}`);
+      errorStage = 'soap.scope';
+      logStage(correlationId, errorStage, { rto_code });
       const scopeResult = await fetchOrganisationScope(rto_code, correlationId);
 
       // Delete old scope data and insert new (only if we got results)
       if (!scopeResult.error) {
-        errorStage = 'db_upsert_qualifications';
+        errorStage = 'db.upsert_qualifications';
         await supabase.from('tga_scope_qualifications').delete().eq('tenant_id', tenant_id).eq('rto_code', rto_code);
         if (scopeResult.qualifications.length > 0) {
-          console.log(`[TGA] [${correlationId}] Stage: ${errorStage} - inserting ${scopeResult.qualifications.length} qualifications`);
+          logStage(correlationId, errorStage, { count: scopeResult.qualifications.length });
           const { error: qualErr } = await supabase.from('tga_scope_qualifications').insert(
             scopeResult.qualifications.map(q => ({
               tenant_id,
@@ -749,10 +877,10 @@ serve(async (req) => {
           }
         }
 
-        errorStage = 'db_upsert_skillsets';
+        errorStage = 'db.upsert_skillsets';
         await supabase.from('tga_scope_skillsets').delete().eq('tenant_id', tenant_id).eq('rto_code', rto_code);
         if (scopeResult.skillsets.length > 0) {
-          console.log(`[TGA] [${correlationId}] Stage: ${errorStage} - inserting ${scopeResult.skillsets.length} skillsets`);
+          logStage(correlationId, errorStage, { count: scopeResult.skillsets.length });
           const { error: skillErr } = await supabase.from('tga_scope_skillsets').insert(
             scopeResult.skillsets.map(s => ({
               tenant_id,
@@ -768,10 +896,10 @@ serve(async (req) => {
           }
         }
 
-        errorStage = 'db_upsert_units';
+        errorStage = 'db.upsert_units';
         await supabase.from('tga_scope_units').delete().eq('tenant_id', tenant_id).eq('rto_code', rto_code);
         if (scopeResult.units.length > 0) {
-          console.log(`[TGA] [${correlationId}] Stage: ${errorStage} - inserting ${scopeResult.units.length} units`);
+          logStage(correlationId, errorStage, { count: scopeResult.units.length });
           const { error: unitErr } = await supabase.from('tga_scope_units').insert(
             scopeResult.units.map(u => ({
               tenant_id,
@@ -787,10 +915,10 @@ serve(async (req) => {
           }
         }
 
-        errorStage = 'db_upsert_courses';
+        errorStage = 'db.upsert_courses';
         await supabase.from('tga_scope_courses').delete().eq('tenant_id', tenant_id).eq('rto_code', rto_code);
         if (scopeResult.courses.length > 0) {
-          console.log(`[TGA] [${correlationId}] Stage: ${errorStage} - inserting ${scopeResult.courses.length} courses`);
+          logStage(correlationId, errorStage, { count: scopeResult.courses.length });
           const { error: courseErr } = await supabase.from('tga_scope_courses').insert(
             scopeResult.courses.map(c => ({
               tenant_id,
@@ -817,21 +945,27 @@ serve(async (req) => {
           courses_count: scopeResult.courses.length,
         }).eq('id', job_id);
       } else {
-        console.warn(`[TGA] [${correlationId}] Scope fetch failed (non-fatal): ${scopeResult.error}`);
+        logStage(correlationId, 'soap.scope', { error: scopeResult.error, non_fatal: true });
       }
 
       // Mark job complete
-      errorStage = 'finalize';
+      errorStage = 'done';
       await supabase.from('tga_rto_import_jobs').update({
         status: 'completed',
         completed_at: new Date().toISOString(),
       }).eq('id', job_id);
 
-      console.log(`[TGA] [${correlationId}] Import completed successfully`);
+      logStage(correlationId, 'done', {
+        ok: true,
+        summary: !!orgResult.summary,
+        contacts: orgResult.contacts.length,
+        qualifications: scopeResult.qualifications.length,
+        units: scopeResult.units.length,
+      });
 
       // Log sync success
       await logAudit('sync_completed', {
-        stage: 'finalize',
+        stage: 'done',
         summary: orgResult.summary,
         contacts_count: orgResult.contacts.length,
         addresses_count: orgResult.addresses.length,
