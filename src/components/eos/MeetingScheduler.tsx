@@ -35,7 +35,7 @@ export const MeetingScheduler = ({ open, onOpenChange, onScheduled }: MeetingSch
   const [endDate, setEndDate] = useState('');
 
   // Fetch default template for selected meeting type
-  const { data: defaultTemplate } = useQuery({
+  const { data: defaultTemplate, isLoading: isLoadingTemplate } = useQuery({
     queryKey: ['eos-agenda-templates', profile?.tenant_id, meetingType],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -55,8 +55,11 @@ export const MeetingScheduler = ({ open, onOpenChange, onScheduled }: MeetingSch
   useEffect(() => {
     if (defaultTemplate) {
       setTemplateId(defaultTemplate.id);
+    } else if (!isLoadingTemplate) {
+      // Clear template ID if no default template found
+      setTemplateId('');
     }
-  }, [defaultTemplate]);
+  }, [defaultTemplate, isLoadingTemplate]);
 
   // Fetch users for facilitator selection
   const { data: users } = useQuery({
@@ -79,8 +82,9 @@ export const MeetingScheduler = ({ open, onOpenChange, onScheduled }: MeetingSch
       return;
     }
 
-    if (!templateId) {
-      toast({ title: 'Template not loaded', description: 'Please wait for the template to load', variant: 'destructive' });
+    // If still loading template, wait
+    if (isLoadingTemplate) {
+      toast({ title: 'Template loading', description: 'Please wait for the template to load', variant: 'destructive' });
       return;
     }
 
@@ -91,19 +95,39 @@ export const MeetingScheduler = ({ open, onOpenChange, onScheduled }: MeetingSch
 
     setIsSubmitting(true);
     try {
-      // Create the base meeting
-      const { data: meetingId, error: meetingError } = await supabase.rpc('create_meeting_from_template', {
-        p_tenant_id: profile.tenant_id,
-        p_agenda_template_id: templateId,
-        p_title: title,
-        p_scheduled_date: scheduledDate,
-        p_duration_minutes: parseInt(duration),
-        p_facilitator_id: facilitatorId,
-        p_scribe_id: null,
-        p_participant_ids: [],
-      });
+      let meetingId: string;
 
-      if (meetingError) throw meetingError;
+      if (templateId) {
+        // Create meeting from template
+        const { data, error: meetingError } = await supabase.rpc('create_meeting_from_template', {
+          p_tenant_id: profile.tenant_id,
+          p_agenda_template_id: templateId,
+          p_title: title,
+          p_scheduled_date: scheduledDate,
+          p_duration_minutes: parseInt(duration),
+          p_facilitator_id: facilitatorId,
+          p_scribe_id: null,
+          p_participant_ids: [],
+        });
+        if (meetingError) throw meetingError;
+        meetingId = data;
+      } else {
+        // Create meeting directly without template
+        const { data, error: meetingError } = await supabase
+          .from('eos_meetings')
+          .insert({
+            tenant_id: profile.tenant_id,
+            meeting_type: meetingType,
+            title: title,
+            scheduled_date: scheduledDate,
+            duration_minutes: parseInt(duration),
+            created_by: facilitatorId,
+          })
+          .select('id')
+          .single();
+        if (meetingError) throw meetingError;
+        meetingId = data.id;
+      }
 
       // If recurring, generate recurrence pattern
       if (frequency !== 'one-time' && meetingId) {
