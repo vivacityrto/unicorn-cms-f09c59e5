@@ -1,0 +1,491 @@
+import { useState, useEffect, useCallback } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
+
+export interface ClientPackage {
+  id: string;
+  package_id: number;
+  package_name: string;
+  package_slug: string | null;
+  membership_state: string;
+  hours_included: number;
+  hours_used: number;
+  current_stage_name: string | null;
+  completed_stages: number;
+  total_stages: number;
+  has_blocked_stages: boolean;
+  membership_started_at: string;
+}
+
+export interface ClientSummary {
+  id: number;
+  name: string;
+  slug: string;
+  status: string;
+  risk_level: string;
+  created_at: string;
+  member_count: number;
+  csc_name: string | null;
+  csc_avatar: string | null;
+  csc_user_id: string | null;
+  packages: {
+    id: number;
+    name: string;
+    slug: string | null;
+    membership_state: string;
+    current_stage: string | null;
+    progress_percent: number;
+    has_blocked: boolean;
+  }[];
+  state: string | null;
+  rto_number: string | null;
+}
+
+export interface ClientProfile {
+  tenant_id: number;
+  trading_name: string | null;
+  abn: string | null;
+  acn: string | null;
+  org_type: string | null;
+  primary_contact_name: string | null;
+  primary_contact_email: string | null;
+  primary_contact_phone: string | null;
+  address_line_1: string | null;
+  address_line_2: string | null;
+  suburb: string | null;
+  state: string | null;
+  postcode: string | null;
+  rto_number: string | null;
+  cricos_number: string | null;
+  notes: string | null;
+  updated_at: string | null;
+}
+
+export interface RegistryLink {
+  id: string;
+  tenant_id: number;
+  registry: string;
+  external_id: string | null;
+  link_status: string;
+  last_synced_at: string | null;
+  last_error: string | null;
+}
+
+export function useClientManagement() {
+  const [clients, setClients] = useState<ClientSummary[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [packages, setPackages] = useState<{ id: number; name: string; slug: string | null }[]>([]);
+  const { toast } = useToast();
+
+  const fetchClients = useCallback(async () => {
+    try {
+      setLoading(true);
+
+      // Fetch all tenants
+      const { data: tenantsData, error: tenantsError } = await supabase
+        .from('tenants')
+        .select('id, name, slug, status, risk_level, created_at')
+        .order('name');
+
+      if (tenantsError) throw tenantsError;
+      if (!tenantsData || tenantsData.length === 0) {
+        setClients([]);
+        setLoading(false);
+        return;
+      }
+
+      const tenantIds = tenantsData.map(t => t.id);
+
+      // Fetch all membership entitlements with package details
+      const { data: entitlements } = await supabase
+        .from('membership_entitlements')
+        .select(`
+          id,
+          tenant_id,
+          package_id,
+          membership_state,
+          hours_included_monthly,
+          hours_used_current_month,
+          packages(id, name, slug)
+        `)
+        .in('tenant_id', tenantIds);
+
+      // Fetch stage progress for each entitlement
+      const { data: stageProgress } = await supabase
+        .from('client_package_stage_state')
+        .select('tenant_id, package_id, status')
+        .in('tenant_id', tenantIds);
+
+      // Fetch member counts
+      const { data: memberCounts } = await supabase
+        .from('users')
+        .select('tenant_id')
+        .in('tenant_id', tenantIds);
+
+      const memberCountMap = (memberCounts || []).reduce((acc, user) => {
+        acc[user.tenant_id] = (acc[user.tenant_id] || 0) + 1;
+        return acc;
+      }, {} as Record<number, number>);
+
+      // Fetch CSC assignments from connected_tenants
+      const { data: connectedData } = await supabase
+        .from('connected_tenants')
+        .select('tenant_id, user_uuid')
+        .in('tenant_id', tenantIds);
+
+      const connectedMap = (connectedData || []).reduce((acc, conn) => {
+        if (!acc[conn.tenant_id]) {
+          acc[conn.tenant_id] = conn.user_uuid;
+        }
+        return acc;
+      }, {} as Record<number, string>);
+
+      // Fetch CSC user details
+      const userUuids = Object.values(connectedMap).filter(Boolean);
+      const { data: usersData } = await supabase
+        .from('users')
+        .select('user_uuid, first_name, last_name, avatar_url')
+        .in('user_uuid', userUuids);
+
+      const userDataMap = (usersData || []).reduce((acc, user) => {
+        acc[user.user_uuid] = {
+          name: `${user.first_name || ''} ${user.last_name || ''}`.trim(),
+          avatar: user.avatar_url
+        };
+        return acc;
+      }, {} as Record<string, { name: string; avatar: string | null }>);
+
+      // Fetch tenant profiles for RTO numbers
+      const { data: profiles } = await supabase
+        .from('tenant_profile')
+        .select('tenant_id, rto_number, state')
+        .in('tenant_id', tenantIds);
+
+      const profileMap = (profiles || []).reduce((acc, p) => {
+        acc[p.tenant_id] = { rto_number: p.rto_number, state: p.state };
+        return acc;
+      }, {} as Record<number, { rto_number: string | null; state: string | null }>);
+
+      // Build package summary per tenant
+      const entitlementsByTenant = (entitlements || []).reduce((acc, ent) => {
+        if (!acc[ent.tenant_id]) acc[ent.tenant_id] = [];
+        
+        // Calculate stage progress
+        const tenantPackageStages = (stageProgress || []).filter(
+          s => s.tenant_id === ent.tenant_id && s.package_id === ent.package_id
+        );
+        const totalStages = tenantPackageStages.length;
+        const completedStages = tenantPackageStages.filter(s => s.status === 'completed').length;
+        const hasBlocked = tenantPackageStages.some(s => s.status === 'blocked');
+        const activeStage = tenantPackageStages.find(s => s.status === 'active' || s.status === 'in_progress');
+
+        acc[ent.tenant_id].push({
+          id: ent.package_id,
+          name: (ent.packages as any)?.name || 'Unknown',
+          slug: (ent.packages as any)?.slug || null,
+          membership_state: ent.membership_state,
+          current_stage: activeStage ? 'In Progress' : totalStages > 0 && completedStages === totalStages ? 'Completed' : 'Not Started',
+          progress_percent: totalStages > 0 ? Math.round((completedStages / totalStages) * 100) : 0,
+          has_blocked: hasBlocked
+        });
+        return acc;
+      }, {} as Record<number, ClientSummary['packages']>);
+
+      // Merge all data
+      const clientsWithData: ClientSummary[] = tenantsData.map(tenant => ({
+        id: tenant.id,
+        name: tenant.name,
+        slug: tenant.slug,
+        status: tenant.status,
+        risk_level: tenant.risk_level || 'low',
+        created_at: tenant.created_at,
+        member_count: memberCountMap[tenant.id] || 0,
+        csc_name: connectedMap[tenant.id] ? userDataMap[connectedMap[tenant.id]]?.name || null : null,
+        csc_avatar: connectedMap[tenant.id] ? userDataMap[connectedMap[tenant.id]]?.avatar || null : null,
+        csc_user_id: connectedMap[tenant.id] || null,
+        packages: entitlementsByTenant[tenant.id] || [],
+        state: profileMap[tenant.id]?.state || null,
+        rto_number: profileMap[tenant.id]?.rto_number || null
+      }));
+
+      setClients(clientsWithData);
+    } catch (error: any) {
+      console.error('Error fetching clients:', error);
+      toast({
+        title: 'Error',
+        description: error.message,
+        variant: 'destructive'
+      });
+    } finally {
+      setLoading(false);
+    }
+  }, [toast]);
+
+  const fetchPackages = useCallback(async () => {
+    const { data, error } = await supabase
+      .from('packages')
+      .select('id, name, slug')
+      .order('name');
+    
+    if (!error && data) {
+      setPackages(data);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchClients();
+    fetchPackages();
+  }, [fetchClients, fetchPackages]);
+
+  return {
+    clients,
+    packages,
+    loading,
+    refreshClients: fetchClients
+  };
+}
+
+export function useClientProfile(tenantId: number | null) {
+  const [profile, setProfile] = useState<ClientProfile | null>(null);
+  const [registryLink, setRegistryLink] = useState<RegistryLink | null>(null);
+  const [loading, setLoading] = useState(true);
+  const { toast } = useToast();
+
+  const fetchProfile = useCallback(async () => {
+    if (!tenantId) return;
+    
+    try {
+      setLoading(true);
+      
+      const [profileResult, linkResult] = await Promise.all([
+        supabase
+          .from('tenant_profile')
+          .select('*')
+          .eq('tenant_id', tenantId)
+          .maybeSingle(),
+        supabase
+          .from('tenant_registry_links')
+          .select('*')
+          .eq('tenant_id', tenantId)
+          .eq('registry', 'tga')
+          .maybeSingle()
+      ]);
+
+      if (profileResult.error && profileResult.error.code !== 'PGRST116') {
+        throw profileResult.error;
+      }
+
+      setProfile(profileResult.data);
+      setRegistryLink(linkResult.data);
+    } catch (error: any) {
+      console.error('Error fetching client profile:', error);
+      toast({
+        title: 'Error',
+        description: error.message,
+        variant: 'destructive'
+      });
+    } finally {
+      setLoading(false);
+    }
+  }, [tenantId, toast]);
+
+  const saveProfile = useCallback(async (updates: Partial<ClientProfile>) => {
+    if (!tenantId) return false;
+
+    try {
+      const { data: session } = await supabase.auth.getSession();
+      const userId = session?.session?.user?.id;
+
+      // Get old values for audit
+      const oldProfile = profile;
+
+      const { error } = await supabase
+        .from('tenant_profile')
+        .upsert({
+          tenant_id: tenantId,
+          ...updates,
+          updated_by: userId,
+          updated_at: new Date().toISOString()
+        }, { onConflict: 'tenant_id' });
+
+      if (error) throw error;
+
+      // Log audit
+      await supabase.from('client_audit_log').insert([{
+        tenant_id: tenantId,
+        actor_user_id: userId || undefined,
+        action: 'client_profile_updated',
+        entity_type: 'tenant_profile',
+        entity_id: tenantId.toString(),
+        details: JSON.parse(JSON.stringify({
+          old_values: oldProfile,
+          new_values: updates,
+          changed_fields: Object.keys(updates)
+        }))
+      }]);
+
+      toast({
+        title: 'Success',
+        description: 'Client profile saved successfully'
+      });
+
+      await fetchProfile();
+      return true;
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: error.message,
+        variant: 'destructive'
+      });
+      return false;
+    }
+  }, [tenantId, profile, fetchProfile, toast]);
+
+  const updateRegistryLink = useCallback(async (status: string, externalId?: string) => {
+    if (!tenantId) return false;
+
+    try {
+      const { data: session } = await supabase.auth.getSession();
+      const userId = session?.session?.user?.id;
+
+      const oldLink = registryLink;
+
+      const { error } = await supabase
+        .from('tenant_registry_links')
+        .upsert({
+          tenant_id: tenantId,
+          registry: 'tga',
+          link_status: status,
+          external_id: externalId || profile?.rto_number || null,
+          updated_by: userId,
+          last_synced_at: status === 'linked' ? new Date().toISOString() : registryLink?.last_synced_at
+        }, { onConflict: 'tenant_id,registry' });
+
+      if (error) throw error;
+
+      // Log audit
+      await supabase.from('client_audit_log').insert([{
+        tenant_id: tenantId,
+        actor_user_id: userId || undefined,
+        action: 'registry_link_updated',
+        entity_type: 'tenant_registry_links',
+        entity_id: tenantId.toString(),
+        details: JSON.parse(JSON.stringify({
+          registry: 'tga',
+          old_status: oldLink?.link_status,
+          new_status: status
+        }))
+      }]);
+
+      toast({
+        title: 'Success',
+        description: `TGA link status updated to ${status}`
+      });
+
+      await fetchProfile();
+      return true;
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: error.message,
+        variant: 'destructive'
+      });
+      return false;
+    }
+  }, [tenantId, profile, registryLink, fetchProfile, toast]);
+
+  useEffect(() => {
+    fetchProfile();
+  }, [fetchProfile]);
+
+  return {
+    profile,
+    registryLink,
+    loading,
+    saveProfile,
+    updateRegistryLink,
+    refreshProfile: fetchProfile
+  };
+}
+
+export function useClientPackages(tenantId: number | null) {
+  const [packages, setPackages] = useState<ClientPackage[]>([]);
+  const [loading, setLoading] = useState(true);
+  const { toast } = useToast();
+
+  const fetchPackages = useCallback(async () => {
+    if (!tenantId) return;
+
+    try {
+      setLoading(true);
+
+      // Fetch entitlements
+      const { data: entitlements, error } = await supabase
+        .from('membership_entitlements')
+        .select(`
+          id,
+          tenant_id,
+          package_id,
+          membership_state,
+          hours_included_monthly,
+          hours_used_current_month,
+          membership_started_at,
+          packages(id, name, slug)
+        `)
+        .eq('tenant_id', tenantId);
+
+      if (error) throw error;
+
+      // Fetch stage states
+      const { data: stageStates } = await supabase
+        .from('client_package_stage_state')
+        .select('*, documents_stages(title)')
+        .eq('tenant_id', tenantId);
+
+      // Build package data with stage info
+      const packageData: ClientPackage[] = (entitlements || []).map(ent => {
+        const pkgStages = (stageStates || []).filter(s => s.package_id === ent.package_id);
+        const totalStages = pkgStages.length;
+        const completedStages = pkgStages.filter(s => s.status === 'completed').length;
+        const hasBlocked = pkgStages.some(s => s.status === 'blocked');
+        const activeStage = pkgStages.find(s => s.status === 'active' || s.status === 'in_progress');
+
+        return {
+          id: ent.id,
+          package_id: ent.package_id,
+          package_name: (ent.packages as any)?.name || 'Unknown',
+          package_slug: (ent.packages as any)?.slug || null,
+          membership_state: ent.membership_state,
+          hours_included: ent.hours_included_monthly,
+          hours_used: ent.hours_used_current_month,
+          current_stage_name: activeStage ? (activeStage.documents_stages as any)?.title || null : null,
+          completed_stages: completedStages,
+          total_stages: totalStages,
+          has_blocked_stages: hasBlocked,
+          membership_started_at: ent.membership_started_at
+        };
+      });
+
+      setPackages(packageData);
+    } catch (error: any) {
+      console.error('Error fetching client packages:', error);
+      toast({
+        title: 'Error',
+        description: error.message,
+        variant: 'destructive'
+      });
+    } finally {
+      setLoading(false);
+    }
+  }, [tenantId, toast]);
+
+  useEffect(() => {
+    fetchPackages();
+  }, [fetchPackages]);
+
+  return {
+    packages,
+    loading,
+    refreshPackages: fetchPackages
+  };
+}

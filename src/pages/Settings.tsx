@@ -107,7 +107,7 @@ export default function Settings() {
       if (userData.tenant_id) {
         const { data: tenantData } = await supabase
           .from('tenants')
-          .select('*, tenant_profiles(*)')
+          .select('*, tenant_profile(*)')
           .eq('id', userData.tenant_id)
           .single();
         

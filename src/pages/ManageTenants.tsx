@@ -658,7 +658,7 @@ export default function ManageTenants() {
                     Status
                   </TableHead>
                   <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-r border-border/50 text-center">
-                    CST
+                    CSC
                   </TableHead>
                   <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-r border-border/50 text-center">
                     Members
