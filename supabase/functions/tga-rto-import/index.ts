@@ -24,19 +24,22 @@ function getSecret(nameList: string[]): string | undefined {
 // Backward-compatible secret names (Unicorn + ComplyHub)
 const TGA_WS_USERNAME = getSecret(['TGA_WS_USERNAME', 'TGA_USERNAME']);
 const TGA_WS_PASSWORD = getSecret(['TGA_WS_PASSWORD', 'TGA_PASSWORD']);
-const TGA_ORG_ENDPOINT_OVERRIDE = getSecret(['TGA_ORG_ENDPOINT']);
-const TGA_COMPONENT_ENDPOINT_OVERRIDE = getSecret(['TGA_COMPONENT_ENDPOINT', 'TGA_COMP_ENDPOINT']);
 const TGA_TIMEOUT_MS = parseInt(getSecret(['TGA_TIMEOUT_MS']) || '30000', 10);
 
-// Default base URL
-const DEFAULT_TGA_BASE = 'https://ws.training.gov.au/Deewr.Tga.WebServices';
+// Direct endpoints - matching working tga-sync implementation (uppercase WebServices)
+// Fallback list in order of preference
+const ORG_ENDPOINTS = [
+  'https://ws.training.gov.au/Deewr.Tga.Webservices/OrganisationServiceV13.svc',
+  'https://ws.training.gov.au/Deewr.Tga.Webservices/OrganisationService.svc',
+];
 
-// SOAP namespaces
-const SOAP_NS = {
-  soap: 'http://www.w3.org/2003/05/soap-envelope',
-  org: 'http://training.gov.au/services/Organisation',
-  tc: 'http://training.gov.au/services/TrainingComponent',
-};
+// SOAP namespaces - two variants to try in order
+const SOAP_NS_VARIANTS = [
+  { org: 'http://training.gov.au/services/Organisation' },
+  { org: 'http://training.gov.au/services/13/OrganisationService' },
+];
+
+const SOAP12_NS = 'http://www.w3.org/2003/05/soap-envelope';
 
 function generateCorrelationId(): string {
   return `tga-${crypto.randomUUID()}`;
@@ -69,165 +72,7 @@ function jsonResponse(body: Record<string, unknown>, status = 200): Response {
 }
 
 // ============================================================================
-// WSDL ENDPOINT DISCOVERY
-// ============================================================================
-
-interface EndpointDiscoveryResult {
-  ok: boolean;
-  serviceEndpoint: string | null;
-  wsdlUrl: string | null;
-  candidatesTried: string[];
-  httpStatus: number | null;
-  stage: string;
-  error?: string;
-  responseSnippet?: string;
-}
-
-function normalizeOrgBase(endpoint: string | undefined): string {
-  if (!endpoint) {
-    return DEFAULT_TGA_BASE;
-  }
-  
-  let base = endpoint.trim();
-  
-  // Strip ?wsdl if present
-  if (base.endsWith('?wsdl')) {
-    base = base.slice(0, -5);
-  }
-  
-  // If it already ends with .svc, return parent directory
-  if (base.endsWith('.svc')) {
-    const lastSlash = base.lastIndexOf('/');
-    if (lastSlash > 0) {
-      return base.slice(0, lastSlash);
-    }
-  }
-  
-  // Remove trailing slash
-  if (base.endsWith('/')) {
-    base = base.slice(0, -1);
-  }
-  
-  return base;
-}
-
-function buildWsdlCandidates(orgBase: string): string[] {
-  const candidates: string[] = [];
-  
-  // V13 first (preferred), then non-versioned
-  candidates.push(`${orgBase}/OrganisationServiceV13.svc?wsdl`);
-  candidates.push(`${orgBase}/OrganisationService.svc?wsdl`);
-  
-  return candidates;
-}
-
-async function discoverEndpointFromWsdl(
-  correlationId: string
-): Promise<EndpointDiscoveryResult> {
-  const orgBase = normalizeOrgBase(TGA_ORG_ENDPOINT_OVERRIDE);
-  const candidates = buildWsdlCandidates(orgBase);
-  const candidatesTried: string[] = [];
-  
-  logStage(correlationId, 'config.resolve', {
-    org_base: orgBase,
-    candidates: candidates,
-    has_endpoint_override: !!TGA_ORG_ENDPOINT_OVERRIDE,
-  });
-
-  for (const wsdlUrl of candidates) {
-    candidatesTried.push(wsdlUrl);
-    
-    try {
-      logStage(correlationId, 'wsdl.fetch', { wsdl_url: wsdlUrl });
-      
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), TGA_TIMEOUT_MS);
-      
-      const response = await fetch(wsdlUrl, {
-        method: 'GET',
-        headers: { 'Accept': 'text/xml, application/xml' },
-        signal: controller.signal,
-      });
-      
-      clearTimeout(timeoutId);
-      
-      if (response.status !== 200) {
-        logStage(correlationId, 'wsdl.fetch.fail', {
-          wsdl_url: wsdlUrl,
-          http_status: response.status,
-        });
-        continue;
-      }
-      
-      const wsdlXml = await response.text();
-      logStage(correlationId, 'wsdl.parse', {
-        wsdl_url: wsdlUrl,
-        wsdl_length: wsdlXml.length,
-      });
-      
-      // Extract SOAP 1.2 address first, then SOAP 1.1
-      let serviceEndpoint = extractSoapAddress(wsdlXml, 'soap12');
-      if (!serviceEndpoint) {
-        serviceEndpoint = extractSoapAddress(wsdlXml, 'soap');
-      }
-      
-      if (serviceEndpoint) {
-        logStage(correlationId, 'wsdl.discovered', {
-          wsdl_url: wsdlUrl,
-          service_endpoint: serviceEndpoint,
-        });
-        
-        return {
-          ok: true,
-          serviceEndpoint,
-          wsdlUrl,
-          candidatesTried,
-          httpStatus: 200,
-          stage: 'wsdl.discovered',
-        };
-      } else {
-        logStage(correlationId, 'wsdl.parse.no_address', { wsdl_url: wsdlUrl });
-      }
-    } catch (err) {
-      const errorMsg = err instanceof Error ? err.message : String(err);
-      logStage(correlationId, 'wsdl.fetch.error', {
-        wsdl_url: wsdlUrl,
-        error: errorMsg,
-      });
-    }
-  }
-  
-  // All candidates failed
-  return {
-    ok: false,
-    serviceEndpoint: null,
-    wsdlUrl: null,
-    candidatesTried,
-    httpStatus: null,
-    stage: 'config.endpoint_not_found',
-    error: `No valid WSDL found. Tried: ${candidatesTried.join(', ')}`,
-  };
-}
-
-function extractSoapAddress(wsdlXml: string, prefix: string): string | null {
-  // Match <soap12:address location="..." /> or <soap:address location="..." />
-  const patterns = [
-    new RegExp(`<${prefix}:address[^>]+location=["']([^"']+)["']`, 'i'),
-    new RegExp(`<wsdl:port[^>]*>[\\s\\S]*?<${prefix}:address[^>]+location=["']([^"']+)["']`, 'i'),
-  ];
-  
-  for (const pattern of patterns) {
-    const match = wsdlXml.match(pattern);
-    if (match && match[1]) {
-      return match[1];
-    }
-  }
-  
-  return null;
-}
-
-// ============================================================================
-// SOAP LAYER - Using discovered endpoint
+// CONFIG VALIDATION
 // ============================================================================
 
 interface ConfigValidation {
@@ -250,106 +95,179 @@ function getBasicAuthHeader(): string | null {
   return `Basic ${credentials}`;
 }
 
-function buildOrgSoapRequest(action: string, body: string): string {
+// ============================================================================
+// SOAP LAYER - Direct endpoints, no WSDL discovery
+// ============================================================================
+
+function buildOrgSoapEnvelope(orgNs: string, rtoCode: string): string {
   return `<?xml version="1.0" encoding="utf-8"?>
-<soap12:Envelope xmlns:soap12="${SOAP_NS.soap}" xmlns:org="${SOAP_NS.org}">
+<soap12:Envelope xmlns:soap12="${SOAP12_NS}" xmlns:org="${orgNs}">
   <soap12:Body>
-    <org:${action}>
-      ${body}
-    </org:${action}>
+    <org:GetDetails>
+      <org:request>
+        <org:Code>${rtoCode}</org:Code>
+      </org:request>
+    </org:GetDetails>
   </soap12:Body>
 </soap12:Envelope>`;
 }
 
-interface SoapRequestResult {
+interface SoapCallResult {
   ok: boolean;
   xml: string;
   httpStatus: number | null;
+  endpointUsed: string | null;
+  namespaceUsed: string | null;
   error?: string;
   responseSnippet?: string;
 }
 
-async function makeSoapRequest(
-  endpoint: string,
-  soapAction: string,
-  body: string,
-  correlationId: string
-): Promise<SoapRequestResult> {
-  logStage(correlationId, 'soap.post', {
-    endpoint_used: endpoint,
-    soap_action: soapAction,
-    body_length: body.length,
-  });
-
-  // Check auth header before making request
+async function callOrgService(rtoCode: string, correlationId: string): Promise<SoapCallResult> {
   const authHeader = getBasicAuthHeader();
   if (!authHeader) {
     return {
       ok: false,
       xml: '',
       httpStatus: null,
+      endpointUsed: null,
+      namespaceUsed: null,
       error: 'TGA credentials not configured (username or password missing)',
     };
   }
 
-  try {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), TGA_TIMEOUT_MS);
+  const attemptedEndpoints: string[] = [];
+  
+  // Try each endpoint with each namespace variant
+  for (const endpoint of ORG_ENDPOINTS) {
+    for (const nsVariant of SOAP_NS_VARIANTS) {
+      attemptedEndpoints.push(`${endpoint} (ns: ${nsVariant.org})`);
+      
+      const soapBody = buildOrgSoapEnvelope(nsVariant.org, rtoCode);
+      
+      logStage(correlationId, 'soap.build', {
+        endpoint,
+        namespace: nsVariant.org,
+        body_length: soapBody.length,
+      });
 
-    const response = await fetch(endpoint, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/soap+xml; charset=utf-8',
-        'Authorization': authHeader,
-      },
-      body,
-      signal: controller.signal,
-    });
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), TGA_TIMEOUT_MS);
 
-    clearTimeout(timeoutId);
-    
-    let xmlResponse = '';
-    try {
-      xmlResponse = await response.text();
-    } catch (textErr) {
-      xmlResponse = `[Failed to read response body: ${textErr instanceof Error ? textErr.message : String(textErr)}]`;
+        logStage(correlationId, 'soap.fetch', { endpoint });
+
+        const response = await fetch(endpoint, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/soap+xml; charset=utf-8',
+            'Authorization': authHeader,
+          },
+          body: soapBody,
+          signal: controller.signal,
+        });
+
+        clearTimeout(timeoutId);
+
+        let xmlResponse = '';
+        try {
+          xmlResponse = await response.text();
+        } catch {
+          xmlResponse = '[Failed to read response body]';
+        }
+
+        logStage(correlationId, 'soap.response', {
+          endpoint,
+          http_status: response.status,
+          response_length: xmlResponse.length,
+          response_snippet: xmlResponse.slice(0, 300),
+        });
+
+        // 401/403 = auth failed, stop trying
+        if (response.status === 401 || response.status === 403) {
+          return {
+            ok: false,
+            xml: xmlResponse,
+            httpStatus: response.status,
+            endpointUsed: endpoint,
+            namespaceUsed: nsVariant.org,
+            error: `Authentication failed: ${response.status} ${response.statusText}`,
+            responseSnippet: xmlResponse.slice(0, 500),
+          };
+        }
+
+        // 404 = endpoint not found, try next
+        if (response.status === 404) {
+          logStage(correlationId, 'soap.404', { endpoint, trying_next: true });
+          continue;
+        }
+
+        // 500+ = server error, try next endpoint
+        if (response.status >= 500) {
+          logStage(correlationId, 'soap.server_error', { endpoint, http_status: response.status });
+          continue;
+        }
+
+        // Check for SOAP Fault
+        if (xmlResponse.includes('<Fault') || xmlResponse.includes(':Fault>')) {
+          // Extract fault message
+          const faultMatch = xmlResponse.match(/<(?:faultstring|Text|Reason)[^>]*>([^<]+)/i);
+          const faultMessage = faultMatch ? faultMatch[1] : 'Unknown SOAP Fault';
+          
+          logStage(correlationId, 'soap.fault', { endpoint, fault: faultMessage });
+          
+          // Try next namespace variant (same endpoint)
+          continue;
+        }
+
+        // Success!
+        if (response.ok) {
+          logStage(correlationId, 'soap.parse', {
+            endpoint,
+            namespace: nsVariant.org,
+            response_length: xmlResponse.length,
+          });
+          
+          return {
+            ok: true,
+            xml: xmlResponse,
+            httpStatus: response.status,
+            endpointUsed: endpoint,
+            namespaceUsed: nsVariant.org,
+          };
+        }
+
+        // Other non-2xx status
+        return {
+          ok: false,
+          xml: xmlResponse,
+          httpStatus: response.status,
+          endpointUsed: endpoint,
+          namespaceUsed: nsVariant.org,
+          error: `SOAP request failed: ${response.status} ${response.statusText}`,
+          responseSnippet: xmlResponse.slice(0, 500),
+        };
+
+      } catch (err) {
+        const errorMsg = err instanceof Error ? err.message : String(err);
+        const isTimeout = err instanceof Error && err.name === 'AbortError';
+        
+        logStage(correlationId, 'soap.error', { endpoint, error: errorMsg, is_timeout: isTimeout });
+        
+        // Continue to next endpoint/namespace on network errors
+        continue;
+      }
     }
-
-    logStage(correlationId, 'soap.response', {
-      endpoint_used: endpoint,
-      http_status: response.status,
-      response_length: xmlResponse.length,
-      response_snippet: xmlResponse.slice(0, 300),
-    });
-
-    if (!response.ok) {
-      return {
-        ok: false,
-        xml: xmlResponse,
-        httpStatus: response.status,
-        error: `SOAP request failed: ${response.status} ${response.statusText}`,
-        responseSnippet: xmlResponse.slice(0, 500),
-      };
-    }
-
-    return {
-      ok: true,
-      xml: xmlResponse,
-      httpStatus: response.status,
-    };
-  } catch (error) {
-    const errorMsg = error instanceof Error ? error.message : String(error);
-    const isTimeout = error instanceof Error && error.name === 'AbortError';
-    
-    logStage(correlationId, 'soap.error', { error: errorMsg, is_timeout: isTimeout });
-    
-    return {
-      ok: false,
-      xml: '',
-      httpStatus: null,
-      error: isTimeout ? 'Request timed out' : errorMsg,
-    };
   }
+
+  // All endpoints failed
+  return {
+    ok: false,
+    xml: '',
+    httpStatus: 404,
+    endpointUsed: attemptedEndpoints.join('; '),
+    namespaceUsed: null,
+    error: `All TGA endpoints failed. Tried: ${attemptedEndpoints.join(', ')}`,
+  };
 }
 
 // ============================================================================
@@ -435,9 +353,8 @@ interface FetchOrgResult {
   units: ScopeItem[];
   courses: string[];
   httpStatus: number | null;
-  endpointUsed: string;
-  wsdlUrlUsed: string | null;
-  stage?: string;
+  endpointUsed: string | null;
+  stage: string;
   error?: string;
   responseSnippet?: string;
 }
@@ -448,37 +365,17 @@ async function fetchOrganisationDetails(
 ): Promise<FetchOrgResult> {
   logStage(correlationId, 'soap.org_details', { rto_code: rtoCode });
 
-  // First, discover the endpoint via WSDL
-  const discovery = await discoverEndpointFromWsdl(correlationId);
-  
-  if (!discovery.ok || !discovery.serviceEndpoint) {
-    return {
-      ok: false,
-      summary: null,
-      contacts: [],
-      addresses: [],
-      scopeItems: [],
-      qualifications: [],
-      skillSets: [],
-      units: [],
-      courses: [],
-      httpStatus: discovery.httpStatus,
-      endpointUsed: discovery.candidatesTried.join(', '),
-      wsdlUrlUsed: null,
-      error: discovery.error || 'WSDL discovery failed',
-    };
-  }
-
-  const endpoint = discovery.serviceEndpoint;
-  const body = buildOrgSoapRequest('GetDetails', `<org:request><org:Code>${rtoCode}</org:Code></org:request>`);
-  const result = await makeSoapRequest(endpoint, 'GetDetails', body, correlationId);
+  // Call the org service directly (no WSDL discovery)
+  const result = await callOrgService(rtoCode, correlationId);
 
   if (!result.ok) {
-    logStage(correlationId, 'soap.org_details.error', {
-      error: result.error,
-      http_status: result.httpStatus,
-      endpoint_used: endpoint,
-    });
+    // Determine stage based on error type
+    let stage = 'soap.request.error';
+    if (result.httpStatus === 401 || result.httpStatus === 403) {
+      stage = 'config.auth_failed';
+    } else if (result.httpStatus === 404) {
+      stage = 'soap.endpoint.not_found';
+    }
 
     return {
       ok: false,
@@ -491,8 +388,8 @@ async function fetchOrganisationDetails(
       units: [],
       courses: [],
       httpStatus: result.httpStatus,
-      endpointUsed: endpoint,
-      wsdlUrlUsed: discovery.wsdlUrl,
+      endpointUsed: result.endpointUsed,
+      stage,
       error: result.error,
       responseSnippet: result.responseSnippet,
     };
@@ -500,6 +397,26 @@ async function fetchOrganisationDetails(
 
   const xml = result.xml;
   logStage(correlationId, 'soap.parse', { response_length: xml.length });
+
+  // Check if we got a valid response with organisation data
+  if (!xml.includes('LegalName') && !xml.includes('Name>')) {
+    return {
+      ok: false,
+      summary: null,
+      contacts: [],
+      addresses: [],
+      scopeItems: [],
+      qualifications: [],
+      skillSets: [],
+      units: [],
+      courses: [],
+      httpStatus: result.httpStatus,
+      endpointUsed: result.endpointUsed,
+      stage: 'soap.parse.error',
+      error: 'Response did not contain organisation data',
+      responseSnippet: xml.slice(0, 500),
+    };
+  }
 
   // Parse summary
   const summary: OrganisationSummary = {
@@ -590,8 +507,8 @@ async function fetchOrganisationDetails(
     units,
     courses,
     httpStatus: result.httpStatus,
-    endpointUsed: endpoint,
-    wsdlUrlUsed: discovery.wsdlUrl,
+    endpointUsed: result.endpointUsed,
+    stage: 'done',
   };
 }
 
@@ -611,25 +528,12 @@ async function handleProbe(rtoCode: string, correlationId: string): Promise<Resp
       stage: 'config.auth_failed',
       error: 'TGA credentials not configured. Set TGA_WS_USERNAME and TGA_WS_PASSWORD.',
       credentials_configured: false,
+      http_status: null,
+      endpoint_used: null,
     });
   }
 
-  // Discover endpoint
-  const discovery = await discoverEndpointFromWsdl(correlationId);
-  
-  if (!discovery.ok) {
-    return jsonResponse({
-      ok: false,
-      correlation_id: correlationId,
-      stage: 'config.endpoint_not_found',
-      error: discovery.error,
-      candidates_tried: discovery.candidatesTried,
-      wsdl_ok: false,
-      auth_ok: credentialsConfigured,
-    });
-  }
-
-  // Fetch org details
+  // Fetch org details directly
   const orgResult = await fetchOrganisationDetails(rtoCode, correlationId);
 
   const hs = orgResult.httpStatus;
@@ -638,37 +542,20 @@ async function handleProbe(rtoCode: string, correlationId: string): Promise<Resp
   const summaryFound = !!orgResult.summary?.legalName;
 
   logStage(correlationId, 'probe.complete', {
-    wsdl_ok: !!discovery.wsdlUrl,
     auth_ok: authOk,
     endpoint_ok: endpointOk,
     summary_found: summaryFound,
     http_status: orgResult.httpStatus,
     endpoint_used: orgResult.endpointUsed,
-    wsdl_url_used: orgResult.wsdlUrlUsed,
+    stage: orgResult.stage,
   });
-
-  // Determine error stage if not ok
-  let stage = 'probe.complete';
-  if (!orgResult.ok) {
-    if (hs === 401 || hs === 403) {
-      stage = 'config.auth_failed';
-    } else if (hs === 404) {
-      stage = 'config.endpoint_not_found';
-    } else if (hs === null) {
-      stage = 'soap.request.error';
-    } else {
-      stage = 'soap.request.error';
-    }
-  }
 
   return jsonResponse({
     ok: orgResult.ok,
     correlation_id: correlationId,
-    stage,
+    stage: orgResult.stage,
     endpoint_used: orgResult.endpointUsed,
-    wsdl_url_used: orgResult.wsdlUrlUsed,
     http_status: orgResult.httpStatus,
-    wsdl_ok: !!discovery.wsdlUrl,
     auth_ok: authOk,
     endpoint_ok: endpointOk,
     summary_found: summaryFound,
@@ -712,7 +599,7 @@ serve(async (req) => {
         missing_secrets: configCheck.missing,
         endpoint_used: null,
         http_status: null,
-      });
+      }, 400);
     }
 
     // Handle probe mode via GET
@@ -727,6 +614,8 @@ serve(async (req) => {
             correlation_id: correlationId,
             stage: 'probe.error',
             error: 'Missing rto or rto_code query parameter',
+            endpoint_used: null,
+            http_status: null,
           }, 400);
         }
         return handleProbe(rtoCode, correlationId);
@@ -738,8 +627,7 @@ serve(async (req) => {
         correlation_id: correlationId,
         stage: 'health',
         credentials_configured: !!(TGA_WS_USERNAME && TGA_WS_PASSWORD),
-        default_base: DEFAULT_TGA_BASE,
-        has_endpoint_override: !!TGA_ORG_ENDPOINT_OVERRIDE,
+        endpoints: ORG_ENDPOINTS,
       });
     }
 
@@ -758,6 +646,8 @@ serve(async (req) => {
             correlation_id: correlationId,
             stage: 'probe.error',
             error: 'Missing rto_code in request body',
+            endpoint_used: null,
+            http_status: null,
           }, 400);
         }
         return handleProbe(rto_code, correlationId);
@@ -770,6 +660,8 @@ serve(async (req) => {
           correlation_id: correlationId,
           stage: 'input.error',
           error: 'Missing required fields: job_id, tenant_id, rto_code',
+          endpoint_used: null,
+          http_status: null,
         }, 400);
       }
 
@@ -791,14 +683,6 @@ serve(async (req) => {
       const orgResult = await fetchOrganisationDetails(rto_code, correlationId);
 
       if (!orgResult.ok) {
-        // Determine error type
-        let stage = 'soap.error';
-        if (orgResult.httpStatus === 404) {
-          stage = 'config.endpoint_not_found';
-        } else if (orgResult.httpStatus === 401 || orgResult.httpStatus === 403) {
-          stage = 'config.auth_failed';
-        }
-
         await supabase
           .from('tga_rto_import_jobs')
           .update({
@@ -811,13 +695,12 @@ serve(async (req) => {
         return jsonResponse({
           ok: false,
           correlation_id: correlationId,
-          stage,
+          stage: orgResult.stage,
           http_status: orgResult.httpStatus,
           endpoint_used: orgResult.endpointUsed,
-          wsdl_url_used: orgResult.wsdlUrlUsed,
           error: orgResult.error,
           response_snippet: orgResult.responseSnippet,
-        });
+        }, 502);
       }
 
       // ========== UPSERT TO DATABASE ==========
@@ -1027,58 +910,50 @@ serve(async (req) => {
         }
       }
 
-      // Update job status
+      // Update job status to completed
       await supabase
         .from('tga_rto_import_jobs')
         .update({
           status: 'completed',
           completed_at: new Date().toISOString(),
-          summary_fetched: !!orgResult.summary,
-          contacts_fetched: counts.contacts > 0,
-          addresses_fetched: counts.addresses > 0,
-          scope_fetched: counts.qualifications > 0 || counts.skillsets > 0 || counts.units > 0,
-          qualifications_count: counts.qualifications,
-          skillsets_count: counts.skillsets,
-          units_count: counts.units,
-          courses_count: counts.courses,
+          records_fetched: 1,
+          records_inserted: counts.org + counts.contacts + counts.addresses + 
+                           counts.qualifications + counts.skillsets + counts.units + counts.courses,
         })
         .eq('id', job_id);
 
-      logStage(correlationId, 'done', {
-        message: `Import complete: org:${counts.org}, contacts:${counts.contacts}, addresses:${counts.addresses}, quals:${counts.qualifications}, skillsets:${counts.skillsets}, units:${counts.units}, courses:${counts.courses}`,
-      });
-
-      console.log(`[TGA] [${correlationId}] Import complete: { org:${counts.org}, contacts:${counts.contacts}, addresses:${counts.addresses}, quals:${counts.qualifications}, skillsets:${counts.skillsets}, units:${counts.units}, courses:${counts.courses} }`);
+      logStage(correlationId, 'done', { counts });
 
       return jsonResponse({
         ok: true,
         correlation_id: correlationId,
         stage: 'done',
-        org_name: orgResult.summary?.legalName,
         endpoint_used: orgResult.endpointUsed,
-        wsdl_url_used: orgResult.wsdlUrlUsed,
+        http_status: orgResult.httpStatus,
         counts,
+        org_name: orgResult.summary?.legalName,
       });
     }
 
+    // Unsupported method
     return jsonResponse({
       ok: false,
       correlation_id: correlationId,
       stage: 'error',
-      error: `Method ${req.method} not allowed`,
+      error: `Unsupported method: ${req.method}`,
+      endpoint_used: null,
+      http_status: null,
     }, 405);
 
-  } catch (error) {
-    const errorMsg = error instanceof Error ? error.message : String(error);
-    const errorStack = error instanceof Error ? error.stack : undefined;
+  } catch (err) {
+    // Unhandled exception - return JSON, never crash
+    const errorMsg = err instanceof Error ? err.message : String(err);
+    const errorStack = err instanceof Error ? err.stack : undefined;
     
-    console.error(`[TGA] [${correlationId}] STAGE=unhandled.exception error="${errorMsg}"`, errorStack);
-    logStage(correlationId, 'unhandled.exception', { 
-      error: errorMsg,
-      stack_preview: errorStack?.slice(0, 300),
-    });
-
-    // Always return 200 with JSON so UI can parse the error
+    console.error(`[TGA] [${correlationId}] UNHANDLED EXCEPTION:`, errorMsg, errorStack);
+    
+    logStage(correlationId, 'unhandled.exception', { error: errorMsg });
+    
     return jsonResponse({
       ok: false,
       correlation_id: correlationId,
@@ -1086,6 +961,6 @@ serve(async (req) => {
       error: errorMsg,
       endpoint_used: null,
       http_status: null,
-    }, 200);
+    }, 500);
   }
 });
