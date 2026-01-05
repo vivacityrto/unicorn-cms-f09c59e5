@@ -77,8 +77,10 @@ interface EndpointDiscoveryResult {
   serviceEndpoint: string | null;
   wsdlUrl: string | null;
   candidatesTried: string[];
-  httpStatus: number;
+  httpStatus: number | null;
+  stage: string;
   error?: string;
+  responseSnippet?: string;
 }
 
 function normalizeOrgBase(endpoint: string | undefined): string {
@@ -181,6 +183,7 @@ async function discoverEndpointFromWsdl(
           wsdlUrl,
           candidatesTried,
           httpStatus: 200,
+          stage: 'wsdl.discovered',
         };
       } else {
         logStage(correlationId, 'wsdl.parse.no_address', { wsdl_url: wsdlUrl });
@@ -200,7 +203,8 @@ async function discoverEndpointFromWsdl(
     serviceEndpoint: null,
     wsdlUrl: null,
     candidatesTried,
-    httpStatus: 404,
+    httpStatus: null,
+    stage: 'config.endpoint_not_found',
     error: `No valid WSDL found. Tried: ${candidatesTried.join(', ')}`,
   };
 }
@@ -260,7 +264,7 @@ function buildOrgSoapRequest(action: string, body: string): string {
 interface SoapRequestResult {
   ok: boolean;
   xml: string;
-  httpStatus: number;
+  httpStatus: number | null;
   error?: string;
   responseSnippet?: string;
 }
@@ -283,7 +287,7 @@ async function makeSoapRequest(
     return {
       ok: false,
       xml: '',
-      httpStatus: 0,
+      httpStatus: null,
       error: 'TGA credentials not configured (username or password missing)',
     };
   }
@@ -324,7 +328,7 @@ async function makeSoapRequest(
         xml: xmlResponse,
         httpStatus: response.status,
         error: `SOAP request failed: ${response.status} ${response.statusText}`,
-        responseSnippet: xmlResponse.slice(0, 300),
+        responseSnippet: xmlResponse.slice(0, 500),
       };
     }
 
@@ -342,7 +346,7 @@ async function makeSoapRequest(
     return {
       ok: false,
       xml: '',
-      httpStatus: 0,
+      httpStatus: null,
       error: isTimeout ? 'Request timed out' : errorMsg,
     };
   }
@@ -430,9 +434,10 @@ interface FetchOrgResult {
   skillSets: ScopeItem[];
   units: ScopeItem[];
   courses: string[];
-  httpStatus: number;
+  httpStatus: number | null;
   endpointUsed: string;
   wsdlUrlUsed: string | null;
+  stage?: string;
   error?: string;
   responseSnippet?: string;
 }
@@ -627,8 +632,9 @@ async function handleProbe(rtoCode: string, correlationId: string): Promise<Resp
   // Fetch org details
   const orgResult = await fetchOrganisationDetails(rtoCode, correlationId);
 
-  const authOk = orgResult.httpStatus !== 401 && orgResult.httpStatus !== 403;
-  const endpointOk = orgResult.httpStatus !== 404 && orgResult.httpStatus !== 0;
+  const hs = orgResult.httpStatus;
+  const authOk = hs !== null && hs !== 401 && hs !== 403;
+  const endpointOk = hs !== null && hs !== 404;
   const summaryFound = !!orgResult.summary?.legalName;
 
   logStage(correlationId, 'probe.complete', {
@@ -644,12 +650,14 @@ async function handleProbe(rtoCode: string, correlationId: string): Promise<Resp
   // Determine error stage if not ok
   let stage = 'probe.complete';
   if (!orgResult.ok) {
-    if (orgResult.httpStatus === 401 || orgResult.httpStatus === 403) {
+    if (hs === 401 || hs === 403) {
       stage = 'config.auth_failed';
-    } else if (orgResult.httpStatus === 404) {
+    } else if (hs === 404) {
       stage = 'config.endpoint_not_found';
+    } else if (hs === null) {
+      stage = 'soap.request.error';
     } else {
-      stage = 'soap.error';
+      stage = 'soap.request.error';
     }
   }
 
