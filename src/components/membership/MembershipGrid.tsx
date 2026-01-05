@@ -7,8 +7,9 @@ import { Button } from '@/components/ui/button';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { MembershipWithDetails, MEMBERSHIP_TIERS, RiskFlag } from '@/types/membership';
+import { MembershipWithDetails, MEMBERSHIP_TIERS, RiskFlag, StageStatus } from '@/types/membership';
 import { MembershipHoverCard } from './MembershipHoverCard';
+import { StageStatusDot } from './StageCellEditor';
 import { cn } from '@/lib/utils';
 import { format, parseISO, isPast, isToday } from 'date-fns';
 
@@ -116,7 +117,8 @@ export function MembershipGrid({ memberships, onSelectMembership, onCSCChange, s
             <TableHead>Client</TableHead>
             <TableHead className="w-28">Package</TableHead>
             <TableHead className="w-40">CSC</TableHead>
-            <TableHead className="w-48">Next Action</TableHead>
+            <TableHead className="w-48">Current Stage</TableHead>
+            <TableHead className="w-20">Progress</TableHead>
             <TableHead className="w-20">Risk</TableHead>
             <TableHead className="w-24">State</TableHead>
             <TableHead className="w-28">Hours</TableHead>
@@ -177,24 +179,38 @@ export function MembershipGrid({ memberships, onSelectMembership, onCSCChange, s
                       )}
                     </TableCell>
                     
-                    {/* Next Action Column */}
+                    {/* Current Stage Column */}
                     <TableCell onClick={(e) => e.stopPropagation()}>
-                      {membership.next_action && (
+                      {membership.current_stage_name ? (
                         <div className="space-y-0.5">
-                          <div className="text-sm font-medium truncate max-w-[180px]" title={membership.next_action.title}>
-                            {membership.next_action.title}
+                          <div className="flex items-center gap-1.5">
+                            <StageStatusDot state={(membership.current_stage_status as StageStatus) || 'not_started'} />
+                            <span className="text-sm font-medium truncate max-w-[160px]" title={membership.current_stage_name}>
+                              {membership.current_stage_name}
+                            </span>
                           </div>
-                          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                            <Clock className="h-3 w-3" />
-                            {formatDueDate(membership.next_action.due_at)}
-                            {membership.next_action.source === 'system' && (
-                              <Badge variant="outline" className="h-4 px-1 text-[10px] bg-blue-50 text-blue-600 border-blue-200">
-                                Suggested
-                              </Badge>
-                            )}
-                          </div>
+                          {membership.current_stage_status === 'blocked' && (
+                            <Badge variant="outline" className="h-4 px-1 text-[10px] bg-red-50 text-red-600 border-red-200">
+                              Blocked
+                            </Badge>
+                          )}
+                          {membership.current_stage_status === 'waiting' && (
+                            <Badge variant="outline" className="h-4 px-1 text-[10px] bg-amber-50 text-amber-600 border-amber-200">
+                              Waiting
+                            </Badge>
+                          )}
                         </div>
+                      ) : (
+                        <span className="text-sm text-muted-foreground italic">No stage data</span>
                       )}
+                    </TableCell>
+                    
+                    {/* Progress Column */}
+                    <TableCell>
+                      <div className="space-y-1">
+                        <div className="text-sm font-medium">{membership.progress_percent}%</div>
+                        <Progress value={membership.progress_percent} className="h-1.5 w-16" />
+                      </div>
                     </TableCell>
                     
                     {/* Risk Flags Column */}
@@ -275,7 +291,7 @@ export function MembershipGrid({ memberships, onSelectMembership, onCSCChange, s
 
                   <CollapsibleContent asChild>
                     <TableRow className="bg-muted/20">
-                      <TableCell colSpan={9} className="p-0">
+                      <TableCell colSpan={10} className="p-0">
                         <div className="p-4 grid grid-cols-4 gap-4">
                           {/* Onboarding */}
                           <div className="space-y-2">

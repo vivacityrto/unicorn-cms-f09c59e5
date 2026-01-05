@@ -103,11 +103,11 @@ export function useMembershipDashboard() {
         overdueMap.set(key, (overdueMap.get(key) || 0) + 1);
       });
 
-      // Get rollups from RPC (next_action + risk_flags)
-      const { data: rollups } = await supabase.rpc('get_membership_rollups');
-      const rollupMap = new Map<string, any>();
-      (rollups || []).forEach((r: any) => {
-        rollupMap.set(`${r.tenant_id}-${r.package_id}`, r);
+      // Get stage progress from RPC (uses stage-state table as source of truth)
+      const { data: stageProgress } = await supabase.rpc('get_stage_progress');
+      const progressMap = new Map<string, any>();
+      (stageProgress || []).forEach((r: any) => {
+        progressMap.set(`${r.tenant_id}-${r.package_id}`, r);
       });
 
       // Build membership list
@@ -128,30 +128,54 @@ export function useMembershipDashboard() {
           const entitlement = entitlementMap.get(key);
           const cscUserId = entitlement?.csc_user_id || cscMap.get(tenant.id);
           const cscUser = staffUsers.find(u => u.user_uuid === cscUserId);
-          const rollup = rollupMap.get(key);
+          const progress = progressMap.get(key);
 
           // Calculate health score with overdue tasks and CSC assignment status
           const overdueCount = overdueMap.get(key) || 0;
           const hasCscAssigned = !!cscUserId;
           const healthScore: MembershipHealthScore = calculateHealthScore(entitlement, tier, overdueCount, hasCscAssigned);
 
-          // Build next_action from rollup
-          const nextAction: NextAction | null = rollup ? {
-            title: rollup.next_action_title || 'Review status',
-            due_at: rollup.next_action_due_at,
-            owner_id: rollup.next_action_owner_id,
-            source: rollup.next_action_source as 'task' | 'system',
-            reason: rollup.next_action_reason || '',
+          // Build next_action based on stage progress
+          const nextAction: NextAction | null = progress?.current_stage_name ? {
+            title: `Continue: ${progress.current_stage_name}`,
+            due_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+            owner_id: cscUserId || null,
+            source: 'system' as const,
+            reason: progress.current_stage_status === 'blocked' ? 'Stage blocked' : 'In progress',
           } : {
             title: 'Review status and set next steps',
             due_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
             owner_id: cscUserId || null,
             source: 'system',
-            reason: 'No open tasks',
+            reason: 'No stage data',
           };
 
-          // Parse risk_flags from rollup
-          const riskFlags: RiskFlag[] = (rollup?.risk_flags as RiskFlag[]) || [];
+          // Build risk flags from stage progress
+          const riskFlags: RiskFlag[] = [];
+          if (progress?.blocked_count > 0) {
+            riskFlags.push({
+              code: 'STAGE_OVERDUE',
+              severity: 'critical',
+              message: `${progress.blocked_count} stage${progress.blocked_count > 1 ? 's' : ''} blocked`,
+              source: 'stage',
+            });
+          }
+          if (overdueCount > 0) {
+            riskFlags.push({
+              code: 'OVERDUE_TASKS',
+              severity: 'warn',
+              message: `${overdueCount} overdue task${overdueCount > 1 ? 's' : ''}`,
+              source: 'task',
+            });
+          }
+          if (!hasCscAssigned) {
+            riskFlags.push({
+              code: 'MISSING_CSC',
+              severity: 'warn',
+              message: 'No CSC assigned',
+              source: 'system',
+            });
+          }
 
           membershipList.push({
             id: entitlement?.id || `temp-${key}`,
@@ -182,11 +206,11 @@ export function useMembershipDashboard() {
             pending_tasks_count: 0,
             next_action: nextAction,
             risk_flags: riskFlags,
-            // Deterministic stage fields from rollup
-            current_stage_name: rollup?.current_stage_name || null,
-            current_stage_status: rollup?.current_stage_status || null,
-            progress_percent: rollup?.progress_percent || 0,
-            phase: rollup?.phase || null,
+            // Deterministic stage fields from stage-state table
+            current_stage_name: progress?.current_stage_name || null,
+            current_stage_status: progress?.current_stage_status || null,
+            progress_percent: progress?.percent_complete || 0,
+            phase: null, // Not applicable for memberships
           });
         }
       }

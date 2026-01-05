@@ -7372,6 +7372,20 @@ export type Database = {
           video_url: string
         }[]
       }
+      get_stage_progress: {
+        Args: never
+        Returns: {
+          active_count: number
+          blocked_count: number
+          completed_count: number
+          current_stage_name: string
+          current_stage_status: string
+          package_id: number
+          percent_complete: number
+          tenant_id: number
+          total_stages: number
+        }[]
+      }
       get_user_favourites: {
         Args: never
         Returns: {
@@ -7612,6 +7626,12 @@ export type Database = {
         | "todos"
         | "ids"
         | "conclude"
+      task_status:
+        | "not_started"
+        | "in_progress"
+        | "blocked"
+        | "completed"
+        | "cancelled"
       tenant_member_role:
         | "SUPER_ADMIN_ADMINISTRATOR"
         | "SUPER_ADMIN_TEAM_LEADER"
@@ -7794,6 +7814,13 @@ export const Constants = {
         "todos",
         "ids",
         "conclude",
+      ],
+      task_status: [
+        "not_started",
+        "in_progress",
+        "blocked",
+        "completed",
+        "cancelled",
       ],
       tenant_member_role: [
         "SUPER_ADMIN_ADMINISTRATOR",
