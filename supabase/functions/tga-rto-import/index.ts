@@ -7,253 +7,256 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// TGA Production SOAP Endpoints
-const TGA_ENDPOINTS = {
-  organisation: 'https://ws.training.gov.au/Deewr.Tga.Webservices/OrganisationServiceV13.svc',
-  training: 'https://ws.training.gov.au/Deewr.Tga.Webservices/TrainingComponentServiceV13.svc',
-};
+// TGA SOAP Endpoint - using sandbox with /Organisation suffix like the working function
+const TGA_ORG_ENDPOINT = 'https://ws.sandbox.training.gov.au/Deewr.Tga.Webservices/OrganisationServiceV13.svc/Organisation';
 
-const TGA_WS_USERNAME = Deno.env.get('TGA_WS_USERNAME');
-const TGA_WS_PASSWORD = Deno.env.get('TGA_WS_PASSWORD');
+// Use sandbox credentials (matching the working get-organisation-details function)
+const TGA_USERNAME = Deno.env.get('TGA_SANDBOX_USERNAME') || Deno.env.get('TGA_WS_USERNAME') || '';
+const TGA_PASSWORD = Deno.env.get('TGA_SANDBOX_PASSWORD') || Deno.env.get('TGA_WS_PASSWORD') || '';
 
-const SOAP_NS = {
-  soap: 'http://www.w3.org/2003/05/soap-envelope',
-  org: 'http://training.gov.au/services/Organisation',
-};
+function escapeXml(unsafe: string): string {
+  return unsafe
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&apos;');
+}
 
-function getBasicAuthHeader(): string {
-  if (!TGA_WS_USERNAME || !TGA_WS_PASSWORD) {
-    throw new Error('TGA SOAP credentials not configured');
-  }
-  return `Basic ${btoa(`${TGA_WS_USERNAME}:${TGA_WS_PASSWORD}`)}`;
+// Build SOAP 1.1 envelope with WS-Security (matching working function pattern)
+function buildSoapEnvelope(body: string, action: string): string {
+  const securityHeader = TGA_USERNAME && TGA_PASSWORD ? `
+  <soap:Header>
+    <wsse:Security xmlns:wsse="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-secext-1.0.xsd">
+      <wsse:UsernameToken>
+        <wsse:Username>${escapeXml(TGA_USERNAME)}</wsse:Username>
+        <wsse:Password Type="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-username-token-profile-1.0#PasswordText">${escapeXml(TGA_PASSWORD)}</wsse:Password>
+      </wsse:UsernameToken>
+    </wsse:Security>
+  </soap:Header>` : '';
+
+  return `<?xml version="1.0" encoding="utf-8"?>
+<soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/" 
+               xmlns:tga="http://www.tga.deewr.gov.au/"
+               xmlns:wsse="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-secext-1.0.xsd">${securityHeader}
+  <soap:Body>
+    ${body}
+  </soap:Body>
+</soap:Envelope>`;
 }
 
 // XML parsing helpers
 function extractValue(xml: string, tagName: string): string | null {
   const patterns = [
-    new RegExp(`<(?:a:)?${tagName}>([^<]*)<\\/(?:a:)?${tagName}>`, 'i'),
-    new RegExp(`<${tagName}[^>]*>([^<]*)<\\/${tagName}>`, 'i'),
+    new RegExp(`<a:${tagName}[^>]*>([^<]*)</a:${tagName}>`, 'i'),
+    new RegExp(`<${tagName}[^>]*>([^<]*)</${tagName}>`, 'i'),
   ];
   for (const pattern of patterns) {
     const match = xml.match(pattern);
-    if (match) return match[1].trim() || null;
+    if (match && match[1]?.trim()) return match[1].trim();
   }
   return null;
 }
 
-function extractBlock(xml: string, tagName: string): string | null {
-  const pattern = new RegExp(`<(?:a:)?${tagName}[^>]*>([\\s\\S]*?)<\\/(?:a:)?${tagName}>`, 'i');
-  const match = xml.match(pattern);
-  return match ? match[0] : null;
-}
-
 function extractMultipleBlocks(xml: string, tagName: string): string[] {
-  const pattern = new RegExp(`<(?:a:)?${tagName}[^>]*>[\\s\\S]*?<\\/(?:a:)?${tagName}>`, 'gi');
-  return xml.match(pattern) || [];
+  const pattern = new RegExp(`<a:${tagName}[^>]*>[\\s\\S]*?</a:${tagName}>`, 'gi');
+  const matches = xml.match(pattern) || [];
+  // Also try without 'a:' prefix
+  if (matches.length === 0) {
+    const pattern2 = new RegExp(`<${tagName}[^>]*>[\\s\\S]*?</${tagName}>`, 'gi');
+    return xml.match(pattern2) || [];
+  }
+  return matches;
 }
 
-function buildOrgSoapRequest(action: string, body: string): string {
-  return `<?xml version="1.0" encoding="utf-8"?>
-<soap12:Envelope xmlns:soap12="${SOAP_NS.soap}" xmlns:org="${SOAP_NS.org}">
-  <soap12:Body>
-    <org:${action}>
-      ${body}
-    </org:${action}>
-  </soap12:Body>
-</soap12:Envelope>`;
-}
-
-async function makeSoapRequest(endpoint: string, soapAction: string, body: string): Promise<string> {
-  console.log(`[TGA RTO Import] SOAP request to ${endpoint}, action: ${soapAction}`);
+async function makeSoapRequest(action: string, body: string): Promise<{ xml: string; error: string | null }> {
+  console.log(`[TGA RTO Import] SOAP request, action: ${action}`);
   
-  const response = await fetch(endpoint, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/soap+xml; charset=utf-8',
-      'Authorization': getBasicAuthHeader(),
-    },
-    body,
-  });
-
-  if (!response.ok) {
-    const errorText = await response.text();
-    console.error(`[TGA RTO Import] Error ${response.status}:`, errorText.substring(0, 500));
-    throw new Error(`SOAP request failed: ${response.status} ${response.statusText}`);
+  if (!TGA_USERNAME || !TGA_PASSWORD) {
+    console.error('[TGA RTO Import] Missing TGA credentials');
+    return { xml: '', error: 'TGA SOAP credentials not configured. Set TGA_SANDBOX_USERNAME and TGA_SANDBOX_PASSWORD.' };
   }
 
-  return await response.text();
+  const soapEnvelope = buildSoapEnvelope(body, action);
+  
+  try {
+    const response = await fetch(TGA_ORG_ENDPOINT, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'text/xml; charset=utf-8',
+        'SOAPAction': `http://www.tga.deewr.gov.au/IOrganisationService/${action}`,
+      },
+      body: soapEnvelope,
+    });
+
+    const responseText = await response.text();
+    
+    if (!response.ok) {
+      console.error(`[TGA RTO Import] SOAP error ${response.status}:`, responseText.substring(0, 1000));
+      
+      if (responseText.includes('InvalidSecurity')) {
+        return { xml: '', error: 'TGA authentication failed. Check credentials.' };
+      }
+      
+      return { xml: '', error: `SOAP request failed: ${response.status} ${response.statusText}` };
+    }
+
+    console.log(`[TGA RTO Import] Got ${responseText.length} bytes`);
+    return { xml: responseText, error: null };
+  } catch (error) {
+    console.error('[TGA RTO Import] Fetch error:', error);
+    return { xml: '', error: error instanceof Error ? error.message : String(error) };
+  }
 }
 
-// Fetch organisation details
+// Fetch organisation details using GetOrganisation (matching working function)
 async function fetchOrganisationDetails(rtoCode: string): Promise<{
   summary: Record<string, unknown> | null;
   contacts: Record<string, unknown>[];
   addresses: Record<string, unknown>[];
   deliveryLocations: Record<string, unknown>[];
-  rawXml: string;
   error: string | null;
 }> {
-  try {
-    const body = buildOrgSoapRequest('GetDetails', `<org:request><org:Code>${rtoCode}</org:Code></org:request>`);
-    const xml = await makeSoapRequest(TGA_ENDPOINTS.organisation, 'GetDetails', body);
-    
-    console.log(`[TGA RTO Import] Got ${xml.length} bytes for org ${rtoCode}`);
-    
-    // Parse summary
-    const summary = {
-      legal_name: extractValue(xml, 'LegalName') || extractValue(xml, 'Name'),
-      trading_name: extractValue(xml, 'TradingName'),
-      organisation_type: extractValue(xml, 'OrganisationType'),
-      abn: extractValue(xml, 'ABN'),
-      status: extractValue(xml, 'Status'),
-      registration_start_date: extractValue(xml, 'RegistrationStartDate'),
-      registration_end_date: extractValue(xml, 'RegistrationEndDate'),
-    };
-
-    // Parse contacts
-    const contactBlocks = extractMultipleBlocks(xml, 'Contact');
-    const contacts = contactBlocks.map(block => ({
-      contact_type: extractValue(block, 'ContactType') || extractValue(block, 'Type'),
-      name: extractValue(block, 'Name') || `${extractValue(block, 'FirstName') || ''} ${extractValue(block, 'LastName') || ''}`.trim(),
-      position: extractValue(block, 'Position'),
-      phone: extractValue(block, 'Phone') || extractValue(block, 'PhoneNumber'),
-      email: extractValue(block, 'Email'),
-    })).filter(c => c.name || c.email);
-
-    // Parse addresses
-    const addressBlocks = extractMultipleBlocks(xml, 'Address');
-    const addresses = addressBlocks.map(block => ({
-      address_type: extractValue(block, 'AddressType') || extractValue(block, 'Type') || 'head_office',
-      address_line_1: extractValue(block, 'AddressLine1') || extractValue(block, 'Line1'),
-      address_line_2: extractValue(block, 'AddressLine2') || extractValue(block, 'Line2'),
-      suburb: extractValue(block, 'Suburb'),
-      state: extractValue(block, 'State'),
-      postcode: extractValue(block, 'Postcode'),
-      country: extractValue(block, 'Country'),
-      phone: extractValue(block, 'Phone'),
-      fax: extractValue(block, 'Fax'),
-      email: extractValue(block, 'Email'),
-      website: extractValue(block, 'Website'),
-    })).filter(a => a.suburb || a.state);
-
-    // Parse delivery locations
-    const locationBlocks = extractMultipleBlocks(xml, 'DeliveryLocation');
-    const deliveryLocations = locationBlocks.map(block => ({
-      location_name: extractValue(block, 'Name') || extractValue(block, 'LocationName'),
-      address_line_1: extractValue(block, 'AddressLine1') || extractValue(block, 'Line1'),
-      address_line_2: extractValue(block, 'AddressLine2') || extractValue(block, 'Line2'),
-      suburb: extractValue(block, 'Suburb'),
-      state: extractValue(block, 'State'),
-      postcode: extractValue(block, 'Postcode'),
-      country: extractValue(block, 'Country'),
-    })).filter(l => l.suburb || l.location_name);
-
-    return { 
-      summary: summary.legal_name ? summary : null, 
-      contacts, 
-      addresses, 
-      deliveryLocations,
-      rawXml: xml,
-      error: null 
-    };
-  } catch (error: unknown) {
-    console.error(`[TGA RTO Import] Error fetching org ${rtoCode}:`, error);
-    return { 
-      summary: null, 
-      contacts: [], 
-      addresses: [], 
-      deliveryLocations: [],
-      rawXml: '',
-      error: error instanceof Error ? error.message : String(error) 
-    };
+  const body = `<tga:GetOrganisation>
+      <tga:code>${escapeXml(rtoCode)}</tga:code>
+    </tga:GetOrganisation>`;
+  
+  const { xml, error } = await makeSoapRequest('GetOrganisation', body);
+  
+  if (error) {
+    return { summary: null, contacts: [], addresses: [], deliveryLocations: [], error };
   }
+
+  // Parse summary
+  const summary = {
+    legal_name: extractValue(xml, 'LegalName') || extractValue(xml, 'Name'),
+    trading_name: extractValue(xml, 'TradingName'),
+    organisation_type: extractValue(xml, 'OrganisationType'),
+    abn: extractValue(xml, 'ABN'),
+    status: extractValue(xml, 'Status'),
+    registration_start_date: extractValue(xml, 'RegistrationStartDate') || extractValue(xml, 'RegistrationDate'),
+    registration_end_date: extractValue(xml, 'RegistrationEndDate'),
+  };
+
+  // Parse contacts
+  const contactBlocks = extractMultipleBlocks(xml, 'Contact');
+  const contacts = contactBlocks.map(block => ({
+    contact_type: extractValue(block, 'ContactType') || extractValue(block, 'Type'),
+    name: extractValue(block, 'Name') || `${extractValue(block, 'FirstName') || ''} ${extractValue(block, 'LastName') || ''}`.trim(),
+    position: extractValue(block, 'Position'),
+    phone: extractValue(block, 'Phone') || extractValue(block, 'PhoneNumber'),
+    email: extractValue(block, 'Email'),
+  })).filter(c => c.name || c.email);
+
+  // Parse addresses
+  const addressBlocks = extractMultipleBlocks(xml, 'Address');
+  const addresses = addressBlocks.map(block => ({
+    address_type: extractValue(block, 'AddressType') || extractValue(block, 'Type') || 'head_office',
+    address_line_1: extractValue(block, 'StreetAddress') || extractValue(block, 'AddressLine1') || extractValue(block, 'Line1'),
+    address_line_2: extractValue(block, 'AddressLine2') || extractValue(block, 'Line2'),
+    suburb: extractValue(block, 'Suburb'),
+    state: extractValue(block, 'State'),
+    postcode: extractValue(block, 'Postcode'),
+    country: extractValue(block, 'Country'),
+    phone: extractValue(block, 'Phone'),
+    fax: extractValue(block, 'Fax'),
+    email: extractValue(block, 'Email'),
+    website: extractValue(block, 'Website'),
+  })).filter(a => a.suburb || a.state);
+
+  // Parse delivery locations
+  const locationBlocks = extractMultipleBlocks(xml, 'DeliveryLocation');
+  const deliveryLocations = locationBlocks.map(block => ({
+    location_name: extractValue(block, 'Name') || extractValue(block, 'LocationName'),
+    address_line_1: extractValue(block, 'StreetAddress') || extractValue(block, 'AddressLine1'),
+    address_line_2: extractValue(block, 'AddressLine2'),
+    suburb: extractValue(block, 'Suburb'),
+    state: extractValue(block, 'State'),
+    postcode: extractValue(block, 'Postcode'),
+    country: extractValue(block, 'Country'),
+  })).filter(l => l.suburb || l.location_name);
+
+  return { 
+    summary: summary.legal_name ? summary : null, 
+    contacts, 
+    addresses, 
+    deliveryLocations,
+    error: null 
+  };
 }
 
-// Fetch scope (qualifications, skillsets, units, courses)
+// Fetch scope using GetOrganisationScope
 async function fetchOrganisationScope(rtoCode: string): Promise<{
   qualifications: Record<string, unknown>[];
   skillsets: Record<string, unknown>[];
   units: Record<string, unknown>[];
   courses: Record<string, unknown>[];
-  rawXml: string;
   error: string | null;
 }> {
-  try {
-    const body = buildOrgSoapRequest('GetScope', `<org:request><org:OrganisationCode>${rtoCode}</org:OrganisationCode></org:request>`);
-    const xml = await makeSoapRequest(TGA_ENDPOINTS.organisation, 'GetScope', body);
-    
-    console.log(`[TGA RTO Import] Got ${xml.length} bytes for scope ${rtoCode}`);
-
-    // Parse qualifications
-    const qualBlocks = extractMultipleBlocks(xml, 'Qualification');
-    const qualifications = qualBlocks.map(block => ({
-      qualification_code: extractValue(block, 'Code'),
-      qualification_title: extractValue(block, 'Title'),
-      training_package_code: extractValue(block, 'TrainingPackageCode'),
-      training_package_title: extractValue(block, 'TrainingPackageTitle'),
-      scope_start_date: extractValue(block, 'ScopeStartDate') || extractValue(block, 'StartDate'),
-      scope_end_date: extractValue(block, 'ScopeEndDate') || extractValue(block, 'EndDate'),
-      status: extractValue(block, 'Status'),
-      is_current: extractValue(block, 'IsCurrent')?.toLowerCase() === 'true',
-    })).filter(q => q.qualification_code);
-
-    // Parse skill sets
-    const skillBlocks = extractMultipleBlocks(xml, 'SkillSet');
-    const skillsets = skillBlocks.map(block => ({
-      skillset_code: extractValue(block, 'Code'),
-      skillset_title: extractValue(block, 'Title'),
-      training_package_code: extractValue(block, 'TrainingPackageCode'),
-      training_package_title: extractValue(block, 'TrainingPackageTitle'),
-      scope_start_date: extractValue(block, 'ScopeStartDate') || extractValue(block, 'StartDate'),
-      scope_end_date: extractValue(block, 'ScopeEndDate') || extractValue(block, 'EndDate'),
-      status: extractValue(block, 'Status'),
-      is_current: extractValue(block, 'IsCurrent')?.toLowerCase() === 'true',
-    })).filter(s => s.skillset_code);
-
-    // Parse units (explicit)
-    const unitBlocks = extractMultipleBlocks(xml, 'Unit');
-    const units = unitBlocks.map(block => ({
-      unit_code: extractValue(block, 'Code'),
-      unit_title: extractValue(block, 'Title'),
-      training_package_code: extractValue(block, 'TrainingPackageCode'),
-      training_package_title: extractValue(block, 'TrainingPackageTitle'),
-      scope_start_date: extractValue(block, 'ScopeStartDate') || extractValue(block, 'StartDate'),
-      scope_end_date: extractValue(block, 'ScopeEndDate') || extractValue(block, 'EndDate'),
-      status: extractValue(block, 'Status'),
-      is_current: extractValue(block, 'IsCurrent')?.toLowerCase() === 'true',
-      is_explicit: true,
-    })).filter(u => u.unit_code);
-
-    // Parse accredited courses
-    const courseBlocks = extractMultipleBlocks(xml, 'AccreditedCourse');
-    const courses = courseBlocks.map(block => ({
-      course_code: extractValue(block, 'Code'),
-      course_title: extractValue(block, 'Title'),
-      scope_start_date: extractValue(block, 'ScopeStartDate') || extractValue(block, 'StartDate'),
-      scope_end_date: extractValue(block, 'ScopeEndDate') || extractValue(block, 'EndDate'),
-      status: extractValue(block, 'Status'),
-      is_current: extractValue(block, 'IsCurrent')?.toLowerCase() === 'true',
-    })).filter(c => c.course_code);
-
-    return { 
-      qualifications, 
-      skillsets, 
-      units, 
-      courses,
-      rawXml: xml,
-      error: null 
-    };
-  } catch (error: unknown) {
-    console.error(`[TGA RTO Import] Error fetching scope ${rtoCode}:`, error);
-    return { 
-      qualifications: [], 
-      skillsets: [], 
-      units: [], 
-      courses: [],
-      rawXml: '',
-      error: error instanceof Error ? error.message : String(error) 
-    };
+  const body = `<tga:GetOrganisationScope>
+      <tga:code>${escapeXml(rtoCode)}</tga:code>
+    </tga:GetOrganisationScope>`;
+  
+  const { xml, error } = await makeSoapRequest('GetOrganisationScope', body);
+  
+  if (error) {
+    console.error('[TGA RTO Import] Scope fetch error:', error);
+    // Don't fail the whole import if scope fails - just return empty
+    return { qualifications: [], skillsets: [], units: [], courses: [], error };
   }
+
+  // Parse qualifications
+  const qualBlocks = extractMultipleBlocks(xml, 'Qualification');
+  const qualifications = qualBlocks.map(block => ({
+    qualification_code: extractValue(block, 'Code'),
+    qualification_title: extractValue(block, 'Title'),
+    training_package_code: extractValue(block, 'TrainingPackageCode'),
+    training_package_title: extractValue(block, 'TrainingPackageTitle'),
+    scope_start_date: extractValue(block, 'ScopeStartDate') || extractValue(block, 'StartDate'),
+    scope_end_date: extractValue(block, 'ScopeEndDate') || extractValue(block, 'EndDate'),
+    status: extractValue(block, 'Status'),
+    is_current: extractValue(block, 'IsCurrent')?.toLowerCase() === 'true',
+  })).filter(q => q.qualification_code);
+
+  // Parse skill sets
+  const skillBlocks = extractMultipleBlocks(xml, 'SkillSet');
+  const skillsets = skillBlocks.map(block => ({
+    skillset_code: extractValue(block, 'Code'),
+    skillset_title: extractValue(block, 'Title'),
+    training_package_code: extractValue(block, 'TrainingPackageCode'),
+    training_package_title: extractValue(block, 'TrainingPackageTitle'),
+    scope_start_date: extractValue(block, 'ScopeStartDate') || extractValue(block, 'StartDate'),
+    scope_end_date: extractValue(block, 'ScopeEndDate') || extractValue(block, 'EndDate'),
+    status: extractValue(block, 'Status'),
+    is_current: extractValue(block, 'IsCurrent')?.toLowerCase() === 'true',
+  })).filter(s => s.skillset_code);
+
+  // Parse units
+  const unitBlocks = extractMultipleBlocks(xml, 'Unit');
+  const units = unitBlocks.map(block => ({
+    unit_code: extractValue(block, 'Code'),
+    unit_title: extractValue(block, 'Title'),
+    training_package_code: extractValue(block, 'TrainingPackageCode'),
+    training_package_title: extractValue(block, 'TrainingPackageTitle'),
+    scope_start_date: extractValue(block, 'ScopeStartDate') || extractValue(block, 'StartDate'),
+    scope_end_date: extractValue(block, 'ScopeEndDate') || extractValue(block, 'EndDate'),
+    status: extractValue(block, 'Status'),
+    is_current: extractValue(block, 'IsCurrent')?.toLowerCase() === 'true',
+    is_explicit: true,
+  })).filter(u => u.unit_code);
+
+  // Parse accredited courses
+  const courseBlocks = extractMultipleBlocks(xml, 'AccreditedCourse');
+  const courses = courseBlocks.map(block => ({
+    course_code: extractValue(block, 'Code'),
+    course_title: extractValue(block, 'Title'),
+    scope_start_date: extractValue(block, 'ScopeStartDate') || extractValue(block, 'StartDate'),
+    scope_end_date: extractValue(block, 'ScopeEndDate') || extractValue(block, 'EndDate'),
+    status: extractValue(block, 'Status'),
+    is_current: extractValue(block, 'IsCurrent')?.toLowerCase() === 'true',
+  })).filter(c => c.course_code);
+
+  return { qualifications, skillsets, units, courses, error: null };
 }
 
 serve(async (req) => {
@@ -329,6 +332,7 @@ serve(async (req) => {
 
       // Upsert summary
       if (orgResult.summary) {
+        console.log('[TGA RTO Import] Upserting summary:', orgResult.summary);
         await supabase.from('tga_rto_summary').upsert({
           tenant_id,
           rto_code,
@@ -342,6 +346,7 @@ serve(async (req) => {
       // Delete old contacts and insert new
       await supabase.from('tga_rto_contacts').delete().eq('tenant_id', tenant_id).eq('rto_code', rto_code);
       if (orgResult.contacts.length > 0) {
+        console.log(`[TGA RTO Import] Inserting ${orgResult.contacts.length} contacts`);
         await supabase.from('tga_rto_contacts').insert(
           orgResult.contacts.map(c => ({
             tenant_id,
@@ -356,6 +361,7 @@ serve(async (req) => {
       // Delete old addresses and insert new
       await supabase.from('tga_rto_addresses').delete().eq('tenant_id', tenant_id).eq('rto_code', rto_code);
       if (orgResult.addresses.length > 0) {
+        console.log(`[TGA RTO Import] Inserting ${orgResult.addresses.length} addresses`);
         await supabase.from('tga_rto_addresses').insert(
           orgResult.addresses.map(a => ({
             tenant_id,
@@ -370,6 +376,7 @@ serve(async (req) => {
       // Delete old delivery locations and insert new
       await supabase.from('tga_rto_delivery_locations').delete().eq('tenant_id', tenant_id).eq('rto_code', rto_code);
       if (orgResult.deliveryLocations.length > 0) {
+        console.log(`[TGA RTO Import] Inserting ${orgResult.deliveryLocations.length} delivery locations`);
         await supabase.from('tga_rto_delivery_locations').insert(
           orgResult.deliveryLocations.map(l => ({
             tenant_id,
@@ -391,62 +398,68 @@ serve(async (req) => {
       // 2. Fetch scope
       const scopeResult = await fetchOrganisationScope(rto_code);
 
-      // Delete old scope data and insert new
-      await supabase.from('tga_scope_qualifications').delete().eq('tenant_id', tenant_id).eq('rto_code', rto_code);
-      if (scopeResult.qualifications.length > 0) {
-        await supabase.from('tga_scope_qualifications').insert(
-          scopeResult.qualifications.map(q => ({
-            tenant_id,
-            rto_code,
-            ...q,
-            source_payload: q,
-            fetched_at: now,
-          }))
-        );
-      }
+      // Delete old scope data and insert new (only if we got results)
+      if (!scopeResult.error) {
+        await supabase.from('tga_scope_qualifications').delete().eq('tenant_id', tenant_id).eq('rto_code', rto_code);
+        if (scopeResult.qualifications.length > 0) {
+          console.log(`[TGA RTO Import] Inserting ${scopeResult.qualifications.length} qualifications`);
+          await supabase.from('tga_scope_qualifications').insert(
+            scopeResult.qualifications.map(q => ({
+              tenant_id,
+              rto_code,
+              ...q,
+              source_payload: q,
+              fetched_at: now,
+            }))
+          );
+        }
 
-      await supabase.from('tga_scope_skillsets').delete().eq('tenant_id', tenant_id).eq('rto_code', rto_code);
-      if (scopeResult.skillsets.length > 0) {
-        await supabase.from('tga_scope_skillsets').insert(
-          scopeResult.skillsets.map(s => ({
-            tenant_id,
-            rto_code,
-            ...s,
-            source_payload: s,
-            fetched_at: now,
-          }))
-        );
-      }
+        await supabase.from('tga_scope_skillsets').delete().eq('tenant_id', tenant_id).eq('rto_code', rto_code);
+        if (scopeResult.skillsets.length > 0) {
+          console.log(`[TGA RTO Import] Inserting ${scopeResult.skillsets.length} skillsets`);
+          await supabase.from('tga_scope_skillsets').insert(
+            scopeResult.skillsets.map(s => ({
+              tenant_id,
+              rto_code,
+              ...s,
+              source_payload: s,
+              fetched_at: now,
+            }))
+          );
+        }
 
-      await supabase.from('tga_scope_units').delete().eq('tenant_id', tenant_id).eq('rto_code', rto_code);
-      if (scopeResult.units.length > 0) {
-        await supabase.from('tga_scope_units').insert(
-          scopeResult.units.map(u => ({
-            tenant_id,
-            rto_code,
-            ...u,
-            source_payload: u,
-            fetched_at: now,
-          }))
-        );
-      }
+        await supabase.from('tga_scope_units').delete().eq('tenant_id', tenant_id).eq('rto_code', rto_code);
+        if (scopeResult.units.length > 0) {
+          console.log(`[TGA RTO Import] Inserting ${scopeResult.units.length} units`);
+          await supabase.from('tga_scope_units').insert(
+            scopeResult.units.map(u => ({
+              tenant_id,
+              rto_code,
+              ...u,
+              source_payload: u,
+              fetched_at: now,
+            }))
+          );
+        }
 
-      await supabase.from('tga_scope_courses').delete().eq('tenant_id', tenant_id).eq('rto_code', rto_code);
-      if (scopeResult.courses.length > 0) {
-        await supabase.from('tga_scope_courses').insert(
-          scopeResult.courses.map(c => ({
-            tenant_id,
-            rto_code,
-            ...c,
-            source_payload: c,
-            fetched_at: now,
-          }))
-        );
+        await supabase.from('tga_scope_courses').delete().eq('tenant_id', tenant_id).eq('rto_code', rto_code);
+        if (scopeResult.courses.length > 0) {
+          console.log(`[TGA RTO Import] Inserting ${scopeResult.courses.length} courses`);
+          await supabase.from('tga_scope_courses').insert(
+            scopeResult.courses.map(c => ({
+              tenant_id,
+              rto_code,
+              ...c,
+              source_payload: c,
+              fetched_at: now,
+            }))
+          );
+        }
       }
 
       // Update job with counts
       await supabase.from('tga_rto_import_jobs').update({
-        scope_fetched: true,
+        scope_fetched: !scopeResult.error,
         qualifications_count: scopeResult.qualifications.length,
         skillsets_count: scopeResult.skillsets.length,
         units_count: scopeResult.units.length,
@@ -474,30 +487,29 @@ serve(async (req) => {
     // Audit log
     await supabase.from('client_audit_log').insert({
       tenant_id,
-      entity_type: 'tga_rto_import_jobs',
+      entity_type: 'tga_import',
       entity_id: job_id,
       action: errorMessage ? 'tga.import.failed' : 'tga.import.completed',
       actor_user_id: user.id,
-      details: {
+      details: { rto_code, error: errorMessage },
+    });
+
+    console.log(`[TGA RTO Import] Job ${job_id} ${errorMessage ? 'failed' : 'completed'}`);
+
+    return new Response(
+      JSON.stringify({ 
+        success: !errorMessage, 
         job_id,
-        rto_code,
-        error: errorMessage,
-      },
-    });
+        error: errorMessage 
+      }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
 
-    return new Response(JSON.stringify({
-      success: !errorMessage,
-      job_id,
-      error: errorMessage,
-    }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
-
-  } catch (error: unknown) {
-    console.error('[TGA RTO Import] Error:', error);
-    return new Response(JSON.stringify({ error: error instanceof Error ? error.message : String(error) }), {
-      status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
+  } catch (error) {
+    console.error('[TGA RTO Import] Handler error:', error);
+    return new Response(
+      JSON.stringify({ error: error instanceof Error ? error.message : 'Unknown error' }),
+      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
   }
 });

@@ -158,8 +158,10 @@ export function useTgaRtoData(tenantId: number | null, rtoCode: string | null) {
     }
   }, [tenantId, rtoCode]);
 
-  const triggerSync = useCallback(async (): Promise<boolean> => {
-    if (!tenantId) return false;
+  const triggerSync = useCallback(async (): Promise<{ success: boolean; error?: string }> => {
+    if (!tenantId || !rtoCode) {
+      return { success: false, error: 'Missing tenant or RTO code' };
+    }
 
     try {
       setSyncing(true);
@@ -169,12 +171,25 @@ export function useTgaRtoData(tenantId: number | null, rtoCode: string | null) {
         p_tenant_id: tenantId
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error('RPC error:', error);
+        toast({
+          title: 'Sync Failed',
+          description: error.message,
+          variant: 'destructive'
+        });
+        return { success: false, error: error.message };
+      }
 
       const result = data as { success: boolean; import_job_id: string; rto_number: string };
 
       if (!result.success) {
-        throw new Error('Failed to trigger sync');
+        toast({
+          title: 'Sync Failed',
+          description: 'Failed to trigger sync job',
+          variant: 'destructive'
+        });
+        return { success: false, error: 'Failed to trigger sync job' };
       }
 
       // Call edge function to run the import
@@ -184,11 +199,31 @@ export function useTgaRtoData(tenantId: number | null, rtoCode: string | null) {
           job_id: result.import_job_id,
           tenant_id: tenantId,
           rto_code: result.rto_number
+        },
+        headers: {
+          Authorization: `Bearer ${session?.session?.access_token}`
         }
       });
 
       if (response.error) {
-        throw new Error(response.error.message);
+        console.error('Edge function error:', response.error);
+        toast({
+          title: 'Import Failed',
+          description: response.error.message,
+          variant: 'destructive'
+        });
+        return { success: false, error: response.error.message };
+      }
+
+      // Check if the edge function returned an error
+      if (response.data?.error) {
+        console.error('Import error:', response.data.error);
+        toast({
+          title: 'Import Failed',
+          description: response.data.error,
+          variant: 'destructive'
+        });
+        return { success: false, error: response.data.error };
       }
 
       toast({
@@ -197,20 +232,21 @@ export function useTgaRtoData(tenantId: number | null, rtoCode: string | null) {
       });
 
       await fetchData();
-      return true;
+      return { success: true };
 
     } catch (error: unknown) {
       console.error('Sync error:', error);
+      const errorMsg = error instanceof Error ? error.message : 'Unknown error';
       toast({
         title: 'Sync Failed',
-        description: error instanceof Error ? error.message : 'Unknown error',
+        description: errorMsg,
         variant: 'destructive'
       });
-      return false;
+      return { success: false, error: errorMsg };
     } finally {
       setSyncing(false);
     }
-  }, [tenantId, fetchData, toast]);
+  }, [tenantId, rtoCode, fetchData, toast]);
 
   useEffect(() => {
     fetchData();
