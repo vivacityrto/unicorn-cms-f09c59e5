@@ -8,11 +8,12 @@ const corsHeaders = {
 };
 
 // TGA SOAP Endpoints - production URLs
-// CRITICAL: Use lowercase 'Webservices' not 'WebServices'!
+// IMPORTANT: Use uppercase 'WebServices' as confirmed by WSDL endpoint!
 const TGA_WS_BASE = 'https://ws.training.gov.au';
 
 // Production endpoint - V13 is the current version
-const TGA_ORG_ENDPOINT = `${TGA_WS_BASE}/Deewr.Tga.Webservices/OrganisationServiceV13.svc`;
+// NOTE: The correct path is Deewr.Tga.WebServices (uppercase S) per official WSDL
+const TGA_ORG_ENDPOINT = `${TGA_WS_BASE}/Deewr.Tga.WebServices/OrganisationServiceV13.svc`;
 
 // Production credentials
 const TGA_USERNAME = Deno.env.get('TGA_WS_USERNAME') || '';

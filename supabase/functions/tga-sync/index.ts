@@ -7,11 +7,11 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// TGA Production SOAP Endpoints
+// TGA Production SOAP Endpoints (uppercase WebServices per official WSDL)
 const TGA_ENDPOINTS = {
-  organisation: 'https://ws.training.gov.au/Deewr.Tga.Webservices/OrganisationServiceV13.svc',
-  training: 'https://ws.training.gov.au/Deewr.Tga.Webservices/TrainingComponentServiceV13.svc',
-  classification: 'https://ws.training.gov.au/Deewr.Tga.Webservices/ClassificationServiceV13.svc',
+  organisation: 'https://ws.training.gov.au/Deewr.Tga.WebServices/OrganisationServiceV13.svc',
+  training: 'https://ws.training.gov.au/Deewr.Tga.WebServices/TrainingComponentServiceV13.svc',
+  classification: 'https://ws.training.gov.au/Deewr.Tga.WebServices/ClassificationServiceV13.svc',
 };
 
 const TGA_WS_USERNAME = Deno.env.get('TGA_WS_USERNAME');
