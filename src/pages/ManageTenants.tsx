@@ -674,7 +674,7 @@ export default function ManageTenants() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredTenants.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage).map((tenant, index) => <TableRow key={tenant.id} className={cn("group transition-all duration-200 cursor-pointer border-b border-border/50", index % 2 === 0 ? "bg-background" : "bg-muted/20", "hover:bg-primary/5 animate-fade-in")} onClick={() => navigate(`/tenant/${tenant.id}`)}>
+                {filteredTenants.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage).map((tenant, index) => <TableRow key={tenant.id} className={cn("group transition-all duration-200 cursor-pointer border-b border-border/50", index % 2 === 0 ? "bg-background" : "bg-muted/20", "hover:bg-primary/5 animate-fade-in")} onClick={() => navigate(`/clients/${tenant.id}`)}>
                     <TableCell className="py-6 border-r border-border/50 min-w-[280px] pr-8">
                       <div>
                         <div className="font-semibold text-foreground pb-[10px] whitespace-nowrap">
