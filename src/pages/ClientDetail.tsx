@@ -51,6 +51,8 @@ export default function ClientDetail() {
     registryLink, 
     loading: profileLoading, 
     saveProfile, 
+    setTgaLink,
+    verifyTgaLink,
     updateRegistryLink 
   } = useClientProfile(tenantIdNum);
   
@@ -60,9 +62,12 @@ export default function ClientDetail() {
     refreshPackages 
   } = useClientPackages(tenantIdNum);
 
-  const isSuperAdmin = authProfile?.unicorn_role === 'Super Admin';
+  // Get user's role for this tenant
+  const { isSuperAdmin: checkSuperAdmin, hasTenantAdmin } = useAuth();
+  const isSuperAdminUser = checkSuperAdmin();
   const isTeamLeader = authProfile?.unicorn_role === 'Team Leader';
-  const canEdit = isSuperAdmin || isTeamLeader;
+  const canEdit = isSuperAdminUser || isTeamLeader;
+  const canVerifyTga = isSuperAdminUser || hasTenantAdmin(tenantIdNum || 0);
 
   useEffect(() => {
     if (tenantIdNum) {
@@ -306,7 +311,10 @@ export default function ClientDetail() {
             <ClientIntegrationsTab
               profile={profile}
               registryLink={registryLink}
+              onSetTgaLink={setTgaLink}
+              onVerifyTgaLink={verifyTgaLink}
               onUpdateLink={updateRegistryLink}
+              canVerify={canVerifyTga}
               loading={profileLoading}
             />
           </TabsContent>

@@ -69,6 +69,8 @@ export interface RegistryLink {
   link_status: string;
   last_synced_at: string | null;
   last_error: string | null;
+  verified_at: string | null;
+  verified_by: string | null;
 }
 
 export function useClientManagement() {
@@ -341,6 +343,68 @@ export function useClientProfile(tenantId: number | null) {
     }
   }, [tenantId, profile, fetchProfile, toast]);
 
+  // Set TGA link with role-based auto-verification via RPC
+  const setTgaLink = useCallback(async (rtoNumber: string): Promise<{ success: boolean; status?: string; autoVerified?: boolean }> => {
+    if (!tenantId) return { success: false };
+
+    try {
+      const { data, error } = await supabase.rpc('client_tga_link_set', {
+        p_tenant_id: tenantId,
+        p_rto_number: rtoNumber
+      });
+
+      if (error) throw error;
+
+      const result = data as { success: boolean; status: string; auto_verified: boolean };
+
+      toast({
+        title: 'Success',
+        description: result.auto_verified 
+          ? 'TGA link verified automatically' 
+          : 'TGA link initiated - awaiting admin verification'
+      });
+
+      await fetchProfile();
+      return { success: true, status: result.status, autoVerified: result.auto_verified };
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: error.message,
+        variant: 'destructive'
+      });
+      return { success: false };
+    }
+  }, [tenantId, fetchProfile, toast]);
+
+  // Verify pending TGA link (Admin-only) via RPC
+  const verifyTgaLink = useCallback(async (): Promise<boolean> => {
+    if (!tenantId) return false;
+
+    try {
+      const { data, error } = await supabase.rpc('client_tga_link_verify', {
+        p_tenant_id: tenantId
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: 'Success',
+        description: 'TGA link verified successfully'
+      });
+
+      await fetchProfile();
+      return true;
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: error.message,
+        variant: 'destructive'
+      });
+      return false;
+    }
+  }, [tenantId, fetchProfile, toast]);
+
+  // Simple status update for unlink/clear operations
   const updateRegistryLink = useCallback(async (status: string, externalId?: string) => {
     if (!tenantId) return false;
 
@@ -358,6 +422,8 @@ export function useClientProfile(tenantId: number | null) {
           link_status: status,
           external_id: externalId || profile?.rto_number || null,
           updated_by: userId,
+          verified_at: null,
+          verified_by: null,
           last_synced_at: status === 'linked' ? new Date().toISOString() : registryLink?.last_synced_at
         }, { onConflict: 'tenant_id,registry' });
 
@@ -403,6 +469,8 @@ export function useClientProfile(tenantId: number | null) {
     registryLink,
     loading,
     saveProfile,
+    setTgaLink,
+    verifyTgaLink,
     updateRegistryLink,
     refreshProfile: fetchProfile
   };
