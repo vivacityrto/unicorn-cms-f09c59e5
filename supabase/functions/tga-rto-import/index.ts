@@ -9,8 +9,11 @@ const corsHeaders = {
 
 // TGA SOAP Endpoints - correct production URLs
 const TGA_WS_BASE = Deno.env.get('TGA_WS_BASE') || 'https://ws.training.gov.au';
-const TGA_ORG_ENDPOINT = Deno.env.get('TGA_ORG_ENDPOINT') || 
-  `${TGA_WS_BASE}/Deewr.Tga.WebServices/OrganisationServiceV13.svc`;
+
+// NOTE: Some deployments had an env var with wrong casing (Webservices). Normalize to avoid 404.
+const RAW_TGA_ORG_ENDPOINT = Deno.env.get('TGA_ORG_ENDPOINT');
+const TGA_ORG_ENDPOINT = (RAW_TGA_ORG_ENDPOINT || `${TGA_WS_BASE}/Deewr.Tga.WebServices/OrganisationServiceV13.svc`)
+  .replace('Deewr.Tga.Webservices', 'Deewr.Tga.WebServices');
 
 // Production credentials
 const TGA_USERNAME = Deno.env.get('TGA_WS_USERNAME') || '';
@@ -25,7 +28,8 @@ const REQUEST_TIMEOUT_MS = 30000;
 const TGA_V13_NAMESPACE = 'http://training.gov.au/services/13/';
 
 function generateCorrelationId(): string {
-  return `tga-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
+  // human-friendly prefix, stable UUID for correlation
+  return `tga-${crypto.randomUUID()}`;
 }
 
 function escapeXml(unsafe: string): string {
@@ -509,7 +513,14 @@ serve(async (req) => {
     const { data: { user }, error: authError } = await supabase.auth.getUser(token);
     
     if (authError || !user) {
-      return new Response(JSON.stringify({ error: 'Invalid token' }), {
+      return new Response(JSON.stringify({
+        ok: false,
+        correlation_id: correlationId,
+        stage: 'auth.resolve',
+        error_code: 'auth.invalid_token',
+        message: 'Invalid token',
+        details: {}
+      }), {
         status: 401,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
@@ -524,17 +535,62 @@ serve(async (req) => {
 
     const isAdmin = userProfile?.global_role === 'SuperAdmin' || userProfile?.global_role === 'Admin';
     if (!isAdmin) {
-      return new Response(JSON.stringify({ error: 'Admin access required' }), {
+      return new Response(JSON.stringify({
+        ok: false,
+        correlation_id: correlationId,
+        stage: 'auth.resolve',
+        error_code: 'auth.forbidden',
+        message: 'Admin access required',
+        details: {}
+      }), {
         status: 403,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
-    const { job_id, tenant_id, rto_code } = await req.json();
+    const { job_id, tenant_id, rto_code, probe } = await req.json();
 
     if (!job_id || !tenant_id || !rto_code) {
-      return new Response(JSON.stringify({ error: 'job_id, tenant_id, and rto_code required' }), {
+      return new Response(JSON.stringify({
+        ok: false,
+        correlation_id: correlationId,
+        stage: 'input.validate',
+        error_code: 'input.missing_fields',
+        message: 'job_id, tenant_id, and rto_code required',
+        details: { required: ['job_id', 'tenant_id', 'rto_code'] }
+      }), {
         status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    // Probe mode (POST body.probe === true): SOAP-only org details, no DB writes.
+    if (probe === true) {
+      console.log(`[TGA] [${correlationId}] Probe request (POST) for RTO ${rto_code}`);
+      const orgResult = await fetchOrganisationDetails(rto_code, correlationId);
+      if (orgResult.error) {
+        return new Response(JSON.stringify({
+          ok: false,
+          correlation_id: correlationId,
+          stage: 'soap.org_details',
+          error_code: orgResult.error.includes('auth') ? 'tga.auth_error' : 'tga.soap_error',
+          message: orgResult.error,
+          details: {}
+        }), {
+          status: 502,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+      return new Response(JSON.stringify({
+        ok: true,
+        correlation_id: correlationId,
+        rto_number: rto_code,
+        imported: { org: orgResult.summary ? 1 : 0 },
+        summary: orgResult.summary,
+        contacts_count: orgResult.contacts.length,
+        addresses_count: orgResult.addresses.length,
+        delivery_locations_count: orgResult.deliveryLocations.length,
+      }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
@@ -849,10 +905,13 @@ serve(async (req) => {
 
   } catch (error) {
     console.error(`[TGA] [${correlationId}] Handler error:`, error);
-    return new Response(JSON.stringify({ 
-      error: 'tga.handler_error',
+    return new Response(JSON.stringify({
+      ok: false,
+      correlation_id: correlationId,
+      stage: 'handler',
+      error_code: 'tga.handler_error',
       message: error instanceof Error ? error.message : 'Unknown error',
-      correlation_id: correlationId
+      details: {}
     }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },

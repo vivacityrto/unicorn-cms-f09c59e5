@@ -192,103 +192,104 @@ export function useTgaRtoData(tenantId: number | null, rtoCode: string | null) {
         return { success: false, error: 'Failed to trigger sync job' };
       }
 
-      // Call edge function to run the import
+      // Call edge function to run the import (use fetch so we can read body text on non-2xx)
       const { data: session } = await supabase.auth.getSession();
-      const response = await supabase.functions.invoke('tga-rto-import', {
-        body: {
-          job_id: result.import_job_id,
-          tenant_id: tenantId,
-          rto_code: result.rto_number
-        },
-        headers: {
-          Authorization: `Bearer ${session?.session?.access_token}`
-        }
-      });
+      const accessToken = session?.session?.access_token;
 
-      // Handle edge function transport error
-      if (response.error) {
-        console.error('Edge function error:', response.error);
-        
-        // Try to extract structured error from response
-        const errorData = response.data || {};
-        const stage = errorData.stage || 'unknown';
-        const correlationId = errorData.correlation_id;
-        const message = errorData.message || response.error.message || 'Edge function error';
-        const hint = errorData.details?.hint;
-        
+      if (!accessToken) {
         toast({
           title: 'Import Failed',
-          description: (
-            <div className="space-y-1">
-              <p>{message}</p>
-              {stage !== 'unknown' && <p className="text-xs text-muted-foreground">Stage: {stage}</p>}
-              {hint && <p className="text-xs text-muted-foreground">{hint}</p>}
-              {correlationId && (
-                <button 
-                  onClick={() => {
-                    navigator.clipboard.writeText(correlationId);
-                  }}
-                  className="text-xs underline text-muted-foreground hover:text-foreground"
-                >
-                  Copy ref: {correlationId}
-                </button>
-              )}
-            </div>
-          ) as unknown as string,
+          description: 'Missing session token',
           variant: 'destructive'
         });
-        return { success: false, error: message, correlationId, stage };
+        return { success: false, error: 'Missing session token' };
       }
 
-      // Check if the edge function returned a structured error (ok: false)
-      if (response.data?.ok === false) {
-        const { stage, message, correlation_id, error_code, details } = response.data;
-        console.error('Import error:', message, `stage=${stage}`, correlation_id ? `(${correlation_id})` : '');
-        
+      const FUNCTION_URL = 'https://yxkgdalkbrriasiyyrwk.supabase.co/functions/v1/tga-rto-import';
+      const ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl4a2dkYWxrYnJyaWFzaXl5cndrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDc2MjQwMzEsImV4cCI6MjA2MzIwMDAzMX0.bBFTaO-6Afko1koQqx-PWdzl2mu5qmE0xWNTvneqyqY';
+
+      const res = await fetch(FUNCTION_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          apikey: ANON_KEY,
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({
+          job_id: result.import_job_id,
+          tenant_id: tenantId,
+          rto_code: result.rto_number,
+        }),
+      });
+
+      const text = await res.text();
+      let parsed: any = null;
+      try {
+        parsed = text ? JSON.parse(text) : null;
+      } catch {
+        parsed = null;
+      }
+
+      if (!res.ok) {
+        const message = parsed?.message || parsed?.error || res.statusText || 'Request failed';
+        const stage = parsed?.stage;
+        const correlationId = parsed?.correlation_id;
+        const snippet = !parsed && text ? text.slice(0, 300) : undefined;
+
         toast({
           title: 'Import Failed',
           description: (
             <div className="space-y-1">
               <p>{message}</p>
               {stage && <p className="text-xs text-muted-foreground">Stage: {stage}</p>}
-              {error_code && <p className="text-xs text-muted-foreground">Error: {error_code}</p>}
-              {details?.hint && <p className="text-xs text-muted-foreground">{details.hint}</p>}
-              {correlation_id && (
-                <button 
-                  onClick={() => {
-                    navigator.clipboard.writeText(correlation_id);
-                  }}
+              {correlationId && (
+                <button
+                  onClick={() => navigator.clipboard.writeText(correlationId)}
                   className="text-xs underline text-muted-foreground hover:text-foreground"
                 >
-                  Copy ref: {correlation_id}
+                  Copy ref: {correlationId}
+                </button>
+              )}
+              {snippet && <p className="text-xs text-muted-foreground">{snippet}</p>}
+            </div>
+          ),
+          variant: 'destructive'
+        });
+
+        return { success: false, error: message, correlationId, stage };
+      }
+
+      if (parsed?.ok === false) {
+        const message = parsed.message || 'Import failed';
+        const stage = parsed.stage;
+        const correlationId = parsed.correlation_id;
+        toast({
+          title: 'Import Failed',
+          description: (
+            <div className="space-y-1">
+              <p>{message}</p>
+              {stage && <p className="text-xs text-muted-foreground">Stage: {stage}</p>}
+              {correlationId && (
+                <button
+                  onClick={() => navigator.clipboard.writeText(correlationId)}
+                  className="text-xs underline text-muted-foreground hover:text-foreground"
+                >
+                  Copy ref: {correlationId}
                 </button>
               )}
             </div>
-          ) as unknown as string,
+          ),
           variant: 'destructive'
         });
-        return { success: false, error: message, correlationId: correlation_id, stage };
-      }
-
-      // Legacy error check (error field without ok field)
-      if (response.data?.error && response.data?.ok === undefined) {
-        const errorMsg = response.data.message || response.data.error;
-        const corrId = response.data.correlation_id;
-        console.error('Import error:', errorMsg, corrId ? `(${corrId})` : '');
-        toast({
-          title: 'Import Failed',
-          description: corrId ? `${errorMsg} (Ref: ${corrId})` : errorMsg,
-          variant: 'destructive'
-        });
-        return { success: false, error: errorMsg, correlationId: corrId };
+        return { success: false, error: message, correlationId, stage };
       }
 
       // Success!
-      const imported = response.data?.imported;
-      const summaryText = imported 
-        ? `Imported ${imported.qualifications || 0} qualifications, ${imported.contacts || 0} contacts`
+      const imported = parsed?.imported;
+      const summaryText = imported
+        ? `Imported: org ${imported.summary || 0}, contacts ${imported.contacts || 0}, quals ${imported.qualifications || 0}, units ${imported.units || 0}`
         : 'Data has been imported from Training.gov.au';
-      
+
       toast({
         title: 'TGA Sync Complete',
         description: summaryText
@@ -296,7 +297,6 @@ export function useTgaRtoData(tenantId: number | null, rtoCode: string | null) {
 
       await fetchData();
       return { success: true };
-
     } catch (error: unknown) {
       console.error('Sync error:', error);
       const errorMsg = error instanceof Error ? error.message : 'Unknown error';
