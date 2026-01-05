@@ -1123,6 +1123,47 @@ export type Database = {
           },
         ]
       }
+      client_audit_log: {
+        Row: {
+          action: string
+          actor_user_id: string | null
+          created_at: string | null
+          details: Json | null
+          entity_id: string | null
+          entity_type: string
+          id: string
+          tenant_id: number
+        }
+        Insert: {
+          action: string
+          actor_user_id?: string | null
+          created_at?: string | null
+          details?: Json | null
+          entity_id?: string | null
+          entity_type: string
+          id?: string
+          tenant_id: number
+        }
+        Update: {
+          action?: string
+          actor_user_id?: string | null
+          created_at?: string | null
+          details?: Json | null
+          entity_id?: string | null
+          entity_type?: string
+          id?: string
+          tenant_id?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_audit_log_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       client_liaisons: {
         Row: {
           assigned_at: string | null
@@ -6355,6 +6396,127 @@ export type Database = {
           },
           {
             foreignKeyName: "tenant_notes_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tenant_profile: {
+        Row: {
+          abn: string | null
+          acn: string | null
+          address_line_1: string | null
+          address_line_2: string | null
+          created_at: string | null
+          cricos_number: string | null
+          notes: string | null
+          org_type: string | null
+          postcode: string | null
+          primary_contact_email: string | null
+          primary_contact_name: string | null
+          primary_contact_phone: string | null
+          rto_number: string | null
+          state: string | null
+          suburb: string | null
+          tenant_id: number
+          trading_name: string | null
+          updated_at: string | null
+          updated_by: string | null
+        }
+        Insert: {
+          abn?: string | null
+          acn?: string | null
+          address_line_1?: string | null
+          address_line_2?: string | null
+          created_at?: string | null
+          cricos_number?: string | null
+          notes?: string | null
+          org_type?: string | null
+          postcode?: string | null
+          primary_contact_email?: string | null
+          primary_contact_name?: string | null
+          primary_contact_phone?: string | null
+          rto_number?: string | null
+          state?: string | null
+          suburb?: string | null
+          tenant_id: number
+          trading_name?: string | null
+          updated_at?: string | null
+          updated_by?: string | null
+        }
+        Update: {
+          abn?: string | null
+          acn?: string | null
+          address_line_1?: string | null
+          address_line_2?: string | null
+          created_at?: string | null
+          cricos_number?: string | null
+          notes?: string | null
+          org_type?: string | null
+          postcode?: string | null
+          primary_contact_email?: string | null
+          primary_contact_name?: string | null
+          primary_contact_phone?: string | null
+          rto_number?: string | null
+          state?: string | null
+          suburb?: string | null
+          tenant_id?: number
+          trading_name?: string | null
+          updated_at?: string | null
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tenant_profile_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: true
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tenant_registry_links: {
+        Row: {
+          created_at: string | null
+          external_id: string | null
+          id: string
+          last_error: string | null
+          last_synced_at: string | null
+          link_status: string
+          registry: string
+          tenant_id: number
+          updated_at: string | null
+          updated_by: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          external_id?: string | null
+          id?: string
+          last_error?: string | null
+          last_synced_at?: string | null
+          link_status?: string
+          registry: string
+          tenant_id: number
+          updated_at?: string | null
+          updated_by?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          external_id?: string | null
+          id?: string
+          last_error?: string | null
+          last_synced_at?: string | null
+          link_status?: string
+          registry?: string
+          tenant_id?: number
+          updated_at?: string | null
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tenant_registry_links_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"

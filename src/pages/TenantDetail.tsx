@@ -786,7 +786,7 @@ export default function TenantDetail() {
             {/* Liaison Officer */}
             {liaisonName && <Card className="border-0 shadow-lg overflow-hidden">
               <div className="bg-muted/30 px-6 h-14 border-b border-border/50 flex items-center">
-                <h2 className="font-semibold text-foreground">CST Officer</h2>
+                <h2 className="font-semibold text-foreground">CSC Officer</h2>
               </div>
               
               <div className="p-6">
