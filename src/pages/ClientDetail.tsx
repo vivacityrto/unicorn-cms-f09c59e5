@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { ClientNotesTab } from '@/components/client/ClientNotesTab';
 import { useClientProfile, useClientPackages } from '@/hooks/useClientManagement';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -234,7 +235,6 @@ export default function ClientDetail() {
             <TabsTrigger
               value="notes"
               className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none bg-transparent px-1 pb-3"
-              onClick={() => navigate(`/tenant/${tenantId}/notes`)}
             >
               <StickyNote className="h-4 w-4 mr-2" />
               Notes
@@ -284,6 +284,10 @@ export default function ClientDetail() {
               tenantId={tenantIdNum!}
               packages={packages}
             />
+          </TabsContent>
+
+          <TabsContent value="notes" className="mt-0">
+            <ClientNotesTab tenantId={tenantIdNum!} packages={packages} />
           </TabsContent>
 
           <TabsContent value="integrations" className="mt-0">
