@@ -7,30 +7,20 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// TGA SOAP Endpoints - production URLs
-// CRITICAL: Use correct casing for path: WebServices (capital S), not Webservices
-const TGA_WS_BASE = 'https://ws.training.gov.au';
-const TGA_ORG_ENDPOINT = `${TGA_WS_BASE}/Deewr.Tga.WebServices/OrganisationServiceV13.svc`;
+// LOCKED TGA Production Endpoints - DO NOT MODIFY CASING
+// These are the exact URLs from the TGA WSDL
+const ORG_ENDPOINT = Deno.env.get("TGA_ORG_ENDPOINT") ?? "https://ws.training.gov.au/Deewr.Tga.Webservices/OrganisationServiceV13.svc";
+const TC_ENDPOINT = Deno.env.get("TGA_TC_ENDPOINT") ?? "https://ws.training.gov.au/Deewr.Tga.Webservices/TrainingComponentServiceV13.svc";
 
-// Production credentials
+// Credentials from env
 const TGA_USERNAME = Deno.env.get('TGA_WS_USERNAME') || '';
 const TGA_PASSWORD = Deno.env.get('TGA_WS_PASSWORD') || '';
 
-// Retry configuration
-const MAX_RETRIES = 2;
-const RETRY_DELAYS = [500, 1500];
-const REQUEST_TIMEOUT_MS = 30000;
-
 // TGA V13 namespace
-const TGA_V13_NAMESPACE = 'http://training.gov.au/services/13/';
+const TGA_NS = 'http://training.gov.au/services/13/';
 
-// SOAP action patterns to try (ordered by likelihood)
-const SOAP_ACTION_PATTERNS = [
-  (op: string) => `"${TGA_V13_NAMESPACE}IOrganisationService/${op}"`,
-  (op: string) => `${TGA_V13_NAMESPACE}IOrganisationService/${op}`,
-  (op: string) => `"${TGA_V13_NAMESPACE}OrganisationService/${op}"`,
-  (op: string) => `"http://www.tga.deewr.gov.au/IOrganisationServiceV13/${op}"`,
-];
+// Request timeout
+const REQUEST_TIMEOUT_MS = 30000;
 
 function generateCorrelationId(): string {
   return `tga-${crypto.randomUUID()}`;
@@ -45,7 +35,7 @@ function escapeXml(unsafe: string): string {
     .replace(/'/g, '&apos;');
 }
 
-// Structured logging helper
+// Structured logging - never log secrets
 interface StageLogData {
   [key: string]: unknown;
 }
@@ -53,8 +43,11 @@ interface StageLogData {
 function logStage(correlationId: string, stage: string, data: StageLogData = {}) {
   const sanitized: Record<string, unknown> = { correlation_id: correlationId, stage };
   
-  // Copy safe data, truncate long strings
   for (const [k, v] of Object.entries(data)) {
+    // Skip any auth-related fields
+    if (k.toLowerCase().includes('password') || k.toLowerCase().includes('auth') || k.toLowerCase().includes('token')) {
+      continue;
+    }
     if (typeof v === 'string' && v.length > 500) {
       sanitized[k] = v.slice(0, 500) + '...';
     } else {
@@ -65,41 +58,40 @@ function logStage(correlationId: string, stage: string, data: StageLogData = {})
   console.log(`[TGA] [${correlationId}] STAGE=${stage}`, JSON.stringify(sanitized));
 }
 
-// Config validation
-interface ConfigValidation {
+// JSON response helper
+function jsonResponse(body: Record<string, unknown>, status = 200): Response {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+  });
+}
+
+// Validate config
+interface ConfigResult {
   ok: boolean;
   missing: string[];
   endpoint: string;
 }
 
-function validateConfig(): ConfigValidation {
+function validateConfig(): ConfigResult {
   const missing: string[] = [];
   if (!TGA_USERNAME) missing.push('TGA_WS_USERNAME');
   if (!TGA_PASSWORD) missing.push('TGA_WS_PASSWORD');
-  return { ok: missing.length === 0, missing, endpoint: TGA_ORG_ENDPOINT };
+  
+  // Validate endpoint ends with .svc
+  if (!ORG_ENDPOINT.endsWith('.svc')) {
+    missing.push('TGA_ORG_ENDPOINT (must end with .svc)');
+  }
+  
+  return { ok: missing.length === 0, missing, endpoint: ORG_ENDPOINT };
 }
 
-// Build SOAP 1.1 envelope with WS-Security
-function buildSoap11Envelope(operation: string, bodyContent: string): string {
-  const now = new Date();
-  const expires = new Date(now.getTime() + 5 * 60 * 1000);
-  
+// Build SOAP 1.2 envelope with Basic Auth approach
+// TGA uses HTTP Basic Auth + SOAP 1.2 action in Content-Type
+function buildSoap12Envelope(operation: string, bodyContent: string): string {
   return `<?xml version="1.0" encoding="utf-8"?>
-<soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/" 
-               xmlns:tns="${TGA_V13_NAMESPACE}">
-  <soap:Header>
-    <wsse:Security xmlns:wsse="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-secext-1.0.xsd"
-                   xmlns:wsu="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-utility-1.0.xsd">
-      <wsu:Timestamp wsu:Id="Timestamp-${Date.now()}">
-        <wsu:Created>${now.toISOString()}</wsu:Created>
-        <wsu:Expires>${expires.toISOString()}</wsu:Expires>
-      </wsu:Timestamp>
-      <wsse:UsernameToken wsu:Id="UsernameToken-${Date.now()}">
-        <wsse:Username>${escapeXml(TGA_USERNAME)}</wsse:Username>
-        <wsse:Password Type="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-username-token-profile-1.0#PasswordText">${escapeXml(TGA_PASSWORD)}</wsse:Password>
-      </wsse:UsernameToken>
-    </wsse:Security>
-  </soap:Header>
+<soap:Envelope xmlns:soap="http://www.w3.org/2003/05/soap-envelope" 
+               xmlns:tns="${TGA_NS}">
   <soap:Body>
     <tns:${operation}>
       ${bodyContent}
@@ -108,9 +100,9 @@ function buildSoap11Envelope(operation: string, bodyContent: string): string {
 </soap:Envelope>`;
 }
 
-// Parse SOAP fault from response
+// Parse SOAP fault
 function parseSoapFault(xml: string): { faultcode: string | null; faultstring: string | null } {
-  const faultcodeMatch = xml.match(/<(?:[a-z0-9]:)?(?:faultcode|Code)[^>]*>([^<]+)<\/(?:[a-z0-9]:)?(?:faultcode|Code)>/i);
+  const faultcodeMatch = xml.match(/<(?:[a-z0-9]:)?(?:faultcode|Code|Value)[^>]*>([^<]+)<\/(?:[a-z0-9]:)?(?:faultcode|Code|Value)>/i);
   const faultstringMatch = xml.match(/<(?:[a-z0-9]:)?(?:faultstring|Reason|Text)[^>]*>([^<]+)<\/(?:[a-z0-9]:)?(?:faultstring|Reason|Text)>/i);
   
   return {
@@ -119,7 +111,6 @@ function parseSoapFault(xml: string): { faultcode: string | null; faultstring: s
   };
 }
 
-// Check if response contains SOAP fault
 function containsSoapFault(xml: string): boolean {
   return /<(?:[a-z0-9]:)?Fault/i.test(xml);
 }
@@ -152,16 +143,17 @@ interface SoapResult {
   xml: string;
   error: string | null;
   fault: { faultcode: string | null; faultstring: string | null } | null;
-  correlationId: string;
-  actionUsed?: string;
   httpStatus?: number;
-  authOk?: boolean;
-  endpointOk?: boolean;
+  authOk: boolean;
+  endpointOk: boolean;
+  endpointUsed: string;
 }
 
-// Make SOAP 1.1 request with WS-Security
+// Make SOAP 1.2 request with HTTP Basic Auth
 async function makeSoapRequest(
+  endpoint: string,
   operation: string,
+  soapAction: string,
   bodyContent: string,
   correlationId: string
 ): Promise<SoapResult> {
@@ -170,218 +162,213 @@ async function makeSoapRequest(
     logStage(correlationId, 'config.missing_secret', { missing: config.missing });
     return {
       xml: '',
-      error: `TGA credentials not configured. Missing: ${config.missing.join(', ')}`,
+      error: `Configuration error. Missing: ${config.missing.join(', ')}`,
       fault: null,
-      correlationId,
       authOk: false,
       endpointOk: false,
+      endpointUsed: endpoint,
     };
   }
 
-  const soapEnvelope = buildSoap11Envelope(operation, bodyContent);
-  const endpointUrl = new URL(TGA_ORG_ENDPOINT);
-
-  logStage(correlationId, 'soap.fetch', {
+  const soapEnvelope = buildSoap12Envelope(operation, bodyContent);
+  
+  // Basic Auth header
+  const basicAuth = btoa(`${TGA_USERNAME}:${TGA_PASSWORD}`);
+  
+  // SOAP 1.2 uses action in Content-Type header
+  const contentType = `application/soap+xml; charset=utf-8; action="${soapAction}"`;
+  
+  const endpointUrl = new URL(endpoint);
+  
+  logStage(correlationId, 'soap.request.build', {
     endpoint_host: endpointUrl.host,
     endpoint_path: endpointUrl.pathname,
+    operation,
+    soap_action: soapAction,
+    content_type_sent: contentType,
   });
 
-  let lastError: Error | null = null;
-  let lastFault: { faultcode: string | null; faultstring: string | null } | null = null;
-  let lastHttpStatus: number | undefined;
-  let authOk = true;
-  let endpointOk = true;
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
 
-  // Try each SOAPAction pattern
-  for (let actionIdx = 0; actionIdx < SOAP_ACTION_PATTERNS.length; actionIdx++) {
-    const soapAction = SOAP_ACTION_PATTERNS[actionIdx](operation);
-    
-    console.log(`[TGA] [${correlationId}] Trying SOAP action pattern ${actionIdx + 1}: ${soapAction}`);
+    const response = await fetch(endpoint, {
+      method: 'POST',
+      headers: {
+        'Content-Type': contentType,
+        'Accept': 'application/soap+xml, text/xml',
+        'Authorization': `Basic ${basicAuth}`,
+        'User-Agent': 'Unicorn2.0/1.0',
+      },
+      body: soapEnvelope,
+      signal: controller.signal,
+    });
 
-    for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
-      if (attempt > 0) {
-        const delay = RETRY_DELAYS[attempt - 1] || 1000;
-        console.log(`[TGA] [${correlationId}] Retry ${attempt}/${MAX_RETRIES} after ${delay}ms`);
-        await new Promise((resolve) => setTimeout(resolve, delay));
-      }
+    clearTimeout(timeoutId);
+    const responseText = await response.text();
 
-      try {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+    logStage(correlationId, 'soap.fetch', {
+      endpoint_used: `${endpointUrl.host}${endpointUrl.pathname}`,
+      http_status: response.status,
+      content_type_sent: contentType,
+      response_snippet: responseText.slice(0, 500),
+    });
 
-        const response = await fetch(TGA_ORG_ENDPOINT, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'text/xml; charset=utf-8',
-            'Accept': 'text/xml',
-            'SOAPAction': soapAction,
-            'User-Agent': 'Unicorn2.0/1.0',
-          },
-          body: soapEnvelope,
-          signal: controller.signal,
-        });
+    // 404 - endpoint not found
+    if (response.status === 404) {
+      return {
+        xml: '',
+        error: `Endpoint not found: ${endpoint}`,
+        fault: null,
+        httpStatus: 404,
+        authOk: true, // 404 means we reached the server
+        endpointOk: false,
+        endpointUsed: endpoint,
+      };
+    }
 
-        clearTimeout(timeoutId);
-        const responseText = await response.text();
-        lastHttpStatus = response.status;
+    // 401/403 - auth failure
+    if (response.status === 401 || response.status === 403) {
+      const fault = parseSoapFault(responseText);
+      return {
+        xml: '',
+        error: `Authentication failed: ${fault.faultstring || response.statusText}`,
+        fault,
+        httpStatus: response.status,
+        authOk: false,
+        endpointOk: true,
+        endpointUsed: endpoint,
+      };
+    }
 
-        logStage(correlationId, 'soap.response.parse', {
-          http_status: response.status,
-          response_snippet: responseText.slice(0, 500),
-          soap_action: soapAction,
-        });
-
-        if (response.ok) {
-          if (containsSoapFault(responseText)) {
-            const fault = parseSoapFault(responseText);
-            logStage(correlationId, 'soap.fault', { fault, http_status: response.status });
-            
-            // ActionNotSupported - try next pattern
-            if (fault.faultcode?.includes('ActionNotSupported') || 
-                fault.faultstring?.includes('ContractFilter')) {
-              console.log(`[TGA] [${correlationId}] Action mismatch, trying next pattern...`);
-              lastFault = fault;
-              break; // Try next action pattern
-            }
-            
-            // Auth errors - don't retry
-            if (fault.faultstring?.includes('Unknown user') || 
-                fault.faultstring?.includes('incorrect password') ||
-                responseText.includes('InvalidSecurity')) {
-              authOk = false;
-              return {
-                xml: '',
-                error: `TGA authentication failed: ${fault.faultstring || 'Invalid credentials'}`,
-                fault,
-                correlationId,
-                httpStatus: response.status,
-                authOk: false,
-                endpointOk: true,
-              };
-            }
-            
-            return {
-              xml: '',
-              error: fault.faultstring || `SOAP Fault: ${fault.faultcode}`,
-              fault,
-              correlationId,
-              httpStatus: response.status,
-              authOk: true,
-              endpointOk: true,
-            };
-          }
-          
-          console.log(`[TGA] [${correlationId}] Success with action: ${soapAction}, received ${responseText.length} bytes`);
-          return { 
-            xml: responseText, 
-            error: null, 
-            fault: null, 
-            correlationId, 
-            actionUsed: soapAction,
-            httpStatus: response.status,
-            authOk: true,
-            endpointOk: true,
-          };
-        }
-
-        // Non-OK response
-        console.error(`[TGA] [${correlationId}] HTTP ${response.status}:`, responseText.substring(0, 500));
-        
-        const fault = parseSoapFault(responseText);
-        lastFault = fault;
-
-        // Check for auth errors in non-OK response
-        if (fault.faultstring?.includes('Unknown user') || 
-            fault.faultstring?.includes('incorrect password') ||
-            responseText.includes('InvalidSecurity')) {
-          authOk = false;
-          return {
-            xml: '',
-            error: `TGA authentication failed: ${fault.faultstring || 'Invalid credentials'}`,
-            fault,
-            correlationId,
-            httpStatus: response.status,
-            authOk: false,
-            endpointOk: true,
-          };
-        }
-
-        // ActionNotSupported on non-OK response - try next pattern
-        if (fault.faultcode?.includes('ActionNotSupported') || 
-            fault.faultstring?.includes('ContractFilter') ||
-            response.status === 500) {
-          console.log(`[TGA] [${correlationId}] Action mismatch on ${response.status}, trying next pattern...`);
-          break; // Try next action pattern
-        }
-
-        // 404 - endpoint/action not found - try next pattern
-        if (response.status === 404) {
-          endpointOk = false;
-          console.log(`[TGA] [${correlationId}] 404 received, trying next action pattern...`);
-          break; // Try next action pattern
-        }
-
-        // Server errors - retry
-        if (response.status >= 500 && attempt < MAX_RETRIES) {
-          lastError = new Error(`HTTP ${response.status}`);
-          continue;
-        }
-
-        // Non-retryable error
+    // Check for SOAP fault in response
+    if (containsSoapFault(responseText)) {
+      const fault = parseSoapFault(responseText);
+      logStage(correlationId, 'soap.fault', { fault, http_status: response.status });
+      
+      // Auth errors in SOAP fault
+      if (fault.faultstring?.includes('Unknown user') || 
+          fault.faultstring?.includes('incorrect password') ||
+          responseText.includes('InvalidSecurity') ||
+          responseText.includes('FailedAuthentication')) {
         return {
           xml: '',
-          error: `HTTP ${response.status} - ${fault.faultstring || 'endpoint or action not found'}`,
+          error: `TGA authentication failed: ${fault.faultstring || 'Invalid credentials'}`,
           fault,
-          correlationId,
           httpStatus: response.status,
-          authOk,
-          endpointOk: response.status !== 404,
+          authOk: false,
+          endpointOk: true,
+          endpointUsed: endpoint,
         };
-
-      } catch (error) {
-        console.error(`[TGA] [${correlationId}] Request error:`, error);
-
-        if (error instanceof Error && error.name === 'AbortError') {
-          lastError = new Error('Request timed out');
-        } else {
-          lastError = error instanceof Error ? error : new Error(String(error));
-        }
-
-        if (attempt < MAX_RETRIES) continue;
       }
+      
+      // ActionNotSupported - wrong operation
+      if (fault.faultcode?.includes('ActionNotSupported') || 
+          fault.faultstring?.includes('ContractFilter') ||
+          fault.faultstring?.includes('does not match')) {
+        return {
+          xml: '',
+          error: `SOAP action not supported: ${soapAction}`,
+          fault,
+          httpStatus: response.status,
+          authOk: true,
+          endpointOk: true,
+          endpointUsed: endpoint,
+        };
+      }
+      
+      return {
+        xml: '',
+        error: fault.faultstring || `SOAP Fault: ${fault.faultcode}`,
+        fault,
+        httpStatus: response.status,
+        authOk: true,
+        endpointOk: true,
+        endpointUsed: endpoint,
+      };
     }
-  }
 
-  // All action patterns exhausted
-  return {
-    xml: '',
-    error: lastError?.message || lastFault?.faultstring || 'SOAP request failed after all action patterns',
-    fault: lastFault,
-    correlationId,
-    httpStatus: lastHttpStatus,
-    authOk,
-    endpointOk,
-  };
+    // Success
+    if (response.ok) {
+      logStage(correlationId, 'soap.response.parse', { 
+        http_status: response.status, 
+        response_length: responseText.length 
+      });
+      return {
+        xml: responseText,
+        error: null,
+        fault: null,
+        httpStatus: response.status,
+        authOk: true,
+        endpointOk: true,
+        endpointUsed: endpoint,
+      };
+    }
+
+    // Other error
+    return {
+      xml: '',
+      error: `HTTP ${response.status}: ${response.statusText}`,
+      fault: parseSoapFault(responseText),
+      httpStatus: response.status,
+      authOk: true,
+      endpointOk: true,
+      endpointUsed: endpoint,
+    };
+
+  } catch (error) {
+    const errorMsg = error instanceof Error ? error.message : String(error);
+    logStage(correlationId, 'soap.error', { error: errorMsg });
+    
+    if (error instanceof Error && error.name === 'AbortError') {
+      return {
+        xml: '',
+        error: 'Request timed out',
+        fault: null,
+        authOk: true,
+        endpointOk: true,
+        endpointUsed: endpoint,
+      };
+    }
+    
+    return {
+      xml: '',
+      error: errorMsg,
+      fault: null,
+      authOk: true,
+      endpointOk: false,
+      endpointUsed: endpoint,
+    };
+  }
 }
 
-// Fetch organisation details using GetOrganisation
+// Fetch organisation details
 async function fetchOrganisationDetails(rtoCode: string, correlationId: string): Promise<{
   summary: Record<string, unknown> | null;
   contacts: Record<string, unknown>[];
   addresses: Record<string, unknown>[];
   deliveryLocations: Record<string, unknown>[];
   error: string | null;
-  correlationId: string;
   fault?: { faultcode: string | null; faultstring: string | null } | null;
   httpStatus?: number;
-  authOk?: boolean;
-  endpointOk?: boolean;
+  authOk: boolean;
+  endpointOk: boolean;
+  endpointUsed: string;
 }> {
-  console.log(`[TGA] [${correlationId}] Fetching org details for RTO ${rtoCode}`);
+  logStage(correlationId, 'soap.org_details', { rto_code: rtoCode });
 
   const bodyContent = `<tns:code>${escapeXml(rtoCode)}</tns:code>`;
+  
+  // SOAP Action for GetOrganisation - from WSDL
+  const soapAction = `${TGA_NS}IOrganisationService/GetOrganisation`;
 
-  const result = await makeSoapRequest('GetOrganisation', bodyContent, correlationId);
+  const result = await makeSoapRequest(
+    ORG_ENDPOINT,
+    'GetOrganisation',
+    soapAction,
+    bodyContent,
+    correlationId
+  );
   
   if (result.error) {
     return { 
@@ -390,11 +377,11 @@ async function fetchOrganisationDetails(rtoCode: string, correlationId: string):
       addresses: [], 
       deliveryLocations: [], 
       error: result.error,
-      correlationId,
       fault: result.fault,
       httpStatus: result.httpStatus,
       authOk: result.authOk,
       endpointOk: result.endpointOk,
+      endpointUsed: result.endpointUsed,
     };
   }
 
@@ -453,14 +440,14 @@ async function fetchOrganisationDetails(rtoCode: string, correlationId: string):
     addresses, 
     deliveryLocations,
     error: null,
-    correlationId,
     httpStatus: result.httpStatus,
     authOk: result.authOk,
     endpointOk: result.endpointOk,
+    endpointUsed: result.endpointUsed,
   };
 }
 
-// Fetch scope using GetRtoScope
+// Fetch scope
 async function fetchOrganisationScope(rtoCode: string, correlationId: string): Promise<{
   qualifications: Record<string, unknown>[];
   skillsets: Record<string, unknown>[];
@@ -468,255 +455,192 @@ async function fetchOrganisationScope(rtoCode: string, correlationId: string): P
   courses: Record<string, unknown>[];
   error: string | null;
 }> {
-  console.log(`[TGA] [${correlationId}] Fetching scope for RTO ${rtoCode}`);
+  logStage(correlationId, 'soap.scope', { rto_code: rtoCode });
   
   const bodyContent = `<tns:code>${escapeXml(rtoCode)}</tns:code>`;
+  const soapAction = `${TGA_NS}IOrganisationService/GetRtoScope`;
   
-  const result = await makeSoapRequest('GetRtoScope', bodyContent, correlationId);
+  const result = await makeSoapRequest(
+    ORG_ENDPOINT,
+    'GetRtoScope',
+    soapAction,
+    bodyContent,
+    correlationId
+  );
   
   if (result.error) {
-    console.error(`[TGA] [${correlationId}] Scope fetch error:`, result.error);
     return { qualifications: [], skillsets: [], units: [], courses: [], error: result.error };
   }
 
   // Parse qualifications
   const qualBlocks = extractMultipleBlocks(result.xml, 'Qualification');
   const qualifications = qualBlocks.map(block => ({
-    qualification_code: extractValue(block, 'Code'),
-    qualification_title: extractValue(block, 'Title'),
+    qualification_code: extractValue(block, 'Code') || extractValue(block, 'NationalCode'),
+    qualification_title: extractValue(block, 'Title') || extractValue(block, 'Name'),
     training_package_code: extractValue(block, 'TrainingPackageCode'),
-    training_package_title: extractValue(block, 'TrainingPackageTitle'),
-    scope_start_date: extractValue(block, 'ScopeStartDate') || extractValue(block, 'StartDate'),
-    scope_end_date: extractValue(block, 'ScopeEndDate') || extractValue(block, 'EndDate'),
-    status: extractValue(block, 'Status'),
+    status: extractValue(block, 'Status') || extractValue(block, 'ScopeStatus'),
     is_current: extractValue(block, 'IsCurrent')?.toLowerCase() === 'true',
   })).filter(q => q.qualification_code);
 
   // Parse skill sets
   const skillBlocks = extractMultipleBlocks(result.xml, 'SkillSet');
   const skillsets = skillBlocks.map(block => ({
-    skillset_code: extractValue(block, 'Code'),
-    skillset_title: extractValue(block, 'Title'),
+    skillset_code: extractValue(block, 'Code') || extractValue(block, 'NationalCode'),
+    skillset_title: extractValue(block, 'Title') || extractValue(block, 'Name'),
     training_package_code: extractValue(block, 'TrainingPackageCode'),
-    training_package_title: extractValue(block, 'TrainingPackageTitle'),
-    scope_start_date: extractValue(block, 'ScopeStartDate') || extractValue(block, 'StartDate'),
-    scope_end_date: extractValue(block, 'ScopeEndDate') || extractValue(block, 'EndDate'),
-    status: extractValue(block, 'Status'),
+    status: extractValue(block, 'Status') || extractValue(block, 'ScopeStatus'),
     is_current: extractValue(block, 'IsCurrent')?.toLowerCase() === 'true',
   })).filter(s => s.skillset_code);
 
   // Parse units
   const unitBlocks = extractMultipleBlocks(result.xml, 'Unit');
   const units = unitBlocks.map(block => ({
-    unit_code: extractValue(block, 'Code'),
-    unit_title: extractValue(block, 'Title'),
+    unit_code: extractValue(block, 'Code') || extractValue(block, 'NationalCode'),
+    unit_title: extractValue(block, 'Title') || extractValue(block, 'Name'),
     training_package_code: extractValue(block, 'TrainingPackageCode'),
-    training_package_title: extractValue(block, 'TrainingPackageTitle'),
-    scope_start_date: extractValue(block, 'ScopeStartDate') || extractValue(block, 'StartDate'),
-    scope_end_date: extractValue(block, 'ScopeEndDate') || extractValue(block, 'EndDate'),
-    status: extractValue(block, 'Status'),
+    status: extractValue(block, 'Status') || extractValue(block, 'ScopeStatus'),
     is_current: extractValue(block, 'IsCurrent')?.toLowerCase() === 'true',
-    is_explicit: true,
   })).filter(u => u.unit_code);
 
-  // Parse accredited courses
-  const courseBlocks = extractMultipleBlocks(result.xml, 'AccreditedCourse');
+  // Parse courses
+  const courseBlocks = extractMultipleBlocks(result.xml, 'Course');
   const courses = courseBlocks.map(block => ({
-    course_code: extractValue(block, 'Code'),
-    course_title: extractValue(block, 'Title'),
-    scope_start_date: extractValue(block, 'ScopeStartDate') || extractValue(block, 'StartDate'),
-    scope_end_date: extractValue(block, 'ScopeEndDate') || extractValue(block, 'EndDate'),
-    status: extractValue(block, 'Status'),
+    course_code: extractValue(block, 'Code') || extractValue(block, 'NationalCode'),
+    course_title: extractValue(block, 'Title') || extractValue(block, 'Name'),
+    status: extractValue(block, 'Status') || extractValue(block, 'ScopeStatus'),
     is_current: extractValue(block, 'IsCurrent')?.toLowerCase() === 'true',
   })).filter(c => c.course_code);
 
   return { qualifications, skillsets, units, courses, error: null };
 }
 
-// JSON response helper
-function jsonResponse(data: Record<string, unknown>, status = 200): Response {
-  return new Response(JSON.stringify(data), {
-    status,
-    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-  });
+// WSDL probe to verify endpoint connectivity
+async function probeWsdl(correlationId: string): Promise<{
+  ok: boolean;
+  http_status?: number;
+  response_snippet?: string;
+  error?: string;
+}> {
+  const wsdlUrl = `${ORG_ENDPOINT}?wsdl`;
+  logStage(correlationId, 'probe.wsdl', { url: wsdlUrl });
+  
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
+    
+    const response = await fetch(wsdlUrl, {
+      method: 'GET',
+      headers: { 'Accept': 'text/xml, application/xml' },
+      signal: controller.signal,
+    });
+    
+    clearTimeout(timeoutId);
+    const text = await response.text();
+    
+    const isWsdl = text.includes('definitions') || text.includes('wsdl:definitions') || text.includes('<wsdl');
+    
+    logStage(correlationId, 'probe.wsdl.result', {
+      http_status: response.status,
+      is_wsdl: isWsdl,
+      response_snippet: text.slice(0, 300),
+    });
+    
+    return {
+      ok: response.status === 200 && isWsdl,
+      http_status: response.status,
+      response_snippet: text.slice(0, 300),
+    };
+  } catch (error) {
+    const errorMsg = error instanceof Error ? error.message : String(error);
+    return { ok: false, error: errorMsg };
+  }
 }
 
 serve(async (req) => {
   const correlationId = generateCorrelationId();
   
-  // Handle CORS preflight
-  if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
-  }
+  // Always log request start
+  logStage(correlationId, 'request.start', { 
+    method: req.method,
+    url: req.url,
+  });
 
   try {
-    // Validate config upfront
-    const config = validateConfig();
-    if (!config.ok) {
-      logStage(correlationId, 'config.missing_secret', { missing: config.missing });
-      return jsonResponse({
-        ok: false,
-        correlation_id: correlationId,
-        stage: 'config.missing_secret',
-        error: `TGA credentials not configured`,
-        missing: config.missing,
-      }, 400);
+    // CORS preflight
+    if (req.method === 'OPTIONS') {
+      return new Response(null, { headers: corsHeaders });
     }
 
-    // Handle GET probe request
     const url = new URL(req.url);
+    
+    // GET ?probe=1 - WSDL connectivity check
     if (req.method === 'GET' && url.searchParams.get('probe') === '1') {
-      const rto = url.searchParams.get('rto') || '91020';
+      const config = validateConfig();
       
-      logStage(correlationId, 'input.validate', { rto_code: rto, mode: 'probe_get' });
+      // First check WSDL
+      const wsdlResult = await probeWsdl(correlationId);
       
-      // Check auth header
-      const authHeader = req.headers.get('Authorization');
-      if (!authHeader) {
-        logStage(correlationId, 'auth.resolve', { error: 'Missing authorization' });
+      if (!wsdlResult.ok) {
         return jsonResponse({
           ok: false,
           correlation_id: correlationId,
-          stage: 'auth',
-          error: 'Missing authorization header',
-        }, 401);
+          stage: 'probe.wsdl',
+          endpoint_used: ORG_ENDPOINT,
+          config_ok: config.ok,
+          config_missing: config.missing,
+          wsdl_ok: false,
+          http_status: wsdlResult.http_status,
+          response_snippet: wsdlResult.response_snippet,
+          error: wsdlResult.error || 'WSDL not accessible',
+        }, 200);
       }
       
-      // Fetch org details as probe (no DB writes)
-      logStage(correlationId, 'soap.org_details', { rto_code: rto });
+      // Then try a minimal SOAP call
+      const rto = url.searchParams.get('rto') || '91020';
       const orgResult = await fetchOrganisationDetails(rto, correlationId);
       
-      if (orgResult.error) {
-        logStage(correlationId, 'soap.org_details.error', { 
-          error: orgResult.error, 
-          fault: orgResult.fault,
-          auth_ok: orgResult.authOk,
-          endpoint_ok: orgResult.endpointOk,
-        });
-        
-        // Return diagnostic info, NOT 502
-        const statusCode = orgResult.authOk === false ? 401 : 
-                          orgResult.endpointOk === false ? 404 : 500;
-        
-        return jsonResponse({
-          ok: false,
-          correlation_id: correlationId,
-          stage: 'soap.org_details',
-          mode: 'probe',
-          rto_code: rto,
-          error: orgResult.error,
-          fault: orgResult.fault,
-          http_status: orgResult.httpStatus,
-          auth_ok: orgResult.authOk,
-          endpoint_ok: orgResult.endpointOk,
-          endpoint_used: TGA_ORG_ENDPOINT,
-        }, statusCode);
-      }
-      
-      logStage(correlationId, 'soap.org_details.success', { 
-        has_summary: !!orgResult.summary,
-        contacts_count: orgResult.contacts.length,
-        addresses_count: orgResult.addresses.length,
-        delivery_locations_count: orgResult.deliveryLocations.length,
-      });
-      
       return jsonResponse({
-        ok: true,
+        ok: !orgResult.error,
         correlation_id: correlationId,
-        mode: 'probe',
-        rto_code: rto,
-        auth_ok: true,
-        endpoint_ok: true,
+        stage: 'probe.complete',
+        endpoint_used: orgResult.endpointUsed || ORG_ENDPOINT,
+        config_ok: config.ok,
+        wsdl_ok: true,
+        auth_ok: orgResult.authOk,
+        endpoint_ok: orgResult.endpointOk,
         http_status: orgResult.httpStatus,
-        summary: orgResult.summary,
-        counts: {
-          contacts: orgResult.contacts.length,
-          addresses: orgResult.addresses.length,
-          delivery_locations: orgResult.deliveryLocations.length,
-        },
-        endpoint_used: TGA_ORG_ENDPOINT,
-      });
+        summary_found: !!orgResult.summary,
+        error: orgResult.error,
+      }, 200);
     }
 
-    // POST request - full import or probe
+    // POST - full import
     if (req.method !== 'POST') {
       return jsonResponse({
         ok: false,
         correlation_id: correlationId,
         stage: 'input.validate',
-        error: 'Method not allowed. Use POST for import or GET with ?probe=1&rto=XXXXX for diagnostics.',
+        error: 'Method not allowed. Use POST for import, GET ?probe=1 for diagnostics.',
+        endpoint_used: ORG_ENDPOINT,
       }, 405);
     }
 
-    let body: Record<string, unknown>;
-    try {
-      body = await req.json();
-    } catch {
+    // Validate config first
+    const config = validateConfig();
+    if (!config.ok) {
       return jsonResponse({
         ok: false,
         correlation_id: correlationId,
-        stage: 'input.validate',
-        error: 'Invalid JSON body',
+        stage: 'config.missing_secret',
+        error: `Missing configuration: ${config.missing.join(', ')}`,
+        missing: config.missing,
+        endpoint_used: ORG_ENDPOINT,
       }, 400);
     }
 
-    const { job_id, tenant_id, rto_code, probe } = body as {
-      job_id?: string;
-      tenant_id?: number;
-      rto_code?: string;
-      probe?: boolean;
-    };
-    
-    // Handle probe via POST
-    if (probe === true) {
-      const rto = rto_code || '91020';
-      logStage(correlationId, 'input.validate', { rto_code: rto, mode: 'probe_post' });
-      
-      const orgResult = await fetchOrganisationDetails(rto, correlationId);
-      
-      if (orgResult.error) {
-        logStage(correlationId, 'soap.org_details.error', { 
-          error: orgResult.error, 
-          fault: orgResult.fault,
-          auth_ok: orgResult.authOk,
-          endpoint_ok: orgResult.endpointOk,
-        });
-        
-        const statusCode = orgResult.authOk === false ? 401 : 
-                          orgResult.endpointOk === false ? 404 : 500;
-        
-        return jsonResponse({
-          ok: false,
-          correlation_id: correlationId,
-          stage: 'soap.org_details',
-          mode: 'probe',
-          rto_code: rto,
-          error: orgResult.error,
-          fault: orgResult.fault,
-          http_status: orgResult.httpStatus,
-          auth_ok: orgResult.authOk,
-          endpoint_ok: orgResult.endpointOk,
-          endpoint_used: TGA_ORG_ENDPOINT,
-        }, statusCode);
-      }
-      
-      return jsonResponse({
-        ok: true,
-        correlation_id: correlationId,
-        mode: 'probe',
-        rto_code: rto,
-        auth_ok: true,
-        endpoint_ok: true,
-        summary: orgResult.summary,
-        counts: {
-          contacts: orgResult.contacts.length,
-          addresses: orgResult.addresses.length,
-          delivery_locations: orgResult.deliveryLocations.length,
-        },
-      });
-    }
+    const body = await req.json().catch(() => ({}));
+    const { job_id, tenant_id, rto_code } = body;
 
-    // Full import - validate required params
     logStage(correlationId, 'input.validate', { job_id, tenant_id, rto_code });
     
     if (!job_id || !tenant_id || !rto_code) {
@@ -725,10 +649,11 @@ serve(async (req) => {
         correlation_id: correlationId,
         stage: 'input.validate',
         error: 'Missing required params: job_id, tenant_id, rto_code',
+        endpoint_used: ORG_ENDPOINT,
       }, 400);
     }
 
-    // Get auth token for Supabase
+    // Get auth token
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
       return jsonResponse({
@@ -736,26 +661,30 @@ serve(async (req) => {
         correlation_id: correlationId,
         stage: 'auth',
         error: 'Missing authorization header',
+        endpoint_used: ORG_ENDPOINT,
       }, 401);
     }
 
-    // Initialize Supabase client
+    // Supabase client
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
     
     if (!supabaseUrl || !supabaseServiceKey) {
-      logStage(correlationId, 'config.missing_secret', { missing: ['SUPABASE_URL', 'SUPABASE_SERVICE_ROLE_KEY'].filter(k => !Deno.env.get(k)) });
+      const missing = ['SUPABASE_URL', 'SUPABASE_SERVICE_ROLE_KEY'].filter(k => !Deno.env.get(k));
+      logStage(correlationId, 'config.missing_secret', { missing });
       return jsonResponse({
         ok: false,
         correlation_id: correlationId,
         stage: 'config.missing_secret',
         error: 'Supabase configuration missing',
+        missing,
+        endpoint_used: ORG_ENDPOINT,
       }, 500);
     }
     
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Update job status to running
+    // Update job status
     await supabase.from('tga_rto_import_jobs').update({
       status: 'running',
       started_at: new Date().toISOString(),
@@ -773,8 +702,7 @@ serve(async (req) => {
       courses: 0,
     };
 
-    // Stage 1: Fetch organisation details
-    logStage(correlationId, 'soap.org_details', { rto_code });
+    // Stage 1: Fetch org details
     const orgResult = await fetchOrganisationDetails(rto_code, correlationId);
     
     if (orgResult.error) {
@@ -783,6 +711,7 @@ serve(async (req) => {
         fault: orgResult.fault,
         auth_ok: orgResult.authOk,
         endpoint_ok: orgResult.endpointOk,
+        endpoint_used: orgResult.endpointUsed,
       });
       
       await supabase.from('tga_rto_import_jobs').update({
@@ -803,6 +732,7 @@ serve(async (req) => {
         http_status: orgResult.httpStatus,
         auth_ok: orgResult.authOk,
         endpoint_ok: orgResult.endpointOk,
+        endpoint_used: orgResult.endpointUsed,
       }, statusCode);
     }
 
@@ -869,7 +799,6 @@ serve(async (req) => {
     }
 
     // Stage 2: Fetch scope
-    logStage(correlationId, 'soap.scope', { rto_code });
     const scopeResult = await fetchOrganisationScope(rto_code, correlationId);
     
     if (!scopeResult.error) {
@@ -940,7 +869,7 @@ serve(async (req) => {
       logStage(correlationId, 'soap.scope.error', { error: scopeResult.error });
     }
 
-    // Update job status to completed
+    // Update job status
     await supabase.from('tga_rto_import_jobs').update({
       status: 'completed',
       completed_at: new Date().toISOString(),
@@ -955,7 +884,7 @@ serve(async (req) => {
       details: { correlation_id: correlationId, rto_code, imported },
     });
 
-    logStage(correlationId, 'import.complete', { imported });
+    logStage(correlationId, 'done', { imported });
 
     return jsonResponse({
       ok: true,
@@ -963,6 +892,7 @@ serve(async (req) => {
       stage: 'done',
       rto_code,
       imported,
+      endpoint_used: ORG_ENDPOINT,
     });
 
   } catch (error) {
@@ -972,8 +902,9 @@ serve(async (req) => {
     return jsonResponse({
       ok: false,
       correlation_id: correlationId,
-      stage: 'request',
+      stage: 'request.error',
       error: errorMsg,
+      endpoint_used: ORG_ENDPOINT,
     }, 500);
   }
 });
