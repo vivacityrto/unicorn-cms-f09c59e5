@@ -13,6 +13,9 @@ import {
   MEMBERSHIP_TIERS,
   SUPERHERO_PACKAGE_IDS,
   MembershipHealthScore,
+  MembershipRollup,
+  NextAction,
+  RiskFlag,
 } from '@/types/membership';
 
 export function useMembershipDashboard() {
@@ -98,6 +101,13 @@ export function useMembershipDashboard() {
         overdueMap.set(key, (overdueMap.get(key) || 0) + 1);
       });
 
+      // Get rollups from RPC (next_action + risk_flags)
+      const { data: rollups } = await supabase.rpc('get_membership_rollups');
+      const rollupMap = new Map<string, any>();
+      (rollups || []).forEach((r: any) => {
+        rollupMap.set(`${r.tenant_id}-${r.package_id}`, r);
+      });
+
       // Build membership list
       const membershipList: MembershipWithDetails[] = [];
 
@@ -116,11 +126,30 @@ export function useMembershipDashboard() {
           const entitlement = entitlementMap.get(key);
           const cscUserId = entitlement?.csc_user_id || cscMap.get(tenant.id);
           const cscUser = staffUsers.find(u => u.user_uuid === cscUserId);
+          const rollup = rollupMap.get(key);
 
           // Calculate health score with overdue tasks and CSC assignment status
           const overdueCount = overdueMap.get(key) || 0;
           const hasCscAssigned = !!cscUserId;
           const healthScore: MembershipHealthScore = calculateHealthScore(entitlement, tier, overdueCount, hasCscAssigned);
+
+          // Build next_action from rollup
+          const nextAction: NextAction | null = rollup ? {
+            title: rollup.next_action_title || 'Review status',
+            due_at: rollup.next_action_due_at,
+            owner_id: rollup.next_action_owner_id,
+            source: rollup.next_action_source as 'task' | 'system',
+            reason: rollup.next_action_reason || '',
+          } : {
+            title: 'Review status and set next steps',
+            due_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+            owner_id: cscUserId || null,
+            source: 'system',
+            reason: 'No open tasks',
+          };
+
+          // Parse risk_flags from rollup
+          const riskFlags: RiskFlag[] = (rollup?.risk_flags as RiskFlag[]) || [];
 
           membershipList.push({
             id: entitlement?.id || `temp-${key}`,
@@ -137,10 +166,10 @@ export function useMembershipDashboard() {
             validation_status: entitlement?.validation_status || 'not_scheduled',
             validation_scheduled_date: entitlement?.validation_scheduled_date || null,
             csc_user_id: cscUserId || null,
-          membership_started_at: entitlement?.membership_started_at || new Date().toISOString(),
-          last_activity_at: entitlement?.last_activity_at || null,
-          created_at: entitlement?.created_at || new Date().toISOString(),
-          updated_at: entitlement?.updated_at || new Date().toISOString(),
+            membership_started_at: entitlement?.membership_started_at || new Date().toISOString(),
+            last_activity_at: entitlement?.last_activity_at || null,
+            created_at: entitlement?.created_at || new Date().toISOString(),
+            updated_at: entitlement?.updated_at || new Date().toISOString(),
             tenant_name: tenant.name,
             package_name: pkg.name,
             tier,
@@ -148,7 +177,9 @@ export function useMembershipDashboard() {
             csc_avatar: cscUser?.avatar_url || null,
             health_score: healthScore,
             overdue_tasks_count: overdueMap.get(key) || 0,
-            pending_tasks_count: 0, // Could calculate if needed
+            pending_tasks_count: 0,
+            next_action: nextAction,
+            risk_flags: riskFlags,
           });
         }
       }

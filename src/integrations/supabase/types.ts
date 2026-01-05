@@ -4935,6 +4935,39 @@ export type Database = {
           },
         ]
       }
+      package_type_thresholds: {
+        Row: {
+          created_at: string
+          hours_critical_pct: number
+          hours_warn_pct: number
+          no_activity_days: number
+          package_type: string
+          updated_at: string
+          waiting_critical_days: number
+          waiting_warn_days: number
+        }
+        Insert: {
+          created_at?: string
+          hours_critical_pct?: number
+          hours_warn_pct?: number
+          no_activity_days?: number
+          package_type: string
+          updated_at?: string
+          waiting_critical_days?: number
+          waiting_warn_days?: number
+        }
+        Update: {
+          created_at?: string
+          hours_critical_pct?: number
+          hours_warn_pct?: number
+          no_activity_days?: number
+          package_type?: string
+          updated_at?: string
+          waiting_critical_days?: number
+          waiting_warn_days?: number
+        }
+        Relationships: []
+      }
       package_workflow_logs: {
         Row: {
           action: string
@@ -7085,6 +7118,19 @@ export type Database = {
       get_email_automation_stats: {
         Args: { p_tenant_id: number }
         Returns: Json
+      }
+      get_membership_rollups: {
+        Args: never
+        Returns: {
+          next_action_due_at: string
+          next_action_owner_id: string
+          next_action_reason: string
+          next_action_source: string
+          next_action_title: string
+          package_id: number
+          risk_flags: Json
+          tenant_id: number
+        }[]
       }
       get_most_used_resources: {
         Args: { p_limit?: number }

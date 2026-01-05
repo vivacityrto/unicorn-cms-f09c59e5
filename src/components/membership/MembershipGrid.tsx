@@ -1,14 +1,16 @@
 import { useState } from 'react';
-import { ChevronDown, ChevronRight, Check, Clock, Calendar, BookOpen, FileText, GraduationCap, AlertTriangle, Sparkles } from 'lucide-react';
+import { ChevronDown, ChevronRight, Check, Clock, Calendar, BookOpen, FileText, GraduationCap, AlertTriangle, Sparkles, AlertCircle, Info } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { MembershipWithDetails, MEMBERSHIP_TIERS } from '@/types/membership';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { MembershipWithDetails, MEMBERSHIP_TIERS, RiskFlag } from '@/types/membership';
 import { MembershipHoverCard } from './MembershipHoverCard';
 import { cn } from '@/lib/utils';
+import { format, parseISO, isPast, isToday } from 'date-fns';
 
 interface MembershipGridProps {
   memberships: MembershipWithDetails[];
@@ -72,6 +74,29 @@ export function MembershipGrid({ memberships, onSelectMembership, onCSCChange, s
     }
   };
 
+  const getRiskFlagIcon = (severity: string) => {
+    if (severity === 'critical') {
+      return <AlertCircle className="h-3.5 w-3.5 text-red-500" />;
+    }
+    return <AlertTriangle className="h-3.5 w-3.5 text-amber-500" />;
+  };
+
+  const formatDueDate = (dateStr: string | null) => {
+    if (!dateStr) return 'No date';
+    try {
+      const date = parseISO(dateStr);
+      if (isPast(date) && !isToday(date)) {
+        return <span className="text-red-600 font-medium">{format(date, 'MMM d')}</span>;
+      }
+      if (isToday(date)) {
+        return <span className="text-amber-600 font-medium">Today</span>;
+      }
+      return format(date, 'MMM d');
+    } catch {
+      return dateStr;
+    }
+  };
+
   if (memberships.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-12 text-center">
@@ -91,6 +116,8 @@ export function MembershipGrid({ memberships, onSelectMembership, onCSCChange, s
             <TableHead>Client</TableHead>
             <TableHead className="w-28">Package</TableHead>
             <TableHead className="w-40">CSC</TableHead>
+            <TableHead className="w-48">Next Action</TableHead>
+            <TableHead className="w-20">Risk</TableHead>
             <TableHead className="w-24">State</TableHead>
             <TableHead className="w-28">Hours</TableHead>
             <TableHead className="w-24">Health</TableHead>
@@ -150,6 +177,68 @@ export function MembershipGrid({ memberships, onSelectMembership, onCSCChange, s
                       )}
                     </TableCell>
                     
+                    {/* Next Action Column */}
+                    <TableCell onClick={(e) => e.stopPropagation()}>
+                      {membership.next_action && (
+                        <div className="space-y-0.5">
+                          <div className="text-sm font-medium truncate max-w-[180px]" title={membership.next_action.title}>
+                            {membership.next_action.title}
+                          </div>
+                          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                            <Clock className="h-3 w-3" />
+                            {formatDueDate(membership.next_action.due_at)}
+                            {membership.next_action.source === 'system' && (
+                              <Badge variant="outline" className="h-4 px-1 text-[10px] bg-blue-50 text-blue-600 border-blue-200">
+                                Suggested
+                              </Badge>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </TableCell>
+                    
+                    {/* Risk Flags Column */}
+                    <TableCell>
+                      <TooltipProvider>
+                        {membership.risk_flags && membership.risk_flags.length > 0 ? (
+                          <div className="flex items-center gap-1">
+                            {membership.risk_flags.slice(0, 3).map((flag, idx) => (
+                              <Tooltip key={idx}>
+                                <TooltipTrigger asChild>
+                                  <div className="cursor-help">
+                                    {getRiskFlagIcon(flag.severity)}
+                                  </div>
+                                </TooltipTrigger>
+                                <TooltipContent side="top" className="max-w-xs">
+                                  <p className="text-xs font-medium">{flag.code.replace(/_/g, ' ')}</p>
+                                  <p className="text-xs text-muted-foreground">{flag.message}</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            ))}
+                            {membership.risk_flags.length > 3 && (
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Badge variant="outline" className="h-5 px-1 text-[10px]">
+                                    +{membership.risk_flags.length - 3}
+                                  </Badge>
+                                </TooltipTrigger>
+                                <TooltipContent side="top" className="max-w-xs">
+                                  {membership.risk_flags.slice(3).map((flag, idx) => (
+                                    <p key={idx} className="text-xs">{flag.message}</p>
+                                  ))}
+                                </TooltipContent>
+                              </Tooltip>
+                            )}
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-1 text-emerald-600">
+                            <Check className="h-3.5 w-3.5" />
+                            <span className="text-xs">OK</span>
+                          </div>
+                        )}
+                      </TooltipProvider>
+                    </TableCell>
+                    
                     <TableCell>
                       <Badge variant="outline" className={cn('capitalize', getStateStyles(membership.membership_state))}>
                         {membership.membership_state.replace('_', ' ')}
@@ -186,7 +275,7 @@ export function MembershipGrid({ memberships, onSelectMembership, onCSCChange, s
 
                   <CollapsibleContent asChild>
                     <TableRow className="bg-muted/20">
-                      <TableCell colSpan={7} className="p-0">
+                      <TableCell colSpan={9} className="p-0">
                         <div className="p-4 grid grid-cols-4 gap-4">
                           {/* Onboarding */}
                           <div className="space-y-2">
