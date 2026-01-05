@@ -7,10 +7,10 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// LOCKED TGA Production Endpoints - DO NOT MODIFY CASING
-// These are the exact URLs from the TGA WSDL
-const ORG_ENDPOINT = Deno.env.get("TGA_ORG_ENDPOINT") ?? "https://ws.training.gov.au/Deewr.Tga.Webservices/OrganisationServiceV13.svc";
-const TC_ENDPOINT = Deno.env.get("TGA_TC_ENDPOINT") ?? "https://ws.training.gov.au/Deewr.Tga.Webservices/TrainingComponentServiceV13.svc";
+// LOCKED TGA Production Endpoints - VERIFIED WORKING URLs
+// Capital S in WebServices, OrganisationServiceV13.svc (with V13)
+const ORG_ENDPOINT = Deno.env.get("TGA_ORG_ENDPOINT") ?? "https://ws.training.gov.au/Deewr.Tga.WebServices/OrganisationServiceV13.svc";
+const TC_ENDPOINT = Deno.env.get("TGA_TC_ENDPOINT") ?? "https://ws.training.gov.au/Deewr.Tga.WebServices/TrainingComponentServiceV13.svc";
 
 // Credentials from env
 const TGA_USERNAME = Deno.env.get('TGA_WS_USERNAME') || '';
