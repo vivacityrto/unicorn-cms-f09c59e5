@@ -9,6 +9,50 @@ export type PackageType = 'membership' | 'audit' | 'project' | 'regulatory_submi
 export type ProgressMode = 'stage_completion' | 'phase_based' | 'milestone_based' | 'entitlement_milestone';
 export type StageType = 'setup' | 'delivery' | 'review' | 'submission' | 'waiting' | 'entitlement' | 'recurring' | 'closeout';
 
+// Task status enums (canonical)
+export type TaskStatus = 'open' | 'in_progress' | 'blocked' | 'waiting_on_client' | 'waiting_on_regulator' | 'done' | 'cancelled';
+export type TaskPriority = 'low' | 'medium' | 'high' | 'urgent';
+export type TaskSource = 'manual' | 'template' | 'system_suggestion' | 'ai_suggestion';
+
+// Stage status enum
+export type StageStatus = 'not_started' | 'in_progress' | 'blocked' | 'waiting' | 'complete' | 'skipped';
+
+// Client package state
+export type ClientPackageState = 'ACTIVE' | 'AT_RISK' | 'PAUSED' | 'EXITING' | 'CLOSED';
+
+// Client Package Stage State
+export interface ClientPackageStageState {
+  id: string;
+  client_package_id: string;
+  package_stage_id: number;
+  status: StageStatus;
+  is_required: boolean;
+  started_at: string | null;
+  completed_at: string | null;
+  blocked_at: string | null;
+  blocked_reason: string | null;
+  waiting_at: string | null;
+  waiting_reason: string | null;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+  updated_by: string | null;
+  // Joined fields
+  stage_name?: string;
+  stage_type?: StageType;
+}
+
+// Stage State Audit Log entry
+export interface StageStateAuditEntry {
+  id: string;
+  client_package_stage_state_id: string;
+  previous_status: string | null;
+  new_status: string;
+  reason: string | null;
+  changed_by: string | null;
+  changed_at: string;
+}
+
 // Stage group definitions for dashboard rendering
 export const STAGE_GROUP_LABELS: Record<string, string> = {
   setup: 'Onboarding',
@@ -58,7 +102,7 @@ export const MEMBERSHIP_TIERS: Record<string, MembershipTier> = {
 export const SUPERHERO_PACKAGE_IDS = [29, 16, 3, 22, 39, 13, 5, 24, 40]; // M-AM, M-GR, M-RR, M-SAR, M-DR, M-GC, M-RC, M-SAC, M-DC
 
 // Risk flag definitions
-export type RiskFlagCode = 'OVERDUE_TASKS' | 'MISSING_CSC' | 'NO_ACTIVITY' | 'WAITING_TOO_LONG' | 'SUBMISSION_RISK' | 'HOURS_AT_RISK';
+export type RiskFlagCode = 'OVERDUE_TASKS' | 'MISSING_CSC' | 'NO_ACTIVITY' | 'WAITING_TOO_LONG' | 'SUBMISSION_RISK' | 'HOURS_AT_RISK' | 'STAGE_OVERDUE';
 export type RiskFlagSeverity = 'info' | 'warn' | 'critical';
 
 export interface RiskFlag {
@@ -77,6 +121,9 @@ export interface NextAction {
   reason: string;
 }
 
+// Phase for non-membership packages
+export type PackagePhase = 'Setup' | 'Delivery' | 'Submission' | 'External' | 'Closeout' | 'Ongoing';
+
 // Dashboard rollup from RPC
 export interface MembershipRollup {
   tenant_id: number;
@@ -87,6 +134,11 @@ export interface MembershipRollup {
   next_action_source: string;
   next_action_reason: string;
   risk_flags: RiskFlag[] | null;
+  // New deterministic stage fields
+  current_stage_name: string | null;
+  current_stage_status: string | null;
+  progress_percent: number;
+  phase: PackagePhase | null;
 }
 
 export interface MembershipEntitlement {
@@ -181,6 +233,11 @@ export interface MembershipWithDetails extends MembershipEntitlement {
   // Computed from RPC
   next_action: NextAction | null;
   risk_flags: RiskFlag[];
+  // Deterministic stage tracking
+  current_stage_name: string | null;
+  current_stage_status: StageStatus | null;
+  progress_percent: number;
+  phase: PackagePhase | null;
 }
 
 export interface KPIStats {
