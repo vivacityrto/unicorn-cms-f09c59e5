@@ -1,5 +1,6 @@
-import { useState } from 'react';
-import { ChevronDown, ChevronRight, Check, Clock, Calendar, BookOpen, FileText, GraduationCap, AlertTriangle, Sparkles, AlertCircle, Info } from 'lucide-react';
+import { useState, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { ChevronDown, ChevronRight, Check, Clock, Calendar, BookOpen, FileText, GraduationCap, AlertTriangle, Sparkles, AlertCircle, Info, Building2, ExternalLink } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -13,6 +14,17 @@ import { StageStatusDot } from './StageCellEditor';
 import { cn } from '@/lib/utils';
 import { format, parseISO, isPast, isToday } from 'date-fns';
 
+interface TenantGroup {
+  tenant_id: number;
+  tenant_name: string;
+  csc_name: string | null;
+  csc_avatar: string | null;
+  csc_user_id: string | null;
+  packages: MembershipWithDetails[];
+  total_risk_flags: number;
+  worst_health_score: number;
+}
+
 interface MembershipGridProps {
   memberships: MembershipWithDetails[];
   onSelectMembership: (membership: MembershipWithDetails) => void;
@@ -21,14 +33,49 @@ interface MembershipGridProps {
 }
 
 export function MembershipGrid({ memberships, onSelectMembership, onCSCChange, staffUsers }: MembershipGridProps) {
-  const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
+  const navigate = useNavigate();
+  const [expandedRows, setExpandedRows] = useState<Set<number>>(new Set());
 
-  const toggleRow = (id: string) => {
+  // Group memberships by tenant
+  const tenantGroups = useMemo<TenantGroup[]>(() => {
+    const grouped = new Map<number, TenantGroup>();
+    
+    memberships.forEach((m) => {
+      if (!grouped.has(m.tenant_id)) {
+        grouped.set(m.tenant_id, {
+          tenant_id: m.tenant_id,
+          tenant_name: m.tenant_name,
+          csc_name: m.csc_name,
+          csc_avatar: m.csc_avatar,
+          csc_user_id: m.csc_user_id,
+          packages: [],
+          total_risk_flags: 0,
+          worst_health_score: 100,
+        });
+      }
+      const group = grouped.get(m.tenant_id)!;
+      group.packages.push(m);
+      group.total_risk_flags += m.risk_flags?.length || 0;
+      if (m.health_score.score < group.worst_health_score) {
+        group.worst_health_score = m.health_score.score;
+      }
+      // Use CSC from first package that has one
+      if (!group.csc_name && m.csc_name) {
+        group.csc_name = m.csc_name;
+        group.csc_avatar = m.csc_avatar;
+        group.csc_user_id = m.csc_user_id;
+      }
+    });
+    
+    return Array.from(grouped.values()).sort((a, b) => a.tenant_name.localeCompare(b.tenant_name));
+  }, [memberships]);
+
+  const toggleRow = (tenantId: number) => {
     const newExpanded = new Set(expandedRows);
-    if (newExpanded.has(id)) {
-      newExpanded.delete(id);
+    if (newExpanded.has(tenantId)) {
+      newExpanded.delete(tenantId);
     } else {
-      newExpanded.add(id);
+      newExpanded.add(tenantId);
     }
     setExpandedRows(newExpanded);
   };
@@ -98,11 +145,11 @@ export function MembershipGrid({ memberships, onSelectMembership, onCSCChange, s
     }
   };
 
-  if (memberships.length === 0) {
+  if (tenantGroups.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-12 text-center">
         <Sparkles className="h-12 w-12 text-muted-foreground/40 mb-4" />
-        <h3 className="text-lg font-medium text-foreground mb-1">No memberships found</h3>
+        <h3 className="text-lg font-medium text-foreground mb-1">No clients found</h3>
         <p className="text-sm text-muted-foreground">Try adjusting your filters or search query.</p>
       </div>
     );
@@ -115,27 +162,22 @@ export function MembershipGrid({ memberships, onSelectMembership, onCSCChange, s
           <TableRow className="bg-muted/50">
             <TableHead className="w-8"></TableHead>
             <TableHead>Client</TableHead>
-            <TableHead className="w-28">Package</TableHead>
+            <TableHead className="w-32">Packages</TableHead>
             <TableHead className="w-40">CSC</TableHead>
-            <TableHead className="w-48">Current Stage</TableHead>
-            <TableHead className="w-20">Progress</TableHead>
             <TableHead className="w-20">Risk</TableHead>
-            <TableHead className="w-24">State</TableHead>
-            <TableHead className="w-28">Hours</TableHead>
             <TableHead className="w-24">Health</TableHead>
+            <TableHead className="w-20"></TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
-          {memberships.map((membership) => {
-            const isExpanded = expandedRows.has(membership.id);
-            const hoursPercent = membership.tier.hoursIncluded > 0 
-              ? (membership.hours_used_current_month / membership.tier.hoursIncluded) * 100 
-              : 0;
+          {tenantGroups.map((group) => {
+            const isExpanded = expandedRows.has(group.tenant_id);
+            const healthStatus = group.worst_health_score >= 80 ? 'healthy' : group.worst_health_score >= 50 ? 'warning' : 'critical';
 
             return (
-              <Collapsible key={membership.id} open={isExpanded} onOpenChange={() => toggleRow(membership.id)} asChild>
+              <Collapsible key={group.tenant_id} open={isExpanded} onOpenChange={() => toggleRow(group.tenant_id)} asChild>
                 <>
-                  <TableRow className="hover:bg-muted/30 cursor-pointer" onClick={() => toggleRow(membership.id)}>
+                  <TableRow className="hover:bg-muted/30 cursor-pointer" onClick={() => toggleRow(group.tenant_id)}>
                     <TableCell className="p-2">
                       <CollapsibleTrigger asChild>
                         <Button variant="ghost" size="icon" className="h-6 w-6">
@@ -145,106 +187,57 @@ export function MembershipGrid({ memberships, onSelectMembership, onCSCChange, s
                     </TableCell>
                     
                     <TableCell>
-                      <MembershipHoverCard membership={membership}>
-                        <div className="font-medium text-foreground hover:text-primary cursor-pointer">
-                          {membership.tenant_name}
-                        </div>
-                      </MembershipHoverCard>
-                      {membership.overdue_tasks_count > 0 && (
-                        <Badge variant="destructive" className="ml-2 h-5 px-1.5 text-[10px]">
-                          {membership.overdue_tasks_count} overdue
-                        </Badge>
-                      )}
+                      <div 
+                        className="font-medium text-foreground hover:text-primary cursor-pointer flex items-center gap-2"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          navigate(`/clients/${group.tenant_id}`);
+                        }}
+                      >
+                        <Building2 className="h-4 w-4 text-muted-foreground" />
+                        {group.tenant_name}
+                        <ExternalLink className="h-3 w-3 text-muted-foreground opacity-0 group-hover:opacity-100" />
+                      </div>
                     </TableCell>
                     
                     <TableCell>
-                      <Badge className={cn('border', membership.tier.bgColor, membership.tier.color)}>
-                        {membership.tier.fullText}
-                      </Badge>
+                      <div className="flex flex-wrap gap-1">
+                        {group.packages.slice(0, 2).map((pkg) => (
+                          <Badge key={pkg.id} className={cn('border text-[10px] px-1.5', pkg.tier.bgColor, pkg.tier.color)}>
+                            {pkg.tier.name}
+                          </Badge>
+                        ))}
+                        {group.packages.length > 2 && (
+                          <Badge variant="outline" className="text-[10px] px-1.5">
+                            +{group.packages.length - 2}
+                          </Badge>
+                        )}
+                      </div>
                     </TableCell>
                     
                     <TableCell>
-                      {membership.csc_name ? (
+                      {group.csc_name ? (
                         <div className="flex items-center gap-2">
                           <Avatar className="h-6 w-6">
-                            <AvatarImage src={membership.csc_avatar || ''} />
+                            <AvatarImage src={group.csc_avatar || ''} />
                             <AvatarFallback className="text-[10px]">
-                              {membership.csc_name.split(' ').map(n => n[0]).join('')}
+                              {group.csc_name.split(' ').map(n => n[0]).join('')}
                             </AvatarFallback>
                           </Avatar>
-                          <span className="text-sm">{membership.csc_name}</span>
+                          <span className="text-sm">{group.csc_name}</span>
                         </div>
                       ) : (
                         <span className="text-sm text-muted-foreground italic">Unassigned</span>
                       )}
                     </TableCell>
                     
-                    {/* Current Stage Column */}
-                    <TableCell onClick={(e) => e.stopPropagation()}>
-                      {membership.current_stage_name ? (
-                        <div className="space-y-0.5">
-                          <div className="flex items-center gap-1.5">
-                            <StageStatusDot state={(membership.current_stage_status as StageStatus) || 'not_started'} />
-                            <span className="text-sm font-medium truncate max-w-[160px]" title={membership.current_stage_name}>
-                              {membership.current_stage_name}
-                            </span>
-                          </div>
-                          {membership.current_stage_status === 'blocked' && (
-                            <Badge variant="outline" className="h-4 px-1 text-[10px] bg-red-50 text-red-600 border-red-200">
-                              Blocked
-                            </Badge>
-                          )}
-                          {membership.current_stage_status === 'waiting' && (
-                            <Badge variant="outline" className="h-4 px-1 text-[10px] bg-amber-50 text-amber-600 border-amber-200">
-                              Waiting
-                            </Badge>
-                          )}
-                        </div>
-                      ) : (
-                        <span className="text-sm text-muted-foreground italic">No stage data</span>
-                      )}
-                    </TableCell>
-                    
-                    {/* Progress Column */}
-                    <TableCell>
-                      <div className="space-y-1">
-                        <div className="text-sm font-medium">{membership.progress_percent}%</div>
-                        <Progress value={membership.progress_percent} className="h-1.5 w-16" />
-                      </div>
-                    </TableCell>
-                    
-                    {/* Risk Flags Column */}
+                    {/* Risk Column */}
                     <TableCell>
                       <TooltipProvider>
-                        {membership.risk_flags && membership.risk_flags.length > 0 ? (
+                        {group.total_risk_flags > 0 ? (
                           <div className="flex items-center gap-1">
-                            {membership.risk_flags.slice(0, 3).map((flag, idx) => (
-                              <Tooltip key={idx}>
-                                <TooltipTrigger asChild>
-                                  <div className="cursor-help">
-                                    {getRiskFlagIcon(flag.severity)}
-                                  </div>
-                                </TooltipTrigger>
-                                <TooltipContent side="top" className="max-w-xs">
-                                  <p className="text-xs font-medium">{flag.code.replace(/_/g, ' ')}</p>
-                                  <p className="text-xs text-muted-foreground">{flag.message}</p>
-                                </TooltipContent>
-                              </Tooltip>
-                            ))}
-                            {membership.risk_flags.length > 3 && (
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <Badge variant="outline" className="h-5 px-1 text-[10px]">
-                                    +{membership.risk_flags.length - 3}
-                                  </Badge>
-                                </TooltipTrigger>
-                                <TooltipContent side="top" className="max-w-xs">
-                                  {membership.risk_flags.slice(3).map((flag, idx) => (
-                                    <p key={idx} className="text-xs">{flag.message}</p>
-                                  ))}
-                                </TooltipContent>
-                              </Tooltip>
-                            )}
+                            <AlertTriangle className="h-3.5 w-3.5 text-amber-500" />
+                            <span className="text-xs">{group.total_risk_flags}</span>
                           </div>
                         ) : (
                           <div className="flex items-center gap-1 text-emerald-600">
@@ -256,126 +249,129 @@ export function MembershipGrid({ memberships, onSelectMembership, onCSCChange, s
                     </TableCell>
                     
                     <TableCell>
-                      <Badge variant="outline" className={cn('capitalize', getStateStyles(membership.membership_state))}>
-                        {membership.membership_state.replace('_', ' ')}
-                      </Badge>
-                    </TableCell>
-                    
-                    <TableCell>
-                      {membership.tier.hoursIncluded > 0 ? (
-                        <div className="space-y-1">
-                          <div className={cn('text-sm font-medium', getHoursColor(membership.hours_used_current_month, membership.tier.hoursIncluded))}>
-                            {membership.hours_used_current_month}/{membership.tier.hoursIncluded}h
-                          </div>
-                          <Progress 
-                            value={Math.min(hoursPercent, 100)} 
-                            className="h-1.5"
-                          />
-                        </div>
-                      ) : (
-                        <span className="text-xs text-muted-foreground">No hours</span>
-                      )}
-                    </TableCell>
-                    
-                    <TableCell>
                       <div className="flex items-center gap-1.5">
                         <div className={cn(
                           'h-2.5 w-2.5 rounded-full',
-                          membership.health_score.status === 'healthy' ? 'bg-emerald-500' :
-                          membership.health_score.status === 'warning' ? 'bg-amber-500' : 'bg-red-500'
+                          healthStatus === 'healthy' ? 'bg-emerald-500' :
+                          healthStatus === 'warning' ? 'bg-amber-500' : 'bg-red-500'
                         )} />
-                        <span className="text-sm">{membership.health_score.score}</span>
+                        <span className="text-sm">{group.worst_health_score}</span>
                       </div>
+                    </TableCell>
+                    
+                    <TableCell>
+                      <Button 
+                        variant="ghost" 
+                        size="sm"
+                        className="h-7 text-xs"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          navigate(`/clients/${group.tenant_id}`);
+                        }}
+                      >
+                        View
+                      </Button>
                     </TableCell>
                   </TableRow>
 
                   <CollapsibleContent asChild>
-                    <TableRow className="bg-muted/20">
-                      <TableCell colSpan={10} className="p-0">
-                        <div className="p-4 grid grid-cols-4 gap-4">
-                          {/* Onboarding */}
-                          <div className="space-y-2">
-                            <h4 className="text-xs font-semibold uppercase text-muted-foreground">Onboarding</h4>
-                            <div className="flex items-center gap-2 p-2 rounded bg-background border">
-                              {membership.setup_complete ? (
-                                <Check className="h-4 w-4 text-emerald-500" />
-                              ) : (
-                                <Clock className="h-4 w-4 text-amber-500" />
-                              )}
-                              <span className="text-sm">
-                                Setup: {membership.setup_complete ? 'Complete' : 'Pending'}
-                              </span>
-                            </div>
+                    <TableRow className="bg-muted/10">
+                      <TableCell colSpan={7} className="p-0">
+                        <div className="p-4 space-y-3">
+                          <h4 className="text-xs font-semibold uppercase text-muted-foreground mb-2">Active Packages</h4>
+                          <div className="grid gap-2">
+                            {group.packages.map((membership) => {
+                              const hoursPercent = membership.tier.hoursIncluded > 0 
+                                ? (membership.hours_used_current_month / membership.tier.hoursIncluded) * 100 
+                                : 0;
+                              
+                              return (
+                                <div key={membership.id} className="flex items-center gap-4 p-3 rounded-lg border bg-background">
+                                  {/* Package Badge */}
+                                  <Badge className={cn('border shrink-0', membership.tier.bgColor, membership.tier.color)}>
+                                    {membership.tier.fullText}
+                                  </Badge>
+                                  
+                                  {/* Current Stage */}
+                                  <div className="flex-1 min-w-0">
+                                    {membership.current_stage_name ? (
+                                      <div className="flex items-center gap-1.5">
+                                        <StageStatusDot state={(membership.current_stage_status as StageStatus) || 'not_started'} />
+                                        <span className="text-sm truncate">{membership.current_stage_name}</span>
+                                        {membership.current_stage_status === 'blocked' && (
+                                          <Badge variant="outline" className="h-4 px-1 text-[10px] bg-red-50 text-red-600 border-red-200 ml-1">
+                                            Blocked
+                                          </Badge>
+                                        )}
+                                      </div>
+                                    ) : (
+                                      <span className="text-sm text-muted-foreground italic">No stage data</span>
+                                    )}
+                                  </div>
+                                  
+                                  {/* Progress */}
+                                  <div className="flex items-center gap-2 w-24">
+                                    <Progress value={membership.progress_percent} className="h-1.5 flex-1" />
+                                    <span className="text-xs text-muted-foreground w-8">{membership.progress_percent}%</span>
+                                  </div>
+                                  
+                                  {/* Hours */}
+                                  {membership.tier.hoursIncluded > 0 && (
+                                    <div className="w-20 text-right">
+                                      <span className={cn('text-xs font-medium', getHoursColor(membership.hours_used_current_month, membership.tier.hoursIncluded))}>
+                                        {membership.hours_used_current_month}/{membership.tier.hoursIncluded}h
+                                      </span>
+                                    </div>
+                                  )}
+                                  
+                                  {/* State Badge */}
+                                  <Badge variant="outline" className={cn('capitalize text-[10px]', getStateStyles(membership.membership_state))}>
+                                    {membership.membership_state.replace('_', ' ')}
+                                  </Badge>
+                                  
+                                  {/* Risk Flags */}
+                                  {membership.risk_flags && membership.risk_flags.length > 0 && (
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <div className="flex items-center gap-1 cursor-help">
+                                          {getRiskFlagIcon(membership.risk_flags[0].severity)}
+                                          {membership.risk_flags.length > 1 && (
+                                            <span className="text-[10px] text-muted-foreground">+{membership.risk_flags.length - 1}</span>
+                                          )}
+                                        </div>
+                                      </TooltipTrigger>
+                                      <TooltipContent side="top" className="max-w-xs">
+                                        {membership.risk_flags.map((flag, idx) => (
+                                          <p key={idx} className="text-xs">{flag.message}</p>
+                                        ))}
+                                      </TooltipContent>
+                                    </Tooltip>
+                                  )}
+                                </div>
+                              );
+                            })}
                           </div>
-
-                          {/* Ongoing Access */}
-                          <div className="space-y-2">
-                            <h4 className="text-xs font-semibold uppercase text-muted-foreground">Ongoing Access</h4>
-                            <div className="space-y-1.5">
-                              <div className="flex items-center gap-2 p-1.5 rounded bg-background border text-xs">
-                                <GraduationCap className="h-3.5 w-3.5 text-blue-500" />
-                                Professional Development
-                                <Check className="h-3 w-3 text-emerald-500 ml-auto" />
-                              </div>
-                              <div className="flex items-center gap-2 p-1.5 rounded bg-background border text-xs">
-                                <BookOpen className="h-3.5 w-3.5 text-purple-500" />
-                                Vivacity Training
-                                <Check className="h-3 w-3 text-emerald-500 ml-auto" />
-                              </div>
-                              <div className="flex items-center gap-2 p-1.5 rounded bg-background border text-xs">
-                                <FileText className="h-3.5 w-3.5 text-cyan-500" />
-                                RTO Documentation 2025
-                                <Check className="h-3 w-3 text-emerald-500 ml-auto" />
-                              </div>
-                            </div>
-                          </div>
-
-                          {/* Usage & Support */}
-                          <div className="space-y-2">
-                            <h4 className="text-xs font-semibold uppercase text-muted-foreground">Usage & Support</h4>
-                            <div className="p-2 rounded bg-background border space-y-2">
-                              <div className="flex justify-between text-xs">
-                                <span>Consultation Hours</span>
-                                <span className={getHoursColor(membership.hours_used_current_month, membership.tier.hoursIncluded)}>
-                                  {membership.hours_used_current_month}/{membership.tier.hoursIncluded}h
-                                </span>
-                              </div>
-                              {membership.tier.hoursIncluded > 0 && (
-                                <Progress value={Math.min(hoursPercent, 100)} className="h-2" />
-                              )}
-                              <Button size="sm" variant="outline" className="w-full text-xs h-7 mt-1">
-                                + Log Consult
-                              </Button>
-                            </div>
-                          </div>
-
-                          {/* Annual Obligations */}
-                          <div className="space-y-2">
-                            <h4 className="text-xs font-semibold uppercase text-muted-foreground">Annual Obligations</h4>
-                            <div className="space-y-1.5">
-                              <div className="flex items-center justify-between p-1.5 rounded bg-background border text-xs">
-                                <span>Compliance Health Check</span>
-                                {getObligationBadge(membership.health_check_status)}
-                              </div>
-                              <div className="flex items-center justify-between p-1.5 rounded bg-background border text-xs">
-                                <span>Assessment Validation</span>
-                                {getObligationBadge(membership.validation_status)}
-                              </div>
-                            </div>
+                          
+                          {/* Quick Actions */}
+                          <div className="flex items-center gap-2 pt-2">
+                            <Button 
+                              size="sm" 
+                              variant="outline" 
+                              className="text-xs h-7"
+                              onClick={() => navigate(`/clients/${group.tenant_id}`)}
+                            >
+                              View Client Details
+                            </Button>
+                            <Button 
+                              size="sm" 
+                              variant="outline" 
+                              className="text-xs h-7"
+                              onClick={() => navigate(`/tenant/${group.tenant_id}/notes`)}
+                            >
+                              View Notes
+                            </Button>
                           </div>
                         </div>
-
-                        {/* Risk factors */}
-                        {membership.health_score.risk_factors.length > 0 && (
-                          <div className="px-4 pb-4">
-                            <div className="flex items-center gap-2 p-2 rounded bg-amber-50 border border-amber-200">
-                              <AlertTriangle className="h-4 w-4 text-amber-600" />
-                              <span className="text-xs text-amber-700">
-                                Risk factors: {membership.health_score.risk_factors.map(r => r.message).join(' • ')}
-                              </span>
-                            </div>
-                          </div>
-                        )}
                       </TableCell>
                     </TableRow>
                   </CollapsibleContent>

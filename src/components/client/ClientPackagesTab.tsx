@@ -4,6 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { 
   Package2, 
   Calendar, 
@@ -11,11 +12,14 @@ import {
   AlertCircle, 
   CheckCircle2, 
   ChevronRight,
+  ChevronDown,
   Plus,
   PlayCircle,
-  PauseCircle
+  PauseCircle,
+  Settings
 } from 'lucide-react';
 import { ClientPackage } from '@/hooks/useClientManagement';
+import { PackageStagesManager } from './PackageStagesManager';
 import { useNavigate } from 'react-router-dom';
 
 interface ClientPackagesTabProps {
@@ -41,6 +45,17 @@ const STATE_ICONS: Record<string, React.ReactNode> = {
 
 export function ClientPackagesTab({ tenantId, packages, loading, onAddPackage }: ClientPackagesTabProps) {
   const navigate = useNavigate();
+  const [expandedPackages, setExpandedPackages] = useState<Set<number>>(new Set());
+
+  const togglePackage = (packageId: number) => {
+    const newExpanded = new Set(expandedPackages);
+    if (newExpanded.has(packageId)) {
+      newExpanded.delete(packageId);
+    } else {
+      newExpanded.add(packageId);
+    }
+    setExpandedPackages(newExpanded);
+  };
 
   if (loading) {
     return (
@@ -89,100 +104,134 @@ export function ClientPackagesTab({ tenantId, packages, loading, onAddPackage }:
       )}
 
       {/* Package Cards */}
-      {packages.map((pkg) => (
-        <Card 
-          key={pkg.id} 
-          className="hover:shadow-md transition-shadow cursor-pointer"
-          onClick={() => navigate(`/admin/package/${pkg.package_id}/tenant/${tenantId}`)}
-        >
-          <CardContent className="p-6">
-            <div className="flex items-start justify-between gap-4">
-              {/* Left: Package Info */}
-              <div className="flex-1 space-y-3">
-                <div className="flex items-center gap-3">
-                  <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                    <Package2 className="h-5 w-5 text-primary" />
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-lg">{pkg.package_name}</h3>
-                    {pkg.package_slug && (
-                      <span className="text-sm text-muted-foreground">{pkg.package_slug}</span>
+      {packages.map((pkg) => {
+        const isExpanded = expandedPackages.has(pkg.package_id);
+        
+        return (
+          <Collapsible key={pkg.id} open={isExpanded} onOpenChange={() => togglePackage(pkg.package_id)}>
+            <Card className="hover:shadow-md transition-shadow">
+              <CardContent className="p-6">
+                <div className="flex items-start justify-between gap-4">
+                  {/* Left: Package Info */}
+                  <div className="flex-1 space-y-3">
+                    <div className="flex items-center gap-3">
+                      <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                        <Package2 className="h-5 w-5 text-primary" />
+                      </div>
+                      <div>
+                        <h3 className="font-semibold text-lg">{pkg.package_name}</h3>
+                        {pkg.package_slug && (
+                          <span className="text-sm text-muted-foreground">{pkg.package_slug}</span>
+                        )}
+                      </div>
+                      <Badge 
+                        variant="outline"
+                        className={`ml-2 ${STATE_COLORS[pkg.membership_state] || ''}`}
+                      >
+                        {STATE_ICONS[pkg.membership_state]}
+                        <span className="ml-1 capitalize">{pkg.membership_state}</span>
+                      </Badge>
+                    </div>
+
+                    {/* Stats Row */}
+                    <div className="flex items-center gap-6 text-sm">
+                      <div className="flex items-center gap-1 text-muted-foreground">
+                        <Calendar className="h-4 w-4" />
+                        <span>Started {new Date(pkg.membership_started_at).toLocaleDateString()}</span>
+                      </div>
+                      <div className="flex items-center gap-1 text-muted-foreground">
+                        <Clock className="h-4 w-4" />
+                        <span>{pkg.hours_used}/{pkg.hours_included} hrs used</span>
+                      </div>
+                    </div>
+
+                    {/* Stage Progress */}
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-muted-foreground">Stage Progress</span>
+                        <span className="font-medium">
+                          {pkg.total_stages > 0 
+                            ? `${pkg.completed_stages}/${pkg.total_stages} stages`
+                            : 'No stages configured'}
+                        </span>
+                      </div>
+                      {pkg.total_stages > 0 ? (
+                        <div className="flex items-center gap-2">
+                          <Progress 
+                            value={(pkg.completed_stages / pkg.total_stages) * 100} 
+                            className="h-2 flex-1" 
+                          />
+                          <span className="text-sm font-medium w-12 text-right">
+                            {Math.round((pkg.completed_stages / pkg.total_stages) * 100)}%
+                          </span>
+                        </div>
+                      ) : (
+                        <p className="text-sm text-amber-600">
+                          <AlertCircle className="h-4 w-4 inline mr-1" />
+                          Stage tracking not configured for this package
+                        </p>
+                      )}
+                    </div>
+
+                    {/* Current Stage */}
+                    {pkg.current_stage_name && (
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm text-muted-foreground">Current Stage:</span>
+                        <Badge variant="secondary">{pkg.current_stage_name}</Badge>
+                      </div>
+                    )}
+
+                    {/* Blocked Warning */}
+                    {pkg.has_blocked_stages && (
+                      <div className="flex items-center gap-2 text-red-600 text-sm">
+                        <AlertCircle className="h-4 w-4" />
+                        <span>Has blocked stages that need attention</span>
+                      </div>
                     )}
                   </div>
-                  <Badge 
-                    variant="outline"
-                    className={`ml-2 ${STATE_COLORS[pkg.membership_state] || ''}`}
-                  >
-                    {STATE_ICONS[pkg.membership_state]}
-                    <span className="ml-1 capitalize">{pkg.membership_state}</span>
-                  </Badge>
-                </div>
 
-                {/* Stats Row */}
-                <div className="flex items-center gap-6 text-sm">
-                  <div className="flex items-center gap-1 text-muted-foreground">
-                    <Calendar className="h-4 w-4" />
-                    <span>Started {new Date(pkg.membership_started_at).toLocaleDateString()}</span>
-                  </div>
-                  <div className="flex items-center gap-1 text-muted-foreground">
-                    <Clock className="h-4 w-4" />
-                    <span>{pkg.hours_used}/{pkg.hours_included} hrs used</span>
-                  </div>
-                </div>
-
-                {/* Stage Progress */}
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-muted-foreground">Stage Progress</span>
-                    <span className="font-medium">
-                      {pkg.total_stages > 0 
-                        ? `${pkg.completed_stages}/${pkg.total_stages} stages`
-                        : 'No stages configured'}
-                    </span>
-                  </div>
-                  {pkg.total_stages > 0 ? (
-                    <div className="flex items-center gap-2">
-                      <Progress 
-                        value={(pkg.completed_stages / pkg.total_stages) * 100} 
-                        className="h-2 flex-1" 
-                      />
-                      <span className="text-sm font-medium w-12 text-right">
-                        {Math.round((pkg.completed_stages / pkg.total_stages) * 100)}%
-                      </span>
-                    </div>
-                  ) : (
-                    <p className="text-sm text-amber-600">
-                      <AlertCircle className="h-4 w-4 inline mr-1" />
-                      Stage tracking not configured for this package
-                    </p>
-                  )}
-                </div>
-
-                {/* Current Stage */}
-                {pkg.current_stage_name && (
+                  {/* Right: Actions */}
                   <div className="flex items-center gap-2">
-                    <span className="text-sm text-muted-foreground">Current Stage:</span>
-                    <Badge variant="secondary">{pkg.current_stage_name}</Badge>
+                    <CollapsibleTrigger asChild>
+                      <Button variant="outline" size="sm" className="gap-1">
+                        <Settings className="h-4 w-4" />
+                        Stages
+                        {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                      </Button>
+                    </CollapsibleTrigger>
+                    <Button 
+                      variant="ghost" 
+                      size="sm"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        navigate(`/admin/package/${pkg.package_id}/tenant/${tenantId}`);
+                      }}
+                    >
+                      <ChevronRight className="h-5 w-5 text-muted-foreground" />
+                    </Button>
                   </div>
-                )}
-
-                {/* Blocked Warning */}
-                {pkg.has_blocked_stages && (
-                  <div className="flex items-center gap-2 text-red-600 text-sm">
-                    <AlertCircle className="h-4 w-4" />
-                    <span>Has blocked stages that need attention</span>
+                </div>
+              </CardContent>
+              
+              <CollapsibleContent>
+                <div className="px-6 pb-6 pt-0 border-t bg-muted/30">
+                  <div className="pt-4">
+                    <h4 className="text-sm font-semibold mb-4 flex items-center gap-2">
+                      <Settings className="h-4 w-4" />
+                      Manage Stage States
+                    </h4>
+                    <PackageStagesManager 
+                      tenantId={tenantId} 
+                      packageId={pkg.package_id} 
+                      packageName={pkg.package_name}
+                    />
                   </div>
-                )}
-              </div>
-
-              {/* Right: Arrow */}
-              <div className="flex items-center">
-                <ChevronRight className="h-5 w-5 text-muted-foreground" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      ))}
+                </div>
+              </CollapsibleContent>
+            </Card>
+          </Collapsible>
+        );
+      })}
     </div>
   );
 }

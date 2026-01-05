@@ -86,9 +86,9 @@ export default function MembershipDashboard() {
                 <Sparkles className="h-5 w-5 text-white" />
               </div>
               <div>
-                <h1 className="text-xl font-bold text-foreground">Superhero Membership Dashboard</h1>
+                <h1 className="text-xl font-bold text-foreground">Clients Dashboard</h1>
                 <p className="text-sm text-muted-foreground">
-                  Manage perpetual memberships • {memberships.length} active memberships
+                  Manage all clients • {memberships.length} active packages across clients
                 </p>
               </div>
             </div>
