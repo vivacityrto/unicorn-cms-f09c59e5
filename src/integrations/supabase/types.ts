@@ -7122,12 +7122,16 @@ export type Database = {
       get_membership_rollups: {
         Args: never
         Returns: {
+          current_stage_name: string
+          current_stage_status: string
           next_action_due_at: string
           next_action_owner_id: string
           next_action_reason: string
           next_action_source: string
           next_action_title: string
           package_id: number
+          phase: string
+          progress_percent: number
           risk_flags: Json
           tenant_id: number
         }[]

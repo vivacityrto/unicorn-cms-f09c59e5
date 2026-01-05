@@ -16,6 +16,8 @@ import {
   MembershipRollup,
   NextAction,
   RiskFlag,
+  PackagePhase,
+  StageStatus,
 } from '@/types/membership';
 
 export function useMembershipDashboard() {
@@ -180,6 +182,11 @@ export function useMembershipDashboard() {
             pending_tasks_count: 0,
             next_action: nextAction,
             risk_flags: riskFlags,
+            // Deterministic stage fields from rollup
+            current_stage_name: rollup?.current_stage_name || null,
+            current_stage_status: rollup?.current_stage_status || null,
+            progress_percent: rollup?.progress_percent || 0,
+            phase: rollup?.phase || null,
           });
         }
       }
