@@ -10,7 +10,7 @@ const corsHeaders = {
 // TGA SOAP Endpoints - production URLs
 const TGA_WS_BASE = 'https://ws.training.gov.au';
 
-// Production endpoint - V13 (use uppercase WebServices per WSDL)
+// Production endpoint - V13 (matches get-organisation-details)
 const TGA_ORG_ENDPOINT = `${TGA_WS_BASE}/Deewr.Tga.WebServices/OrganisationServiceV13.svc`;
 
 // Production credentials
@@ -22,18 +22,31 @@ const MAX_RETRIES = 2;
 const RETRY_DELAYS = [500, 1500];
 const REQUEST_TIMEOUT_MS = 30000;
 
-// TGA namespaces
-const SOAP12_NS = 'http://www.w3.org/2003/05/soap-envelope';
-const ORG_SERVICE_NS = 'http://training.gov.au/services/Organisation';
-
-// (Legacy) V13 namespace kept for parsing compatibility
+// TGA V13 namespace - CORRECT namespace per WSDL (matches get-organisation-details)
 const TGA_V13_NAMESPACE = 'http://training.gov.au/services/13/';
+
+// SOAP action patterns to try (ordered by likelihood) - matches get-organisation-details
+const SOAP_ACTION_PATTERNS = [
+  (op: string) => `"${TGA_V13_NAMESPACE}IOrganisationService/${op}"`,
+  (op: string) => `${TGA_V13_NAMESPACE}IOrganisationService/${op}`,
+  (op: string) => `"${TGA_V13_NAMESPACE}OrganisationService/${op}"`,
+  (op: string) => `"http://www.tga.deewr.gov.au/IOrganisationServiceV13/${op}"`,
+];
 
 function generateCorrelationId(): string {
   return `tga-${crypto.randomUUID()}`;
 }
 
-// ========== STAGED LOGGING HELPER ==========
+function escapeXml(unsafe: string): string {
+  return unsafe
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&apos;');
+}
+
+// Staged logging helper
 interface StageLogData {
   endpoint_host?: string;
   endpoint_path?: string;
@@ -67,7 +80,6 @@ function logStage(correlationId: string, stage: string, data: StageLogData = {})
   console.log(`[TGA] [${correlationId}] STAGE=${stage}`, JSON.stringify(sanitized));
 }
 
-// ========== STARTUP VALIDATION ==========
 function validateSecrets(): { ok: boolean; missing: string[] } {
   const missing: string[] = [];
   if (!TGA_USERNAME) missing.push('TGA_WS_USERNAME');
@@ -75,35 +87,33 @@ function validateSecrets(): { ok: boolean; missing: string[] } {
   return { ok: missing.length === 0, missing };
 }
 
-function escapeXml(unsafe: string): string {
-  return unsafe
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&apos;');
-}
-
-// Build Basic Auth header (matches tga-sync which is confirmed working)
-function getBasicAuthHeader(): string {
-  const secretsCheck = validateSecrets();
-  if (!secretsCheck.ok) {
-    throw new Error(`Missing secrets: ${secretsCheck.missing.join(', ')}`);
-  }
-  const credentials = btoa(`${TGA_USERNAME}:${TGA_PASSWORD}`);
-  return `Basic ${credentials}`;
-}
-
-// Build SOAP 1.2 envelope for Organisation service (matches tga-sync)
-function buildOrgSoap12Envelope(operation: string, body: string): string {
+// Build SOAP 1.1 envelope with WS-Security (matches get-organisation-details)
+function buildSoap11Envelope(operation: string, bodyContent: string): string {
+  const now = new Date();
+  const expires = new Date(now.getTime() + 5 * 60 * 1000);
+  
   return `<?xml version="1.0" encoding="utf-8"?>
-<soap12:Envelope xmlns:soap12="${SOAP12_NS}" xmlns:org="${ORG_SERVICE_NS}">
-  <soap12:Body>
-    <org:${operation}>
-      ${body}
-    </org:${operation}>
-  </soap12:Body>
-</soap12:Envelope>`;
+<soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/" 
+               xmlns:tns="${TGA_V13_NAMESPACE}">
+  <soap:Header>
+    <wsse:Security xmlns:wsse="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-secext-1.0.xsd"
+                   xmlns:wsu="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-utility-1.0.xsd">
+      <wsu:Timestamp wsu:Id="Timestamp-${Date.now()}">
+        <wsu:Created>${now.toISOString()}</wsu:Created>
+        <wsu:Expires>${expires.toISOString()}</wsu:Expires>
+      </wsu:Timestamp>
+      <wsse:UsernameToken wsu:Id="UsernameToken-${Date.now()}">
+        <wsse:Username>${escapeXml(TGA_USERNAME)}</wsse:Username>
+        <wsse:Password Type="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-username-token-profile-1.0#PasswordText">${escapeXml(TGA_PASSWORD)}</wsse:Password>
+      </wsse:UsernameToken>
+    </wsse:Security>
+  </soap:Header>
+  <soap:Body>
+    <tns:${operation}>
+      ${bodyContent}
+    </tns:${operation}>
+  </soap:Body>
+</soap:Envelope>`;
 }
 
 // Parse SOAP fault from response
@@ -154,10 +164,10 @@ interface SoapResult {
   actionUsed?: string;
 }
 
-// Make SOAP 1.2 request with Basic Auth (matches tga-sync)
+// Make SOAP 1.1 request with WS-Security (matches get-organisation-details)
 async function makeSoapRequest(
   operation: string,
-  body: string,
+  bodyContent: string,
   correlationId: string
 ): Promise<SoapResult> {
   const secretsCheck = validateSecrets();
@@ -171,7 +181,7 @@ async function makeSoapRequest(
     };
   }
 
-  const soapEnvelope = buildOrgSoap12Envelope(operation, body);
+  const soapEnvelope = buildSoap11Envelope(operation, bodyContent);
   const endpointUrl = new URL(TGA_ORG_ENDPOINT);
 
   logStage(correlationId, 'soap.fetch', {
@@ -179,46 +189,105 @@ async function makeSoapRequest(
     endpoint_path: endpointUrl.pathname,
   });
 
-  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
-    if (attempt > 0) {
-      const delay = RETRY_DELAYS[attempt - 1] || 1000;
-      console.log(`[TGA] [${correlationId}] Retry ${attempt}/${MAX_RETRIES} after ${delay}ms`);
-      await new Promise((resolve) => setTimeout(resolve, delay));
-    }
+  let lastError: Error | null = null;
+  let lastFault: { faultcode: string | null; faultstring: string | null } | null = null;
+  let successAction: string | null = null;
 
-    try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+  // Try each SOAPAction pattern (matches get-organisation-details approach)
+  for (let actionIdx = 0; actionIdx < SOAP_ACTION_PATTERNS.length; actionIdx++) {
+    const soapAction = SOAP_ACTION_PATTERNS[actionIdx](operation);
+    
+    console.log(`[TGA] [${correlationId}] Trying SOAP action pattern ${actionIdx + 1}: ${soapAction}`);
 
-      const response = await fetch(TGA_ORG_ENDPOINT, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/soap+xml; charset=utf-8',
-          'Authorization': getBasicAuthHeader(),
-          'User-Agent': 'Unicorn2.0/1.0',
-        },
-        body: soapEnvelope,
-        signal: controller.signal,
-      });
+    for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+      if (attempt > 0) {
+        const delay = RETRY_DELAYS[attempt - 1] || 1000;
+        console.log(`[TGA] [${correlationId}] Retry ${attempt}/${MAX_RETRIES} after ${delay}ms`);
+        await new Promise((resolve) => setTimeout(resolve, delay));
+      }
 
-      clearTimeout(timeoutId);
-      const responseText = await response.text();
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
 
-      logStage(correlationId, 'soap.response.parse', {
-        http_status: response.status,
-        response_snippet: responseText,
-      });
+        // SOAP 1.1 format with text/xml Content-Type and SOAPAction header
+        const response = await fetch(TGA_ORG_ENDPOINT, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'text/xml; charset=utf-8',
+            'Accept': 'text/xml',
+            'SOAPAction': soapAction,
+            'User-Agent': 'Unicorn2.0/1.0',
+          },
+          body: soapEnvelope,
+          signal: controller.signal,
+        });
 
-      if (containsSoapFault(responseText)) {
+        clearTimeout(timeoutId);
+        const responseText = await response.text();
+
+        logStage(correlationId, 'soap.response.parse', {
+          http_status: response.status,
+          response_snippet: responseText,
+          soap_action: soapAction,
+        });
+
+        if (response.ok) {
+          if (containsSoapFault(responseText)) {
+            const fault = parseSoapFault(responseText);
+            logStage(correlationId, 'soap.fault', { fault, http_status: response.status });
+            
+            // ActionNotSupported - try next pattern
+            if (fault.faultcode?.includes('ActionNotSupported') || 
+                fault.faultstring?.includes('ContractFilter')) {
+              console.log(`[TGA] [${correlationId}] Action mismatch, trying next pattern...`);
+              lastFault = fault;
+              break; // Try next action pattern
+            }
+            
+            // Auth errors - don't retry
+            if (fault.faultstring?.includes('Unknown user') || 
+                fault.faultstring?.includes('incorrect password') ||
+                responseText.includes('InvalidSecurity')) {
+              return {
+                xml: '',
+                error: `TGA authentication failed: ${fault.faultstring || 'Invalid credentials'}`,
+                fault,
+                correlationId,
+              };
+            }
+            
+            return {
+              xml: '',
+              error: fault.faultstring || `SOAP Fault: ${fault.faultcode}`,
+              fault,
+              correlationId,
+            };
+          }
+          
+          successAction = soapAction;
+          console.log(`[TGA] [${correlationId}] Success with action: ${soapAction}, received ${responseText.length} bytes`);
+          return { xml: responseText, error: null, fault: null, correlationId, actionUsed: successAction };
+        }
+
+        // Non-OK response
+        console.error(`[TGA] [${correlationId}] HTTP ${response.status}:`, responseText.substring(0, 500));
+        
         const fault = parseSoapFault(responseText);
-        logStage(correlationId, 'soap.fault', { fault, http_status: response.status });
+        lastFault = fault;
+
+        // ActionNotSupported on non-OK response - try next pattern
+        if (fault.faultcode?.includes('ActionNotSupported') || 
+            fault.faultstring?.includes('ContractFilter') ||
+            response.status === 500) {
+          console.log(`[TGA] [${correlationId}] Action mismatch on ${response.status}, trying next pattern...`);
+          break; // Try next action pattern
+        }
 
         // Auth errors
-        if (
-          fault.faultstring?.includes('Unknown user') ||
-          fault.faultstring?.includes('incorrect password') ||
-          responseText.includes('InvalidSecurity')
-        ) {
+        if (fault.faultstring?.includes('Unknown user') || 
+            fault.faultstring?.includes('incorrect password') ||
+            responseText.includes('InvalidSecurity')) {
           return {
             xml: '',
             error: `TGA authentication failed: ${fault.faultstring || 'Invalid credentials'}`,
@@ -227,54 +296,50 @@ async function makeSoapRequest(
           };
         }
 
+        // 404 - endpoint/action not found - try next pattern
+        if (response.status === 404) {
+          console.log(`[TGA] [${correlationId}] 404 received, trying next action pattern...`);
+          break; // Try next action pattern
+        }
+
+        // Server errors - retry
+        if (response.status >= 500 && attempt < MAX_RETRIES) {
+          lastError = new Error(`HTTP ${response.status}`);
+          continue;
+        }
+
+        // Non-retryable error
         return {
           xml: '',
-          error: fault.faultstring || `SOAP Fault: ${fault.faultcode}`,
+          error: `HTTP ${response.status} - ${fault.faultstring || 'endpoint or action not found'}`,
           fault,
           correlationId,
         };
+
+      } catch (error) {
+        console.error(`[TGA] [${correlationId}] Request error:`, error);
+
+        if (error instanceof Error && error.name === 'AbortError') {
+          lastError = new Error('Request timed out');
+        } else {
+          lastError = error instanceof Error ? error : new Error(String(error));
+        }
+
+        if (attempt < MAX_RETRIES) continue;
       }
-
-      if (response.ok) {
-        return { xml: responseText, error: null, fault: null, correlationId };
-      }
-
-      console.error(`[TGA] [${correlationId}] HTTP ${response.status}:`, responseText.substring(0, 500));
-
-      if (response.status >= 500 && attempt < MAX_RETRIES) {
-        continue;
-      }
-
-      // non-retryable
-      return {
-        xml: '',
-        error: `HTTP ${response.status} - endpoint or action not found`,
-        fault: null,
-        correlationId,
-      };
-    } catch (error) {
-      console.error(`[TGA] [${correlationId}] Request error:`, error);
-
-      if (attempt < MAX_RETRIES) continue;
-
-      return {
-        xml: '',
-        error: error instanceof Error ? error.message : String(error),
-        fault: null,
-        correlationId,
-      };
     }
   }
 
+  // All action patterns exhausted
   return {
     xml: '',
-    error: 'SOAP request failed after retries',
-    fault: null,
+    error: lastError?.message || lastFault?.faultstring || 'SOAP request failed after all action patterns',
+    fault: lastFault,
     correlationId,
   };
 }
 
-// Fetch organisation details using GetDetails (matches tga-sync)
+// Fetch organisation details using GetOrganisation (matches get-organisation-details)
 async function fetchOrganisationDetails(rtoCode: string, correlationId: string): Promise<{
   summary: Record<string, unknown> | null;
   contacts: Record<string, unknown>[];
@@ -286,9 +351,10 @@ async function fetchOrganisationDetails(rtoCode: string, correlationId: string):
 }> {
   console.log(`[TGA] [${correlationId}] Fetching org details for RTO ${rtoCode}`);
 
-  const body = `<org:request><org:Code>${escapeXml(rtoCode)}</org:Code></org:request>`;
+  // Body format matches get-organisation-details
+  const bodyContent = `<tns:code>${escapeXml(rtoCode)}</tns:code>`;
 
-  const result = await makeSoapRequest('GetDetails', body, correlationId);
+  const result = await makeSoapRequest('GetOrganisation', bodyContent, correlationId);
   
   if (result.error) {
     return { 
@@ -371,10 +437,10 @@ async function fetchOrganisationScope(rtoCode: string, correlationId: string): P
 }> {
   console.log(`[TGA] [${correlationId}] Fetching scope for RTO ${rtoCode}`);
   
-  // Build body for GetRtoScope operation (V13 format)
-  const body = `<tns:code>${escapeXml(rtoCode)}</tns:code>`;
+  // Body format for GetRtoScope
+  const bodyContent = `<tns:code>${escapeXml(rtoCode)}</tns:code>`;
   
-  const result = await makeSoapRequest('GetRtoScope', body, correlationId);
+  const result = await makeSoapRequest('GetRtoScope', bodyContent, correlationId);
   
   if (result.error) {
     console.error(`[TGA] [${correlationId}] Scope fetch error:`, result.error);
