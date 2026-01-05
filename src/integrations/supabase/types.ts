@@ -6988,6 +6988,546 @@ export type Database = {
         }
         Relationships: []
       }
+      tga_rto_addresses: {
+        Row: {
+          address_line_1: string | null
+          address_line_2: string | null
+          address_type: string
+          country: string | null
+          created_at: string
+          email: string | null
+          fax: string | null
+          fetched_at: string
+          id: string
+          phone: string | null
+          postcode: string | null
+          rto_code: string
+          source_payload: Json | null
+          state: string | null
+          suburb: string | null
+          tenant_id: number
+          website: string | null
+        }
+        Insert: {
+          address_line_1?: string | null
+          address_line_2?: string | null
+          address_type?: string
+          country?: string | null
+          created_at?: string
+          email?: string | null
+          fax?: string | null
+          fetched_at?: string
+          id?: string
+          phone?: string | null
+          postcode?: string | null
+          rto_code: string
+          source_payload?: Json | null
+          state?: string | null
+          suburb?: string | null
+          tenant_id: number
+          website?: string | null
+        }
+        Update: {
+          address_line_1?: string | null
+          address_line_2?: string | null
+          address_type?: string
+          country?: string | null
+          created_at?: string
+          email?: string | null
+          fax?: string | null
+          fetched_at?: string
+          id?: string
+          phone?: string | null
+          postcode?: string | null
+          rto_code?: string
+          source_payload?: Json | null
+          state?: string | null
+          suburb?: string | null
+          tenant_id?: number
+          website?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tga_rto_addresses_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tga_rto_contacts: {
+        Row: {
+          contact_type: string | null
+          created_at: string
+          email: string | null
+          fetched_at: string
+          id: string
+          name: string | null
+          phone: string | null
+          position: string | null
+          rto_code: string
+          source_payload: Json | null
+          tenant_id: number
+        }
+        Insert: {
+          contact_type?: string | null
+          created_at?: string
+          email?: string | null
+          fetched_at?: string
+          id?: string
+          name?: string | null
+          phone?: string | null
+          position?: string | null
+          rto_code: string
+          source_payload?: Json | null
+          tenant_id: number
+        }
+        Update: {
+          contact_type?: string | null
+          created_at?: string
+          email?: string | null
+          fetched_at?: string
+          id?: string
+          name?: string | null
+          phone?: string | null
+          position?: string | null
+          rto_code?: string
+          source_payload?: Json | null
+          tenant_id?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tga_rto_contacts_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tga_rto_delivery_locations: {
+        Row: {
+          address_line_1: string | null
+          address_line_2: string | null
+          country: string | null
+          created_at: string
+          fetched_at: string
+          id: string
+          location_name: string | null
+          postcode: string | null
+          rto_code: string
+          source_payload: Json | null
+          state: string | null
+          suburb: string | null
+          tenant_id: number
+        }
+        Insert: {
+          address_line_1?: string | null
+          address_line_2?: string | null
+          country?: string | null
+          created_at?: string
+          fetched_at?: string
+          id?: string
+          location_name?: string | null
+          postcode?: string | null
+          rto_code: string
+          source_payload?: Json | null
+          state?: string | null
+          suburb?: string | null
+          tenant_id: number
+        }
+        Update: {
+          address_line_1?: string | null
+          address_line_2?: string | null
+          country?: string | null
+          created_at?: string
+          fetched_at?: string
+          id?: string
+          location_name?: string | null
+          postcode?: string | null
+          rto_code?: string
+          source_payload?: Json | null
+          state?: string | null
+          suburb?: string | null
+          tenant_id?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tga_rto_delivery_locations_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tga_rto_import_jobs: {
+        Row: {
+          addresses_fetched: boolean | null
+          completed_at: string | null
+          contacts_fetched: boolean | null
+          courses_count: number | null
+          created_at: string
+          created_by: string | null
+          error_message: string | null
+          id: string
+          job_type: string
+          qualifications_count: number | null
+          rto_code: string
+          scope_fetched: boolean | null
+          skillsets_count: number | null
+          started_at: string | null
+          status: string
+          summary_fetched: boolean | null
+          tenant_id: number
+          units_count: number | null
+        }
+        Insert: {
+          addresses_fetched?: boolean | null
+          completed_at?: string | null
+          contacts_fetched?: boolean | null
+          courses_count?: number | null
+          created_at?: string
+          created_by?: string | null
+          error_message?: string | null
+          id?: string
+          job_type?: string
+          qualifications_count?: number | null
+          rto_code: string
+          scope_fetched?: boolean | null
+          skillsets_count?: number | null
+          started_at?: string | null
+          status?: string
+          summary_fetched?: boolean | null
+          tenant_id: number
+          units_count?: number | null
+        }
+        Update: {
+          addresses_fetched?: boolean | null
+          completed_at?: string | null
+          contacts_fetched?: boolean | null
+          courses_count?: number | null
+          created_at?: string
+          created_by?: string | null
+          error_message?: string | null
+          id?: string
+          job_type?: string
+          qualifications_count?: number | null
+          rto_code?: string
+          scope_fetched?: boolean | null
+          skillsets_count?: number | null
+          started_at?: string | null
+          status?: string
+          summary_fetched?: boolean | null
+          tenant_id?: number
+          units_count?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tga_rto_import_jobs_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tga_rto_summary: {
+        Row: {
+          abn: string | null
+          created_at: string
+          fetched_at: string
+          id: string
+          legal_name: string | null
+          organisation_type: string | null
+          registration_end_date: string | null
+          registration_start_date: string | null
+          rto_code: string
+          source_hash: string | null
+          source_payload: Json | null
+          status: string | null
+          tenant_id: number
+          trading_name: string | null
+          updated_at: string
+        }
+        Insert: {
+          abn?: string | null
+          created_at?: string
+          fetched_at?: string
+          id?: string
+          legal_name?: string | null
+          organisation_type?: string | null
+          registration_end_date?: string | null
+          registration_start_date?: string | null
+          rto_code: string
+          source_hash?: string | null
+          source_payload?: Json | null
+          status?: string | null
+          tenant_id: number
+          trading_name?: string | null
+          updated_at?: string
+        }
+        Update: {
+          abn?: string | null
+          created_at?: string
+          fetched_at?: string
+          id?: string
+          legal_name?: string | null
+          organisation_type?: string | null
+          registration_end_date?: string | null
+          registration_start_date?: string | null
+          rto_code?: string
+          source_hash?: string | null
+          source_payload?: Json | null
+          status?: string | null
+          tenant_id?: number
+          trading_name?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tga_rto_summary_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tga_scope_courses: {
+        Row: {
+          course_code: string
+          course_title: string | null
+          created_at: string
+          fetched_at: string
+          id: string
+          is_current: boolean | null
+          rto_code: string
+          scope_end_date: string | null
+          scope_start_date: string | null
+          source_payload: Json | null
+          status: string | null
+          tenant_id: number
+        }
+        Insert: {
+          course_code: string
+          course_title?: string | null
+          created_at?: string
+          fetched_at?: string
+          id?: string
+          is_current?: boolean | null
+          rto_code: string
+          scope_end_date?: string | null
+          scope_start_date?: string | null
+          source_payload?: Json | null
+          status?: string | null
+          tenant_id: number
+        }
+        Update: {
+          course_code?: string
+          course_title?: string | null
+          created_at?: string
+          fetched_at?: string
+          id?: string
+          is_current?: boolean | null
+          rto_code?: string
+          scope_end_date?: string | null
+          scope_start_date?: string | null
+          source_payload?: Json | null
+          status?: string | null
+          tenant_id?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tga_scope_courses_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tga_scope_qualifications: {
+        Row: {
+          created_at: string
+          fetched_at: string
+          id: string
+          is_current: boolean | null
+          qualification_code: string
+          qualification_title: string | null
+          rto_code: string
+          scope_end_date: string | null
+          scope_start_date: string | null
+          source_payload: Json | null
+          status: string | null
+          tenant_id: number
+          training_package_code: string | null
+          training_package_title: string | null
+        }
+        Insert: {
+          created_at?: string
+          fetched_at?: string
+          id?: string
+          is_current?: boolean | null
+          qualification_code: string
+          qualification_title?: string | null
+          rto_code: string
+          scope_end_date?: string | null
+          scope_start_date?: string | null
+          source_payload?: Json | null
+          status?: string | null
+          tenant_id: number
+          training_package_code?: string | null
+          training_package_title?: string | null
+        }
+        Update: {
+          created_at?: string
+          fetched_at?: string
+          id?: string
+          is_current?: boolean | null
+          qualification_code?: string
+          qualification_title?: string | null
+          rto_code?: string
+          scope_end_date?: string | null
+          scope_start_date?: string | null
+          source_payload?: Json | null
+          status?: string | null
+          tenant_id?: number
+          training_package_code?: string | null
+          training_package_title?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tga_scope_qualifications_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tga_scope_skillsets: {
+        Row: {
+          created_at: string
+          fetched_at: string
+          id: string
+          is_current: boolean | null
+          rto_code: string
+          scope_end_date: string | null
+          scope_start_date: string | null
+          skillset_code: string
+          skillset_title: string | null
+          source_payload: Json | null
+          status: string | null
+          tenant_id: number
+          training_package_code: string | null
+          training_package_title: string | null
+        }
+        Insert: {
+          created_at?: string
+          fetched_at?: string
+          id?: string
+          is_current?: boolean | null
+          rto_code: string
+          scope_end_date?: string | null
+          scope_start_date?: string | null
+          skillset_code: string
+          skillset_title?: string | null
+          source_payload?: Json | null
+          status?: string | null
+          tenant_id: number
+          training_package_code?: string | null
+          training_package_title?: string | null
+        }
+        Update: {
+          created_at?: string
+          fetched_at?: string
+          id?: string
+          is_current?: boolean | null
+          rto_code?: string
+          scope_end_date?: string | null
+          scope_start_date?: string | null
+          skillset_code?: string
+          skillset_title?: string | null
+          source_payload?: Json | null
+          status?: string | null
+          tenant_id?: number
+          training_package_code?: string | null
+          training_package_title?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tga_scope_skillsets_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tga_scope_units: {
+        Row: {
+          created_at: string
+          fetched_at: string
+          id: string
+          is_current: boolean | null
+          is_explicit: boolean | null
+          rto_code: string
+          scope_end_date: string | null
+          scope_start_date: string | null
+          source_payload: Json | null
+          status: string | null
+          tenant_id: number
+          training_package_code: string | null
+          training_package_title: string | null
+          unit_code: string
+          unit_title: string | null
+        }
+        Insert: {
+          created_at?: string
+          fetched_at?: string
+          id?: string
+          is_current?: boolean | null
+          is_explicit?: boolean | null
+          rto_code: string
+          scope_end_date?: string | null
+          scope_start_date?: string | null
+          source_payload?: Json | null
+          status?: string | null
+          tenant_id: number
+          training_package_code?: string | null
+          training_package_title?: string | null
+          unit_code: string
+          unit_title?: string | null
+        }
+        Update: {
+          created_at?: string
+          fetched_at?: string
+          id?: string
+          is_current?: boolean | null
+          is_explicit?: boolean | null
+          rto_code?: string
+          scope_end_date?: string | null
+          scope_start_date?: string | null
+          source_payload?: Json | null
+          status?: string | null
+          tenant_id?: number
+          training_package_code?: string | null
+          training_package_title?: string | null
+          unit_code?: string
+          unit_title?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tga_scope_units_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tga_sync_jobs: {
         Row: {
           completed_at: string | null
@@ -8341,6 +8881,7 @@ export type Database = {
       tga_sync_delta: { Args: { p_since?: string }; Returns: Json }
       tga_sync_full: { Args: never; Returns: Json }
       tga_sync_status: { Args: never; Returns: Json }
+      tga_trigger_sync: { Args: { p_tenant_id: number }; Returns: Json }
       toggle_favourite: { Args: { p_resource_id: string }; Returns: boolean }
       transition_stage_state: {
         Args: {
