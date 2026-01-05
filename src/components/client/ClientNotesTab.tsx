@@ -1,0 +1,758 @@
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+import { Button } from "@/components/ui/button";
+import { useToast } from "@/hooks/use-toast";
+import { Plus, StickyNote, Calendar as CalendarComponent, CalendarClock, X, Upload, Flag, FileText, Users, Phone, MoreHorizontal, Play, Square, CheckSquare, Paperclip, Timer, CheckCircle2, Clock, Eye, Search, ArrowUpDown, Loader2 } from "lucide-react";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Separator } from "@/components/ui/separator";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectSeparator } from "@/components/ui/select";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { format } from "date-fns";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { cn } from "@/lib/utils";
+import { ScrollArea } from "@/components/ui/scroll-area";
+
+interface TenantNote {
+  id: string;
+  tenant_id: number;
+  note_details: string;
+  note_type: string | null;
+  priority: string | null;
+  started_date: string | null;
+  completed_date: string | null;
+  uploaded_files: string[] | null;
+  file_names: string[] | null;
+  assignees: string[] | null;
+  duration: number | null;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+  user?: {
+    first_name: string;
+    last_name: string;
+    email: string;
+    avatar_url: string | null;
+  };
+}
+
+interface ClientNotesTabProps {
+  tenantId: number;
+  packages: Array<{ package_id: number; package_name: string }>;
+}
+
+export function ClientNotesTab({ tenantId, packages }: ClientNotesTabProps) {
+  const navigate = useNavigate();
+  const { toast } = useToast();
+  const [notes, setNotes] = useState<TenantNote[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [selectedNote, setSelectedNote] = useState<TenantNote | null>(null);
+  const [noteText, setNoteText] = useState("");
+  const [noteType, setNoteType] = useState("");
+  const [priority, setPriority] = useState("");
+  const [startedDate, setStartedDate] = useState<Date>();
+  const [startedTime, setStartedTime] = useState({ hour: "12", minute: "00", period: "AM" });
+  const [completedDate, setCompletedDate] = useState<Date>();
+  const [completedTime, setCompletedTime] = useState({ hour: "12", minute: "00", period: "AM" });
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
+  const [existingFiles, setExistingFiles] = useState<{ path: string; name: string }[]>([]);
+  const [filesToRemove, setFilesToRemove] = useState<string[]>([]);
+  const [assignees, setAssignees] = useState<string[]>([]);
+  const [vivacityTeam, setVivacityTeam] = useState<Array<{
+    user_uuid: string;
+    first_name: string;
+    last_name: string;
+    avatar_url: string | null;
+  }>>([]);
+  const [isTimerRunning, setIsTimerRunning] = useState(false);
+  const [timerStartTime, setTimerStartTime] = useState<number | null>(null);
+  const [elapsedTime, setElapsedTime] = useState(0);
+  const [accumulatedTime, setAccumulatedTime] = useState(0);
+  const [totalDurationUsed, setTotalDurationUsed] = useState(0);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [sortPriority, setSortPriority] = useState<string>("all");
+  const [activePackageId, setActivePackageId] = useState<number | null>(null);
+  const [saving, setSaving] = useState(false);
+
+  // Filter and sort notes
+  const filteredNotes = notes.filter(note => {
+    if (!searchQuery) return true;
+    const query = searchQuery.toLowerCase();
+    return (
+      note.note_details.toLowerCase().includes(query) ||
+      note.note_type?.toLowerCase().includes(query) ||
+      note.user?.first_name?.toLowerCase().includes(query) ||
+      note.user?.last_name?.toLowerCase().includes(query) ||
+      note.user?.email?.toLowerCase().includes(query)
+    );
+  }).filter(note => {
+    if (sortPriority === "all") return true;
+    return note.priority === sortPriority;
+  }).sort((a, b) => {
+    if (sortPriority !== "all") {
+      const priorityOrder = { urgent: 0, high: 1, normal: 2, low: 3 };
+      const aPriority = priorityOrder[a.priority as keyof typeof priorityOrder] ?? 4;
+      const bPriority = priorityOrder[b.priority as keyof typeof priorityOrder] ?? 4;
+      return aPriority - bPriority;
+    }
+    return 0;
+  });
+
+  // Timer effect for real-time duration tracking
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    if (isTimerRunning && timerStartTime) {
+      interval = setInterval(() => {
+        setElapsedTime(accumulatedTime + (Date.now() - timerStartTime));
+      }, 100);
+    }
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [isTimerRunning, timerStartTime, accumulatedTime]);
+
+  const handlePlayTimer = () => {
+    const now = Date.now();
+    setTimerStartTime(now);
+    setIsTimerRunning(true);
+    if (!startedDate) {
+      const currentDate = new Date();
+      setStartedDate(currentDate);
+      const hours = currentDate.getHours();
+      const minutes = currentDate.getMinutes();
+      const period = hours >= 12 ? "PM" : "AM";
+      const hour12 = hours % 12 || 12;
+      setStartedTime({
+        hour: hour12.toString().padStart(2, "0"),
+        minute: minutes.toString().padStart(2, "0"),
+        period
+      });
+    }
+  };
+
+  const handleStopTimer = () => {
+    setIsTimerRunning(false);
+    setAccumulatedTime(elapsedTime);
+    const currentDate = new Date();
+    setCompletedDate(currentDate);
+    const hours = currentDate.getHours();
+    const minutes = currentDate.getMinutes();
+    const period = hours >= 12 ? "PM" : "AM";
+    const hour12 = hours % 12 || 12;
+    setCompletedTime({
+      hour: hour12.toString().padStart(2, "0"),
+      minute: minutes.toString().padStart(2, "0"),
+      period
+    });
+  };
+
+  const formatElapsedTime = (ms: number) => {
+    const totalSeconds = Math.floor(ms / 1000);
+    const days = Math.floor(totalSeconds / 86400);
+    const hours = Math.floor((totalSeconds % 86400) / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const seconds = totalSeconds % 60;
+    const parts = [];
+    if (days > 0) parts.push(`${days} day${days > 1 ? 's' : ''}`);
+    if (hours > 0) parts.push(`${hours} hour${hours > 1 ? 's' : ''}`);
+    if (minutes > 0) parts.push(`${minutes} min${minutes > 1 ? 's' : ''}`);
+    if (seconds > 0 || parts.length === 0) parts.push(`${seconds} sec${seconds > 1 ? 's' : ''}`);
+    return parts.join(' ');
+  };
+
+  const calculateDuration = () => {
+    if (startedDate && completedDate) {
+      const convert12To24 = (time: { hour: string; minute: string; period: string }) => {
+        let hour = parseInt(time.hour);
+        if (time.period === "PM" && hour !== 12) hour += 12;
+        if (time.period === "AM" && hour === 12) hour = 0;
+        return { hour, minute: parseInt(time.minute) };
+      };
+      const startTime = convert12To24(startedTime);
+      const endTime = convert12To24(completedTime);
+      const startDateTime = new Date(startedDate);
+      startDateTime.setHours(startTime.hour, startTime.minute, 0, 0);
+      const endDateTime = new Date(completedDate);
+      endDateTime.setHours(endTime.hour, endTime.minute, 0, 0);
+      const diffMs = endDateTime.getTime() - startDateTime.getTime();
+      if (diffMs < 0) return "Invalid duration";
+      const diffMins = Math.floor(diffMs / 60000);
+      const days = Math.floor(diffMins / 1440);
+      const hours = Math.floor((diffMins % 1440) / 60);
+      const minutes = diffMins % 60;
+      const parts = [];
+      if (days > 0) parts.push(`${days} day${days > 1 ? 's' : ''}`);
+      if (hours > 0) parts.push(`${hours} hour${hours > 1 ? 's' : ''}`);
+      if (minutes > 0) parts.push(`${minutes} min${minutes > 1 ? 's' : ''}`);
+      return parts.length > 0 ? parts.join(' ') : '0 mins';
+    }
+    if (isTimerRunning) return formatElapsedTime(elapsedTime);
+    if (elapsedTime > 0) return formatElapsedTime(elapsedTime);
+    return "No duration";
+  };
+
+  useEffect(() => {
+    if (tenantId) {
+      fetchNotes();
+      getCurrentUser();
+      fetchVivacityTeam();
+    }
+  }, [tenantId]);
+
+  const getCurrentUser = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      setCurrentUserId(user.id);
+      setAssignees([user.id]);
+    }
+  };
+
+  const fetchVivacityTeam = async () => {
+    try {
+      const { data, error } = await supabase.from("users")
+        .select("user_uuid, first_name, last_name, avatar_url")
+        .in("unicorn_role", ["Super Admin", "Team Leader", "Team Member"])
+        .order("first_name");
+      if (error) throw error;
+      setVivacityTeam(data || []);
+    } catch (error: any) {
+      console.error("Error fetching team:", error);
+    }
+  };
+
+  const fetchNotes = async () => {
+    if (!tenantId) return;
+    setLoading(true);
+    try {
+      const { data, error } = await supabase.from("tenant_notes")
+        .select("*")
+        .eq("tenant_id", tenantId)
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+
+      if (data && data.length > 0) {
+        const totalMinutes = data.reduce((sum, note) => {
+          if (note.started_date && note.completed_date) {
+            const start = new Date(note.started_date);
+            const end = new Date(note.completed_date);
+            const diffMs = end.getTime() - start.getTime();
+            const diffMins = Math.floor(diffMs / 60000);
+            return sum + (diffMins > 0 ? diffMins : 0);
+          }
+          return sum;
+        }, 0);
+        setTotalDurationUsed(totalMinutes);
+
+        const userIds = [...new Set(data.map(n => n.created_by))];
+        const { data: usersData } = await supabase.from("users")
+          .select("user_uuid, first_name, last_name, email, avatar_url")
+          .in("user_uuid", userIds);
+        const usersMap = new Map(usersData?.map(u => [u.user_uuid, u]) || []);
+        const notesWithUsers = data.map(note => ({
+          ...note,
+          user: usersMap.get(note.created_by) || undefined
+        }));
+        setNotes(notesWithUsers);
+      } else {
+        setNotes([]);
+        setTotalDurationUsed(0);
+      }
+    } catch (error: any) {
+      console.error("Error fetching notes:", error);
+      toast({ title: "Error", description: "Failed to load notes", variant: "destructive" });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (files) setUploadedFiles(prev => [...prev, ...Array.from(files)]);
+  };
+
+  const handleRemoveFile = (index: number) => {
+    setUploadedFiles(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const handleAddNote = async () => {
+    if (!noteText.trim() || !tenantId || saving) return;
+    setSaving(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast({ title: "Error", description: "You must be logged in", variant: "destructive" });
+        return;
+      }
+
+      const fileUrls: string[] = [];
+      const fileNames: string[] = [];
+      if (uploadedFiles.length > 0) {
+        for (const file of uploadedFiles) {
+          const fileName = `${Date.now()}-${file.name}`;
+          const { data: uploadData, error: uploadError } = await supabase.storage
+            .from('tenant-note-files').upload(fileName, file);
+          if (uploadError) throw uploadError;
+          fileUrls.push(uploadData.path);
+          fileNames.push(file.name);
+        }
+      }
+
+      const convert12To24 = (time: { hour: string; minute: string; period: string }) => {
+        let hour = parseInt(time.hour);
+        if (time.period === "PM" && hour !== 12) hour += 12;
+        if (time.period === "AM" && hour === 12) hour = 0;
+        return `${hour.toString().padStart(2, "0")}:${time.minute}`;
+      };
+
+      let startedDateTime = null;
+      if (startedDate) {
+        const time24 = convert12To24(startedTime);
+        startedDateTime = `${format(startedDate, "yyyy-MM-dd")}T${time24}:00`;
+      }
+
+      let completedDateTime = null;
+      if (completedDate) {
+        const time24 = convert12To24(completedTime);
+        completedDateTime = `${format(completedDate, "yyyy-MM-dd")}T${time24}:00`;
+      }
+
+      const remainingExistingFiles = existingFiles.filter(f => !filesToRemove.includes(f.path));
+      const existingFilePaths = remainingExistingFiles.map(f => f.path);
+      const existingFileNames = remainingExistingFiles.map(f => f.name);
+
+      const allFilePaths = [...existingFilePaths, ...fileUrls];
+      const allFileNames = [...existingFileNames, ...fileNames];
+
+      const noteData = {
+        note_details: noteText.trim(),
+        note_type: noteType || null,
+        priority: priority || null,
+        started_date: startedDateTime,
+        completed_date: completedDateTime,
+        uploaded_files: allFilePaths.length > 0 ? allFilePaths : null,
+        file_names: allFileNames.length > 0 ? allFileNames : null,
+        assignees: assignees.length > 0 ? assignees : null,
+        package_id: activePackageId
+      };
+
+      if (selectedNote) {
+        const { error } = await supabase.from("tenant_notes").update(noteData).eq("id", selectedNote.id);
+        if (error) throw error;
+        toast({ title: "Success", description: "Note updated successfully" });
+      } else {
+        const { error } = await supabase.from("tenant_notes").insert({
+          tenant_id: tenantId,
+          ...noteData,
+          created_by: user.id
+        });
+        if (error) throw error;
+        toast({ title: "Success", description: "Note added successfully" });
+      }
+      resetForm();
+      fetchNotes();
+    } catch (error: any) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const resetForm = () => {
+    setNoteText("");
+    setNoteType("");
+    setPriority("");
+    setStartedDate(undefined);
+    setStartedTime({ hour: "12", minute: "00", period: "AM" });
+    setCompletedDate(undefined);
+    setCompletedTime({ hour: "12", minute: "00", period: "AM" });
+    setUploadedFiles([]);
+    setExistingFiles([]);
+    setFilesToRemove([]);
+    setAssignees(currentUserId ? [currentUserId] : []);
+    setSelectedNote(null);
+    setIsTimerRunning(false);
+    setTimerStartTime(null);
+    setElapsedTime(0);
+    setAccumulatedTime(0);
+    setIsAddDialogOpen(false);
+  };
+
+  const handleDeleteNote = async () => {
+    if (!selectedNote) return;
+    try {
+      const { error } = await supabase.from("tenant_notes").delete().eq("id", selectedNote.id);
+      if (error) throw error;
+      toast({ title: "Success", description: "Note deleted successfully" });
+      setSelectedNote(null);
+      setIsDeleteDialogOpen(false);
+      fetchNotes();
+    } catch (error: any) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    }
+  };
+
+  const openEditDialog = (note: TenantNote) => {
+    setSelectedNote(note);
+    setNoteText(note.note_details);
+    setNoteType(note.note_type || "");
+    setPriority(note.priority || "");
+
+    if (note.started_date) {
+      const startDate = new Date(note.started_date);
+      setStartedDate(startDate);
+      const hours = startDate.getHours();
+      const minutes = startDate.getMinutes();
+      const period = hours >= 12 ? "PM" : "AM";
+      const hour12 = hours % 12 || 12;
+      setStartedTime({ hour: hour12.toString().padStart(2, "0"), minute: minutes.toString().padStart(2, "0"), period });
+    }
+
+    if (note.completed_date) {
+      const completeDate = new Date(note.completed_date);
+      setCompletedDate(completeDate);
+      const hours = completeDate.getHours();
+      const minutes = completeDate.getMinutes();
+      const period = hours >= 12 ? "PM" : "AM";
+      const hour12 = hours % 12 || 12;
+      setCompletedTime({ hour: hour12.toString().padStart(2, "0"), minute: minutes.toString().padStart(2, "0"), period });
+    }
+
+    if (note.assignees && note.assignees.length > 0) setAssignees(note.assignees);
+    if (note.uploaded_files && note.file_names) {
+      const files = note.uploaded_files.map((path, idx) => ({ path, name: note.file_names?.[idx] || path }));
+      setExistingFiles(files);
+    } else {
+      setExistingFiles([]);
+    }
+    setFilesToRemove([]);
+    setIsAddDialogOpen(true);
+  };
+
+  const openDeleteDialog = (note: TenantNote) => {
+    setSelectedNote(note);
+    setIsDeleteDialogOpen(true);
+  };
+
+  const toggleAssignee = (userId: string) => {
+    setAssignees(prev => prev.includes(userId) ? prev.filter(id => id !== userId) : [...prev, userId]);
+  };
+
+  const getPriorityBadge = (priority: string | null) => {
+    switch (priority) {
+      case 'urgent':
+        return <Badge className="bg-red-100 text-red-700 border-red-200"><Flag className="h-3 w-3 mr-1 fill-red-500" />Urgent</Badge>;
+      case 'high':
+        return <Badge className="bg-orange-100 text-orange-700 border-orange-200"><Flag className="h-3 w-3 mr-1 fill-orange-500" />High</Badge>;
+      case 'normal':
+        return <Badge className="bg-green-100 text-green-700 border-green-200"><CheckCircle2 className="h-3 w-3 mr-1" />Normal</Badge>;
+      case 'low':
+        return <Badge className="bg-blue-100 text-blue-700 border-blue-200"><Clock className="h-3 w-3 mr-1" />Low</Badge>;
+      default:
+        return <span className="text-sm text-muted-foreground">Not set</span>;
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <Badge variant="outline" className="bg-orange-50 text-orange-700 border-orange-200 text-[0.8rem] py-1.5 px-3 rounded-full font-medium gap-2">
+            <Timer className="h-4 w-4" />
+            <span>Total time used: {(() => {
+              const days = Math.floor(totalDurationUsed / 1440);
+              const hours = Math.floor((totalDurationUsed % 1440) / 60);
+              const mins = totalDurationUsed % 60;
+              if (days > 0) return `${days}d ${hours}h ${mins}m`;
+              return `${hours}h ${mins}m`;
+            })()}</span>
+          </Badge>
+        </div>
+        <Button onClick={() => setIsAddDialogOpen(true)} className="gap-2">
+          <Plus className="h-4 w-4" />
+          Add Note
+        </Button>
+      </div>
+
+      {/* Search and Sort */}
+      <div className="flex flex-col md:flex-row gap-4">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input placeholder="Search keyword or by name..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="pl-10 h-[48px]" />
+        </div>
+        <Select value={sortPriority} onValueChange={setSortPriority}>
+          <SelectTrigger className="w-full md:w-[220px] h-[48px]">
+            <div className="flex items-center gap-2">
+              <ArrowUpDown className="h-4 w-4 text-muted-foreground" />
+              <SelectValue placeholder="All Priorities" />
+            </div>
+          </SelectTrigger>
+          <SelectContent className="bg-background">
+            <SelectItem value="all">All Priorities</SelectItem>
+            <SelectItem value="urgent">Urgent</SelectItem>
+            <SelectItem value="high">High</SelectItem>
+            <SelectItem value="normal">Normal</SelectItem>
+            <SelectItem value="low">Low</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      {/* Notes Table */}
+      <Card className="border shadow-sm overflow-hidden">
+        <CardContent className="p-0">
+          {loading ? (
+            <div className="flex items-center justify-center py-12">
+              <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-primary border-r-transparent"></div>
+            </div>
+          ) : filteredNotes.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-12 text-center">
+              <StickyNote className="h-12 w-12 text-muted-foreground/50 mb-4" />
+              <h3 className="text-lg font-medium text-foreground mb-1">{notes.length === 0 ? "No notes yet" : "No matching notes"}</h3>
+              <p className="text-sm text-muted-foreground mb-4">{notes.length === 0 ? "Add your first note to get started" : "Try adjusting your search or filter"}</p>
+              {notes.length === 0 && (
+                <Button onClick={() => setIsAddDialogOpen(true)} variant="outline" className="gap-2">
+                  <Plus className="h-4 w-4" />
+                  Add Note
+                </Button>
+              )}
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-muted/50">
+                    <TableHead className="font-semibold">Created By</TableHead>
+                    <TableHead className="font-semibold">Note Type</TableHead>
+                    <TableHead className="font-semibold">Note Details</TableHead>
+                    <TableHead className="font-semibold">Priority</TableHead>
+                    <TableHead className="font-semibold">Started</TableHead>
+                    <TableHead className="font-semibold">Completed</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredNotes.map((note) => (
+                    <TableRow key={note.id} onClick={() => openEditDialog(note)} className="hover:bg-muted/30 cursor-pointer">
+                      <TableCell>
+                        <div className="flex items-center gap-3">
+                          <Avatar className="h-8 w-8">
+                            {note.user?.avatar_url && <AvatarImage src={note.user.avatar_url} />}
+                            <AvatarFallback className="bg-primary/10 text-primary text-xs">
+                              {note.user ? `${note.user.first_name?.[0] || ''}${note.user.last_name?.[0] || ''}`.toUpperCase() : 'U'}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div>
+                            <p className="text-sm font-medium">{note.user ? `${note.user.first_name || ''} ${note.user.last_name || ''}`.trim() || 'Unknown' : 'Unknown User'}</p>
+                            <p className="text-xs text-muted-foreground">{note.user?.email || ''}</p>
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex flex-col gap-1">
+                          <span className="text-sm font-medium capitalize">{note.note_type || 'Not specified'}</span>
+                          <span className="text-xs text-muted-foreground">Created {format(new Date(note.created_at), "dd/MM/yyyy")}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell className="max-w-md">
+                        <p className="text-sm text-muted-foreground truncate">{note.note_details}</p>
+                      </TableCell>
+                      <TableCell>{getPriorityBadge(note.priority)}</TableCell>
+                      <TableCell>
+                        {note.started_date ? (
+                          <div className="flex flex-col gap-1 text-xs">
+                            <span>{format(new Date(note.started_date), "dd MMM yyyy")}</span>
+                            <span className="text-muted-foreground">{format(new Date(note.started_date), "h:mm a")}</span>
+                          </div>
+                        ) : 'Not started'}
+                      </TableCell>
+                      <TableCell>
+                        {note.completed_date ? (
+                          <div className="flex flex-col gap-1 text-xs">
+                            <span>{format(new Date(note.completed_date), "dd MMM yyyy")}</span>
+                            <span className="text-muted-foreground">{format(new Date(note.completed_date), "h:mm a")}</span>
+                          </div>
+                        ) : 'Not completed'}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Add/Edit Note Dialog */}
+      <Dialog open={isAddDialogOpen} onOpenChange={(open) => { if (!open) resetForm(); setIsAddDialogOpen(open); }}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{selectedNote ? 'Edit Note' : 'Add Note'}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Note Details *</Label>
+              <Textarea value={noteText} onChange={(e) => setNoteText(e.target.value)} placeholder="Enter note details..." rows={4} />
+            </div>
+            
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Note Type</Label>
+                <Select value={noteType} onValueChange={setNoteType}>
+                  <SelectTrigger><SelectValue placeholder="Select type" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="General">General</SelectItem>
+                    <SelectItem value="Meeting">Meeting</SelectItem>
+                    <SelectItem value="Phone-Call">Phone Call</SelectItem>
+                    <SelectItem value="Action">Action</SelectItem>
+                    <SelectItem value="Document">Document</SelectItem>
+                    <SelectItem value="Tasks">Tasks</SelectItem>
+                    <SelectItem value="Others">Others</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Priority</Label>
+                <Select value={priority} onValueChange={setPriority}>
+                  <SelectTrigger><SelectValue placeholder="Select priority" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="urgent">Urgent</SelectItem>
+                    <SelectItem value="high">High</SelectItem>
+                    <SelectItem value="normal">Normal</SelectItem>
+                    <SelectItem value="low">Low</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Started Date</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" className={cn("w-full justify-start text-left font-normal", !startedDate && "text-muted-foreground")}>
+                      <CalendarComponent className="mr-2 h-4 w-4" />
+                      {startedDate ? format(startedDate, "PPP") : "Pick a date"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0"><Calendar mode="single" selected={startedDate} onSelect={setStartedDate} /></PopoverContent>
+                </Popover>
+              </div>
+              <div className="space-y-2">
+                <Label>Completed Date</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" className={cn("w-full justify-start text-left font-normal", !completedDate && "text-muted-foreground")}>
+                      <CalendarComponent className="mr-2 h-4 w-4" />
+                      {completedDate ? format(completedDate, "PPP") : "Pick a date"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0"><Calendar mode="single" selected={completedDate} onSelect={setCompletedDate} /></PopoverContent>
+                </Popover>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Timer</Label>
+              <div className="flex items-center gap-4">
+                {!isTimerRunning ? (
+                  <Button type="button" variant="outline" onClick={handlePlayTimer} className="gap-2">
+                    <Play className="h-4 w-4" />Start Timer
+                  </Button>
+                ) : (
+                  <Button type="button" variant="outline" onClick={handleStopTimer} className="gap-2">
+                    <Square className="h-4 w-4" />Stop Timer
+                  </Button>
+                )}
+                <span className="text-sm text-muted-foreground">Duration: {calculateDuration()}</span>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Files</Label>
+              <div className="border rounded-lg p-4">
+                <input type="file" multiple onChange={handleFileUpload} className="hidden" id="file-upload" />
+                <label htmlFor="file-upload" className="flex items-center justify-center gap-2 cursor-pointer p-4 border-2 border-dashed rounded-lg hover:bg-muted/50">
+                  <Upload className="h-5 w-5 text-muted-foreground" />
+                  <span className="text-sm text-muted-foreground">Click to upload files</span>
+                </label>
+                {(uploadedFiles.length > 0 || existingFiles.length > 0) && (
+                  <div className="mt-3 space-y-2">
+                    {existingFiles.filter(f => !filesToRemove.includes(f.path)).map((file, index) => (
+                      <div key={`existing-${index}`} className="flex items-center justify-between p-2 bg-muted rounded">
+                        <span className="text-sm truncate">{file.name}</span>
+                        <Button type="button" variant="ghost" size="sm" onClick={() => setFilesToRemove(prev => [...prev, file.path])}>
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ))}
+                    {uploadedFiles.map((file, index) => (
+                      <div key={`new-${index}`} className="flex items-center justify-between p-2 bg-muted rounded">
+                        <span className="text-sm truncate">{file.name}</span>
+                        <Button type="button" variant="ghost" size="sm" onClick={() => handleRemoveFile(index)}>
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Assignees</Label>
+              <div className="flex flex-wrap gap-2">
+                {vivacityTeam.map((user) => (
+                  <Button
+                    key={user.user_uuid}
+                    type="button"
+                    variant={assignees.includes(user.user_uuid) ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => toggleAssignee(user.user_uuid)}
+                    className="gap-2"
+                  >
+                    <Avatar className="h-5 w-5">
+                      {user.avatar_url && <AvatarImage src={user.avatar_url} />}
+                      <AvatarFallback className="text-[10px]">{user.first_name?.[0]}{user.last_name?.[0]}</AvatarFallback>
+                    </Avatar>
+                    {user.first_name} {user.last_name}
+                  </Button>
+                ))}
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { resetForm(); setIsAddDialogOpen(false); }}>Cancel</Button>
+            <Button onClick={handleAddNote} disabled={!noteText.trim() || saving}>
+              {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              {selectedNote ? 'Update Note' : 'Add Note'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Note</AlertDialogTitle>
+            <AlertDialogDescription>Are you sure you want to delete this note? This action cannot be undone.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteNote} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Delete</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </div>
+  );
+}
