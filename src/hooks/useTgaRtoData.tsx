@@ -158,7 +158,7 @@ export function useTgaRtoData(tenantId: number | null, rtoCode: string | null) {
     }
   }, [tenantId, rtoCode]);
 
-  const triggerSync = useCallback(async (): Promise<{ success: boolean; error?: string }> => {
+  const triggerSync = useCallback(async (): Promise<{ success: boolean; error?: string; correlationId?: string; stage?: string }> => {
     if (!tenantId || !rtoCode) {
       return { success: false, error: 'Missing tenant or RTO code' };
     }
@@ -205,18 +205,73 @@ export function useTgaRtoData(tenantId: number | null, rtoCode: string | null) {
         }
       });
 
+      // Handle edge function transport error
       if (response.error) {
         console.error('Edge function error:', response.error);
+        
+        // Try to extract structured error from response
+        const errorData = response.data || {};
+        const stage = errorData.stage || 'unknown';
+        const correlationId = errorData.correlation_id;
+        const message = errorData.message || response.error.message || 'Edge function error';
+        const hint = errorData.details?.hint;
+        
         toast({
           title: 'Import Failed',
-          description: response.error.message,
+          description: (
+            <div className="space-y-1">
+              <p>{message}</p>
+              {stage !== 'unknown' && <p className="text-xs text-muted-foreground">Stage: {stage}</p>}
+              {hint && <p className="text-xs text-muted-foreground">{hint}</p>}
+              {correlationId && (
+                <button 
+                  onClick={() => {
+                    navigator.clipboard.writeText(correlationId);
+                  }}
+                  className="text-xs underline text-muted-foreground hover:text-foreground"
+                >
+                  Copy ref: {correlationId}
+                </button>
+              )}
+            </div>
+          ) as unknown as string,
           variant: 'destructive'
         });
-        return { success: false, error: response.error.message };
+        return { success: false, error: message, correlationId, stage };
       }
 
-      // Check if the edge function returned an error
-      if (response.data?.error) {
+      // Check if the edge function returned a structured error (ok: false)
+      if (response.data?.ok === false) {
+        const { stage, message, correlation_id, error_code, details } = response.data;
+        console.error('Import error:', message, `stage=${stage}`, correlation_id ? `(${correlation_id})` : '');
+        
+        toast({
+          title: 'Import Failed',
+          description: (
+            <div className="space-y-1">
+              <p>{message}</p>
+              {stage && <p className="text-xs text-muted-foreground">Stage: {stage}</p>}
+              {error_code && <p className="text-xs text-muted-foreground">Error: {error_code}</p>}
+              {details?.hint && <p className="text-xs text-muted-foreground">{details.hint}</p>}
+              {correlation_id && (
+                <button 
+                  onClick={() => {
+                    navigator.clipboard.writeText(correlation_id);
+                  }}
+                  className="text-xs underline text-muted-foreground hover:text-foreground"
+                >
+                  Copy ref: {correlation_id}
+                </button>
+              )}
+            </div>
+          ) as unknown as string,
+          variant: 'destructive'
+        });
+        return { success: false, error: message, correlationId: correlation_id, stage };
+      }
+
+      // Legacy error check (error field without ok field)
+      if (response.data?.error && response.data?.ok === undefined) {
         const errorMsg = response.data.message || response.data.error;
         const corrId = response.data.correlation_id;
         console.error('Import error:', errorMsg, corrId ? `(${corrId})` : '');
@@ -225,12 +280,18 @@ export function useTgaRtoData(tenantId: number | null, rtoCode: string | null) {
           description: corrId ? `${errorMsg} (Ref: ${corrId})` : errorMsg,
           variant: 'destructive'
         });
-        return { success: false, error: errorMsg };
+        return { success: false, error: errorMsg, correlationId: corrId };
       }
 
+      // Success!
+      const imported = response.data?.imported;
+      const summaryText = imported 
+        ? `Imported ${imported.qualifications || 0} qualifications, ${imported.contacts || 0} contacts`
+        : 'Data has been imported from Training.gov.au';
+      
       toast({
         title: 'TGA Sync Complete',
-        description: 'Data has been imported from Training.gov.au'
+        description: summaryText
       });
 
       await fetchData();

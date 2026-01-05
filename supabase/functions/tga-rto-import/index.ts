@@ -548,20 +548,45 @@ serve(async (req) => {
       .eq('id', job_id);
 
     let errorMessage: string | null = null;
+    let errorStage: string = 'init';
+    let errorCode: string = 'tga.unknown_error';
     const now = new Date().toISOString();
 
+    // Helper to log audit event
+    const logAudit = async (action: string, details: Record<string, unknown>) => {
+      try {
+        await supabase.from('client_audit_log').insert({
+          tenant_id,
+          entity_type: 'tga_sync',
+          entity_id: job_id,
+          action,
+          actor_user_id: user.id,
+          details: { ...details, correlation_id: correlationId, rto_code }
+        });
+      } catch (e) {
+        console.warn(`[TGA] [${correlationId}] Failed to log audit:`, e);
+      }
+    };
+
     try {
+      // Log sync start
+      await logAudit('sync_started', { stage: 'init' });
+
       // 1. Fetch organisation details
+      errorStage = 'org_details';
+      console.log(`[TGA] [${correlationId}] Stage: ${errorStage}`);
       const orgResult = await fetchOrganisationDetails(rto_code, correlationId);
       
       if (orgResult.error) {
-        throw new Error(`Failed to fetch org details: ${orgResult.error}`);
+        errorCode = orgResult.error.includes('auth') ? 'tga.auth_error' : 'tga.soap_error';
+        throw new Error(orgResult.error);
       }
 
       // Upsert summary
+      errorStage = 'db_upsert_summary';
       if (orgResult.summary) {
-        console.log(`[TGA] [${correlationId}] Upserting summary:`, orgResult.summary);
-        await supabase.from('tga_rto_summary').upsert({
+        console.log(`[TGA] [${correlationId}] Stage: ${errorStage} - upserting summary`);
+        const { error: summaryErr } = await supabase.from('tga_rto_summary').upsert({
           tenant_id,
           rto_code,
           ...orgResult.summary,
@@ -569,13 +594,18 @@ serve(async (req) => {
           fetched_at: now,
           updated_at: now,
         }, { onConflict: 'tenant_id,rto_code' });
+        if (summaryErr) {
+          errorCode = 'db_error';
+          throw new Error(`Failed to upsert summary: ${summaryErr.message}`);
+        }
       }
 
       // Delete old contacts and insert new
+      errorStage = 'db_upsert_contacts';
       await supabase.from('tga_rto_contacts').delete().eq('tenant_id', tenant_id).eq('rto_code', rto_code);
       if (orgResult.contacts.length > 0) {
-        console.log(`[TGA] [${correlationId}] Inserting ${orgResult.contacts.length} contacts`);
-        await supabase.from('tga_rto_contacts').insert(
+        console.log(`[TGA] [${correlationId}] Stage: ${errorStage} - inserting ${orgResult.contacts.length} contacts`);
+        const { error: contactsErr } = await supabase.from('tga_rto_contacts').insert(
           orgResult.contacts.map(c => ({
             tenant_id,
             rto_code,
@@ -584,13 +614,18 @@ serve(async (req) => {
             fetched_at: now,
           }))
         );
+        if (contactsErr) {
+          errorCode = 'db_error';
+          throw new Error(`Failed to insert contacts: ${contactsErr.message}`);
+        }
       }
 
       // Delete old addresses and insert new
+      errorStage = 'db_upsert_addresses';
       await supabase.from('tga_rto_addresses').delete().eq('tenant_id', tenant_id).eq('rto_code', rto_code);
       if (orgResult.addresses.length > 0) {
-        console.log(`[TGA] [${correlationId}] Inserting ${orgResult.addresses.length} addresses`);
-        await supabase.from('tga_rto_addresses').insert(
+        console.log(`[TGA] [${correlationId}] Stage: ${errorStage} - inserting ${orgResult.addresses.length} addresses`);
+        const { error: addrErr } = await supabase.from('tga_rto_addresses').insert(
           orgResult.addresses.map(a => ({
             tenant_id,
             rto_code,
@@ -599,13 +634,18 @@ serve(async (req) => {
             fetched_at: now,
           }))
         );
+        if (addrErr) {
+          errorCode = 'db_error';
+          throw new Error(`Failed to insert addresses: ${addrErr.message}`);
+        }
       }
 
       // Delete old delivery locations and insert new
+      errorStage = 'db_upsert_locations';
       await supabase.from('tga_rto_delivery_locations').delete().eq('tenant_id', tenant_id).eq('rto_code', rto_code);
       if (orgResult.deliveryLocations.length > 0) {
-        console.log(`[TGA] [${correlationId}] Inserting ${orgResult.deliveryLocations.length} delivery locations`);
-        await supabase.from('tga_rto_delivery_locations').insert(
+        console.log(`[TGA] [${correlationId}] Stage: ${errorStage} - inserting ${orgResult.deliveryLocations.length} delivery locations`);
+        const { error: locErr } = await supabase.from('tga_rto_delivery_locations').insert(
           orgResult.deliveryLocations.map(l => ({
             tenant_id,
             rto_code,
@@ -614,6 +654,10 @@ serve(async (req) => {
             fetched_at: now,
           }))
         );
+        if (locErr) {
+          errorCode = 'db_error';
+          throw new Error(`Failed to insert delivery locations: ${locErr.message}`);
+        }
       }
 
       // Update job progress
@@ -624,14 +668,17 @@ serve(async (req) => {
       }).eq('id', job_id);
 
       // 2. Fetch scope
+      errorStage = 'scope';
+      console.log(`[TGA] [${correlationId}] Stage: ${errorStage}`);
       const scopeResult = await fetchOrganisationScope(rto_code, correlationId);
 
       // Delete old scope data and insert new (only if we got results)
       if (!scopeResult.error) {
+        errorStage = 'db_upsert_qualifications';
         await supabase.from('tga_scope_qualifications').delete().eq('tenant_id', tenant_id).eq('rto_code', rto_code);
         if (scopeResult.qualifications.length > 0) {
-          console.log(`[TGA] [${correlationId}] Inserting ${scopeResult.qualifications.length} qualifications`);
-          await supabase.from('tga_scope_qualifications').insert(
+          console.log(`[TGA] [${correlationId}] Stage: ${errorStage} - inserting ${scopeResult.qualifications.length} qualifications`);
+          const { error: qualErr } = await supabase.from('tga_scope_qualifications').insert(
             scopeResult.qualifications.map(q => ({
               tenant_id,
               rto_code,
@@ -640,12 +687,17 @@ serve(async (req) => {
               fetched_at: now,
             }))
           );
+          if (qualErr) {
+            errorCode = 'db_error';
+            throw new Error(`Failed to insert qualifications: ${qualErr.message}`);
+          }
         }
 
+        errorStage = 'db_upsert_skillsets';
         await supabase.from('tga_scope_skillsets').delete().eq('tenant_id', tenant_id).eq('rto_code', rto_code);
         if (scopeResult.skillsets.length > 0) {
-          console.log(`[TGA] [${correlationId}] Inserting ${scopeResult.skillsets.length} skillsets`);
-          await supabase.from('tga_scope_skillsets').insert(
+          console.log(`[TGA] [${correlationId}] Stage: ${errorStage} - inserting ${scopeResult.skillsets.length} skillsets`);
+          const { error: skillErr } = await supabase.from('tga_scope_skillsets').insert(
             scopeResult.skillsets.map(s => ({
               tenant_id,
               rto_code,
@@ -654,12 +706,17 @@ serve(async (req) => {
               fetched_at: now,
             }))
           );
+          if (skillErr) {
+            errorCode = 'db_error';
+            throw new Error(`Failed to insert skillsets: ${skillErr.message}`);
+          }
         }
 
+        errorStage = 'db_upsert_units';
         await supabase.from('tga_scope_units').delete().eq('tenant_id', tenant_id).eq('rto_code', rto_code);
         if (scopeResult.units.length > 0) {
-          console.log(`[TGA] [${correlationId}] Inserting ${scopeResult.units.length} units`);
-          await supabase.from('tga_scope_units').insert(
+          console.log(`[TGA] [${correlationId}] Stage: ${errorStage} - inserting ${scopeResult.units.length} units`);
+          const { error: unitErr } = await supabase.from('tga_scope_units').insert(
             scopeResult.units.map(u => ({
               tenant_id,
               rto_code,
@@ -668,12 +725,17 @@ serve(async (req) => {
               fetched_at: now,
             }))
           );
+          if (unitErr) {
+            errorCode = 'db_error';
+            throw new Error(`Failed to insert units: ${unitErr.message}`);
+          }
         }
 
+        errorStage = 'db_upsert_courses';
         await supabase.from('tga_scope_courses').delete().eq('tenant_id', tenant_id).eq('rto_code', rto_code);
         if (scopeResult.courses.length > 0) {
-          console.log(`[TGA] [${correlationId}] Inserting ${scopeResult.courses.length} courses`);
-          await supabase.from('tga_scope_courses').insert(
+          console.log(`[TGA] [${correlationId}] Stage: ${errorStage} - inserting ${scopeResult.courses.length} courses`);
+          const { error: courseErr } = await supabase.from('tga_scope_courses').insert(
             scopeResult.courses.map(c => ({
               tenant_id,
               rto_code,
@@ -682,6 +744,10 @@ serve(async (req) => {
               fetched_at: now,
             }))
           );
+          if (courseErr) {
+            errorCode = 'db_error';
+            throw new Error(`Failed to insert courses: ${courseErr.message}`);
+          }
         }
 
         await supabase.from('tga_rto_import_jobs').update({
@@ -694,9 +760,12 @@ serve(async (req) => {
           units_count: scopeResult.units.length,
           courses_count: scopeResult.courses.length,
         }).eq('id', job_id);
+      } else {
+        console.warn(`[TGA] [${correlationId}] Scope fetch failed (non-fatal): ${scopeResult.error}`);
       }
 
       // Mark job complete
+      errorStage = 'finalize';
       await supabase.from('tga_rto_import_jobs').update({
         status: 'completed',
         completed_at: new Date().toISOString(),
@@ -704,38 +773,76 @@ serve(async (req) => {
 
       console.log(`[TGA] [${correlationId}] Import completed successfully`);
 
-      return new Response(JSON.stringify({ 
-        success: true, 
-        correlation_id: correlationId,
-        job_id,
+      // Log sync success
+      await logAudit('sync_completed', {
+        stage: 'finalize',
         summary: orgResult.summary,
         contacts_count: orgResult.contacts.length,
         addresses_count: orgResult.addresses.length,
-        qualifications_count: scopeResult.qualifications.length
+        qualifications_count: scopeResult.qualifications.length,
+        skillsets_count: scopeResult.skillsets.length,
+        units_count: scopeResult.units.length,
+        courses_count: scopeResult.courses.length,
+      });
+
+      return new Response(JSON.stringify({ 
+        ok: true, 
+        correlation_id: correlationId,
+        client_id: tenant_id,
+        rto_number: rto_code,
+        job_id,
+        imported: {
+          summary: orgResult.summary ? 1 : 0,
+          contacts: orgResult.contacts.length,
+          addresses: orgResult.addresses.length,
+          delivery_locations: orgResult.deliveryLocations.length,
+          qualifications: scopeResult.qualifications.length,
+          skillsets: scopeResult.skillsets.length,
+          units: scopeResult.units.length,
+          courses: scopeResult.courses.length,
+        }
       }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
 
     } catch (importError) {
       errorMessage = importError instanceof Error ? importError.message : String(importError);
-      console.error(`[TGA] [${correlationId}] Import error:`, importError);
+      console.error(`[TGA] [${correlationId}] Import error at stage '${errorStage}':`, importError);
 
       // Mark job as failed
       await supabase.from('tga_rto_import_jobs').update({
         status: 'failed',
-        error_message: `${errorMessage} (Ref: ${correlationId})`,
+        error_message: `${errorMessage} (Stage: ${errorStage}, Ref: ${correlationId})`,
         completed_at: new Date().toISOString(),
       }).eq('id', job_id);
 
-      console.log(`[TGA] [${correlationId}] Job ${job_id} failed`);
+      // Log sync failure
+      await logAudit('sync_failed', {
+        stage: errorStage,
+        error_code: errorCode,
+        error_message: errorMessage,
+      });
+
+      console.log(`[TGA] [${correlationId}] Job ${job_id} failed at stage '${errorStage}'`);
 
       return new Response(JSON.stringify({ 
-        error: 'tga.import_error',
-        message: errorMessage,
+        ok: false,
         correlation_id: correlationId,
-        job_id
+        stage: errorStage,
+        error_code: errorCode,
+        message: errorMessage,
+        details: {
+          job_id,
+          tenant_id,
+          rto_code,
+          hint: errorCode === 'tga.auth_error' 
+            ? 'Check TGA credentials in secrets' 
+            : errorCode === 'db_error'
+            ? 'Database operation failed - check RLS policies'
+            : 'Check edge function logs for more details'
+        }
       }), {
-        status: 500,
+        status: errorCode === 'tga.auth_error' ? 401 : 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
