@@ -162,7 +162,7 @@ export default function AcceptInvitation() {
             unicorn_role: invitationData!.userType === 'vivacity' ? 'Super Admin' : 'User',
             user_type: invitationData!.userType === 'vivacity' ? 'Vivacity' : 'Client',
           },
-          emailRedirectTo: `${window.location.origin}/manage-packages`,
+          emailRedirectTo: `${window.location.origin}/dashboard`,
         },
       });
 
@@ -186,7 +186,7 @@ export default function AcceptInvitation() {
         description: 'Redirecting...',
       });
 
-      setTimeout(() => navigate('/manage-packages'), 1500);
+      setTimeout(() => navigate('/dashboard'), 1500);
     } catch (error: any) {
       toast({
         title: 'Signup failed',
