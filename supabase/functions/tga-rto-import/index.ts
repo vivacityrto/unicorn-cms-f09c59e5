@@ -8,10 +8,12 @@ const corsHeaders = {
 };
 
 // TGA SOAP Endpoints - production URLs
-const TGA_WS_BASE = 'https://ws.training.gov.au';
+// Prefer env overrides so it can match the verified working endpoint configuration.
+const TGA_WS_BASE = Deno.env.get('TGA_WS_BASE') || 'https://ws.training.gov.au';
 
-// Production endpoint - V13 (matches get-organisation-details)
-const TGA_ORG_ENDPOINT = `${TGA_WS_BASE}/Deewr.Tga.WebServices/OrganisationServiceV13.svc`;
+// Production endpoint - V13 (default), overridable via env to avoid hardcoding a potentially incorrect path.
+const TGA_ORG_ENDPOINT = Deno.env.get('TGA_ORG_ENDPOINT') ||
+  `${TGA_WS_BASE}/Deewr.Tga.WebServices/OrganisationServiceV13.svc`;
 
 // Production credentials
 const TGA_USERNAME = Deno.env.get('TGA_WS_USERNAME') || '';
