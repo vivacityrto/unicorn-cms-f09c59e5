@@ -20,9 +20,10 @@ interface CreateDocumentDialog2Props {
   packageId?: number;
   stageId?: number;
   editDocument?: any;
+  tenantId?: number;
 }
 
-export function CreateDocumentDialog2({ open, onOpenChange, onSuccess, packageId, stageId, editDocument }: CreateDocumentDialog2Props) {
+export function CreateDocumentDialog2({ open, onOpenChange, onSuccess, packageId, stageId, editDocument, tenantId }: CreateDocumentDialog2Props) {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [categories, setCategories] = useState<{ id: number; name: string }[]>([]);
@@ -110,10 +111,10 @@ export function CreateDocumentDialog2({ open, onOpenChange, onSuccess, packageId
       return;
     }
 
-    if (!packageId || !stageId) {
+    if (!packageId) {
       toast({
         title: "Error",
-        description: "Package and stage must be selected for this document",
+        description: "Package must be selected for this document",
         variant: "destructive",
       });
       return;
@@ -126,8 +127,11 @@ export function CreateDocumentDialog2({ open, onOpenChange, onSuccess, packageId
       const fileUrls: string[] = [...existingFiles];
       if (uploadedFiles.length > 0) {
         const timestamp = Date.now();
+        const folderPath = stageId 
+          ? `package_${packageId}/stage_${stageId}` 
+          : `package_${packageId}/client_${tenantId || 'general'}`;
         const uploadPromises = uploadedFiles.map((file, index) => {
-          const filePath = `package_${packageId}/stage_${stageId}/${timestamp}_${index}_${file.name}`;
+          const filePath = `${folderPath}/${timestamp}_${index}_${file.name}`;
           return supabase.storage
             .from('package-documents')
             .upload(filePath, file, {
@@ -159,8 +163,9 @@ export function CreateDocumentDialog2({ open, onOpenChange, onSuccess, packageId
         isclientdoc: formData.release_to_client,
         is_released: formData.release_to_client,
         watermark: formData.watermark,
-        stage: stageId,
+        stage: stageId || null,
         package_id: packageId,
+        tenant_id: tenantId || null,
         category: categoryName,
         uploaded_files: fileUrls.length > 0 ? fileUrls : null,
         file_names: uploadedFiles.length > 0 ? uploadedFiles.map(f => f.name) : (editDocument?.file_names || null),
