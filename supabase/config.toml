@@ -1,1 +1,4 @@
 project_id = "yxkgdalkbrriasiyyrwk"
+
+[functions.tga-integration]
+verify_jwt = false
