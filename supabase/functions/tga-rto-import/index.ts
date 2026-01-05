@@ -226,9 +226,21 @@ function extractSoapAddress(wsdlXml: string, prefix: string): string | null {
 // SOAP LAYER - Using discovered endpoint
 // ============================================================================
 
-function getBasicAuthHeader(): string {
+interface ConfigValidation {
+  ok: boolean;
+  missing: string[];
+}
+
+function validateConfig(): ConfigValidation {
+  const missing: string[] = [];
+  if (!TGA_WS_USERNAME) missing.push('TGA_WS_USERNAME or TGA_USERNAME');
+  if (!TGA_WS_PASSWORD) missing.push('TGA_WS_PASSWORD or TGA_PASSWORD');
+  return { ok: missing.length === 0, missing };
+}
+
+function getBasicAuthHeader(): string | null {
   if (!TGA_WS_USERNAME || !TGA_WS_PASSWORD) {
-    throw new Error('TGA SOAP credentials not configured');
+    return null;
   }
   const credentials = btoa(`${TGA_WS_USERNAME}:${TGA_WS_PASSWORD}`);
   return `Basic ${credentials}`;
@@ -265,6 +277,17 @@ async function makeSoapRequest(
     body_length: body.length,
   });
 
+  // Check auth header before making request
+  const authHeader = getBasicAuthHeader();
+  if (!authHeader) {
+    return {
+      ok: false,
+      xml: '',
+      httpStatus: 0,
+      error: 'TGA credentials not configured (username or password missing)',
+    };
+  }
+
   try {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), TGA_TIMEOUT_MS);
@@ -273,14 +296,20 @@ async function makeSoapRequest(
       method: 'POST',
       headers: {
         'Content-Type': 'application/soap+xml; charset=utf-8',
-        'Authorization': getBasicAuthHeader(),
+        'Authorization': authHeader,
       },
       body,
       signal: controller.signal,
     });
 
     clearTimeout(timeoutId);
-    const xmlResponse = await response.text();
+    
+    let xmlResponse = '';
+    try {
+      xmlResponse = await response.text();
+    } catch (textErr) {
+      xmlResponse = `[Failed to read response body: ${textErr instanceof Error ? textErr.message : String(textErr)}]`;
+    }
 
     logStage(correlationId, 'soap.response', {
       endpoint_used: endpoint,
@@ -646,20 +675,38 @@ async function handleProbe(rtoCode: string, correlationId: string): Promise<Resp
 // ============================================================================
 
 serve(async (req) => {
+  // Generate correlation ID first thing - used throughout
   const correlationId = generateCorrelationId();
-  const url = new URL(req.url);
-
-  logStage(correlationId, 'request.start', {
-    method: req.method,
-    url: req.url,
-  });
-
-  // Handle CORS preflight
+  
+  // Handle CORS preflight BEFORE any other processing
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
+  // Top-level try/catch to ensure we NEVER throw uncaught
   try {
+    const url = new URL(req.url);
+
+    logStage(correlationId, 'request.start', {
+      method: req.method,
+      url: req.url,
+    });
+
+    // Validate config at start - return JSON error if missing secrets
+    const configCheck = validateConfig();
+    if (!configCheck.ok) {
+      logStage(correlationId, 'config.missing_secret', { missing: configCheck.missing });
+      return jsonResponse({
+        ok: false,
+        correlation_id: correlationId,
+        stage: 'config.missing_secret',
+        error: `Missing required secrets: ${configCheck.missing.join(', ')}`,
+        missing_secrets: configCheck.missing,
+        endpoint_used: null,
+        http_status: null,
+      });
+    }
+
     // Handle probe mode via GET
     if (req.method === 'GET') {
       const isProbe = url.searchParams.has('probe');
@@ -1015,13 +1062,22 @@ serve(async (req) => {
 
   } catch (error) {
     const errorMsg = error instanceof Error ? error.message : String(error);
-    logStage(correlationId, 'error.unhandled', { error: errorMsg });
+    const errorStack = error instanceof Error ? error.stack : undefined;
+    
+    console.error(`[TGA] [${correlationId}] STAGE=unhandled.exception error="${errorMsg}"`, errorStack);
+    logStage(correlationId, 'unhandled.exception', { 
+      error: errorMsg,
+      stack_preview: errorStack?.slice(0, 300),
+    });
 
+    // Always return 200 with JSON so UI can parse the error
     return jsonResponse({
       ok: false,
       correlation_id: correlationId,
-      stage: 'error.unhandled',
+      stage: 'unhandled.exception',
       error: errorMsg,
-    }, 500);
+      endpoint_used: null,
+      http_status: null,
+    }, 200);
   }
 });
