@@ -7,10 +7,12 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// LOCKED TGA Production Endpoints - VERIFIED WORKING URLs
-// Capital S in WebServices, OrganisationServiceV13.svc (with V13)
-const ORG_ENDPOINT = Deno.env.get("TGA_ORG_ENDPOINT") ?? "https://ws.training.gov.au/Deewr.Tga.WebServices/OrganisationServiceV13.svc";
-const TC_ENDPOINT = Deno.env.get("TGA_TC_ENDPOINT") ?? "https://ws.training.gov.au/Deewr.Tga.WebServices/TrainingComponentServiceV13.svc";
+// LOCKED TGA Production Endpoint (OrganisationServiceV13)
+// IMPORTANT: must match production URL verbatim (no env override, no normalization, no casing changes)
+const ORG_ENDPOINT = "https://ws.training.gov.au/Deewr.Tga.Webservices/OrganisationServiceV13.svc";
+
+// Keep other endpoints configurable if/when needed elsewhere
+const TC_ENDPOINT = Deno.env.get("TGA_TC_ENDPOINT") ?? "https://ws.training.gov.au/Deewr.Tga.Webservices/TrainingComponentServiceV13.svc";
 
 // Credentials from env
 const TGA_USERNAME = Deno.env.get('TGA_WS_USERNAME') || '';
@@ -77,13 +79,13 @@ function validateConfig(): ConfigResult {
   const missing: string[] = [];
   if (!TGA_USERNAME) missing.push('TGA_WS_USERNAME');
   if (!TGA_PASSWORD) missing.push('TGA_WS_PASSWORD');
-  
-  // Validate endpoint ends with .svc
-  if (!ORG_ENDPOINT.endsWith('.svc')) {
-    missing.push('TGA_ORG_ENDPOINT (must end with .svc)');
-  }
-  
+
   return { ok: missing.length === 0, missing, endpoint: ORG_ENDPOINT };
+}
+
+function validateOrgEndpoint(): { ok: boolean; reason?: string } {
+  if (!ORG_ENDPOINT.endsWith('.svc')) return { ok: false, reason: 'Endpoint must end with .svc' };
+  return { ok: true };
 }
 
 // Build SOAP 1.2 envelope with Basic Auth approach
@@ -514,7 +516,7 @@ async function fetchOrganisationScope(rtoCode: string, correlationId: string): P
   return { qualifications, skillsets, units, courses, error: null };
 }
 
-// WSDL probe to verify endpoint connectivity
+// WSDL probe to verify endpoint connectivity (no SOAP call, no DB writes)
 async function probeWsdl(correlationId: string): Promise<{
   ok: boolean;
   http_status?: number;
@@ -522,45 +524,50 @@ async function probeWsdl(correlationId: string): Promise<{
   error?: string;
 }> {
   const wsdlUrl = `${ORG_ENDPOINT}?wsdl`;
-  logStage(correlationId, 'probe.wsdl', { url: wsdlUrl });
-  
+  logStage(correlationId, 'wsdl.fetch', { url: wsdlUrl });
+
   try {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 10000);
-    
+
     const response = await fetch(wsdlUrl, {
       method: 'GET',
-      headers: { 'Accept': 'text/xml, application/xml' },
+      headers: { Accept: 'text/xml, application/xml' },
       signal: controller.signal,
     });
-    
+
     clearTimeout(timeoutId);
     const text = await response.text();
-    
-    const isWsdl = text.includes('definitions') || text.includes('wsdl:definitions') || text.includes('<wsdl');
-    
-    logStage(correlationId, 'probe.wsdl.result', {
+    const snippet = text.slice(0, 300);
+    const isWsdl =
+      text.includes('definitions') ||
+      text.includes('wsdl:definitions') ||
+      text.includes('<wsdl');
+
+    logStage(correlationId, 'wsdl.fetch.result', {
+      endpoint_used: `${new URL(ORG_ENDPOINT).host}${new URL(ORG_ENDPOINT).pathname}`,
       http_status: response.status,
       is_wsdl: isWsdl,
-      response_snippet: text.slice(0, 300),
+      response_snippet: snippet,
     });
-    
+
     return {
       ok: response.status === 200 && isWsdl,
       http_status: response.status,
-      response_snippet: text.slice(0, 300),
+      response_snippet: snippet,
     };
   } catch (error) {
     const errorMsg = error instanceof Error ? error.message : String(error);
+    logStage(correlationId, 'wsdl.fetch.error', { error: errorMsg });
     return { ok: false, error: errorMsg };
   }
 }
 
 serve(async (req) => {
   const correlationId = generateCorrelationId();
-  
+
   // Always log request start
-  logStage(correlationId, 'request.start', { 
+  logStage(correlationId, 'request.start', {
     method: req.method,
     url: req.url,
   });
@@ -572,72 +579,100 @@ serve(async (req) => {
     }
 
     const url = new URL(req.url);
-    
+
     // GET ?probe=1 - WSDL connectivity check
     if (req.method === 'GET' && url.searchParams.get('probe') === '1') {
-      const config = validateConfig();
-      
-      // First check WSDL
-      const wsdlResult = await probeWsdl(correlationId);
-      
-      if (!wsdlResult.ok) {
-        return jsonResponse({
-          ok: false,
-          correlation_id: correlationId,
-          stage: 'probe.wsdl',
-          endpoint_used: ORG_ENDPOINT,
-          config_ok: config.ok,
-          config_missing: config.missing,
-          wsdl_ok: false,
-          http_status: wsdlResult.http_status,
-          response_snippet: wsdlResult.response_snippet,
-          error: wsdlResult.error || 'WSDL not accessible',
-        }, 200);
+      const endpointCheck = validateOrgEndpoint();
+      if (!endpointCheck.ok) {
+        return jsonResponse(
+          {
+            ok: false,
+            correlation_id: correlationId,
+            stage: 'config.invalid_endpoint',
+            http_status: 400,
+            endpoint_used: ORG_ENDPOINT,
+            error: endpointCheck.reason,
+          },
+          400,
+        );
       }
-      
-      // Then try a minimal SOAP call
-      const rto = url.searchParams.get('rto') || '91020';
-      const orgResult = await fetchOrganisationDetails(rto, correlationId);
-      
-      return jsonResponse({
-        ok: !orgResult.error,
-        correlation_id: correlationId,
-        stage: 'probe.complete',
-        endpoint_used: orgResult.endpointUsed || ORG_ENDPOINT,
-        config_ok: config.ok,
-        wsdl_ok: true,
-        auth_ok: orgResult.authOk,
-        endpoint_ok: orgResult.endpointOk,
-        http_status: orgResult.httpStatus,
-        summary_found: !!orgResult.summary,
-        error: orgResult.error,
-      }, 200);
+
+      const wsdlResult = await probeWsdl(correlationId);
+
+      if (!wsdlResult.ok) {
+        return jsonResponse(
+          {
+            ok: false,
+            correlation_id: correlationId,
+            stage: 'wsdl.fetch_failed',
+            http_status: wsdlResult.http_status,
+            endpoint_used: ORG_ENDPOINT,
+            response_snippet: wsdlResult.response_snippet,
+            error: wsdlResult.error || 'WSDL not accessible',
+          },
+          200,
+        );
+      }
+
+      return jsonResponse(
+        {
+          ok: true,
+          correlation_id: correlationId,
+          stage: 'wsdl.ok',
+          http_status: 200,
+          endpoint_used: ORG_ENDPOINT,
+          response_snippet: wsdlResult.response_snippet,
+        },
+        200,
+      );
     }
 
     // POST - full import
     if (req.method !== 'POST') {
-      return jsonResponse({
-        ok: false,
-        correlation_id: correlationId,
-        stage: 'input.validate',
-        error: 'Method not allowed. Use POST for import, GET ?probe=1 for diagnostics.',
-        endpoint_used: ORG_ENDPOINT,
-      }, 405);
+      return jsonResponse(
+        {
+          ok: false,
+          correlation_id: correlationId,
+          stage: 'input.validate',
+          error: 'Method not allowed. Use POST for import, GET ?probe=1 for WSDL diagnostics.',
+          endpoint_used: ORG_ENDPOINT,
+          http_status: 405,
+        },
+        405,
+      );
+    }
+
+    const endpointCheck = validateOrgEndpoint();
+    if (!endpointCheck.ok) {
+      return jsonResponse(
+        {
+          ok: false,
+          correlation_id: correlationId,
+          stage: 'config.invalid_endpoint',
+          error: endpointCheck.reason,
+          endpoint_used: ORG_ENDPOINT,
+          http_status: 400,
+        },
+        400,
+      );
     }
 
     // Validate config first
     const config = validateConfig();
     if (!config.ok) {
-      return jsonResponse({
-        ok: false,
-        correlation_id: correlationId,
-        stage: 'config.missing_secret',
-        error: `Missing configuration: ${config.missing.join(', ')}`,
-        missing: config.missing,
-        endpoint_used: ORG_ENDPOINT,
-      }, 400);
+      return jsonResponse(
+        {
+          ok: false,
+          correlation_id: correlationId,
+          stage: 'config.missing_secret',
+          error: `Missing configuration: ${config.missing.join(', ')}`,
+          missing: config.missing,
+          endpoint_used: ORG_ENDPOINT,
+          http_status: 400,
+        },
+        400,
+      );
     }
-
     const body = await req.json().catch(() => ({}));
     const { job_id, tenant_id, rto_code } = body;
 
@@ -650,6 +685,7 @@ serve(async (req) => {
         stage: 'input.validate',
         error: 'Missing required params: job_id, tenant_id, rto_code',
         endpoint_used: ORG_ENDPOINT,
+        http_status: 400,
       }, 400);
     }
 
@@ -662,6 +698,7 @@ serve(async (req) => {
         stage: 'auth',
         error: 'Missing authorization header',
         endpoint_used: ORG_ENDPOINT,
+        http_status: 401,
       }, 401);
     }
 
@@ -679,6 +716,7 @@ serve(async (req) => {
         error: 'Supabase configuration missing',
         missing,
         endpoint_used: ORG_ENDPOINT,
+        http_status: 500,
       }, 500);
     }
     
@@ -720,19 +758,21 @@ serve(async (req) => {
         completed_at: new Date().toISOString(),
       }).eq('id', job_id);
       
-      const statusCode = orgResult.authOk === false ? 401 : 
+      const statusCode = orgResult.authOk === false ? 401 :
                         orgResult.endpointOk === false ? 404 : 500;
-      
+
+      const stage = orgResult.endpointOk === false ? 'soap.endpoint_not_found' : 'soap.org_details';
+
       return jsonResponse({
         ok: false,
         correlation_id: correlationId,
-        stage: 'soap.org_details',
+        stage,
         error: orgResult.error,
         fault: orgResult.fault,
         http_status: orgResult.httpStatus,
         auth_ok: orgResult.authOk,
         endpoint_ok: orgResult.endpointOk,
-        endpoint_used: orgResult.endpointUsed,
+        endpoint_used: ORG_ENDPOINT,
       }, statusCode);
     }
 
@@ -905,6 +945,7 @@ serve(async (req) => {
       stage: 'request.error',
       error: errorMsg,
       endpoint_used: ORG_ENDPOINT,
+      http_status: 500,
     }, 500);
   }
 });
