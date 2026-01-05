@@ -6904,6 +6904,327 @@ export type Database = {
           },
         ]
       }
+      tga_organisations: {
+        Row: {
+          abn: string | null
+          address_line1: string | null
+          address_line2: string | null
+          code: string
+          country: string | null
+          created_at: string
+          email: string | null
+          fetched_at: string
+          id: string
+          legal_name: string
+          organisation_type: string | null
+          phone: string | null
+          postcode: string | null
+          registration_end_date: string | null
+          registration_start_date: string | null
+          source_hash: string
+          source_payload: Json | null
+          state: string | null
+          status: string | null
+          suburb: string | null
+          trading_name: string | null
+          updated_at: string
+          website: string | null
+        }
+        Insert: {
+          abn?: string | null
+          address_line1?: string | null
+          address_line2?: string | null
+          code: string
+          country?: string | null
+          created_at?: string
+          email?: string | null
+          fetched_at?: string
+          id?: string
+          legal_name: string
+          organisation_type?: string | null
+          phone?: string | null
+          postcode?: string | null
+          registration_end_date?: string | null
+          registration_start_date?: string | null
+          source_hash: string
+          source_payload?: Json | null
+          state?: string | null
+          status?: string | null
+          suburb?: string | null
+          trading_name?: string | null
+          updated_at?: string
+          website?: string | null
+        }
+        Update: {
+          abn?: string | null
+          address_line1?: string | null
+          address_line2?: string | null
+          code?: string
+          country?: string | null
+          created_at?: string
+          email?: string | null
+          fetched_at?: string
+          id?: string
+          legal_name?: string
+          organisation_type?: string | null
+          phone?: string | null
+          postcode?: string | null
+          registration_end_date?: string | null
+          registration_start_date?: string | null
+          source_hash?: string
+          source_payload?: Json | null
+          state?: string | null
+          status?: string | null
+          suburb?: string | null
+          trading_name?: string | null
+          updated_at?: string
+          website?: string | null
+        }
+        Relationships: []
+      }
+      tga_sync_jobs: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          created_by: string
+          delta_since: string | null
+          error_details: Json | null
+          error_message: string | null
+          id: string
+          job_type: string
+          records_failed: number | null
+          records_fetched: number | null
+          records_inserted: number | null
+          records_unchanged: number | null
+          records_updated: number | null
+          started_at: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          created_by: string
+          delta_since?: string | null
+          error_details?: Json | null
+          error_message?: string | null
+          id?: string
+          job_type: string
+          records_failed?: number | null
+          records_fetched?: number | null
+          records_inserted?: number | null
+          records_unchanged?: number | null
+          records_updated?: number | null
+          started_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string
+          delta_since?: string | null
+          error_details?: Json | null
+          error_message?: string | null
+          id?: string
+          job_type?: string
+          records_failed?: number | null
+          records_fetched?: number | null
+          records_inserted?: number | null
+          records_unchanged?: number | null
+          records_updated?: number | null
+          started_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      tga_sync_status: {
+        Row: {
+          connection_status: string | null
+          current_job_id: string | null
+          id: number
+          is_syncing: boolean | null
+          last_delta_sync_at: string | null
+          last_full_sync_at: string | null
+          last_health_check_at: string | null
+          last_health_check_result: Json | null
+          last_sync_job_id: string | null
+          organisations_count: number | null
+          products_count: number | null
+          units_count: number | null
+          updated_at: string
+        }
+        Insert: {
+          connection_status?: string | null
+          current_job_id?: string | null
+          id?: number
+          is_syncing?: boolean | null
+          last_delta_sync_at?: string | null
+          last_full_sync_at?: string | null
+          last_health_check_at?: string | null
+          last_health_check_result?: Json | null
+          last_sync_job_id?: string | null
+          organisations_count?: number | null
+          products_count?: number | null
+          units_count?: number | null
+          updated_at?: string
+        }
+        Update: {
+          connection_status?: string | null
+          current_job_id?: string | null
+          id?: number
+          is_syncing?: boolean | null
+          last_delta_sync_at?: string | null
+          last_full_sync_at?: string | null
+          last_health_check_at?: string | null
+          last_health_check_result?: Json | null
+          last_sync_job_id?: string | null
+          organisations_count?: number | null
+          products_count?: number | null
+          units_count?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tga_sync_status_current_job_id_fkey"
+            columns: ["current_job_id"]
+            isOneToOne: false
+            referencedRelation: "tga_sync_jobs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tga_sync_status_last_sync_job_id_fkey"
+            columns: ["last_sync_job_id"]
+            isOneToOne: false
+            referencedRelation: "tga_sync_jobs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tga_training_products: {
+        Row: {
+          code: string
+          created_at: string
+          currency_status: string | null
+          fetched_at: string
+          id: string
+          is_current: boolean | null
+          product_type: string
+          release_date: string | null
+          release_number: string | null
+          source_hash: string
+          source_payload: Json | null
+          status: string | null
+          superseded_by: string | null
+          title: string
+          training_package_code: string | null
+          training_package_title: string | null
+          updated_at: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          currency_status?: string | null
+          fetched_at?: string
+          id?: string
+          is_current?: boolean | null
+          product_type: string
+          release_date?: string | null
+          release_number?: string | null
+          source_hash: string
+          source_payload?: Json | null
+          status?: string | null
+          superseded_by?: string | null
+          title: string
+          training_package_code?: string | null
+          training_package_title?: string | null
+          updated_at?: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          currency_status?: string | null
+          fetched_at?: string
+          id?: string
+          is_current?: boolean | null
+          product_type?: string
+          release_date?: string | null
+          release_number?: string | null
+          source_hash?: string
+          source_payload?: Json | null
+          status?: string | null
+          superseded_by?: string | null
+          title?: string
+          training_package_code?: string | null
+          training_package_title?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      tga_units: {
+        Row: {
+          code: string
+          created_at: string
+          currency_status: string | null
+          fetched_at: string
+          id: string
+          is_current: boolean | null
+          nominal_hours: number | null
+          release_date: string | null
+          release_number: string | null
+          source_hash: string
+          source_payload: Json | null
+          status: string | null
+          superseded_by: string | null
+          title: string
+          training_package_code: string | null
+          training_package_title: string | null
+          updated_at: string
+          usage_recommendation: string | null
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          currency_status?: string | null
+          fetched_at?: string
+          id?: string
+          is_current?: boolean | null
+          nominal_hours?: number | null
+          release_date?: string | null
+          release_number?: string | null
+          source_hash: string
+          source_payload?: Json | null
+          status?: string | null
+          superseded_by?: string | null
+          title: string
+          training_package_code?: string | null
+          training_package_title?: string | null
+          updated_at?: string
+          usage_recommendation?: string | null
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          currency_status?: string | null
+          fetched_at?: string
+          id?: string
+          is_current?: boolean | null
+          nominal_hours?: number | null
+          release_date?: string | null
+          release_number?: string | null
+          source_hash?: string
+          source_payload?: Json | null
+          status?: string | null
+          superseded_by?: string | null
+          title?: string
+          training_package_code?: string | null
+          training_package_title?: string | null
+          updated_at?: string
+          usage_recommendation?: string | null
+        }
+        Relationships: []
+      }
       time_tracking: {
         Row: {
           client_id: string | null
@@ -7996,14 +8317,19 @@ export type Database = {
         Args: { p_package_id: number; p_tenant_id: number }
         Returns: boolean
       }
-      tga_health_check: {
-        Args: { p_sample_codes?: string[]; p_tenant_id: number }
-        Returns: Json
-      }
+      tga_health_check:
+        | { Args: never; Returns: Json }
+        | {
+            Args: { p_sample_codes?: string[]; p_tenant_id: number }
+            Returns: Json
+          }
       tga_queue_sync: {
         Args: { p_codes: string[]; p_tenant_id: number }
         Returns: Json
       }
+      tga_sync_delta: { Args: { p_since?: string }; Returns: Json }
+      tga_sync_full: { Args: never; Returns: Json }
+      tga_sync_status: { Args: never; Returns: Json }
       toggle_favourite: { Args: { p_resource_id: string }; Returns: boolean }
       transition_stage_state: {
         Args: {
