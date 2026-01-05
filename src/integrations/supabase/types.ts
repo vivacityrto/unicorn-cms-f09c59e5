@@ -1176,6 +1176,85 @@ export type Database = {
           },
         ]
       }
+      client_package_stage_state: {
+        Row: {
+          blocked_at: string | null
+          blocked_reason: string | null
+          completed_at: string | null
+          created_at: string
+          id: number
+          is_required: boolean
+          package_id: number
+          sort_order: number
+          stage_id: number
+          started_at: string | null
+          status: string
+          tenant_id: number
+          updated_at: string
+          updated_by: string | null
+          waiting_at: string | null
+          waiting_reason: string | null
+        }
+        Insert: {
+          blocked_at?: string | null
+          blocked_reason?: string | null
+          completed_at?: string | null
+          created_at?: string
+          id?: never
+          is_required?: boolean
+          package_id: number
+          sort_order?: number
+          stage_id: number
+          started_at?: string | null
+          status?: string
+          tenant_id: number
+          updated_at?: string
+          updated_by?: string | null
+          waiting_at?: string | null
+          waiting_reason?: string | null
+        }
+        Update: {
+          blocked_at?: string | null
+          blocked_reason?: string | null
+          completed_at?: string | null
+          created_at?: string
+          id?: never
+          is_required?: boolean
+          package_id?: number
+          sort_order?: number
+          stage_id?: number
+          started_at?: string | null
+          status?: string
+          tenant_id?: number
+          updated_at?: string
+          updated_by?: string | null
+          waiting_at?: string | null
+          waiting_reason?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_package_stage_state_package_id_fkey"
+            columns: ["package_id"]
+            isOneToOne: false
+            referencedRelation: "packages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_package_stage_state_stage_id_fkey"
+            columns: ["stage_id"]
+            isOneToOne: false
+            referencedRelation: "documents_stages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_package_stage_state_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       clientfields: {
         Row: {
           client_id: number
@@ -4347,6 +4426,7 @@ export type Database = {
         Row: {
           created_at: string
           csc_user_id: string | null
+          current_stage_state_id: number | null
           health_check_delivered_at: string | null
           health_check_scheduled_date: string | null
           health_check_status: string
@@ -4370,6 +4450,7 @@ export type Database = {
         Insert: {
           created_at?: string
           csc_user_id?: string | null
+          current_stage_state_id?: number | null
           health_check_delivered_at?: string | null
           health_check_scheduled_date?: string | null
           health_check_status?: string
@@ -4393,6 +4474,7 @@ export type Database = {
         Update: {
           created_at?: string
           csc_user_id?: string | null
+          current_stage_state_id?: number | null
           health_check_delivered_at?: string | null
           health_check_scheduled_date?: string | null
           health_check_status?: string
@@ -4414,6 +4496,13 @@ export type Database = {
           validation_status?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "membership_entitlements_current_stage_state_id_fkey"
+            columns: ["current_stage_state_id"]
+            isOneToOne: false
+            referencedRelation: "client_package_stage_state"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "membership_entitlements_package_id_fkey"
             columns: ["package_id"]
@@ -4928,6 +5017,54 @@ export type Database = {
           },
           {
             foreignKeyName: "fk_package_staff_tasks_stage"
+            columns: ["stage_id"]
+            isOneToOne: false
+            referencedRelation: "documents_stages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      package_stage_map: {
+        Row: {
+          created_at: string
+          dashboard_visible: boolean
+          id: number
+          is_required: boolean
+          package_id: number
+          sort_order: number
+          stage_id: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          dashboard_visible?: boolean
+          id?: never
+          is_required?: boolean
+          package_id: number
+          sort_order?: number
+          stage_id: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          dashboard_visible?: boolean
+          id?: never
+          is_required?: boolean
+          package_id?: number
+          sort_order?: number
+          stage_id?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "package_stage_map_package_id_fkey"
+            columns: ["package_id"]
+            isOneToOne: false
+            referencedRelation: "packages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "package_stage_map_stage_id_fkey"
             columns: ["stage_id"]
             isOneToOne: false
             referencedRelation: "documents_stages"
@@ -5835,6 +5972,44 @@ export type Database = {
           status?: number
         }
         Relationships: []
+      }
+      stage_state_audit_log: {
+        Row: {
+          changed_at: string
+          changed_by: string | null
+          id: number
+          new_status: string
+          old_status: string | null
+          reason: string | null
+          stage_state_id: number
+        }
+        Insert: {
+          changed_at?: string
+          changed_by?: string | null
+          id?: never
+          new_status: string
+          old_status?: string | null
+          reason?: string | null
+          stage_state_id: number
+        }
+        Update: {
+          changed_at?: string
+          changed_by?: string | null
+          id?: never
+          new_status?: string
+          old_status?: string | null
+          reason?: string | null
+          stage_state_id?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stage_state_audit_log_stage_state_id_fkey"
+            columns: ["stage_state_id"]
+            isOneToOne: false
+            referencedRelation: "client_package_stage_state"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       system_emails: {
         Row: {
@@ -7379,6 +7554,15 @@ export type Database = {
         Returns: boolean
       }
       toggle_favourite: { Args: { p_resource_id: string }; Returns: boolean }
+      transition_stage_state: {
+        Args: {
+          p_new_status: string
+          p_reason?: string
+          p_stage_state_id: number
+          p_user_id?: string
+        }
+        Returns: Json
+      }
       update_user_notification_prefs: {
         Args: { p_prefs: Json }
         Returns: string

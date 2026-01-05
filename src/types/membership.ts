@@ -20,20 +20,33 @@ export type StageStatus = 'not_started' | 'in_progress' | 'blocked' | 'waiting' 
 // Client package state
 export type ClientPackageState = 'ACTIVE' | 'AT_RISK' | 'PAUSED' | 'EXITING' | 'CLOSED';
 
+// Package Stage Map (links stages to packages)
+export interface PackageStageMap {
+  id: number;
+  package_id: number;
+  stage_id: number;
+  sort_order: number;
+  is_required: boolean;
+  dashboard_visible: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
 // Client Package Stage State
 export interface ClientPackageStageState {
-  id: string;
-  client_package_id: string;
-  package_stage_id: number;
+  id: number;
+  tenant_id: number;
+  package_id: number;
+  stage_id: number;
   status: StageStatus;
   is_required: boolean;
+  sort_order: number;
   started_at: string | null;
   completed_at: string | null;
   blocked_at: string | null;
   blocked_reason: string | null;
   waiting_at: string | null;
   waiting_reason: string | null;
-  sort_order: number;
   created_at: string;
   updated_at: string;
   updated_by: string | null;
@@ -44,9 +57,9 @@ export interface ClientPackageStageState {
 
 // Stage State Audit Log entry
 export interface StageStateAuditEntry {
-  id: string;
-  client_package_stage_state_id: string;
-  previous_status: string | null;
+  id: number;
+  stage_state_id: number;
+  old_status: string | null;
   new_status: string;
   reason: string | null;
   changed_by: string | null;
