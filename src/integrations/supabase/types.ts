@@ -1127,6 +1127,8 @@ export type Database = {
         Row: {
           action: string
           actor_user_id: string | null
+          after_data: Json | null
+          before_data: Json | null
           created_at: string | null
           details: Json | null
           entity_id: string | null
@@ -1137,6 +1139,8 @@ export type Database = {
         Insert: {
           action: string
           actor_user_id?: string | null
+          after_data?: Json | null
+          before_data?: Json | null
           created_at?: string | null
           details?: Json | null
           entity_id?: string | null
@@ -1147,6 +1151,8 @@ export type Database = {
         Update: {
           action?: string
           actor_user_id?: string | null
+          after_data?: Json | null
+          before_data?: Json | null
           created_at?: string | null
           details?: Json | null
           entity_id?: string | null
@@ -1223,8 +1229,10 @@ export type Database = {
           blocked_reason: string | null
           completed_at: string | null
           created_at: string
+          due_at: string | null
           id: number
           is_required: boolean
+          notes: string | null
           package_id: number
           sort_order: number
           stage_id: number
@@ -1241,8 +1249,10 @@ export type Database = {
           blocked_reason?: string | null
           completed_at?: string | null
           created_at?: string
+          due_at?: string | null
           id?: never
           is_required?: boolean
+          notes?: string | null
           package_id: number
           sort_order?: number
           stage_id: number
@@ -1259,8 +1269,10 @@ export type Database = {
           blocked_reason?: string | null
           completed_at?: string | null
           created_at?: string
+          due_at?: string | null
           id?: never
           is_required?: boolean
+          notes?: string | null
           package_id?: number
           sort_order?: number
           stage_id?: number
@@ -5113,6 +5125,54 @@ export type Database = {
           },
         ]
       }
+      package_stages: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          dashboard_group: string | null
+          id: number
+          is_required: boolean
+          package_id: number
+          sort_order: number
+          stage_id: number
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          dashboard_group?: string | null
+          id?: number
+          is_required?: boolean
+          package_id: number
+          sort_order?: number
+          stage_id: number
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          dashboard_group?: string | null
+          id?: number
+          is_required?: boolean
+          package_id?: number
+          sort_order?: number
+          stage_id?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "package_stages_package_id_fkey"
+            columns: ["package_id"]
+            isOneToOne: false
+            referencedRelation: "packages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "package_stages_stage_id_fkey"
+            columns: ["stage_id"]
+            isOneToOne: false
+            referencedRelation: "documents_stages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       package_type_thresholds: {
         Row: {
           created_at: string
@@ -6588,9 +6648,45 @@ export type Database = {
           },
         ]
       }
+      tenant_users: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: number
+          role: string
+          tenant_id: number
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: number
+          role?: string
+          tenant_id: number
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: number
+          role?: string
+          tenant_id?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tenant_users_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tenants: {
         Row: {
           created_at: string
+          cricos_id: string | null
           id: number
           id_uuid: string | null
           metadata: Json | null
@@ -6599,14 +6695,17 @@ export type Database = {
           package_id: number | null
           package_ids: number[] | null
           risk_level: string | null
+          rto_id: string | null
           slug: string
           stage_ids: number[] | null
           state: Database["public"]["Enums"]["australian_state"] | null
           status: string
+          tga_sync_status: string | null
           updated_at: string
         }
         Insert: {
           created_at?: string
+          cricos_id?: string | null
           id?: number
           id_uuid?: string | null
           metadata?: Json | null
@@ -6615,14 +6714,17 @@ export type Database = {
           package_id?: number | null
           package_ids?: number[] | null
           risk_level?: string | null
+          rto_id?: string | null
           slug: string
           stage_ids?: number[] | null
           state?: Database["public"]["Enums"]["australian_state"] | null
           status?: string
+          tga_sync_status?: string | null
           updated_at?: string
         }
         Update: {
           created_at?: string
+          cricos_id?: string | null
           id?: number
           id_uuid?: string | null
           metadata?: Json | null
@@ -6631,10 +6733,12 @@ export type Database = {
           package_id?: number | null
           package_ids?: number[] | null
           risk_level?: string | null
+          rto_id?: string | null
           slug?: string
           stage_ids?: number[] | null
           state?: Database["public"]["Enums"]["australian_state"] | null
           status?: string
+          tga_sync_status?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -7788,7 +7892,14 @@ export type Database = {
         | "todos"
         | "ids"
         | "conclude"
+      stage_state:
+        | "not_started"
+        | "active"
+        | "blocked"
+        | "complete"
+        | "not_applicable"
       task_status:
+        | "backlog"
         | "not_started"
         | "in_progress"
         | "blocked"
@@ -7977,7 +8088,15 @@ export const Constants = {
         "ids",
         "conclude",
       ],
+      stage_state: [
+        "not_started",
+        "active",
+        "blocked",
+        "complete",
+        "not_applicable",
+      ],
       task_status: [
+        "backlog",
         "not_started",
         "in_progress",
         "blocked",
