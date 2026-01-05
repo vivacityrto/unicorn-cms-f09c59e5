@@ -18,7 +18,10 @@ import { ClientProfile, RegistryLink } from '@/hooks/useClientManagement';
 interface ClientIntegrationsTabProps {
   profile: ClientProfile | null;
   registryLink: RegistryLink | null;
+  onSetTgaLink: (rtoNumber: string) => Promise<{ success: boolean; status?: string; autoVerified?: boolean }>;
+  onVerifyTgaLink: () => Promise<boolean>;
   onUpdateLink: (status: string) => Promise<boolean>;
+  canVerify: boolean;
   loading?: boolean;
 }
 
@@ -48,7 +51,10 @@ const STATUS_CONFIG: Record<string, { color: string; icon: React.ReactNode; labe
 export function ClientIntegrationsTab({ 
   profile, 
   registryLink, 
+  onSetTgaLink,
+  onVerifyTgaLink,
   onUpdateLink,
+  canVerify,
   loading 
 }: ClientIntegrationsTabProps) {
   const [updating, setUpdating] = useState(false);
@@ -57,15 +63,18 @@ export function ClientIntegrationsTab({
   const currentStatus = registryLink?.link_status || 'not_linked';
   const statusConfig = STATUS_CONFIG[currentStatus] || STATUS_CONFIG.not_linked;
 
+  // Link to TGA - uses RPC with role-based auto-verification
   const handleLinkToTGA = async () => {
+    if (!profile?.rto_number) return;
     setUpdating(true);
-    await onUpdateLink('pending');
+    await onSetTgaLink(profile.rto_number);
     setUpdating(false);
   };
 
+  // Manual verification for pending links (Admin-only)
   const handleMarkLinked = async () => {
     setUpdating(true);
-    await onUpdateLink('linked');
+    await onVerifyTgaLink();
     setUpdating(false);
   };
 
@@ -161,18 +170,22 @@ export function ClientIntegrationsTab({
                     <Clock className="h-4 w-4 text-amber-600" />
                     <AlertTitle className="text-amber-600">Link Pending</AlertTitle>
                     <AlertDescription>
-                      TGA link has been initiated. An admin can manually verify and mark as linked.
+                      {canVerify 
+                        ? 'TGA link has been initiated. You can verify and mark as linked.'
+                        : 'TGA link has been initiated. An admin must verify and mark as linked.'}
                     </AlertDescription>
                   </Alert>
                   <div className="flex gap-2">
-                    <Button onClick={handleMarkLinked} variant="default" disabled={updating}>
-                      {updating ? (
-                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      ) : (
-                        <CheckCircle2 className="h-4 w-4 mr-2" />
-                      )}
-                      Mark as Linked
-                    </Button>
+                    {canVerify && (
+                      <Button onClick={handleMarkLinked} variant="default" disabled={updating}>
+                        {updating ? (
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        ) : (
+                          <CheckCircle2 className="h-4 w-4 mr-2" />
+                        )}
+                        Mark as Linked
+                      </Button>
+                    )}
                     <Button onClick={handleUnlink} variant="outline" disabled={updating}>
                       Cancel
                     </Button>

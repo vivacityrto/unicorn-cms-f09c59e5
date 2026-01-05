@@ -6593,6 +6593,8 @@ export type Database = {
           tenant_id: number
           updated_at: string | null
           updated_by: string | null
+          verified_at: string | null
+          verified_by: string | null
         }
         Insert: {
           created_at?: string | null
@@ -6605,6 +6607,8 @@ export type Database = {
           tenant_id: number
           updated_at?: string | null
           updated_by?: string | null
+          verified_at?: string | null
+          verified_by?: string | null
         }
         Update: {
           created_at?: string | null
@@ -6617,6 +6621,8 @@ export type Database = {
           tenant_id?: number
           updated_at?: string | null
           updated_by?: string | null
+          verified_at?: string | null
+          verified_by?: string | null
         }
         Relationships: [
           {
@@ -7923,6 +7929,11 @@ export type Database = {
         }
         Returns: string[]
       }
+      client_tga_link_set: {
+        Args: { p_rto_number: string; p_tenant_id: number }
+        Returns: Json
+      }
+      client_tga_link_verify: { Args: { p_tenant_id: number }; Returns: Json }
       create_audit: {
         Args: { p_client_id: string; p_created_by: string; p_tenant_id: number }
         Returns: number
