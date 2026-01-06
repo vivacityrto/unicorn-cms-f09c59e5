@@ -392,15 +392,15 @@ export function TeamProfileFields({ user, canEdit, onSave }: TeamProfileFieldsPr
               Cover Contact While Away
             </Label>
             <Select
-              value={formData.cover_user_id}
-              onValueChange={(value) => setFormData({ ...formData, cover_user_id: value })}
+              value={formData.cover_user_id || 'none'}
+              onValueChange={(value) => setFormData({ ...formData, cover_user_id: value === 'none' ? '' : value })}
               disabled={!canEdit}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Select cover contact..." />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">None</SelectItem>
+                <SelectItem value="none">None</SelectItem>
                 {teamUsers.map((teamUser) => (
                   <SelectItem key={teamUser.user_uuid} value={teamUser.user_uuid}>
                     {teamUser.first_name} {teamUser.last_name}
