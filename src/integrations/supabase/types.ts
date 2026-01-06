@@ -2907,6 +2907,95 @@ export type Database = {
           },
         ]
       }
+      email_send_log: {
+        Row: {
+          body_html: string
+          body_text: string | null
+          cc_emails: string[] | null
+          created_at: string
+          created_by: string | null
+          email_template_id: string
+          email_template_version: number
+          error_message: string | null
+          id: string
+          merge_data: Json | null
+          package_id: number | null
+          sent_at: string | null
+          stage_id: number | null
+          status: string
+          subject: string
+          tenant_id: number
+          to_email: string
+        }
+        Insert: {
+          body_html: string
+          body_text?: string | null
+          cc_emails?: string[] | null
+          created_at?: string
+          created_by?: string | null
+          email_template_id: string
+          email_template_version?: number
+          error_message?: string | null
+          id?: string
+          merge_data?: Json | null
+          package_id?: number | null
+          sent_at?: string | null
+          stage_id?: number | null
+          status?: string
+          subject: string
+          tenant_id: number
+          to_email: string
+        }
+        Update: {
+          body_html?: string
+          body_text?: string | null
+          cc_emails?: string[] | null
+          created_at?: string
+          created_by?: string | null
+          email_template_id?: string
+          email_template_version?: number
+          error_message?: string | null
+          id?: string
+          merge_data?: Json | null
+          package_id?: number | null
+          sent_at?: string | null
+          stage_id?: number | null
+          status?: string
+          subject?: string
+          tenant_id?: number
+          to_email?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_send_log_email_template_id_fkey"
+            columns: ["email_template_id"]
+            isOneToOne: false
+            referencedRelation: "email_templates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "email_send_log_package_id_fkey"
+            columns: ["package_id"]
+            isOneToOne: false
+            referencedRelation: "packages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "email_send_log_stage_id_fkey"
+            columns: ["stage_id"]
+            isOneToOne: false
+            referencedRelation: "documents_stages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "email_send_log_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       email_sends: {
         Row: {
           created_at: string
@@ -2960,8 +3049,11 @@ export type Database = {
           preview_text: string | null
           reply_to: string
           slug: string
+          status: string | null
           subject: string
           updated_at: string
+          updated_by: string | null
+          version: number | null
         }
         Insert: {
           created_at?: string
@@ -2974,8 +3066,11 @@ export type Database = {
           preview_text?: string | null
           reply_to?: string
           slug: string
+          status?: string | null
           subject: string
           updated_at?: string
+          updated_by?: string | null
+          version?: number | null
         }
         Update: {
           created_at?: string
@@ -2988,8 +3083,11 @@ export type Database = {
           preview_text?: string | null
           reply_to?: string
           slug?: string
+          status?: string | null
           subject?: string
           updated_at?: string
+          updated_by?: string | null
+          version?: number | null
         }
         Relationships: []
       }
