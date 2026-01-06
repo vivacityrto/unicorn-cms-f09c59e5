@@ -54,6 +54,7 @@ interface CurrentUser {
   unicorn_role: string | null;
   user_type: string | null;
   tenant_id: number | null;
+  global_role: string | null;
 }
 
 export default function UserProfile() {
@@ -79,7 +80,7 @@ export default function UserProfile() {
 
       const { data: userData } = await supabase
         .from('users')
-        .select('user_uuid, unicorn_role, user_type, tenant_id')
+        .select('user_uuid, unicorn_role, user_type, tenant_id, global_role')
         .eq('user_uuid', authUser.id)
         .single();
 
@@ -195,8 +196,8 @@ export default function UserProfile() {
   }
 
   const canEdit = canEditProfile ?? false;
-  const isSuperAdmin = currentUser.unicorn_role === 'Super Admin' && 
-                       (currentUser.user_type === 'Vivacity' || currentUser.user_type === 'Vivacity Team');
+  // Use global_role as authoritative source for SuperAdmin check
+  const isSuperAdmin = currentUser.global_role === 'SuperAdmin' || currentUser.unicorn_role === 'Super Admin';
   const isAdmin = isSuperAdmin || 
                   (currentUser.unicorn_role === 'Admin' && 
                    (currentUser.user_type === 'Client' || currentUser.user_type === 'Client Parent') &&

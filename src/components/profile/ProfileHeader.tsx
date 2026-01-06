@@ -95,7 +95,7 @@ export function ProfileHeader({ user, tenantName, canEdit, onAvatarChange, onEdi
       const fileName = `profile.${fileExt}`;
       const filePath = `${targetUserId}/${fileName}`;
       
-      console.log(`[Avatar Upload] Target user: ${targetUserId}, Current user: ${authUser?.id}, SuperAdmin: ${isSuperAdmin}`);
+      console.log(`[Avatar Upload Debug]`, { targetUserId, authUserId: authUser?.id, isSuperAdmin, viewedUserUuid: user.user_uuid, isUploadingForSelf: targetUserId === authUser?.id });
 
       const { error: uploadError } = await supabase.storage
         .from('avatars')
