@@ -6515,6 +6515,54 @@ export type Database = {
           },
         ]
       }
+      tenant_csc_assignments: {
+        Row: {
+          assigned_since: string
+          created_at: string
+          csc_user_id: string
+          id: number
+          is_primary: boolean
+          role_label: string
+          tenant_id: number
+          updated_at: string
+        }
+        Insert: {
+          assigned_since?: string
+          created_at?: string
+          csc_user_id: string
+          id?: number
+          is_primary?: boolean
+          role_label?: string
+          tenant_id: number
+          updated_at?: string
+        }
+        Update: {
+          assigned_since?: string
+          created_at?: string
+          csc_user_id?: string
+          id?: number
+          is_primary?: boolean
+          role_label?: string
+          tenant_id?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tenant_csc_assignments_csc_user_id_fkey"
+            columns: ["csc_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "tenant_csc_assignments_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tenant_members: {
         Row: {
           created_at: string
@@ -8205,6 +8253,30 @@ export type Database = {
         }
         Relationships: []
       }
+      timezones: {
+        Row: {
+          country_code: string | null
+          display_order: number | null
+          label: string
+          tz: string
+          utc_offset_minutes: number
+        }
+        Insert: {
+          country_code?: string | null
+          display_order?: number | null
+          label: string
+          tz: string
+          utc_offset_minutes: number
+        }
+        Update: {
+          country_code?: string | null
+          display_order?: number | null
+          label?: string
+          tz?: string
+          utc_offset_minutes?: number
+        }
+        Relationships: []
+      }
       trainer_training_products: {
         Row: {
           trainer_id: string
@@ -8530,22 +8602,27 @@ export type Database = {
           accounting_system: string | null
           acn: string | null
           archived: boolean
+          availability_note: string | null
           avatar_path: string | null
           avatar_updated_at: string | null
           avatar_url: string | null
           bio: string | null
           biography: string | null
+          booking_url: string | null
           clickup_url: string | null
           client_id: string | null
+          communication_pref: string | null
           country: string | null
           created_at: string | null
           cricos_id: string | null
+          csc_visibility: Json | null
           disabled: boolean
           email: string
           email_address: string | null
           first_name: string
           global_role: string | null
           head_office_address: string | null
+          is_csc: boolean | null
           is_team: boolean | null
           job_title: string | null
           keap_url: string | null
@@ -8566,7 +8643,9 @@ export type Database = {
           po_box_address: string | null
           postcode: string | null
           profile_photo: boolean | null
+          public_holiday_region: string | null
           registration_end_date: string | null
+          response_time_sla: string | null
           role: string | null
           rto_id: number | null
           rto_name: string | null
@@ -8587,6 +8666,8 @@ export type Database = {
           user_type: Database["public"]["Enums"]["user_type_enum"]
           user_uuid: string
           website: string | null
+          working_days: Json | null
+          working_hours: Json | null
         }
         Insert: {
           abn?: string | null
@@ -8594,22 +8675,27 @@ export type Database = {
           accounting_system?: string | null
           acn?: string | null
           archived?: boolean
+          availability_note?: string | null
           avatar_path?: string | null
           avatar_updated_at?: string | null
           avatar_url?: string | null
           bio?: string | null
           biography?: string | null
+          booking_url?: string | null
           clickup_url?: string | null
           client_id?: string | null
+          communication_pref?: string | null
           country?: string | null
           created_at?: string | null
           cricos_id?: string | null
+          csc_visibility?: Json | null
           disabled?: boolean
           email: string
           email_address?: string | null
           first_name: string
           global_role?: string | null
           head_office_address?: string | null
+          is_csc?: boolean | null
           is_team?: boolean | null
           job_title?: string | null
           keap_url?: string | null
@@ -8630,7 +8716,9 @@ export type Database = {
           po_box_address?: string | null
           postcode?: string | null
           profile_photo?: boolean | null
+          public_holiday_region?: string | null
           registration_end_date?: string | null
+          response_time_sla?: string | null
           role?: string | null
           rto_id?: number | null
           rto_name?: string | null
@@ -8651,6 +8739,8 @@ export type Database = {
           user_type: Database["public"]["Enums"]["user_type_enum"]
           user_uuid?: string
           website?: string | null
+          working_days?: Json | null
+          working_hours?: Json | null
         }
         Update: {
           abn?: string | null
@@ -8658,22 +8748,27 @@ export type Database = {
           accounting_system?: string | null
           acn?: string | null
           archived?: boolean
+          availability_note?: string | null
           avatar_path?: string | null
           avatar_updated_at?: string | null
           avatar_url?: string | null
           bio?: string | null
           biography?: string | null
+          booking_url?: string | null
           clickup_url?: string | null
           client_id?: string | null
+          communication_pref?: string | null
           country?: string | null
           created_at?: string | null
           cricos_id?: string | null
+          csc_visibility?: Json | null
           disabled?: boolean
           email?: string
           email_address?: string | null
           first_name?: string
           global_role?: string | null
           head_office_address?: string | null
+          is_csc?: boolean | null
           is_team?: boolean | null
           job_title?: string | null
           keap_url?: string | null
@@ -8694,7 +8789,9 @@ export type Database = {
           po_box_address?: string | null
           postcode?: string | null
           profile_photo?: boolean | null
+          public_holiday_region?: string | null
           registration_end_date?: string | null
+          response_time_sla?: string | null
           role?: string | null
           rto_id?: number | null
           rto_name?: string | null
@@ -8715,6 +8812,8 @@ export type Database = {
           user_type?: Database["public"]["Enums"]["user_type_enum"]
           user_uuid?: string
           website?: string | null
+          working_days?: Json | null
+          working_hours?: Json | null
         }
         Relationships: [
           {
@@ -8786,6 +8885,10 @@ export type Database = {
       admin_fix_memberships: { Args: { dry_run?: boolean }; Returns: Json }
       admin_fix_profile_linkage: { Args: { dry_run?: boolean }; Returns: Json }
       admin_fix_user_linkage: { Args: { p_user_uuid: string }; Returns: Json }
+      admin_remove_tenant_csc_assignment: {
+        Args: { p_csc_user_id: string; p_tenant_id: number }
+        Returns: Json
+      }
       admin_search_clients: {
         Args: {
           org_types?: string[]
@@ -8803,6 +8906,33 @@ export type Database = {
       }
       admin_set_role_type: {
         Args: { p_role_type: string; p_tenant_id?: number; p_user_uuid: string }
+        Returns: Json
+      }
+      admin_set_tenant_csc_assignment: {
+        Args: {
+          p_csc_user_id: string
+          p_is_primary?: boolean
+          p_role_label?: string
+          p_tenant_id: number
+        }
+        Returns: Json
+      }
+      admin_update_csc_profile: {
+        Args: {
+          p_availability_note?: string
+          p_bio?: string
+          p_booking_url?: string
+          p_csc_visibility?: Json
+          p_is_csc?: boolean
+          p_job_title?: string
+          p_linkedin_url?: string
+          p_phone?: string
+          p_public_holiday_region?: string
+          p_timezone?: string
+          p_user_id: string
+          p_working_days?: Json
+          p_working_hours?: Json
+        }
         Returns: Json
       }
       advance_segment: { Args: { p_meeting_id: string }; Returns: string }
@@ -9045,6 +9175,17 @@ export type Database = {
           schema_owner: string
         }[]
       }
+      get_csc_users: {
+        Args: never
+        Returns: {
+          avatar_url: string
+          email: string
+          first_name: string
+          job_title: string
+          last_name: string
+          user_uuid: string
+        }[]
+      }
       get_current_user_role: { Args: never; Returns: string }
       get_current_user_tenant: { Args: never; Returns: number }
       get_current_user_type: { Args: never; Returns: string }
@@ -9142,6 +9283,37 @@ export type Database = {
           percent_complete: number
           tenant_id: number
           total_stages: number
+        }[]
+      }
+      get_tenant_csc_profiles: {
+        Args: { p_tenant_id?: number }
+        Returns: {
+          availability_note: string
+          avatar_url: string
+          bio: string
+          booking_url: string
+          email: string
+          first_name: string
+          is_primary: boolean
+          job_title: string
+          last_name: string
+          linkedin_url: string
+          phone: string
+          public_holiday_region: string
+          role_label: string
+          timezone: string
+          user_uuid: string
+          working_days: Json
+          working_hours: Json
+        }[]
+      }
+      get_timezones: {
+        Args: never
+        Returns: {
+          country_code: string
+          label: string
+          tz: string
+          utc_offset_minutes: number
         }[]
       }
       get_user_audit: {
@@ -9397,6 +9569,23 @@ export type Database = {
           p_reason?: string
           p_stage_state_id: number
           p_user_id?: string
+        }
+        Returns: Json
+      }
+      update_my_csc_profile: {
+        Args: {
+          p_availability_note?: string
+          p_bio?: string
+          p_booking_url?: string
+          p_communication_pref?: string
+          p_job_title?: string
+          p_linkedin_url?: string
+          p_phone?: string
+          p_public_holiday_region?: string
+          p_response_time_sla?: string
+          p_timezone?: string
+          p_working_days?: Json
+          p_working_hours?: Json
         }
         Returns: Json
       }

@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Save, Mail, Phone, Briefcase, Clock, Globe } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { useTimezones, groupTimezones } from '@/hooks/useTimezones';
 
 interface ProfileFormProps {
   user: {
@@ -24,35 +25,12 @@ interface ProfileFormProps {
   onSave: () => void;
 }
 
-const TIMEZONES = [
-  // Australia
-  { value: 'Australia/Sydney', label: 'Sydney (AEDT/AEST)', group: 'Australia' },
-  { value: 'Australia/Melbourne', label: 'Melbourne (AEDT/AEST)', group: 'Australia' },
-  { value: 'Australia/Brisbane', label: 'Brisbane (AEST)', group: 'Australia' },
-  { value: 'Australia/Adelaide', label: 'Adelaide (ACDT/ACST)', group: 'Australia' },
-  { value: 'Australia/Perth', label: 'Perth (AWST)', group: 'Australia' },
-  { value: 'Australia/Darwin', label: 'Darwin (ACST)', group: 'Australia' },
-  { value: 'Australia/Hobart', label: 'Hobart (AEDT/AEST)', group: 'Australia' },
-  // Asia Pacific
-  { value: 'Asia/Manila', label: 'Manila (PHT)', group: 'Asia Pacific' },
-  { value: 'Pacific/Auckland', label: 'Auckland (NZDT/NZST)', group: 'Asia Pacific' },
-  { value: 'Asia/Singapore', label: 'Singapore (SGT)', group: 'Asia Pacific' },
-  { value: 'Asia/Kuala_Lumpur', label: 'Kuala Lumpur (MYT)', group: 'Asia Pacific' },
-  { value: 'Asia/Jakarta', label: 'Jakarta (WIB)', group: 'Asia Pacific' },
-  { value: 'Asia/Makassar', label: 'Makassar (WITA)', group: 'Asia Pacific' },
-  { value: 'Asia/Kolkata', label: 'Kolkata (IST)', group: 'Asia Pacific' },
-  // Europe
-  { value: 'Europe/London', label: 'London (GMT/BST)', group: 'Europe' },
-  // Americas
-  { value: 'America/New_York', label: 'New York (EST/EDT)', group: 'Americas' },
-  { value: 'America/Chicago', label: 'Chicago (CST/CDT)', group: 'Americas' },
-  { value: 'America/Denver', label: 'Denver (MST/MDT)', group: 'Americas' },
-  { value: 'America/Los_Angeles', label: 'Los Angeles (PST/PDT)', group: 'Americas' },
-];
-
 export function ProfileForm({ user, canEdit, onSave }: ProfileFormProps) {
   const { toast } = useToast();
   const [saving, setSaving] = useState(false);
+  const { data: timezones = [], isLoading: loadingTimezones } = useTimezones();
+  const groupedTimezones = groupTimezones(timezones);
+  
   const [formData, setFormData] = useState({
     first_name: user.first_name || '',
     last_name: user.last_name || '',
@@ -183,17 +161,17 @@ export function ProfileForm({ user, canEdit, onSave }: ProfileFormProps) {
             <Select
               value={formData.timezone}
               onValueChange={(value) => setFormData({ ...formData, timezone: value })}
-              disabled={!canEdit}
+              disabled={!canEdit || loadingTimezones}
             >
               <SelectTrigger id="timezone">
                 <SelectValue placeholder="Select timezone" />
               </SelectTrigger>
               <SelectContent>
-                {['Australia', 'Asia Pacific', 'Europe', 'Americas'].map((group) => (
+                {Object.entries(groupedTimezones).map(([group, tzList]) => (
                   <div key={group}>
                     <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">{group}</div>
-                    {TIMEZONES.filter(tz => tz.group === group).map((tz) => (
-                      <SelectItem key={tz.value} value={tz.value}>
+                    {tzList.map((tz) => (
+                      <SelectItem key={tz.tz} value={tz.tz}>
                         {tz.label}
                       </SelectItem>
                     ))}

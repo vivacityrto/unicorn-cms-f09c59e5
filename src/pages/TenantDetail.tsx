@@ -15,6 +15,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import TenantProgressTable from "@/components/tenant/TenantProgressTable";
+import { CSCProfileCard } from "@/components/csc/CSCProfileCard";
 interface ClientData {
   id: string;
   companyname: string;
@@ -783,30 +784,8 @@ export default function TenantDetail() {
                 </div>
               </Card>}
 
-            {/* Liaison Officer */}
-            {liaisonName && <Card className="border-0 shadow-lg overflow-hidden">
-              <div className="bg-muted/30 px-6 h-14 border-b border-border/50 flex items-center">
-                <h2 className="font-semibold text-foreground">CSC Officer</h2>
-              </div>
-              
-              <div className="p-6">
-                <div className="flex items-center gap-4 p-4 rounded-lg border border-border/40 bg-gradient-to-r from-primary/5 to-transparent hover:shadow-md transition-all duration-200">
-                  <div className="flex-shrink-0">
-                    <Avatar className="h-12 w-12 border-2 border-primary/20">
-                      <AvatarImage src={liaisonAvatar} alt={liaisonName} />
-                      <AvatarFallback className="bg-primary/10 text-primary font-semibold">
-                        {liaisonName.split(' ').map(n => n[0]).join('').toUpperCase()}
-                      </AvatarFallback>
-                    </Avatar>
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-foreground">{liaisonName}</p>
-                    <p className="text-xs text-muted-foreground mt-0.5">{liaisonEmail}</p>
-                  </div>
-                  
-                </div>
-              </div>
-            </Card>}
+            {/* CSC Profile Card - uses new CSC assignment system */}
+            <CSCProfileCard tenantId={parseInt(tenantId || '0')} compact={true} />
 
             {/* Contact Info */}
             <Card className="border-0 shadow-lg overflow-hidden">

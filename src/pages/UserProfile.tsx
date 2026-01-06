@@ -10,6 +10,7 @@ import { ProfileHeader } from '@/components/profile/ProfileHeader';
 import { ProfileForm } from '@/components/profile/ProfileForm';
 import { AdminActions } from '@/components/profile/AdminActions';
 import { ActivityPanel } from '@/components/profile/ActivityPanel';
+import { CSCProfileFields } from '@/components/profile/CSCProfileFields';
 
 interface UserData {
   user_uuid: string;
@@ -31,6 +32,14 @@ interface UserData {
   last_sign_in_at: string | null;
   tenant_name?: string | null;
   staff_team?: string | null;
+  // CSC fields
+  linkedin_url?: string | null;
+  booking_url?: string | null;
+  working_days?: string[] | null;
+  working_hours?: { start: string; end: string } | null;
+  availability_note?: string | null;
+  public_holiday_region?: string | null;
+  is_csc?: boolean;
 }
 
 interface CurrentUser {
@@ -98,6 +107,13 @@ export default function UserProfile() {
           updated_at,
           last_sign_in_at,
           staff_team,
+          linkedin_url,
+          booking_url,
+          working_days,
+          working_hours,
+          availability_note,
+          public_holiday_region,
+          is_csc,
           tenants!tenant_id(name)
         `)
         .eq('user_uuid', userId)
@@ -105,11 +121,13 @@ export default function UserProfile() {
 
       if (userError) throw userError;
 
-      // Add tenant name to user data
-      const userWithTenant = {
+      // Add tenant name to user data and cast JSON fields
+      const userWithTenant: UserData = {
         ...userData,
         tenant_name: (userData.tenants as any)?.name || null,
         staff_team: userData.staff_team || null,
+        working_days: userData.working_days as string[] | null,
+        working_hours: userData.working_hours as { start: string; end: string } | null,
       };
       delete (userWithTenant as any).tenants;
 
@@ -197,6 +215,18 @@ export default function UserProfile() {
               setIsEditing(false);
             }}
           />
+
+          {/* CSC Profile Fields (for CSC users) */}
+          {user.is_csc && (
+            <CSCProfileFields
+              user={user}
+              canEdit={canEdit && isEditing}
+              onSave={() => {
+                fetchUserData();
+                setIsEditing(false);
+              }}
+            />
+          )}
 
           {/* Admin Actions */}
           {isAdmin && user.user_uuid !== currentUser.user_uuid && (
