@@ -9311,6 +9311,7 @@ export type Database = {
         Args: never
         Returns: {
           avatar_url: string
+          disabled: boolean
           email: string
           first_name: string
           is_csc: boolean

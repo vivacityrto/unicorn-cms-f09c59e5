@@ -26,6 +26,8 @@ interface TeamUser {
   first_name: string;
   last_name: string;
   email: string;
+  job_title: string | null;
+  disabled: boolean;
 }
 
 interface TeamProfileFieldsProps {
@@ -111,7 +113,17 @@ export function TeamProfileFields({ user, canEdit, onSave, currentUserId, isCurr
     try {
       const { data, error } = await supabase.rpc('get_team_users');
       if (error) throw error;
-      const users = (data || []).filter((u: any) => u.user_uuid !== user.user_uuid) as TeamUser[];
+      // Filter out current user (prevent self-selection) but include inactive users if they're the current selection
+      const users = (data || [])
+        .filter((u: any) => u.user_uuid !== user.user_uuid)
+        .map((u: any) => ({
+          user_uuid: u.user_uuid,
+          first_name: u.first_name,
+          last_name: u.last_name,
+          email: u.email,
+          job_title: u.job_title || null,
+          disabled: u.disabled || false,
+        })) as TeamUser[];
       setTeamUsers(users);
     } catch (error) {
       console.error('Error fetching team users:', error);
@@ -431,15 +443,45 @@ export function TeamProfileFields({ user, canEdit, onSave, currentUserId, isCurr
               disabled={!canEdit}
             >
               <SelectTrigger>
-                <SelectValue placeholder="Select cover contact..." />
+                <SelectValue placeholder="Select cover contact...">
+                  {formData.cover_user_id && formData.cover_user_id !== 'none' ? (
+                    (() => {
+                      const selectedUser = teamUsers.find(u => u.user_uuid === formData.cover_user_id);
+                      if (selectedUser) {
+                        return (
+                          <span className="flex items-center gap-2">
+                            {selectedUser.first_name} {selectedUser.last_name}
+                            {selectedUser.job_title && ` (${selectedUser.job_title})`}
+                            {selectedUser.disabled && (
+                              <Badge variant="destructive" className="ml-1 text-xs py-0 px-1">Inactive</Badge>
+                            )}
+                          </span>
+                        );
+                      }
+                      return 'Select cover contact...';
+                    })()
+                  ) : (
+                    'None'
+                  )}
+                </SelectValue>
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="none">None</SelectItem>
-                {teamUsers.map((teamUser) => (
-                  <SelectItem key={teamUser.user_uuid} value={teamUser.user_uuid}>
-                    {teamUser.first_name} {teamUser.last_name}
-                  </SelectItem>
-                ))}
+                {teamUsers
+                  .filter(teamUser => !teamUser.disabled || teamUser.user_uuid === formData.cover_user_id)
+                  .map((teamUser) => (
+                    <SelectItem key={teamUser.user_uuid} value={teamUser.user_uuid}>
+                      <span className="flex items-center gap-2">
+                        {teamUser.first_name} {teamUser.last_name}
+                        {teamUser.job_title && ` (${teamUser.job_title})`}
+                        {' - '}
+                        <span className="text-muted-foreground">{teamUser.email}</span>
+                        {teamUser.disabled && (
+                          <Badge variant="destructive" className="ml-1 text-xs py-0 px-1">Inactive</Badge>
+                        )}
+                      </span>
+                    </SelectItem>
+                  ))}
               </SelectContent>
             </Select>
             <p className="text-xs text-muted-foreground">
