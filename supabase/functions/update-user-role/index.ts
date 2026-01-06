@@ -8,7 +8,7 @@ const corsHeaders = {
 interface UpdateUserRoleRequest {
   user_uuid: string;
   unicorn_role?: 'Super Admin' | 'Admin' | 'User';
-  user_type?: 'Vivacity' | 'Client' | 'Member';
+  user_type?: 'Vivacity' | 'Vivacity Team' | 'Client' | 'Client Parent' | 'Member';
   tenant_id?: number | null;
 }
 
@@ -48,7 +48,7 @@ Deno.serve(async (req) => {
       .eq('user_uuid', user.id)
       .single();
 
-    if (callerError || !callerData || callerData.unicorn_role !== 'Super Admin' || callerData.user_type !== 'Vivacity') {
+    if (callerError || !callerData || callerData.unicorn_role !== 'Super Admin' || !['Vivacity', 'Vivacity Team'].includes(callerData.user_type)) {
       console.error('Access denied:', { callerError, callerData });
       return new Response(
         JSON.stringify({ ok: false, code: 'FORBIDDEN', detail: 'Only Super Admins can update user roles' }),
@@ -69,19 +69,15 @@ Deno.serve(async (req) => {
 
     // Validate role/type combinations
     if (unicorn_role && user_type) {
-      if (unicorn_role === 'Super Admin' && user_type !== 'Vivacity') {
+      // Only Super Admin role requires Vivacity user type
+      if (unicorn_role === 'Super Admin' && !['Vivacity', 'Vivacity Team'].includes(user_type)) {
         return new Response(
           JSON.stringify({ ok: false, code: 'INVALID_COMBINATION', detail: 'Super Admin role requires Vivacity user type' }),
           { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
 
-      if (user_type === 'Vivacity' && unicorn_role !== 'Super Admin') {
-        return new Response(
-          JSON.stringify({ ok: false, code: 'INVALID_COMBINATION', detail: 'Vivacity user type requires Super Admin role' }),
-          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
+      // Vivacity staff can have any role (Super Admin, Admin, User)
 
       if (user_type === 'Client' && tenant_id === null) {
         return new Response(
