@@ -7,9 +7,10 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
+import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Layers, Loader2, Circle, Clock, CheckCircle2 } from "lucide-react";
+import { Layers, Loader2, Circle, Clock, CheckCircle2, ShieldCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface AddStageDialogProps {
@@ -26,6 +27,8 @@ interface AddStageDialogProps {
     video_url: string | null;
     order_number: number | null;
     status?: string | null;
+    is_certified?: boolean;
+    certified_notes?: string | null;
   } | null;
 }
 
@@ -45,7 +48,9 @@ export function AddStageDialog({
     stage_description: "",
     video_url: "",
     order_number: 0,
-    status: "not_started" as "not_started" | "in_progress" | "completed"
+    status: "not_started" as "not_started" | "in_progress" | "completed",
+    is_certified: false,
+    certified_notes: ""
   });
 
   // Pre-fill form when editing
@@ -57,7 +62,9 @@ export function AddStageDialog({
         stage_description: stageData.stage_description || "",
         video_url: stageData.video_url || "",
         order_number: stageData.order_number || 0,
-        status: (stageData.status as "not_started" | "in_progress" | "completed") || "not_started"
+        status: (stageData.status as "not_started" | "in_progress" | "completed") || "not_started",
+        is_certified: stageData.is_certified || false,
+        certified_notes: stageData.certified_notes || ""
       });
     } else {
       setFormData({
@@ -66,7 +73,9 @@ export function AddStageDialog({
         stage_description: "",
         video_url: "",
         order_number: 0,
-        status: "not_started"
+        status: "not_started",
+        is_certified: false,
+        certified_notes: ""
       });
     }
   }, [stageData, open]);
@@ -94,6 +103,8 @@ export function AddStageDialog({
             description: formData.stage_description || null,
             video_url: formData.video_url || null,
             status: formData.status,
+            is_certified: formData.is_certified,
+            certified_notes: formData.is_certified ? formData.certified_notes || null : null,
           })
           .eq('id', stageData.id);
         
@@ -112,6 +123,8 @@ export function AddStageDialog({
             description: formData.stage_description || null,
             video_url: formData.video_url || null,
             status: formData.status,
+            is_certified: formData.is_certified,
+            certified_notes: formData.is_certified ? formData.certified_notes || null : null,
           })
           .select('id')
           .single();
@@ -154,7 +167,9 @@ export function AddStageDialog({
         stage_description: "",
         video_url: "",
         order_number: 0,
-        status: "not_started"
+        status: "not_started",
+        is_certified: false,
+        certified_notes: ""
       });
       onSuccess();
       onOpenChange(false);
@@ -237,8 +252,41 @@ export function AddStageDialog({
                 type="url"
                 value={formData.video_url}
                 onChange={e => setFormData({ ...formData, video_url: e.target.value })}
-                placeholder="https://..."
+              placeholder="https://..."
               />
+            </div>
+
+            {/* Certified Stage Toggle */}
+            <div className="space-y-3 p-4 rounded-lg border bg-muted/30">
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label htmlFor="stage-certified" className="flex items-center gap-2">
+                    <ShieldCheck className="h-4 w-4 text-emerald-600" />
+                    Certified Stage
+                  </Label>
+                  <p className="text-xs text-muted-foreground">
+                    Mark this stage as a certified template for reuse
+                  </p>
+                </div>
+                <Switch
+                  id="stage-certified"
+                  checked={formData.is_certified}
+                  onCheckedChange={(checked) => setFormData({ ...formData, is_certified: checked })}
+                />
+              </div>
+              {formData.is_certified && (
+                <div className="space-y-2">
+                  <Label htmlFor="stage-certified-notes">Certification Notes</Label>
+                  <Textarea
+                    id="stage-certified-notes"
+                    value={formData.certified_notes}
+                    onChange={(e) => setFormData({ ...formData, certified_notes: e.target.value })}
+                    placeholder="Notes about why this stage is certified, standards met, etc."
+                    rows={2}
+                    className="resize-none"
+                  />
+                </div>
+              )}
             </div>
 
             {/* Status - Only show when adding stage for a specific tenant */}

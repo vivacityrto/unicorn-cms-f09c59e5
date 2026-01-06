@@ -32,7 +32,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { Pencil, Trash2, Plus, Search, ArrowLeft, ChevronLeft, ChevronRight, Video, LinkIcon } from 'lucide-react';
+import { Pencil, Trash2, Plus, Search, ArrowLeft, ChevronLeft, ChevronRight, Video, LinkIcon, ShieldCheck } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import {
   Pagination,
@@ -56,6 +56,8 @@ interface Stage {
   created_by: string | null;
   creator_name?: string;
   creator_avatar?: string | null;
+  is_certified?: boolean;
+  certified_notes?: string | null;
 }
 
 export default function ManageStages() {
@@ -310,7 +312,15 @@ export default function ManageStages() {
                     <span className="font-semibold text-foreground">{stage.id}</span>
                   </TableCell>
                   <TableCell className="py-6 border-r border-border/50">
-                    <span className="font-semibold text-foreground max-w-[200px] truncate whitespace-nowrap block">{stage.title}</span>
+                    <div className="flex items-center gap-2">
+                      <span className="font-semibold text-foreground max-w-[200px] truncate whitespace-nowrap block">{stage.title}</span>
+                      {stage.is_certified && (
+                        <Badge className="text-xs bg-emerald-500/10 text-emerald-600 border-emerald-500/20 shrink-0">
+                          <ShieldCheck className="h-3 w-3 mr-1" />
+                          Certified
+                        </Badge>
+                      )}
+                    </div>
                   </TableCell>
                   <TableCell className="py-6 border-r border-border/50">
                     <span className="text-muted-foreground text-sm max-w-xs truncate whitespace-nowrap block">{stage.description || 'No description added'}</span>
