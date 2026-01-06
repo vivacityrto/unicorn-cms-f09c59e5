@@ -27,7 +27,8 @@ import ManagePackagesWrapper from "./pages/ManagePackagesWrapper";
 import PackageDetail from "./pages/PackageDetail";
 import AdminPackageDetailWrapper from "./pages/AdminPackageDetailWrapper";
 import AdminPackageTenantDetailWrapper from "./pages/AdminPackageTenantDetailWrapper";
-import AdminManagePackagesWrapper from "./pages/AdminManagePackagesWrapper";
+import PackageBuilder from "./pages/PackageBuilder";
+import PackageBuilderDetail from "./pages/PackageBuilderDetail";
 import ManageEmailsWrapper from "./pages/ManageEmailsWrapper";
 import DocumentDetailWrapper from "./pages/DocumentDetailWrapper";
 import TeamSettingsWrapper from "./pages/TeamSettingsWrapper";
@@ -306,7 +307,15 @@ const App = () => (
               path="/admin/manage-packages"
               element={
                 <ProtectedRoute>
-                  <AdminManagePackagesWrapper />
+                  <PackageBuilder />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/admin/package-builder/:id"
+              element={
+                <ProtectedRoute>
+                  <PackageBuilderDetail />
                 </ProtectedRoute>
               } 
             />
