@@ -1,6 +1,6 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Package, usePackageBuilder } from '@/hooks/usePackageBuilder';
+import { Package, usePackageBuilder, PackageStage } from '@/hooks/usePackageBuilder';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -11,12 +11,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Skeleton } from '@/components/ui/skeleton';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 import { 
   Search, Plus, MoreHorizontal, Edit, Copy, Archive, Trash2, 
   Layers, Clock, Package as PackageIcon, CheckCircle2, XCircle,
   Building2, GraduationCap, Users, Briefcase
 } from 'lucide-react';
 import { CreatePackageDialog } from './CreatePackageDialog';
+import { computePackageReadiness, PackageReadinessBadge, ReadinessResult } from './PackageReadinessIndicator';
 
 const PACKAGE_TYPE_ICONS: Record<string, React.ReactNode> = {
   'project': <Briefcase className="h-4 w-4" />,
@@ -43,6 +45,49 @@ export function PackageBuilderOverview() {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [packageToDelete, setPackageToDelete] = useState<Package | null>(null);
+  const [packageStagesMap, setPackageStagesMap] = useState<Map<number, PackageStage[]>>(new Map());
+
+  // Fetch stages for all packages to compute readiness
+  useEffect(() => {
+    const fetchAllPackageStages = async () => {
+      if (packages.length === 0) return;
+      
+      const { data, error } = await supabase
+        .from('package_stages' as any)
+        .select(`
+          id,
+          package_id,
+          stage_id,
+          sort_order,
+          is_required,
+          dashboard_group,
+          stage:documents_stages(id, title, stage_type)
+        `)
+        .in('package_id', packages.map(p => p.id)) as any;
+
+      if (!error && data) {
+        const map = new Map<number, PackageStage[]>();
+        (data as any[]).forEach((ps: any) => {
+          const existing = map.get(ps.package_id) || [];
+          existing.push(ps);
+          map.set(ps.package_id, existing);
+        });
+        setPackageStagesMap(map);
+      }
+    };
+
+    fetchAllPackageStages();
+  }, [packages]);
+
+  // Compute readiness for each package
+  const packageReadiness = useMemo(() => {
+    const readinessMap = new Map<number, ReadinessResult>();
+    packages.forEach(pkg => {
+      const stages = packageStagesMap.get(pkg.id) || [];
+      readinessMap.set(pkg.id, computePackageReadiness(stages));
+    });
+    return readinessMap;
+  }, [packages, packageStagesMap]);
 
   const filteredPackages = useMemo(() => {
     return packages.filter(pkg => {
@@ -237,9 +282,10 @@ export function PackageBuilderOverview() {
           <Table>
             <TableHeader>
               <TableRow className="hover:bg-transparent">
-                <TableHead className="w-[300px]">Package Name</TableHead>
+                <TableHead className="w-[280px]">Package Name</TableHead>
                 <TableHead>Type</TableHead>
                 <TableHead>Status</TableHead>
+                <TableHead>Readiness</TableHead>
                 <TableHead className="text-center">Duration</TableHead>
                 <TableHead className="text-center">Stages</TableHead>
                 <TableHead className="w-[100px]">Actions</TableHead>
@@ -248,7 +294,7 @@ export function PackageBuilderOverview() {
             <TableBody>
               {filteredPackages.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="h-32 text-center text-muted-foreground">
+                  <TableCell colSpan={7} className="h-32 text-center text-muted-foreground">
                     {searchQuery || statusFilter !== 'all' || typeFilter !== 'all' 
                       ? 'No packages match your filters.'
                       : 'No packages yet. Create your first package to get started.'}
@@ -278,6 +324,15 @@ export function PackageBuilderOverview() {
                       </div>
                     </TableCell>
                     <TableCell>{getStatusBadge(pkg.status)}</TableCell>
+                    <TableCell>
+                      {(() => {
+                        const readiness = packageReadiness.get(pkg.id);
+                        if (readiness) {
+                          return <PackageReadinessBadge status={readiness.status} issues={readiness.issues} size="sm" />;
+                        }
+                        return null;
+                      })()}
+                    </TableCell>
                     <TableCell className="text-center">
                       <div className="flex items-center justify-center gap-1 text-muted-foreground">
                         <Clock className="h-3.5 w-3.5" />

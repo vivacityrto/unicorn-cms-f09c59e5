@@ -24,6 +24,7 @@ import { StageLibraryDialog } from './StageLibraryDialog';
 import { StageDetailPanel } from './StageDetailPanel';
 import { PackageAIAssistant } from './PackageAIAssistant';
 import { AddRecommendedStagesDialog } from './AddRecommendedStagesDialog';
+import { computePackageReadiness, PackageReadinessSummary } from './PackageReadinessIndicator';
 import {
   DndContext,
   closestCenter,
@@ -358,6 +359,9 @@ export function PackageBuilderEditor() {
   if (!stageTypes.includes('onboarding')) missingLifecycleStages.push('Onboarding');
   if (!stageTypes.includes('offboarding')) missingLifecycleStages.push('Offboarding');
 
+  // Compute package readiness
+  const packageReadiness = computePackageReadiness(packageStages);
+
   const selectedStage = packageStages.find(ps => ps.stage_id === selectedStageId);
 
   return (
@@ -436,23 +440,10 @@ export function PackageBuilderEditor() {
         </div>
       </div>
 
-      {/* AI Warnings Banner */}
-      {missingLifecycleStages.length > 0 && (
-        <div className="flex items-center gap-3 py-2 px-4 mb-4 rounded-lg border border-amber-500/30 bg-amber-500/5">
-          <Lightbulb className="h-4 w-4 text-amber-500 shrink-0" />
-          <span className="text-sm">
-            <strong>Missing:</strong> {missingLifecycleStages.join(', ')}
-          </span>
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            className="ml-auto"
-            onClick={() => setIsStageLibraryOpen(true)}
-          >
-            Add Stages
-          </Button>
-        </div>
-      )}
+      {/* Package Readiness Summary */}
+      <div className="mb-4">
+        <PackageReadinessSummary status={packageReadiness.status} issues={packageReadiness.issues} />
+      </div>
 
       {/* Main Content */}
       <div className="flex-1 overflow-hidden">
