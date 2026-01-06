@@ -2572,6 +2572,7 @@ export type Database = {
           dashboard_visible: boolean | null
           description: string | null
           id: number
+          is_archived: boolean
           is_certified: boolean
           is_reusable: boolean | null
           short_name: string | null
@@ -2590,6 +2591,7 @@ export type Database = {
           dashboard_visible?: boolean | null
           description?: string | null
           id?: never
+          is_archived?: boolean
           is_certified?: boolean
           is_reusable?: boolean | null
           short_name?: string | null
@@ -2608,6 +2610,7 @@ export type Database = {
           dashboard_visible?: boolean | null
           description?: string | null
           id?: never
+          is_archived?: boolean
           is_certified?: boolean
           is_reusable?: boolean | null
           short_name?: string | null

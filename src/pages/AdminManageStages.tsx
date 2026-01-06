@@ -1,8 +1,9 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useRBAC } from '@/hooks/useRBAC';
+import { useStageDuplication } from '@/hooks/useStageDuplication';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -28,6 +29,16 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { 
   Plus, 
   Search, 
@@ -37,7 +48,9 @@ import {
   Users,
   Layers,
   Copy,
-  ShieldX
+  ShieldX,
+  Archive,
+  ArchiveRestore
 } from 'lucide-react';
 import { AddStageDialog } from '@/components/AddStageDialog';
 import { StagePreviewDialog } from '@/components/package-builder/StagePreviewDialog';
@@ -66,6 +79,12 @@ const USAGE_FILTER_OPTIONS = [
   { value: 'used', label: 'Used in packages' },
 ];
 
+const ARCHIVED_FILTER_OPTIONS = [
+  { value: 'active', label: 'Active' },
+  { value: 'archived', label: 'Archived' },
+  { value: 'all', label: 'All' },
+];
+
 interface StageWithUsage {
   id: number;
   title: string;
@@ -76,6 +95,7 @@ interface StageWithUsage {
   stage_key: string;
   is_certified: boolean;
   certified_notes: string | null;
+  is_archived: boolean;
   created_at: string;
   updated_at: string | null;
   usage_count: number;
@@ -84,16 +104,24 @@ interface StageWithUsage {
 
 export default function AdminManageStages() {
   const { toast } = useToast();
+  const navigate = useNavigate();
   const { isSuperAdmin } = useRBAC();
+  const { duplicateAndNavigate, isDuplicating } = useStageDuplication();
+  
   const [stages, setStages] = useState<StageWithUsage[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [stageTypeFilter, setStageTypeFilter] = useState('all');
   const [certifiedFilter, setCertifiedFilter] = useState('all');
   const [usageFilter, setUsageFilter] = useState('all');
+  const [archivedFilter, setArchivedFilter] = useState('active');
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [previewStage, setPreviewStage] = useState<Stage | null>(null);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+  
+  // Archive confirmation
+  const [archiveConfirmOpen, setArchiveConfirmOpen] = useState(false);
+  const [stageToArchive, setStageToArchive] = useState<StageWithUsage | null>(null);
 
   useEffect(() => {
     fetchStages();
@@ -150,6 +178,7 @@ export default function AdminManageStages() {
         stage_key: stage.stage_key || '',
         is_certified: stage.is_certified || false,
         certified_notes: stage.certified_notes,
+        is_archived: stage.is_archived || false,
         created_at: stage.created_at,
         updated_at: stage.updated_at,
         usage_count: usageCountMap[stage.id] || 0,
@@ -194,9 +223,15 @@ export default function AdminManageStages() {
         (usageFilter === 'not-used' && stage.usage_count === 0) ||
         (usageFilter === 'used' && stage.usage_count > 0);
 
-      return matchesSearch && matchesType && matchesCertified && matchesUsage;
+      // Archived filter
+      const matchesArchived =
+        archivedFilter === 'all' ||
+        (archivedFilter === 'active' && !stage.is_archived) ||
+        (archivedFilter === 'archived' && stage.is_archived);
+
+      return matchesSearch && matchesType && matchesCertified && matchesUsage && matchesArchived;
     });
-  }, [stages, searchQuery, stageTypeFilter, certifiedFilter, usageFilter]);
+  }, [stages, searchQuery, stageTypeFilter, certifiedFilter, usageFilter, archivedFilter]);
 
   const handlePreview = (stage: StageWithUsage) => {
     // Convert to Stage type for preview dialog
@@ -220,34 +255,48 @@ export default function AdminManageStages() {
   };
 
   const handleDuplicate = async (stage: StageWithUsage) => {
+    await duplicateAndNavigate({ sourceStageId: stage.id });
+  };
+
+  const handleArchive = async (stage: StageWithUsage) => {
+    if (stage.usage_count > 0 || stage.active_client_count > 0) {
+      setStageToArchive(stage);
+      setArchiveConfirmOpen(true);
+    } else {
+      await toggleArchive(stage);
+    }
+  };
+
+  const toggleArchive = async (stage: StageWithUsage) => {
     try {
-      const newStageKey = `${stage.title.toLowerCase().replace(/[^a-zA-Z0-9]+/g, '-')}-copy-${Date.now()}`;
-      
+      const newArchived = !stage.is_archived;
       const { error } = await supabase
         .from('documents_stages')
-        .insert({
-          title: `${stage.title} (Copy)`,
-          short_name: stage.short_name,
-          description: stage.description,
-          video_url: stage.video_url,
-          stage_type: stage.stage_type,
-          stage_key: newStageKey,
-          is_certified: false, // Copies are not certified by default
-          certified_notes: null,
-        });
+        .update({ is_archived: newArchived })
+        .eq('id', stage.id);
 
       if (error) throw error;
 
       toast({
-        title: 'Success',
-        description: 'Stage duplicated successfully',
+        title: newArchived ? 'Stage Archived' : 'Stage Restored',
+        description: newArchived 
+          ? 'Stage has been archived and hidden from stage selection.' 
+          : 'Stage has been restored and is now available.',
+      });
+      
+      // Log audit event
+      await supabase.from('audit_events').insert({
+        entity: 'stage',
+        entity_id: stage.id.toString(),
+        action: newArchived ? 'stage.archived' : 'stage.restored',
+        details: { stage_title: stage.title },
       });
       
       fetchStages();
     } catch (error: any) {
       toast({
         title: 'Error',
-        description: error.message || 'Failed to duplicate stage',
+        description: error.message || 'Failed to update stage',
         variant: 'destructive',
       });
     }
@@ -357,6 +406,19 @@ export default function AdminManageStages() {
           </SelectContent>
         </Select>
 
+        <Select value={archivedFilter} onValueChange={setArchivedFilter}>
+          <SelectTrigger className="w-[120px]">
+            <SelectValue placeholder="Status" />
+          </SelectTrigger>
+          <SelectContent>
+            {ARCHIVED_FILTER_OPTIONS.map((option) => (
+              <SelectItem key={option.value} value={option.value}>
+                {option.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
         <div className="text-sm text-muted-foreground ml-auto">
           Showing {filteredStages.length} of {stages.length} stages
         </div>
@@ -439,12 +501,20 @@ export default function AdminManageStages() {
                   className="group hover:bg-muted/50 transition-colors"
                 >
                   <TableCell>
-                    <Link
-                      to={`/admin/stages/${stage.id}`}
-                      className="font-medium text-foreground hover:text-primary hover:underline"
-                    >
-                      {stage.title}
-                    </Link>
+                    <div className="flex items-center gap-2">
+                      <Link
+                        to={`/admin/stages/${stage.id}`}
+                        className="font-medium text-foreground hover:text-primary hover:underline"
+                      >
+                        {stage.title}
+                      </Link>
+                      {stage.is_archived && (
+                        <Badge variant="outline" className="text-xs bg-muted">
+                          <Archive className="h-3 w-3 mr-1" />
+                          Archived
+                        </Badge>
+                      )}
+                    </div>
                     {stage.stage_key && (
                       <p className="text-xs text-muted-foreground mt-0.5 font-mono">
                         {stage.stage_key}
@@ -520,12 +590,35 @@ export default function AdminManageStages() {
                               variant="ghost"
                               size="icon"
                               onClick={() => handleDuplicate(stage)}
+                              disabled={isDuplicating}
                               className="h-8 w-8"
                             >
                               <Copy className="h-4 w-4" />
                             </Button>
                           </TooltipTrigger>
                           <TooltipContent>Duplicate</TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleArchive(stage)}
+                              className="h-8 w-8"
+                            >
+                              {stage.is_archived ? (
+                                <ArchiveRestore className="h-4 w-4" />
+                              ) : (
+                                <Archive className="h-4 w-4" />
+                              )}
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            {stage.is_archived ? 'Restore' : 'Archive'}
+                          </TooltipContent>
                         </Tooltip>
                       </TooltipProvider>
                     </div>
@@ -550,6 +643,40 @@ export default function AdminManageStages() {
         onOpenChange={setIsPreviewOpen}
         stage={previewStage}
       />
+
+      {/* Archive Confirmation Dialog */}
+      <AlertDialog open={archiveConfirmOpen} onOpenChange={setArchiveConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Archive Stage?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {stageToArchive && (
+                <>
+                  <strong>{stageToArchive.title}</strong> is currently used in{' '}
+                  <strong>{stageToArchive.usage_count} package(s)</strong>
+                  {stageToArchive.active_client_count > 0 && (
+                    <> and <strong>{stageToArchive.active_client_count} active client(s)</strong></>
+                  )}.
+                  <br /><br />
+                  Archived stages will be hidden from stage selection dialogs but will remain 
+                  in existing packages. Are you sure you want to archive this stage?
+                </>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (stageToArchive) toggleArchive(stageToArchive);
+                setArchiveConfirmOpen(false);
+              }}
+            >
+              Archive
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
