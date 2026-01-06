@@ -10,23 +10,34 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
+import { Switch } from '@/components/ui/switch';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useToast } from '@/hooks/use-toast';
 import { 
   X, Plus, Trash2, Users, Mail, FileText, CheckSquare, 
-  GripVertical, Clock, User, Loader2, AlertTriangle
+  GripVertical, Clock, User, Loader2, AlertTriangle, Settings, Copy
 } from 'lucide-react';
 
 interface StageDetailPanelProps {
   packageId: number;
   stageId: number;
   stage?: Stage;
+  allStages?: Stage[];
   onClose: () => void;
 }
 
-export function StageDetailPanel({ packageId, stageId, stage, onClose }: StageDetailPanelProps) {
+const STAGE_TYPE_OPTIONS = [
+  { value: 'onboarding', label: 'Onboarding', color: 'bg-blue-500/10 text-blue-600 border-blue-500/20' },
+  { value: 'delivery', label: 'Delivery', color: 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20' },
+  { value: 'support', label: 'Ongoing Support', color: 'bg-purple-500/10 text-purple-600 border-purple-500/20' },
+  { value: 'offboarding', label: 'Offboarding', color: 'bg-amber-500/10 text-amber-600 border-amber-500/20' },
+  { value: 'other', label: 'Other', color: 'bg-muted text-muted-foreground' }
+];
+
+export function StageDetailPanel({ packageId, stageId, stage, allStages = [], onClose }: StageDetailPanelProps) {
   const { toast } = useToast();
-  const { emailTemplates } = usePackageBuilder();
+  const { emailTemplates, updateStage, createStage } = usePackageBuilder();
   const {
     staffTasks,
     clientTasks,
@@ -43,10 +54,12 @@ export function StageDetailPanel({ packageId, stageId, stage, onClose }: StageDe
     removeStageEmail
   } = useStageDetail(packageId, stageId);
 
-  const [activeTab, setActiveTab] = useState('team-tasks');
+  const [activeTab, setActiveTab] = useState('settings');
   const [isAddingTask, setIsAddingTask] = useState(false);
   const [isAddingClientTask, setIsAddingClientTask] = useState(false);
   const [isAddingEmail, setIsAddingEmail] = useState(false);
+  const [isDuplicatingStage, setIsDuplicatingStage] = useState(false);
+  
   const [taskForm, setTaskForm] = useState({
     name: '',
     description: '',
@@ -57,13 +70,62 @@ export function StageDetailPanel({ packageId, stageId, stage, onClose }: StageDe
   const [clientTaskForm, setClientTaskForm] = useState({
     name: '',
     description: '',
-    instructions: ''
+    instructions: '',
+    due_date_offset: ''
   });
   const [emailForm, setEmailForm] = useState({
     email_template_id: '',
     trigger_type: 'manual',
     recipient_type: 'tenant'
   });
+
+  // Check if stage is reused
+  const usageCount = stage?.usage_count || 0;
+  const isReused = usageCount > 1;
+
+  const handleUpdateStage = async (updates: Partial<Stage>) => {
+    if (!stage) return;
+    try {
+      await updateStage(stage.id, updates);
+      toast({ title: 'Stage Updated' });
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to update stage',
+        variant: 'destructive'
+      });
+    }
+  };
+
+  const handleDuplicateStage = async () => {
+    if (!stage) return;
+    try {
+      setIsDuplicatingStage(true);
+      // Create a new stage with the same properties
+      const newStage = await createStage({
+        title: `${stage.title} (Copy)`,
+        short_name: stage.short_name,
+        description: stage.description,
+        stage_type: stage.stage_type,
+        video_url: stage.video_url,
+        ai_hint: stage.ai_hint,
+        is_reusable: true,
+        dashboard_visible: stage.dashboard_visible
+      });
+      toast({
+        title: 'Stage Duplicated',
+        description: `Created "${newStage.title}" in the library.`
+      });
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to duplicate stage',
+        variant: 'destructive'
+      });
+    } finally {
+      setIsDuplicatingStage(false);
+    }
+  };
 
   const handleAddStaffTask = async () => {
     if (!taskForm.name.trim()) {
@@ -109,10 +171,11 @@ export function StageDetailPanel({ packageId, stageId, stage, onClose }: StageDe
       await addClientTask({
         name: clientTaskForm.name,
         description: clientTaskForm.description,
-        instructions: clientTaskForm.instructions
+        instructions: clientTaskForm.instructions,
+        due_date_offset: clientTaskForm.due_date_offset ? parseInt(clientTaskForm.due_date_offset) : null
       });
       toast({ title: 'Client Task Added' });
-      setClientTaskForm({ name: '', description: '', instructions: '' });
+      setClientTaskForm({ name: '', description: '', instructions: '', due_date_offset: '' });
       setIsAddingClientTask(false);
     } catch (error: any) {
       toast({
@@ -162,86 +225,204 @@ export function StageDetailPanel({ packageId, stageId, stage, onClose }: StageDe
   }
 
   const getStageTypeColor = (stageType: string) => {
-    switch (stageType) {
-      case 'onboarding': return 'bg-blue-500/10 text-blue-600 border-blue-500/20';
-      case 'delivery': return 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20';
-      case 'support': return 'bg-purple-500/10 text-purple-600 border-purple-500/20';
-      case 'offboarding': return 'bg-amber-500/10 text-amber-600 border-amber-500/20';
-      default: return 'bg-muted text-muted-foreground';
-    }
+    return STAGE_TYPE_OPTIONS.find(opt => opt.value === stageType)?.color || 'bg-muted text-muted-foreground';
   };
 
   return (
-    <Card>
-      <CardHeader className="pb-3">
-        <div className="flex items-start justify-between">
-          <div>
-            <CardTitle className="text-lg">{stage?.title || 'Stage Details'}</CardTitle>
+    <div className="space-y-4">
+      {/* Header */}
+      <div className="flex items-start justify-between">
+        <div>
+          <h2 className="text-xl font-semibold">{stage?.title || 'Stage Details'}</h2>
+          <div className="flex items-center gap-2 mt-1">
             {stage?.stage_type && (
-              <Badge variant="outline" className={`mt-1 ${getStageTypeColor(stage.stage_type)}`}>
-                {stage.stage_type}
+              <Badge variant="outline" className={getStageTypeColor(stage.stage_type)}>
+                {STAGE_TYPE_OPTIONS.find(o => o.value === stage.stage_type)?.label || stage.stage_type}
+              </Badge>
+            )}
+            {isReused && (
+              <Badge variant="secondary" className="text-xs">
+                Used in {usageCount} packages
               </Badge>
             )}
           </div>
-          <Button variant="ghost" size="icon" onClick={onClose}>
-            <X className="h-4 w-4" />
-          </Button>
         </div>
-        {stage?.description && (
-          <CardDescription className="mt-2">{stage.description}</CardDescription>
-        )}
-      </CardHeader>
-      <CardContent>
-        <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-4 h-auto">
-            <TabsTrigger value="team-tasks" className="text-xs px-2 py-1.5">
-              <Users className="h-3 w-3 mr-1" />
-              Team
-            </TabsTrigger>
-            <TabsTrigger value="emails" className="text-xs px-2 py-1.5">
-              <Mail className="h-3 w-3 mr-1" />
-              Emails
-            </TabsTrigger>
-            <TabsTrigger value="client-tasks" className="text-xs px-2 py-1.5">
-              <CheckSquare className="h-3 w-3 mr-1" />
-              Client
-            </TabsTrigger>
-            <TabsTrigger value="documents" className="text-xs px-2 py-1.5">
-              <FileText className="h-3 w-3 mr-1" />
-              Docs
-            </TabsTrigger>
-          </TabsList>
+        <Button variant="ghost" size="icon" onClick={onClose}>
+          <X className="h-4 w-4" />
+        </Button>
+      </div>
 
-          {/* Team Tasks */}
-          <TabsContent value="team-tasks" className="mt-4">
-            <div className="space-y-3">
+      {/* Reuse Warning */}
+      {isReused && (
+        <Alert className="border-amber-500/30 bg-amber-500/5">
+          <AlertTriangle className="h-4 w-4 text-amber-600" />
+          <AlertDescription className="flex items-center justify-between">
+            <span className="text-amber-800">
+              This stage is shared across {usageCount} packages. Changes will affect all of them.
+            </span>
+            <Button 
+              size="sm" 
+              variant="outline" 
+              onClick={handleDuplicateStage}
+              disabled={isDuplicatingStage}
+            >
+              <Copy className="h-3 w-3 mr-1" />
+              {isDuplicatingStage ? 'Duplicating...' : 'Duplicate Stage'}
+            </Button>
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {/* Tabs */}
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <TabsList className="grid w-full grid-cols-5">
+          <TabsTrigger value="settings" className="text-xs">
+            <Settings className="h-3 w-3 mr-1" />
+            Settings
+          </TabsTrigger>
+          <TabsTrigger value="team-tasks" className="text-xs">
+            <Users className="h-3 w-3 mr-1" />
+            Team
+          </TabsTrigger>
+          <TabsTrigger value="emails" className="text-xs">
+            <Mail className="h-3 w-3 mr-1" />
+            Emails
+          </TabsTrigger>
+          <TabsTrigger value="client-tasks" className="text-xs">
+            <CheckSquare className="h-3 w-3 mr-1" />
+            Client
+          </TabsTrigger>
+          <TabsTrigger value="documents" className="text-xs">
+            <FileText className="h-3 w-3 mr-1" />
+            Docs
+          </TabsTrigger>
+        </TabsList>
+
+        {/* Stage Settings Tab */}
+        <TabsContent value="settings" className="mt-4">
+          <Card>
+            <CardContent className="pt-6 space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Stage Name</Label>
+                  <Input
+                    value={stage?.title || ''}
+                    onChange={(e) => handleUpdateStage({ title: e.target.value })}
+                    placeholder="e.g., Client Onboarding"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Stage Type</Label>
+                  <Select 
+                    value={stage?.stage_type || 'delivery'} 
+                    onValueChange={(value) => handleUpdateStage({ stage_type: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {STAGE_TYPE_OPTIONS.map(opt => (
+                        <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Description</Label>
+                <Textarea
+                  value={stage?.description || ''}
+                  onChange={(e) => handleUpdateStage({ description: e.target.value })}
+                  placeholder="Describe what this stage involves..."
+                  rows={3}
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Short Name</Label>
+                  <Input
+                    value={stage?.short_name || ''}
+                    onChange={(e) => handleUpdateStage({ short_name: e.target.value })}
+                    placeholder="e.g., Onboard"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Reusable</Label>
+                  <div className="flex items-center gap-3 h-10">
+                    <Switch
+                      checked={stage?.is_reusable ?? true}
+                      onCheckedChange={(checked) => handleUpdateStage({ is_reusable: checked })}
+                      disabled={isReused}
+                    />
+                    <span className="text-sm text-muted-foreground">
+                      {isReused ? 'Cannot change (already reused)' : (stage?.is_reusable ? 'Yes' : 'No')}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Video URL (optional)</Label>
+                <Input
+                  value={stage?.video_url || ''}
+                  onChange={(e) => handleUpdateStage({ video_url: e.target.value })}
+                  placeholder="https://youtube.com/..."
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label>AI Hint (optional)</Label>
+                <Textarea
+                  value={stage?.ai_hint || ''}
+                  onChange={(e) => handleUpdateStage({ ai_hint: e.target.value })}
+                  placeholder="Hints for AI suggestions..."
+                  rows={2}
+                />
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Team Tasks Tab */}
+        <TabsContent value="team-tasks" className="mt-4">
+          <Card>
+            <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
-                <span className="text-sm font-medium">{staffTasks.length} tasks</span>
-                <Button size="sm" variant="outline" onClick={() => setIsAddingTask(true)}>
+                <div>
+                  <CardTitle className="text-base">Team Tasks</CardTitle>
+                  <CardDescription>{staffTasks.length} tasks configured</CardDescription>
+                </div>
+                <Button size="sm" onClick={() => setIsAddingTask(true)}>
                   <Plus className="h-3 w-3 mr-1" />
                   Add Task
                 </Button>
               </div>
-              
-              <ScrollArea className="h-[300px]">
+            </CardHeader>
+            <CardContent>
+              <ScrollArea className="h-[350px]">
                 {staffTasks.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center py-8 text-center">
-                    <Users className="h-8 w-8 text-muted-foreground mb-2" />
-                    <p className="text-sm text-muted-foreground">No team tasks yet</p>
+                  <div className="flex flex-col items-center justify-center py-12 text-center">
+                    <Users className="h-10 w-10 text-muted-foreground mb-3" />
+                    <p className="text-muted-foreground">No team tasks configured</p>
                   </div>
                 ) : (
                   <div className="space-y-2">
                     {staffTasks.map((task, index) => (
-                      <div key={task.id} className="flex items-start gap-2 p-2 rounded border bg-muted/30">
+                      <div key={task.id} className="flex items-start gap-2 p-3 rounded-lg border bg-muted/30">
                         <GripVertical className="h-4 w-4 text-muted-foreground mt-0.5 cursor-grab" />
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2">
-                            <span className="text-sm font-medium truncate">{task.name}</span>
+                            <span className="font-medium">{task.name}</span>
                             {task.is_mandatory && (
                               <Badge variant="secondary" className="text-xs">Required</Badge>
                             )}
                           </div>
-                          <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
+                          {task.description && (
+                            <p className="text-sm text-muted-foreground mt-1 line-clamp-1">{task.description}</p>
+                          )}
+                          <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground">
                             <span className="flex items-center gap-1">
                               <User className="h-3 w-3" />
                               {task.owner_role}
@@ -257,7 +438,7 @@ export function StageDetailPanel({ packageId, stageId, stage, onClose }: StageDe
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-6 w-6"
+                          className="h-7 w-7"
                           onClick={() => deleteStaffTask(task.id)}
                         >
                           <Trash2 className="h-3 w-3" />
@@ -267,46 +448,56 @@ export function StageDetailPanel({ packageId, stageId, stage, onClose }: StageDe
                   </div>
                 )}
               </ScrollArea>
-            </div>
-          </TabsContent>
+            </CardContent>
+          </Card>
+        </TabsContent>
 
-          {/* Emails */}
-          <TabsContent value="emails" className="mt-4">
-            <div className="space-y-3">
+        {/* Emails Tab */}
+        <TabsContent value="emails" className="mt-4">
+          <Card>
+            <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
-                <span className="text-sm font-medium">{stageEmails.length} emails</span>
-                <Button size="sm" variant="outline" onClick={() => setIsAddingEmail(true)}>
+                <div>
+                  <CardTitle className="text-base">Email Triggers</CardTitle>
+                  <CardDescription>{stageEmails.length} emails configured</CardDescription>
+                </div>
+                <Button size="sm" onClick={() => setIsAddingEmail(true)}>
                   <Plus className="h-3 w-3 mr-1" />
                   Add Email
                 </Button>
               </div>
-              
-              <ScrollArea className="h-[300px]">
+            </CardHeader>
+            <CardContent>
+              <ScrollArea className="h-[350px]">
                 {stageEmails.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center py-8 text-center">
-                    <Mail className="h-8 w-8 text-muted-foreground mb-2" />
-                    <p className="text-sm text-muted-foreground">No emails configured</p>
+                  <div className="flex flex-col items-center justify-center py-12 text-center">
+                    <Mail className="h-10 w-10 text-muted-foreground mb-3" />
+                    <p className="text-muted-foreground">No emails configured</p>
                   </div>
                 ) : (
                   <div className="space-y-2">
                     {stageEmails.map((email) => {
                       const template = emailTemplates.find(t => t.id === email.email_template_id);
                       return (
-                        <div key={email.id} className="flex items-start gap-2 p-2 rounded border bg-muted/30">
+                        <div key={email.id} className="flex items-start gap-2 p-3 rounded-lg border bg-muted/30">
                           <Mail className="h-4 w-4 text-muted-foreground mt-0.5" />
                           <div className="flex-1 min-w-0">
-                            <span className="text-sm font-medium truncate block">
+                            <span className="font-medium block">
                               {template?.internal_name || 'Unknown Template'}
                             </span>
                             <div className="flex items-center gap-2 mt-1">
-                              <Badge variant="outline" className="text-xs">{email.trigger_type}</Badge>
-                              <Badge variant="secondary" className="text-xs">{email.recipient_type}</Badge>
+                              <Badge variant="outline" className="text-xs capitalize">
+                                {email.trigger_type.replace('_', ' ')}
+                              </Badge>
+                              <Badge variant="secondary" className="text-xs capitalize">
+                                {email.recipient_type}
+                              </Badge>
                             </div>
                           </div>
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="h-6 w-6"
+                            className="h-7 w-7"
                             onClick={() => removeStageEmail(email.id)}
                           >
                             <Trash2 className="h-3 w-3" />
@@ -317,41 +508,52 @@ export function StageDetailPanel({ packageId, stageId, stage, onClose }: StageDe
                   </div>
                 )}
               </ScrollArea>
-            </div>
-          </TabsContent>
+            </CardContent>
+          </Card>
+        </TabsContent>
 
-          {/* Client Tasks */}
-          <TabsContent value="client-tasks" className="mt-4">
-            <div className="space-y-3">
+        {/* Client Tasks Tab */}
+        <TabsContent value="client-tasks" className="mt-4">
+          <Card>
+            <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
-                <span className="text-sm font-medium">{clientTasks.length} tasks</span>
-                <Button size="sm" variant="outline" onClick={() => setIsAddingClientTask(true)}>
+                <div>
+                  <CardTitle className="text-base">Client Tasks</CardTitle>
+                  <CardDescription>{clientTasks.length} tasks visible to tenants</CardDescription>
+                </div>
+                <Button size="sm" onClick={() => setIsAddingClientTask(true)}>
                   <Plus className="h-3 w-3 mr-1" />
                   Add Task
                 </Button>
               </div>
-              
-              <ScrollArea className="h-[300px]">
+            </CardHeader>
+            <CardContent>
+              <ScrollArea className="h-[350px]">
                 {clientTasks.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center py-8 text-center">
-                    <CheckSquare className="h-8 w-8 text-muted-foreground mb-2" />
-                    <p className="text-sm text-muted-foreground">No client tasks yet</p>
+                  <div className="flex flex-col items-center justify-center py-12 text-center">
+                    <CheckSquare className="h-10 w-10 text-muted-foreground mb-3" />
+                    <p className="text-muted-foreground">No client tasks configured</p>
                   </div>
                 ) : (
                   <div className="space-y-2">
                     {clientTasks.map((task) => (
-                      <div key={task.id} className="flex items-start gap-2 p-2 rounded border bg-muted/30">
+                      <div key={task.id} className="flex items-start gap-2 p-3 rounded-lg border bg-muted/30">
                         <GripVertical className="h-4 w-4 text-muted-foreground mt-0.5 cursor-grab" />
                         <div className="flex-1 min-w-0">
-                          <span className="text-sm font-medium truncate block">{task.name}</span>
+                          <span className="font-medium block">{task.name}</span>
                           {task.description && (
-                            <p className="text-xs text-muted-foreground truncate">{task.description}</p>
+                            <p className="text-sm text-muted-foreground mt-1 line-clamp-1">{task.description}</p>
+                          )}
+                          {task.due_date_offset && (
+                            <span className="text-xs text-muted-foreground mt-1 block">
+                              Due: +{task.due_date_offset} days from stage start
+                            </span>
                           )}
                         </div>
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-6 w-6"
+                          className="h-7 w-7"
                           onClick={() => deleteClientTask(task.id)}
                         >
                           <Trash2 className="h-3 w-3" />
@@ -361,39 +563,54 @@ export function StageDetailPanel({ packageId, stageId, stage, onClose }: StageDe
                   </div>
                 )}
               </ScrollArea>
-            </div>
-          </TabsContent>
+            </CardContent>
+          </Card>
+        </TabsContent>
 
-          {/* Documents */}
-          <TabsContent value="documents" className="mt-4">
-            <div className="space-y-3">
+        {/* Documents Tab */}
+        <TabsContent value="documents" className="mt-4">
+          <Card>
+            <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
-                <span className="text-sm font-medium">{documents.length} documents</span>
-                <Button size="sm" variant="outline" disabled>
+                <div>
+                  <CardTitle className="text-base">Documents</CardTitle>
+                  <CardDescription>{documents.length} documents linked</CardDescription>
+                </div>
+                <Button size="sm" disabled>
                   <Plus className="h-3 w-3 mr-1" />
                   Link Document
                 </Button>
               </div>
-              
-              <ScrollArea className="h-[300px]">
+            </CardHeader>
+            <CardContent>
+              <ScrollArea className="h-[350px]">
                 {documents.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center py-8 text-center">
-                    <FileText className="h-8 w-8 text-muted-foreground mb-2" />
-                    <p className="text-sm text-muted-foreground">No documents linked</p>
+                  <div className="flex flex-col items-center justify-center py-12 text-center">
+                    <FileText className="h-10 w-10 text-muted-foreground mb-3" />
+                    <p className="text-muted-foreground">No documents linked</p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Link documents from the Document Library
+                    </p>
                   </div>
                 ) : (
                   <div className="space-y-2">
                     {documents.map((doc) => (
-                      <div key={doc.id} className="flex items-start gap-2 p-2 rounded border bg-muted/30">
+                      <div key={doc.id} className="flex items-start gap-2 p-3 rounded-lg border bg-muted/30">
                         <FileText className="h-4 w-4 text-muted-foreground mt-0.5" />
                         <div className="flex-1 min-w-0">
-                          <span className="text-sm font-medium truncate block">{doc.title}</span>
+                          <span className="font-medium block">{doc.title}</span>
                           <div className="flex items-center gap-2 mt-1">
-                            {doc.isclientdoc && (
-                              <Badge variant="secondary" className="text-xs">Client</Badge>
+                            {doc.is_team_only && (
+                              <Badge variant="outline" className="text-xs">Team Only</Badge>
+                            )}
+                            {doc.is_tenant_downloadable && (
+                              <Badge variant="secondary" className="text-xs">Tenant Download</Badge>
+                            )}
+                            {doc.is_auto_generated && (
+                              <Badge variant="secondary" className="text-xs">Auto-generated</Badge>
                             )}
                             {doc.format && (
-                              <Badge variant="outline" className="text-xs">{doc.format}</Badge>
+                              <Badge variant="outline" className="text-xs uppercase">{doc.format}</Badge>
                             )}
                           </div>
                         </div>
@@ -402,10 +619,10 @@ export function StageDetailPanel({ packageId, stageId, stage, onClose }: StageDe
                   </div>
                 )}
               </ScrollArea>
-            </div>
-          </TabsContent>
-        </Tabs>
-      </CardContent>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
 
       {/* Add Staff Task Dialog */}
       <Dialog open={isAddingTask} onOpenChange={setIsAddingTask}>
@@ -426,12 +643,12 @@ export function StageDetailPanel({ packageId, stageId, stage, onClose }: StageDe
               />
             </div>
             <div className="space-y-2">
-              <Label>Description</Label>
+              <Label>Instructions</Label>
               <Textarea
                 value={taskForm.description}
                 onChange={(e) => setTaskForm({ ...taskForm, description: e.target.value })}
-                placeholder="Describe the task..."
-                rows={2}
+                placeholder="Describe what needs to be done..."
+                rows={3}
               />
             </div>
             <div className="grid grid-cols-2 gap-4">
@@ -439,13 +656,13 @@ export function StageDetailPanel({ packageId, stageId, stage, onClose }: StageDe
                 <Label>Owner Role</Label>
                 <Select 
                   value={taskForm.owner_role} 
-                  onValueChange={(v) => setTaskForm({ ...taskForm, owner_role: v })}
+                  onValueChange={(value) => setTaskForm({ ...taskForm, owner_role: value })}
                 >
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="Super Admin">Super Admin</SelectItem>
+                    <SelectItem value="SuperAdmin">SuperAdmin</SelectItem>
                     <SelectItem value="Admin">Admin</SelectItem>
                     <SelectItem value="CSC">CSC</SelectItem>
                   </SelectContent>
@@ -455,12 +672,20 @@ export function StageDetailPanel({ packageId, stageId, stage, onClose }: StageDe
                 <Label>Estimated Hours</Label>
                 <Input
                   type="number"
-                  step="0.5"
+                  min={0}
+                  step={0.25}
                   value={taskForm.estimated_hours}
                   onChange={(e) => setTaskForm({ ...taskForm, estimated_hours: e.target.value })}
-                  placeholder="e.g., 2.5"
+                  placeholder="e.g., 1.5"
                 />
               </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <Switch
+                checked={taskForm.is_mandatory}
+                onCheckedChange={(checked) => setTaskForm({ ...taskForm, is_mandatory: checked })}
+              />
+              <Label>Mandatory task</Label>
             </div>
           </div>
           <DialogFooter>
@@ -476,7 +701,7 @@ export function StageDetailPanel({ packageId, stageId, stage, onClose }: StageDe
           <DialogHeader>
             <DialogTitle>Add Client Task</DialogTitle>
             <DialogDescription>
-              Create a task visible in the client portal.
+              Create a task visible to tenants in the client portal.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
@@ -493,7 +718,7 @@ export function StageDetailPanel({ packageId, stageId, stage, onClose }: StageDe
               <Textarea
                 value={clientTaskForm.description}
                 onChange={(e) => setClientTaskForm({ ...clientTaskForm, description: e.target.value })}
-                placeholder="Brief description..."
+                placeholder="Brief description of the task..."
                 rows={2}
               />
             </div>
@@ -502,9 +727,22 @@ export function StageDetailPanel({ packageId, stageId, stage, onClose }: StageDe
               <Textarea
                 value={clientTaskForm.instructions}
                 onChange={(e) => setClientTaskForm({ ...clientTaskForm, instructions: e.target.value })}
-                placeholder="Step-by-step instructions for the client..."
+                placeholder="Detailed instructions for the client..."
                 rows={3}
               />
+            </div>
+            <div className="space-y-2">
+              <Label>Due Offset (days)</Label>
+              <Input
+                type="number"
+                min={0}
+                value={clientTaskForm.due_date_offset}
+                onChange={(e) => setClientTaskForm({ ...clientTaskForm, due_date_offset: e.target.value })}
+                placeholder="e.g., 7"
+              />
+              <p className="text-xs text-muted-foreground">
+                Days after stage start when this task is due
+              </p>
             </div>
           </div>
           <DialogFooter>
@@ -518,7 +756,7 @@ export function StageDetailPanel({ packageId, stageId, stage, onClose }: StageDe
       <Dialog open={isAddingEmail} onOpenChange={setIsAddingEmail}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Add Email</DialogTitle>
+            <DialogTitle>Add Email Trigger</DialogTitle>
             <DialogDescription>
               Configure an email to be sent during this stage.
             </DialogDescription>
@@ -528,7 +766,7 @@ export function StageDetailPanel({ packageId, stageId, stage, onClose }: StageDe
               <Label>Email Template *</Label>
               <Select 
                 value={emailForm.email_template_id} 
-                onValueChange={(v) => setEmailForm({ ...emailForm, email_template_id: v })}
+                onValueChange={(value) => setEmailForm({ ...emailForm, email_template_id: value })}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select a template..." />
@@ -547,7 +785,7 @@ export function StageDetailPanel({ packageId, stageId, stage, onClose }: StageDe
                 <Label>Trigger</Label>
                 <Select 
                   value={emailForm.trigger_type} 
-                  onValueChange={(v) => setEmailForm({ ...emailForm, trigger_type: v })}
+                  onValueChange={(value) => setEmailForm({ ...emailForm, trigger_type: value })}
                 >
                   <SelectTrigger>
                     <SelectValue />
@@ -563,14 +801,14 @@ export function StageDetailPanel({ packageId, stageId, stage, onClose }: StageDe
                 <Label>Recipient</Label>
                 <Select 
                   value={emailForm.recipient_type} 
-                  onValueChange={(v) => setEmailForm({ ...emailForm, recipient_type: v })}
+                  onValueChange={(value) => setEmailForm({ ...emailForm, recipient_type: value })}
                 >
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="internal">Internal Team</SelectItem>
-                    <SelectItem value="tenant">Tenant/Client</SelectItem>
+                    <SelectItem value="internal">Internal (Team)</SelectItem>
+                    <SelectItem value="tenant">Tenant</SelectItem>
                     <SelectItem value="both">Both</SelectItem>
                   </SelectContent>
                 </Select>
@@ -583,6 +821,6 @@ export function StageDetailPanel({ packageId, stageId, stage, onClose }: StageDe
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </Card>
+    </div>
   );
 }

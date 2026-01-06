@@ -632,18 +632,22 @@ export function useStageDetail(packageId: number | null, stageId: number | null)
 
     const maxOrder = clientTasks.reduce((max, t) => Math.max(max, t.order_number), -1);
 
+    const insertData: any = {
+      package_id: packageId,
+      stage_id: stageId,
+      name: data.name,
+      description: data.description || null,
+      order_number: maxOrder + 1
+    };
+
+    // Only add optional fields if they exist in the table
+    if (data.instructions !== undefined) insertData.instructions = data.instructions;
+    if (data.due_date_offset !== undefined) insertData.due_date_offset = data.due_date_offset;
+    if (data.required_documents !== undefined) insertData.required_documents = data.required_documents;
+
     const { error } = await supabase
       .from('package_client_tasks')
-      .insert({
-        package_id: packageId,
-        stage_id: stageId,
-        name: data.name,
-        description: data.description,
-        instructions: data.instructions,
-        due_date_offset: data.due_date_offset,
-        order_number: maxOrder + 1,
-        required_documents: data.required_documents
-      });
+      .insert(insertData);
 
     if (error) throw error;
     await fetchStageData();
