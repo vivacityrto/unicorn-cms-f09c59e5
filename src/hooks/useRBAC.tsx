@@ -37,7 +37,7 @@ export const ADMIN_ROUTES = [
   '/audits',
   '/admin/manage-packages',
   '/admin/package-builder',
-  '/admin/manage-emails',
+  '/admin/email-templates',
   '/admin/user-audit',
 ];
 
