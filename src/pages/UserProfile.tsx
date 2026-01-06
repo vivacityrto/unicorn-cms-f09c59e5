@@ -221,6 +221,7 @@ export default function UserProfile() {
             onEditClick={() => setIsEditing(!isEditing)}
             isEditing={isEditing}
             isSuperAdmin={isSuperAdmin}
+            isViewingOwnProfile={user.user_uuid === currentUser.user_uuid}
           />
         </CardContent>
       </Card>

@@ -1,11 +1,22 @@
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Upload, Trash2, Edit2 } from 'lucide-react';
+import { Upload, Trash2, Edit2, UserCheck, UserX } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { useState } from 'react';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 
 interface ProfileHeaderProps {
   user: {
@@ -28,6 +39,7 @@ interface ProfileHeaderProps {
   onEditClick: () => void;
   isEditing: boolean;
   isSuperAdmin?: boolean; // Current user is SuperAdmin
+  isViewingOwnProfile?: boolean; // Whether viewing own profile
 }
 
 const TEAM_LABELS: Record<string, { label: string; color: string }> = {
@@ -38,15 +50,19 @@ const TEAM_LABELS: Record<string, { label: string; color: string }> = {
   other: { label: 'Staff', color: 'bg-gray-500/10 text-gray-700 border-gray-200' },
 };
 
-export function ProfileHeader({ user, tenantName, canEdit, onAvatarChange, onEditClick, isEditing, isSuperAdmin = false }: ProfileHeaderProps) {
+export function ProfileHeader({ user, tenantName, canEdit, onAvatarChange, onEditClick, isEditing, isSuperAdmin = false, isViewingOwnProfile = true }: ProfileHeaderProps) {
   const { toast } = useToast();
   const { refreshProfile, user: authUser } = useAuth();
   const [uploading, setUploading] = useState(false);
+  const [togglingStatus, setTogglingStatus] = useState(false);
   
   // Determine target user for avatar upload
   // SuperAdmin can upload for the viewed user, others can only upload for themselves
   const targetUserId = isSuperAdmin ? user.user_uuid : authUser?.id;
   const isUploadingForSelf = targetUserId === authUser?.id;
+  
+  // Can toggle status if SuperAdmin viewing another user's profile
+  const canToggleStatus = isSuperAdmin && !isViewingOwnProfile;
 
   const initials = `${user.first_name?.[0] || ''}${user.last_name?.[0] || ''}`.toUpperCase() || 'U';
 
@@ -226,6 +242,40 @@ export function ProfileHeader({ user, tenantName, canEdit, onAvatarChange, onEdi
 
   const isActive = !user.disabled && !user.archived;
 
+  const handleToggleStatus = async () => {
+    try {
+      setTogglingStatus(true);
+
+      const { data, error } = await supabase.functions.invoke('toggle-user-status', {
+        body: {
+          user_uuid: user.user_uuid,
+          disabled: !user.disabled,
+        },
+      });
+
+      if (error) throw error;
+
+      if (!data?.ok) {
+        throw new Error(data?.detail || data?.code || 'Failed to update status');
+      }
+
+      toast({
+        title: 'Success',
+        description: `User ${user.disabled ? 'activated' : 'deactivated'} successfully`,
+      });
+
+      onAvatarChange(); // This refreshes the user data
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: error.message,
+        variant: 'destructive',
+      });
+    } finally {
+      setTogglingStatus(false);
+    }
+  };
+
   return (
     <div className="flex flex-col md:flex-row gap-6 items-start">
       {/* Avatar Section */}
@@ -301,8 +351,44 @@ export function ProfileHeader({ user, tenantName, canEdit, onAvatarChange, onEdi
             {user.unicorn_role}
           </Badge>
           
-          <Badge variant={isActive ? 'default' : 'destructive'}>
+          <Badge variant={isActive ? 'default' : 'destructive'} className="gap-1">
             {isActive ? 'Active' : 'Inactive'}
+            {canToggleStatus && (
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <button
+                    className="ml-1 hover:opacity-70 transition-opacity"
+                    disabled={togglingStatus}
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    {isActive ? (
+                      <UserX className="h-3 w-3" />
+                    ) : (
+                      <UserCheck className="h-3 w-3" />
+                    )}
+                  </button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>
+                      {user.disabled ? 'Activate' : 'Deactivate'} User?
+                    </AlertDialogTitle>
+                    <AlertDialogDescription>
+                      {user.disabled 
+                        ? `This will restore access for ${user.first_name} ${user.last_name}.`
+                        : `This will prevent ${user.first_name} ${user.last_name} from accessing the system.`
+                      }
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleToggleStatus} disabled={togglingStatus}>
+                      {togglingStatus ? 'Processing...' : 'Confirm'}
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            )}
           </Badge>
 
           {user.user_type && (
