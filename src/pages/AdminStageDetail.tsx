@@ -1,9 +1,11 @@
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useRBAC } from '@/hooks/useRBAC';
 import { useStageActiveUsage } from '@/hooks/useStageActiveUsage';
 import { useStageCertification } from '@/hooks/useStageCertification';
+import { useStageDuplication } from '@/hooks/useStageDuplication';
+import { useStageReplacement } from '@/hooks/useStageReplacement';
 import { usePackageBuilder, Stage, StaffTask, ClientTask, StageEmail, StageDocument } from '@/hooks/usePackageBuilder';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
@@ -13,6 +15,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -20,10 +23,12 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { 
   ArrowLeft, Layers, ShieldCheck, ShieldX, Settings, Users, CheckSquare, 
   Mail, FileText, BarChart3, History, Copy, AlertTriangle, Plus, Trash2, 
-  User, Clock, GripVertical, Package, Info, Loader2
+  User, Clock, GripVertical, Package, Info, Loader2, RefreshCw, ExternalLink,
+  Archive
 } from 'lucide-react';
 import { StageDocumentsTab } from '@/components/package-builder/StageDocumentsTab';
 
@@ -40,16 +45,20 @@ interface PackageOption {
   id: number;
   name: string;
   status: string;
+  package_type?: string;
 }
 
 export default function AdminStageDetail() {
   const { stage_id } = useParams<{ stage_id: string }>();
   const stageIdNum = stage_id ? parseInt(stage_id) : null;
+  const navigate = useNavigate();
   const { isSuperAdmin } = useRBAC();
   const { toast } = useToast();
-  const { updateStage, createStage, emailTemplates } = usePackageBuilder();
+  const { updateStage, emailTemplates } = usePackageBuilder();
   const { activeUsage } = useStageActiveUsage(stageIdNum);
   const { updateCertification, isUpdating: isCertUpdating } = useStageCertification();
+  const { duplicateAndNavigate, isDuplicating } = useStageDuplication();
+  const { replaceStageInPackages, isReplacing } = useStageReplacement();
   
   const [stage, setStage] = useState<Stage | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -60,13 +69,22 @@ export default function AdminStageDetail() {
   // Package context for editing tasks/emails/documents
   const [selectedPackageId, setSelectedPackageId] = useState<number | null>(null);
   
-  // Edit confirmation
+  // Edit confirmation with typed phrase
   const [editConfirmationOpen, setEditConfirmationOpen] = useState(false);
   const [pendingUpdate, setPendingUpdate] = useState<Partial<Stage> | null>(null);
   const [hasConfirmedEditing, setHasConfirmedEditing] = useState(false);
+  const [confirmPhrase, setConfirmPhrase] = useState('');
   
-  // Duplication state
-  const [isDuplicating, setIsDuplicating] = useState(false);
+  // Replace stage state
+  const [replaceDialogOpen, setReplaceDialogOpen] = useState(false);
+  const [selectedPackagesForReplace, setSelectedPackagesForReplace] = useState<number[]>([]);
+  const [replacementStageId, setReplacementStageId] = useState<number | null>(null);
+  const [allStages, setAllStages] = useState<Stage[]>([]);
+  const [copyContentOnReplace, setCopyContentOnReplace] = useState(true);
+  
+  // Duplicate dialog state
+  const [duplicateDialogOpen, setDuplicateDialogOpen] = useState(false);
+  const [sourcePackageForDupe, setSourcePackageForDupe] = useState<number | null>(null);
   
   // Package-context data
   const [staffTasks, setStaffTasks] = useState<StaffTask[]>([]);
@@ -289,30 +307,47 @@ export default function AdminStageDetail() {
 
   const handleDuplicateStage = async () => {
     if (!stage) return;
-    try {
-      setIsDuplicating(true);
-      const newStage = await createStage({
-        title: `${stage.title} (Copy)`,
-        short_name: stage.short_name,
-        description: stage.description,
-        stage_type: stage.stage_type,
-        video_url: stage.video_url,
-        ai_hint: stage.ai_hint,
-        is_reusable: true,
-        dashboard_visible: stage.dashboard_visible
-      });
+    
+    // If packages exist, show dialog to select source package context
+    if (packagesUsing.length > 0) {
+      setSourcePackageForDupe(packagesUsing[0].id);
+      setDuplicateDialogOpen(true);
+    } else {
+      // No packages, just duplicate the stage shell
+      await duplicateAndNavigate({ sourceStageId: stage.id });
+    }
+  };
+
+  const confirmDuplicate = async () => {
+    if (!stage) return;
+    setDuplicateDialogOpen(false);
+    await duplicateAndNavigate({ 
+      sourceStageId: stage.id, 
+      sourcePackageId: sourcePackageForDupe || undefined 
+    });
+  };
+
+  const handleReplaceInPackages = async () => {
+    if (!stageIdNum || !replacementStageId || selectedPackagesForReplace.length === 0) {
+      toast({ title: 'Error', description: 'Select packages and a replacement stage', variant: 'destructive' });
+      return;
+    }
+
+    const result = await replaceStageInPackages({
+      oldStageId: stageIdNum,
+      newStageId: replacementStageId,
+      packageIds: selectedPackagesForReplace,
+      copyContent: copyContentOnReplace,
+    });
+
+    if (result) {
       toast({
-        title: 'Stage Duplicated',
-        description: `Created "${newStage.title}". You can now edit the copy safely.`
+        title: 'Replacement Complete',
+        description: `Updated ${result.updated} package(s). ${result.skipped} skipped.`,
       });
-    } catch (error: any) {
-      toast({
-        title: 'Error',
-        description: error.message || 'Failed to duplicate stage',
-        variant: 'destructive'
-      });
-    } finally {
-      setIsDuplicating(false);
+      setReplaceDialogOpen(false);
+      setSelectedPackagesForReplace([]);
+      fetchUsageData();
     }
   };
 
