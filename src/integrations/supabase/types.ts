@@ -9285,18 +9285,38 @@ export type Database = {
           total_stages: number
         }[]
       }
+      get_team_users: {
+        Args: never
+        Returns: {
+          avatar_url: string
+          email: string
+          first_name: string
+          is_csc: boolean
+          job_title: string
+          last_name: string
+          superadmin_level: string
+          user_uuid: string
+        }[]
+      }
       get_tenant_csc_profiles: {
         Args: { p_tenant_id?: number }
         Returns: {
           availability_note: string
           avatar_url: string
+          away_message: string
           bio: string
           booking_url: string
+          cover_email: string
+          cover_first_name: string
+          cover_last_name: string
+          cover_user_id: string
           email: string
           first_name: string
           is_primary: boolean
           job_title: string
           last_name: string
+          leave_from: string
+          leave_to: string
           linkedin_url: string
           phone: string
           public_holiday_region: string
@@ -9583,6 +9603,25 @@ export type Database = {
           p_phone?: string
           p_public_holiday_region?: string
           p_response_time_sla?: string
+          p_timezone?: string
+          p_working_days?: Json
+          p_working_hours?: Json
+        }
+        Returns: Json
+      }
+      update_own_team_profile: {
+        Args: {
+          p_availability_note?: string
+          p_away_message?: string
+          p_bio?: string
+          p_booking_url?: string
+          p_cover_user_id?: string
+          p_job_title?: string
+          p_leave_from?: string
+          p_leave_to?: string
+          p_linkedin_url?: string
+          p_phone?: string
+          p_public_holiday_region?: string
           p_timezone?: string
           p_working_days?: Json
           p_working_hours?: Json
