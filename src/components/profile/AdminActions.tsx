@@ -79,10 +79,11 @@ export function AdminActions({
   const [newTenantId, setNewTenantId] = useState(user.tenant_id?.toString() || '');
   const [tenants, setTenants] = useState<Tenant[]>([]);
 
-  const isSuperAdmin = currentUserRole === 'Super Admin' && currentUserType === 'Vivacity';
+  const isSuperAdmin = currentUserRole === 'Super Admin' && 
+    (currentUserType === 'Vivacity' || currentUserType === 'Vivacity Team');
   const isClientAdmin = currentUserRole === 'Admin' && 
-                       currentUserType === 'Client' &&
-                       currentUserTenantId === user.tenant_id;
+    (currentUserType === 'Client' || currentUserType === 'Client Parent') &&
+    currentUserTenantId === user.tenant_id;
 
   const canManage = isSuperAdmin || isClientAdmin;
   const canManageVivacity = isSuperAdmin && user.tenant_id === VIVACITY_TENANT_ID;
