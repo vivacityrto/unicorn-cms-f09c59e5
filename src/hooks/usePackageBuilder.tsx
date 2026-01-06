@@ -704,11 +704,155 @@ export function useStageDetail(packageId: number | null, stageId: number | null)
     await fetchStageData();
   };
 
+  // Stage document functions
+  const [stageDocuments, setStageDocuments] = useState<StageDocument[]>([]);
+
+  const fetchStageDocuments = useCallback(async () => {
+    if (!packageId || !stageId) return;
+
+    const { data, error } = await supabase
+      .from('package_stage_documents' as any)
+      .select(`
+        *,
+        document:documents(id, title, format, category, is_team_only, is_tenant_downloadable, is_auto_generated)
+      `)
+      .eq('package_id', packageId)
+      .eq('stage_id', stageId)
+      .order('sort_order', { ascending: true }) as any;
+
+    if (error) {
+      console.error('Error fetching stage documents:', error);
+      return;
+    }
+    setStageDocuments(data || []);
+  }, [packageId, stageId]);
+
+  useEffect(() => {
+    if (packageId && stageId) {
+      fetchStageDocuments();
+    }
+  }, [fetchStageDocuments, packageId, stageId]);
+
+  const addStageDocument = async (documentId: number, visibility: string = 'both', deliveryType: string = 'manual') => {
+    if (!packageId || !stageId) return;
+
+    const maxOrder = stageDocuments.reduce((max, d) => Math.max(max, d.sort_order), -1);
+
+    const { error } = await (supabase
+      .from('package_stage_documents' as any)
+      .insert({
+        package_id: packageId,
+        stage_id: stageId,
+        document_id: documentId,
+        visibility,
+        delivery_type: deliveryType,
+        sort_order: maxOrder + 1
+      }) as any);
+
+    if (error) {
+      if (error.code === '23505') {
+        throw new Error('This document is already linked to this stage');
+      }
+      throw error;
+    }
+
+    // Log to audit
+    await (supabase
+      .from('package_builder_audit_log' as any)
+      .insert({
+        package_id: packageId,
+        action: 'link',
+        entity_type: 'stage_document',
+        entity_id: documentId.toString(),
+        after_data: { stage_id: stageId, document_id: documentId, visibility, delivery_type: deliveryType }
+      }) as any);
+
+    await fetchStageDocuments();
+  };
+
+  const updateStageDocument = async (id: string, data: { visibility?: string; delivery_type?: string }) => {
+    // Get before state for audit
+    const existing = stageDocuments.find(d => d.id === id);
+    
+    const { error } = await (supabase
+      .from('package_stage_documents' as any)
+      .update(data)
+      .eq('id', id) as any);
+
+    if (error) throw error;
+
+    // Log to audit
+    await (supabase
+      .from('package_builder_audit_log' as any)
+      .insert({
+        package_id: packageId,
+        action: 'update',
+        entity_type: 'stage_document',
+        entity_id: id,
+        before_data: existing ? { visibility: existing.visibility, delivery_type: existing.delivery_type } : null,
+        after_data: data
+      }) as any);
+
+    await fetchStageDocuments();
+  };
+
+  const removeStageDocument = async (id: string, documentId: number) => {
+    const { error } = await (supabase
+      .from('package_stage_documents' as any)
+      .delete()
+      .eq('id', id) as any);
+
+    if (error) throw error;
+
+    // Log to audit
+    await (supabase
+      .from('package_builder_audit_log' as any)
+      .insert({
+        package_id: packageId,
+        action: 'unlink',
+        entity_type: 'stage_document',
+        entity_id: documentId.toString(),
+        before_data: { stage_id: stageId, document_id: documentId }
+      }) as any);
+
+    await fetchStageDocuments();
+  };
+
+  const reorderStageDocuments = async (orderedIds: string[]) => {
+    if (!packageId || !stageId) return;
+
+    const updates = orderedIds.map((id, index) => ({
+      id,
+      sort_order: index
+    }));
+
+    for (const update of updates) {
+      await (supabase
+        .from('package_stage_documents' as any)
+        .update({ sort_order: update.sort_order })
+        .eq('id', update.id) as any);
+    }
+
+    // Log to audit
+    await (supabase
+      .from('package_builder_audit_log' as any)
+      .insert({
+        package_id: packageId,
+        action: 'reorder',
+        entity_type: 'stage_documents',
+        entity_id: stageId.toString(),
+        after_data: { new_order: orderedIds }
+      }) as any);
+
+    await fetchStageDocuments();
+  };
+
   return {
     staffTasks,
     clientTasks,
     stageEmails,
     documents,
+    stageDocuments,
     loading,
     fetchStageData,
     addStaffTask,
@@ -718,6 +862,32 @@ export function useStageDetail(packageId: number | null, stageId: number | null)
     updateClientTask,
     deleteClientTask,
     addStageEmail,
-    removeStageEmail
+    removeStageEmail,
+    addStageDocument,
+    updateStageDocument,
+    removeStageDocument,
+    reorderStageDocuments
+  };
+}
+
+// Type for stage document with joined document data
+export interface StageDocument {
+  id: string;
+  package_id: number;
+  stage_id: number;
+  document_id: number;
+  visibility: 'team_only' | 'tenant_download' | 'both';
+  delivery_type: 'manual' | 'auto_generate';
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+  document: {
+    id: number;
+    title: string;
+    format: string | null;
+    category: string | null;
+    is_team_only: boolean | null;
+    is_tenant_downloadable: boolean | null;
+    is_auto_generated: boolean | null;
   };
 }

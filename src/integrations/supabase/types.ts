@@ -5278,6 +5278,64 @@ export type Database = {
           },
         ]
       }
+      package_stage_documents: {
+        Row: {
+          created_at: string
+          delivery_type: string
+          document_id: number
+          id: string
+          package_id: number
+          sort_order: number
+          stage_id: number
+          updated_at: string
+          visibility: string
+        }
+        Insert: {
+          created_at?: string
+          delivery_type?: string
+          document_id: number
+          id?: string
+          package_id: number
+          sort_order?: number
+          stage_id: number
+          updated_at?: string
+          visibility?: string
+        }
+        Update: {
+          created_at?: string
+          delivery_type?: string
+          document_id?: number
+          id?: string
+          package_id?: number
+          sort_order?: number
+          stage_id?: number
+          updated_at?: string
+          visibility?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "package_stage_documents_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "documents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "package_stage_documents_package_id_fkey"
+            columns: ["package_id"]
+            isOneToOne: false
+            referencedRelation: "packages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "package_stage_documents_stage_id_fkey"
+            columns: ["stage_id"]
+            isOneToOne: false
+            referencedRelation: "documents_stages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       package_stage_emails: {
         Row: {
           created_at: string

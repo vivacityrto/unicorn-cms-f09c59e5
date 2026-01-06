@@ -18,6 +18,7 @@ import {
   X, Plus, Trash2, Users, Mail, FileText, CheckSquare, 
   GripVertical, Clock, User, Loader2, AlertTriangle, Settings, Copy
 } from 'lucide-react';
+import { StageDocumentsTab } from './StageDocumentsTab';
 
 interface StageDetailPanelProps {
   packageId: number;
@@ -43,6 +44,7 @@ export function StageDetailPanel({ packageId, stageId, stage, allStages = [], on
     clientTasks,
     stageEmails,
     documents,
+    stageDocuments,
     loading,
     addStaffTask,
     updateStaffTask,
@@ -51,7 +53,11 @@ export function StageDetailPanel({ packageId, stageId, stage, allStages = [], on
     updateClientTask,
     deleteClientTask,
     addStageEmail,
-    removeStageEmail
+    removeStageEmail,
+    addStageDocument,
+    updateStageDocument,
+    removeStageDocument,
+    reorderStageDocuments
   } = useStageDetail(packageId, stageId);
 
   const [activeTab, setActiveTab] = useState('settings');
@@ -569,58 +575,15 @@ export function StageDetailPanel({ packageId, stageId, stage, allStages = [], on
 
         {/* Documents Tab */}
         <TabsContent value="documents" className="mt-4">
-          <Card>
-            <CardHeader className="pb-3">
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle className="text-base">Documents</CardTitle>
-                  <CardDescription>{documents.length} documents linked</CardDescription>
-                </div>
-                <Button size="sm" disabled>
-                  <Plus className="h-3 w-3 mr-1" />
-                  Link Document
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <ScrollArea className="h-[350px]">
-                {documents.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center py-12 text-center">
-                    <FileText className="h-10 w-10 text-muted-foreground mb-3" />
-                    <p className="text-muted-foreground">No documents linked</p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Link documents from the Document Library
-                    </p>
-                  </div>
-                ) : (
-                  <div className="space-y-2">
-                    {documents.map((doc) => (
-                      <div key={doc.id} className="flex items-start gap-2 p-3 rounded-lg border bg-muted/30">
-                        <FileText className="h-4 w-4 text-muted-foreground mt-0.5" />
-                        <div className="flex-1 min-w-0">
-                          <span className="font-medium block">{doc.title}</span>
-                          <div className="flex items-center gap-2 mt-1">
-                            {doc.is_team_only && (
-                              <Badge variant="outline" className="text-xs">Team Only</Badge>
-                            )}
-                            {doc.is_tenant_downloadable && (
-                              <Badge variant="secondary" className="text-xs">Tenant Download</Badge>
-                            )}
-                            {doc.is_auto_generated && (
-                              <Badge variant="secondary" className="text-xs">Auto-generated</Badge>
-                            )}
-                            {doc.format && (
-                              <Badge variant="outline" className="text-xs uppercase">{doc.format}</Badge>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </ScrollArea>
-            </CardContent>
-          </Card>
+          <StageDocumentsTab
+            packageId={packageId}
+            stageId={stageId}
+            stageDocuments={stageDocuments}
+            onAddDocument={addStageDocument}
+            onUpdateDocument={updateStageDocument}
+            onRemoveDocument={removeStageDocument}
+            onReorderDocuments={reorderStageDocuments}
+          />
         </TabsContent>
       </Tabs>
 
