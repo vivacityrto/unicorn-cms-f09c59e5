@@ -17,7 +17,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useToast } from '@/hooks/use-toast';
-import { Building2, Search, Users, UserCheck, UserX } from 'lucide-react';
+import { Building2, Search, Users, UserCheck, UserX, ArrowUpDown } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 interface TenantUser {
   user_uuid: string;
@@ -39,6 +40,8 @@ interface Tenant {
   name: string;
 }
 
+type SortField = 'name' | 'tenant' | 'role' | 'status' | 'lastLogin';
+
 export default function TenantUsers() {
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -50,6 +53,8 @@ export default function TenantUsers() {
   const [tenantFilter, setTenantFilter] = useState('all');
   const [roleFilter, setRoleFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [sortField, setSortField] = useState<SortField>('name');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
 
   useEffect(() => {
     fetchData();
@@ -57,7 +62,16 @@ export default function TenantUsers() {
 
   useEffect(() => {
     applyFilters();
-  }, [users, searchQuery, tenantFilter, roleFilter, statusFilter]);
+  }, [users, searchQuery, tenantFilter, roleFilter, statusFilter, sortField, sortDirection]);
+
+  const toggleSort = (field: SortField) => {
+    if (sortField === field) {
+      setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortDirection('asc');
+    }
+  };
 
   const fetchData = async () => {
     try {
@@ -148,6 +162,45 @@ export default function TenantUsers() {
     } else if (statusFilter === 'inactive') {
       filtered = filtered.filter(user => user.disabled || user.archived);
     }
+
+    // Sorting
+    filtered.sort((a, b) => {
+      let aVal: string | number;
+      let bVal: string | number;
+
+      switch (sortField) {
+        case 'name':
+          aVal = `${a.first_name} ${a.last_name}`.toLowerCase();
+          bVal = `${b.first_name} ${b.last_name}`.toLowerCase();
+          break;
+        case 'tenant':
+          aVal = a.tenant_name?.toLowerCase() || '';
+          bVal = b.tenant_name?.toLowerCase() || '';
+          break;
+        case 'role':
+          aVal = a.user_type;
+          bVal = b.user_type;
+          break;
+        case 'status':
+          aVal = (a.disabled || a.archived) ? 1 : 0;
+          bVal = (b.disabled || b.archived) ? 1 : 0;
+          break;
+        case 'lastLogin':
+          aVal = a.last_sign_in_at || '';
+          bVal = b.last_sign_in_at || '';
+          break;
+        default:
+          aVal = '';
+          bVal = '';
+      }
+
+      if (typeof aVal === 'string' && typeof bVal === 'string') {
+        const comparison = aVal.localeCompare(bVal);
+        return sortDirection === 'asc' ? comparison : -comparison;
+      }
+
+      return sortDirection === 'asc' ? (aVal as number) - (bVal as number) : (bVal as number) - (aVal as number);
+    });
 
     setFilteredUsers(filtered);
   };
@@ -312,12 +365,37 @@ export default function TenantUsers() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>User</TableHead>
+                  <TableHead>
+                    <Button variant="ghost" size="sm" className="h-8 px-2 -ml-2 hover:bg-transparent" onClick={() => toggleSort('name')}>
+                      User
+                      <ArrowUpDown className="ml-2 h-4 w-4" />
+                    </Button>
+                  </TableHead>
                   <TableHead>Email</TableHead>
-                  <TableHead>Tenant</TableHead>
-                  <TableHead>Role</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Last Login</TableHead>
+                  <TableHead>
+                    <Button variant="ghost" size="sm" className="h-8 px-2 -ml-2 hover:bg-transparent" onClick={() => toggleSort('tenant')}>
+                      Tenant
+                      <ArrowUpDown className="ml-2 h-4 w-4" />
+                    </Button>
+                  </TableHead>
+                  <TableHead>
+                    <Button variant="ghost" size="sm" className="h-8 px-2 -ml-2 hover:bg-transparent" onClick={() => toggleSort('role')}>
+                      Role
+                      <ArrowUpDown className="ml-2 h-4 w-4" />
+                    </Button>
+                  </TableHead>
+                  <TableHead>
+                    <Button variant="ghost" size="sm" className="h-8 px-2 -ml-2 hover:bg-transparent" onClick={() => toggleSort('status')}>
+                      Status
+                      <ArrowUpDown className="ml-2 h-4 w-4" />
+                    </Button>
+                  </TableHead>
+                  <TableHead>
+                    <Button variant="ghost" size="sm" className="h-8 px-2 -ml-2 hover:bg-transparent" onClick={() => toggleSort('lastLogin')}>
+                      Last Login
+                      <ArrowUpDown className="ml-2 h-4 w-4" />
+                    </Button>
+                  </TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
