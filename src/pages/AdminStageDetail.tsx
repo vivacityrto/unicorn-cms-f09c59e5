@@ -74,6 +74,7 @@ export default function AdminStageDetail() {
   const [pendingUpdate, setPendingUpdate] = useState<Partial<Stage> | null>(null);
   const [hasConfirmedEditing, setHasConfirmedEditing] = useState(false);
   const [confirmPhrase, setConfirmPhrase] = useState('');
+  const CONFIRM_PHRASE_REQUIRED = 'EDIT LIVE STAGE';
   
   // Replace stage state
   const [replaceDialogOpen, setReplaceDialogOpen] = useState(false);
@@ -81,10 +82,12 @@ export default function AdminStageDetail() {
   const [replacementStageId, setReplacementStageId] = useState<number | null>(null);
   const [allStages, setAllStages] = useState<Stage[]>([]);
   const [copyContentOnReplace, setCopyContentOnReplace] = useState(true);
+  const [stageSearchQuery, setStageSearchQuery] = useState('');
   
   // Duplicate dialog state
   const [duplicateDialogOpen, setDuplicateDialogOpen] = useState(false);
   const [sourcePackageForDupe, setSourcePackageForDupe] = useState<number | null>(null);
+  const [applyToAllPackages, setApplyToAllPackages] = useState(false);
   
   // Package-context data
   const [staffTasks, setStaffTasks] = useState<StaffTask[]>([]);
@@ -175,6 +178,15 @@ export default function AdminStageDetail() {
           setSelectedPackageId(packagesData[0].id);
         }
       }
+      
+      // Fetch all stages for replacement dropdown
+      const { data: allStagesData } = await supabase
+        .from('documents_stages')
+        .select('*')
+        .eq('is_archived', false)
+        .order('title', { ascending: true });
+      
+      setAllStages((allStagesData || []) as Stage[]);
     } catch (error) {
       console.error('Failed to fetch usage data:', error);
     }
@@ -271,8 +283,19 @@ export default function AdminStageDetail() {
   };
 
   const confirmAndApplyUpdate = async () => {
+    // Validate the typed phrase
+    if (confirmPhrase !== CONFIRM_PHRASE_REQUIRED) {
+      toast({
+        title: 'Confirmation Required',
+        description: `Please type "${CONFIRM_PHRASE_REQUIRED}" to confirm`,
+        variant: 'destructive'
+      });
+      return;
+    }
+    
     setHasConfirmedEditing(true);
     setEditConfirmationOpen(false);
+    setConfirmPhrase('');
     if (pendingUpdate && stage) {
       try {
         await updateStage(stage.id, pendingUpdate);
@@ -323,9 +346,45 @@ export default function AdminStageDetail() {
     setDuplicateDialogOpen(false);
     await duplicateAndNavigate({ 
       sourceStageId: stage.id, 
-      sourcePackageId: sourcePackageForDupe || undefined 
+      sourcePackageId: sourcePackageForDupe || undefined,
+      targetPackageIds: applyToAllPackages ? packagesUsing.map(p => p.id) : undefined
     });
+    setApplyToAllPackages(false);
   };
+
+  const openReplaceDialog = () => {
+    setSelectedPackagesForReplace([]);
+    setReplacementStageId(null);
+    setCopyContentOnReplace(true);
+    setStageSearchQuery('');
+    setReplaceDialogOpen(true);
+  };
+
+  const togglePackageSelection = (pkgId: number) => {
+    setSelectedPackagesForReplace(prev => 
+      prev.includes(pkgId) 
+        ? prev.filter(id => id !== pkgId)
+        : [...prev, pkgId]
+    );
+  };
+
+  const selectAllPackages = () => {
+    setSelectedPackagesForReplace(packagesUsing.map(p => p.id));
+  };
+
+  const selectNonePackages = () => {
+    setSelectedPackagesForReplace([]);
+  };
+
+  const filteredReplacementStages = allStages.filter(s => {
+    if (s.id === stageIdNum) return false; // exclude current stage
+    if (stageSearchQuery) {
+      const query = stageSearchQuery.toLowerCase();
+      return s.title?.toLowerCase().includes(query) || s.stage_key?.toLowerCase().includes(query);
+    }
+    // Default: filter to same stage_type
+    return stage ? s.stage_type === stage.stage_type : true;
+  });
 
   const handleReplaceInPackages = async () => {
     if (!stageIdNum || !replacementStageId || selectedPackagesForReplace.length === 0) {
@@ -1125,18 +1184,21 @@ export default function AdminStageDetail() {
                   )}
                 </div>
 
-                {/* Phase 3 Actions */}
+                {/* Actions */}
                 <div className="pt-4 border-t">
                   <h3 className="font-semibold mb-3">Actions</h3>
                   <div className="flex gap-2">
-                    <Button variant="outline" disabled>
+                    <Button variant="outline" onClick={handleDuplicateStage} disabled={isDuplicating}>
                       <Copy className="h-4 w-4 mr-2" />
-                      Duplicate Stage
-                      <Badge variant="secondary" className="ml-2 text-xs">Phase 3</Badge>
+                      {isDuplicating ? 'Duplicating...' : 'Duplicate Stage'}
                     </Button>
-                    <Button variant="outline" disabled>
+                    <Button 
+                      variant="outline" 
+                      onClick={openReplaceDialog} 
+                      disabled={packagesUsing.length === 0}
+                    >
+                      <RefreshCw className="h-4 w-4 mr-2" />
                       Replace in Packages
-                      <Badge variant="secondary" className="ml-2 text-xs">Phase 3</Badge>
                     </Button>
                   </div>
                 </div>
@@ -1332,39 +1394,270 @@ export default function AdminStageDetail() {
         </DialogContent>
       </Dialog>
 
-      {/* Edit Confirmation Dialog */}
-      <AlertDialog open={editConfirmationOpen} onOpenChange={setEditConfirmationOpen}>
+      {/* Edit Confirmation Dialog with typed phrase */}
+      <AlertDialog open={editConfirmationOpen} onOpenChange={(open) => {
+        setEditConfirmationOpen(open);
+        if (!open) setConfirmPhrase('');
+      }}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2">
               <AlertTriangle className="h-5 w-5 text-destructive" />
               Confirm Edit to Active Stage
             </AlertDialogTitle>
-            <AlertDialogDescription className="space-y-3">
-              <p>
-                This stage is currently being used by <strong>{activeUsage.clients.length} active client{activeUsage.clients.length !== 1 ? 's' : ''}</strong>. 
-                Changes will affect their ongoing packages.
-              </p>
-              {activeUsage.clients.length > 0 && activeUsage.clients.length <= 5 && (
-                <div className="text-sm">
-                  <p className="font-medium mb-1">Affected clients:</p>
-                  <ul className="list-disc list-inside text-muted-foreground">
-                    {activeUsage.clients.map(c => (
-                      <li key={c.tenant_id}>{c.tenant_name}</li>
-                    ))}
-                  </ul>
+            <AlertDialogDescription asChild>
+              <div className="space-y-3">
+                <p>
+                  This stage is currently being used by <strong>{activeUsage.clients.length} active client{activeUsage.clients.length !== 1 ? 's' : ''}</strong>. 
+                  Changes will affect their ongoing packages.
+                </p>
+                {activeUsage.clients.length > 0 && activeUsage.clients.length <= 5 && (
+                  <div className="text-sm">
+                    <p className="font-medium mb-1">Affected clients:</p>
+                    <ul className="list-disc list-inside text-muted-foreground">
+                      {activeUsage.clients.map(c => (
+                        <li key={c.tenant_id}>{c.tenant_name}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                <div className="pt-2">
+                  <p className="text-sm mb-2">Type <strong>{CONFIRM_PHRASE_REQUIRED}</strong> to confirm:</p>
+                  <Input 
+                    value={confirmPhrase}
+                    onChange={(e) => setConfirmPhrase(e.target.value)}
+                    placeholder={CONFIRM_PHRASE_REQUIRED}
+                    className="font-mono"
+                  />
                 </div>
-              )}
+              </div>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmAndApplyUpdate} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+            <AlertDialogAction 
+              onClick={confirmAndApplyUpdate} 
+              disabled={confirmPhrase !== CONFIRM_PHRASE_REQUIRED}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
               Edit Anyway
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Duplicate Stage Dialog */}
+      <Dialog open={duplicateDialogOpen} onOpenChange={setDuplicateDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Copy className="h-5 w-5" />
+              Duplicate Stage
+            </DialogTitle>
+            <DialogDescription>
+              Create a copy of this stage with all its content.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <Alert>
+              <Info className="h-4 w-4" />
+              <AlertDescription>
+                The new stage will not be certified and will have a new unique stage key.
+              </AlertDescription>
+            </Alert>
+            
+            {packagesUsing.length > 0 && (
+              <>
+                <div className="space-y-2">
+                  <Label>Source Package Context</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Select which package's tasks, emails, and documents to copy.
+                  </p>
+                  <Select 
+                    value={sourcePackageForDupe?.toString() || ''} 
+                    onValueChange={(val) => setSourcePackageForDupe(val ? parseInt(val) : null)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select a package..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {packagesUsing.map(pkg => (
+                        <SelectItem key={pkg.id} value={pkg.id.toString()}>
+                          {pkg.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div className="flex items-center gap-3 pt-2">
+                  <Checkbox 
+                    id="applyToAll" 
+                    checked={applyToAllPackages}
+                    onCheckedChange={(checked) => setApplyToAllPackages(checked === true)}
+                  />
+                  <Label htmlFor="applyToAll" className="text-sm cursor-pointer">
+                    Apply copied content to all packages using this stage ({packagesUsing.length})
+                  </Label>
+                </div>
+              </>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDuplicateDialogOpen(false)}>Cancel</Button>
+            <Button onClick={confirmDuplicate} disabled={isDuplicating}>
+              {isDuplicating ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Duplicating...
+                </>
+              ) : (
+                <>
+                  <Copy className="h-4 w-4 mr-2" />
+                  Duplicate
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Replace Stage in Packages Dialog */}
+      <Dialog open={replaceDialogOpen} onOpenChange={setReplaceDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <RefreshCw className="h-5 w-5" />
+              Replace Stage in Packages
+            </DialogTitle>
+            <DialogDescription>
+              Swap this stage for another in selected packages. This only updates package templates, not active client instances.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            {isUsedByActiveClients && (
+              <Alert className="border-amber-500/30 bg-amber-500/5">
+                <AlertTriangle className="h-4 w-4 text-amber-600" />
+                <AlertTitle className="text-amber-800">Active clients warning</AlertTitle>
+                <AlertDescription className="text-amber-700 text-sm">
+                  This will update package templates only. Active client instances will continue using the current stage.
+                </AlertDescription>
+              </Alert>
+            )}
+
+            {/* Package Selection */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label>Select Packages to Update</Label>
+                <div className="flex gap-2">
+                  <Button variant="ghost" size="sm" onClick={selectAllPackages}>Select All</Button>
+                  <Button variant="ghost" size="sm" onClick={selectNonePackages}>Select None</Button>
+                </div>
+              </div>
+              <div className="border rounded-lg divide-y max-h-[200px] overflow-y-auto">
+                {packagesUsing.map(pkg => (
+                  <div 
+                    key={pkg.id} 
+                    className="flex items-center gap-3 p-3 hover:bg-muted/50 cursor-pointer"
+                    onClick={() => togglePackageSelection(pkg.id)}
+                  >
+                    <Checkbox 
+                      checked={selectedPackagesForReplace.includes(pkg.id)}
+                      onCheckedChange={() => togglePackageSelection(pkg.id)}
+                    />
+                    <div className="flex items-center gap-2 flex-1">
+                      <Package className="h-4 w-4 text-muted-foreground" />
+                      <span className="font-medium">{pkg.name}</span>
+                    </div>
+                    <Badge variant="outline" className="text-xs">{pkg.status}</Badge>
+                  </div>
+                ))}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {selectedPackagesForReplace.length} of {packagesUsing.length} packages selected
+              </p>
+            </div>
+
+            {/* Replacement Stage Selection */}
+            <div className="space-y-2">
+              <Label>Replacement Stage</Label>
+              <Input
+                placeholder="Search stages by name or key..."
+                value={stageSearchQuery}
+                onChange={(e) => setStageSearchQuery(e.target.value)}
+                className="mb-2"
+              />
+              <div className="border rounded-lg divide-y max-h-[200px] overflow-y-auto">
+                {filteredReplacementStages.length === 0 ? (
+                  <div className="p-4 text-center text-muted-foreground text-sm">
+                    {stageSearchQuery ? 'No stages match your search' : 'No compatible stages found'}
+                  </div>
+                ) : (
+                  filteredReplacementStages.map(s => (
+                    <div 
+                      key={s.id} 
+                      className={`flex items-center gap-3 p-3 cursor-pointer transition-colors ${
+                        replacementStageId === s.id ? 'bg-primary/10 border-l-2 border-primary' : 'hover:bg-muted/50'
+                      }`}
+                      onClick={() => setReplacementStageId(s.id)}
+                    >
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium">{s.title}</span>
+                          {s.is_certified && (
+                            <Badge className="bg-emerald-500/10 text-emerald-600 border-emerald-500/20 text-xs">
+                              <ShieldCheck className="h-3 w-3 mr-1" />
+                              Certified
+                            </Badge>
+                          )}
+                        </div>
+                        <p className="text-xs text-muted-foreground font-mono">{s.stage_key}</p>
+                      </div>
+                      <Badge variant="outline" className="text-xs capitalize">{s.stage_type}</Badge>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+
+            {/* Copy content option */}
+            <div className="flex items-center gap-3 pt-2">
+              <Checkbox 
+                id="copyContent" 
+                checked={copyContentOnReplace}
+                onCheckedChange={(checked) => setCopyContentOnReplace(checked === true)}
+              />
+              <div>
+                <Label htmlFor="copyContent" className="text-sm cursor-pointer">
+                  Copy stage content to replacement
+                </Label>
+                <p className="text-xs text-muted-foreground">
+                  Copy tasks, emails, and documents from the old stage to the new stage for each package
+                </p>
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setReplaceDialogOpen(false)}>Cancel</Button>
+            <Button 
+              onClick={handleReplaceInPackages} 
+              disabled={isReplacing || selectedPackagesForReplace.length === 0 || !replacementStageId}
+            >
+              {isReplacing ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Replacing...
+                </>
+              ) : (
+                <>
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                  Replace in {selectedPackagesForReplace.length} Package{selectedPackagesForReplace.length !== 1 ? 's' : ''}
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
