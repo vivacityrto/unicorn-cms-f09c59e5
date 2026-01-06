@@ -115,6 +115,11 @@ export function AddStageDialog({
         });
       } else {
         // Create new stage in documents_stages
+        // Generate a stage_key from the title
+        const stageKey = formData.stage_name.toLowerCase()
+          .replace(/[^a-zA-Z0-9]+/g, '-')
+          .replace(/^-+|-+$/g, '') + '-' + Date.now();
+        
         const { data: newStage, error: stageError } = await supabase
           .from('documents_stages')
           .insert({
@@ -125,6 +130,7 @@ export function AddStageDialog({
             status: formData.status,
             is_certified: formData.is_certified,
             certified_notes: formData.is_certified ? formData.certified_notes || null : null,
+            stage_key: stageKey,
           })
           .select('id')
           .single();

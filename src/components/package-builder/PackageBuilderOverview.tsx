@@ -47,6 +47,8 @@ export function PackageBuilderOverview() {
   const [packageToDelete, setPackageToDelete] = useState<Package | null>(null);
   const [packageStagesMap, setPackageStagesMap] = useState<Map<number, PackageStage[]>>(new Map());
 
+  const [stageDocumentCounts, setStageDocumentCounts] = useState<Map<number, number>>(new Map());
+
   // Fetch stages for all packages to compute readiness
   useEffect(() => {
     const fetchAllPackageStages = async () => {
@@ -61,18 +63,37 @@ export function PackageBuilderOverview() {
           sort_order,
           is_required,
           dashboard_group,
-          stage:documents_stages(id, title, stage_type)
+          stage:documents_stages(id, title, stage_type, stage_key)
         `)
         .in('package_id', packages.map(p => p.id)) as any;
 
       if (!error && data) {
         const map = new Map<number, PackageStage[]>();
+        const stageIds = new Set<number>();
+        
         (data as any[]).forEach((ps: any) => {
           const existing = map.get(ps.package_id) || [];
           existing.push(ps);
           map.set(ps.package_id, existing);
+          if (ps.stage_id) stageIds.add(ps.stage_id);
         });
         setPackageStagesMap(map);
+        
+        // Fetch document counts for stages
+        if (stageIds.size > 0) {
+          const { data: docData } = await supabase
+            .from('stage_documents' as any)
+            .select('stage_id')
+            .in('stage_id', Array.from(stageIds)) as any;
+          
+          if (docData) {
+            const docCounts = new Map<number, number>();
+            (docData as any[]).forEach((d: any) => {
+              docCounts.set(d.stage_id, (docCounts.get(d.stage_id) || 0) + 1);
+            });
+            setStageDocumentCounts(docCounts);
+          }
+        }
       }
     };
 
@@ -84,10 +105,15 @@ export function PackageBuilderOverview() {
     const readinessMap = new Map<number, ReadinessResult>();
     packages.forEach(pkg => {
       const stages = packageStagesMap.get(pkg.id) || [];
-      readinessMap.set(pkg.id, computePackageReadiness(stages));
+      // Add stage_id to each stage for document count lookup
+      const stagesWithIds = stages.map(s => ({
+        ...s,
+        stage_id: s.stage_id
+      }));
+      readinessMap.set(pkg.id, computePackageReadiness(stagesWithIds, undefined, stageDocumentCounts));
     });
     return readinessMap;
-  }, [packages, packageStagesMap]);
+  }, [packages, packageStagesMap, stageDocumentCounts]);
 
   const filteredPackages = useMemo(() => {
     return packages.filter(pkg => {

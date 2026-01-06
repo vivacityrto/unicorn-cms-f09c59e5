@@ -2572,9 +2572,10 @@ export type Database = {
           dashboard_visible: boolean | null
           description: string | null
           id: number
-          is_certified: boolean | null
+          is_certified: boolean
           is_reusable: boolean | null
           short_name: string | null
+          stage_key: string
           stage_type: string | null
           status: string | null
           title: string
@@ -2589,9 +2590,10 @@ export type Database = {
           dashboard_visible?: boolean | null
           description?: string | null
           id?: never
-          is_certified?: boolean | null
+          is_certified?: boolean
           is_reusable?: boolean | null
           short_name?: string | null
+          stage_key: string
           stage_type?: string | null
           status?: string | null
           title: string
@@ -2606,9 +2608,10 @@ export type Database = {
           dashboard_visible?: boolean | null
           description?: string | null
           id?: never
-          is_certified?: boolean | null
+          is_certified?: boolean
           is_reusable?: boolean | null
           short_name?: string | null
+          stage_key?: string
           stage_type?: string | null
           status?: string | null
           title?: string
@@ -10531,6 +10534,14 @@ export type Database = {
             }
             Returns: Json
           }
+      update_stage_certification: {
+        Args: {
+          p_certified_notes?: string
+          p_is_certified: boolean
+          p_stage_id: number
+        }
+        Returns: Json
+      }
       update_team_member_profile: {
         Args: {
           p_availability_note?: string

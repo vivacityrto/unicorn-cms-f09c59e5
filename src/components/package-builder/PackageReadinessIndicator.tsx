@@ -11,17 +11,26 @@ export interface ReadinessResult {
 }
 
 interface PackageStageForReadiness {
+  stage_id?: number;
   stage?: {
     stage_type?: string;
     title?: string;
+    stage_key?: string;
   };
   // For checking client tasks in onboarding
   clientTaskCount?: number;
 }
 
+// Stage keys that qualify as documentation stages
+const DOCUMENTATION_STAGE_KEYS = [
+  'rto-documentation-2025',
+  'membership-support-ongoing'
+];
+
 export function computePackageReadiness(
   packageStages: PackageStageForReadiness[],
-  clientTaskCounts?: Map<number, number>
+  clientTaskCounts?: Map<number, number>,
+  stageDocumentCounts?: Map<number, number>
 ): ReadinessResult {
   const issues: string[] = [];
   let hasRisk = false;
@@ -62,8 +71,41 @@ export function computePackageReadiness(
       const type = ps.stage?.stage_type?.toLowerCase();
       return type === 'onboarding' || type?.includes('onboard');
     });
-    // If we have task count info, check if onboarding has client tasks
-    // This check only applies when we have the data available
+    if (onboardingStage?.stage_id) {
+      const taskCount = clientTaskCounts.get(onboardingStage.stage_id) || 0;
+      if (taskCount === 0) {
+        issues.push('No client tasks in onboarding stage');
+        hasRisk = true;
+      }
+    }
+  }
+
+  // Check if documentation stage has linked documents
+  if (hasDocumentation && stageDocumentCounts) {
+    // Find documentation stages
+    const documentationStages = packageStages.filter(ps => {
+      const type = ps.stage?.stage_type?.toLowerCase();
+      const stageKey = ps.stage?.stage_key;
+      
+      // Check by type or by known documentation stage_keys
+      return type === 'delivery' || 
+             type === 'documentation' || 
+             type?.includes('document') ||
+             DOCUMENTATION_STAGE_KEYS.includes(stageKey || '');
+    });
+
+    // Check if any documentation stage has 0 documents
+    for (const docStage of documentationStages) {
+      if (docStage.stage_id) {
+        const docCount = stageDocumentCounts.get(docStage.stage_id) || 0;
+        if (docCount === 0) {
+          const stageName = docStage.stage?.title || 'Documentation stage';
+          issues.push(`${stageName} has no documents linked`);
+          hasIncomplete = true;
+          break; // Only report first issue
+        }
+      }
+    }
   }
 
   // Determine final status
@@ -160,14 +202,14 @@ export function PackageReadinessSummary({ status, issues }: PackageReadinessSumm
         return {
           icon: <XCircle className="h-4 w-4" />,
           label: 'Package Incomplete',
-          description: 'Missing required stages',
+          description: 'Missing required stages or documents',
           className: 'border-amber-500/30 bg-amber-500/5 text-amber-700'
         };
       case 'risk':
         return {
           icon: <AlertTriangle className="h-4 w-4" />,
           label: 'Package at Risk',
-          description: 'Missing recommended stages',
+          description: 'Missing recommended stages or tasks',
           className: 'border-red-500/30 bg-red-500/5 text-red-700'
         };
     }

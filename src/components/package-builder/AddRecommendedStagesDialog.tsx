@@ -6,22 +6,31 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { CheckCircle2, ShieldCheck, Plus, AlertCircle } from 'lucide-react';
 import { Stage } from '@/hooks/usePackageBuilder';
 
-// Recommended stage sets by package type (matched by title)
-const RECOMMENDED_STAGES: Record<string, string[]> = {
+// Recommended stage sets by package type (matched by stable stage_key)
+const RECOMMENDED_STAGE_KEYS: Record<string, string[]> = {
   rto: [
-    'Onboarding – Client Commencement',
-    'RTO Documentation – 2025',
-    'Offboarding – Client Closure'
+    'onboarding-client-commencement',
+    'rto-documentation-2025',
+    'offboarding-client-closure'
   ],
   membership: [
-    'Onboarding – Client Commencement',
-    'Membership Support – Ongoing',
-    'Offboarding – Client Closure'
+    'onboarding-client-commencement',
+    'membership-support-ongoing',
+    'offboarding-client-closure'
   ]
 };
 
+// Human-readable titles for stage_keys (used when stage not found)
+const STAGE_KEY_LABELS: Record<string, string> = {
+  'onboarding-client-commencement': 'Onboarding – Client Commencement',
+  'rto-documentation-2025': 'RTO Documentation – 2025',
+  'offboarding-client-closure': 'Offboarding – Client Closure',
+  'membership-support-ongoing': 'Membership Support – Ongoing'
+};
+
 interface StageMatch {
-  title: string;
+  stageKey: string;
+  displayTitle: string;
   stage: Stage | null;
   alreadyInPackage: boolean;
   isCertified: boolean;
@@ -50,24 +59,29 @@ export function AddRecommendedStagesDialog({
   useEffect(() => {
     if (!open) return;
 
-    // Get recommended titles for this package type
-    const recommendedTitles = RECOMMENDED_STAGES[packageType?.toLowerCase()] || [];
+    // Get recommended stage_keys for this package type
+    const recommendedKeys = RECOMMENDED_STAGE_KEYS[packageType?.toLowerCase()] || [];
 
-    // Match titles to actual stages, preferring certified ones
-    const matches: StageMatch[] = recommendedTitles.map(title => {
-      // Find all stages matching this title
-      const matchingStages = allStages.filter(s => 
-        s.title?.toLowerCase() === title.toLowerCase()
-      );
-
-      // Prefer certified stages
-      const certifiedMatch = matchingStages.find(s => s.is_certified);
-      const bestMatch = certifiedMatch || matchingStages[0] || null;
+    // Match stage_keys to actual stages, preferring certified ones
+    const matches: StageMatch[] = recommendedKeys.map(stageKey => {
+      // Find stage by stage_key
+      const matchedStage = allStages.find(s => s.stage_key === stageKey);
+      
+      // If no exact match, try to find by certified + partial match as fallback
+      let bestMatch = matchedStage;
+      if (!bestMatch) {
+        // Fallback: look for certified stages with matching key pattern
+        bestMatch = allStages.find(s => 
+          s.stage_key?.startsWith(stageKey) && s.is_certified
+        ) || null;
+      }
 
       const alreadyInPackage = bestMatch ? existingStageIds.includes(bestMatch.id) : false;
+      const displayTitle = STAGE_KEY_LABELS[stageKey] || stageKey;
 
       return {
-        title,
+        stageKey,
+        displayTitle,
         stage: bestMatch,
         alreadyInPackage,
         isCertified: bestMatch?.is_certified || false
@@ -93,7 +107,7 @@ export function AddRecommendedStagesDialog({
     }
   };
 
-  const hasRecommendations = RECOMMENDED_STAGES[packageType?.toLowerCase()];
+  const hasRecommendations = RECOMMENDED_STAGE_KEYS[packageType?.toLowerCase()];
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -134,7 +148,7 @@ export function AddRecommendedStagesDialog({
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
                       <span className={`font-medium text-sm ${match.alreadyInPackage ? 'text-muted-foreground' : ''}`}>
-                        {match.title}
+                        {match.stage?.title || match.displayTitle}
                       </span>
                       {match.isCertified && (
                         <Badge variant="outline" className="text-xs bg-emerald-500/10 text-emerald-600 border-emerald-500/20">
@@ -148,7 +162,7 @@ export function AddRecommendedStagesDialog({
                         ? 'Already in package'
                         : match.stage 
                           ? 'Will be added'
-                          : 'Stage not found in library'
+                          : `Missing recommended stage template (${match.stageKey})`
                       }
                     </p>
                   </div>
@@ -157,7 +171,7 @@ export function AddRecommendedStagesDialog({
 
               {missingStages.length > 0 && (
                 <p className="text-xs text-muted-foreground pt-2">
-                  Some stages don't exist yet. Create them in the Stage Library first.
+                  Some recommended stages don't exist in the library. Create them with the correct stage_key first.
                 </p>
               )}
             </div>

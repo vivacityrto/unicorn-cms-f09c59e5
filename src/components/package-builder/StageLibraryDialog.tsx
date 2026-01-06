@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
 import { usePackageBuilder, Stage } from '@/hooks/usePackageBuilder';
+import { useAuth } from '@/hooks/useAuth';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -36,6 +37,7 @@ export function StageLibraryDialog({
   existingStageIds 
 }: StageLibraryDialogProps) {
   const { toast } = useToast();
+  const { isSuperAdmin } = useAuth();
   const { stages, createStage } = usePackageBuilder();
   
   const [activeTab, setActiveTab] = useState('library');
@@ -95,6 +97,15 @@ export function StageLibraryDialog({
 
     try {
       setIsCreating(true);
+      // Only allow certification fields if SuperAdmin
+      const certificationData = isSuperAdmin() ? {
+        is_certified: newStage.is_certified,
+        certified_notes: newStage.is_certified ? newStage.certified_notes : null
+      } : {
+        is_certified: false,
+        certified_notes: null
+      };
+      
       const created = await createStage({
         title: newStage.title,
         short_name: newStage.short_name,
@@ -104,8 +115,7 @@ export function StageLibraryDialog({
         ai_hint: newStage.ai_hint,
         is_reusable: true,
         dashboard_visible: true,
-        is_certified: newStage.is_certified,
-        certified_notes: newStage.is_certified ? newStage.certified_notes : null
+        ...certificationData
       });
 
       toast({
