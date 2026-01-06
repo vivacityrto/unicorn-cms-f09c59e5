@@ -27,6 +27,7 @@ interface ProfileHeaderProps {
   onAvatarChange: () => void;
   onEditClick: () => void;
   isEditing: boolean;
+  isSuperAdmin?: boolean; // Current user is SuperAdmin
 }
 
 const TEAM_LABELS: Record<string, { label: string; color: string }> = {
@@ -37,10 +38,15 @@ const TEAM_LABELS: Record<string, { label: string; color: string }> = {
   other: { label: 'Staff', color: 'bg-gray-500/10 text-gray-700 border-gray-200' },
 };
 
-export function ProfileHeader({ user, tenantName, canEdit, onAvatarChange, onEditClick, isEditing }: ProfileHeaderProps) {
+export function ProfileHeader({ user, tenantName, canEdit, onAvatarChange, onEditClick, isEditing, isSuperAdmin = false }: ProfileHeaderProps) {
   const { toast } = useToast();
-  const { refreshProfile } = useAuth();
+  const { refreshProfile, user: authUser } = useAuth();
   const [uploading, setUploading] = useState(false);
+  
+  // Determine target user for avatar upload
+  // SuperAdmin can upload for the viewed user, others can only upload for themselves
+  const targetUserId = isSuperAdmin ? user.user_uuid : authUser?.id;
+  const isUploadingForSelf = targetUserId === authUser?.id;
 
   const initials = `${user.first_name?.[0] || ''}${user.last_name?.[0] || ''}`.toUpperCase() || 'U';
 
@@ -83,11 +89,13 @@ export function ProfileHeader({ user, tenantName, canEdit, onAvatarChange, onEdi
     try {
       setUploading(true);
 
-      // Upload to avatars bucket with user folder structure
-      // Path must start with auth.uid() for RLS policy to allow upload
+      // Upload to avatars bucket with target user folder structure
+      // SuperAdmin can upload for any user, others only for themselves
       const fileExt = file.name.split('.').pop()?.toLowerCase() || 'jpg';
       const fileName = `profile.${fileExt}`;
-      const filePath = `${user.user_uuid}/${fileName}`;
+      const filePath = `${targetUserId}/${fileName}`;
+      
+      console.log(`[Avatar Upload] Target user: ${targetUserId}, Current user: ${authUser?.id}, SuperAdmin: ${isSuperAdmin}`);
 
       const { error: uploadError } = await supabase.storage
         .from('avatars')
@@ -96,18 +104,19 @@ export function ProfileHeader({ user, tenantName, canEdit, onAvatarChange, onEdi
       if (uploadError) {
         console.error('Avatar upload error:', uploadError);
         
-        // Provide clear error messages for common issues
-        let errorMsg = 'Failed to upload avatar';
+        // Provide clear error messages with original error
+        let guidance = '';
         if (uploadError.message.includes('row-level security') || uploadError.message.includes('policy')) {
-          errorMsg = 'Permission denied: You can only upload your own avatar.';
+          guidance = isSuperAdmin 
+            ? 'SuperAdmin permission check failed. Contact support.'
+            : 'You can only upload your own avatar.';
         } else if (uploadError.message.includes('Payload too large')) {
-          errorMsg = 'File is too large. Please use an image under 5MB.';
+          guidance = 'Please use an image under 5MB.';
         } else if (uploadError.message.includes('mime')) {
-          errorMsg = 'Invalid file type. Please upload a JPEG, PNG, GIF, or WebP image.';
-        } else if (uploadError.message) {
-          errorMsg = uploadError.message;
+          guidance = 'Please upload a JPEG, PNG, GIF, or WebP image.';
         }
-        throw new Error(errorMsg);
+        
+        throw new Error(guidance ? `${uploadError.message}\n${guidance}` : uploadError.message);
       }
 
       // Get public URL and update user record
@@ -151,6 +160,8 @@ export function ProfileHeader({ user, tenantName, canEdit, onAvatarChange, onEdi
   const handleAvatarDelete = async () => {
     try {
       setUploading(true);
+      
+      console.log(`[Avatar Delete] Target user: ${user.user_uuid}, Current user: ${authUser?.id}, SuperAdmin: ${isSuperAdmin}`);
 
       // Delete from storage
       if (user.avatar_url) {
@@ -163,7 +174,11 @@ export function ProfileHeader({ user, tenantName, canEdit, onAvatarChange, onEdi
           
           if (deleteError) {
             console.error('Avatar delete error:', deleteError);
-            // Continue - we'll still clear the URL
+            // SuperAdmin should have permission, show error if it fails
+            if (!isSuperAdmin && (deleteError.message.includes('policy') || deleteError.message.includes('security'))) {
+              throw new Error('Permission denied: You can only delete your own avatar.');
+            }
+            // Continue for other errors - we'll still clear the URL
           }
         }
       }
