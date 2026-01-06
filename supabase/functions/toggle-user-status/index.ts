@@ -45,7 +45,7 @@ Deno.serve(async (req) => {
       .single();
 
     const isSuperAdmin = currentUserData?.unicorn_role === "Super Admin" && 
-                        currentUserData?.user_type === "Vivacity";
+                        (currentUserData?.user_type === "Vivacity" || currentUserData?.user_type === "Vivacity Team");
 
     // Get target user's tenant
     const { data: targetUserData } = await supabase
