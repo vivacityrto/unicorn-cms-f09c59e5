@@ -287,6 +287,7 @@ export default function ClientDetail() {
           <TabsContent value="packages" className="mt-0">
             <ClientPackagesTab
               tenantId={tenantIdNum!}
+              tenantName={tenant.name}
               packages={packages}
               loading={packagesLoading}
             />

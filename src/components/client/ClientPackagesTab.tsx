@@ -16,14 +16,18 @@ import {
   Plus,
   PlayCircle,
   PauseCircle,
-  Settings
+  Settings,
+  Rocket
 } from 'lucide-react';
 import { ClientPackage } from '@/hooks/useClientManagement';
 import { PackageStagesManager } from './PackageStagesManager';
+import { StartPackageDialog } from './StartPackageDialog';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '@/hooks/useAuth';
 
 interface ClientPackagesTabProps {
   tenantId: number;
+  tenantName?: string;
   packages: ClientPackage[];
   loading: boolean;
   onAddPackage?: () => void;
@@ -43,9 +47,11 @@ const STATE_ICONS: Record<string, React.ReactNode> = {
   exiting: <AlertCircle className="h-3 w-3" />
 };
 
-export function ClientPackagesTab({ tenantId, packages, loading, onAddPackage }: ClientPackagesTabProps) {
+export function ClientPackagesTab({ tenantId, tenantName, packages, loading, onAddPackage }: ClientPackagesTabProps) {
   const navigate = useNavigate();
+  const { isSuperAdmin } = useAuth();
   const [expandedPackages, setExpandedPackages] = useState<Set<number>>(new Set());
+  const [startPackageOpen, setStartPackageOpen] = useState(false);
 
   const togglePackage = (packageId: number) => {
     const newExpanded = new Set(expandedPackages);
@@ -93,15 +99,29 @@ export function ClientPackagesTab({ tenantId, packages, loading, onAddPackage }:
 
   return (
     <div className="space-y-4">
-      {/* Header with Add button */}
-      {onAddPackage && (
-        <div className="flex justify-end">
+      {/* Header with buttons */}
+      <div className="flex justify-end gap-2">
+        {isSuperAdmin() && (
+          <Button onClick={() => setStartPackageOpen(true)}>
+            <Rocket className="h-4 w-4 mr-2" />
+            Start Package
+          </Button>
+        )}
+        {onAddPackage && (
           <Button variant="outline" onClick={onAddPackage}>
             <Plus className="h-4 w-4 mr-2" />
             Add Package
           </Button>
-        </div>
-      )}
+        )}
+      </div>
+
+      {/* Start Package Dialog */}
+      <StartPackageDialog
+        open={startPackageOpen}
+        onOpenChange={setStartPackageOpen}
+        tenantId={tenantId}
+        tenantName={tenantName || 'Client'}
+      />
 
       {/* Package Cards */}
       {packages.map((pkg) => {
