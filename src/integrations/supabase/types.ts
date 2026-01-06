@@ -6958,6 +6958,39 @@ export type Database = {
         }
         Relationships: []
       }
+      system_reference_lists: {
+        Row: {
+          created_at: string
+          description: string | null
+          display_name: string
+          id: string
+          is_active: boolean
+          list_key: string
+          updated_at: string
+          values: string[]
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          display_name: string
+          id?: string
+          is_active?: boolean
+          list_key: string
+          updated_at?: string
+          values?: string[]
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          display_name?: string
+          id?: string
+          is_active?: boolean
+          list_key?: string
+          updated_at?: string
+          values?: string[]
+        }
+        Relationships: []
+      }
       task_evidence: {
         Row: {
           file_name: string
