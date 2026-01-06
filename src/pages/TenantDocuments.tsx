@@ -1,15 +1,17 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Search, FileText, Download, Calendar, Trash2, GripVertical, CheckCircle2, XCircle, Tag } from "lucide-react";
+import { ArrowLeft, Search, FileText, Download, Trash2, CheckCircle2, XCircle, Tag, AlertCircle, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { CreateDocumentDialog2 } from "@/components/CreateDocumentDialog2";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
+import { MissingMergeFieldsDialog } from "@/components/tenant/MissingMergeFieldsDialog";
+import { useMissingMergeFields, MissingField } from "@/hooks/useMissingMergeFields";
 
 interface Document {
   id: number;
@@ -23,6 +25,8 @@ interface Document {
   createdat: string | null;
   isclientdoc: boolean | null;
   package_name?: string | null;
+  merge_fields?: any;
+  is_auto_generated?: boolean | null;
 }
 
 export default function TenantDocuments() {
@@ -39,9 +43,46 @@ export default function TenantDocuments() {
   const [packageId, setPackageId] = useState<number | null>(null);
   const [filesDialogOpen, setFilesDialogOpen] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState<string[]>([]);
+  
+  // Missing merge fields state
+  const [missingFieldsDialogOpen, setMissingFieldsDialogOpen] = useState(false);
+  const [selectedDocForMerge, setSelectedDocForMerge] = useState<Document | null>(null);
+  const [missingFieldsList, setMissingFieldsList] = useState<MissingField[]>([]);
+  const [documentMissingFields, setDocumentMissingFields] = useState<Record<number, MissingField[]>>({});
+  const [checkingFields, setCheckingFields] = useState(false);
+
+  const parsedTenantId = tenantId ? parseInt(tenantId) : null;
+  const { detectMissingFields } = useMissingMergeFields(parsedTenantId);
 
   // Get packageId from URL params if provided
   const urlPackageId = searchParams.get('packageId');
+
+  // Check missing fields for all documents after loading
+  const checkAllMissingFields = useCallback(async (docs: Document[]) => {
+    if (!parsedTenantId || docs.length === 0) return;
+    
+    setCheckingFields(true);
+    const missingByDoc: Record<number, MissingField[]> = {};
+    
+    for (const doc of docs) {
+      if (doc.is_auto_generated && doc.merge_fields) {
+        // Extract merge field codes from document
+        const docFieldCodes = Array.isArray(doc.merge_fields) 
+          ? doc.merge_fields 
+          : Object.keys(doc.merge_fields);
+        
+        if (docFieldCodes.length > 0) {
+          const missing = await detectMissingFields(docFieldCodes);
+          if (missing.length > 0) {
+            missingByDoc[doc.id] = missing;
+          }
+        }
+      }
+    }
+    
+    setDocumentMissingFields(missingByDoc);
+    setCheckingFields(false);
+  }, [parsedTenantId, detectMissingFields]);
 
   useEffect(() => {
     fetchData();
@@ -83,6 +124,9 @@ export default function TenantDocuments() {
           }));
           
           setDocuments(docsWithPackage);
+          
+          // Check for missing merge fields in auto-generate documents
+          checkAllMissingFields(docsWithPackage);
         }
       }
     } catch (error: any) {
@@ -95,6 +139,19 @@ export default function TenantDocuments() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleOpenMissingFields = (doc: Document, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const missing = documentMissingFields[doc.id] || [];
+    setSelectedDocForMerge(doc);
+    setMissingFieldsList(missing);
+    setMissingFieldsDialogOpen(true);
+  };
+
+  const handleMissingFieldsSuccess = () => {
+    // Refresh documents and re-check missing fields
+    fetchData();
   };
 
   const handleDelete = async (documentId: number) => {
@@ -206,10 +263,10 @@ export default function TenantDocuments() {
               <TableHead className="font-semibold bg-muted/30 text-foreground h-14 whitespace-nowrap border-r min-w-[250px]">Description</TableHead>
               <TableHead className="font-semibold bg-muted/30 text-foreground h-14 whitespace-nowrap border-r w-32">Category</TableHead>
               <TableHead className="font-semibold bg-muted/30 text-foreground h-14 whitespace-nowrap border-r w-40">Package</TableHead>
-              <TableHead className="font-semibold bg-muted/30 text-foreground h-14 whitespace-nowrap border-r w-24">Released</TableHead>
+              <TableHead className="font-semibold bg-muted/30 text-foreground h-14 whitespace-nowrap border-r w-36">Status</TableHead>
               <TableHead className="font-semibold bg-muted/30 text-foreground h-14 whitespace-nowrap border-r min-w-[180px]">Files</TableHead>
               <TableHead className="font-semibold bg-muted/30 text-foreground h-14 whitespace-nowrap border-r w-32">Created</TableHead>
-              <TableHead className="font-semibold bg-muted/30 text-foreground h-14 whitespace-nowrap w-32">Actions</TableHead>
+              <TableHead className="font-semibold bg-muted/30 text-foreground h-14 whitespace-nowrap w-48">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -264,12 +321,32 @@ export default function TenantDocuments() {
                       <span className="text-muted-foreground text-sm">—</span>
                     )}
                   </TableCell>
-                  <TableCell className="py-6 border-r border-border/50 text-center">
-                    {doc.is_released ? (
-                      <CheckCircle2 className="h-5 w-5 text-green-600 mx-auto" />
-                    ) : (
-                      <XCircle className="h-5 w-5 text-muted-foreground mx-auto" />
-                    )}
+                  <TableCell className="py-6 border-r border-border/50 whitespace-nowrap">
+                    {(() => {
+                      const hasMissingFields = documentMissingFields[doc.id]?.length > 0;
+                      if (checkingFields) {
+                        return (
+                          <Badge variant="secondary" className="text-xs">
+                            <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                            Checking...
+                          </Badge>
+                        );
+                      }
+                      if (hasMissingFields) {
+                        return (
+                          <Badge variant="outline" className="bg-amber-500/10 text-amber-600 border-amber-500 text-xs">
+                            <AlertCircle className="h-3 w-3 mr-1" />
+                            Pending Info
+                          </Badge>
+                        );
+                      }
+                      return (
+                        <Badge variant="outline" className="bg-green-500/10 text-green-600 border-green-500 text-xs">
+                          <CheckCircle2 className="h-3 w-3 mr-1" />
+                          Ready
+                        </Badge>
+                      );
+                    })()}
                   </TableCell>
                   <TableCell className="py-6 border-r border-border/50 whitespace-nowrap">
                     {doc.uploaded_files && doc.uploaded_files.length > 0 ? (
@@ -299,6 +376,17 @@ export default function TenantDocuments() {
                   </TableCell>
                   <TableCell className="py-6">
                     <div className="flex items-center gap-1">
+                      {documentMissingFields[doc.id]?.length > 0 && (
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={(e) => handleOpenMissingFields(doc, e)}
+                          className="text-xs bg-amber-500/10 text-amber-600 border-amber-500 hover:bg-amber-500/20"
+                        >
+                          <AlertCircle className="h-3 w-3 mr-1" />
+                          Provide Info
+                        </Button>
+                      )}
                       <Button 
                         variant="ghost" 
                         size="sm"
@@ -369,6 +457,21 @@ export default function TenantDocuments() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Missing Merge Fields Dialog */}
+      {parsedTenantId && selectedDocForMerge && (
+        <MissingMergeFieldsDialog
+          open={missingFieldsDialogOpen}
+          onOpenChange={setMissingFieldsDialogOpen}
+          tenantId={parsedTenantId}
+          documentName={selectedDocForMerge.title}
+          documentId={selectedDocForMerge.id}
+          stageId={selectedDocForMerge.stage || undefined}
+          packageId={selectedDocForMerge.package_id || undefined}
+          missingFields={missingFieldsList}
+          onSuccess={handleMissingFieldsSuccess}
+        />
+      )}
     </div>
   );
 }

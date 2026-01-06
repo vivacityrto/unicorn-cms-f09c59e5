@@ -66,6 +66,21 @@ Deno.serve(async (req: Request) => {
 
     console.log('Client data fetched:', client.companyname);
 
+    // 2b. Fetch any supplementary merge data from tenant_merge_data
+    const { data: tenantMergeData, error: mergeDataError } = await supabase
+      .from('tenant_merge_data')
+      .select('data')
+      .eq('tenant_id', tenant_id)
+      .single();
+
+    if (mergeDataError && mergeDataError.code !== 'PGRST116') {
+      console.warn('Could not fetch tenant merge data:', mergeDataError.message);
+    }
+
+    // Combine client data with tenant-supplied merge data (tenant data takes priority)
+    const combinedClientData = { ...client, ...(tenantMergeData?.data || {}) };
+    console.log('Combined data sources for merge fields');
+
     // 3. Fetch merge field definitions
     const { data: mergeFields, error: fieldsError } = await supabase
       .from('merge_field_definitions')
@@ -79,7 +94,7 @@ Deno.serve(async (req: Request) => {
     // 4. Build merge data object
     const mergeData: Record<string, string> = {};
     (mergeFields || []).forEach((field: { code: string; source_column: string }) => {
-      const value = (client as Record<string, unknown>)[field.source_column];
+      const value = (combinedClientData as Record<string, unknown>)[field.source_column];
       mergeData[field.code] = value !== null && value !== undefined ? String(value) : '';
     });
 
