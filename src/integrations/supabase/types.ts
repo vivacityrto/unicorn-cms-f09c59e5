@@ -5428,6 +5428,7 @@ export type Database = {
           bio: string | null
           created_at: string | null
           email: string | null
+          global_role: string | null
           id: number
           role: string | null
           updated_at: string | null
@@ -5441,6 +5442,7 @@ export type Database = {
           bio?: string | null
           created_at?: string | null
           email?: string | null
+          global_role?: string | null
           id?: number
           role?: string | null
           updated_at?: string | null
@@ -5454,6 +5456,7 @@ export type Database = {
           bio?: string | null
           created_at?: string | null
           email?: string | null
+          global_role?: string | null
           id?: number
           role?: string | null
           updated_at?: string | null
