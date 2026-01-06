@@ -2036,8 +2036,12 @@ export type Database = {
           file_names: string[] | null
           format: string | null
           id: number
+          is_auto_generated: boolean | null
           is_released: boolean | null
+          is_team_only: boolean | null
+          is_tenant_downloadable: boolean | null
           isclientdoc: boolean | null
+          merge_fields: Json | null
           package_id: number | null
           stage: number | null
           tenant_id: number | null
@@ -2058,8 +2062,12 @@ export type Database = {
           file_names?: string[] | null
           format?: string | null
           id?: never
+          is_auto_generated?: boolean | null
           is_released?: boolean | null
+          is_team_only?: boolean | null
+          is_tenant_downloadable?: boolean | null
           isclientdoc?: boolean | null
+          merge_fields?: Json | null
           package_id?: number | null
           stage?: number | null
           tenant_id?: number | null
@@ -2080,8 +2088,12 @@ export type Database = {
           file_names?: string[] | null
           format?: string | null
           id?: never
+          is_auto_generated?: boolean | null
           is_released?: boolean | null
+          is_team_only?: boolean | null
+          is_tenant_downloadable?: boolean | null
           isclientdoc?: boolean | null
+          merge_fields?: Json | null
           package_id?: number | null
           stage?: number | null
           tenant_id?: number | null
@@ -2261,11 +2273,13 @@ export type Database = {
       }
       documents_stages: {
         Row: {
+          ai_hint: string | null
           created_at: string
           created_by: string | null
           dashboard_visible: boolean | null
           description: string | null
           id: number
+          is_reusable: boolean | null
           short_name: string | null
           stage_type: string | null
           status: string | null
@@ -2274,11 +2288,13 @@ export type Database = {
           video_url: string | null
         }
         Insert: {
+          ai_hint?: string | null
           created_at?: string
           created_by?: string | null
           dashboard_visible?: boolean | null
           description?: string | null
           id?: never
+          is_reusable?: boolean | null
           short_name?: string | null
           stage_type?: string | null
           status?: string | null
@@ -2287,11 +2303,13 @@ export type Database = {
           video_url?: string | null
         }
         Update: {
+          ai_hint?: string | null
           created_at?: string
           created_by?: string | null
           dashboard_visible?: boolean | null
           description?: string | null
           id?: never
+          is_reusable?: boolean | null
           short_name?: string | null
           stage_type?: string | null
           status?: string | null
@@ -4986,15 +5004,61 @@ export type Database = {
           },
         ]
       }
+      package_builder_audit_log: {
+        Row: {
+          action: string
+          after_data: Json | null
+          before_data: Json | null
+          created_at: string
+          entity_id: string | null
+          entity_type: string
+          id: string
+          package_id: number
+          user_id: string | null
+        }
+        Insert: {
+          action: string
+          after_data?: Json | null
+          before_data?: Json | null
+          created_at?: string
+          entity_id?: string | null
+          entity_type: string
+          id?: string
+          package_id: number
+          user_id?: string | null
+        }
+        Update: {
+          action?: string
+          after_data?: Json | null
+          before_data?: Json | null
+          created_at?: string
+          entity_id?: string | null
+          entity_type?: string
+          id?: string
+          package_id?: number
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "package_builder_audit_log_package_id_fkey"
+            columns: ["package_id"]
+            isOneToOne: false
+            referencedRelation: "packages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       package_client_tasks: {
         Row: {
           created_at: string
           description: string | null
           due_date_offset: number | null
           id: string
+          instructions: string | null
           name: string
           order_number: number
           package_id: number
+          required_documents: string[] | null
           stage_id: number
           updated_at: string
         }
@@ -5003,9 +5067,11 @@ export type Database = {
           description?: string | null
           due_date_offset?: number | null
           id?: string
+          instructions?: string | null
           name: string
           order_number?: number
           package_id: number
+          required_documents?: string[] | null
           stage_id: number
           updated_at?: string
         }
@@ -5014,9 +5080,11 @@ export type Database = {
           description?: string | null
           due_date_offset?: number | null
           id?: string
+          instructions?: string | null
           name?: string
           order_number?: number
           package_id?: number
+          required_documents?: string[] | null
           stage_id?: number
           updated_at?: string
         }
@@ -5155,9 +5223,12 @@ export type Database = {
           created_at: string
           description: string | null
           due_date_offset: number | null
+          estimated_hours: number | null
           id: string
+          is_mandatory: boolean | null
           name: string
           order_number: number
+          owner_role: string | null
           package_id: number
           stage_id: number
           updated_at: string
@@ -5166,9 +5237,12 @@ export type Database = {
           created_at?: string
           description?: string | null
           due_date_offset?: number | null
+          estimated_hours?: number | null
           id?: string
+          is_mandatory?: boolean | null
           name: string
           order_number?: number
+          owner_role?: string | null
           package_id: number
           stage_id: number
           updated_at?: string
@@ -5177,9 +5251,12 @@ export type Database = {
           created_at?: string
           description?: string | null
           due_date_offset?: number | null
+          estimated_hours?: number | null
           id?: string
+          is_mandatory?: boolean | null
           name?: string
           order_number?: number
+          owner_role?: string | null
           package_id?: number
           stage_id?: number
           updated_at?: string
@@ -5194,6 +5271,67 @@ export type Database = {
           },
           {
             foreignKeyName: "fk_package_staff_tasks_stage"
+            columns: ["stage_id"]
+            isOneToOne: false
+            referencedRelation: "documents_stages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      package_stage_emails: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          email_template_id: string
+          id: number
+          is_active: boolean
+          package_id: number
+          recipient_type: string
+          sort_order: number
+          stage_id: number
+          trigger_type: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          email_template_id: string
+          id?: never
+          is_active?: boolean
+          package_id: number
+          recipient_type?: string
+          sort_order?: number
+          stage_id: number
+          trigger_type?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          email_template_id?: string
+          id?: never
+          is_active?: boolean
+          package_id?: number
+          recipient_type?: string
+          sort_order?: number
+          stage_id?: number
+          trigger_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "package_stage_emails_email_template_id_fkey"
+            columns: ["email_template_id"]
+            isOneToOne: false
+            referencedRelation: "email_templates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "package_stage_emails_package_id_fkey"
+            columns: ["package_id"]
+            isOneToOne: false
+            referencedRelation: "packages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "package_stage_emails_stage_id_fkey"
             columns: ["stage_id"]
             isOneToOne: false
             referencedRelation: "documents_stages"
