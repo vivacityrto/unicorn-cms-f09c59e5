@@ -71,14 +71,14 @@ export default {
 					DEFAULT: 'hsl(var(--card))',
 					foreground: 'hsl(var(--card-foreground))'
 				},
-				vivacity: {
-					aqua: 'hsl(var(--vivacity-aqua))',
-					'light-aqua': 'hsl(var(--vivacity-light-aqua))',
-					acai: 'hsl(var(--vivacity-acai))',
-					purple: 'hsl(var(--vivacity-purple))',
-					'light-purple': 'hsl(var(--vivacity-light-purple))',
-					fuchsia: 'hsl(var(--vivacity-fuchsia))',
-					macaron: 'hsl(var(--vivacity-macaron))'
+				brand: {
+					cyan: 'hsl(var(--brand-cyan))',
+					'light-cyan': 'hsl(var(--brand-light-cyan))',
+					acai: 'hsl(var(--brand-acai))',
+					purple: 'hsl(var(--brand-purple))',
+					'light-purple': 'hsl(var(--brand-light-purple))',
+					fuchsia: 'hsl(var(--brand-fuchsia))',
+					macaron: 'hsl(var(--brand-macaron))'
 				},
 				sidebar: {
 					DEFAULT: 'hsl(var(--sidebar-background))',
