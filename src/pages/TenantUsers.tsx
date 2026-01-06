@@ -71,7 +71,7 @@ export default function TenantUsers() {
       
       setTenants(tenantsData || []);
 
-      // Fetch tenant users (exclude SuperAdmins)
+      // Fetch tenant users - include only client user types
       const { data, error } = await supabase
         .from('users')
         .select(`
@@ -86,13 +86,9 @@ export default function TenantUsers() {
           disabled,
           archived,
           last_sign_in_at,
-          global_role,
           tenants!tenant_id(name)
         `)
-        .not('global_role', 'eq', 'SuperAdmin')
-        .not('unicorn_role', 'eq', 'Super Admin')
-        .not('user_type', 'eq', 'Vivacity Team')
-        .not('user_type', 'eq', 'Vivacity')
+        .in('user_type', ['Client Parent', 'Client Child', 'Client'])
         .order('first_name', { ascending: true });
 
       if (error) throw error;
