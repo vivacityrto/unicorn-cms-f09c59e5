@@ -1,5 +1,5 @@
 import { useState, useMemo, useRef, useEffect, useLayoutEffect } from "react";
-import { LayoutDashboard, FileText, BarChart3, Calendar, MessageSquare, Settings, LogOut, Menu, X, Users, Building2, Package2, Wrench, FileCode, Blocks, ScrollText, Flag, AlertTriangle, Heart, ChevronDown, ChevronRight, Bell, Target, TrendingUp, ListTodo, User, Mail, ClipboardCheck, Lightbulb, Home, Sparkles, Library, CheckSquare, ClipboardList, Search, Video, BookOpen, Clock, ShieldCheck } from "lucide-react";
+import { LayoutDashboard, FileText, BarChart3, Calendar, MessageSquare, Settings, LogOut, Menu, X, Users, Building2, Package2, Wrench, FileCode, Blocks, ScrollText, Flag, AlertTriangle, Heart, ChevronDown, ChevronRight, Bell, Target, TrendingUp, ListTodo, User, Mail, ClipboardCheck, Lightbulb, Home, Sparkles, Library, CheckSquare, ClipboardList, Search, Video, BookOpen, Clock, ShieldCheck, Shield } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
@@ -76,9 +76,13 @@ const adminMenuItems = {
 const superAdminMenuItems = {
   main: [...baseMenuItemsWithoutDocs],
   admin: [{
-    icon: Users,
-    label: "Manage Users",
-    path: "/manage-users"
+    icon: Shield,
+    label: "Team Users",
+    path: "/admin/team-users"
+  }, {
+    icon: Building2,
+    label: "Tenant Users",
+    path: "/admin/tenant-users"
   }, {
     icon: Mail,
     label: "Manage Invites",
