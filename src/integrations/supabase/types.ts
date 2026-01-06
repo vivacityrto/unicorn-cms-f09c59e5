@@ -9678,7 +9678,7 @@ export type Database = {
           p_linkedin_url?: string
           p_public_holiday_region?: string
           p_target_user_id: string
-          p_working_days?: string[]
+          p_working_days?: Json
           p_working_hours?: Json
         }
         Returns: Json
