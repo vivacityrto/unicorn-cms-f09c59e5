@@ -72,6 +72,8 @@ import AdminTgaIntegrationWrapper from "./pages/AdminTgaIntegrationWrapper";
 import AdminUserAudit from "./pages/AdminUserAudit";
 import TeamUsers from "./pages/TeamUsers";
 import TenantUsers from "./pages/TenantUsers";
+import ClientPackageDetailWrapper from "./pages/ClientPackageDetailWrapper";
+
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -272,12 +274,20 @@ const App = () => (
               } 
             />
             <Route 
+              path="/admin/client-packages/:clientPackageId" 
+              element={
+                <ProtectedRoute>
+                  <ClientPackageDetailWrapper />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
               path="/tasks" 
               element={
                 <ProtectedRoute>
                   <TasksManagementWrapper />
                 </ProtectedRoute>
-              } 
+              }
             />
             <Route 
               path="/tenant/:tenantId/tasks" 

@@ -1170,6 +1170,57 @@ export type Database = {
           },
         ]
       }
+      client_email_queue: {
+        Row: {
+          client_package_stage_id: string
+          created_at: string | null
+          email_template_id: string
+          id: string
+          recipient_type: string
+          scheduled_at: string | null
+          sent_at: string | null
+          status: string
+          trigger_type: string
+        }
+        Insert: {
+          client_package_stage_id: string
+          created_at?: string | null
+          email_template_id: string
+          id?: string
+          recipient_type: string
+          scheduled_at?: string | null
+          sent_at?: string | null
+          status?: string
+          trigger_type: string
+        }
+        Update: {
+          client_package_stage_id?: string
+          created_at?: string | null
+          email_template_id?: string
+          id?: string
+          recipient_type?: string
+          scheduled_at?: string | null
+          sent_at?: string | null
+          status?: string
+          trigger_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_email_queue_client_package_stage_id_fkey"
+            columns: ["client_package_stage_id"]
+            isOneToOne: false
+            referencedRelation: "client_package_stages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_email_queue_email_template_id_fkey"
+            columns: ["email_template_id"]
+            isOneToOne: false
+            referencedRelation: "email_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       client_liaisons: {
         Row: {
           assigned_at: string | null
@@ -1304,6 +1355,244 @@ export type Database = {
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      client_package_stages: {
+        Row: {
+          client_package_id: string
+          completed_at: string | null
+          created_at: string | null
+          id: string
+          sort_order: number
+          stage_id: number
+          started_at: string | null
+          status: string
+        }
+        Insert: {
+          client_package_id: string
+          completed_at?: string | null
+          created_at?: string | null
+          id?: string
+          sort_order: number
+          stage_id: number
+          started_at?: string | null
+          status?: string
+        }
+        Update: {
+          client_package_id?: string
+          completed_at?: string | null
+          created_at?: string | null
+          id?: string
+          sort_order?: number
+          stage_id?: number
+          started_at?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_package_stages_client_package_id_fkey"
+            columns: ["client_package_id"]
+            isOneToOne: false
+            referencedRelation: "client_packages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_package_stages_stage_id_fkey"
+            columns: ["stage_id"]
+            isOneToOne: false
+            referencedRelation: "documents_stages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      client_packages: {
+        Row: {
+          assigned_csc_user_id: string | null
+          created_at: string | null
+          created_by: string | null
+          end_date: string | null
+          id: string
+          package_id: number
+          start_date: string
+          status: string
+          tenant_id: number
+        }
+        Insert: {
+          assigned_csc_user_id?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          end_date?: string | null
+          id?: string
+          package_id: number
+          start_date?: string
+          status?: string
+          tenant_id: number
+        }
+        Update: {
+          assigned_csc_user_id?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          end_date?: string | null
+          id?: string
+          package_id?: number
+          start_date?: string
+          status?: string
+          tenant_id?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_packages_package_id_fkey"
+            columns: ["package_id"]
+            isOneToOne: false
+            referencedRelation: "packages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_packages_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      client_stage_documents: {
+        Row: {
+          client_package_stage_id: string
+          created_at: string | null
+          delivery_type: string
+          document_id: number
+          id: string
+          sort_order: number
+          visibility: string
+        }
+        Insert: {
+          client_package_stage_id: string
+          created_at?: string | null
+          delivery_type: string
+          document_id: number
+          id?: string
+          sort_order: number
+          visibility: string
+        }
+        Update: {
+          client_package_stage_id?: string
+          created_at?: string | null
+          delivery_type?: string
+          document_id?: number
+          id?: string
+          sort_order?: number
+          visibility?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_stage_documents_client_package_stage_id_fkey"
+            columns: ["client_package_stage_id"]
+            isOneToOne: false
+            referencedRelation: "client_package_stages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_stage_documents_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "documents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      client_tasks: {
+        Row: {
+          client_package_stage_id: string
+          created_at: string | null
+          due_date: string | null
+          id: string
+          instructions: string | null
+          name: string
+          sort_order: number
+          status: string
+          template_task_id: string | null
+        }
+        Insert: {
+          client_package_stage_id: string
+          created_at?: string | null
+          due_date?: string | null
+          id?: string
+          instructions?: string | null
+          name: string
+          sort_order: number
+          status?: string
+          template_task_id?: string | null
+        }
+        Update: {
+          client_package_stage_id?: string
+          created_at?: string | null
+          due_date?: string | null
+          id?: string
+          instructions?: string | null
+          name?: string
+          sort_order?: number
+          status?: string
+          template_task_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_tasks_client_package_stage_id_fkey"
+            columns: ["client_package_stage_id"]
+            isOneToOne: false
+            referencedRelation: "client_package_stages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      client_team_tasks: {
+        Row: {
+          client_package_stage_id: string
+          created_at: string | null
+          estimated_hours: number | null
+          id: string
+          instructions: string | null
+          is_mandatory: boolean | null
+          name: string
+          owner_role: string | null
+          sort_order: number
+          status: string
+          template_task_id: string | null
+        }
+        Insert: {
+          client_package_stage_id: string
+          created_at?: string | null
+          estimated_hours?: number | null
+          id?: string
+          instructions?: string | null
+          is_mandatory?: boolean | null
+          name: string
+          owner_role?: string | null
+          sort_order: number
+          status?: string
+          template_task_id?: string | null
+        }
+        Update: {
+          client_package_stage_id?: string
+          created_at?: string | null
+          estimated_hours?: number | null
+          id?: string
+          instructions?: string | null
+          is_mandatory?: boolean | null
+          name?: string
+          owner_role?: string | null
+          sort_order?: number
+          status?: string
+          template_task_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_team_tasks_client_package_stage_id_fkey"
+            columns: ["client_package_stage_id"]
+            isOneToOne: false
+            referencedRelation: "client_package_stages"
             referencedColumns: ["id"]
           },
         ]
@@ -10007,6 +10296,14 @@ export type Database = {
         Returns: undefined
       }
       set_user_notification_prefs: { Args: { p_prefs: Json }; Returns: string }
+      start_client_package: {
+        Args: {
+          p_assigned_csc_user_id?: string
+          p_package_id: number
+          p_tenant_id: number
+        }
+        Returns: string
+      }
       tenant_has_package: {
         Args: { p_package_id: number; p_tenant_id: number }
         Returns: boolean
