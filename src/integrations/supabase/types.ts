@@ -8904,6 +8904,10 @@ export type Database = {
         Args: { p_meeting_id: string }
         Returns: string
       }
+      generate_username: {
+        Args: { p_email: string; p_user_id: string }
+        Returns: string
+      }
       get_all_resources: {
         Args: never
         Returns: {
