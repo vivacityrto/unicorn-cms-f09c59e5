@@ -8613,6 +8613,7 @@ export type Database = {
           client_id: string | null
           communication_pref: string | null
           country: string | null
+          cover_user_id: string | null
           created_at: string | null
           cricos_id: string | null
           csc_visibility: Json | null
@@ -8629,6 +8630,8 @@ export type Database = {
           last_name: string
           last_new_client_tasks_email: string | null
           last_sign_in_at: string | null
+          leave_from: string | null
+          leave_until: string | null
           legal_name: string | null
           linkedin: string | null
           linkedin_url: string | null
@@ -8687,6 +8690,7 @@ export type Database = {
           client_id?: string | null
           communication_pref?: string | null
           country?: string | null
+          cover_user_id?: string | null
           created_at?: string | null
           cricos_id?: string | null
           csc_visibility?: Json | null
@@ -8703,6 +8707,8 @@ export type Database = {
           last_name: string
           last_new_client_tasks_email?: string | null
           last_sign_in_at?: string | null
+          leave_from?: string | null
+          leave_until?: string | null
           legal_name?: string | null
           linkedin?: string | null
           linkedin_url?: string | null
@@ -8761,6 +8767,7 @@ export type Database = {
           client_id?: string | null
           communication_pref?: string | null
           country?: string | null
+          cover_user_id?: string | null
           created_at?: string | null
           cricos_id?: string | null
           csc_visibility?: Json | null
@@ -8777,6 +8784,8 @@ export type Database = {
           last_name?: string
           last_new_client_tasks_email?: string | null
           last_sign_in_at?: string | null
+          leave_from?: string | null
+          leave_until?: string | null
           legal_name?: string | null
           linkedin?: string | null
           linkedin_url?: string | null
@@ -8832,6 +8841,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "dashboard_client_snapshot"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "users_cover_user_id_fkey"
+            columns: ["cover_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["user_uuid"]
           },
           {
             foreignKeyName: "users_tenant_id_fkey"
@@ -9437,6 +9453,7 @@ export type Database = {
       is_super_admin:
         | { Args: never; Returns: boolean }
         | { Args: { p_user_id: string }; Returns: boolean }
+      is_super_admin_admin: { Args: never; Returns: boolean }
       is_super_admin_by_role: { Args: never; Returns: boolean }
       is_super_admin_member: { Args: never; Returns: boolean }
       is_super_admin_user: { Args: { p_user_id: string }; Returns: boolean }
@@ -9612,25 +9629,45 @@ export type Database = {
         }
         Returns: Json
       }
-      update_own_team_profile: {
-        Args: {
-          p_availability_note?: string
-          p_away_message?: string
-          p_bio?: string
-          p_booking_url?: string
-          p_cover_user_id?: string
-          p_job_title?: string
-          p_leave_from?: string
-          p_leave_to?: string
-          p_linkedin_url?: string
-          p_phone?: string
-          p_public_holiday_region?: string
-          p_timezone?: string
-          p_working_days?: Json
-          p_working_hours?: Json
-        }
-        Returns: Json
-      }
+      update_own_team_profile:
+        | {
+            Args: {
+              p_availability_note?: string
+              p_away_message?: string
+              p_bio?: string
+              p_booking_url?: string
+              p_cover_user_id?: string
+              p_job_title?: string
+              p_leave_from?: string
+              p_leave_until?: string
+              p_linkedin_url?: string
+              p_phone?: string
+              p_public_holiday_region?: string
+              p_timezone?: string
+              p_working_days?: Json
+              p_working_hours?: Json
+            }
+            Returns: Json
+          }
+        | {
+            Args: {
+              p_availability_note?: string
+              p_away_message?: string
+              p_bio?: string
+              p_booking_url?: string
+              p_cover_user_id?: string
+              p_job_title?: string
+              p_leave_from?: string
+              p_leave_to?: string
+              p_linkedin_url?: string
+              p_phone?: string
+              p_public_holiday_region?: string
+              p_timezone?: string
+              p_working_days?: Json
+              p_working_hours?: Json
+            }
+            Returns: Json
+          }
       update_user_notification_prefs: {
         Args: { p_prefs: Json }
         Returns: string

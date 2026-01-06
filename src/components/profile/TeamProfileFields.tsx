@@ -39,7 +39,7 @@ interface TeamProfileFieldsProps {
     public_holiday_region?: string | null;
     is_csc?: boolean;
     leave_from?: string | null;
-    leave_to?: string | null;
+    leave_until?: string | null;  // Fixed: was leave_to
     away_message?: string | null;
     cover_user_id?: string | null;
     user_type?: string;
@@ -81,8 +81,8 @@ export function TeamProfileFields({ user, canEdit, onSave }: TeamProfileFieldsPr
   const [saving, setSaving] = useState(false);
   const [teamUsers, setTeamUsers] = useState<TeamUser[]>([]);
   
-  // Check if user is a Team (SuperAdmin) user
-  const isTeamUser = user.unicorn_role === 'Super Admin' && 
+  // Check if user is a Team (SuperAdmin) user - includes Team Member role
+  const isTeamUser = (user.unicorn_role === 'Super Admin' || user.unicorn_role === 'Team Member') && 
     (user.user_type === 'Vivacity' || user.user_type === 'Vivacity Team');
 
   const [formData, setFormData] = useState({
@@ -94,7 +94,7 @@ export function TeamProfileFields({ user, canEdit, onSave }: TeamProfileFieldsPr
     availability_note: user.availability_note || '',
     public_holiday_region: user.public_holiday_region || '',
     leave_from: user.leave_from ? user.leave_from.split('T')[0] : '',
-    leave_to: user.leave_to ? user.leave_to.split('T')[0] : '',
+    leave_until: user.leave_until ? user.leave_until.split('T')[0] : '',
     away_message: user.away_message || '',
     cover_user_id: user.cover_user_id || '',
   });
@@ -163,8 +163,8 @@ export function TeamProfileFields({ user, canEdit, onSave }: TeamProfileFieldsPr
         },
         p_availability_note: formData.availability_note || null,
         p_public_holiday_region: formData.public_holiday_region || null,
-        p_leave_from: formData.leave_from ? new Date(formData.leave_from).toISOString() : null,
-        p_leave_to: formData.leave_to ? new Date(formData.leave_to).toISOString() : null,
+        p_leave_from: formData.leave_from || null,
+        p_leave_until: formData.leave_until || null,
         p_away_message: formData.away_message || null,
         p_cover_user_id: formData.cover_user_id || null,
       });
@@ -193,8 +193,8 @@ export function TeamProfileFields({ user, canEdit, onSave }: TeamProfileFieldsPr
     }
   };
 
-  const hasLeaveActive = formData.leave_from && formData.leave_to && 
-    new Date(formData.leave_to) >= new Date();
+  const hasLeaveActive = formData.leave_from && formData.leave_until && 
+    new Date(formData.leave_until) >= new Date();
 
   const hasChanges = 
     formData.linkedin_url !== (user.linkedin_url || '') ||
@@ -205,7 +205,7 @@ export function TeamProfileFields({ user, canEdit, onSave }: TeamProfileFieldsPr
     formData.availability_note !== (user.availability_note || '') ||
     formData.public_holiday_region !== (user.public_holiday_region || '') ||
     formData.leave_from !== (user.leave_from?.split('T')[0] || '') ||
-    formData.leave_to !== (user.leave_to?.split('T')[0] || '') ||
+    formData.leave_until !== (user.leave_until?.split('T')[0] || '') ||
     formData.away_message !== (user.away_message || '') ||
     formData.cover_user_id !== (user.cover_user_id || '');
 
@@ -226,7 +226,7 @@ export function TeamProfileFields({ user, canEdit, onSave }: TeamProfileFieldsPr
           <Alert className="bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-800">
             <AlertTriangle className="h-4 w-4 text-amber-600" />
             <AlertDescription className="text-amber-800 dark:text-amber-200">
-              <strong>You are currently marked as away</strong> until {new Date(formData.leave_to).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' })}
+              <strong>You are currently marked as away</strong> until {new Date(formData.leave_until).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' })}
             </AlertDescription>
           </Alert>
         )}
@@ -363,12 +363,12 @@ export function TeamProfileFields({ user, canEdit, onSave }: TeamProfileFieldsPr
             </div>
             
             <div className="space-y-2">
-              <Label htmlFor="leave_to">Leave Until</Label>
+              <Label htmlFor="leave_until">Leave Until</Label>
               <Input
-                id="leave_to"
+                id="leave_until"
                 type="date"
-                value={formData.leave_to}
-                onChange={(e) => setFormData({ ...formData, leave_to: e.target.value })}
+                value={formData.leave_until}
+                onChange={(e) => setFormData({ ...formData, leave_until: e.target.value })}
                 disabled={!canEdit}
               />
             </div>

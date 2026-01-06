@@ -7,9 +7,10 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
-import { Upload, Save, Lock, Mail, User, Phone, Briefcase, Clock, Globe, MapPin, Check, Calendar } from 'lucide-react';
+import { Upload, Save, Lock, Mail, User, Phone, Briefcase, Clock, Globe, MapPin, Calendar } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectSeparator } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
+import { TeamProfileFields } from '@/components/profile/TeamProfileFields';
 
 export default function Settings() {
   const { toast } = useToast();
@@ -18,6 +19,7 @@ export default function Settings() {
   const [uploading, setUploading] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [tenantInfo, setTenantInfo] = useState<any>(null);
+  const [teamUserData, setTeamUserData] = useState<any>(null);
   const [liveTime, setLiveTime] = useState('');
   const [timezoneOptions, setTimezoneOptions] = useState<{ value: string; label: string }[]>([]);
   const [formData, setFormData] = useState({
@@ -102,6 +104,24 @@ export default function Settings() {
         confirmPassword: '',
       });
       setAvatarUrl(userData.avatar_url);
+
+      // Set team user data for TeamProfileFields component
+      setTeamUserData({
+        user_uuid: userData.user_uuid,
+        linkedin_url: userData.linkedin_url,
+        booking_url: userData.booking_url,
+        working_days: userData.working_days,
+        working_hours: userData.working_hours,
+        availability_note: userData.availability_note,
+        public_holiday_region: userData.public_holiday_region,
+        is_csc: userData.is_csc,
+        leave_from: userData.leave_from,
+        leave_until: userData.leave_until,
+        away_message: userData.availability_note, // Using availability_note for away_message
+        cover_user_id: userData.cover_user_id,
+        user_type: userData.user_type,
+        unicorn_role: userData.unicorn_role,
+      });
 
       // Fetch tenant information
       if (userData.tenant_id) {
@@ -540,6 +560,15 @@ export default function Settings() {
             </CardContent>
           </Card>
         </div>
+
+        {/* Team Profile Section - only shows for team users */}
+        {teamUserData && (
+          <TeamProfileFields 
+            user={teamUserData} 
+            canEdit={true} 
+            onSave={fetchUserData}
+          />
+        )}
 
         {/* Tenant Information */}
         {tenantInfo && (
