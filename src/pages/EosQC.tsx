@@ -7,6 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Plus, Users, Calendar, CheckCircle, Clock } from 'lucide-react';
 import { useQuarterlyConversations } from '@/hooks/useQuarterlyConversations';
 import { useAuth } from '@/hooks/useAuth';
+import { useRBAC } from '@/hooks/useRBAC';
 import { useNavigate } from 'react-router-dom';
 import { QCScheduler } from '@/components/eos/qc/QCScheduler';
 import { format } from 'date-fns';
@@ -23,9 +24,11 @@ export default function EosQC() {
 const QCContent = () => {
   const { conversations, isLoading } = useQuarterlyConversations();
   const { profile } = useAuth();
+  const { canScheduleQC, canViewAllQC } = useRBAC();
   const navigate = useNavigate();
   const [schedulerOpen, setSchedulerOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState<string>('all');
+  // Default to 'my-reviews' for General Users (who can't see 'all')
+  const [activeTab, setActiveTab] = useState<string>(canViewAllQC() ? 'all' : 'my-reviews');
 
   const getStatusBadge = (status: QCStatus) => {
     const statusConfig = {
@@ -38,7 +41,18 @@ const QCContent = () => {
     return <Badge variant={config.variant}>{config.label}</Badge>;
   };
 
+  // Filter conversations based on user role
+  // SuperAdmin (canViewAllQC) sees all; General User sees only their own
   const filteredConversations = conversations?.filter((qc) => {
+    // First filter by role-based access
+    if (!canViewAllQC()) {
+      // General User can only see QCs where they are reviewee or manager
+      const isReviewee = qc.reviewee_id === profile?.user_uuid;
+      const isManager = qc.manager_ids.includes(profile?.user_uuid || '');
+      if (!isReviewee && !isManager) return false;
+    }
+
+    // Then apply tab filter
     if (activeTab === 'all') return true;
     if (activeTab === 'my-reviews') return qc.reviewee_id === profile?.user_uuid;
     if (activeTab === 'managing') return qc.manager_ids.includes(profile?.user_uuid || '');
@@ -58,10 +72,12 @@ const QCContent = () => {
             One-on-one strategic alignment sessions between managers and team members
           </p>
         </div>
-        <Button onClick={() => setSchedulerOpen(true)}>
-          <Plus className="h-4 w-4 mr-2" />
-          Schedule QC
-        </Button>
+        {canScheduleQC() && (
+          <Button onClick={() => setSchedulerOpen(true)}>
+            <Plus className="h-4 w-4 mr-2" />
+            Schedule QC
+          </Button>
+        )}
       </div>
 
       <QCScheduler 
@@ -108,7 +124,7 @@ const QCContent = () => {
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList>
-          <TabsTrigger value="all">All Conversations</TabsTrigger>
+          {canViewAllQC() && <TabsTrigger value="all">All Conversations</TabsTrigger>}
           <TabsTrigger value="my-reviews">My Reviews</TabsTrigger>
           <TabsTrigger value="managing">Managing</TabsTrigger>
         </TabsList>
@@ -158,12 +174,16 @@ const QCContent = () => {
                 <Users className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
                 <p className="text-lg font-medium mb-2">No conversations yet</p>
                 <p className="text-sm text-muted-foreground mb-4">
-                  Schedule your first Quarterly Conversation to get started
+                  {canScheduleQC() 
+                    ? "Schedule your first Quarterly Conversation to get started"
+                    : "No Quarterly Conversations have been scheduled for you yet."}
                 </p>
-                <Button onClick={() => setSchedulerOpen(true)}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Schedule First QC
-                </Button>
+                {canScheduleQC() && (
+                  <Button onClick={() => setSchedulerOpen(true)}>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Schedule First QC
+                  </Button>
+                )}
               </CardContent>
             </Card>
           )}

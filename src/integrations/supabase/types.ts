@@ -9106,7 +9106,9 @@ export type Database = {
         Returns: boolean
       }
       is_qc_signed: { Args: { _qc_id: string }; Returns: boolean }
-      is_super_admin: { Args: never; Returns: boolean }
+      is_super_admin:
+        | { Args: never; Returns: boolean }
+        | { Args: { p_user_id: string }; Returns: boolean }
       is_super_admin_by_role: { Args: never; Returns: boolean }
       is_super_admin_member: { Args: never; Returns: boolean }
       is_superadmin: { Args: never; Returns: boolean }

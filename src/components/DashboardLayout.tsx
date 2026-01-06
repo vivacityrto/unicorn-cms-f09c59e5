@@ -3,6 +3,7 @@ import { LayoutDashboard, FileText, BarChart3, Calendar, MessageSquare, Settings
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
+import { useRBAC } from "@/hooks/useRBAC";
 import { useViewMode } from "@/contexts/ViewModeContext";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -228,6 +229,10 @@ export const DashboardLayout = ({
     profile,
     signOut
   } = useAuth();
+  const {
+    canAccessAdmin,
+    canAccessAdvanced
+  } = useRBAC();
   const {
     isViewingAsClient
   } = useViewMode();
@@ -465,8 +470,8 @@ export const DashboardLayout = ({
                   </CollapsibleContent>
                 </Collapsible>}
 
-              {/* Admin Section (for Super Admin only) */}
-              {"admin" in menuItems && Array.isArray(menuItems.admin) && menuItems.admin.length > 0 && profile?.unicorn_role === "Super Admin" && <Collapsible open={sectionsOpen.admin} onOpenChange={open => setSectionsOpen(prev => ({
+              {/* Admin Section (SuperAdmin only - uses RBAC) */}
+              {"admin" in menuItems && Array.isArray(menuItems.admin) && menuItems.admin.length > 0 && canAccessAdmin() && <Collapsible open={sectionsOpen.admin} onOpenChange={open => setSectionsOpen(prev => ({
             ...prev,
             admin: open
           }))} className="mt-6">
@@ -489,7 +494,7 @@ export const DashboardLayout = ({
                     </CollapsibleContent>
                   </Collapsible>}
 
-              {/* EOS Section (for Super Admin) */}
+              {/* EOS Section (visible to all staff with EOS menu items) */}
               {"eos" in menuItems && Array.isArray(menuItems.eos) && menuItems.eos.length > 0 && <Collapsible open={sectionsOpen.eos} onOpenChange={open => setSectionsOpen(prev => ({
             ...prev,
             eos: open
@@ -513,8 +518,8 @@ export const DashboardLayout = ({
                   </CollapsibleContent>
                 </Collapsible>}
 
-              {/* Advanced Features Section (for Super Admin) */}
-              {"advanced" in menuItems && Array.isArray(menuItems.advanced) && menuItems.advanced.length > 0 && <Collapsible open={sectionsOpen.advanced} onOpenChange={open => setSectionsOpen(prev => ({
+              {/* Advanced Features Section (SuperAdmin only - uses RBAC) */}
+              {"advanced" in menuItems && Array.isArray(menuItems.advanced) && menuItems.advanced.length > 0 && canAccessAdvanced() && <Collapsible open={sectionsOpen.advanced} onOpenChange={open => setSectionsOpen(prev => ({
             ...prev,
             advanced: open
           }))} className="mt-6">

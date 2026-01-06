@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { useRBAC } from '@/hooks/useRBAC';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -21,6 +22,7 @@ export default function EosVto() {
 
 function VtoContent() {
   const { profile } = useAuth();
+  const { canEditVTO } = useRBAC();
   const [isEditing, setIsEditing] = useState(false);
   const [selectedVersion, setSelectedVersion] = useState<string | null>(null);
 
@@ -76,7 +78,7 @@ function VtoContent() {
           </p>
         </div>
         <div className="flex gap-2">
-          {activeVto && !isEditing && (
+          {activeVto && !isEditing && canEditVTO() && (
             <Button onClick={() => setIsEditing(true)} variant="default">
               <Edit className="h-4 w-4 mr-2" />
               Edit V/TO
@@ -106,14 +108,18 @@ function VtoContent() {
               <CardContent className="flex flex-col items-center justify-center py-12">
                 <h3 className="text-lg font-semibold mb-2">No V/TO Created Yet</h3>
                 <p className="text-muted-foreground mb-4 text-center max-w-md">
-                  Create your first Vision/Traction Organizer to define your company's vision and track progress
+                  {canEditVTO() 
+                    ? "Create your first Vision/Traction Organizer to define your company's vision and track progress"
+                    : "No Vision/Traction Organizer has been created yet. Contact your administrator to set one up."}
                 </p>
-                <Button onClick={() => setIsEditing(true)}>
-                  Create Your First V/TO
-                </Button>
+                {canEditVTO() && (
+                  <Button onClick={() => setIsEditing(true)}>
+                    Create Your First V/TO
+                  </Button>
+                )}
               </CardContent>
             </Card>
-          ) : isEditing ? (
+          ) : isEditing && canEditVTO() ? (
             <VtoEditor vto={activeVto} onCancel={() => setIsEditing(false)} />
           ) : (
             <VtoViewer vto={activeVto!} />
