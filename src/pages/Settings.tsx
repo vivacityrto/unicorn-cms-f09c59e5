@@ -117,7 +117,7 @@ export default function Settings() {
         is_csc: userData.is_csc,
         leave_from: userData.leave_from,
         leave_until: userData.leave_until,
-        away_message: userData.availability_note, // Using availability_note for away_message
+        away_message: userData.away_message,  // Use the correct away_message column
         cover_user_id: userData.cover_user_id,
         user_type: userData.user_type,
         unicorn_role: userData.unicorn_role,
