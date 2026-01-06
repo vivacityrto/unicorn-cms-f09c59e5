@@ -112,21 +112,17 @@ export const MeetingScheduler = ({ open, onOpenChange, onScheduled }: MeetingSch
         if (meetingError) throw meetingError;
         meetingId = data;
       } else {
-        // Create meeting directly without template
-        const { data, error: meetingError } = await supabase
-          .from('eos_meetings')
-          .insert({
-            tenant_id: profile.tenant_id,
-            meeting_type: meetingType,
-            title: title,
-            scheduled_date: scheduledDate,
-            duration_minutes: parseInt(duration),
-            created_by: facilitatorId,
-          })
-          .select('id')
-          .single();
+        // Create meeting directly without template using RPC to avoid RLS recursion
+        const { data, error: meetingError } = await supabase.rpc('create_meeting_basic', {
+          p_tenant_id: profile.tenant_id,
+          p_meeting_type: meetingType,
+          p_title: title,
+          p_scheduled_date: scheduledDate,
+          p_duration_minutes: parseInt(duration),
+          p_facilitator_id: facilitatorId,
+        });
         if (meetingError) throw meetingError;
-        meetingId = data.id;
+        meetingId = data;
       }
 
       // If recurring, generate recurrence pattern
