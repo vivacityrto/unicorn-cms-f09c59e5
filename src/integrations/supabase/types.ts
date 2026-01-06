@@ -1786,6 +1786,7 @@ export type Database = {
           id: string
           last_message: string | null
           last_message_time: string | null
+          tenant_id: number | null
           title: string
           unread_count: number | null
         }
@@ -1794,6 +1795,7 @@ export type Database = {
           id?: string
           last_message?: string | null
           last_message_time?: string | null
+          tenant_id?: number | null
           title: string
           unread_count?: number | null
         }
@@ -1802,10 +1804,19 @@ export type Database = {
           id?: string
           last_message?: string | null
           last_message_time?: string | null
+          tenant_id?: number | null
           title?: string
           unread_count?: number | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "conversations_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       course_cache: {
         Row: {
