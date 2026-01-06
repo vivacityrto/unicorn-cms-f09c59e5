@@ -127,8 +127,11 @@ export default function UserProfile() {
 
   const canEditProfile = user && currentUser && (
     user.user_uuid === currentUser.user_uuid || // User editing themselves
-    (currentUser.unicorn_role === 'Super Admin' && currentUser.user_type === 'Vivacity') || // Super Admin
-    (currentUser.unicorn_role === 'Admin' && currentUser.user_type === 'Client' && user.tenant_id === currentUser.tenant_id) // Client Admin
+    (currentUser.unicorn_role === 'Super Admin' && 
+     (currentUser.user_type === 'Vivacity' || currentUser.user_type === 'Vivacity Team')) || // Super Admin
+    (currentUser.unicorn_role === 'Admin' && 
+     (currentUser.user_type === 'Client' || currentUser.user_type === 'Client Parent') && 
+     user.tenant_id === currentUser.tenant_id) // Client Admin
   );
 
   if (loading) {
@@ -160,8 +163,11 @@ export default function UserProfile() {
   }
 
   const canEdit = canEditProfile ?? false;
-  const isAdmin = currentUser.unicorn_role === 'Super Admin' || 
-                  (currentUser.unicorn_role === 'Admin' && user.tenant_id === currentUser.tenant_id);
+  const isAdmin = (currentUser.unicorn_role === 'Super Admin' && 
+                   (currentUser.user_type === 'Vivacity' || currentUser.user_type === 'Vivacity Team')) || 
+                  (currentUser.unicorn_role === 'Admin' && 
+                   (currentUser.user_type === 'Client' || currentUser.user_type === 'Client Parent') &&
+                   user.tenant_id === currentUser.tenant_id);
 
   return (
     <div className="container mx-auto p-6 max-w-7xl space-y-6 animate-fade-in">

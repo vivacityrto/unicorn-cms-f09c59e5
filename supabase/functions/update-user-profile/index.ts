@@ -58,7 +58,7 @@ Deno.serve(async (req) => {
       console.log("Current user error:", currentUserError);
 
       const isSuperAdmin = currentUserData?.unicorn_role === "Super Admin" && 
-                          currentUserData?.user_type === "Vivacity Team";
+        (currentUserData?.user_type === "Vivacity Team" || currentUserData?.user_type === "Vivacity");
 
       console.log("Is super admin:", isSuperAdmin);
 
@@ -74,8 +74,8 @@ Deno.serve(async (req) => {
         console.log("Target user error:", targetUserError);
 
         const isClientAdmin = currentUserData?.unicorn_role === "Admin" &&
-                             currentUserData?.user_type === "Client Parent" &&
-                             targetUserData?.tenant_id === currentUserData?.tenant_id;
+          (currentUserData?.user_type === "Client Parent" || currentUserData?.user_type === "Client") &&
+          targetUserData?.tenant_id === currentUserData?.tenant_id;
 
         console.log("Is client admin:", isClientAdmin);
 
