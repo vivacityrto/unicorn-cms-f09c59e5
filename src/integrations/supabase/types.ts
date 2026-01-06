@@ -1393,6 +1393,7 @@ export type Database = {
       clients_legacy: {
         Row: {
           abn: string | null
+          accountable_person: string | null
           accounting_system: string | null
           acn: string | null
           address: string | null
@@ -1444,6 +1445,7 @@ export type Database = {
         }
         Insert: {
           abn?: string | null
+          accountable_person?: string | null
           accounting_system?: string | null
           acn?: string | null
           address?: string | null
@@ -1495,6 +1497,7 @@ export type Database = {
         }
         Update: {
           abn?: string | null
+          accountable_person?: string | null
           accounting_system?: string | null
           acn?: string | null
           address?: string | null
@@ -4342,6 +4345,103 @@ export type Database = {
         }
         Relationships: []
       }
+      generated_documents: {
+        Row: {
+          client_legacy_id: string | null
+          created_at: string | null
+          error_message: string | null
+          file_name: string
+          file_path: string
+          generated_at: string | null
+          generated_by: string | null
+          id: string
+          merge_data: Json | null
+          package_id: number | null
+          source_document_id: number | null
+          stage_id: number | null
+          status: string | null
+          tenant_id: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          client_legacy_id?: string | null
+          created_at?: string | null
+          error_message?: string | null
+          file_name: string
+          file_path: string
+          generated_at?: string | null
+          generated_by?: string | null
+          id?: string
+          merge_data?: Json | null
+          package_id?: number | null
+          source_document_id?: number | null
+          stage_id?: number | null
+          status?: string | null
+          tenant_id?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          client_legacy_id?: string | null
+          created_at?: string | null
+          error_message?: string | null
+          file_name?: string
+          file_path?: string
+          generated_at?: string | null
+          generated_by?: string | null
+          id?: string
+          merge_data?: Json | null
+          package_id?: number | null
+          source_document_id?: number | null
+          stage_id?: number | null
+          status?: string | null
+          tenant_id?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "generated_documents_client_legacy_id_fkey"
+            columns: ["client_legacy_id"]
+            isOneToOne: false
+            referencedRelation: "clients_legacy"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "generated_documents_client_legacy_id_fkey"
+            columns: ["client_legacy_id"]
+            isOneToOne: false
+            referencedRelation: "dashboard_client_snapshot"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "generated_documents_package_id_fkey"
+            columns: ["package_id"]
+            isOneToOne: false
+            referencedRelation: "packages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "generated_documents_source_document_id_fkey"
+            columns: ["source_document_id"]
+            isOneToOne: false
+            referencedRelation: "documents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "generated_documents_stage_id_fkey"
+            columns: ["stage_id"]
+            isOneToOne: false
+            referencedRelation: "documents_stages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "generated_documents_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       integration_slack: {
         Row: {
           bot_user_id: string | null
@@ -4830,6 +4930,45 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      merge_field_definitions: {
+        Row: {
+          code: string
+          created_at: string | null
+          created_by: string | null
+          description: string | null
+          id: string
+          is_active: boolean | null
+          is_system: boolean | null
+          name: string
+          source_column: string
+          source_table: string
+        }
+        Insert: {
+          code: string
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          is_system?: boolean | null
+          name: string
+          source_column: string
+          source_table: string
+        }
+        Update: {
+          code?: string
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          is_system?: boolean | null
+          name?: string
+          source_column?: string
+          source_table?: string
+        }
+        Relationships: []
       }
       messages: {
         Row: {

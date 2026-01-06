@@ -19,6 +19,7 @@ import {
   GripVertical, Clock, User, Loader2, AlertTriangle, Settings, Copy
 } from 'lucide-react';
 import { StageDocumentsTab } from './StageDocumentsTab';
+import { BulkGenerateDocumentsDialog } from './BulkGenerateDocumentsDialog';
 
 interface StageDetailPanelProps {
   packageId: number;
@@ -55,6 +56,7 @@ export function StageDetailPanel({ packageId, stageId, stage, allStages = [], on
     addStageEmail,
     removeStageEmail,
     addStageDocument,
+    addBulkStageDocuments,
     updateStageDocument,
     removeStageDocument,
     reorderStageDocuments
@@ -65,6 +67,7 @@ export function StageDetailPanel({ packageId, stageId, stage, allStages = [], on
   const [isAddingClientTask, setIsAddingClientTask] = useState(false);
   const [isAddingEmail, setIsAddingEmail] = useState(false);
   const [isDuplicatingStage, setIsDuplicatingStage] = useState(false);
+  const [isBulkGenerateOpen, setIsBulkGenerateOpen] = useState(false);
   
   const [taskForm, setTaskForm] = useState({
     name: '',
@@ -580,9 +583,11 @@ export function StageDetailPanel({ packageId, stageId, stage, allStages = [], on
             stageId={stageId}
             stageDocuments={stageDocuments}
             onAddDocument={addStageDocument}
+            onAddBulkDocuments={addBulkStageDocuments}
             onUpdateDocument={updateStageDocument}
             onRemoveDocument={removeStageDocument}
             onReorderDocuments={reorderStageDocuments}
+            onOpenBulkGenerate={() => setIsBulkGenerateOpen(true)}
           />
         </TabsContent>
       </Tabs>
@@ -784,6 +789,16 @@ export function StageDetailPanel({ packageId, stageId, stage, allStages = [], on
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Bulk Generate Documents Dialog */}
+      <BulkGenerateDocumentsDialog
+        open={isBulkGenerateOpen}
+        onOpenChange={setIsBulkGenerateOpen}
+        packageId={packageId}
+        stageId={stageId}
+        stageName={stage?.title || 'Stage'}
+        stageDocuments={stageDocuments}
+      />
     </div>
   );
 }

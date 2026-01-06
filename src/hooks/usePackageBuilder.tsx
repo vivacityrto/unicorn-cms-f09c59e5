@@ -770,6 +770,45 @@ export function useStageDetail(packageId: number | null, stageId: number | null)
     await fetchStageDocuments();
   };
 
+  const addBulkStageDocuments = async (documentIds: number[], visibility: string = 'both', deliveryType: string = 'manual') => {
+    if (!packageId || !stageId || documentIds.length === 0) return;
+
+    const startOrder = stageDocuments.reduce((max, d) => Math.max(max, d.sort_order), -1) + 1;
+
+    const inserts = documentIds.map((docId, idx) => ({
+      package_id: packageId,
+      stage_id: stageId,
+      document_id: docId,
+      visibility,
+      delivery_type: deliveryType,
+      sort_order: startOrder + idx
+    }));
+
+    const { error } = await (supabase
+      .from('package_stage_documents' as any)
+      .insert(inserts) as any);
+
+    if (error) {
+      if (error.code === '23505') {
+        throw new Error('One or more documents are already linked to this stage');
+      }
+      throw error;
+    }
+
+    // Log to audit
+    await (supabase
+      .from('package_builder_audit_log' as any)
+      .insert({
+        package_id: packageId,
+        action: 'bulk_link',
+        entity_type: 'stage_documents',
+        entity_id: stageId.toString(),
+        after_data: { stage_id: stageId, document_ids: documentIds, count: documentIds.length }
+      }) as any);
+
+    await fetchStageDocuments();
+  };
+
   const updateStageDocument = async (id: string, data: { visibility?: string; delivery_type?: string }) => {
     // Get before state for audit
     const existing = stageDocuments.find(d => d.id === id);
@@ -864,6 +903,7 @@ export function useStageDetail(packageId: number | null, stageId: number | null)
     addStageEmail,
     removeStageEmail,
     addStageDocument,
+    addBulkStageDocuments,
     updateStageDocument,
     removeStageDocument,
     reorderStageDocuments
