@@ -42,57 +42,57 @@
 @layer base {
   :root {
     --background: 0 0% 100%;
-    --foreground: 240 60% 20%;
+    --foreground: 270 47% 26%; /* #44235F - ACAI - Body Text */
 
     --card: 0 0% 100%;
-    --card-foreground: 240 60% 20%;
+    --card-foreground: 270 47% 26%; /* #44235F - ACAI */
 
     --popover: 0 0% 100%;
-    --popover-foreground: 240 60% 20%;
+    --popover-foreground: 270 47% 26%; /* #44235F - ACAI */
 
-    --primary: 275 54% 41%;
-    --primary-foreground: 0 0% 100%;
+    --primary: 187 74% 50%; /* #23c0dd - CYAN - Buttons */
+    --primary-foreground: 0 0% 100%; /* White text on buttons */
 
-    --secondary: 196 100% 47%;
+    --secondary: 270 55% 41%; /* #7130A0 - Purple - Headings */
     --secondary-foreground: 0 0% 100%;
 
-    --muted: 240 10% 96%;
-    --muted-foreground: 240 10% 50%;
+    --muted: 270 30% 91%; /* #DFD8E8 - Light Purple - Backgrounds */
+    --muted-foreground: 270 47% 26%; /* #44235F - ACAI */
 
-    --accent: 196 100% 47%;
-    --accent-foreground: 0 0% 100%;
+    --accent: 187 100% 83%; /* #A6F1FF - Light CYAN - Backgrounds */
+    --accent-foreground: 270 47% 26%; /* #44235F - ACAI */
 
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 240 10% 90%;
-    --input: 240 10% 90%;
-    --ring: 275 54% 41%;
+    --border: 270 30% 85%;
+    --input: 270 30% 91%;
+    --ring: 187 74% 50%; /* #23c0dd - CYAN */
 
     --radius: 1rem;
 
-    --gradient-purple: linear-gradient(135deg, hsl(275 54% 35%), hsl(275 54% 41%));
-    --gradient-card: linear-gradient(180deg, hsl(275 30% 85% / 0.3), hsl(275 30% 90% / 0.2));
+    --gradient-brand: linear-gradient(135deg, hsl(270 55% 41%), hsl(330 86% 51%)); /* #7130A0 to #ed1878 */
+    --gradient-card: linear-gradient(180deg, hsl(270 30% 91% / 0.5), hsl(187 100% 83% / 0.3));
 
     /* Status colors */
     --success: 142 76% 36%;
     --success-foreground: 0 0% 100%;
-    --warning: 38 92% 50%;
-    --warning-foreground: 0 0% 100%;
-    --info: 217 91% 60%;
+    --warning: 48 96% 52%; /* #f9cb0c - MACARON */
+    --warning-foreground: 270 47% 26%;
+    --info: 187 74% 50%; /* #23c0dd - CYAN */
     --info-foreground: 0 0% 100%;
 
-    /* Vivacity brand colors */
-    --vivacity-aqua: 196 100% 47%;
-    --vivacity-light-aqua: 196 100% 85%;
-    --vivacity-acai: 275 54% 35%;
-    --vivacity-purple: 275 54% 41%;
-    --vivacity-light-purple: 275 30% 85%;
-    --vivacity-fuchsia: 320 85% 60%;
-    --vivacity-macaron: 340 90% 75%;
+    /* Brand colors - Unicorn palette */
+    --brand-cyan: 187 74% 50%; /* #23c0dd - Buttons */
+    --brand-light-cyan: 187 100% 83%; /* #A6F1FF - Backgrounds */
+    --brand-acai: 270 47% 26%; /* #44235F - Body Text */
+    --brand-purple: 270 55% 41%; /* #7130A0 - Headings */
+    --brand-light-purple: 270 30% 91%; /* #DFD8E8 - Backgrounds */
+    --brand-fuchsia: 330 86% 51%; /* #ed1878 - Headings and Icons */
+    --brand-macaron: 48 96% 52%; /* #f9cb0c - Highlighted images */
 
-    /* Sidebar gradient */
-    --gradient-sidebar: linear-gradient(180deg, hsl(275 54% 41%), hsl(275 54% 35%));
+    /* Sidebar gradient - Purple to Fuchsia */
+    --gradient-sidebar: linear-gradient(180deg, hsl(270 55% 41%), hsl(330 86% 51%));
 
     /* Animation durations */
     --duration-fast: 150ms;
@@ -101,33 +101,33 @@
   }
 
   .dark {
-    --background: 240 60% 10%;
+    --background: 270 47% 12%;
     --foreground: 0 0% 95%;
 
-    --card: 240 50% 15%;
+    --card: 270 47% 16%;
     --card-foreground: 0 0% 95%;
 
-    --popover: 240 50% 15%;
+    --popover: 270 47% 16%;
     --popover-foreground: 0 0% 95%;
 
-    --primary: 275 54% 41%;
+    --primary: 187 74% 50%; /* #23c0dd - CYAN - Buttons */
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 196 100% 47%;
+    --secondary: 270 55% 55%; /* Lighter purple for dark mode */
     --secondary-foreground: 0 0% 100%;
 
-    --muted: 240 30% 20%;
-    --muted-foreground: 240 10% 70%;
+    --muted: 270 30% 22%;
+    --muted-foreground: 270 20% 70%;
 
-    --accent: 196 100% 47%;
+    --accent: 187 74% 35%;
     --accent-foreground: 0 0% 100%;
 
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 240 30% 25%;
-    --input: 240 30% 25%;
-    --ring: 275 54% 41%;
+    --border: 270 30% 28%;
+    --input: 270 30% 25%;
+    --ring: 187 74% 50%;
   }
 }
 
