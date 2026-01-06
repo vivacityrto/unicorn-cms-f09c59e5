@@ -1,0 +1,555 @@
+import { useState, useEffect, useMemo } from 'react';
+import { Link } from 'react-router-dom';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
+import { useRBAC } from '@/hooks/useRBAC';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
+import { 
+  Plus, 
+  Search, 
+  Eye, 
+  ShieldCheck, 
+  Package2, 
+  Users,
+  Layers,
+  Copy,
+  ShieldX
+} from 'lucide-react';
+import { AddStageDialog } from '@/components/AddStageDialog';
+import { StagePreviewDialog } from '@/components/package-builder/StagePreviewDialog';
+import { Stage } from '@/hooks/usePackageBuilder';
+import { format } from 'date-fns';
+
+const STAGE_TYPE_OPTIONS = [
+  { value: 'all', label: 'All Types' },
+  { value: 'onboarding', label: 'Onboarding' },
+  { value: 'delivery', label: 'Delivery' },
+  { value: 'documentation', label: 'Documentation' },
+  { value: 'support', label: 'Ongoing Support' },
+  { value: 'offboarding', label: 'Offboarding' },
+  { value: 'other', label: 'Other' },
+];
+
+const CERTIFIED_FILTER_OPTIONS = [
+  { value: 'all', label: 'All' },
+  { value: 'certified', label: 'Certified' },
+  { value: 'non-certified', label: 'Non-certified' },
+];
+
+const USAGE_FILTER_OPTIONS = [
+  { value: 'all', label: 'All' },
+  { value: 'not-used', label: 'Not used' },
+  { value: 'used', label: 'Used in packages' },
+];
+
+interface StageWithUsage {
+  id: number;
+  title: string;
+  short_name: string | null;
+  description: string | null;
+  video_url: string | null;
+  stage_type: string;
+  stage_key: string;
+  is_certified: boolean;
+  certified_notes: string | null;
+  created_at: string;
+  updated_at: string | null;
+  usage_count: number;
+  active_client_count: number;
+}
+
+export default function AdminManageStages() {
+  const { toast } = useToast();
+  const { isSuperAdmin } = useRBAC();
+  const [stages, setStages] = useState<StageWithUsage[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [stageTypeFilter, setStageTypeFilter] = useState('all');
+  const [certifiedFilter, setCertifiedFilter] = useState('all');
+  const [usageFilter, setUsageFilter] = useState('all');
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [previewStage, setPreviewStage] = useState<Stage | null>(null);
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+
+  useEffect(() => {
+    fetchStages();
+  }, []);
+
+  const fetchStages = async () => {
+    try {
+      setIsLoading(true);
+
+      // Fetch all stages
+      const { data: stagesData, error: stagesError } = await supabase
+        .from('documents_stages')
+        .select('*')
+        .order('title', { ascending: true });
+
+      if (stagesError) throw stagesError;
+
+      // Fetch package_stages usage counts
+      const { data: usageData, error: usageError } = await supabase
+        .from('package_stages')
+        .select('stage_id');
+
+      if (usageError) throw usageError;
+
+      // Fetch active client counts from client_package_stages
+      const { data: activeClientData, error: activeError } = await supabase
+        .from('client_package_stages')
+        .select(`
+          stage_id,
+          client_packages!inner (status)
+        `)
+        .in('client_packages.status', ['active', 'in_progress']);
+
+      // Build usage count map
+      const usageCountMap: Record<number, number> = {};
+      (usageData || []).forEach((item: any) => {
+        usageCountMap[item.stage_id] = (usageCountMap[item.stage_id] || 0) + 1;
+      });
+
+      // Build active client count map
+      const activeClientCountMap: Record<number, number> = {};
+      (activeClientData || []).forEach((item: any) => {
+        activeClientCountMap[item.stage_id] = (activeClientCountMap[item.stage_id] || 0) + 1;
+      });
+
+      // Merge data
+      const stagesWithUsage: StageWithUsage[] = (stagesData || []).map((stage: any) => ({
+        id: stage.id,
+        title: stage.title,
+        short_name: stage.short_name,
+        description: stage.description,
+        video_url: stage.video_url,
+        stage_type: stage.stage_type || 'other',
+        stage_key: stage.stage_key || '',
+        is_certified: stage.is_certified || false,
+        certified_notes: stage.certified_notes,
+        created_at: stage.created_at,
+        updated_at: stage.updated_at,
+        usage_count: usageCountMap[stage.id] || 0,
+        active_client_count: activeClientCountMap[stage.id] || 0,
+      }));
+
+      setStages(stagesWithUsage);
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to fetch stages',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Filter stages based on search and filters
+  const filteredStages = useMemo(() => {
+    return stages.filter((stage) => {
+      // Search filter
+      const searchLower = searchQuery.toLowerCase();
+      const matchesSearch =
+        !searchQuery ||
+        stage.title.toLowerCase().includes(searchLower) ||
+        stage.stage_key.toLowerCase().includes(searchLower) ||
+        stage.short_name?.toLowerCase().includes(searchLower);
+
+      // Stage type filter
+      const matchesType = stageTypeFilter === 'all' || stage.stage_type === stageTypeFilter;
+
+      // Certified filter
+      const matchesCertified =
+        certifiedFilter === 'all' ||
+        (certifiedFilter === 'certified' && stage.is_certified) ||
+        (certifiedFilter === 'non-certified' && !stage.is_certified);
+
+      // Usage filter
+      const matchesUsage =
+        usageFilter === 'all' ||
+        (usageFilter === 'not-used' && stage.usage_count === 0) ||
+        (usageFilter === 'used' && stage.usage_count > 0);
+
+      return matchesSearch && matchesType && matchesCertified && matchesUsage;
+    });
+  }, [stages, searchQuery, stageTypeFilter, certifiedFilter, usageFilter]);
+
+  const handlePreview = (stage: StageWithUsage) => {
+    // Convert to Stage type for preview dialog
+    setPreviewStage({
+      id: stage.id,
+      title: stage.title,
+      short_name: stage.short_name,
+      description: stage.description,
+      video_url: stage.video_url,
+      stage_type: stage.stage_type,
+      stage_key: stage.stage_key,
+      is_certified: stage.is_certified,
+      certified_notes: stage.certified_notes,
+      created_at: stage.updated_at || stage.created_at,
+      usage_count: stage.usage_count,
+      is_reusable: true,
+      ai_hint: null,
+      dashboard_visible: true,
+    });
+    setIsPreviewOpen(true);
+  };
+
+  const handleDuplicate = async (stage: StageWithUsage) => {
+    try {
+      const newStageKey = `${stage.title.toLowerCase().replace(/[^a-zA-Z0-9]+/g, '-')}-copy-${Date.now()}`;
+      
+      const { error } = await supabase
+        .from('documents_stages')
+        .insert({
+          title: `${stage.title} (Copy)`,
+          short_name: stage.short_name,
+          description: stage.description,
+          video_url: stage.video_url,
+          stage_type: stage.stage_type,
+          stage_key: newStageKey,
+          is_certified: false, // Copies are not certified by default
+          certified_notes: null,
+        });
+
+      if (error) throw error;
+
+      toast({
+        title: 'Success',
+        description: 'Stage duplicated successfully',
+      });
+      
+      fetchStages();
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to duplicate stage',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const getStageTypeColor = (stageType: string) => {
+    switch (stageType) {
+      case 'onboarding':
+        return 'bg-blue-500/10 text-blue-600 border-blue-500/20';
+      case 'delivery':
+      case 'documentation':
+        return 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20';
+      case 'support':
+        return 'bg-purple-500/10 text-purple-600 border-purple-500/20';
+      case 'offboarding':
+        return 'bg-amber-500/10 text-amber-600 border-amber-500/20';
+      default:
+        return 'bg-muted text-muted-foreground border-border';
+    }
+  };
+
+  // Access denied for non-SuperAdmins
+  if (!isSuperAdmin) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center space-y-4">
+          <ShieldX className="h-16 w-16 mx-auto text-destructive/50" />
+          <h2 className="text-xl font-semibold">Access Denied</h2>
+          <p className="text-muted-foreground">
+            You need Super Admin privileges to access this page.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6 p-6 animate-fade-in">
+      {/* Header */}
+      <div className="flex justify-between items-start">
+        <div>
+          <h1 className="text-[28px] font-bold flex items-center gap-2">
+            <Layers className="h-7 w-7" />
+            Manage Stages
+          </h1>
+          <p className="text-muted-foreground">
+            Create and manage stage templates for packages
+          </p>
+        </div>
+        <Button
+          onClick={() => setIsCreateDialogOpen(true)}
+          className="bg-[hsl(188_74%_51%)] hover:bg-[hsl(188_74%_51%)]/90"
+        >
+          <Plus className="mr-2 h-4 w-4" />
+          Create Stage
+        </Button>
+      </div>
+
+      {/* Filters Row */}
+      <div className="flex flex-wrap items-center gap-4">
+        <div className="relative flex-1 min-w-[250px] max-w-md">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search by name or stage key..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-10"
+          />
+        </div>
+
+        <Select value={stageTypeFilter} onValueChange={setStageTypeFilter}>
+          <SelectTrigger className="w-[160px]">
+            <SelectValue placeholder="Stage Type" />
+          </SelectTrigger>
+          <SelectContent>
+            {STAGE_TYPE_OPTIONS.map((option) => (
+              <SelectItem key={option.value} value={option.value}>
+                {option.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        <Select value={certifiedFilter} onValueChange={setCertifiedFilter}>
+          <SelectTrigger className="w-[140px]">
+            <SelectValue placeholder="Certified" />
+          </SelectTrigger>
+          <SelectContent>
+            {CERTIFIED_FILTER_OPTIONS.map((option) => (
+              <SelectItem key={option.value} value={option.value}>
+                {option.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        <Select value={usageFilter} onValueChange={setUsageFilter}>
+          <SelectTrigger className="w-[160px]">
+            <SelectValue placeholder="Usage" />
+          </SelectTrigger>
+          <SelectContent>
+            {USAGE_FILTER_OPTIONS.map((option) => (
+              <SelectItem key={option.value} value={option.value}>
+                {option.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        <div className="text-sm text-muted-foreground ml-auto">
+          Showing {filteredStages.length} of {stages.length} stages
+        </div>
+      </div>
+
+      {/* Table */}
+      <div className="rounded-lg border bg-card shadow-sm overflow-hidden">
+        <Table>
+          <TableHeader>
+            <TableRow className="border-b hover:bg-transparent">
+              <TableHead className="font-semibold">Stage Name</TableHead>
+              <TableHead className="font-semibold">Type</TableHead>
+              <TableHead className="font-semibold text-center">Certified</TableHead>
+              <TableHead className="font-semibold text-center">
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger className="flex items-center gap-1 mx-auto">
+                      <Package2 className="h-4 w-4" />
+                      Packages
+                    </TooltipTrigger>
+                    <TooltipContent>Used in packages count</TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </TableHead>
+              <TableHead className="font-semibold text-center">
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger className="flex items-center gap-1 mx-auto">
+                      <Users className="h-4 w-4" />
+                      Active
+                    </TooltipTrigger>
+                    <TooltipContent>Active client instances</TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </TableHead>
+              <TableHead className="font-semibold">Updated</TableHead>
+              <TableHead className="font-semibold text-right">Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {isLoading ? (
+              // Loading skeleton
+              Array.from({ length: 5 }).map((_, i) => (
+                <TableRow key={i}>
+                  <TableCell><Skeleton className="h-5 w-[200px]" /></TableCell>
+                  <TableCell><Skeleton className="h-5 w-[80px]" /></TableCell>
+                  <TableCell><Skeleton className="h-5 w-[60px] mx-auto" /></TableCell>
+                  <TableCell><Skeleton className="h-5 w-[40px] mx-auto" /></TableCell>
+                  <TableCell><Skeleton className="h-5 w-[40px] mx-auto" /></TableCell>
+                  <TableCell><Skeleton className="h-5 w-[80px]" /></TableCell>
+                  <TableCell><Skeleton className="h-5 w-[80px] ml-auto" /></TableCell>
+                </TableRow>
+              ))
+            ) : filteredStages.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={7} className="text-center py-16">
+                  <div className="space-y-3">
+                    <Layers className="h-12 w-12 mx-auto text-muted-foreground/50" />
+                    <p className="text-muted-foreground">
+                      {stages.length === 0
+                        ? 'No stages found. Create a stage to get started.'
+                        : 'No stages match your filters.'}
+                    </p>
+                    {stages.length === 0 && (
+                      <Button
+                        variant="outline"
+                        onClick={() => setIsCreateDialogOpen(true)}
+                      >
+                        <Plus className="mr-2 h-4 w-4" />
+                        Create Stage
+                      </Button>
+                    )}
+                  </div>
+                </TableCell>
+              </TableRow>
+            ) : (
+              filteredStages.map((stage) => (
+                <TableRow
+                  key={stage.id}
+                  className="group hover:bg-muted/50 transition-colors"
+                >
+                  <TableCell>
+                    <Link
+                      to={`/admin/stages/${stage.id}`}
+                      className="font-medium text-foreground hover:text-primary hover:underline"
+                    >
+                      {stage.title}
+                    </Link>
+                    {stage.stage_key && (
+                      <p className="text-xs text-muted-foreground mt-0.5 font-mono">
+                        {stage.stage_key}
+                      </p>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    <Badge
+                      variant="outline"
+                      className={`text-xs capitalize ${getStageTypeColor(stage.stage_type)}`}
+                    >
+                      {stage.stage_type}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-center">
+                    {stage.is_certified ? (
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger>
+                            <Badge className="bg-emerald-500/10 text-emerald-600 border-emerald-500/20">
+                              <ShieldCheck className="h-3 w-3 mr-1" />
+                              Yes
+                            </Badge>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            {stage.certified_notes || 'Certified stage template'}
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    ) : (
+                      <span className="text-muted-foreground">-</span>
+                    )}
+                  </TableCell>
+                  <TableCell className="text-center">
+                    <span className="font-medium">{stage.usage_count}</span>
+                  </TableCell>
+                  <TableCell className="text-center">
+                    {stage.active_client_count > 0 ? (
+                      <Badge variant="secondary" className="text-xs">
+                        {stage.active_client_count}
+                      </Badge>
+                    ) : (
+                      <span className="text-muted-foreground">-</span>
+                    )}
+                  </TableCell>
+                  <TableCell className="text-muted-foreground text-sm">
+                    {stage.updated_at
+                      ? format(new Date(stage.updated_at), 'dd MMM yyyy')
+                      : format(new Date(stage.created_at), 'dd MMM yyyy')}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handlePreview(stage)}
+                              className="h-8 w-8"
+                            >
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>Preview</TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                      
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleDuplicate(stage)}
+                              className="h-8 w-8"
+                            >
+                              <Copy className="h-4 w-4" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>Duplicate</TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
+          </TableBody>
+        </Table>
+      </div>
+
+      {/* Create Stage Dialog */}
+      <AddStageDialog
+        open={isCreateDialogOpen}
+        onOpenChange={setIsCreateDialogOpen}
+        onSuccess={fetchStages}
+      />
+
+      {/* Preview Dialog */}
+      <StagePreviewDialog
+        open={isPreviewOpen}
+        onOpenChange={setIsPreviewOpen}
+        stage={previewStage}
+      />
+    </div>
+  );
+}
