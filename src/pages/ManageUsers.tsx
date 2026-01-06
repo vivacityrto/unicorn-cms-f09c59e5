@@ -85,6 +85,8 @@ export default function ManageUsers() {
     job_title: '',
     timezone: '',
     bio: '',
+    user_type: '',
+    unicorn_role: '',
   });
   const [deleteDialog, setDeleteDialog] = useState<{
     open: boolean;
@@ -413,10 +415,10 @@ export default function ManageUsers() {
   const handleEditUser = async (user: User) => {
     setEditingUser(user);
     
-    // Fetch full user details including job_title, timezone, bio
+    // Fetch full user details including job_title, timezone, bio, user_type, unicorn_role
     const { data, error } = await supabase
       .from('users')
-      .select('first_name, last_name, mobile_phone, job_title, timezone, bio')
+      .select('first_name, last_name, mobile_phone, job_title, timezone, bio, user_type, unicorn_role')
       .eq('user_uuid', user.user_uuid)
       .single();
     
@@ -428,6 +430,8 @@ export default function ManageUsers() {
         job_title: data.job_title || '',
         timezone: data.timezone || 'Australia/Sydney',
         bio: data.bio || '',
+        user_type: data.user_type || '',
+        unicorn_role: data.unicorn_role || '',
       });
     } else {
       setEditFormData({
@@ -437,6 +441,8 @@ export default function ManageUsers() {
         job_title: '',
         timezone: 'Australia/Sydney',
         bio: '',
+        user_type: user.user_type || '',
+        unicorn_role: user.unicorn_role || '',
       });
     }
     
@@ -463,6 +469,8 @@ export default function ManageUsers() {
           job_title: editFormData.job_title || null,
           timezone: editFormData.timezone || null,
           bio: editFormData.bio || null,
+          user_type: editFormData.user_type || null,
+          unicorn_role: editFormData.unicorn_role || null,
         },
         headers: {
           Authorization: `Bearer ${token}`,
@@ -1048,6 +1056,43 @@ export default function ManageUsers() {
                       <SelectItem value="Australia/Perth">Perth (AWST)</SelectItem>
                       <SelectItem value="Australia/Adelaide">Adelaide (ACDT/ACST)</SelectItem>
                       <SelectItem value="Australia/Darwin">Darwin (ACST)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-user-type">User Type</Label>
+                  <Select
+                    value={editFormData.user_type}
+                    onValueChange={(value) => setEditFormData({ ...editFormData, user_type: value })}
+                  >
+                    <SelectTrigger id="edit-user-type">
+                      <SelectValue placeholder="Select user type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Vivacity Team">Vivacity Team</SelectItem>
+                      <SelectItem value="Client Parent">Client Parent</SelectItem>
+                      <SelectItem value="Client Child">Client Child</SelectItem>
+                      <SelectItem value="Client">Client</SelectItem>
+                      <SelectItem value="Member">Member</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-unicorn-role">System Role</Label>
+                  <Select
+                    value={editFormData.unicorn_role}
+                    onValueChange={(value) => setEditFormData({ ...editFormData, unicorn_role: value })}
+                  >
+                    <SelectTrigger id="edit-unicorn-role">
+                      <SelectValue placeholder="Select role" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Super Admin">Super Admin</SelectItem>
+                      <SelectItem value="Admin">Admin</SelectItem>
+                      <SelectItem value="User">User</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
