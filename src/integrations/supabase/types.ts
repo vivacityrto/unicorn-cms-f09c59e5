@@ -5432,7 +5432,7 @@ export type Database = {
           id: number
           role: string | null
           updated_at: string | null
-          user_id: string | null
+          user_id: string
           userid: number | null
           username: string
         }
@@ -5446,7 +5446,7 @@ export type Database = {
           id?: number
           role?: string | null
           updated_at?: string | null
-          user_id?: string | null
+          user_id: string
           userid?: number | null
           username: string
         }
@@ -5460,7 +5460,7 @@ export type Database = {
           id?: number
           role?: string | null
           updated_at?: string | null
-          user_id?: string | null
+          user_id?: string
           userid?: number | null
           username?: string
         }
@@ -6444,7 +6444,7 @@ export type Database = {
           postcode: string | null
           state: string | null
           suburb: string | null
-          tenant_id: string
+          tenant_id: number | null
           updated_at: string
           updated_by: string | null
         }
@@ -6467,7 +6467,7 @@ export type Database = {
           postcode?: string | null
           state?: string | null
           suburb?: string | null
-          tenant_id: string
+          tenant_id?: number | null
           updated_at?: string
           updated_by?: string | null
         }
@@ -6490,7 +6490,7 @@ export type Database = {
           postcode?: string | null
           state?: string | null
           suburb?: string | null
-          tenant_id?: string
+          tenant_id?: number | null
           updated_at?: string
           updated_by?: string | null
         }
@@ -9118,10 +9118,14 @@ export type Database = {
         | { Args: { p_user_id: string }; Returns: boolean }
       is_super_admin_by_role: { Args: never; Returns: boolean }
       is_super_admin_member: { Args: never; Returns: boolean }
+      is_super_admin_user: { Args: { p_user_id: string }; Returns: boolean }
       is_superadmin: { Args: never; Returns: boolean }
       is_tenant_admin:
         | { Args: { _tenant_id: number; _user_id: string }; Returns: boolean }
-        | { Args: { tid: number }; Returns: boolean }
+        | { Args: { p_tenant_id: number }; Returns: boolean }
+      is_tenant_admin_uuid: { Args: { p_tenant_id: string }; Returns: boolean }
+      is_tenant_member: { Args: { p_tenant_id: number }; Returns: boolean }
+      is_tenant_member_uuid: { Args: { p_tenant_id: string }; Returns: boolean }
       is_user_super_admin: { Args: { user_id: string }; Returns: boolean }
       is_vivacity: { Args: never; Returns: boolean }
       is_vivacity_super_admin: { Args: never; Returns: boolean }
