@@ -96,6 +96,10 @@ const superAdminMenuItems = {
     label: "Manage Packages",
     path: "/admin/manage-packages"
   }, {
+    icon: Blocks,
+    label: "Manage Stages",
+    path: "/admin/stages"
+  }, {
     icon: Mail,
     label: "Email Templates",
     path: "/admin/email-templates"
