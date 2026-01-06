@@ -97,8 +97,7 @@ export function AdminActions({
 
   // Check for invalid combinations
   const hasInvalidCombination = 
-    (newRole === 'Super Admin' && newUserType !== 'Vivacity') ||
-    (newUserType === 'Vivacity' && newRole !== 'Super Admin') ||
+    (newRole === 'Super Admin' && !['Vivacity', 'Vivacity Team'].includes(newUserType)) ||
     (newUserType === 'Client' && !newTenantId);
 
   useEffect(() => {
@@ -272,7 +271,9 @@ export function AdminActions({
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="Vivacity">Vivacity</SelectItem>
+                    <SelectItem value="Vivacity Team">Vivacity Team</SelectItem>
                     <SelectItem value="Client">Client</SelectItem>
+                    <SelectItem value="Client Parent">Client Parent</SelectItem>
                     <SelectItem value="Member">Member</SelectItem>
                   </SelectContent>
                 </Select>
@@ -298,20 +299,11 @@ export function AdminActions({
               )}
 
               {/* Validation Warnings */}
-              {newRole === 'Super Admin' && newUserType !== 'Vivacity' && (
+              {newRole === 'Super Admin' && !['Vivacity', 'Vivacity Team'].includes(newUserType) && (
                 <Alert variant="destructive">
                   <AlertCircle className="h-4 w-4" />
                   <AlertDescription>
                     Super Admin role requires Vivacity user type
-                  </AlertDescription>
-                </Alert>
-              )}
-
-              {newUserType === 'Vivacity' && newRole !== 'Super Admin' && (
-                <Alert variant="destructive">
-                  <AlertCircle className="h-4 w-4" />
-                  <AlertDescription>
-                    Vivacity user type requires Super Admin role
                   </AlertDescription>
                 </Alert>
               )}
