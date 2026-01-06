@@ -5013,7 +5013,7 @@ export type Database = {
           entity_id: string | null
           entity_type: string
           id: string
-          package_id: number
+          package_id: number | null
           user_id: string | null
         }
         Insert: {
@@ -5024,7 +5024,7 @@ export type Database = {
           entity_id?: string | null
           entity_type: string
           id?: string
-          package_id: number
+          package_id?: number | null
           user_id?: string | null
         }
         Update: {
@@ -5035,7 +5035,7 @@ export type Database = {
           entity_id?: string | null
           entity_type?: string
           id?: string
-          package_id?: number
+          package_id?: number | null
           user_id?: string | null
         }
         Relationships: [
@@ -6373,6 +6373,65 @@ export type Database = {
             columns: ["stage_state_id"]
             isOneToOne: false
             referencedRelation: "client_package_stage_state"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      stage_task_templates: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          due_date_offset: number | null
+          estimated_hours: number | null
+          id: string
+          instructions: string | null
+          is_mandatory: boolean | null
+          name: string
+          order_number: number
+          owner_role: string | null
+          required_documents: string[] | null
+          stage_id: number | null
+          task_type: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          due_date_offset?: number | null
+          estimated_hours?: number | null
+          id?: string
+          instructions?: string | null
+          is_mandatory?: boolean | null
+          name: string
+          order_number?: number
+          owner_role?: string | null
+          required_documents?: string[] | null
+          stage_id?: number | null
+          task_type: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          due_date_offset?: number | null
+          estimated_hours?: number | null
+          id?: string
+          instructions?: string | null
+          is_mandatory?: boolean | null
+          name?: string
+          order_number?: number
+          owner_role?: string | null
+          required_documents?: string[] | null
+          stage_id?: number | null
+          task_type?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stage_task_templates_stage_id_fkey"
+            columns: ["stage_id"]
+            isOneToOne: false
+            referencedRelation: "documents_stages"
             referencedColumns: ["id"]
           },
         ]
