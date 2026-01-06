@@ -8507,6 +8507,7 @@ export type Database = {
           role: string | null
           rto_id: number | null
           rto_name: string | null
+          staff_team: Database["public"]["Enums"]["staff_team_type"] | null
           state: number | null
           street_address: string | null
           street_number_and_name: string | null
@@ -8570,6 +8571,7 @@ export type Database = {
           role?: string | null
           rto_id?: number | null
           rto_name?: string | null
+          staff_team?: Database["public"]["Enums"]["staff_team_type"] | null
           state?: number | null
           street_address?: string | null
           street_number_and_name?: string | null
@@ -8633,6 +8635,7 @@ export type Database = {
           role?: string | null
           rto_id?: number | null
           rto_name?: string | null
+          staff_team?: Database["public"]["Enums"]["staff_team_type"] | null
           state?: number | null
           street_address?: string | null
           street_number_and_name?: string | null
@@ -9258,6 +9261,7 @@ export type Database = {
         | "todos"
         | "ids"
         | "conclude"
+      staff_team_type: "csc" | "csc_admin" | "growth" | "leadership" | "other"
       stage_state:
         | "not_started"
         | "active"
@@ -9454,6 +9458,7 @@ export const Constants = {
         "ids",
         "conclude",
       ],
+      staff_team_type: ["csc", "csc_admin", "growth", "leadership", "other"],
       stage_state: [
         "not_started",
         "active",
