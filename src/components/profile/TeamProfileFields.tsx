@@ -40,13 +40,15 @@ interface TeamProfileFieldsProps {
     is_csc?: boolean;
     leave_from?: string | null;
     leave_until?: string | null;
-    away_message?: string | null;  // Separate from availability_note
+    away_message?: string | null;
     cover_user_id?: string | null;
     user_type?: string;
     unicorn_role?: string;
   };
   canEdit: boolean;
   onSave: () => void;
+  currentUserId?: string;  // To determine if editing self or another user
+  isCurrentUserSuperAdmin?: boolean;  // To know if current user can edit others
 }
 
 const DAYS = [
@@ -76,7 +78,7 @@ const HOLIDAY_REGIONS = [
   { value: 'US', label: 'United States' },
 ];
 
-export function TeamProfileFields({ user, canEdit, onSave }: TeamProfileFieldsProps) {
+export function TeamProfileFields({ user, canEdit, onSave, currentUserId, isCurrentUserSuperAdmin }: TeamProfileFieldsProps) {
   const { toast } = useToast();
   const [saving, setSaving] = useState(false);
   const [teamUsers, setTeamUsers] = useState<TeamUser[]>([]);
@@ -153,21 +155,53 @@ export function TeamProfileFields({ user, canEdit, onSave }: TeamProfileFieldsPr
         return;
       }
 
-      const { data, error } = await supabase.rpc('update_own_team_profile', {
-        p_linkedin_url: formData.linkedin_url || null,
-        p_booking_url: formData.booking_url || null,
-        p_working_days: formData.working_days,
-        p_working_hours: { 
-          start: formData.working_hours_start, 
-          end: formData.working_hours_end 
-        },
-        p_availability_note: formData.availability_note || null,
-        p_public_holiday_region: formData.public_holiday_region || null,
-        p_leave_from: formData.leave_from || null,
-        p_leave_until: formData.leave_until || null,
-        p_away_message: formData.away_message || null,
-        p_cover_user_id: formData.cover_user_id || null,
-      });
+      // Determine if editing self or another user
+      const isEditingSelf = !currentUserId || currentUserId === user.user_uuid;
+      
+      let data, error;
+      
+      if (isEditingSelf) {
+        // Use the self-update RPC
+        const result = await supabase.rpc('update_own_team_profile', {
+          p_linkedin_url: formData.linkedin_url || null,
+          p_booking_url: formData.booking_url || null,
+          p_working_days: formData.working_days,
+          p_working_hours: { 
+            start: formData.working_hours_start, 
+            end: formData.working_hours_end 
+          },
+          p_availability_note: formData.availability_note || null,
+          p_public_holiday_region: formData.public_holiday_region || null,
+          p_leave_from: formData.leave_from || null,
+          p_leave_until: formData.leave_until || null,
+          p_away_message: formData.away_message || null,
+          p_cover_user_id: formData.cover_user_id || null,
+        });
+        data = result.data;
+        error = result.error;
+      } else if (isCurrentUserSuperAdmin) {
+        // SuperAdmin editing another team member - use admin RPC
+        const result = await supabase.rpc('update_team_member_profile', {
+          p_target_user_id: user.user_uuid,
+          p_linkedin_url: formData.linkedin_url || null,
+          p_booking_url: formData.booking_url || null,
+          p_working_days: formData.working_days,
+          p_working_hours: { 
+            start: formData.working_hours_start, 
+            end: formData.working_hours_end 
+          },
+          p_availability_note: formData.availability_note || null,
+          p_public_holiday_region: formData.public_holiday_region || null,
+          p_leave_from: formData.leave_from || null,
+          p_leave_until: formData.leave_until || null,
+          p_away_message: formData.away_message || null,
+          p_cover_user_id: formData.cover_user_id || null,
+        });
+        data = result.data;
+        error = result.error;
+      } else {
+        throw new Error('You do not have permission to edit this profile');
+      }
 
       if (error) throw error;
 

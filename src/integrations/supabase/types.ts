@@ -9667,6 +9667,22 @@ export type Database = {
             }
             Returns: Json
           }
+      update_team_member_profile: {
+        Args: {
+          p_availability_note?: string
+          p_away_message?: string
+          p_booking_url?: string
+          p_cover_user_id?: string
+          p_leave_from?: string
+          p_leave_until?: string
+          p_linkedin_url?: string
+          p_public_holiday_region?: string
+          p_target_user_id: string
+          p_working_days?: string[]
+          p_working_hours?: Json
+        }
+        Returns: Json
+      }
       update_user_notification_prefs: {
         Args: { p_prefs: Json }
         Returns: string
