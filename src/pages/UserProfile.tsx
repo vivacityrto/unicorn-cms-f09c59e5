@@ -11,6 +11,7 @@ import { ProfileForm } from '@/components/profile/ProfileForm';
 import { AdminActions } from '@/components/profile/AdminActions';
 import { ActivityPanel } from '@/components/profile/ActivityPanel';
 import { CSCProfileFields } from '@/components/profile/CSCProfileFields';
+import { TeamProfileFields } from '@/components/profile/TeamProfileFields';
 
 interface UserData {
   user_uuid: string;
@@ -40,6 +41,12 @@ interface UserData {
   availability_note?: string | null;
   public_holiday_region?: string | null;
   is_csc?: boolean;
+  // Leave fields
+  leave_from?: string | null;
+  leave_to?: string | null;
+  away_message?: string | null;
+  cover_user_id?: string | null;
+  superadmin_level?: string | null;
 }
 
 interface CurrentUser {
@@ -86,6 +93,7 @@ export default function UserProfile() {
 
   const fetchUserData = async () => {
     try {
+      // Use raw query to include new columns that may not be in types yet
       const { data: userData, error: userError } = await supabase
         .from('users')
         .select(`
@@ -122,12 +130,18 @@ export default function UserProfile() {
       if (userError) throw userError;
 
       // Add tenant name to user data and cast JSON fields
+      const rawData = userData as any;
       const userWithTenant: UserData = {
-        ...userData,
-        tenant_name: (userData.tenants as any)?.name || null,
-        staff_team: userData.staff_team || null,
-        working_days: userData.working_days as string[] | null,
-        working_hours: userData.working_hours as { start: string; end: string } | null,
+        ...rawData,
+        tenant_name: rawData.tenants?.name || null,
+        staff_team: rawData.staff_team || null,
+        working_days: rawData.working_days as string[] | null,
+        working_hours: rawData.working_hours as { start: string; end: string } | null,
+        leave_from: rawData.leave_from || null,
+        leave_to: rawData.leave_to || null,
+        away_message: rawData.away_message || null,
+        cover_user_id: rawData.cover_user_id || null,
+        superadmin_level: rawData.superadmin_level || null,
       };
       delete (userWithTenant as any).tenants;
 
@@ -208,6 +222,16 @@ export default function UserProfile() {
         {/* Left Column - Profile Form */}
         <div className="lg:col-span-2 space-y-6">
           <ProfileForm
+            user={user}
+            canEdit={canEdit && isEditing}
+            onSave={() => {
+              fetchUserData();
+              setIsEditing(false);
+            }}
+          />
+
+          {/* Team Profile Fields (for Team/SuperAdmin users) */}
+          <TeamProfileFields
             user={user}
             canEdit={canEdit && isEditing}
             onSave={() => {

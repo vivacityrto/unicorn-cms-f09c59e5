@@ -13,8 +13,11 @@ import {
   MapPin,
   Briefcase,
   Globe,
-  ExternalLink
+  ExternalLink,
+  AlertTriangle,
+  UserCheck
 } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
@@ -36,6 +39,13 @@ interface CSCProfile {
   avatar_url: string | null;
   is_primary: boolean;
   role_label: string;
+  leave_from: string | null;
+  leave_to: string | null;
+  away_message: string | null;
+  cover_user_id: string | null;
+  cover_first_name: string | null;
+  cover_last_name: string | null;
+  cover_email: string | null;
 }
 
 interface CSCProfileCardProps {
@@ -71,8 +81,14 @@ export function CSCProfileCard({ tenantId, compact = false }: CSCProfileCardProp
 
       if (error) throw error;
       
-      // Type cast the response
-      const profiles = (data || []) as CSCProfile[];
+      // Transform the response to match our interface
+      const profiles = (data || []).map((item: any) => ({
+        ...item,
+        working_days: Array.isArray(item.working_days) ? item.working_days : null,
+        working_hours: item.working_hours && typeof item.working_hours === 'object' 
+          ? item.working_hours as { start: string; end: string }
+          : null,
+      })) as CSCProfile[];
       setCscProfiles(profiles);
     } catch (error: any) {
       console.error('Error fetching CSC profiles:', error);
@@ -139,11 +155,53 @@ export function CSCProfileCard({ tenantId, compact = false }: CSCProfileCardProp
     return `${firstName?.[0] || ''}${lastName?.[0] || ''}`.toUpperCase() || 'CSC';
   };
 
-  const renderCSCCard = (csc: CSCProfile, isPrimary: boolean) => (
+  const isOnLeave = (csc: CSCProfile) => {
+    if (!csc.leave_from || !csc.leave_to) return false;
+    const now = new Date();
+    const from = new Date(csc.leave_from);
+    const to = new Date(csc.leave_to);
+    return now >= from && now <= to;
+  };
+
+  const formatLeaveDate = (date: string) => {
+    return new Date(date).toLocaleDateString('en-AU', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric'
+    });
+  };
+
+  const renderCSCCard = (csc: CSCProfile, isPrimary: boolean) => {
+    const onLeave = isOnLeave(csc);
+    
+    return (
     <div key={csc.user_uuid} className="space-y-4">
+      {/* Leave Status Banner */}
+      {onLeave && (
+        <Alert className="bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-800">
+          <AlertTriangle className="h-4 w-4 text-amber-600" />
+          <AlertDescription className="text-amber-800 dark:text-amber-200">
+            <strong>{csc.first_name} is away</strong>
+            {csc.leave_to && ` until ${formatLeaveDate(csc.leave_to)}`}
+            {csc.away_message && <span className="block text-sm mt-1">{csc.away_message}</span>}
+            {csc.cover_first_name && csc.cover_last_name && (
+              <span className="flex items-center gap-1 mt-2 text-sm">
+                <UserCheck className="h-3 w-3" />
+                Cover contact: <strong>{csc.cover_first_name} {csc.cover_last_name}</strong>
+                {csc.cover_email && (
+                  <a href={`mailto:${csc.cover_email}`} className="text-primary hover:underline ml-1">
+                    ({csc.cover_email})
+                  </a>
+                )}
+              </span>
+            )}
+          </AlertDescription>
+        </Alert>
+      )}
+
       {/* Header with avatar and name */}
       <div className="flex items-start gap-4">
-        <Avatar className="h-16 w-16 border-2 border-primary/20">
+        <Avatar className={`h-16 w-16 border-2 ${onLeave ? 'border-amber-300 opacity-75' : 'border-primary/20'}`}>
           <AvatarImage src={csc.avatar_url || undefined} />
           <AvatarFallback className="text-lg font-semibold bg-primary/10 text-primary">
             {getInitials(csc.first_name, csc.last_name)}
@@ -160,6 +218,9 @@ export function CSCProfileCard({ tenantId, compact = false }: CSCProfileCardProp
             )}
             {!isPrimary && (
               <Badge variant="outline" className="text-xs">Backup</Badge>
+            )}
+            {onLeave && (
+              <Badge variant="secondary" className="text-xs bg-amber-100 text-amber-800">Away</Badge>
             )}
           </div>
           
@@ -261,6 +322,7 @@ export function CSCProfileCard({ tenantId, compact = false }: CSCProfileCardProp
       </div>
     </div>
   );
+  };
 
   return (
     <Card>
