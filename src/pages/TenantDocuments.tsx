@@ -5,13 +5,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Search, FileText, Download, Trash2, CheckCircle2, XCircle, Tag, AlertCircle, Loader2 } from "lucide-react";
+import { ArrowLeft, Search, FileText, Download, Trash2, CheckCircle2, XCircle, Tag, AlertCircle, Loader2, FileSpreadsheet } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { CreateDocumentDialog2 } from "@/components/CreateDocumentDialog2";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
 import { MissingMergeFieldsDialog } from "@/components/tenant/MissingMergeFieldsDialog";
 import { useMissingMergeFields, MissingField } from "@/hooks/useMissingMergeFields";
+import { useExcelGeneration, isExcelDocument } from "@/hooks/useExcelGeneration";
 
 interface Document {
   id: number;
@@ -27,6 +28,7 @@ interface Document {
   package_name?: string | null;
   merge_fields?: any;
   is_auto_generated?: boolean | null;
+  format?: string | null;
 }
 
 export default function TenantDocuments() {
@@ -53,6 +55,7 @@ export default function TenantDocuments() {
 
   const parsedTenantId = tenantId ? parseInt(tenantId) : null;
   const { detectMissingFields } = useMissingMergeFields(parsedTenantId);
+  const { generateAndDownload, isDocumentGenerating, generating } = useExcelGeneration();
 
   // Get packageId from URL params if provided
   const urlPackageId = searchParams.get('packageId');
@@ -221,6 +224,42 @@ export default function TenantDocuments() {
     }
   };
 
+  // Handle Excel auto-generation download
+  const handleExcelGenerate = async (doc: Document, e: React.MouseEvent) => {
+    e.stopPropagation();
+    
+    if (!parsedTenantId) {
+      toast({
+        title: "Error",
+        description: "Tenant ID is required",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Check if there are missing fields first
+    const hasMissingFields = documentMissingFields[doc.id]?.length > 0;
+    if (hasMissingFields) {
+      handleOpenMissingFields(doc, e);
+      return;
+    }
+
+    // Get client_legacy_id from tenants table
+    const { data: tenantData } = await supabase
+      .from("tenants")
+      .select("client_legacy_id")
+      .eq("id", parsedTenantId)
+      .single();
+
+    await generateAndDownload({
+      documentId: doc.id,
+      tenantId: parsedTenantId,
+      clientLegacyId: (tenantData as any)?.client_legacy_id,
+      stageId: doc.stage || undefined,
+      packageId: doc.package_id || undefined
+    });
+  };
+
   return (
     <div className="p-6 space-y-6 animate-fade-in">
       {/* Back Button */}
@@ -349,23 +388,49 @@ export default function TenantDocuments() {
                     })()}
                   </TableCell>
                   <TableCell className="py-6 border-r border-border/50 whitespace-nowrap">
-                    {doc.uploaded_files && doc.uploaded_files.length > 0 ? (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setSelectedFiles(doc.uploaded_files || []);
-                          setFilesDialogOpen(true);
-                        }}
-                        className="text-xs whitespace-nowrap hover:bg-[hsl(196deg_100%_93.53%/79%)] hover:text-black [&:hover_svg]:text-black"
-                      >
-                        <FileText className="h-3 w-3 mr-1" />
-                        View Files ({doc.uploaded_files.length})
-                      </Button>
-                    ) : (
-                      <span className="text-muted-foreground text-sm">No files</span>
-                    )}
+                    <div className="flex items-center gap-2">
+                      {/* Excel auto-generate button */}
+                      {doc.is_auto_generated && isExcelDocument(doc.format) && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={(e) => handleExcelGenerate(doc, e)}
+                          disabled={isDocumentGenerating(doc.id) || documentMissingFields[doc.id]?.length > 0}
+                          className="text-xs whitespace-nowrap bg-green-500/10 text-green-600 border-green-500 hover:bg-green-500/20"
+                        >
+                          {isDocumentGenerating(doc.id) ? (
+                            <>
+                              <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                              Generating...
+                            </>
+                          ) : (
+                            <>
+                              <FileSpreadsheet className="h-3 w-3 mr-1" />
+                              Generate Excel
+                            </>
+                          )}
+                        </Button>
+                      )}
+                      {/* Regular file view button */}
+                      {doc.uploaded_files && doc.uploaded_files.length > 0 && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedFiles(doc.uploaded_files || []);
+                            setFilesDialogOpen(true);
+                          }}
+                          className="text-xs whitespace-nowrap hover:bg-[hsl(196deg_100%_93.53%/79%)] hover:text-black [&:hover_svg]:text-black"
+                        >
+                          <FileText className="h-3 w-3 mr-1" />
+                          View Files ({doc.uploaded_files.length})
+                        </Button>
+                      )}
+                      {!doc.uploaded_files?.length && !(doc.is_auto_generated && isExcelDocument(doc.format)) && (
+                        <span className="text-muted-foreground text-sm">No files</span>
+                      )}
+                    </div>
                   </TableCell>
                   <TableCell className="py-6 border-r border-border/50 text-muted-foreground text-sm whitespace-nowrap">
                     {doc.createdat ? new Date(doc.createdat).toLocaleDateString('en-US', {
