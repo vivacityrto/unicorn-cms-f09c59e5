@@ -29,6 +29,8 @@ export interface Stage {
   dashboard_visible: boolean;
   created_at: string;
   usage_count?: number;
+  is_certified?: boolean;
+  certified_notes?: string | null;
 }
 
 export interface PackageStage {
@@ -335,7 +337,9 @@ export function usePackageBuilder() {
         stage_type: data.stage_type || 'delivery',
         is_reusable: data.is_reusable ?? true,
         ai_hint: data.ai_hint,
-        dashboard_visible: data.dashboard_visible ?? true
+        dashboard_visible: data.dashboard_visible ?? true,
+        is_certified: data.is_certified ?? false,
+        certified_notes: data.is_certified ? data.certified_notes : null
       })
       .select()
       .single();
@@ -347,6 +351,10 @@ export function usePackageBuilder() {
 
   const updateStage = async (id: number, data: Partial<Stage>) => {
     const { id: _id, ...updateData } = data as any;
+    // If updating certified status to false, clear notes
+    if (updateData.is_certified === false) {
+      updateData.certified_notes = null;
+    }
     const { error } = await supabase
       .from('documents_stages')
       .update(updateData)

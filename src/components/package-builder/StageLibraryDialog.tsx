@@ -9,8 +9,9 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
-import { Search, Plus, Check, Layers, AlertTriangle, Loader2 } from 'lucide-react';
+import { Search, Plus, Check, Layers, AlertTriangle, Loader2, ShieldCheck } from 'lucide-react';
 
 interface StageLibraryDialogProps {
   open: boolean;
@@ -39,6 +40,7 @@ export function StageLibraryDialog({
   const [activeTab, setActiveTab] = useState('library');
   const [searchQuery, setSearchQuery] = useState('');
   const [typeFilter, setTypeFilter] = useState<string>('all');
+  const [certifiedFilter, setCertifiedFilter] = useState<string>('all');
   const [addingStageId, setAddingStageId] = useState<number | null>(null);
   const [isCreating, setIsCreating] = useState(false);
   const [newStage, setNewStage] = useState({
@@ -47,7 +49,9 @@ export function StageLibraryDialog({
     description: '',
     stage_type: 'delivery',
     video_url: '',
-    ai_hint: ''
+    ai_hint: '',
+    is_certified: false,
+    certified_notes: ''
   });
 
   const filteredStages = useMemo(() => {
@@ -58,9 +62,13 @@ export function StageLibraryDialog({
       
       const matchesType = typeFilter === 'all' || stage.stage_type === typeFilter;
       
-      return matchesSearch && matchesType;
+      const matchesCertified = certifiedFilter === 'all' || 
+        (certifiedFilter === 'certified' && stage.is_certified) ||
+        (certifiedFilter === 'non-certified' && !stage.is_certified);
+      
+      return matchesSearch && matchesType && matchesCertified;
     });
-  }, [stages, searchQuery, typeFilter]);
+  }, [stages, searchQuery, typeFilter, certifiedFilter]);
 
   const handleAddStage = async (stageId: number) => {
     try {
@@ -93,7 +101,9 @@ export function StageLibraryDialog({
         video_url: newStage.video_url,
         ai_hint: newStage.ai_hint,
         is_reusable: true,
-        dashboard_visible: true
+        dashboard_visible: true,
+        is_certified: newStage.is_certified,
+        certified_notes: newStage.is_certified ? newStage.certified_notes : null
       });
 
       toast({
@@ -111,7 +121,9 @@ export function StageLibraryDialog({
         description: '',
         stage_type: 'delivery',
         video_url: '',
-        ai_hint: ''
+        ai_hint: '',
+        is_certified: false,
+        certified_notes: ''
       });
       setActiveTab('library');
     } catch (error: any) {
@@ -161,7 +173,7 @@ export function StageLibraryDialog({
                 />
               </div>
               <Select value={typeFilter} onValueChange={setTypeFilter}>
-                <SelectTrigger className="w-[160px]">
+                <SelectTrigger className="w-[140px]">
                   <SelectValue placeholder="Stage Type" />
                 </SelectTrigger>
                 <SelectContent>
@@ -169,6 +181,16 @@ export function StageLibraryDialog({
                   {STAGE_TYPE_OPTIONS.map(opt => (
                     <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
                   ))}
+                </SelectContent>
+              </Select>
+              <Select value={certifiedFilter} onValueChange={setCertifiedFilter}>
+                <SelectTrigger className="w-[140px]">
+                  <SelectValue placeholder="Certified" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Stages</SelectItem>
+                  <SelectItem value="certified">Certified</SelectItem>
+                  <SelectItem value="non-certified">Non-certified</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -200,6 +222,12 @@ export function StageLibraryDialog({
                             <Badge variant="outline" className={`text-xs ${getStageTypeColor(stage.stage_type)}`}>
                               {stage.stage_type}
                             </Badge>
+                            {stage.is_certified && (
+                              <Badge className="text-xs bg-emerald-500/10 text-emerald-600 border-emerald-500/20">
+                                <ShieldCheck className="h-3 w-3 mr-1" />
+                                Certified
+                              </Badge>
+                            )}
                             {usageCount > 1 && (
                               <Badge variant="secondary" className="text-xs">
                                 Used in {usageCount} packages
@@ -312,6 +340,37 @@ export function StageLibraryDialog({
                 placeholder="Hints for AI suggestions, e.g., 'Suggest welcome email and kickoff call task'"
                 rows={2}
               />
+            </div>
+
+            {/* Certified Stage Toggle */}
+            <div className="space-y-3 p-4 rounded-lg border bg-muted/30">
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label htmlFor="certified-toggle" className="flex items-center gap-2">
+                    <ShieldCheck className="h-4 w-4 text-emerald-600" />
+                    Certified Stage
+                  </Label>
+                  <p className="text-xs text-muted-foreground">
+                    Mark this stage as a certified template for reuse
+                  </p>
+                </div>
+                <Switch
+                  id="certified-toggle"
+                  checked={newStage.is_certified}
+                  onCheckedChange={(checked) => setNewStage({ ...newStage, is_certified: checked })}
+                />
+              </div>
+              {newStage.is_certified && (
+                <div className="space-y-2">
+                  <Label>Certification Notes</Label>
+                  <Textarea
+                    value={newStage.certified_notes}
+                    onChange={(e) => setNewStage({ ...newStage, certified_notes: e.target.value })}
+                    placeholder="Notes about why this stage is certified, standards met, etc."
+                    rows={2}
+                  />
+                </div>
+              )}
             </div>
 
             <div className="flex justify-end gap-3 pt-4">

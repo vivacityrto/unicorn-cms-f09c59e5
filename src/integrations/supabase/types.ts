@@ -2566,11 +2566,13 @@ export type Database = {
       documents_stages: {
         Row: {
           ai_hint: string | null
+          certified_notes: string | null
           created_at: string
           created_by: string | null
           dashboard_visible: boolean | null
           description: string | null
           id: number
+          is_certified: boolean | null
           is_reusable: boolean | null
           short_name: string | null
           stage_type: string | null
@@ -2581,11 +2583,13 @@ export type Database = {
         }
         Insert: {
           ai_hint?: string | null
+          certified_notes?: string | null
           created_at?: string
           created_by?: string | null
           dashboard_visible?: boolean | null
           description?: string | null
           id?: never
+          is_certified?: boolean | null
           is_reusable?: boolean | null
           short_name?: string | null
           stage_type?: string | null
@@ -2596,11 +2600,13 @@ export type Database = {
         }
         Update: {
           ai_hint?: string | null
+          certified_notes?: string | null
           created_at?: string
           created_by?: string | null
           dashboard_visible?: boolean | null
           description?: string | null
           id?: never
+          is_certified?: boolean | null
           is_reusable?: boolean | null
           short_name?: string | null
           stage_type?: string | null
