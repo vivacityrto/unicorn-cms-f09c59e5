@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Plus, Calendar, Clock, Users, Play, FileText, Settings } from 'lucide-react';
+import { Plus, Calendar, Clock, Users, Play, FileText, Settings, AlertCircle, RefreshCw } from 'lucide-react';
 import { useEosMeetings } from '@/hooks/useEos';
 import { format } from 'date-fns';
 import { MeetingScheduler } from '@/components/eos/MeetingScheduler';
@@ -22,7 +22,7 @@ export default function EosMeetings() {
 
 function MeetingsContent() {
   const navigate = useNavigate();
-  const { meetings, isLoading } = useEosMeetings();
+  const { meetings, isLoading, error, refetch } = useEosMeetings();
   const [schedulerOpen, setSchedulerOpen] = useState(false);
   const [templateEditorOpen, setTemplateEditorOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<'all' | MeetingType>('all');
@@ -54,6 +54,26 @@ function MeetingsContent() {
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
           <p className="mt-4 text-muted-foreground">Loading meetings...</p>
         </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Card className="max-w-md">
+          <CardContent className="p-8 text-center">
+            <AlertCircle className="w-12 h-12 text-destructive mx-auto mb-4" />
+            <h3 className="text-lg font-semibold mb-2">Couldn't load meetings</h3>
+            <p className="text-muted-foreground mb-4 text-sm">
+              There was an issue loading your meetings. This may be a permissions or configuration issue.
+            </p>
+            <Button onClick={() => refetch()} variant="outline">
+              <RefreshCw className="w-4 h-4 mr-2" />
+              Retry
+            </Button>
+          </CardContent>
+        </Card>
       </div>
     );
   }
