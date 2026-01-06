@@ -13,7 +13,10 @@ import {
   Save,
   AlertCircle,
   Building2,
-  Users
+  Users,
+  Key,
+  Loader2,
+  Mail
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
@@ -128,6 +131,7 @@ export function AdminActions({
 }: AdminActionsProps) {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
+  const [sendingReset, setSendingReset] = useState(false);
   const [tenants, setTenants] = useState<Tenant[]>([]);
   
   // Simplified state
@@ -256,6 +260,35 @@ export function AdminActions({
     }
   };
 
+  const handleSendPasswordReset = async () => {
+    try {
+      setSendingReset(true);
+
+      const { data, error } = await supabase.functions.invoke('send-password-reset', {
+        body: { user_uuid: user.user_uuid },
+      });
+
+      if (error) throw error;
+
+      if (!data?.ok) {
+        throw new Error(data?.detail || data?.code || 'Failed to send password reset');
+      }
+
+      toast({
+        title: 'Password Reset Sent',
+        description: `Reset email sent to ${data.email}`,
+      });
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: error.message,
+        variant: 'destructive',
+      });
+    } finally {
+      setSendingReset(false);
+    }
+  };
+
   const getRoleLabel = (value: RoleType) => 
     ROLE_TYPES.find(r => r.value === value)?.label || value;
 
@@ -321,7 +354,62 @@ export function AdminActions({
 
         <Separator />
 
-        {/* Section 2: Role Type */}
+        {/* Section 2: Password Reset */}
+        <div className="space-y-3">
+          <h3 className="text-sm font-semibold flex items-center gap-2">
+            <Key className="h-4 w-4" />
+            Password Reset
+          </h3>
+          
+          <div className="p-3 rounded-lg bg-background border space-y-3">
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Mail className="h-4 w-4" />
+              <span>Send reset link to: <strong className="text-foreground">{user.email}</strong></span>
+            </div>
+            
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={sendingReset}
+                  className="w-full"
+                >
+                  {sendingReset ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Sending...
+                    </>
+                  ) : (
+                    <>
+                      <Key className="mr-2 h-4 w-4" />
+                      Send Password Reset Email
+                    </>
+                  )}
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Send Password Reset?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This will send a password reset email to <strong>{user.email}</strong>. 
+                    The link will expire in 1 hour.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction onClick={handleSendPasswordReset}>
+                    Send Reset Email
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </div>
+        </div>
+
+        <Separator />
+
+        {/* Section 3: Role Type */}
         {isSuperAdmin && (
           <div className="space-y-4">
             <h3 className="text-sm font-semibold flex items-center gap-2">
