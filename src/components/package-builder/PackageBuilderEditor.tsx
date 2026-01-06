@@ -18,11 +18,12 @@ import { useToast } from '@/hooks/use-toast';
 import { 
   ArrowLeft, Save, Layers, Plus, GripVertical, Trash2, 
   ChevronRight, AlertTriangle, Copy, Archive,
-  Lightbulb, Sparkles, PanelRightClose, PanelRightOpen
+  Lightbulb, Sparkles, PanelRightClose, PanelRightOpen, Wand2
 } from 'lucide-react';
 import { StageLibraryDialog } from './StageLibraryDialog';
 import { StageDetailPanel } from './StageDetailPanel';
 import { PackageAIAssistant } from './PackageAIAssistant';
+import { AddRecommendedStagesDialog } from './AddRecommendedStagesDialog';
 import {
   DndContext,
   closestCenter,
@@ -156,6 +157,7 @@ export function PackageBuilderEditor() {
   const [stageToRemove, setStageToRemove] = useState<number | null>(null);
   const [showAIPanel, setShowAIPanel] = useState(false);
   const [confirmArchive, setConfirmArchive] = useState(false);
+  const [isRecommendedStagesOpen, setIsRecommendedStagesOpen] = useState(false);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -388,6 +390,16 @@ export function PackageBuilderEditor() {
           </div>
         </div>
         <div className="flex items-center gap-2">
+          {(formData.package_type === 'rto' || formData.package_type === 'membership') && (
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={() => setIsRecommendedStagesOpen(true)}
+            >
+              <Wand2 className="h-4 w-4 mr-2" />
+              Add Recommended
+            </Button>
+          )}
           <Button 
             variant="outline" 
             size="sm"
@@ -690,6 +702,24 @@ export function PackageBuilderEditor() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Add Recommended Stages Dialog */}
+      <AddRecommendedStagesDialog
+        open={isRecommendedStagesOpen}
+        onOpenChange={setIsRecommendedStagesOpen}
+        packageType={formData.package_type}
+        allStages={allStages}
+        existingStageIds={packageStages.map(ps => ps.stage_id)}
+        onAddStages={async (stageIds) => {
+          for (const stageId of stageIds) {
+            await addStageToPackage(stageId);
+          }
+          toast({
+            title: 'Stages Added',
+            description: `${stageIds.length} recommended stage${stageIds.length !== 1 ? 's' : ''} added to package.`
+          });
+        }}
+      />
     </div>
   );
 }
