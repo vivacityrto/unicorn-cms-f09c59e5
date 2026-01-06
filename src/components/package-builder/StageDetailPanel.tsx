@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Stage, useStageDetail, usePackageBuilder } from '@/hooks/usePackageBuilder';
+import { useStageActiveUsage } from '@/hooks/useStageActiveUsage';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -12,11 +13,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
 import { 
   X, Plus, Trash2, Users, Mail, FileText, CheckSquare, 
-  GripVertical, Clock, User, Loader2, AlertTriangle, Settings, Copy
+  GripVertical, Clock, User, Loader2, AlertTriangle, Settings, Copy, ShieldAlert
 } from 'lucide-react';
 import { StageDocumentsTab } from './StageDocumentsTab';
 import { BulkGenerateDocumentsDialog } from './BulkGenerateDocumentsDialog';
@@ -62,12 +64,19 @@ export function StageDetailPanel({ packageId, stageId, stage, allStages = [], on
     reorderStageDocuments
   } = useStageDetail(packageId, stageId);
 
+  // Check if stage is used by active client packages
+  const { activeUsage } = useStageActiveUsage(stageId);
+  const isUsedByActiveClients = activeUsage.count > 0;
+
   const [activeTab, setActiveTab] = useState('settings');
   const [isAddingTask, setIsAddingTask] = useState(false);
   const [isAddingClientTask, setIsAddingClientTask] = useState(false);
   const [isAddingEmail, setIsAddingEmail] = useState(false);
   const [isDuplicatingStage, setIsDuplicatingStage] = useState(false);
   const [isBulkGenerateOpen, setIsBulkGenerateOpen] = useState(false);
+  const [editConfirmationOpen, setEditConfirmationOpen] = useState(false);
+  const [pendingUpdate, setPendingUpdate] = useState<Partial<Stage> | null>(null);
+  const [hasConfirmedEditing, setHasConfirmedEditing] = useState(false);
   
   const [taskForm, setTaskForm] = useState({
     name: '',
@@ -94,6 +103,14 @@ export function StageDetailPanel({ packageId, stageId, stage, allStages = [], on
 
   const handleUpdateStage = async (updates: Partial<Stage>) => {
     if (!stage) return;
+    
+    // If stage is used by active clients and user hasn't confirmed, prompt confirmation
+    if (isUsedByActiveClients && !hasConfirmedEditing) {
+      setPendingUpdate(updates);
+      setEditConfirmationOpen(true);
+      return;
+    }
+    
     try {
       await updateStage(stage.id, updates);
       toast({ title: 'Stage Updated' });
@@ -103,6 +120,24 @@ export function StageDetailPanel({ packageId, stageId, stage, allStages = [], on
         description: error.message || 'Failed to update stage',
         variant: 'destructive'
       });
+    }
+  };
+
+  const confirmAndApplyUpdate = async () => {
+    setHasConfirmedEditing(true);
+    setEditConfirmationOpen(false);
+    if (pendingUpdate) {
+      try {
+        await updateStage(stage!.id, pendingUpdate);
+        toast({ title: 'Stage Updated' });
+      } catch (error: any) {
+        toast({
+          title: 'Error',
+          description: error.message || 'Failed to update stage',
+          variant: 'destructive'
+        });
+      }
+      setPendingUpdate(null);
     }
   };
 
@@ -261,8 +296,32 @@ export function StageDetailPanel({ packageId, stageId, stage, allStages = [], on
         </Button>
       </div>
 
-      {/* Reuse Warning */}
-      {isReused && (
+      {/* Active Client Warning - shows first as it's more critical */}
+      {isUsedByActiveClients && (
+        <Alert className="border-destructive/30 bg-destructive/5">
+          <ShieldAlert className="h-4 w-4 text-destructive" />
+          <AlertTitle className="text-destructive">This stage is in use by active clients</AlertTitle>
+          <AlertDescription className="flex items-center justify-between">
+            <span className="text-destructive/80">
+              {activeUsage.clients.length} active client{activeUsage.clients.length !== 1 ? 's' : ''} are using this stage. 
+              Editing may affect their ongoing work.
+            </span>
+            <Button 
+              size="sm" 
+              variant="outline" 
+              onClick={handleDuplicateStage}
+              disabled={isDuplicatingStage}
+              className="border-destructive/30 text-destructive hover:bg-destructive/10"
+            >
+              <Copy className="h-3 w-3 mr-1" />
+              {isDuplicatingStage ? 'Duplicating...' : 'Duplicate & Edit Copy'}
+            </Button>
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {/* Reuse Warning - package-level */}
+      {isReused && !isUsedByActiveClients && (
         <Alert className="border-amber-500/30 bg-amber-500/5">
           <AlertTriangle className="h-4 w-4 text-amber-600" />
           <AlertDescription className="flex items-center justify-between">
@@ -799,6 +858,46 @@ export function StageDetailPanel({ packageId, stageId, stage, allStages = [], on
         stageName={stage?.title || 'Stage'}
         stageDocuments={stageDocuments}
       />
+
+      {/* Edit Confirmation Dialog for stages in active use */}
+      <AlertDialog open={editConfirmationOpen} onOpenChange={setEditConfirmationOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <ShieldAlert className="h-5 w-5 text-destructive" />
+              Confirm Edit to Active Stage
+            </AlertDialogTitle>
+            <AlertDialogDescription className="space-y-3">
+              <p>
+                This stage is currently being used by <strong>{activeUsage.clients.length} active client{activeUsage.clients.length !== 1 ? 's' : ''}</strong>. 
+                Changes will affect their ongoing packages.
+              </p>
+              {activeUsage.clients.length > 0 && activeUsage.clients.length <= 5 && (
+                <div className="text-sm">
+                  <p className="font-medium mb-1">Affected clients:</p>
+                  <ul className="list-disc list-inside text-muted-foreground">
+                    {activeUsage.clients.map(c => (
+                      <li key={c.tenant_id}>{c.tenant_name}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              <p className="text-sm">
+                Consider using <strong>"Duplicate & Edit Copy"</strong> to create a new version instead.
+              </p>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={confirmAndApplyUpdate}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Edit Anyway
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
