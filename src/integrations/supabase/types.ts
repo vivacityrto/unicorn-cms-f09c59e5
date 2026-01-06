@@ -8785,6 +8785,7 @@ export type Database = {
       admin_fix_invitations: { Args: { dry_run?: boolean }; Returns: Json }
       admin_fix_memberships: { Args: { dry_run?: boolean }; Returns: Json }
       admin_fix_profile_linkage: { Args: { dry_run?: boolean }; Returns: Json }
+      admin_fix_user_linkage: { Args: { p_user_uuid: string }; Returns: Json }
       admin_search_clients: {
         Args: {
           org_types?: string[]
@@ -8799,6 +8800,10 @@ export type Database = {
           records: Json
           total_count: number
         }[]
+      }
+      admin_set_role_type: {
+        Args: { p_role_type: string; p_tenant_id?: number; p_user_uuid: string }
+        Returns: Json
       }
       advance_segment: { Args: { p_meeting_id: string }; Returns: string }
       audit_duplicate_emails: {
@@ -9137,6 +9142,37 @@ export type Database = {
           percent_complete: number
           tenant_id: number
           total_stages: number
+        }[]
+      }
+      get_user_audit: {
+        Args: {
+          p_role_filter?: string
+          p_search?: string
+          p_status_filter?: string
+          p_tenant_filter?: number
+        }
+        Returns: {
+          archived: boolean
+          auth_user_exists: boolean
+          computed_status: string
+          created_at: string
+          disabled: boolean
+          email: string
+          email_match: boolean
+          first_name: string
+          has_active_membership: boolean
+          has_global_role: boolean
+          has_parent_or_child: boolean
+          invitation_state: string
+          issues: string[]
+          last_name: string
+          last_sign_in_at: string
+          tenant_id: number
+          tenant_memberships_count: number
+          tenant_name: string
+          unicorn_role: string
+          user_type: string
+          user_uuid: string
         }[]
       }
       get_user_favourites: {

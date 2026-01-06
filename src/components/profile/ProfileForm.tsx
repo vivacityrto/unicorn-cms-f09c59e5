@@ -25,12 +25,29 @@ interface ProfileFormProps {
 }
 
 const TIMEZONES = [
-  { value: 'Australia/Sydney', label: 'Sydney (AEDT/AEST)' },
-  { value: 'Australia/Melbourne', label: 'Melbourne (AEDT/AEST)' },
-  { value: 'Australia/Brisbane', label: 'Brisbane (AEST)' },
-  { value: 'Australia/Perth', label: 'Perth (AWST)' },
-  { value: 'Australia/Adelaide', label: 'Adelaide (ACDT/ACST)' },
-  { value: 'Australia/Darwin', label: 'Darwin (ACST)' },
+  // Australia
+  { value: 'Australia/Sydney', label: 'Sydney (AEDT/AEST)', group: 'Australia' },
+  { value: 'Australia/Melbourne', label: 'Melbourne (AEDT/AEST)', group: 'Australia' },
+  { value: 'Australia/Brisbane', label: 'Brisbane (AEST)', group: 'Australia' },
+  { value: 'Australia/Adelaide', label: 'Adelaide (ACDT/ACST)', group: 'Australia' },
+  { value: 'Australia/Perth', label: 'Perth (AWST)', group: 'Australia' },
+  { value: 'Australia/Darwin', label: 'Darwin (ACST)', group: 'Australia' },
+  { value: 'Australia/Hobart', label: 'Hobart (AEDT/AEST)', group: 'Australia' },
+  // Asia Pacific
+  { value: 'Asia/Manila', label: 'Manila (PHT)', group: 'Asia Pacific' },
+  { value: 'Pacific/Auckland', label: 'Auckland (NZDT/NZST)', group: 'Asia Pacific' },
+  { value: 'Asia/Singapore', label: 'Singapore (SGT)', group: 'Asia Pacific' },
+  { value: 'Asia/Kuala_Lumpur', label: 'Kuala Lumpur (MYT)', group: 'Asia Pacific' },
+  { value: 'Asia/Jakarta', label: 'Jakarta (WIB)', group: 'Asia Pacific' },
+  { value: 'Asia/Makassar', label: 'Makassar (WITA)', group: 'Asia Pacific' },
+  { value: 'Asia/Kolkata', label: 'Kolkata (IST)', group: 'Asia Pacific' },
+  // Europe
+  { value: 'Europe/London', label: 'London (GMT/BST)', group: 'Europe' },
+  // Americas
+  { value: 'America/New_York', label: 'New York (EST/EDT)', group: 'Americas' },
+  { value: 'America/Chicago', label: 'Chicago (CST/CDT)', group: 'Americas' },
+  { value: 'America/Denver', label: 'Denver (MST/MDT)', group: 'Americas' },
+  { value: 'America/Los_Angeles', label: 'Los Angeles (PST/PDT)', group: 'Americas' },
 ];
 
 export function ProfileForm({ user, canEdit, onSave }: ProfileFormProps) {
@@ -172,10 +189,15 @@ export function ProfileForm({ user, canEdit, onSave }: ProfileFormProps) {
                 <SelectValue placeholder="Select timezone" />
               </SelectTrigger>
               <SelectContent>
-                {TIMEZONES.map((tz) => (
-                  <SelectItem key={tz.value} value={tz.value}>
-                    {tz.label}
-                  </SelectItem>
+                {['Australia', 'Asia Pacific', 'Europe', 'Americas'].map((group) => (
+                  <div key={group}>
+                    <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">{group}</div>
+                    {TIMEZONES.filter(tz => tz.group === group).map((tz) => (
+                      <SelectItem key={tz.value} value={tz.value}>
+                        {tz.label}
+                      </SelectItem>
+                    ))}
+                  </div>
                 ))}
               </SelectContent>
             </Select>

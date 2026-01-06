@@ -64,7 +64,7 @@ export function ProfileHeader({ user, tenantName, canEdit, onAvatarChange, onEdi
     if (!file.type.startsWith('image/')) {
       toast({
         title: 'Invalid file',
-        description: 'Please upload an image file',
+        description: 'Please upload an image file (JPEG, PNG, GIF, or WebP)',
         variant: 'destructive',
       });
       return;
@@ -84,7 +84,8 @@ export function ProfileHeader({ user, tenantName, canEdit, onAvatarChange, onEdi
       setUploading(true);
 
       // Upload to avatars bucket with user folder structure
-      const fileExt = file.name.split('.').pop();
+      // Path must start with auth.uid() for RLS policy to allow upload
+      const fileExt = file.name.split('.').pop()?.toLowerCase() || 'jpg';
       const fileName = `profile.${fileExt}`;
       const filePath = `${user.user_uuid}/${fileName}`;
 
@@ -93,14 +94,41 @@ export function ProfileHeader({ user, tenantName, canEdit, onAvatarChange, onEdi
         .upload(filePath, file, { upsert: true });
 
       if (uploadError) {
+        console.error('Avatar upload error:', uploadError);
+        
         // Provide clear error messages for common issues
-        const errorMsg = uploadError.message.includes('new row violates row-level security') 
-          ? 'Permission denied: Unable to upload avatar. Please contact support.'
-          : uploadError.message || 'Failed to upload avatar';
+        let errorMsg = 'Failed to upload avatar';
+        if (uploadError.message.includes('row-level security') || uploadError.message.includes('policy')) {
+          errorMsg = 'Permission denied: You can only upload your own avatar.';
+        } else if (uploadError.message.includes('Payload too large')) {
+          errorMsg = 'File is too large. Please use an image under 5MB.';
+        } else if (uploadError.message.includes('mime')) {
+          errorMsg = 'Invalid file type. Please upload a JPEG, PNG, GIF, or WebP image.';
+        } else if (uploadError.message) {
+          errorMsg = uploadError.message;
+        }
         throw new Error(errorMsg);
       }
 
-      // Database trigger automatically updates user profile and audit log
+      // Get public URL and update user record
+      const { data: publicUrlData } = supabase.storage
+        .from('avatars')
+        .getPublicUrl(filePath);
+
+      // Update user's avatar_url in the database
+      const { error: updateError } = await supabase
+        .from('users')
+        .update({ 
+          avatar_url: publicUrlData.publicUrl,
+          avatar_path: filePath,
+          avatar_updated_at: new Date().toISOString()
+        })
+        .eq('user_uuid', user.user_uuid);
+
+      if (updateError) {
+        console.error('Avatar URL update error:', updateError);
+        // Don't throw - the file was uploaded successfully
+      }
 
       toast({
         title: 'Success',
@@ -111,8 +139,8 @@ export function ProfileHeader({ user, tenantName, canEdit, onAvatarChange, onEdi
       await refreshProfile();
     } catch (error: any) {
       toast({
-        title: 'Error',
-        description: error.message || 'Failed to upload avatar',
+        title: 'Upload Failed',
+        description: error.message || 'Failed to upload avatar. Please try again.',
         variant: 'destructive',
       });
     } finally {
@@ -124,13 +152,34 @@ export function ProfileHeader({ user, tenantName, canEdit, onAvatarChange, onEdi
     try {
       setUploading(true);
 
-      // Delete from storage - trigger automatically updates profile
+      // Delete from storage
       if (user.avatar_url) {
         const pathParts = user.avatar_url.split('/avatars/');
         if (pathParts.length > 1) {
-          const filePath = pathParts[1];
-          await supabase.storage.from('avatars').remove([filePath]);
+          const filePath = decodeURIComponent(pathParts[1]);
+          const { error: deleteError } = await supabase.storage
+            .from('avatars')
+            .remove([filePath]);
+          
+          if (deleteError) {
+            console.error('Avatar delete error:', deleteError);
+            // Continue - we'll still clear the URL
+          }
         }
+      }
+
+      // Clear avatar_url in the database
+      const { error: updateError } = await supabase
+        .from('users')
+        .update({ 
+          avatar_url: null,
+          avatar_path: null,
+          avatar_updated_at: new Date().toISOString()
+        })
+        .eq('user_uuid', user.user_uuid);
+
+      if (updateError) {
+        console.error('Avatar URL clear error:', updateError);
       }
 
       toast({
@@ -143,7 +192,7 @@ export function ProfileHeader({ user, tenantName, canEdit, onAvatarChange, onEdi
     } catch (error: any) {
       toast({
         title: 'Error',
-        description: error.message,
+        description: error.message || 'Failed to remove avatar',
         variant: 'destructive',
       });
     } finally {
