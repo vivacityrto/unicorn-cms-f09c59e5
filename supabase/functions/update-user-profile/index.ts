@@ -9,6 +9,8 @@ type UpdateProfileBody = {
   mobile_phone?: string;
   timezone?: string;
   bio?: string;
+  user_type?: string;
+  unicorn_role?: string;
 };
 
 Deno.serve(async (req) => {
@@ -18,7 +20,7 @@ Deno.serve(async (req) => {
 
   try {
     const body = (await req.json()) as UpdateProfileBody;
-    const { user_uuid, ...updates } = body;
+    const { user_uuid, user_type, unicorn_role, ...updates } = body;
 
     if (!user_uuid) {
       return jsonErr(400, "MISSING_USER_ID", "User UUID is required");
@@ -85,13 +87,33 @@ Deno.serve(async (req) => {
       }
     }
 
+    // Build update payload - only Super Admins can update user_type and unicorn_role
+    const updatePayload: Record<string, unknown> = {
+      ...updates,
+      updated_at: new Date().toISOString(),
+    };
+
+    // Only allow Super Admins to change user_type and unicorn_role
+    const { data: currentUserData2 } = await supabase
+      .from("users")
+      .select("unicorn_role, user_type")
+      .eq("user_uuid", currentUser.id)
+      .single();
+
+    const isSuperAdminForRoleChange = currentUserData2?.unicorn_role === "Super Admin" && 
+      (currentUserData2?.user_type === "Vivacity Team" || currentUserData2?.user_type === "Vivacity");
+
+    if (isSuperAdminForRoleChange) {
+      if (user_type) updatePayload.user_type = user_type;
+      if (unicorn_role) updatePayload.unicorn_role = unicorn_role;
+    } else if (user_type || unicorn_role) {
+      console.log("Non-Super Admin attempted to change user_type or unicorn_role - ignoring");
+    }
+
     // Update the user
     const { error: updateError } = await supabase
       .from("users")
-      .update({
-        ...updates,
-        updated_at: new Date().toISOString(),
-      })
+      .update(updatePayload)
       .eq("user_uuid", user_uuid);
 
     if (updateError) {
