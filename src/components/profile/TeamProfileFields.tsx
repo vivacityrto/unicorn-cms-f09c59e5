@@ -39,8 +39,8 @@ interface TeamProfileFieldsProps {
     public_holiday_region?: string | null;
     is_csc?: boolean;
     leave_from?: string | null;
-    leave_until?: string | null;  // Fixed: was leave_to
-    away_message?: string | null;
+    leave_until?: string | null;
+    away_message?: string | null;  // Separate from availability_note
     cover_user_id?: string | null;
     user_type?: string;
     unicorn_role?: string;

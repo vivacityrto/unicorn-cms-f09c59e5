@@ -43,7 +43,7 @@ interface UserData {
   is_csc?: boolean;
   // Leave fields
   leave_from?: string | null;
-  leave_to?: string | null;
+  leave_until?: string | null;  // Corrected field name
   away_message?: string | null;
   cover_user_id?: string | null;
   superadmin_level?: string | null;
@@ -94,7 +94,7 @@ export default function UserProfile() {
 
   const fetchUserData = async () => {
     try {
-      // Use raw query to include new columns that may not be in types yet
+      // Use raw query to include all team profile columns
       const { data: userData, error: userError } = await supabase
         .from('users')
         .select(`
@@ -123,6 +123,11 @@ export default function UserProfile() {
           availability_note,
           public_holiday_region,
           is_csc,
+          leave_from,
+          leave_until,
+          away_message,
+          cover_user_id,
+          superadmin_level,
           tenants!tenant_id(name)
         `)
         .eq('user_uuid', userId)
@@ -139,7 +144,7 @@ export default function UserProfile() {
         working_days: rawData.working_days as string[] | null,
         working_hours: rawData.working_hours as { start: string; end: string } | null,
         leave_from: rawData.leave_from || null,
-        leave_to: rawData.leave_to || null,
+        leave_until: rawData.leave_until || null,
         away_message: rawData.away_message || null,
         cover_user_id: rawData.cover_user_id || null,
         superadmin_level: rawData.superadmin_level || null,

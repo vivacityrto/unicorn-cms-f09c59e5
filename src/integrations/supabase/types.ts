@@ -8606,6 +8606,7 @@ export type Database = {
           avatar_path: string | null
           avatar_updated_at: string | null
           avatar_url: string | null
+          away_message: string | null
           bio: string | null
           biography: string | null
           booking_url: string | null
@@ -8683,6 +8684,7 @@ export type Database = {
           avatar_path?: string | null
           avatar_updated_at?: string | null
           avatar_url?: string | null
+          away_message?: string | null
           bio?: string | null
           biography?: string | null
           booking_url?: string | null
@@ -8760,6 +8762,7 @@ export type Database = {
           avatar_path?: string | null
           avatar_updated_at?: string | null
           avatar_url?: string | null
+          away_message?: string | null
           bio?: string | null
           biography?: string | null
           booking_url?: string | null
@@ -9634,16 +9637,12 @@ export type Database = {
             Args: {
               p_availability_note?: string
               p_away_message?: string
-              p_bio?: string
               p_booking_url?: string
               p_cover_user_id?: string
-              p_job_title?: string
               p_leave_from?: string
               p_leave_until?: string
               p_linkedin_url?: string
-              p_phone?: string
               p_public_holiday_region?: string
-              p_timezone?: string
               p_working_days?: Json
               p_working_hours?: Json
             }
