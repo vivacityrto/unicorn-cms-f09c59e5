@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Plus, Calendar, Clock, Users, Play, FileText, Settings, AlertCircle, RefreshCw } from 'lucide-react';
 import { useEosMeetings } from '@/hooks/useEos';
+import { useRBAC } from '@/hooks/useRBAC';
 import { format } from 'date-fns';
 import { MeetingScheduler } from '@/components/eos/MeetingScheduler';
 import { AgendaTemplateEditor } from '@/components/eos/AgendaTemplateEditor';
@@ -23,6 +24,7 @@ export default function EosMeetings() {
 function MeetingsContent() {
   const navigate = useNavigate();
   const { meetings, isLoading, error, refetch } = useEosMeetings();
+  const { canScheduleMeetings } = useRBAC();
   const [schedulerOpen, setSchedulerOpen] = useState(false);
   const [templateEditorOpen, setTemplateEditorOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<'all' | MeetingType>('all');
@@ -91,16 +93,18 @@ function MeetingsContent() {
             Level 10, Quarterly, and Annual strategic meetings
           </p>
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={() => setTemplateEditorOpen(true)}>
-            <Settings className="w-4 h-4 mr-2" />
-            Manage Templates
-          </Button>
-          <Button onClick={() => setSchedulerOpen(true)}>
-            <Plus className="w-4 h-4 mr-2" />
-            Schedule Meeting
-          </Button>
-        </div>
+        {canScheduleMeetings() && (
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={() => setTemplateEditorOpen(true)}>
+              <Settings className="w-4 h-4 mr-2" />
+              Manage Templates
+            </Button>
+            <Button onClick={() => setSchedulerOpen(true)}>
+              <Plus className="w-4 h-4 mr-2" />
+              Schedule Meeting
+            </Button>
+          </div>
+        )}
       </div>
 
       <MeetingScheduler
@@ -220,12 +224,16 @@ function MeetingsContent() {
               <Calendar className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
               <h3 className="text-lg font-semibold mb-2">No meetings scheduled</h3>
               <p className="text-muted-foreground mb-4">
-                Schedule your first EOS Meeting to get started
+                {canScheduleMeetings() 
+                  ? "Schedule your first EOS Meeting to get started"
+                  : "No EOS meetings have been scheduled yet."}
               </p>
-              <Button onClick={() => setSchedulerOpen(true)}>
-                <Plus className="w-4 h-4 mr-2" />
-                Schedule First Meeting
-              </Button>
+              {canScheduleMeetings() && (
+                <Button onClick={() => setSchedulerOpen(true)}>
+                  <Plus className="w-4 h-4 mr-2" />
+                  Schedule First Meeting
+                </Button>
+              )}
             </CardContent>
           </Card>
         )}
