@@ -294,7 +294,7 @@ export const useEosMeetings = () => {
   const { profile } = useAuth();
   const queryClient = useQueryClient();
 
-  const { data: meetings, isLoading } = useQuery({
+  const { data: meetings, isLoading, error, refetch } = useQuery({
     queryKey: ['eos-meetings', profile?.tenant_id],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -354,6 +354,8 @@ export const useEosMeetings = () => {
   return {
     meetings,
     isLoading,
+    error,
+    refetch,
     createMeeting,
     updateMeeting,
   };
