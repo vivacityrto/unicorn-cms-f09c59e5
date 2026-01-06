@@ -30,6 +30,7 @@ interface UserData {
   updated_at: string;
   last_sign_in_at: string | null;
   tenant_name?: string | null;
+  staff_team?: string | null;
 }
 
 interface CurrentUser {
@@ -96,6 +97,7 @@ export default function UserProfile() {
           created_at,
           updated_at,
           last_sign_in_at,
+          staff_team,
           tenants!tenant_id(name)
         `)
         .eq('user_uuid', userId)
@@ -107,6 +109,7 @@ export default function UserProfile() {
       const userWithTenant = {
         ...userData,
         tenant_name: (userData.tenants as any)?.name || null,
+        staff_team: userData.staff_team || null,
       };
       delete (userWithTenant as any).tenants;
 

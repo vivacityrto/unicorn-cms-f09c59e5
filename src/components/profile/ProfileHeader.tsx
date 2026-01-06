@@ -20,6 +20,7 @@ interface ProfileHeaderProps {
     archived: boolean;
     created_at: string;
     last_sign_in_at: string | null;
+    staff_team?: string | null;
   };
   tenantName: string | null;
   canEdit: boolean;
@@ -27,6 +28,14 @@ interface ProfileHeaderProps {
   onEditClick: () => void;
   isEditing: boolean;
 }
+
+const TEAM_LABELS: Record<string, { label: string; color: string }> = {
+  csc: { label: 'Client Success Champion', color: 'bg-emerald-500/10 text-emerald-700 border-emerald-200' },
+  csc_admin: { label: 'CSC Admin Assistant', color: 'bg-blue-500/10 text-blue-700 border-blue-200' },
+  growth: { label: 'Business Growth', color: 'bg-purple-500/10 text-purple-700 border-purple-200' },
+  leadership: { label: 'Leadership', color: 'bg-amber-500/10 text-amber-700 border-amber-200' },
+  other: { label: 'Staff', color: 'bg-gray-500/10 text-gray-700 border-gray-200' },
+};
 
 export function ProfileHeader({ user, tenantName, canEdit, onAvatarChange, onEditClick, isEditing }: ProfileHeaderProps) {
   const { toast } = useToast();
@@ -234,6 +243,12 @@ export function ProfileHeader({ user, tenantName, canEdit, onAvatarChange, onEdi
 
           {user.user_type && (
             <Badge variant="outline">{user.user_type}</Badge>
+          )}
+
+          {user.staff_team && TEAM_LABELS[user.staff_team] && (
+            <Badge variant="outline" className={TEAM_LABELS[user.staff_team].color}>
+              {TEAM_LABELS[user.staff_team].label}
+            </Badge>
           )}
         </div>
 

@@ -5,6 +5,14 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Edit, Trash2, Mail, Phone } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
+const TEAM_LABELS: Record<string, { label: string; color: string }> = {
+  csc: { label: 'CSC', color: 'bg-emerald-500/10 text-emerald-700 border-emerald-200' },
+  csc_admin: { label: 'CSC Admin', color: 'bg-blue-500/10 text-blue-700 border-blue-200' },
+  growth: { label: 'Growth', color: 'bg-purple-500/10 text-purple-700 border-purple-200' },
+  leadership: { label: 'Leadership', color: 'bg-amber-500/10 text-amber-700 border-amber-200' },
+  other: { label: 'Staff', color: 'bg-gray-500/10 text-gray-700 border-gray-200' },
+};
+
 interface UserProfileCardProps {
   user: {
     user_uuid: string;
@@ -18,6 +26,7 @@ interface UserProfileCardProps {
     disabled: boolean;
     archived: boolean;
     avatar_url?: string | null;
+    staff_team?: string | null;
   };
   onEdit: (user: any) => void;
   onDelete: (userId: string, userName: string) => void;
@@ -56,10 +65,17 @@ export function UserProfileCard({ user, onEdit, onDelete, animationDelay = 0 }: 
             />
           </div>
 
-          {/* User Type Badge */}
-          <Badge variant="outline" className="mb-2 text-xs">
-            {user.user_type}
-          </Badge>
+          {/* User Type & Team Badges */}
+          <div className="flex flex-wrap justify-center gap-1 mb-2">
+            <Badge variant="outline" className="text-xs">
+              {user.user_type}
+            </Badge>
+            {user.staff_team && TEAM_LABELS[user.staff_team] && (
+              <Badge variant="outline" className={`text-xs ${TEAM_LABELS[user.staff_team].color}`}>
+                {TEAM_LABELS[user.staff_team].label}
+              </Badge>
+            )}
+          </div>
 
           {/* Name */}
           <h3 className="font-semibold text-lg text-foreground mb-1">{fullName}</h3>

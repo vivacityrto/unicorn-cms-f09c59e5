@@ -37,12 +37,12 @@ export function useMembershipDashboard() {
   const [selectedState, setSelectedState] = useState<string | null>(null);
   const [selectedCSC, setSelectedCSC] = useState<string | null>(null);
 
-  // Fetch staff users for CSC assignment
+  // Fetch staff users for CSC assignment (only actual CSCs)
   const fetchStaffUsers = useCallback(async () => {
     const { data } = await supabase
       .from('users')
-      .select('user_uuid, first_name, last_name, avatar_url')
-      .in('unicorn_role', ['Super Admin', 'Team Leader', 'Team Member']);
+      .select('user_uuid, first_name, last_name, avatar_url, staff_team')
+      .eq('staff_team', 'csc');
     
     if (data) {
       setStaffUsers(data);
