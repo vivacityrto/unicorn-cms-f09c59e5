@@ -5,12 +5,13 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
+import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { 
-  Plus, Trash2, FileText, GripVertical, Search, Eye, Download, Loader2
+  Plus, Trash2, FileText, GripVertical, Search, Eye, Download, Loader2, CheckSquare, Square, Wand2
 } from 'lucide-react';
 import {
   DndContext,
@@ -35,9 +36,11 @@ interface StageDocumentsTabProps {
   stageId: number;
   stageDocuments: StageDocument[];
   onAddDocument: (documentId: number, visibility: string, deliveryType: string) => Promise<void>;
+  onAddBulkDocuments?: (documentIds: number[]) => Promise<void>;
   onUpdateDocument: (id: string, data: { visibility?: string; delivery_type?: string }) => Promise<void>;
   onRemoveDocument: (id: string, documentId: number) => Promise<void>;
   onReorderDocuments: (orderedIds: string[]) => Promise<void>;
+  onOpenBulkGenerate?: () => void;
 }
 
 interface Document {
@@ -144,9 +147,11 @@ export function StageDocumentsTab({
   stageId,
   stageDocuments,
   onAddDocument,
+  onAddBulkDocuments,
   onUpdateDocument,
   onRemoveDocument,
-  onReorderDocuments
+  onReorderDocuments,
+  onOpenBulkGenerate
 }: StageDocumentsTabProps) {
   const { toast } = useToast();
   const [isLinkDialogOpen, setIsLinkDialogOpen] = useState(false);
@@ -155,7 +160,10 @@ export function StageDocumentsTab({
   const [availableDocuments, setAvailableDocuments] = useState<Document[]>([]);
   const [categories, setCategories] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [isLinking, setIsLinking] = useState<number | null>(null);
+  const [isLinking, setIsLinking] = useState(false);
+  
+  // Bulk selection state
+  const [selectedDocuments, setSelectedDocuments] = useState<Set<number>>(new Set());
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -198,22 +206,67 @@ export function StageDocumentsTab({
 
   const handleOpenDialog = () => {
     setIsLinkDialogOpen(true);
+    setSelectedDocuments(new Set());
     fetchDocuments();
   };
 
-  const handleLinkDocument = async (documentId: number) => {
-    setIsLinking(documentId);
+  const handleCloseDialog = () => {
+    setIsLinkDialogOpen(false);
+    setSelectedDocuments(new Set());
+    setSearchTerm('');
+    setCategoryFilter('all');
+  };
+
+  const toggleDocumentSelection = (docId: number) => {
+    setSelectedDocuments(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(docId)) {
+        newSet.delete(docId);
+      } else {
+        newSet.add(docId);
+      }
+      return newSet;
+    });
+  };
+
+  const handleSelectAll = () => {
+    const filteredIds = filteredDocuments.map(d => d.id);
+    setSelectedDocuments(new Set(filteredIds));
+  };
+
+  const handleDeselectAll = () => {
+    setSelectedDocuments(new Set());
+  };
+
+  const handleBulkLink = async () => {
+    if (selectedDocuments.size === 0) return;
+    
+    setIsLinking(true);
     try {
-      await onAddDocument(documentId, 'both', 'manual');
-      toast({ title: 'Document linked' });
+      const docIds = Array.from(selectedDocuments);
+      
+      if (onAddBulkDocuments) {
+        await onAddBulkDocuments(docIds);
+      } else {
+        // Fallback to sequential linking if bulk not supported
+        for (const docId of docIds) {
+          await onAddDocument(docId, 'both', 'manual');
+        }
+      }
+      
+      toast({ 
+        title: 'Documents linked', 
+        description: `Successfully linked ${selectedDocuments.size} documents` 
+      });
+      handleCloseDialog();
     } catch (error: any) {
       toast({
         title: 'Error',
-        description: error.message || 'Failed to link document',
+        description: error.message || 'Failed to link documents',
         variant: 'destructive'
       });
     } finally {
-      setIsLinking(null);
+      setIsLinking(false);
     }
   };
 
@@ -281,10 +334,18 @@ export function StageDocumentsTab({
               <CardTitle className="text-base">Documents</CardTitle>
               <CardDescription>{stageDocuments.length} documents linked</CardDescription>
             </div>
-            <Button size="sm" onClick={handleOpenDialog}>
-              <Plus className="h-3 w-3 mr-1" />
-              Link Document
-            </Button>
+            <div className="flex items-center gap-2">
+              {stageDocuments.length > 0 && onOpenBulkGenerate && (
+                <Button size="sm" variant="outline" onClick={onOpenBulkGenerate}>
+                  <Wand2 className="h-3 w-3 mr-1" />
+                  Generate
+                </Button>
+              )}
+              <Button size="sm" onClick={handleOpenDialog}>
+                <Plus className="h-3 w-3 mr-1" />
+                Link Documents
+              </Button>
+            </div>
           </div>
         </CardHeader>
         <CardContent>
@@ -294,7 +355,7 @@ export function StageDocumentsTab({
                 <FileText className="h-10 w-10 text-muted-foreground mb-3" />
                 <p className="text-muted-foreground">No documents linked to this stage.</p>
                 <p className="text-xs text-muted-foreground mt-1">
-                  Click "Link Document" to add documents from the library.
+                  Click "Link Documents" to add documents from the library.
                 </p>
               </div>
             ) : (
@@ -324,13 +385,13 @@ export function StageDocumentsTab({
         </CardContent>
       </Card>
 
-      {/* Link Document Dialog */}
+      {/* Link Documents Dialog - Multi-select */}
       <Dialog open={isLinkDialogOpen} onOpenChange={setIsLinkDialogOpen}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle>Link Document</DialogTitle>
+            <DialogTitle>Link Documents</DialogTitle>
             <DialogDescription>
-              Select a document from the library to link to this stage.
+              Select documents from the library to link to this stage. You can select multiple documents at once.
             </DialogDescription>
           </DialogHeader>
           
@@ -357,6 +418,35 @@ export function StageDocumentsTab({
             </Select>
           </div>
 
+          {/* Bulk selection controls */}
+          <div className="flex items-center justify-between mb-2 px-1">
+            <div className="flex items-center gap-2">
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={handleSelectAll}
+                disabled={filteredDocuments.length === 0}
+              >
+                <CheckSquare className="h-3 w-3 mr-1" />
+                Select All
+              </Button>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={handleDeselectAll}
+                disabled={selectedDocuments.size === 0}
+              >
+                <Square className="h-3 w-3 mr-1" />
+                Deselect All
+              </Button>
+            </div>
+            {selectedDocuments.size > 0 && (
+              <Badge variant="secondary">
+                {selectedDocuments.size} selected
+              </Badge>
+            )}
+          </div>
+
           <ScrollArea className="h-[400px] border rounded-lg">
             {isLoading ? (
               <div className="flex items-center justify-center py-12">
@@ -377,9 +467,17 @@ export function StageDocumentsTab({
                 {filteredDocuments.map((doc) => (
                   <div
                     key={doc.id}
-                    className="flex items-center justify-between p-3 hover:bg-muted/50 transition-colors"
+                    className={`flex items-center justify-between p-3 hover:bg-muted/50 transition-colors cursor-pointer ${
+                      selectedDocuments.has(doc.id) ? 'bg-primary/5' : ''
+                    }`}
+                    onClick={() => toggleDocumentSelection(doc.id)}
                   >
                     <div className="flex items-center gap-3 min-w-0">
+                      <Checkbox
+                        checked={selectedDocuments.has(doc.id)}
+                        onCheckedChange={() => toggleDocumentSelection(doc.id)}
+                        onClick={(e) => e.stopPropagation()}
+                      />
                       <FileText className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                       <div className="min-w-0">
                         <p className="font-medium truncate">{doc.title}</p>
@@ -393,26 +491,33 @@ export function StageDocumentsTab({
                         </div>
                       </div>
                     </div>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => handleLinkDocument(doc.id)}
-                      disabled={isLinking === doc.id}
-                    >
-                      {isLinking === doc.id ? (
-                        <Loader2 className="h-3 w-3 animate-spin" />
-                      ) : (
-                        <>
-                          <Plus className="h-3 w-3 mr-1" />
-                          Link
-                        </>
-                      )}
-                    </Button>
                   </div>
                 ))}
               </div>
             )}
           </ScrollArea>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={handleCloseDialog}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleBulkLink}
+              disabled={selectedDocuments.size === 0 || isLinking}
+            >
+              {isLinking ? (
+                <>
+                  <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                  Linking...
+                </>
+              ) : (
+                <>
+                  <Plus className="h-3 w-3 mr-1" />
+                  Link {selectedDocuments.size > 0 ? `(${selectedDocuments.size})` : ''}
+                </>
+              )}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </>
