@@ -37,6 +37,7 @@ export const ADMIN_ROUTES = [
   '/audits',
   '/admin/manage-packages',
   '/admin/manage-emails',
+  '/admin/user-audit',
 ];
 
 // Advanced Features routes that require SuperAdmin
