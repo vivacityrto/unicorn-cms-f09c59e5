@@ -65,10 +65,15 @@ type RoleType = typeof ROLE_TYPES[number]['value'];
 // Map existing DB values to role_type
 function deriveRoleType(unicornRole: string, userType: string): RoleType {
   // SuperAdmin variants
-  if (unicornRole === 'Super Admin' && (userType === 'Vivacity' || userType === 'Vivacity Team')) {
-    // Check for specific variant based on user_type
-    if (userType === 'Vivacity') return 'superadmin_administrator';
-    if (userType === 'Vivacity Team') return 'superadmin_team_leader';
+  if (unicornRole === 'Super Admin' && userType === 'Vivacity') {
+    return 'superadmin_administrator';
+  }
+  if (unicornRole === 'Super Admin' && userType === 'Vivacity Team') {
+    return 'superadmin_team_leader';
+  }
+  // Team Member with Vivacity types = SuperAdmin General
+  if (unicornRole === 'Team Member' && (userType === 'Vivacity' || userType === 'Vivacity Team')) {
+    return 'superadmin_general';
   }
   
   // Tenant variants
@@ -92,7 +97,7 @@ function roleTypeToDbFields(roleType: RoleType): { unicorn_role: string; user_ty
     case 'superadmin_team_leader':
       return { unicorn_role: 'Super Admin', user_type: 'Vivacity Team' };
     case 'superadmin_general':
-      return { unicorn_role: 'User', user_type: 'Vivacity Team' };
+      return { unicorn_role: 'Team Member', user_type: 'Vivacity Team' };
     case 'tenant_parent':
       return { unicorn_role: 'Admin', user_type: 'Client Parent' };
     case 'tenant_child':

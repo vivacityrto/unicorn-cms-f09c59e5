@@ -7,8 +7,8 @@ const corsHeaders = {
 
 interface UpdateUserRoleRequest {
   user_uuid: string;
-  unicorn_role?: 'Super Admin' | 'Admin' | 'User';
-  user_type?: 'Vivacity' | 'Vivacity Team' | 'Client' | 'Client Parent' | 'Member';
+  unicorn_role?: 'Super Admin' | 'Team Member' | 'Admin' | 'User';
+  user_type?: 'Vivacity' | 'Vivacity Team' | 'Client' | 'Client Parent' | 'Client Child' | 'Member';
   tenant_id?: number | null;
 }
 
@@ -69,7 +69,7 @@ Deno.serve(async (req) => {
 
     // Validate role/type combinations
     if (unicorn_role && user_type) {
-      // Only Super Admin role requires Vivacity user type
+      // Super Admin role requires Vivacity user type
       if (unicorn_role === 'Super Admin' && !['Vivacity', 'Vivacity Team'].includes(user_type)) {
         return new Response(
           JSON.stringify({ ok: false, code: 'INVALID_COMBINATION', detail: 'Super Admin role requires Vivacity user type' }),
@@ -77,7 +77,13 @@ Deno.serve(async (req) => {
         );
       }
 
-      // Vivacity staff can have any role (Super Admin, Admin, User)
+      // Team Member role also requires Vivacity user type
+      if (unicorn_role === 'Team Member' && !['Vivacity', 'Vivacity Team'].includes(user_type)) {
+        return new Response(
+          JSON.stringify({ ok: false, code: 'INVALID_COMBINATION', detail: 'Team Member role requires Vivacity user type' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
 
       if (user_type === 'Client' && tenant_id === null) {
         return new Response(
@@ -90,7 +96,7 @@ Deno.serve(async (req) => {
     // Get current user data for audit log
     const { data: currentUserData } = await supabase
       .from('users')
-      .select('unicorn_role, user_type, tenant_id')
+      .select('unicorn_role, user_type, tenant_id, superadmin_level')
       .eq('user_uuid', user_uuid)
       .single();
 
@@ -99,6 +105,17 @@ Deno.serve(async (req) => {
     if (unicorn_role !== undefined) updates.unicorn_role = unicorn_role;
     if (user_type !== undefined) updates.user_type = user_type;
     if (tenant_id !== undefined) updates.tenant_id = tenant_id;
+
+    // Set superadmin_level based on role
+    if (unicorn_role === 'Super Admin' && user_type === 'Vivacity') {
+      updates.superadmin_level = 'Administrator';
+    } else if (unicorn_role === 'Super Admin' && user_type === 'Vivacity Team') {
+      updates.superadmin_level = 'Team Leader';
+    } else if (unicorn_role === 'Team Member' && ['Vivacity', 'Vivacity Team'].includes(user_type || '')) {
+      updates.superadmin_level = 'General';
+    } else {
+      updates.superadmin_level = null; // Tenant users don't have superadmin level
+    }
 
     // Update user
     const { error: updateError } = await supabase
