@@ -8654,6 +8654,7 @@ export type Database = {
           street_address: string | null
           street_number_and_name: string | null
           suburb: string | null
+          superadmin_level: string | null
           tenant_id: number | null
           tenant_name: string | null
           tenant_role: string | null
@@ -8727,6 +8728,7 @@ export type Database = {
           street_address?: string | null
           street_number_and_name?: string | null
           suburb?: string | null
+          superadmin_level?: string | null
           tenant_id?: number | null
           tenant_name?: string | null
           tenant_role?: string | null
@@ -8800,6 +8802,7 @@ export type Database = {
           street_address?: string | null
           street_number_and_name?: string | null
           suburb?: string | null
+          superadmin_level?: string | null
           tenant_id?: number | null
           tenant_name?: string | null
           tenant_role?: string | null
