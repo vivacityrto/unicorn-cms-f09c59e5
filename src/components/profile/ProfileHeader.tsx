@@ -351,22 +351,25 @@ export function ProfileHeader({ user, tenantName, canEdit, onAvatarChange, onEdi
             {user.unicorn_role}
           </Badge>
           
-          <Badge variant={isActive ? 'default' : 'destructive'} className="gap-1">
-            {isActive ? 'Active' : 'Inactive'}
+          <div className="flex items-center gap-1">
+            <Badge variant={isActive ? 'default' : 'destructive'}>
+              {isActive ? 'Active' : 'Inactive'}
+            </Badge>
             {canToggleStatus && (
               <AlertDialog>
                 <AlertDialogTrigger asChild>
-                  <button
-                    className="ml-1 hover:opacity-70 transition-opacity"
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-6 w-6"
                     disabled={togglingStatus}
-                    onClick={(e) => e.stopPropagation()}
                   >
                     {isActive ? (
-                      <UserX className="h-3 w-3" />
+                      <UserX className="h-3.5 w-3.5 text-destructive" />
                     ) : (
-                      <UserCheck className="h-3 w-3" />
+                      <UserCheck className="h-3.5 w-3.5 text-green-600" />
                     )}
-                  </button>
+                  </Button>
                 </AlertDialogTrigger>
                 <AlertDialogContent>
                   <AlertDialogHeader>
@@ -389,7 +392,7 @@ export function ProfileHeader({ user, tenantName, canEdit, onAvatarChange, onEdi
                 </AlertDialogContent>
               </AlertDialog>
             )}
-          </Badge>
+          </div>
 
           {user.user_type && (
             <Badge variant="outline">{user.user_type}</Badge>
