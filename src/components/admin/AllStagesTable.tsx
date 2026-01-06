@@ -199,14 +199,19 @@ export function AllStagesTable() {
           description: "Stage updated successfully"
         });
       } else {
-        // Create new stage
+        // Create new stage - generate stage_key from title
+        const stageKey = formData.title.toLowerCase()
+          .replace(/[^a-zA-Z0-9]+/g, '-')
+          .replace(/^-+|-+$/g, '') + '-' + Date.now();
+        
         const {
           error
         } = await supabase.from('documents_stages').insert({
           title: formData.title,
           short_name: formData.short_name || null,
           description: formData.description || null,
-          video_url: formData.video_url || null
+          video_url: formData.video_url || null,
+          stage_key: stageKey
         });
         if (error) throw error;
         toast({

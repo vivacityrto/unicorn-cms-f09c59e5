@@ -31,6 +31,7 @@ export interface Stage {
   usage_count?: number;
   is_certified?: boolean;
   certified_notes?: string | null;
+  stage_key: string;
 }
 
 export interface PackageStage {
@@ -327,6 +328,11 @@ export function usePackageBuilder() {
   };
 
   const createStage = async (data: Partial<Stage>) => {
+    // Generate stage_key from title
+    const stageKey = (data.title || 'stage').toLowerCase()
+      .replace(/[^a-zA-Z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '') + '-' + Date.now();
+    
     const { data: newStage, error } = await supabase
       .from('documents_stages')
       .insert({
@@ -339,7 +345,8 @@ export function usePackageBuilder() {
         ai_hint: data.ai_hint,
         dashboard_visible: data.dashboard_visible ?? true,
         is_certified: data.is_certified ?? false,
-        certified_notes: data.is_certified ? data.certified_notes : null
+        certified_notes: data.is_certified ? data.certified_notes : null,
+        stage_key: stageKey
       })
       .select()
       .single();
