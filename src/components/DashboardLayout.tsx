@@ -97,8 +97,8 @@ const superAdminMenuItems = {
     path: "/admin/manage-packages"
   }, {
     icon: Mail,
-    label: "Manage Emails",
-    path: "/admin/manage-emails"
+    label: "Email Templates",
+    path: "/admin/email-templates"
   }, {
     icon: ShieldCheck,
     label: "User Audit",

@@ -29,7 +29,6 @@ import AdminPackageDetailWrapper from "./pages/AdminPackageDetailWrapper";
 import AdminPackageTenantDetailWrapper from "./pages/AdminPackageTenantDetailWrapper";
 import PackageBuilder from "./pages/PackageBuilder";
 import PackageBuilderDetail from "./pages/PackageBuilderDetail";
-import ManageEmailsWrapper from "./pages/ManageEmailsWrapper";
 import ManageEmailTemplatesWrapper from "./pages/ManageEmailTemplatesWrapper";
 import DocumentDetailWrapper from "./pages/DocumentDetailWrapper";
 import TeamSettingsWrapper from "./pages/TeamSettingsWrapper";
@@ -355,10 +354,10 @@ const App = () => (
               } 
             />
             <Route 
-              path="/admin/manage-emails"
+              path="/admin/email-templates"
               element={
                 <ProtectedRoute>
-                  <ManageEmailsWrapper />
+                  <ManageEmailTemplatesWrapper />
                 </ProtectedRoute>
               } 
             />
