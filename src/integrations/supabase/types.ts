@@ -8782,6 +8782,9 @@ export type Database = {
         Args: { p_package_id: number; p_tenant_id: number }
         Returns: undefined
       }
+      admin_fix_invitations: { Args: { dry_run?: boolean }; Returns: Json }
+      admin_fix_memberships: { Args: { dry_run?: boolean }; Returns: Json }
+      admin_fix_profile_linkage: { Args: { dry_run?: boolean }; Returns: Json }
       admin_search_clients: {
         Args: {
           org_types?: string[]
@@ -8798,6 +8801,82 @@ export type Database = {
         }[]
       }
       advance_segment: { Args: { p_meeting_id: string }; Returns: string }
+      audit_duplicate_emails: {
+        Args: never
+        Returns: {
+          auth_ids: string[]
+          count_auth: number
+          count_profiles: number
+          email_lower: string
+          profile_ids: number[]
+        }[]
+      }
+      audit_email_mismatches: {
+        Args: never
+        Returns: {
+          auth_email: string
+          issue: string
+          profile_email: string
+          profile_id: number
+          user_id: string
+        }[]
+      }
+      audit_invalid_memberships: {
+        Args: never
+        Returns: {
+          issue: string
+          membership_id: string
+          role: string
+          status: string
+          tenant_id: number
+          user_id: string
+        }[]
+      }
+      audit_invitation_issues: {
+        Args: never
+        Returns: {
+          created_at: string
+          email: string
+          expires_at: string
+          invitation_id: string
+          issue: string
+          status: string
+          tenant_id: number
+          unicorn_role: string
+        }[]
+      }
+      audit_orphan_auth_users: {
+        Args: never
+        Returns: {
+          auth_user_id: string
+          created_at: string
+          email: string
+          issue: string
+          last_sign_in_at: string
+        }[]
+      }
+      audit_orphan_profiles: {
+        Args: never
+        Returns: {
+          created_at: string
+          issue: string
+          profile_email: string
+          profile_id: number
+          user_id: string
+        }[]
+      }
+      audit_summary: { Args: never; Returns: Json }
+      audit_users_without_membership: {
+        Args: never
+        Returns: {
+          created_at: string
+          email: string
+          global_role: string
+          issue: string
+          profile_id: number
+          user_id: string
+        }[]
+      }
       calculate_membership_health: {
         Args: { p_package_id: number; p_tenant_id: number }
         Returns: Json
