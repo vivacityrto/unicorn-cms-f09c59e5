@@ -7001,6 +7001,41 @@ export type Database = {
           },
         ]
       }
+      tenant_merge_data: {
+        Row: {
+          created_at: string
+          data: Json
+          id: string
+          tenant_id: number
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          created_at?: string
+          data?: Json
+          id?: string
+          tenant_id: number
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          created_at?: string
+          data?: Json
+          id?: string
+          tenant_id?: number
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tenant_merge_data_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: true
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tenant_notes: {
         Row: {
           assignees: string[] | null
