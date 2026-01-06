@@ -246,6 +246,8 @@ export default function UserProfile() {
               fetchUserData();
               setIsEditing(false);
             }}
+            currentUserId={currentUser.user_uuid}
+            isCurrentUserSuperAdmin={isSuperAdmin}
           />
 
           {/* CSC Profile Fields (for CSC users) */}
