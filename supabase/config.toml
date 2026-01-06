@@ -17,3 +17,6 @@ verify_jwt = false
 
 [functions.generate-excel-document]
 verify_jwt = false
+
+[functions.send-stage-email]
+verify_jwt = false
