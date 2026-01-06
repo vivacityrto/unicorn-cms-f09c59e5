@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { useState } from 'react';
 
 // Types for audit results
 interface AuditSummary {
@@ -85,9 +86,68 @@ interface RepairResult {
   error?: string;
 }
 
+// Enhanced user audit data with computed flags
+export interface UserAuditRecord {
+  user_uuid: string;
+  email: string;
+  first_name: string;
+  last_name: string;
+  unicorn_role: string;
+  user_type: string;
+  tenant_id: number | null;
+  tenant_name: string | null;
+  disabled: boolean;
+  archived: boolean;
+  created_at: string;
+  last_sign_in_at: string | null;
+  auth_user_exists: boolean;
+  email_match: boolean | null;
+  has_global_role: boolean;
+  tenant_memberships_count: number;
+  has_active_membership: boolean;
+  has_parent_or_child: boolean;
+  invitation_state: string | null;
+  computed_status: string;
+  issues: string[];
+}
+
+export interface UserAuditFilters {
+  roleFilter: string | null;
+  tenantFilter: number | null;
+  statusFilter: string | null;
+  search: string;
+}
+
 export function useUserAudit() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  
+  // Filter state
+  const [filters, setFilters] = useState<UserAuditFilters>({
+    roleFilter: null,
+    tenantFilter: null,
+    statusFilter: null,
+    search: '',
+  });
+
+  // Fetch enhanced user audit data
+  const { 
+    data: userAuditData, 
+    isLoading: loadingUserAudit, 
+    refetch: refetchUserAudit 
+  } = useQuery({
+    queryKey: ['user-audit-data', filters],
+    queryFn: async (): Promise<UserAuditRecord[]> => {
+      const { data, error } = await supabase.rpc('get_user_audit', {
+        p_role_filter: filters.roleFilter,
+        p_tenant_filter: filters.tenantFilter,
+        p_status_filter: filters.statusFilter,
+        p_search: filters.search || null,
+      });
+      if (error) throw error;
+      return (data || []) as UserAuditRecord[];
+    },
+  });
 
   // Fetch audit summary
   const { data: summary, isLoading: loadingSummary, refetch: refetchSummary } = useQuery({
@@ -169,6 +229,19 @@ export function useUserAudit() {
     },
   });
 
+  // Fetch tenants for filter dropdown
+  const { data: tenants } = useQuery({
+    queryKey: ['tenants-list'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('tenants')
+        .select('id, name')
+        .order('name');
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
   // Repair mutations
   const fixProfileLinkageMutation = useMutation({
     mutationFn: async (dryRun: boolean): Promise<RepairResult> => {
@@ -181,6 +254,7 @@ export function useUserAudit() {
         queryClient.invalidateQueries({ queryKey: ['audit-summary'] });
         queryClient.invalidateQueries({ queryKey: ['audit-orphan-profiles'] });
         queryClient.invalidateQueries({ queryKey: ['audit-email-mismatches'] });
+        queryClient.invalidateQueries({ queryKey: ['user-audit-data'] });
         toast({
           title: 'Profile Linkage Fixed',
           description: `Linked ${data.counts.profiles_linked || 0} profiles, filled ${data.counts.emails_filled || 0} emails.`,
@@ -207,6 +281,7 @@ export function useUserAudit() {
         queryClient.invalidateQueries({ queryKey: ['audit-summary'] });
         queryClient.invalidateQueries({ queryKey: ['audit-users-without-membership'] });
         queryClient.invalidateQueries({ queryKey: ['audit-invitation-issues'] });
+        queryClient.invalidateQueries({ queryKey: ['user-audit-data'] });
         toast({
           title: 'Memberships Fixed',
           description: `Created ${data.counts.memberships_to_create || 0} memberships.`,
@@ -232,6 +307,7 @@ export function useUserAudit() {
       if (!dryRun) {
         queryClient.invalidateQueries({ queryKey: ['audit-summary'] });
         queryClient.invalidateQueries({ queryKey: ['audit-invitation-issues'] });
+        queryClient.invalidateQueries({ queryKey: ['user-audit-data'] });
         toast({
           title: 'Invitations Fixed',
           description: `Expired ${data.counts.marked_expired || 0}, marked redundant ${data.counts.marked_redundant || 0}.`,
@@ -247,8 +323,59 @@ export function useUserAudit() {
     },
   });
 
+  // Fix individual user linkage
+  const fixUserLinkageMutation = useMutation({
+    mutationFn: async (userUuid: string) => {
+      const { data, error } = await supabase.rpc('admin_fix_user_linkage', { p_user_uuid: userUuid });
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['user-audit-data'] });
+      toast({
+        title: 'User Fixed',
+        description: 'User linkage has been repaired.',
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: 'Error',
+        description: error.message,
+        variant: 'destructive',
+      });
+    },
+  });
+
+  // Set user role type
+  const setRoleTypeMutation = useMutation({
+    mutationFn: async ({ userUuid, roleType, tenantId }: { userUuid: string; roleType: string; tenantId?: number }) => {
+      const { data, error } = await supabase.rpc('admin_set_role_type', { 
+        p_user_uuid: userUuid,
+        p_role_type: roleType,
+        p_tenant_id: tenantId || null,
+      });
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['user-audit-data'] });
+      toast({
+        title: 'Role Updated',
+        description: 'User role has been updated.',
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: 'Error',
+        description: error.message,
+        variant: 'destructive',
+      });
+    },
+  });
+
   const refetchAll = () => {
     refetchSummary();
+    refetchUserAudit();
     refetchOrphanAuth();
     refetchOrphanProfiles();
     refetchEmailMismatches();
@@ -262,6 +389,15 @@ export function useUserAudit() {
     // Summary
     summary,
     loadingSummary,
+    
+    // Enhanced user audit data
+    userAuditData,
+    loadingUserAudit,
+    
+    // Filters
+    filters,
+    setFilters,
+    tenants,
     
     // Detailed data
     orphanAuthUsers,
@@ -285,11 +421,15 @@ export function useUserAudit() {
     fixProfileLinkage: fixProfileLinkageMutation.mutateAsync,
     fixMemberships: fixMembershipsMutation.mutateAsync,
     fixInvitations: fixInvitationsMutation.mutateAsync,
+    fixUserLinkage: fixUserLinkageMutation.mutateAsync,
+    setRoleType: setRoleTypeMutation.mutateAsync,
     
     // Mutation states
     isFixingProfileLinkage: fixProfileLinkageMutation.isPending,
     isFixingMemberships: fixMembershipsMutation.isPending,
     isFixingInvitations: fixInvitationsMutation.isPending,
+    isFixingUserLinkage: fixUserLinkageMutation.isPending,
+    isSettingRoleType: setRoleTypeMutation.isPending,
     
     // Refetch all
     refetchAll,
