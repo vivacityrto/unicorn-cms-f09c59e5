@@ -12,7 +12,8 @@ import {
   UserX, 
   Save,
   AlertCircle,
-  Building2
+  Building2,
+  Users
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
@@ -44,12 +45,23 @@ interface AdminActionsProps {
     unicorn_role: string;
     user_type: string;
     tenant_name?: string | null;
+    staff_team?: string | null;
   };
   currentUserRole: string | null;
   currentUserType: string | null;
   currentUserTenantId: number | null;
   onUpdate: () => void;
 }
+
+const STAFF_TEAM_OPTIONS = [
+  { value: '', label: 'No Team Assigned' },
+  { value: 'csc', label: 'Client Success Champion' },
+  { value: 'csc_admin', label: 'CSC Admin' },
+  { value: 'growth', label: 'Growth' },
+  { value: 'leadership', label: 'Leadership' },
+  { value: 'operations', label: 'Operations' },
+  { value: 'design', label: 'Design' },
+] as const;
 
 // The 5 canonical role types
 const ROLE_TYPES = [
@@ -122,6 +134,7 @@ export function AdminActions({
   const [roleType, setRoleType] = useState<RoleType>(() => 
     deriveRoleType(user.unicorn_role, user.user_type)
   );
+  const [selectedStaffTeam, setSelectedStaffTeam] = useState<string>(user.staff_team || '');
   const [selectedTenantId, setSelectedTenantId] = useState<string>(
     user.tenant_id?.toString() || ''
   );
@@ -142,7 +155,8 @@ export function AdminActions({
   
   const hasChanges = 
     roleType !== originalRoleType || 
-    selectedTenantId !== (user.tenant_id?.toString() || '');
+    selectedTenantId !== (user.tenant_id?.toString() || '') ||
+    selectedStaffTeam !== (user.staff_team || '');
 
   // Validation
   const needsTenant = isTenantRole && !selectedTenantId;
@@ -208,12 +222,14 @@ export function AdminActions({
 
       const dbFields = roleTypeToDbFields(roleType);
       
+      // Only include staff_team for SuperAdmin roles
       const { data, error } = await supabase.functions.invoke('update-user-role', {
         body: {
           user_uuid: user.user_uuid,
           unicorn_role: dbFields.unicorn_role,
           user_type: dbFields.user_type,
           tenant_id: isTenantRole ? (selectedTenantId ? parseInt(selectedTenantId) : null) : null,
+          staff_team: isSuperAdminRole ? (selectedStaffTeam || null) : null,
         },
       });
 
@@ -337,6 +353,31 @@ export function AdminActions({
                 </Select>
               </div>
 
+              {/* Staff Team - only for SuperAdmin roles */}
+              {isSuperAdminRole && (
+                <div className="space-y-2">
+                  <Label htmlFor="staff-team" className="flex items-center gap-2">
+                    <Users className="h-4 w-4" />
+                    Staff Team
+                  </Label>
+                  <Select value={selectedStaffTeam} onValueChange={setSelectedStaffTeam}>
+                    <SelectTrigger id="staff-team">
+                      <SelectValue placeholder="Select staff team" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {STAFF_TEAM_OPTIONS.map((team) => (
+                        <SelectItem key={team.value} value={team.value}>
+                          {team.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">
+                    Determines the team badge shown on the user's profile
+                  </p>
+                </div>
+              )}
+
               {/* Tenant Assignment - only for tenant roles */}
               {isTenantRole && (
                 <div className="space-y-2">
@@ -366,16 +407,6 @@ export function AdminActions({
                     </Alert>
                   )}
                 </div>
-              )}
-
-              {/* SuperAdmin roles don't need tenant */}
-              {isSuperAdminRole && selectedTenantId && (
-                <Alert className="mt-2">
-                  <AlertCircle className="h-4 w-4" />
-                  <AlertDescription>
-                    SuperAdmin roles have cross-tenant access. Tenant assignment will be cleared.
-                  </AlertDescription>
-                </Alert>
               )}
             </div>
 
