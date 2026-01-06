@@ -69,6 +69,8 @@ import MembershipDashboardWrapper from "./pages/MembershipDashboardWrapper";
 import ClientDetailWrapper from "./pages/ClientDetailWrapper";
 import AdminTgaIntegrationWrapper from "./pages/AdminTgaIntegrationWrapper";
 import AdminUserAudit from "./pages/AdminUserAudit";
+import TeamUsers from "./pages/TeamUsers";
+import TenantUsers from "./pages/TenantUsers";
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -537,6 +539,9 @@ const App = () => (
             <Route path="/admin/integrations/tga" element={<ProtectedRoute><AdminTgaIntegrationWrapper /></ProtectedRoute>} />
             {/* Admin User Audit */}
             <Route path="/admin/user-audit" element={<ProtectedRoute><AdminUserAudit /></ProtectedRoute>} />
+            {/* Team & Tenant Users */}
+            <Route path="/admin/team-users" element={<ProtectedRoute><TeamUsers /></ProtectedRoute>} />
+            <Route path="/admin/tenant-users" element={<ProtectedRoute><TenantUsers /></ProtectedRoute>} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
