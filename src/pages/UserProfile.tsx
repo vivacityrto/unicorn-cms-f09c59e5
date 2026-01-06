@@ -195,8 +195,9 @@ export default function UserProfile() {
   }
 
   const canEdit = canEditProfile ?? false;
-  const isAdmin = (currentUser.unicorn_role === 'Super Admin' && 
-                   (currentUser.user_type === 'Vivacity' || currentUser.user_type === 'Vivacity Team')) || 
+  const isSuperAdmin = currentUser.unicorn_role === 'Super Admin' && 
+                       (currentUser.user_type === 'Vivacity' || currentUser.user_type === 'Vivacity Team');
+  const isAdmin = isSuperAdmin || 
                   (currentUser.unicorn_role === 'Admin' && 
                    (currentUser.user_type === 'Client' || currentUser.user_type === 'Client Parent') &&
                    user.tenant_id === currentUser.tenant_id);
@@ -213,6 +214,7 @@ export default function UserProfile() {
             onAvatarChange={fetchUserData}
             onEditClick={() => setIsEditing(!isEditing)}
             isEditing={isEditing}
+            isSuperAdmin={isSuperAdmin}
           />
         </CardContent>
       </Card>
