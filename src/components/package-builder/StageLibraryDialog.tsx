@@ -11,7 +11,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
-import { Search, Plus, Check, Layers, AlertTriangle, Loader2, ShieldCheck } from 'lucide-react';
+import { Search, Plus, Check, Layers, AlertTriangle, Loader2, ShieldCheck, Eye } from 'lucide-react';
+import { StagePreviewDialog } from './StagePreviewDialog';
 
 interface StageLibraryDialogProps {
   open: boolean;
@@ -43,6 +44,7 @@ export function StageLibraryDialog({
   const [certifiedFilter, setCertifiedFilter] = useState<string>('all');
   const [addingStageId, setAddingStageId] = useState<number | null>(null);
   const [isCreating, setIsCreating] = useState(false);
+  const [previewStage, setPreviewStage] = useState<Stage | null>(null);
   const [newStage, setNewStage] = useState({
     title: '',
     short_name: '',
@@ -240,26 +242,38 @@ export function StageLibraryDialog({
                             </p>
                           )}
                         </div>
-                        <Button
-                          size="sm"
-                          variant={isAdded ? 'secondary' : 'default'}
-                          disabled={isAdded || isAdding}
-                          onClick={() => handleAddStage(stage.id)}
-                        >
-                          {isAdding ? (
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                          ) : isAdded ? (
-                            <>
-                              <Check className="h-4 w-4 mr-1" />
-                              Added
-                            </>
-                          ) : (
-                            <>
-                              <Plus className="h-4 w-4 mr-1" />
-                              Add
-                            </>
-                          )}
-                        </Button>
+                        <div className="flex items-center gap-2">
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => setPreviewStage(stage)}
+                            className="h-8 w-8 p-0"
+                            title="Preview stage"
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant={isAdded ? 'secondary' : 'default'}
+                            disabled={isAdded || isAdding}
+                            onClick={() => handleAddStage(stage.id)}
+                            title={isAdded ? 'Already added to this package' : 'Add to package'}
+                          >
+                            {isAdding ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : isAdded ? (
+                              <>
+                                <Check className="h-4 w-4 mr-1" />
+                                Added
+                              </>
+                            ) : (
+                              <>
+                                <Plus className="h-4 w-4 mr-1" />
+                                Add
+                              </>
+                            )}
+                          </Button>
+                        </div>
                       </div>
                     );
                   })}
@@ -393,6 +407,13 @@ export function StageLibraryDialog({
             </div>
           </TabsContent>
         </Tabs>
+
+        {/* Stage Preview Dialog */}
+        <StagePreviewDialog
+          open={!!previewStage}
+          onOpenChange={(open) => !open && setPreviewStage(null)}
+          stage={previewStage}
+        />
       </DialogContent>
     </Dialog>
   );
