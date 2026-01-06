@@ -54,7 +54,7 @@ interface AdminActionsProps {
 }
 
 const STAFF_TEAM_OPTIONS = [
-  { value: '', label: 'No Team Assigned' },
+  { value: 'none', label: 'No Team Assigned' },
   { value: 'csc', label: 'Client Success Champion' },
   { value: 'csc_admin', label: 'CSC Admin' },
   { value: 'growth', label: 'Growth' },
@@ -134,7 +134,7 @@ export function AdminActions({
   const [roleType, setRoleType] = useState<RoleType>(() => 
     deriveRoleType(user.unicorn_role, user.user_type)
   );
-  const [selectedStaffTeam, setSelectedStaffTeam] = useState<string>(user.staff_team || '');
+  const [selectedStaffTeam, setSelectedStaffTeam] = useState<string>(user.staff_team || 'none');
   const [selectedTenantId, setSelectedTenantId] = useState<string>(
     user.tenant_id?.toString() || ''
   );
@@ -156,7 +156,7 @@ export function AdminActions({
   const hasChanges = 
     roleType !== originalRoleType || 
     selectedTenantId !== (user.tenant_id?.toString() || '') ||
-    selectedStaffTeam !== (user.staff_team || '');
+    selectedStaffTeam !== (user.staff_team || 'none');
 
   // Validation
   const needsTenant = isTenantRole && !selectedTenantId;
@@ -229,7 +229,7 @@ export function AdminActions({
           unicorn_role: dbFields.unicorn_role,
           user_type: dbFields.user_type,
           tenant_id: isTenantRole ? (selectedTenantId ? parseInt(selectedTenantId) : null) : null,
-          staff_team: isSuperAdminRole ? (selectedStaffTeam || null) : null,
+          staff_team: isSuperAdminRole ? (selectedStaffTeam === 'none' ? null : selectedStaffTeam) : null,
         },
       });
 
