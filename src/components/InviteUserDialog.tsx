@@ -97,7 +97,7 @@ export function InviteUserDialog({ open, onOpenChange, onSuccess }: InviteUserDi
         throw new Error('Please select a tenant for client invites');
       }
 
-      // Call the edge function to invite the user using fetch for proper error handling
+      // Call the edge function to invite the user
       const payload = {
         email: email.trim().toLowerCase(),
         first_name: firstName.trim(),
@@ -107,42 +107,28 @@ export function InviteUserDialog({ open, onOpenChange, onSuccess }: InviteUserDi
         unicorn_role: roleLevel,
       };
 
-      const session = await supabase.auth.getSession();
-      const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/invite-user`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
-          'Authorization': `Bearer ${session.data.session?.access_token ?? ''}`,
-        },
-        body: JSON.stringify(payload),
+      const { data: inviteData, error: inviteError } = await supabase.functions.invoke('invite-user', {
+        body: payload,
       });
 
-      let msg = `HTTP ${res.status}`;
       let inviteStatus = 'failed';
       let errorMsg: string | null = null;
       let inviteUrl: string | null = null;
 
-      try {
-        const json = await res.json();
-        if (!res.ok || json?.ok === false) {
-          msg = json?.detail || json?.message || json?.code || msg;
-          errorMsg = msg;
-          inviteStatus = 'failed';
-        } else {
-          inviteStatus = 'sent';
-          inviteUrl = json?.inviteUrl || null;
-        }
-      } catch (e) {
-        // if body wasn't JSON, read text
-        const text = await res.text().catch(() => '');
-        errorMsg = text || msg;
+      if (inviteError) {
+        errorMsg = inviteError.message || 'Failed to send invitation';
         inviteStatus = 'failed';
+      } else if (inviteData?.ok === false) {
+        errorMsg = inviteData?.detail || inviteData?.message || inviteData?.code || 'Unknown error';
+        inviteStatus = 'failed';
+      } else {
+        inviteStatus = 'sent';
+        inviteUrl = inviteData?.inviteUrl || null;
       }
 
       // Throw error if invite failed
       if (inviteStatus === 'failed') {
-        throw new Error(errorMsg || msg);
+        throw new Error(errorMsg || 'Failed to send invitation');
       }
 
       // Show success with invite URL for manual sharing
