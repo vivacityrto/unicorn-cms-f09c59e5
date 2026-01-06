@@ -13,11 +13,13 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useToast } from '@/hooks/use-toast';
-import { Users, Search, Shield, UserCheck, UserX } from 'lucide-react';
+import { Users, Search, Shield, UserCheck, UserX, UserPlus } from 'lucide-react';
+import { InviteUserDialog } from '@/components/InviteUserDialog';
 
 interface TeamUser {
   user_uuid: string;
@@ -49,6 +51,7 @@ export default function TeamUsers() {
   const [searchQuery, setSearchQuery] = useState('');
   const [levelFilter, setLevelFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
 
   useEffect(() => {
     fetchTeamUsers();
@@ -189,14 +192,20 @@ export default function TeamUsers() {
     <DashboardLayout>
       <div className="space-y-6 p-6 animate-fade-in">
         {/* Header */}
-        <div>
-          <h1 className="text-[28px] font-bold tracking-tight flex items-center gap-2">
-            <Shield className="h-7 w-7 text-purple-600" />
-            Team Users
-          </h1>
-          <p className="text-muted-foreground mt-1">
-            Manage Vivacity team members and SuperAdmin users
-          </p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-[28px] font-bold tracking-tight flex items-center gap-2">
+              <Shield className="h-7 w-7 text-purple-600" />
+              Team Users
+            </h1>
+            <p className="text-muted-foreground mt-1">
+              Manage Vivacity team members and SuperAdmin users
+            </p>
+          </div>
+          <Button onClick={() => setInviteDialogOpen(true)}>
+            <UserPlus className="h-4 w-4 mr-2" />
+            Add User
+          </Button>
         </div>
 
         {/* Stats Cards */}
@@ -329,6 +338,13 @@ export default function TeamUsers() {
             </Table>
           </CardContent>
         </Card>
+
+        {/* Invite User Dialog */}
+        <InviteUserDialog
+          open={inviteDialogOpen}
+          onOpenChange={setInviteDialogOpen}
+          onSuccess={fetchTeamUsers}
+        />
       </div>
     </DashboardLayout>
   );
