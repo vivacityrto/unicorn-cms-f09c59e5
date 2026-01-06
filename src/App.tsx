@@ -306,7 +306,7 @@ const App = () => (
             <Route 
               path="/admin/manage-packages"
               element={
-                <ProtectedRoute>
+                <ProtectedRoute requireSuperAdmin>
                   <PackageBuilder />
                 </ProtectedRoute>
               } 
@@ -314,7 +314,7 @@ const App = () => (
             <Route 
               path="/admin/package-builder/:id"
               element={
-                <ProtectedRoute>
+                <ProtectedRoute requireSuperAdmin>
                   <PackageBuilderDetail />
                 </ProtectedRoute>
               } 
