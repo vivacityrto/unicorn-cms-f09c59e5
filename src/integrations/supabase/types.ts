@@ -3090,6 +3090,7 @@ export type Database = {
           package_id: number | null
           sent_at: string | null
           stage_id: number | null
+          stage_release_id: string | null
           status: string
           subject: string
           tenant_id: number
@@ -3109,6 +3110,7 @@ export type Database = {
           package_id?: number | null
           sent_at?: string | null
           stage_id?: number | null
+          stage_release_id?: string | null
           status?: string
           subject: string
           tenant_id: number
@@ -3128,6 +3130,7 @@ export type Database = {
           package_id?: number | null
           sent_at?: string | null
           stage_id?: number | null
+          stage_release_id?: string | null
           status?: string
           subject?: string
           tenant_id?: number
@@ -3153,6 +3156,13 @@ export type Database = {
             columns: ["stage_id"]
             isOneToOne: false
             referencedRelation: "documents_stages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "email_send_log_stage_release_id_fkey"
+            columns: ["stage_release_id"]
+            isOneToOne: false
+            referencedRelation: "stage_releases"
             referencedColumns: ["id"]
           },
           {
@@ -4904,6 +4914,7 @@ export type Database = {
         Row: {
           client_legacy_id: string | null
           created_at: string | null
+          document_version_id: string | null
           error_message: string | null
           file_name: string
           file_path: string
@@ -4921,6 +4932,7 @@ export type Database = {
         Insert: {
           client_legacy_id?: string | null
           created_at?: string | null
+          document_version_id?: string | null
           error_message?: string | null
           file_name: string
           file_path: string
@@ -4938,6 +4950,7 @@ export type Database = {
         Update: {
           client_legacy_id?: string | null
           created_at?: string | null
+          document_version_id?: string | null
           error_message?: string | null
           file_name?: string
           file_path?: string
@@ -4965,6 +4978,13 @@ export type Database = {
             columns: ["client_legacy_id"]
             isOneToOne: false
             referencedRelation: "dashboard_client_snapshot"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "generated_documents_document_version_id_fkey"
+            columns: ["document_version_id"]
+            isOneToOne: false
+            referencedRelation: "document_versions"
             referencedColumns: ["id"]
           },
           {
@@ -7325,6 +7345,151 @@ export type Database = {
           status?: number
         }
         Relationships: []
+      }
+      stage_release_items: {
+        Row: {
+          created_at: string
+          document_id: number
+          document_version_id: string | null
+          generated_document_id: string | null
+          generation_status: string | null
+          id: string
+          include_in_pack: boolean
+          is_visible_to_tenant: boolean
+          stage_release_id: string
+        }
+        Insert: {
+          created_at?: string
+          document_id: number
+          document_version_id?: string | null
+          generated_document_id?: string | null
+          generation_status?: string | null
+          id?: string
+          include_in_pack?: boolean
+          is_visible_to_tenant?: boolean
+          stage_release_id: string
+        }
+        Update: {
+          created_at?: string
+          document_id?: number
+          document_version_id?: string | null
+          generated_document_id?: string | null
+          generation_status?: string | null
+          id?: string
+          include_in_pack?: boolean
+          is_visible_to_tenant?: boolean
+          stage_release_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stage_release_items_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "documents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stage_release_items_document_version_id_fkey"
+            columns: ["document_version_id"]
+            isOneToOne: false
+            referencedRelation: "document_versions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stage_release_items_generated_document_id_fkey"
+            columns: ["generated_document_id"]
+            isOneToOne: false
+            referencedRelation: "generated_documents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stage_release_items_stage_release_id_fkey"
+            columns: ["stage_release_id"]
+            isOneToOne: false
+            referencedRelation: "stage_releases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      stage_releases: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          email_sent_at: string | null
+          email_template_id: string | null
+          id: string
+          pack_download_url: string | null
+          package_id: number | null
+          release_type: string
+          released_at: string | null
+          released_by: string | null
+          stage_id: number
+          status: string
+          summary: string | null
+          tenant_id: number
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          email_sent_at?: string | null
+          email_template_id?: string | null
+          id?: string
+          pack_download_url?: string | null
+          package_id?: number | null
+          release_type?: string
+          released_at?: string | null
+          released_by?: string | null
+          stage_id: number
+          status?: string
+          summary?: string | null
+          tenant_id: number
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          email_sent_at?: string | null
+          email_template_id?: string | null
+          id?: string
+          pack_download_url?: string | null
+          package_id?: number | null
+          release_type?: string
+          released_at?: string | null
+          released_by?: string | null
+          stage_id?: number
+          status?: string
+          summary?: string | null
+          tenant_id?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stage_releases_email_template_id_fkey"
+            columns: ["email_template_id"]
+            isOneToOne: false
+            referencedRelation: "email_templates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stage_releases_package_id_fkey"
+            columns: ["package_id"]
+            isOneToOne: false
+            referencedRelation: "packages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stage_releases_stage_id_fkey"
+            columns: ["stage_id"]
+            isOneToOne: false
+            referencedRelation: "documents_stages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stage_releases_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       stage_state_audit_log: {
         Row: {
