@@ -75,6 +75,7 @@ export type Database = {
           generation_rate_limit_per_hour: number | null
           id: number
           max_generation_retries: number | null
+          review_required_before_release: boolean
           updated_at: string
         }
         Insert: {
@@ -84,6 +85,7 @@ export type Database = {
           generation_rate_limit_per_hour?: number | null
           id?: never
           max_generation_retries?: number | null
+          review_required_before_release?: boolean
           updated_at?: string
         }
         Update: {
@@ -93,6 +95,7 @@ export type Database = {
           generation_rate_limit_per_hour?: number | null
           id?: never
           max_generation_retries?: number | null
+          review_required_before_release?: boolean
           updated_at?: string
         }
         Relationships: []
@@ -7549,6 +7552,53 @@ export type Database = {
           },
         ]
       }
+      stage_release_reviews: {
+        Row: {
+          checklist: Json | null
+          completed_at: string | null
+          id: string
+          notes: string | null
+          requested_at: string
+          requested_by: string | null
+          reviewer_user_id: string
+          stage_release_id: string
+          started_at: string | null
+          status: string
+        }
+        Insert: {
+          checklist?: Json | null
+          completed_at?: string | null
+          id?: string
+          notes?: string | null
+          requested_at?: string
+          requested_by?: string | null
+          reviewer_user_id: string
+          stage_release_id: string
+          started_at?: string | null
+          status?: string
+        }
+        Update: {
+          checklist?: Json | null
+          completed_at?: string | null
+          id?: string
+          notes?: string | null
+          requested_at?: string
+          requested_by?: string | null
+          reviewer_user_id?: string
+          stage_release_id?: string
+          started_at?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stage_release_reviews_stage_release_id_fkey"
+            columns: ["stage_release_id"]
+            isOneToOne: false
+            referencedRelation: "stage_releases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       stage_releases: {
         Row: {
           created_at: string
@@ -11387,6 +11437,10 @@ export type Database = {
         Returns: Json
       }
       remove_favourite: { Args: { p_resource_id: string }; Returns: undefined }
+      request_stage_review: {
+        Args: { p_reviewer_user_id: string; p_stage_release_id: string }
+        Returns: Json
+      }
       retry_failed_generation: {
         Args: { p_generated_document_id: string }
         Returns: Json
@@ -11523,6 +11577,10 @@ export type Database = {
             }
             Returns: Json
           }
+      update_review_status: {
+        Args: { p_notes?: string; p_review_id: string; p_status: string }
+        Returns: Json
+      }
       update_stage_certification: {
         Args: {
           p_certified_notes?: string

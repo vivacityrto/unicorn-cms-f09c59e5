@@ -139,6 +139,13 @@ serve(async (req) => {
       .select("*")
       .eq("stage_release_id", release.id);
 
+    // Fetch review records
+    const { data: reviews } = await supabase
+      .from("stage_release_reviews")
+      .select("*")
+      .eq("stage_release_id", release.id)
+      .order("requested_at", { ascending: false });
+
     // Fetch audit logs
     const { data: auditLogs } = await supabase
       .from("client_audit_log")
@@ -173,6 +180,7 @@ serve(async (req) => {
     const contentsSummary = {
       documents: [] as { name: string; type: string; status: string }[],
       emails: [] as { recipient: string; sent_at: string; status: string }[],
+      reviews: [] as { status: string; reviewer: string; completed_at: string | null }[],
       audit_events: auditLogs?.length || 0,
       tasks: {
         client: clientTasks?.length || 0,
@@ -265,6 +273,22 @@ serve(async (req) => {
         `${basePath}/Logs/audit_log.json`,
         new zip.BlobReader(new Blob([JSON.stringify(auditLogs, null, 2)], { type: 'application/json' }))
       );
+    }
+
+    // Add review records as JSON
+    if (reviews && reviews.length > 0) {
+      await zipWriter.add(
+        `${basePath}/Logs/reviews.json`,
+        new zip.BlobReader(new Blob([JSON.stringify(reviews, null, 2)], { type: 'application/json' }))
+      );
+
+      for (const review of reviews) {
+        contentsSummary.reviews.push({
+          status: review.status,
+          reviewer: review.reviewer_user_id,
+          completed_at: review.completed_at
+        });
+      }
     }
 
     // Build index.json

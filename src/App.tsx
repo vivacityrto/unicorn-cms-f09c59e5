@@ -79,6 +79,7 @@ import StageBuilder from "./pages/StageBuilder";
 import AdminStageAnalytics from "./pages/AdminStageAnalytics";
 import AdminOperations from "./pages/AdminOperations";
 import AdminCompliancePacks from "./pages/AdminCompliancePacks";
+import AdminReviews from "./pages/AdminReviews";
 
 const queryClient = new QueryClient();
 
@@ -582,6 +583,7 @@ const App = () => (
             <Route path="/admin/stage-analytics" element={<ProtectedRoute requireSuperAdmin><AdminStageAnalytics /></ProtectedRoute>} />
             <Route path="/admin/operations" element={<ProtectedRoute requireSuperAdmin><AdminOperations /></ProtectedRoute>} />
             <Route path="/admin/compliance-packs" element={<ProtectedRoute requireSuperAdmin><AdminCompliancePacks /></ProtectedRoute>} />
+            <Route path="/admin/reviews" element={<ProtectedRoute><AdminReviews /></ProtectedRoute>} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
