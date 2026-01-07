@@ -70,6 +70,7 @@ import {
 } from 'lucide-react';
 import { AddStageDialog } from '@/components/AddStageDialog';
 import { StagePreviewDialog } from '@/components/package-builder/StagePreviewDialog';
+import { StageQualityIndicator } from '@/components/stage/StageQualityIndicator';
 import { Stage } from '@/hooks/usePackageBuilder';
 import { format } from 'date-fns';
 
@@ -694,22 +695,11 @@ export default function AdminManageStages() {
                       : format(new Date(stage.created_at), 'dd MMM yyyy')}
                   </TableCell>
                   <TableCell className="text-center">
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger>
-                          {stage.usage_count === 0 ? (
-                            <span className="text-muted-foreground">-</span>
-                          ) : stage.is_archived ? (
-                            <XCircle className="h-4 w-4 text-red-500 mx-auto" />
-                          ) : (
-                            <CheckCircle2 className="h-4 w-4 text-emerald-500 mx-auto" />
-                          )}
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          {stage.is_archived ? 'Archived - cannot be certified' : 'Quality check available in stage editor'}
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
+                    <StageQualityIndicator 
+                      stageId={stage.id}
+                      stageType={stage.stage_type}
+                      isArchived={stage.is_archived}
+                    />
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
