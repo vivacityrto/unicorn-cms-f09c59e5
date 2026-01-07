@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { DocumentVersionBadge } from '@/components/document/DocumentVersionBadge';
 import { BulkUploadWithMetadataDialog } from '@/components/document/BulkUploadWithMetadataDialog';
+import { DocumentReadinessBadge } from '@/components/document/DocumentReadinessBadge';
 
 interface Document {
   id: number;
@@ -51,6 +52,7 @@ interface StageDocumentsPanelProps {
   onUpdate: (docId: number, data: { is_tenant_visible?: boolean; is_required?: boolean }) => Promise<void>;
   isCertified?: boolean;
   wrapCertifiedAction?: (fn: () => void) => void;
+  tenantId?: number;
 }
 
 export function StageDocumentsPanel({
@@ -61,7 +63,8 @@ export function StageDocumentsPanel({
   onDelete,
   onUpdate,
   isCertified = false,
-  wrapCertifiedAction
+  wrapCertifiedAction,
+  tenantId
 }: StageDocumentsPanelProps) {
   const { toast } = useToast();
   
@@ -305,6 +308,14 @@ export function StageDocumentsPanel({
                               status={(doc.document.document_status || 'draft') as 'draft' | 'published' | 'archived'} 
                               showVersion={false}
                               size="sm"
+                            />
+                          )}
+                          {doc.document && (
+                            <DocumentReadinessBadge
+                              documentId={doc.document.id}
+                              tenantId={tenantId}
+                              isExcel={doc.document.format?.toLowerCase().includes('excel') || doc.document.format?.toLowerCase().includes('xls')}
+                              compact
                             />
                           )}
                         </div>
