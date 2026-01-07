@@ -26,7 +26,7 @@ async function processDocxTemplate(
   templateBytes: Uint8Array,
   mergeData: Record<string, string>
 ): Promise<Uint8Array> {
-  const blob = new Blob([templateBytes.buffer]);
+  const blob = new Blob([templateBytes.slice().buffer]);
   const reader = new zip.ZipReader(new zip.BlobReader(blob));
   const entries = await reader.getEntries();
   
@@ -79,7 +79,7 @@ async function processXlsxTemplate(
   mergeData: Record<string, string>,
   listData: Record<string, string[]>
 ): Promise<Uint8Array> {
-  const blob = new Blob([templateBytes.buffer]);
+  const blob = new Blob([templateBytes.slice().buffer]);
   const reader = new zip.ZipReader(new zip.BlobReader(blob));
   const entries = await reader.getEntries();
   
