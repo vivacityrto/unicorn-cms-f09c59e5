@@ -66,10 +66,12 @@ import {
   CheckCircle2,
   Loader2,
   AlertTriangle,
-  XCircle
+  XCircle,
+  Play
 } from 'lucide-react';
 import { AddStageDialog } from '@/components/AddStageDialog';
 import { StagePreviewDialog } from '@/components/package-builder/StagePreviewDialog';
+import { StageSimulationDialog } from '@/components/stage/StageSimulationDialog';
 import { StageQualityIndicator } from '@/components/stage/StageQualityIndicator';
 import { StageDependencyIndicator } from '@/components/stage/StageDependencyIndicator';
 import { StageFrameworkBadges, formatFrameworks } from '@/components/stage/StageFrameworkSelector';
@@ -152,6 +154,9 @@ export default function AdminManageStages() {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [previewStage, setPreviewStage] = useState<Stage | null>(null);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+  const [simulateStageId, setSimulateStageId] = useState<number | null>(null);
+  const [simulateStageName, setSimulateStageName] = useState<string>('');
+  const [isSimulateOpen, setIsSimulateOpen] = useState(false);
   
   // Archive confirmation
   const [archiveConfirmOpen, setArchiveConfirmOpen] = useState(false);
@@ -798,6 +803,26 @@ export default function AdminManageStages() {
                             <Button
                               variant="ghost"
                               size="icon"
+                              onClick={() => {
+                                setSimulateStageId(stage.id);
+                                setSimulateStageName(stage.title);
+                                setIsSimulateOpen(true);
+                              }}
+                              className="h-8 w-8"
+                            >
+                              <Play className="h-4 w-4" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>Simulate</TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon"
                               onClick={() => handlePreview(stage)}
                               className="h-8 w-8"
                             >
@@ -867,6 +892,14 @@ export default function AdminManageStages() {
         open={isPreviewOpen}
         onOpenChange={setIsPreviewOpen}
         stage={previewStage}
+      />
+
+      {/* Simulation Dialog */}
+      <StageSimulationDialog
+        open={isSimulateOpen}
+        onOpenChange={setIsSimulateOpen}
+        stageId={simulateStageId}
+        stageName={simulateStageName}
       />
 
       {/* Archive Confirmation Dialog */}
