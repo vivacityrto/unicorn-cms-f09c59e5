@@ -13,6 +13,7 @@ import { usePackageBuilder, Stage } from '@/hooks/usePackageBuilder';
 import { useStageTemplateContent, usePackageStageOverrides } from '@/hooks/useStageTemplateContent';
 import { useStageImpact, useSyncStageToPackages } from '@/hooks/usePackageStageOverrides';
 import { useStageDependencyCheck, updateStageDependencies, checkDependencyCertification } from '@/hooks/useStageDependencies';
+import { useStageVersions, StageVersion, CertifiedEditCheck } from '@/hooks/useStageVersions';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -45,6 +46,8 @@ import { StageFrameworkSelector, StageFrameworkBadges, updateStageFrameworks, is
 import { StageStandardsSelector } from '@/components/stage/StageStandardsSelector';
 import { StageSimulationDialog } from '@/components/stage/StageSimulationDialog';
 import { StageImpactPanel } from '@/components/package-builder/StageImpactPanel';
+import { StageVersionHeader } from '@/components/stage/StageVersionHeader';
+import { VersionSnapshotViewer } from '@/components/stage/VersionSnapshotViewer';
 import { format } from 'date-fns';
 
 const STAGE_TYPE_OPTIONS = [
@@ -105,6 +108,18 @@ export default function AdminStageDetail() {
   // Stage impact tracking
   const { packageCount, overrideCount: impactOverrideCount, packages: packagesWithOverrides, refetch: refetchImpact } = useStageImpact(stageIdNum);
   const { syncToPackages, syncing: isSyncing } = useSyncStageToPackages();
+  
+  // Stage versioning
+  const { 
+    versions, 
+    latestPublished, 
+    isLoading: versionsLoading, 
+    publishVersion, 
+    isPublishing, 
+    checkCertifiedEdit 
+  } = useStageVersions(stageIdNum);
+  const [certifiedEditCheck, setCertifiedEditCheck] = useState<CertifiedEditCheck | null>(null);
+  const [viewingVersion, setViewingVersion] = useState<StageVersion | null>(null);
   
   // Quality check state - no package context needed for template quality
   const { result: qualityResult, isLoading: qualityLoading, refetch: refetchQuality } = useStageQualityCheck({
@@ -277,6 +292,15 @@ export default function AdminStageDetail() {
     fetchStage();
     fetchUsageData();
   }, [fetchStage, fetchUsageData]);
+
+  // Check certified edit status
+  useEffect(() => {
+    if (stage?.is_certified) {
+      checkCertifiedEdit().then(setCertifiedEditCheck);
+    } else {
+      setCertifiedEditCheck(null);
+    }
+  }, [stage?.is_certified, checkCertifiedEdit]);
 
   // Sync local dependencies state with fetched result
   useEffect(() => {
@@ -910,6 +934,21 @@ export default function AdminStageDetail() {
                   <Download className="h-3 w-3 mr-1" />
                   {isExporting ? 'Exporting...' : 'Export'}
                 </Button>
+                
+                {/* Version Controls */}
+                <div className="ml-auto">
+                  <StageVersionHeader
+                    stageId={stage.id}
+                    stageName={stage.title}
+                    isCertified={stage.is_certified || false}
+                    versions={versions}
+                    latestPublished={latestPublished}
+                    certifiedCheck={certifiedEditCheck}
+                    onPublish={(notes) => publishVersion({ notes })}
+                    isPublishing={isPublishing}
+                    onViewVersion={(v) => setViewingVersion(v)}
+                  />
+                </div>
               </div>
             </>
           ) : (
@@ -2286,6 +2325,13 @@ export default function AdminStageDetail() {
           stageName={stage.title}
         />
       )}
+
+      {/* Version Snapshot Viewer */}
+      <VersionSnapshotViewer
+        version={viewingVersion}
+        open={!!viewingVersion}
+        onOpenChange={(open) => !open && setViewingVersion(null)}
+      />
     </div>
   );
 }
