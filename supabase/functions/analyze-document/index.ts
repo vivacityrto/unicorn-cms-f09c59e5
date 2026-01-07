@@ -549,18 +549,70 @@ serve(async (req) => {
       source_signals: signals
     };
 
+    // Determine AI status based on confidence thresholds
+    let aiStatus: 'auto_approved' | 'needs_review' | 'rejected' = 'needs_review';
+    if (result.confidence >= 90) {
+      aiStatus = 'auto_approved';
+    } else if (result.confidence < 70) {
+      aiStatus = 'rejected';
+    }
+
+    // Generate reasoning based on signals
+    const reasoningParts: string[] = [];
+    if (signals.filename_tokens.length > 0) {
+      reasoningParts.push(`Filename tokens: ${signals.filename_tokens.slice(0, 5).join(', ')}`);
+    }
+    if (signals.header_text || signals.footer_text) {
+      reasoningParts.push('Header/footer text detected (high confidence)');
+    }
+    if (signals.headings.length > 0) {
+      reasoningParts.push(`${signals.headings.length} headings found`);
+    }
+    if (signals.merge_fields.length > 0) {
+      reasoningParts.push(`${signals.merge_fields.length} merge fields detected`);
+    }
+    if (result.framework_type) {
+      reasoningParts.push(`Framework: ${result.framework_type}`);
+    }
+    const reasoning = reasoningParts.join('. ') + '.';
+
     // Update document with analysis results
     if (docId) {
-      const updateData = {
+      // Check if user has edited fields - if so, don't overwrite
+      const { data: existingDoc } = await supabase
+        .from("documents")
+        .select("user_edited_category, user_edited_description, category, description")
+        .eq("id", docId)
+        .single();
+
+      const updateData: Record<string, unknown> = {
         ai_category_suggestion: result.category,
         ai_description_draft: result.description,
         ai_confidence: result.confidence,
+        ai_confidence_score: result.confidence,
+        ai_category_confidence: result.confidence, // For now, same as overall
+        ai_description_confidence: result.confidence, // For now, same as overall
+        ai_status: aiStatus,
+        ai_reasoning: reasoning,
+        ai_suggested_category: result.category,
+        ai_suggested_description: result.description,
+        ai_last_run_at: new Date().toISOString(),
         detected_merge_fields: result.merge_fields,
         detected_dropdown_sources: result.dropdown_sources,
         source_signals: result.source_signals,
         framework_type: result.framework_type,
         ai_analysis_status: 'completed'
       };
+
+      // Auto-apply if auto_approved and user hasn't edited
+      if (aiStatus === 'auto_approved') {
+        if (!existingDoc?.user_edited_category && !existingDoc?.category) {
+          updateData.document_category = result.category;
+        }
+        if (!existingDoc?.user_edited_description && !existingDoc?.description) {
+          updateData.description = result.description;
+        }
+      }
 
       const { error: updateError } = await supabase
         .from("documents")
@@ -570,6 +622,18 @@ serve(async (req) => {
       if (updateError) {
         console.error("Update error:", updateError);
       }
+
+      // Log to audit table
+      await supabase.from("document_ai_audit").insert({
+        document_id: docId,
+        action: 'ai_analysis_completed',
+        category_confidence: result.confidence,
+        description_confidence: result.confidence,
+        overall_confidence: result.confidence,
+        suggested_category: result.category,
+        suggested_description: result.description,
+        reasoning: reasoning
+      });
     }
 
     console.log(`Analysis complete for ${fileName}: category=${result.category}, confidence=${result.confidence}`);

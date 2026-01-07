@@ -33,6 +33,9 @@ interface Document {
   current_published_version_id?: string | null;
   ai_status?: AIStatus;
   ai_confidence_score?: number | null;
+  ai_category_confidence?: number | null;
+  ai_description_confidence?: number | null;
+  ai_reasoning?: string | null;
 }
 
 interface StageDocumentItem {
@@ -493,6 +496,9 @@ export function StageDocumentsPanel({
                             <AIConfidenceBadge
                               aiStatus={doc.document.ai_status}
                               overallConfidence={doc.document.ai_confidence_score}
+                              categoryConfidence={doc.document.ai_category_confidence}
+                              descriptionConfidence={doc.document.ai_description_confidence}
+                              reasoning={doc.document.ai_reasoning}
                               compact
                             />
                           )}

@@ -100,9 +100,9 @@ export function AIAnalysisReviewDialog({
   };
 
   const getConfidenceBadge = (confidence: number) => {
-    if (confidence >= 80) return { label: 'High', className: 'bg-green-100 text-green-700 border-green-200' };
-    if (confidence >= 50) return { label: 'Medium', className: 'bg-yellow-100 text-yellow-700 border-yellow-200' };
-    return { label: 'Low', className: 'bg-red-100 text-red-700 border-red-200' };
+    if (confidence >= 90) return { label: 'Auto-approved', className: 'bg-green-100 text-green-700 border-green-200' };
+    if (confidence >= 70) return { label: 'Needs Review', className: 'bg-amber-100 text-amber-700 border-amber-200' };
+    return { label: 'Low Confidence', className: 'bg-red-100 text-red-700 border-red-200' };
   };
 
   const getStatusIcon = (status: DocumentWithAnalysis['status']) => {
