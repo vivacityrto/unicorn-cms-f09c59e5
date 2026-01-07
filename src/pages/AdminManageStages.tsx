@@ -1,11 +1,13 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useRBAC } from '@/hooks/useRBAC';
 import { useStageDuplication } from '@/hooks/useStageDuplication';
+import { useStageExportImport, StageExportData } from '@/hooks/useStageExportImport';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
@@ -39,6 +41,14 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { 
   Plus, 
   Search, 
@@ -50,7 +60,11 @@ import {
   Copy,
   ShieldX,
   Archive,
-  ArchiveRestore
+  ArchiveRestore,
+  Upload,
+  FileJson,
+  CheckCircle2,
+  Loader2
 } from 'lucide-react';
 import { AddStageDialog } from '@/components/AddStageDialog';
 import { StagePreviewDialog } from '@/components/package-builder/StagePreviewDialog';
@@ -107,6 +121,8 @@ export default function AdminManageStages() {
   const navigate = useNavigate();
   const { isSuperAdmin } = useRBAC();
   const { duplicateAndNavigate, isDuplicating } = useStageDuplication();
+  const { importStage, validateImportData, isImporting } = useStageExportImport();
+  const fileInputRef = useRef<HTMLInputElement>(null);
   
   const [stages, setStages] = useState<StageWithUsage[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -122,9 +138,18 @@ export default function AdminManageStages() {
   // Archive confirmation
   const [archiveConfirmOpen, setArchiveConfirmOpen] = useState(false);
   const [stageToArchive, setStageToArchive] = useState<StageWithUsage | null>(null);
+  
+  // Import state
+  const [importDialogOpen, setImportDialogOpen] = useState(false);
+  const [importData, setImportData] = useState<StageExportData | null>(null);
+  const [importError, setImportError] = useState<string | null>(null);
+  const [importTargetPackageId, setImportTargetPackageId] = useState<string>('');
+  const [availablePackages, setAvailablePackages] = useState<{id: number; name: string}[]>([]);
+  const [importSuccessId, setImportSuccessId] = useState<number | null>(null);
 
   useEffect(() => {
     fetchStages();
+    fetchPackages();
   }, []);
 
   const fetchStages = async () => {
@@ -195,6 +220,81 @@ export default function AdminManageStages() {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const fetchPackages = async () => {
+    try {
+      const { data } = await supabase
+        .from('packages')
+        .select('id, name')
+        .eq('status', 'active')
+        .order('name');
+      setAvailablePackages(data || []);
+    } catch (error) {
+      console.error('Failed to fetch packages:', error);
+    }
+  };
+
+  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const content = e.target?.result as string;
+        const parsed = JSON.parse(content);
+        
+        if (!validateImportData(parsed)) {
+          setImportError('Invalid stage export file format. Please check the file structure.');
+          setImportData(null);
+        } else {
+          setImportData(parsed);
+          setImportError(null);
+        }
+        setImportDialogOpen(true);
+      } catch (err) {
+        setImportError('Failed to parse JSON file. Please ensure it is a valid stage export.');
+        setImportData(null);
+        setImportDialogOpen(true);
+      }
+    };
+    reader.readAsText(file);
+    
+    // Reset file input
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
+  const handleImport = async () => {
+    if (!importData) return;
+
+    const targetPkg = importTargetPackageId ? parseInt(importTargetPackageId) : undefined;
+    const result = await importStage(importData, targetPkg);
+
+    if (result.success && result.newStageId) {
+      setImportSuccessId(result.newStageId);
+      toast({
+        title: 'Stage Imported',
+        description: `Created "${importData.stage.title}" with ${result.counts?.team_tasks || 0} team tasks, ${result.counts?.client_tasks || 0} client tasks.`,
+      });
+      fetchStages();
+    } else {
+      toast({
+        title: 'Import Failed',
+        description: result.error || 'Failed to import stage',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const closeImportDialog = () => {
+    setImportDialogOpen(false);
+    setImportData(null);
+    setImportError(null);
+    setImportTargetPackageId('');
+    setImportSuccessId(null);
   };
 
   // Filter stages based on search and filters
@@ -346,13 +446,29 @@ export default function AdminManageStages() {
             Create and manage stage templates for packages
           </p>
         </div>
-        <Button
-          onClick={() => setIsCreateDialogOpen(true)}
-          className="bg-[hsl(188_74%_51%)] hover:bg-[hsl(188_74%_51%)]/90"
-        >
-          <Plus className="mr-2 h-4 w-4" />
-          Create Stage
-        </Button>
+        <div className="flex gap-2">
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".json"
+            className="hidden"
+            onChange={handleFileUpload}
+          />
+          <Button
+            variant="outline"
+            onClick={() => fileInputRef.current?.click()}
+          >
+            <Upload className="mr-2 h-4 w-4" />
+            Import Stage
+          </Button>
+          <Button
+            onClick={() => setIsCreateDialogOpen(true)}
+            className="bg-[hsl(188_74%_51%)] hover:bg-[hsl(188_74%_51%)]/90"
+          >
+            <Plus className="mr-2 h-4 w-4" />
+            Create Stage
+          </Button>
+        </div>
       </div>
 
       {/* Filters Row */}
@@ -677,6 +793,117 @@ export default function AdminManageStages() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      {/* Import Stage Dialog */}
+      <Dialog open={importDialogOpen} onOpenChange={closeImportDialog}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <FileJson className="h-5 w-5" />
+              Import Stage from JSON
+            </DialogTitle>
+            <DialogDescription>
+              Create a new stage from an exported stage definition.
+            </DialogDescription>
+          </DialogHeader>
+          
+          {importSuccessId ? (
+            <div className="py-6 text-center space-y-4">
+              <CheckCircle2 className="h-12 w-12 text-emerald-500 mx-auto" />
+              <div>
+                <h3 className="font-semibold text-lg">Stage Imported Successfully!</h3>
+                <p className="text-muted-foreground text-sm mt-1">
+                  The stage "{importData?.stage.title}" has been created.
+                </p>
+              </div>
+              <div className="flex gap-2 justify-center">
+                <Button variant="outline" onClick={closeImportDialog}>Close</Button>
+                <Button onClick={() => navigate(`/admin/stages/${importSuccessId}`)}>
+                  View Stage
+                </Button>
+              </div>
+            </div>
+          ) : importError ? (
+            <div className="py-6 text-center space-y-4">
+              <div className="text-destructive">
+                <ShieldX className="h-12 w-12 mx-auto mb-2" />
+                <p className="font-medium">Import Error</p>
+                <p className="text-sm text-muted-foreground mt-1">{importError}</p>
+              </div>
+              <Button variant="outline" onClick={closeImportDialog}>Close</Button>
+            </div>
+          ) : importData ? (
+            <div className="space-y-4 py-4">
+              <div className="border rounded-lg p-4 bg-muted/30">
+                <h4 className="font-medium mb-2">Stage to Import</h4>
+                <div className="space-y-1 text-sm">
+                  <p><span className="text-muted-foreground">Name:</span> {importData.stage.title}</p>
+                  <p><span className="text-muted-foreground">Type:</span> {importData.stage.stage_type}</p>
+                  <p><span className="text-muted-foreground">Team Tasks:</span> {importData.team_tasks.length}</p>
+                  <p><span className="text-muted-foreground">Client Tasks:</span> {importData.client_tasks.length}</p>
+                  <p><span className="text-muted-foreground">Emails:</span> {importData.emails.length}</p>
+                  <p><span className="text-muted-foreground">Documents:</span> {importData.documents.length}</p>
+                </div>
+                {importData.package_context && (
+                  <p className="text-xs text-amber-600 mt-2">
+                    ⚠️ Exported from package: {importData.package_context.package_name}
+                  </p>
+                )}
+              </div>
+
+              {(importData.team_tasks.length > 0 || importData.client_tasks.length > 0 || 
+                importData.emails.length > 0 || importData.documents.length > 0) && (
+                <div className="space-y-2">
+                  <Label>Target Package for Content (optional)</Label>
+                  <Select value={importTargetPackageId} onValueChange={setImportTargetPackageId}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select package to import content into..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="">None - import stage only</SelectItem>
+                      {availablePackages.map(pkg => (
+                        <SelectItem key={pkg.id} value={pkg.id.toString()}>
+                          {pkg.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">
+                    Tasks, emails, and documents will only be imported if you select a package.
+                  </p>
+                </div>
+              )}
+
+              <p className="text-xs text-muted-foreground">
+                Note: The imported stage will not be certified, regardless of original certification status.
+              </p>
+            </div>
+          ) : (
+            <div className="py-8 text-center text-muted-foreground">
+              <Loader2 className="h-8 w-8 animate-spin mx-auto mb-2" />
+              Loading file...
+            </div>
+          )}
+
+          {importData && !importSuccessId && (
+            <DialogFooter>
+              <Button variant="outline" onClick={closeImportDialog}>Cancel</Button>
+              <Button onClick={handleImport} disabled={isImporting}>
+                {isImporting ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Importing...
+                  </>
+                ) : (
+                  <>
+                    <Upload className="h-4 w-4 mr-2" />
+                    Import Stage
+                  </>
+                )}
+              </Button>
+            </DialogFooter>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
