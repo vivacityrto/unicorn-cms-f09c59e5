@@ -8,19 +8,40 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu';
-import { Clock, Play, Square, Plus, List, ChevronDown } from 'lucide-react';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { Clock, Play, Square, Plus, List, ChevronDown, TrendingDown, AlertTriangle } from 'lucide-react';
 import { useTimeTracking, formatDuration, formatElapsedTime } from '@/hooks/useTimeTracking';
+import { usePackageUsage, formatHours, formatForecast } from '@/hooks/usePackageUsage';
 import { AddTimeDialog } from './AddTimeDialog';
 import { TimeLogDrawer } from './TimeLogDrawer';
 
 interface ClientTimeWidgetProps {
   tenantId: number;
   clientId: number;
-  includedHours?: number | null;
 }
 
-export function ClientTimeWidget({ tenantId, clientId, includedHours }: ClientTimeWidgetProps) {
+export function ClientTimeWidget({ tenantId, clientId }: ClientTimeWidgetProps) {
   const { activeTimer, summary, startTimer, stopTimer, loading } = useTimeTracking(clientId);
+  const { 
+    packages, 
+    selectedPackageId, 
+    setSelectedPackageId, 
+    usage,
+    loading: usageLoading 
+  } = usePackageUsage(clientId);
+  
   const [elapsed, setElapsed] = useState('0:00');
   const [addTimeOpen, setAddTimeOpen] = useState(false);
   const [logOpen, setLogOpen] = useState(false);
@@ -43,7 +64,8 @@ export function ClientTimeWidget({ tenantId, clientId, includedHours }: ClientTi
   }, [isTimerForThisClient, activeTimer]);
 
   const handleStartTimer = async () => {
-    await startTimer(tenantId, null, null, null, 'general');
+    const packageId = selectedPackageId ? packages.find(p => p.id === selectedPackageId)?.package_id : undefined;
+    await startTimer(tenantId, packageId || null, null, null, 'general');
   };
 
   const handleStopTimer = async () => {
@@ -51,11 +73,30 @@ export function ClientTimeWidget({ tenantId, clientId, includedHours }: ClientTi
   };
 
   const monthHours = summary.thisMonth / 60;
-  const usedHours = summary.last90Days / 60;
+  const hasPackages = packages.length > 0;
+  const usedPercent = usage?.used_percent || 0;
+  const isOverBudget = usedPercent >= 100;
+  const isNearLimit = usedPercent >= 80;
 
   return (
     <>
       <div className="flex items-center gap-2">
+        {/* Package selector (if multiple) */}
+        {hasPackages && packages.length > 1 && (
+          <Select value={selectedPackageId || ''} onValueChange={setSelectedPackageId}>
+            <SelectTrigger className="w-[140px] h-8 text-xs">
+              <SelectValue placeholder="Select package" />
+            </SelectTrigger>
+            <SelectContent>
+              {packages.map(pkg => (
+                <SelectItem key={pkg.id} value={pkg.id}>
+                  {pkg.package_name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
+
         {/* Month total */}
         <div className="flex items-center gap-1.5 px-2 py-1 bg-muted rounded-md">
           <Clock className="h-3.5 w-3.5 text-muted-foreground" />
@@ -63,11 +104,34 @@ export function ClientTimeWidget({ tenantId, clientId, includedHours }: ClientTi
           <span className="text-xs text-muted-foreground">this month</span>
         </div>
 
-        {/* Used / Included (if package has included hours) */}
-        {includedHours && includedHours > 0 && (
-          <Badge variant={usedHours > includedHours ? 'destructive' : 'secondary'} className="text-xs">
-            {usedHours.toFixed(1)} / {includedHours}h
-          </Badge>
+        {/* Package Usage Badge */}
+        {usage && usage.included_minutes > 0 && (
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Badge 
+                  variant={isOverBudget ? 'destructive' : isNearLimit ? 'secondary' : 'outline'} 
+                  className={`text-xs gap-1 ${isNearLimit && !isOverBudget ? 'border-yellow-500 text-yellow-700' : ''}`}
+                >
+                  {isOverBudget && <AlertTriangle className="h-3 w-3" />}
+                  {formatHours(usage.used_minutes)} / {formatHours(usage.included_minutes)}
+                  <span className="text-muted-foreground">({usedPercent.toFixed(0)}%)</span>
+                </Badge>
+              </TooltipTrigger>
+              <TooltipContent side="bottom" className="max-w-xs">
+                <div className="space-y-1 text-xs">
+                  <p><strong>Remaining:</strong> {formatHours(usage.remaining_minutes)}</p>
+                  <p><strong>Last 30 days:</strong> {formatHours(usage.trailing_30d_minutes)}</p>
+                  {usage.forecast_days_to_zero !== null && (
+                    <p className="flex items-center gap-1">
+                      <TrendingDown className="h-3 w-3" />
+                      {formatForecast(usage.forecast_days_to_zero)}
+                    </p>
+                  )}
+                </div>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         )}
 
         {/* Timer button */}
