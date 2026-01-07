@@ -89,7 +89,7 @@ export function useStageReleases(tenantId?: number) {
 
       const { data, error } = await query;
       if (error) throw error;
-      setReleases((data || []) as unknown as StageRelease[]);
+      setReleases(data as StageRelease[] ?? []);
     } catch (error: any) {
       console.error('Failed to fetch releases:', error);
     } finally {
@@ -205,13 +205,9 @@ export function useStageReleases(tenantId?: number) {
   const checkReleaseReadiness = async (releaseId: string): Promise<ReleaseReadinessResult> => {
     try {
       // Fetch release items with their generation status
-      const { data: items, error } = await supabase
+      const { data: itemsRaw, error } = await supabase
         .from('stage_release_items')
-        .select(`
-          *,
-          document:documents(id, title, format, merge_fields, dropdown_sources),
-          generated_document:generated_documents(id, status, error_message)
-        `)
+        .select('id, stage_release_id, document_id, document_version_id, generated_document_id, is_visible_to_tenant, include_in_pack, generation_status')
         .eq('stage_release_id', releaseId);
 
       if (error) throw error;
@@ -224,15 +220,33 @@ export function useStageReleases(tenantId?: number) {
         items: []
       };
 
-      for (const item of items || []) {
+      for (const item of itemsRaw || []) {
         const issues: string[] = [];
         let status: 'pass' | 'warn' | 'fail' = 'pass';
 
-        // Check generation status for auto-generated docs
+        // Fetch document info separately
+        const { data: docData } = await supabase
+          .from('documents')
+          .select('id, title, format, merge_fields, dropdown_sources')
+          .eq('id', item.document_id)
+          .single();
+
+        // Fetch generated document info if exists
+        let genDoc: { id: string; status: string; error_message: string | null } | null = null;
         if (item.generated_document_id) {
-          const genStatus = item.generated_document?.status;
+          const { data: genDocData } = await supabase
+            .from('generated_documents')
+            .select('id, status, error_message')
+            .eq('id', item.generated_document_id)
+            .single();
+          genDoc = genDocData;
+        }
+
+        // Check generation status for auto-generated docs
+        if (item.generated_document_id && genDoc) {
+          const genStatus = genDoc.status;
           if (genStatus === 'failed') {
-            issues.push(`Generation failed: ${item.generated_document?.error_message || 'Unknown error'}`);
+            issues.push(`Generation failed: ${genDoc.error_message || 'Unknown error'}`);
             status = 'fail';
           } else if (genStatus !== 'success' && genStatus !== 'generated') {
             issues.push(`Generation not complete (status: ${genStatus})`);
@@ -241,7 +255,7 @@ export function useStageReleases(tenantId?: number) {
         }
 
         // Check merge fields
-        const mergeFields = item.document?.merge_fields as { required?: string[] } | null;
+        const mergeFields = docData?.merge_fields as { required?: string[] } | null;
         if (mergeFields?.required && mergeFields.required.length > 0) {
           // This is a warning - merge fields exist but we can't verify all values
           if (status !== 'fail') {
@@ -251,17 +265,17 @@ export function useStageReleases(tenantId?: number) {
         }
 
         // Check data sources for Excel
-        const dropdownSources = item.document?.dropdown_sources as { required?: string[] } | null;
-        if (dropdownSources?.required && dropdownSources.required.length > 0) {
-          // Check if all data sources are configured
-          const { data: sources } = await supabase
+        const dropdownSources = docData?.dropdown_sources as { required?: string[] } | null;
+        if (dropdownSources?.required && dropdownSources.required.length > 0 && tenantId) {
+          // Check if all data sources are configured - use filter to avoid deep type instantiation
+          const { data: sourcesData } = await supabase
             .from('document_data_sources')
             .select('name')
-            .eq('document_id', item.document_id)
-            .eq('tenant_id', tenantId);
+            .match({ document_id: item.document_id, tenant_id: tenantId });
 
-          const configuredNames = new Set((sources || []).map(s => s.name));
-          const missing = (dropdownSources.required || []).filter(r => !configuredNames.has(r));
+          const sources = sourcesData as { name: string }[] | null;
+          const configuredNames = new Set((sources ?? []).map((s) => s.name));
+          const missing = (dropdownSources.required ?? []).filter((r) => !configuredNames.has(r));
 
           if (missing.length > 0) {
             issues.push(`Missing data sources: ${missing.join(', ')}`);
@@ -271,7 +285,7 @@ export function useStageReleases(tenantId?: number) {
 
         results.items.push({
           document_id: item.document_id,
-          document_name: item.document?.title || `Document #${item.document_id}`,
+          document_name: docData?.title || `Document #${item.document_id}`,
           status,
           issues
         });
