@@ -38,6 +38,7 @@ import {
 } from 'lucide-react';
 import { StageDocumentsTab } from '@/components/package-builder/StageDocumentsTab';
 import { StageQualityPanel, StageQualityBadge } from '@/components/stage/StageQualityPanel';
+import { StageDocumentsPanel } from '@/components/stage/StageDocumentsPanel';
 import { StageDependencySelector } from '@/components/stage/StageDependencySelector';
 import { StageFrameworkSelector, StageFrameworkBadges, updateStageFrameworks, isFrameworksNarrowed } from '@/components/stage/StageFrameworkSelector';
 import { StageStandardsSelector } from '@/components/stage/StageStandardsSelector';
@@ -1391,62 +1392,16 @@ export default function AdminStageDetail() {
           {/* Documents Tab */}
           <TabsContent value="documents">
             {renderReuseInfoBadge()}
-            {loadingTemplateContent ? (
-              <div className="flex items-center justify-center py-12">
-                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-              </div>
-            ) : (
-              <Card>
-                <CardHeader className="pb-3">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <CardTitle className="text-base">Documents</CardTitle>
-                      <CardDescription>{stageDocuments.length} documents configured</CardDescription>
-                    </div>
-                    <Button size="sm" onClick={() => wrapCertifiedAction(() => {
-                      // Will need to implement document adding - for now just show a toast
-                      toast({ title: 'Add Document', description: 'Use the + button to add documents from your library' });
-                    })}>
-                      <Plus className="h-3 w-3 mr-1" />
-                      Add Document
-                    </Button>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <ScrollArea className="h-[400px]">
-                    {stageDocuments.length === 0 ? (
-                      <div className="flex flex-col items-center justify-center py-12 text-center">
-                        <FileText className="h-10 w-10 text-muted-foreground mb-3" />
-                        <p className="text-muted-foreground">No documents configured</p>
-                      </div>
-                    ) : (
-                      <div className="space-y-2">
-                        {stageDocuments.map((doc) => (
-                          <div key={doc.id} className="flex items-start gap-2 p-3 rounded-lg border bg-muted/30">
-                            <GripVertical className="h-4 w-4 text-muted-foreground mt-0.5 cursor-grab" />
-                            <FileText className="h-4 w-4 text-muted-foreground mt-0.5" />
-                            <div className="flex-1 min-w-0">
-                              <span className="font-medium block">{doc.document?.title || 'Unknown Document'}</span>
-                              <div className="flex items-center gap-2 mt-1">
-                                <Badge variant="outline" className="text-xs capitalize">
-                                  {doc.visibility?.replace(/_/g, ' ') || 'both'}
-                                </Badge>
-                                <Badge variant="secondary" className="text-xs capitalize">
-                                  {doc.delivery_type?.replace(/_/g, ' ') || 'manual'}
-                                </Badge>
-                              </div>
-                            </div>
-                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => wrapCertifiedAction(() => handleRemoveDocument(doc.id))}>
-                              <Trash2 className="h-3 w-3" />
-                            </Button>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </ScrollArea>
-                </CardContent>
-              </Card>
-            )}
+            <StageDocumentsPanel
+              stageId={stageIdNum!}
+              documents={stageDocuments as any}
+              loading={loadingTemplateContent}
+              onRefresh={refetchTemplateContent}
+              onDelete={deleteDocument}
+              onUpdate={updateDocument}
+              isCertified={stage?.is_certified ?? false}
+              wrapCertifiedAction={wrapCertifiedAction}
+            />
           </TabsContent>
 
           {/* Usage and Impact Tab */}

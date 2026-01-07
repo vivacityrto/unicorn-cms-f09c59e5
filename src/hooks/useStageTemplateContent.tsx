@@ -58,6 +58,9 @@ export interface StageDocument {
   is_team_only: boolean;
   is_tenant_downloadable: boolean;
   is_auto_generated: boolean;
+  is_tenant_visible: boolean;
+  is_required: boolean;
+  notes: string | null;
   created_at: string;
   created_by: string | null;
   document?: {
@@ -419,7 +422,13 @@ export function useStageTemplateContent(stageId: number | null) {
     await fetchContent();
   };
 
-  const updateDocument = async (docId: number, data: { visibility?: string; delivery_type?: string }) => {
+  const updateDocument = async (docId: number, data: { 
+    visibility?: string; 
+    delivery_type?: string;
+    is_tenant_visible?: boolean;
+    is_required?: boolean;
+    notes?: string | null;
+  }) => {
     const { error } = await supabase
       .from('stage_documents')
       .update(data)
@@ -431,7 +440,7 @@ export function useStageTemplateContent(stageId: number | null) {
       entity: 'stage',
       entity_id: stageId?.toString() || '',
       action: 'stage.template_updated',
-      details: { change_type: 'document_updated', document_id: docId }
+      details: { change_type: 'document_updated', document_id: docId, updates: data }
     });
 
     await fetchContent();

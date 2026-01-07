@@ -6975,8 +6975,11 @@ export type Database = {
           document_id: number
           id: number
           is_auto_generated: boolean | null
+          is_required: boolean
           is_team_only: boolean | null
           is_tenant_downloadable: boolean | null
+          is_tenant_visible: boolean
+          notes: string | null
           sort_order: number
           stage_id: number
           visibility: string
@@ -6988,8 +6991,11 @@ export type Database = {
           document_id: number
           id?: never
           is_auto_generated?: boolean | null
+          is_required?: boolean
           is_team_only?: boolean | null
           is_tenant_downloadable?: boolean | null
+          is_tenant_visible?: boolean
+          notes?: string | null
           sort_order?: number
           stage_id: number
           visibility?: string
@@ -7001,8 +7007,11 @@ export type Database = {
           document_id?: number
           id?: never
           is_auto_generated?: boolean | null
+          is_required?: boolean
           is_team_only?: boolean | null
           is_tenant_downloadable?: boolean | null
+          is_tenant_visible?: boolean
+          notes?: string | null
           sort_order?: number
           stage_id?: number
           visibility?: string
