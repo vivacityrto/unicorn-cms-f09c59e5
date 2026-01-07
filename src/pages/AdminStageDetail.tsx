@@ -33,13 +33,14 @@ import {
   ArrowLeft, Layers, ShieldCheck, ShieldX, Settings, Users, CheckSquare, 
   Mail, FileText, BarChart3, History, Copy, AlertTriangle, Plus, Trash2, 
   User, Clock, GripVertical, Package, Info, Loader2, RefreshCw, ExternalLink,
-  Archive, Download, ChevronDown, ChevronRight, Calendar, Shield, Link2, Globe
+  Archive, Download, ChevronDown, ChevronRight, Calendar, Shield, Link2, Globe, Play
 } from 'lucide-react';
 import { StageDocumentsTab } from '@/components/package-builder/StageDocumentsTab';
 import { StageQualityPanel, StageQualityBadge } from '@/components/stage/StageQualityPanel';
 import { StageDependencySelector } from '@/components/stage/StageDependencySelector';
 import { StageFrameworkSelector, StageFrameworkBadges, updateStageFrameworks, isFrameworksNarrowed } from '@/components/stage/StageFrameworkSelector';
 import { StageStandardsSelector } from '@/components/stage/StageStandardsSelector';
+import { StageSimulationDialog } from '@/components/stage/StageSimulationDialog';
 import { format } from 'date-fns';
 
 const STAGE_TYPE_OPTIONS = [
@@ -168,6 +169,9 @@ export default function AdminStageDetail() {
   const [auditDateFrom, setAuditDateFrom] = useState<Date | undefined>();
   const [auditDateTo, setAuditDateTo] = useState<Date | undefined>();
   const [auditActionFilter, setAuditActionFilter] = useState<string>('all');
+  
+  // Stage simulation state
+  const [simulationOpen, setSimulationOpen] = useState(false);
 
   // Now call audit log hook with filter state
   const { events: auditEvents, isLoading: auditLoading, uniqueActions, refetch: refetchAudit } = useStageAuditLog({ 
@@ -980,6 +984,16 @@ export default function AdminStageDetail() {
               <Badge variant="secondary" className="text-xs">
                 Used in {usageCount} package{usageCount !== 1 ? 's' : ''}
               </Badge>
+            )}
+            {isSuperAdmin && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setSimulationOpen(true)}
+              >
+                <Play className="h-3 w-3 mr-1" />
+                Simulate Stage
+              </Button>
             )}
             <Button
               variant="outline"
@@ -2382,6 +2396,16 @@ export default function AdminStageDetail() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Stage Simulation Dialog */}
+      {stage && (
+        <StageSimulationDialog
+          open={simulationOpen}
+          onOpenChange={setSimulationOpen}
+          stageId={stage.id}
+          stageName={stage.title}
+        />
+      )}
     </div>
   );
 }
