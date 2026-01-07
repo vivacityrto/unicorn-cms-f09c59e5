@@ -525,6 +525,11 @@ export default function AdminStageDetail() {
         warningMessages.push('Consider setting a version label before certifying this stage.');
       }
       
+      // Check for standards mapping warning (soft, non-blocking)
+      if (!localStandards || localStandards.length === 0) {
+        warningMessages.push('Certified stages usually map to one or more standards.');
+      }
+      
       // Check if dependencies are on non-certified stages
       if (localDependencies.length > 0) {
         const depCheck = await checkDependencyCertification(localDependencies);

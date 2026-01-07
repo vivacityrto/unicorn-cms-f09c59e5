@@ -592,6 +592,16 @@ export default function AdminManageStages() {
               <TableHead className="font-semibold">Type</TableHead>
               <TableHead className="font-semibold">Version</TableHead>
               <TableHead className="font-semibold">Frameworks</TableHead>
+              <TableHead className="font-semibold text-center">
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger className="flex items-center gap-1 mx-auto">
+                      Standards
+                    </TooltipTrigger>
+                    <TooltipContent>Standards covered by stage</TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </TableHead>
               <TableHead className="font-semibold text-center">Certified</TableHead>
               <TableHead className="font-semibold text-center">
                 <TooltipProvider>
@@ -637,6 +647,8 @@ export default function AdminManageStages() {
                   <TableCell><Skeleton className="h-5 w-[200px]" /></TableCell>
                   <TableCell><Skeleton className="h-5 w-[80px]" /></TableCell>
                   <TableCell><Skeleton className="h-5 w-[60px]" /></TableCell>
+                  <TableCell><Skeleton className="h-5 w-[60px]" /></TableCell>
+                  <TableCell><Skeleton className="h-5 w-[40px] mx-auto" /></TableCell>
                   <TableCell><Skeleton className="h-5 w-[60px] mx-auto" /></TableCell>
                   <TableCell><Skeleton className="h-5 w-[40px] mx-auto" /></TableCell>
                   <TableCell><Skeleton className="h-5 w-[40px] mx-auto" /></TableCell>
@@ -647,7 +659,7 @@ export default function AdminManageStages() {
               ))
             ) : filteredStages.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={9} className="text-center py-16">
+                <TableCell colSpan={11} className="text-center py-16">
                   <div className="space-y-3">
                     <Layers className="h-12 w-12 mx-auto text-muted-foreground/50" />
                     <p className="text-muted-foreground">
@@ -708,6 +720,32 @@ export default function AdminManageStages() {
                   </TableCell>
                   <TableCell>
                     <StageFrameworkBadges frameworks={stage.frameworks} size="sm" />
+                  </TableCell>
+                  <TableCell className="text-center">
+                    {stage.covers_standards && stage.covers_standards.length > 0 ? (
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger>
+                            <Badge variant="secondary" className="text-xs">
+                              {stage.covers_standards.length}
+                            </Badge>
+                          </TooltipTrigger>
+                          <TooltipContent className="max-w-[300px]">
+                            <p className="font-medium mb-1">Standards covered:</p>
+                            <ul className="text-xs space-y-0.5">
+                              {stage.covers_standards.slice(0, 8).map(code => (
+                                <li key={code}>{code}</li>
+                              ))}
+                              {stage.covers_standards.length > 8 && (
+                                <li>+{stage.covers_standards.length - 8} more</li>
+                              )}
+                            </ul>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    ) : (
+                      <span className="text-muted-foreground">—</span>
+                    )}
                   </TableCell>
                   <TableCell className="text-center">
                     {stage.is_certified ? (

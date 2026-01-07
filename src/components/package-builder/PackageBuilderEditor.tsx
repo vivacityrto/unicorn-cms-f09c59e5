@@ -26,7 +26,9 @@ import { PackageAIAssistant } from './PackageAIAssistant';
 import { AddRecommendedStagesDialog } from './AddRecommendedStagesDialog';
 import { computePackageReadiness, PackageReadinessSummary } from './PackageReadinessIndicator';
 import { FrameworkMismatchDialog } from './FrameworkMismatchDialog';
+import { PackageStandardsCoverageDialog } from './PackageStandardsCoverageDialog';
 import { checkFrameworkCompatibility } from '@/components/stage/StageFrameworkSelector';
+import { usePackageStandardsCoverage } from '@/hooks/useStageStandards';
 import {
   DndContext,
   closestCenter,
@@ -166,6 +168,7 @@ export function PackageBuilderEditor() {
     stageName: string;
     stageFrameworks: string[] | null;
   } | null>(null);
+  const [isStandardsCoverageOpen, setIsStandardsCoverageOpen] = useState(false);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -394,25 +397,42 @@ export function PackageBuilderEditor() {
     const stageFrameworks = ps.stage?.frameworks as string[] | null;
     return !checkFrameworkCompatibility(stageFrameworks, formData.package_type);
   });
+  
+  // Standards coverage analysis
+  const standardsCoverage = usePackageStandardsCoverage(packageStages, formData.package_type);
 
-  // Compute package readiness with framework escalation
+  // Compute package readiness with framework and standards escalation
   const baseReadiness = computePackageReadiness(packageStages);
   const packageReadiness = (() => {
+    let status = baseReadiness.status;
+    const issues = [...baseReadiness.issues];
+    
+    // Framework mismatch escalation
     if (frameworkMismatchStages.length > 0) {
       const frameworkIssue = 'Package includes stages outside its regulatory framework';
-      const issues = [...baseReadiness.issues];
       if (!issues.includes(frameworkIssue)) {
         issues.push(frameworkIssue);
       }
       // Escalate: ready → incomplete, incomplete → risk
-      if (baseReadiness.status === 'ready') {
-        return { status: 'incomplete' as const, issues };
-      } else if (baseReadiness.status === 'incomplete') {
-        return { status: 'risk' as const, issues };
+      if (status === 'ready') {
+        status = 'incomplete';
+      } else if (status === 'incomplete') {
+        status = 'risk';
       }
-      return { status: baseReadiness.status, issues };
     }
-    return baseReadiness;
+    
+    // Zero standards coverage escalation (only escalate one level, ready → incomplete)
+    if (standardsCoverage.totalStandards > 0 && standardsCoverage.coveredCount === 0) {
+      const standardsIssue = 'No standards mapped to stages in this package';
+      if (!issues.includes(standardsIssue)) {
+        issues.push(standardsIssue);
+      }
+      if (status === 'ready') {
+        status = 'incomplete';
+      }
+    }
+    
+    return { status: status as 'ready' | 'incomplete' | 'risk', issues };
   })();
 
   const selectedStage = packageStages.find(ps => ps.stage_id === selectedStageId);
@@ -457,6 +477,18 @@ export function PackageBuilderEditor() {
               Add Recommended
             </Button>
           )}
+          <Button 
+            variant="outline" 
+            size="sm"
+            onClick={() => setIsStandardsCoverageOpen(true)}
+          >
+            Standards Coverage
+            {standardsCoverage.totalStandards > 0 && (
+              <Badge variant="secondary" className="ml-2 text-xs">
+                {standardsCoverage.coveredCount}/{standardsCoverage.totalStandards}
+              </Badge>
+            )}
+          </Button>
           <Button 
             variant="outline" 
             size="sm"
@@ -778,6 +810,13 @@ export function PackageBuilderEditor() {
           }
         }}
         onCancel={() => setFrameworkMismatch(null)}
+      />
+
+      {/* Standards Coverage Dialog */}
+      <PackageStandardsCoverageDialog
+        open={isStandardsCoverageOpen}
+        onOpenChange={setIsStandardsCoverageOpen}
+        coverage={standardsCoverage}
       />
     </div>
   );
