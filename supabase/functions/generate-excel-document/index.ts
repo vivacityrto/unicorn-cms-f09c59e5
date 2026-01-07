@@ -13,85 +13,85 @@ interface ExcelGenerateRequest {
   mode?: 'single' | 'pack';
 }
 
-interface ListConfig {
-  source: 'static' | 'tenant_merge_data' | 'system_reference';
-  values?: string[];
-  list_key?: string;
-  field_key?: string;
+interface TokenBinding {
+  source_type: 'client' | 'tenant' | 'package' | 'stage' | 'system' | 'static';
+  source_field?: string;
+  static_value?: string;
 }
 
-interface DocumentMergeFields {
-  type?: string;
-  required_fields?: string[];
-  lists?: Record<string, ListConfig>;
+interface DropdownBinding {
+  list_id: string;
+  list_name?: string;
+}
+
+interface ExcelBindings {
+  status: string;
+  detected_tokens: Array<{ token: string; sheet: string; cell: string }>;
+  detected_dropdowns: Array<{ dropdown_id: string; sheet: string; cell: string }>;
+  token_bindings: Record<string, TokenBinding>;
+  dropdown_bindings: Record<string, DropdownBinding>;
+  validation_errors: Array<{ type: string; message: string }>;
 }
 
 // Simple XML-based Excel (XLSX) processor
-// Note: XLSX files are ZIP archives containing XML files
-// We use a simplified approach that works for basic templates
-
 async function processExcelTemplate(
   templateBytes: Uint8Array,
   mergeData: Record<string, string>,
   listData: Record<string, string[]>
 ): Promise<Uint8Array> {
-  // XLSX files are ZIP archives - we need to extract, modify XML, and re-archive
-  // For reliable Excel processing with formulas/validations, we process the raw XML
-  
   console.log('Processing Excel template with merge fields:', Object.keys(mergeData).length);
   console.log('Processing Excel template with lists:', Object.keys(listData).length);
 
-  // For this implementation, we'll use a streaming approach with the ZIP library
-  // available in Deno
-  
-  const { ZipReader, ZipWriter, BlobReader, BlobWriter, TextReader, TextWriter, Uint8ArrayReader, Uint8ArrayWriter } = 
+  const { ZipReader, ZipWriter, Uint8ArrayReader, Uint8ArrayWriter } = 
     await import('https://deno.land/x/zipjs@v2.7.32/index.js');
 
-  // Read the template ZIP
   const zipReader = new ZipReader(new Uint8ArrayReader(templateBytes));
   const entries = await zipReader.getEntries();
   
-  // Create output ZIP
   const outputWriter = new Uint8ArrayWriter();
   const zipWriter = new ZipWriter(outputWriter);
 
-  // Process each file in the ZIP
+  // Track if we need to add a hidden Lists sheet for dropdown data
+  const listsSheetData: string[][] = [];
+  const listRanges: Record<string, { start: number; end: number }> = {};
+  
+  // Prepare list data for hidden sheet
+  let rowIndex = 0;
+  for (const [listKey, values] of Object.entries(listData)) {
+    listRanges[listKey] = { start: rowIndex + 1, end: rowIndex + values.length };
+    values.forEach(value => {
+      listsSheetData.push([value]);
+      rowIndex++;
+    });
+  }
+
   for (const entry of entries) {
     if (entry.directory) continue;
     
     const fileName = entry.filename;
-    
-    // Get the file content
     const content = await entry.getData!(new Uint8ArrayWriter());
     
-    // Check if this is an XML file we need to process
     if (fileName.endsWith('.xml') || fileName.endsWith('.xml.rels')) {
-      // Decode as text for processing
       const decoder = new TextDecoder();
       let xmlContent = decoder.decode(content);
       
-      // Process worksheet files for merge field replacement
+      // Process worksheet and shared strings for merge field replacement
       if (fileName.startsWith('xl/worksheets/') || fileName === 'xl/sharedStrings.xml') {
-        // Replace merge fields in format {{FieldName}}
+        // Replace all token formats: {{Token}}, <<Token>>, [[Token]]
         for (const [key, value] of Object.entries(mergeData)) {
-          const pattern = new RegExp(`\\{\\{${key}\\}\\}`, 'g');
           const safeValue = escapeXml(value || '');
-          xmlContent = xmlContent.replace(pattern, safeValue);
+          // Double brace format
+          xmlContent = xmlContent.replace(new RegExp(`\\{\\{${escapeRegex(key)}\\}\\}`, 'g'), safeValue);
+          // Double angle bracket format
+          xmlContent = xmlContent.replace(new RegExp(`<<${escapeRegex(key)}>>`, 'g'), safeValue);
+          // Double square bracket format
+          xmlContent = xmlContent.replace(new RegExp(`\\[\\[${escapeRegex(key)}\\]\\]`, 'g'), safeValue);
         }
       }
       
-      // Process Lists sheet if present (for dropdown data)
-      if (fileName === 'xl/worksheets/sheet1.xml' || fileName.includes('Lists')) {
-        // Check if this is the Lists sheet by looking for a marker or name
-        // We'll populate list data in the appropriate cells
-        // This is a simplified approach - in production, you'd parse the sheet properly
-      }
-      
-      // Re-encode the modified content
       const encoder = new TextEncoder();
       await zipWriter.add(fileName, new Uint8ArrayReader(encoder.encode(xmlContent)));
     } else {
-      // Copy non-XML files as-is (images, etc.)
       await zipWriter.add(fileName, new Uint8ArrayReader(content));
     }
   }
@@ -111,8 +111,11 @@ function escapeXml(str: string): string {
     .replace(/'/g, '&apos;');
 }
 
+function escapeRegex(str: string): string {
+  return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
 Deno.serve(async (req: Request) => {
-  // Handle CORS preflight
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
@@ -120,7 +123,6 @@ Deno.serve(async (req: Request) => {
   try {
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Get the user from the auth header
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
       throw new Error('Missing authorization header');
@@ -139,7 +141,7 @@ Deno.serve(async (req: Request) => {
 
     console.log('Generate Excel request:', { document_id, tenant_id, stage_id, package_id, mode });
 
-    // 1. Fetch the source document with merge_fields metadata
+    // 1. Fetch the source document
     const { data: document, error: docError } = await supabase
       .from('documents')
       .select('id, title, format, file_names, uploaded_files, merge_fields')
@@ -150,7 +152,6 @@ Deno.serve(async (req: Request) => {
       throw new Error(`Document not found: ${docError?.message || 'Unknown error'}`);
     }
 
-    // Verify this is an Excel document
     const format = (document.format || '').toLowerCase();
     if (!['xlsx', 'xls', 'xlsm'].includes(format)) {
       throw new Error(`Document format "${format}" is not an Excel file`);
@@ -158,39 +159,46 @@ Deno.serve(async (req: Request) => {
 
     console.log('Source Excel document:', document.title);
 
-    // Parse merge fields metadata
-    const mergeFieldsConfig: DocumentMergeFields = 
-      typeof document.merge_fields === 'object' ? document.merge_fields as DocumentMergeFields : {};
+    // 2. Fetch Excel bindings if they exist
+    const { data: excelBindings } = await supabase
+      .from('excel_template_bindings')
+      .select('*')
+      .eq('document_id', document_id)
+      .maybeSingle();
 
-    // 2. Fetch the tenant data for merge fields
+    const bindings = excelBindings as ExcelBindings | null;
+    
+    // Check if bindings exist and are ready
+    if (bindings && bindings.status === 'error') {
+      throw new Error('Excel bindings have validation errors. Please fix them before generating.');
+    }
+
+    // 3. Fetch tenant/client data for merge fields
     let tenantData: Record<string, unknown> = {};
     
-    // First try clients_legacy if client_legacy_id provided
     if (client_legacy_id) {
-      const { data: client, error: clientError } = await supabase
+      const { data: client } = await supabase
         .from('clients_legacy')
         .select('*')
         .eq('id', client_legacy_id)
         .single();
 
-      if (!clientError && client) {
+      if (client) {
         tenantData = client as Record<string, unknown>;
-        console.log('Client data fetched:', (client as {companyname?: string}).companyname);
+        console.log('Client data fetched:', (client as { companyname?: string }).companyname);
       }
     }
 
-    // Also fetch from tenants table
-    const { data: tenant, error: tenantError } = await supabase
+    const { data: tenant } = await supabase
       .from('tenants')
       .select('*')
       .eq('id', tenant_id)
       .single();
 
-    if (!tenantError && tenant) {
+    if (tenant) {
       tenantData = { ...tenantData, ...tenant };
     }
 
-    // 3. Fetch tenant_merge_data for additional fields
     const { data: tenantMergeData } = await supabase
       .from('tenant_merge_data')
       .select('data')
@@ -201,81 +209,78 @@ Deno.serve(async (req: Request) => {
       tenantData = { ...tenantData, ...(tenantMergeData.data as Record<string, unknown>) };
     }
 
-    // 4. Fetch merge field definitions
-    const { data: mergeFieldDefs } = await supabase
-      .from('merge_field_definitions')
-      .select('code, source_column')
-      .eq('is_active', true);
-
-    // 5. Build merge data object
+    // 4. Build merge data from bindings OR legacy merge_field_definitions
     const mergeData: Record<string, string> = {};
-    (mergeFieldDefs || []).forEach((field: { code: string; source_column: string }) => {
-      const value = tenantData[field.source_column];
-      mergeData[field.code] = value !== null && value !== undefined ? String(value) : '';
-    });
-
-    // Also add direct field mappings from required_fields
-    if (mergeFieldsConfig.required_fields) {
-      for (const fieldCode of mergeFieldsConfig.required_fields) {
-        if (!mergeData[fieldCode]) {
-          // Try to find in tenant data with various case formats
-          const lowerKey = fieldCode.toLowerCase();
-          const snakeKey = fieldCode.replace(/([A-Z])/g, '_$1').toLowerCase();
-          
-          for (const [k, v] of Object.entries(tenantData)) {
-            if (k.toLowerCase() === lowerKey || k === snakeKey) {
-              mergeData[fieldCode] = v !== null && v !== undefined ? String(v) : '';
-              break;
+    
+    if (bindings && Object.keys(bindings.token_bindings || {}).length > 0) {
+      // Use new binding system
+      for (const [token, binding] of Object.entries(bindings.token_bindings)) {
+        let value = '';
+        
+        switch (binding.source_type) {
+          case 'client':
+          case 'tenant':
+            if (binding.source_field) {
+              const fieldValue = tenantData[binding.source_field];
+              value = fieldValue !== null && fieldValue !== undefined ? String(fieldValue) : '';
             }
-          }
+            break;
+          case 'system':
+            if (binding.source_field === 'current_date') {
+              value = new Date().toLocaleDateString('en-AU');
+            } else if (binding.source_field === 'current_time') {
+              value = new Date().toLocaleTimeString('en-AU');
+            } else if (binding.source_field === 'current_year') {
+              value = new Date().getFullYear().toString();
+            } else if (binding.source_field === 'generated_by') {
+              value = user.email || '';
+            }
+            break;
+          case 'static':
+            value = binding.static_value || '';
+            break;
         }
+        
+        mergeData[token] = value;
       }
+    } else {
+      // Fallback to legacy merge_field_definitions
+      const { data: mergeFieldDefs } = await supabase
+        .from('merge_field_definitions')
+        .select('code, source_column')
+        .eq('is_active', true);
+
+      (mergeFieldDefs || []).forEach((field: { code: string; source_column: string }) => {
+        const value = tenantData[field.source_column];
+        mergeData[field.code] = value !== null && value !== undefined ? String(value) : '';
+      });
     }
 
     console.log('Merge data prepared with', Object.keys(mergeData).length, 'fields');
 
-    // 6. Fetch list data for dropdowns
+    // 5. Build list data from bindings
     const listData: Record<string, string[]> = {};
     
-    if (mergeFieldsConfig.lists) {
-      for (const [listKey, config] of Object.entries(mergeFieldsConfig.lists)) {
-        switch (config.source) {
-          case 'static':
-            if (config.values) {
-              listData[listKey] = config.values;
-            }
-            break;
-            
-          case 'system_reference':
-            if (config.list_key) {
-              const { data: refList } = await supabase
-                .from('system_reference_lists')
-                .select('values')
-                .eq('list_key', config.list_key)
-                .eq('is_active', true)
-                .single();
-              
-              if (refList?.values) {
-                listData[listKey] = refList.values;
-              }
-            }
-            break;
-            
-          case 'tenant_merge_data':
-            if (config.field_key && tenantMergeData?.data) {
-              const fieldValue = (tenantMergeData.data as Record<string, unknown>)[config.field_key];
-              if (Array.isArray(fieldValue)) {
-                listData[listKey] = fieldValue.map(String);
-              }
-            }
-            break;
+    if (bindings && Object.keys(bindings.dropdown_bindings || {}).length > 0) {
+      for (const [dropdownId, binding] of Object.entries(bindings.dropdown_bindings)) {
+        if (binding.list_id) {
+          const { data: listItems } = await supabase
+            .from('lookup_list_items')
+            .select('value, label')
+            .eq('list_id', binding.list_id)
+            .eq('is_active', true)
+            .order('sort_order');
+
+          if (listItems && listItems.length > 0) {
+            listData[dropdownId] = listItems.map(item => item.label || item.value);
+          }
         }
       }
     }
 
     console.log('List data prepared:', Object.keys(listData));
 
-    // 7. Fetch the template file from storage
+    // 6. Fetch and process template
     const templatePath = document.uploaded_files?.[0];
     if (!templatePath) {
       throw new Error('No template file found for this document');
@@ -291,18 +296,16 @@ Deno.serve(async (req: Request) => {
       throw new Error(`Failed to download template: ${downloadError?.message || 'Unknown error'}`);
     }
 
-    // 8. Process the Excel template
     const templateBytes = new Uint8Array(await templateFile.arrayBuffer());
     const generatedBytes = await processExcelTemplate(templateBytes, mergeData, listData);
 
-    // 9. Generate output filename and path
+    // 7. Save generated file
     const tenantName = (tenantData.name || tenantData.companyname || 'tenant') as string;
     const safeTenantName = tenantName.replace(/[^a-zA-Z0-9]/g, '_').substring(0, 50);
     const timestamp = Date.now();
     const generatedFileName = `${document.title}_${safeTenantName}_${timestamp}.xlsx`;
     const outputPath = `generated/${tenant_id}/${document_id}/${generatedFileName}`;
 
-    // 10. Upload the generated file to storage
     const { error: uploadError } = await supabase.storage
       .from('package-documents')
       .upload(outputPath, generatedBytes, {
@@ -316,7 +319,7 @@ Deno.serve(async (req: Request) => {
 
     console.log('Generated file uploaded to:', outputPath);
 
-    // 11. Create generated document record
+    // 8. Record in generated_documents
     const { data: generatedDoc, error: insertError } = await supabase
       .from('generated_documents')
       .insert({
@@ -338,16 +341,31 @@ Deno.serve(async (req: Request) => {
       throw new Error(`Failed to create generated document record: ${insertError.message}`);
     }
 
-    // 12. Get a signed URL for download
+    // 9. Also record in excel_generated_files if we have bindings
+    if (bindings) {
+      await supabase
+        .from('excel_generated_files')
+        .insert({
+          document_id: document_id,
+          tenant_id: tenant_id,
+          client_id: client_legacy_id ? parseInt(client_legacy_id) : null,
+          package_id: package_id || null,
+          stage_id: stage_id || null,
+          storage_path: outputPath,
+          generated_by: user.id
+        });
+    }
+
+    // 10. Get signed URL
     const { data: signedUrlData, error: signedUrlError } = await supabase.storage
       .from('package-documents')
-      .createSignedUrl(outputPath, 3600); // 1 hour expiry
+      .createSignedUrl(outputPath, 3600);
 
     if (signedUrlError) {
       throw new Error(`Failed to create download URL: ${signedUrlError.message}`);
     }
 
-    // 13. Log to audit
+    // 11. Audit log
     await supabase
       .from('client_audit_log')
       .insert({
@@ -361,7 +379,8 @@ Deno.serve(async (req: Request) => {
           document_title: document.title,
           file_name: generatedFileName,
           merge_fields_used: Object.keys(mergeData).length,
-          lists_populated: Object.keys(listData)
+          lists_populated: Object.keys(listData),
+          used_bindings: !!bindings
         }
       });
 

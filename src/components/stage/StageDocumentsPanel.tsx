@@ -21,6 +21,7 @@ import { DocumentReadinessBadge } from '@/components/document/DocumentReadinessB
 import { GeneratePackDialog } from '@/components/document/GeneratePackDialog';
 import { DocumentReuseWarningDialog } from '@/components/document/DocumentReuseWarningDialog';
 import { AIConfidenceBadge, type AIStatus } from '@/components/document/AIConfidenceBadge';
+import { ExcelBindingStatusBadge } from '@/components/document/ExcelBindingStatusBadge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 interface Document {
@@ -489,6 +490,12 @@ export function StageDocumentsPanel({
                               documentId={doc.document.id}
                               tenantId={tenantId}
                               isExcel={doc.document.format?.toLowerCase().includes('excel') || doc.document.format?.toLowerCase().includes('xls')}
+                              compact
+                            />
+                          )}
+                          {doc.document && (doc.document.format?.toLowerCase().includes('excel') || doc.document.format?.toLowerCase().includes('xls')) && (
+                            <ExcelBindingStatusBadge
+                              documentId={doc.document.id}
                               compact
                             />
                           )}

@@ -24,9 +24,10 @@ import { Pagination, PaginationContent, PaginationItem, PaginationLink, Paginati
 import { DocumentVersionHistory } from '@/components/document/DocumentVersionHistory';
 import { DocumentStageUsagePanel } from '@/components/document/DocumentStageUsagePanel';
 import { ExcelDataSourcesTab } from '@/components/document/ExcelDataSourcesTab';
+import { ExcelFieldsTab } from '@/components/document/ExcelFieldsTab';
 import { MergeFieldsEditor } from '@/components/document/MergeFieldsEditor';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Database, FileText as FileTextIcon, GitBranch, Table } from 'lucide-react';
+import { Database, FileText as FileTextIcon, GitBranch, Table, FileSpreadsheet } from 'lucide-react';
 import { DocumentScanStatus } from '@/components/document/DocumentScanStatus';
 
 interface Document {
@@ -1138,11 +1139,14 @@ export default function DocumentDetail() {
           {/* Merge Fields Editor */}
           <MergeFieldsEditor documentId={document.id} />
           
-          {/* Excel Data Sources - Only show for Excel documents */}
+          {/* Excel Fields - Only show for Excel documents */}
           {(document.format?.toLowerCase().includes('excel') || 
             document.format?.toLowerCase().includes('xls') ||
             document.format?.toLowerCase().includes('spreadsheet')) && (
-            <ExcelDataSourcesTab documentId={document.id} />
+            <>
+              <ExcelFieldsTab documentId={document.id} />
+              <ExcelDataSourcesTab documentId={document.id} />
+            </>
           )}
         </div>
       )}
