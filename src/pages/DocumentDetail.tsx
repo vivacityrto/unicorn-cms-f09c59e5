@@ -23,6 +23,10 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from '@/components/ui/pagination';
 import { DocumentVersionHistory } from '@/components/document/DocumentVersionHistory';
 import { DocumentStageUsagePanel } from '@/components/document/DocumentStageUsagePanel';
+import { ExcelDataSourcesTab } from '@/components/document/ExcelDataSourcesTab';
+import { MergeFieldsEditor } from '@/components/document/MergeFieldsEditor';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Database, FileText as FileTextIcon, GitBranch, Table } from 'lucide-react';
 
 interface Document {
   id: number;
@@ -1099,13 +1103,25 @@ export default function DocumentDetail() {
 
       {/* Version History & Stage Usage - Only for Super Admin / Team Leader */}
       {(profile?.unicorn_role === 'Super Admin' || profile?.unicorn_role === 'Team Leader') && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <DocumentVersionHistory 
-            documentId={document.id}
-            documentTitle={document.title}
-            canPublish={true}
-          />
-          <DocumentStageUsagePanel documentId={document.id} />
+        <div className="space-y-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <DocumentVersionHistory 
+              documentId={document.id}
+              documentTitle={document.title}
+              canPublish={true}
+            />
+            <DocumentStageUsagePanel documentId={document.id} />
+          </div>
+          
+          {/* Merge Fields Editor */}
+          <MergeFieldsEditor documentId={document.id} />
+          
+          {/* Excel Data Sources - Only show for Excel documents */}
+          {(document.format?.toLowerCase().includes('excel') || 
+            document.format?.toLowerCase().includes('xls') ||
+            document.format?.toLowerCase().includes('spreadsheet')) && (
+            <ExcelDataSourcesTab documentId={document.id} />
+          )}
         </div>
       )}
 

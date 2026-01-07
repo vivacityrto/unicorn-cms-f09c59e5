@@ -13,10 +13,12 @@ import {
   CheckCircle2, 
   AlertCircle,
   Loader2,
-  Mail
+  Mail,
+  ShieldCheck
 } from 'lucide-react';
 import { useTenantDocumentReleases } from '@/hooks/useDocumentVersions';
 import { DocumentVersionBadge } from './DocumentVersionBadge';
+import { ReleaseReadinessDialog } from './ReleaseReadinessDialog';
 
 interface StageDocument {
   id: number;
@@ -58,6 +60,7 @@ export function ReleaseDocumentsDialog({
   const [releasing, setReleasing] = useState(false);
   const [selectedDocs, setSelectedDocs] = useState<Set<number>>(new Set());
   const [sendEmail, setSendEmail] = useState(true);
+  const [showReadinessCheck, setShowReadinessCheck] = useState(false);
 
   useEffect(() => {
     if (open && stageId) {
@@ -112,7 +115,7 @@ export function ReleaseDocumentsDialog({
     });
   };
 
-  const handleRelease = async () => {
+  const handleInitiateRelease = () => {
     if (selectedDocs.size === 0) {
       toast({
         title: 'Error',
@@ -121,7 +124,11 @@ export function ReleaseDocumentsDialog({
       });
       return;
     }
+    // Show readiness check dialog
+    setShowReadinessCheck(true);
+  };
 
+  const handleConfirmRelease = async () => {
     setReleasing(true);
     try {
       const count = await releaseDocuments(packageId, stageId, Array.from(selectedDocs));
@@ -254,18 +261,27 @@ export function ReleaseDocumentsDialog({
             Cancel
           </Button>
           <Button 
-            onClick={handleRelease} 
+            onClick={handleInitiateRelease} 
             disabled={releasing || selectedDocs.size === 0}
           >
             {releasing ? (
               <Loader2 className="h-4 w-4 mr-1 animate-spin" />
             ) : (
-              <Send className="h-4 w-4 mr-1" />
+              <ShieldCheck className="h-4 w-4 mr-1" />
             )}
-            Release {selectedDocs.size} Document{selectedDocs.size !== 1 ? 's' : ''}
+            Check & Release {selectedDocs.size} Document{selectedDocs.size !== 1 ? 's' : ''}
           </Button>
         </DialogFooter>
       </DialogContent>
+
+      {/* Readiness Check Dialog */}
+      <ReleaseReadinessDialog
+        open={showReadinessCheck}
+        onOpenChange={setShowReadinessCheck}
+        documentIds={Array.from(selectedDocs)}
+        tenantId={tenantId}
+        onConfirmRelease={handleConfirmRelease}
+      />
     </Dialog>
   );
 }
