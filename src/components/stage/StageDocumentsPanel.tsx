@@ -13,11 +13,12 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Progress } from '@/components/ui/progress';
 import { 
   Plus, Trash2, FileText, Upload, Link2, GripVertical, 
-  Loader2, Search, X, CheckCircle2, AlertCircle, Eye, EyeOff, History
+  Loader2, Search, X, CheckCircle2, AlertCircle, Eye, EyeOff, History, Package
 } from 'lucide-react';
 import { DocumentVersionBadge } from '@/components/document/DocumentVersionBadge';
 import { BulkUploadWithMetadataDialog } from '@/components/document/BulkUploadWithMetadataDialog';
 import { DocumentReadinessBadge } from '@/components/document/DocumentReadinessBadge';
+import { GeneratePackDialog } from '@/components/document/GeneratePackDialog';
 
 interface Document {
   id: number;
@@ -45,6 +46,7 @@ interface StageDocumentItem {
 
 interface StageDocumentsPanelProps {
   stageId: number;
+  stageName?: string;
   documents: StageDocumentItem[];
   loading: boolean;
   onRefresh: () => void;
@@ -57,6 +59,7 @@ interface StageDocumentsPanelProps {
 
 export function StageDocumentsPanel({
   stageId,
+  stageName = 'Stage',
   documents,
   loading,
   onRefresh,
@@ -70,6 +73,7 @@ export function StageDocumentsPanel({
   
   // Upload dialog state - using new metadata dialog
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
+  const [packDialogOpen, setPackDialogOpen] = useState(false);
   
   // Link from library dialog state
   const [linkDialogOpen, setLinkDialogOpen] = useState(false);
@@ -245,6 +249,16 @@ export function StageDocumentsPanel({
               <CardDescription>{documents.length} documents linked to this stage</CardDescription>
             </div>
             <div className="flex items-center gap-2">
+              {tenantId && documents.length > 0 && (
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => setPackDialogOpen(true)}
+                >
+                  <Package className="h-3 w-3 mr-1" />
+                  Generate Pack
+                </Button>
+              )}
               <Button 
                 variant="outline" 
                 size="sm" 
@@ -478,6 +492,23 @@ export function StageDocumentsPanel({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Generate Pack Dialog */}
+      {tenantId && (
+        <GeneratePackDialog
+          open={packDialogOpen}
+          onOpenChange={setPackDialogOpen}
+          tenantId={tenantId}
+          stageId={stageId}
+          stageName={stageName}
+          documents={documents.map(d => ({
+            id: d.document?.id || 0,
+            name: d.document?.title || 'Unknown',
+            file_path: null, // Will be fetched from uploaded_files
+            current_published_version_id: d.document?.current_published_version_id || null
+          })).filter(d => d.id > 0)}
+        />
+      )}
     </>
   );
 }
