@@ -1858,6 +1858,85 @@ export type Database = {
           },
         ]
       }
+      compliance_pack_exports: {
+        Row: {
+          completed_at: string | null
+          contents_summary: Json | null
+          created_at: string
+          date_from: string | null
+          date_to: string | null
+          error: string | null
+          export_scope: string
+          file_name: string | null
+          file_size_bytes: number | null
+          id: string
+          package_id: number | null
+          requested_by: string | null
+          stage_release_id: string | null
+          status: string
+          storage_path: string | null
+          tenant_id: number
+        }
+        Insert: {
+          completed_at?: string | null
+          contents_summary?: Json | null
+          created_at?: string
+          date_from?: string | null
+          date_to?: string | null
+          error?: string | null
+          export_scope?: string
+          file_name?: string | null
+          file_size_bytes?: number | null
+          id?: string
+          package_id?: number | null
+          requested_by?: string | null
+          stage_release_id?: string | null
+          status?: string
+          storage_path?: string | null
+          tenant_id: number
+        }
+        Update: {
+          completed_at?: string | null
+          contents_summary?: Json | null
+          created_at?: string
+          date_from?: string | null
+          date_to?: string | null
+          error?: string | null
+          export_scope?: string
+          file_name?: string | null
+          file_size_bytes?: number | null
+          id?: string
+          package_id?: number | null
+          requested_by?: string | null
+          stage_release_id?: string | null
+          status?: string
+          storage_path?: string | null
+          tenant_id?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "compliance_pack_exports_package_id_fkey"
+            columns: ["package_id"]
+            isOneToOne: false
+            referencedRelation: "packages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "compliance_pack_exports_stage_release_id_fkey"
+            columns: ["stage_release_id"]
+            isOneToOne: false
+            referencedRelation: "stage_releases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "compliance_pack_exports_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       connected_tenants: {
         Row: {
           connected_at: string
