@@ -157,6 +157,19 @@ serve(async (req) => {
       );
     }
 
+    // Check if generation is enabled (safety control)
+    const { data: settings } = await supabase
+      .from("app_settings")
+      .select("generation_enabled, generation_rate_limit_per_hour")
+      .single();
+
+    if (settings && settings.generation_enabled === false) {
+      return new Response(
+        JSON.stringify({ error: "Document generation is currently disabled by administrator" }),
+        { status: 503, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     const body: GenerateRequest = await req.json();
     const { release_id } = body;
 
