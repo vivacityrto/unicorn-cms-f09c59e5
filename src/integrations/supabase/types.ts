@@ -70,17 +70,29 @@ export type Database = {
       app_settings: {
         Row: {
           clickup_enabled: boolean
+          email_sending_enabled: boolean | null
+          generation_enabled: boolean | null
+          generation_rate_limit_per_hour: number | null
           id: number
+          max_generation_retries: number | null
           updated_at: string
         }
         Insert: {
           clickup_enabled?: boolean
+          email_sending_enabled?: boolean | null
+          generation_enabled?: boolean | null
+          generation_rate_limit_per_hour?: number | null
           id?: never
+          max_generation_retries?: number | null
           updated_at?: string
         }
         Update: {
           clickup_enabled?: boolean
+          email_sending_enabled?: boolean | null
+          generation_enabled?: boolean | null
+          generation_rate_limit_per_hour?: number | null
           id?: never
+          max_generation_retries?: number | null
           updated_at?: string
         }
         Relationships: []
@@ -3086,8 +3098,10 @@ export type Database = {
           email_template_version: number
           error_message: string | null
           id: string
+          last_retry_at: string | null
           merge_data: Json | null
           package_id: number | null
+          retry_count: number | null
           sent_at: string | null
           stage_id: number | null
           stage_release_id: string | null
@@ -3106,8 +3120,10 @@ export type Database = {
           email_template_version?: number
           error_message?: string | null
           id?: string
+          last_retry_at?: string | null
           merge_data?: Json | null
           package_id?: number | null
+          retry_count?: number | null
           sent_at?: string | null
           stage_id?: number | null
           stage_release_id?: string | null
@@ -3126,8 +3142,10 @@ export type Database = {
           email_template_version?: number
           error_message?: string | null
           id?: string
+          last_retry_at?: string | null
           merge_data?: Json | null
           package_id?: number | null
+          retry_count?: number | null
           sent_at?: string | null
           stage_id?: number | null
           stage_release_id?: string | null
@@ -4921,8 +4939,10 @@ export type Database = {
           generated_at: string | null
           generated_by: string | null
           id: string
+          last_retry_at: string | null
           merge_data: Json | null
           package_id: number | null
+          retry_count: number | null
           source_document_id: number | null
           stage_id: number | null
           status: string | null
@@ -4939,8 +4959,10 @@ export type Database = {
           generated_at?: string | null
           generated_by?: string | null
           id?: string
+          last_retry_at?: string | null
           merge_data?: Json | null
           package_id?: number | null
+          retry_count?: number | null
           source_document_id?: number | null
           stage_id?: number | null
           status?: string | null
@@ -4957,8 +4979,10 @@ export type Database = {
           generated_at?: string | null
           generated_by?: string | null
           id?: string
+          last_retry_at?: string | null
           merge_data?: Json | null
           package_id?: number | null
+          retry_count?: number | null
           source_document_id?: number | null
           stage_id?: number | null
           status?: string | null
@@ -6532,6 +6556,41 @@ export type Database = {
           rto_id?: string
         }
         Relationships: []
+      }
+      rate_limit_tracker: {
+        Row: {
+          action_type: string
+          count: number
+          created_at: string
+          id: string
+          tenant_id: number
+          window_start: string
+        }
+        Insert: {
+          action_type: string
+          count?: number
+          created_at?: string
+          id?: string
+          tenant_id: number
+          window_start?: string
+        }
+        Update: {
+          action_type?: string
+          count?: number
+          created_at?: string
+          id?: string
+          tenant_id?: number
+          window_start?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rate_limit_tracker_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       resource_favourites: {
         Row: {
@@ -10703,6 +10762,10 @@ export type Database = {
         }
         Returns: string[]
       }
+      check_rate_limit: {
+        Args: { p_action_type: string; p_tenant_id: number }
+        Returns: boolean
+      }
       client_tga_link_set: {
         Args: { p_rto_number: string; p_tenant_id: number }
         Returns: Json
@@ -10765,6 +10828,15 @@ export type Database = {
       create_recurring_meetings: {
         Args: { p_base_meeting_id: string; p_weeks_ahead?: number }
         Returns: string[]
+      }
+      create_stage_release: {
+        Args: {
+          p_document_ids?: number[]
+          p_package_id?: number
+          p_stage_id?: number
+          p_tenant_id: number
+        }
+        Returns: string
       }
       create_tenant: {
         Args: { p_admin_email?: string; p_name: string; p_slug: string }
@@ -11092,6 +11164,10 @@ export type Database = {
       }
       has_tenant_access: { Args: { _tenant_id: number }; Returns: boolean }
       has_tenant_admin: { Args: { _tenant_id: number }; Returns: boolean }
+      increment_rate_limit: {
+        Args: { p_action_type: string; p_tenant_id: number }
+        Returns: undefined
+      }
       invite_user: {
         Args: { p_email: string; p_role?: string; p_tenant_id: string }
         Returns: string
@@ -11223,7 +11299,19 @@ export type Database = {
         }
         Returns: number
       }
+      release_to_tenant: {
+        Args: {
+          p_confirm_override?: boolean
+          p_confirm_phrase?: string
+          p_stage_release_id: string
+        }
+        Returns: Json
+      }
       remove_favourite: { Args: { p_resource_id: string }; Returns: undefined }
+      retry_failed_generation: {
+        Args: { p_generated_document_id: string }
+        Returns: Json
+      }
       search_resources: {
         Args: { p_category?: string; p_search_term: string; p_tags?: string[] }
         Returns: {
