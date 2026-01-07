@@ -2567,6 +2567,7 @@ export type Database = {
         Row: {
           ai_hint: string | null
           certified_notes: string | null
+          covers_standards: string[] | null
           created_at: string
           created_by: string | null
           dashboard_visible: boolean | null
@@ -2589,6 +2590,7 @@ export type Database = {
         Insert: {
           ai_hint?: string | null
           certified_notes?: string | null
+          covers_standards?: string[] | null
           created_at?: string
           created_by?: string | null
           dashboard_visible?: boolean | null
@@ -2611,6 +2613,7 @@ export type Database = {
         Update: {
           ai_hint?: string | null
           certified_notes?: string | null
+          covers_standards?: string[] | null
           created_at?: string
           created_by?: string | null
           dashboard_visible?: boolean | null
@@ -7040,6 +7043,36 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      standards_reference: {
+        Row: {
+          code: string
+          created_at: string | null
+          framework: string
+          id: string
+          is_active: boolean | null
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          code: string
+          created_at?: string | null
+          framework: string
+          id?: string
+          is_active?: boolean | null
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          code?: string
+          created_at?: string | null
+          framework?: string
+          id?: string
+          is_active?: boolean | null
+          title?: string
+          updated_at?: string | null
+        }
+        Relationships: []
       }
       system_emails: {
         Row: {

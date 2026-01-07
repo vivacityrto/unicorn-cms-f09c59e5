@@ -126,6 +126,7 @@ interface StageWithUsage {
   is_archived: boolean;
   version_label: string | null;
   frameworks: string[] | null;
+  covers_standards: string[] | null;
   created_at: string;
   updated_at: string | null;
   usage_count: number;
@@ -223,6 +224,7 @@ export default function AdminManageStages() {
         is_archived: stage.is_archived || false,
         version_label: stage.version_label || null,
         frameworks: stage.frameworks || null,
+        covers_standards: stage.covers_standards || null,
         created_at: stage.created_at,
         updated_at: stage.updated_at,
         usage_count: usageCountMap[stage.id] || 0,
