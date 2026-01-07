@@ -64,7 +64,9 @@ import {
   Upload,
   FileJson,
   CheckCircle2,
-  Loader2
+  Loader2,
+  AlertTriangle,
+  XCircle
 } from 'lucide-react';
 import { AddStageDialog } from '@/components/AddStageDialog';
 import { StagePreviewDialog } from '@/components/package-builder/StagePreviewDialog';
@@ -571,6 +573,16 @@ export default function AdminManageStages() {
                 </TooltipProvider>
               </TableHead>
               <TableHead className="font-semibold">Updated</TableHead>
+              <TableHead className="font-semibold text-center">
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger className="flex items-center gap-1 mx-auto">
+                      Quality
+                    </TooltipTrigger>
+                    <TooltipContent>Stage quality check result</TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </TableHead>
               <TableHead className="font-semibold text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
@@ -590,7 +602,7 @@ export default function AdminManageStages() {
               ))
             ) : filteredStages.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} className="text-center py-16">
+                <TableCell colSpan={8} className="text-center py-16">
                   <div className="space-y-3">
                     <Layers className="h-12 w-12 mx-auto text-muted-foreground/50" />
                     <p className="text-muted-foreground">
@@ -680,6 +692,24 @@ export default function AdminManageStages() {
                     {stage.updated_at
                       ? format(new Date(stage.updated_at), 'dd MMM yyyy')
                       : format(new Date(stage.created_at), 'dd MMM yyyy')}
+                  </TableCell>
+                  <TableCell className="text-center">
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger>
+                          {stage.usage_count === 0 ? (
+                            <span className="text-muted-foreground">-</span>
+                          ) : stage.is_archived ? (
+                            <XCircle className="h-4 w-4 text-red-500 mx-auto" />
+                          ) : (
+                            <CheckCircle2 className="h-4 w-4 text-emerald-500 mx-auto" />
+                          )}
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          {stage.is_archived ? 'Archived - cannot be certified' : 'Quality check available in stage editor'}
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">

@@ -8,6 +8,7 @@ import { useStageDuplication } from '@/hooks/useStageDuplication';
 import { useStageReplacement } from '@/hooks/useStageReplacement';
 import { useStageAuditLog, formatActionName, generateAuditSummary } from '@/hooks/useStageAuditLog';
 import { useStageExportImport } from '@/hooks/useStageExportImport';
+import { useStageQualityCheck, computeStageQuality } from '@/hooks/useStageQualityCheck';
 import { usePackageBuilder, Stage, StaffTask, ClientTask, StageEmail, StageDocument } from '@/hooks/usePackageBuilder';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
@@ -31,9 +32,10 @@ import {
   ArrowLeft, Layers, ShieldCheck, ShieldX, Settings, Users, CheckSquare, 
   Mail, FileText, BarChart3, History, Copy, AlertTriangle, Plus, Trash2, 
   User, Clock, GripVertical, Package, Info, Loader2, RefreshCw, ExternalLink,
-  Archive, Download, ChevronDown, ChevronRight, Calendar
+  Archive, Download, ChevronDown, ChevronRight, Calendar, Shield
 } from 'lucide-react';
 import { StageDocumentsTab } from '@/components/package-builder/StageDocumentsTab';
+import { StageQualityPanel, StageQualityBadge } from '@/components/stage/StageQualityPanel';
 import { format } from 'date-fns';
 
 const STAGE_TYPE_OPTIONS = [
@@ -65,6 +67,19 @@ export default function AdminStageDetail() {
   const { replaceStageInPackages, isReplacing } = useStageReplacement();
   const { downloadExport, isExporting } = useStageExportImport();
   
+  // Quality check state - declare selectedPackageId here so it can be used by quality hook
+  const [selectedPackageId, setSelectedPackageId] = useState<number | null>(null);
+  const { result: qualityResult, isLoading: qualityLoading, refetch: refetchQuality } = useStageQualityCheck({
+    stageId: stageIdNum,
+    packageId: selectedPackageId,
+    enabled: !!stageIdNum
+  });
+  
+  // Certification guardrail state
+  const [certBlockDialogOpen, setCertBlockDialogOpen] = useState(false);
+  const [certWarnDialogOpen, setCertWarnDialogOpen] = useState(false);
+  const [pendingCertNotes, setPendingCertNotes] = useState<string | null>(null);
+  
   const [stage, setStage] = useState<Stage | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('settings');
@@ -73,9 +88,6 @@ export default function AdminStageDetail() {
   const [exportDialogOpen, setExportDialogOpen] = useState(false);
   const [exportPackageId, setExportPackageId] = useState<string>('');
   const [packagesUsing, setPackagesUsing] = useState<PackageOption[]>([]);
-  
-  // Package context for editing tasks/emails/documents
-  const [selectedPackageId, setSelectedPackageId] = useState<number | null>(null);
   
   // Edit confirmation with typed phrase
   const [editConfirmationOpen, setEditConfirmationOpen] = useState(false);
@@ -342,10 +354,61 @@ export default function AdminStageDetail() {
   const handleUpdateCertification = async (is_certified: boolean, certified_notes: string | null) => {
     if (!stage) return;
     
+    // If turning certification ON, run quality check first
+    if (is_certified && !stage.is_certified) {
+      const quality = await computeStageQuality(stage.id, selectedPackageId || undefined);
+      
+      if (quality?.status === 'fail') {
+        // Block certification
+        setPendingCertNotes(certified_notes);
+        setCertBlockDialogOpen(true);
+        
+        // Log the blocked attempt
+        await supabase.from('audit_events').insert({
+          entity: 'stage',
+          entity_id: stage.id.toString(),
+          action: 'stage.certification_blocked',
+          details: { 
+            failed_checks: quality.checks.filter(c => c.status === 'fail').map(c => c.check_key),
+            stage_title: stage.title
+          }
+        });
+        return;
+      }
+      
+      if (quality?.status === 'warn') {
+        // Show warning confirmation
+        setPendingCertNotes(certified_notes);
+        setCertWarnDialogOpen(true);
+        return;
+      }
+    }
+    
+    await applyCertification(is_certified, certified_notes);
+  };
+
+  const applyCertification = async (is_certified: boolean, certified_notes: string | null) => {
+    if (!stage) return;
+    
     try {
-      await updateCertification(stage.id, is_certified, certified_notes);
-      setStage(prev => prev ? { ...prev, is_certified, certified_notes } : null);
-      toast({ title: 'Certification updated' });
+      const success = await updateCertification(stage.id, is_certified, certified_notes || undefined);
+      if (success) {
+        setStage(prev => prev ? { ...prev, is_certified, certified_notes } : null);
+        refetchQuality();
+        
+        // Log if certified with warnings
+        if (is_certified && qualityResult?.status === 'warn') {
+          await supabase.from('audit_events').insert({
+            entity: 'stage',
+            entity_id: stage.id.toString(),
+            action: 'stage.certified_with_warnings',
+            details: { 
+              warning_checks: qualityResult.checks.filter(c => c.status === 'warn').map(c => c.check_key),
+              stage_title: stage.title
+            }
+          });
+        }
+      }
     } catch (error: any) {
       toast({
         title: 'Error',
@@ -353,6 +416,12 @@ export default function AdminStageDetail() {
         variant: 'destructive'
       });
     }
+  };
+
+  const handleConfirmCertWithWarnings = async () => {
+    setCertWarnDialogOpen(false);
+    await applyCertification(true, pendingCertNotes);
+    setPendingCertNotes(null);
   };
 
   const handleDuplicateStage = async () => {
@@ -821,6 +890,22 @@ export default function AdminStageDetail() {
               </AlertDescription>
             </Alert>
           )}
+        </div>
+      )}
+
+      {/* Quality Panel - inline next to main content */}
+      {stage && (
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
+          <div className="lg:col-span-3">
+            {/* Main content area - tabs will go here, handled by next block */}
+          </div>
+          <div className="lg:col-span-1">
+            <StageQualityPanel 
+              result={qualityResult} 
+              isLoading={qualityLoading}
+              onRefresh={refetchQuality}
+            />
+          </div>
         </div>
       )}
 
@@ -1958,6 +2043,65 @@ export default function AdminStageDetail() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Certification Blocked Dialog */}
+      <AlertDialog open={certBlockDialogOpen} onOpenChange={setCertBlockDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2 text-destructive">
+              <ShieldX className="h-5 w-5" />
+              Certification Blocked
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              This stage cannot be certified because required elements are missing.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="py-4 space-y-2">
+            {qualityResult?.checks.filter(c => c.status === 'fail').map(check => (
+              <div key={check.check_key} className="flex items-start gap-2 text-sm text-destructive">
+                <ShieldX className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                <span>{check.message}</span>
+              </div>
+            ))}
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogAction onClick={() => setCertBlockDialogOpen(false)}>
+              Understood
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Certification Warning Dialog */}
+      <AlertDialog open={certWarnDialogOpen} onOpenChange={setCertWarnDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2 text-amber-600">
+              <AlertTriangle className="h-5 w-5" />
+              Certification Warnings
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              This stage has warnings. You may certify it, but review the recommendations below.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="py-4 space-y-2">
+            {qualityResult?.checks.filter(c => c.status === 'warn').map(check => (
+              <div key={check.check_key} className="flex items-start gap-2 text-sm text-amber-700">
+                <AlertTriangle className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                <span>{check.message}</span>
+              </div>
+            ))}
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => { setCertWarnDialogOpen(false); setPendingCertNotes(null); }}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmCertWithWarnings} className="bg-amber-600 hover:bg-amber-700">
+              Certify Anyway
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
