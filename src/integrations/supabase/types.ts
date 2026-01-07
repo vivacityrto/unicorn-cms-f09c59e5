@@ -2299,6 +2299,63 @@ export type Database = {
         }
         Relationships: []
       }
+      document_ai_audit: {
+        Row: {
+          action: string
+          category_confidence: number | null
+          created_at: string | null
+          description_confidence: number | null
+          document_id: number
+          id: string
+          overall_confidence: number | null
+          reasoning: string | null
+          suggested_category: string | null
+          suggested_description: string | null
+          user_id: string | null
+        }
+        Insert: {
+          action: string
+          category_confidence?: number | null
+          created_at?: string | null
+          description_confidence?: number | null
+          document_id: number
+          id?: string
+          overall_confidence?: number | null
+          reasoning?: string | null
+          suggested_category?: string | null
+          suggested_description?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          action?: string
+          category_confidence?: number | null
+          created_at?: string | null
+          description_confidence?: number | null
+          document_id?: number
+          id?: string
+          overall_confidence?: number | null
+          reasoning?: string | null
+          suggested_category?: string | null
+          suggested_description?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "document_ai_audit_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "document_stage_usage"
+            referencedColumns: ["document_id"]
+          },
+          {
+            foreignKeyName: "document_ai_audit_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "documents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       document_data_sources: {
         Row: {
           created_at: string
@@ -2601,9 +2658,17 @@ export type Database = {
       documents: {
         Row: {
           ai_analysis_status: string | null
+          ai_category_confidence: number | null
           ai_category_suggestion: string | null
           ai_confidence: number | null
+          ai_confidence_score: number | null
+          ai_description_confidence: number | null
           ai_description_draft: string | null
+          ai_last_run_at: string | null
+          ai_reasoning: string | null
+          ai_status: string | null
+          ai_suggested_category: string | null
+          ai_suggested_description: string | null
           category: string | null
           created_by: string | null
           createdat: string | null
@@ -2637,6 +2702,8 @@ export type Database = {
           title: string
           updated_at: string | null
           uploaded_files: string[] | null
+          user_edited_category: boolean | null
+          user_edited_description: boolean | null
           versiondate: string | null
           versionlastupdated: string | null
           versionnumber: number | null
@@ -2644,9 +2711,17 @@ export type Database = {
         }
         Insert: {
           ai_analysis_status?: string | null
+          ai_category_confidence?: number | null
           ai_category_suggestion?: string | null
           ai_confidence?: number | null
+          ai_confidence_score?: number | null
+          ai_description_confidence?: number | null
           ai_description_draft?: string | null
+          ai_last_run_at?: string | null
+          ai_reasoning?: string | null
+          ai_status?: string | null
+          ai_suggested_category?: string | null
+          ai_suggested_description?: string | null
           category?: string | null
           created_by?: string | null
           createdat?: string | null
@@ -2680,6 +2755,8 @@ export type Database = {
           title: string
           updated_at?: string | null
           uploaded_files?: string[] | null
+          user_edited_category?: boolean | null
+          user_edited_description?: boolean | null
           versiondate?: string | null
           versionlastupdated?: string | null
           versionnumber?: number | null
@@ -2687,9 +2764,17 @@ export type Database = {
         }
         Update: {
           ai_analysis_status?: string | null
+          ai_category_confidence?: number | null
           ai_category_suggestion?: string | null
           ai_confidence?: number | null
+          ai_confidence_score?: number | null
+          ai_description_confidence?: number | null
           ai_description_draft?: string | null
+          ai_last_run_at?: string | null
+          ai_reasoning?: string | null
+          ai_status?: string | null
+          ai_suggested_category?: string | null
+          ai_suggested_description?: string | null
           category?: string | null
           created_by?: string | null
           createdat?: string | null
@@ -2723,6 +2808,8 @@ export type Database = {
           title?: string
           updated_at?: string | null
           uploaded_files?: string[] | null
+          user_edited_category?: boolean | null
+          user_edited_description?: boolean | null
           versiondate?: string | null
           versionlastupdated?: string | null
           versionnumber?: number | null
@@ -10907,11 +10994,32 @@ export type Database = {
         Returns: Json
       }
       advance_segment: { Args: { p_meeting_id: string }; Returns: string }
+      apply_document_ai_analysis: {
+        Args: {
+          p_category_confidence: number
+          p_description_confidence: number
+          p_document_id: number
+          p_reasoning: string
+          p_suggested_category: string
+          p_suggested_description: string
+          p_user_id?: string
+        }
+        Returns: Json
+      }
       apply_stage_version_to_package: {
         Args: {
           p_package_id: number
           p_stage_id: number
           p_target_version_id: string
+        }
+        Returns: Json
+      }
+      approve_document_ai_suggestions: {
+        Args: {
+          p_apply_category?: boolean
+          p_apply_description?: boolean
+          p_document_id: number
+          p_user_id?: string
         }
         Returns: Json
       }
@@ -11562,6 +11670,10 @@ export type Database = {
       record_resource_usage: {
         Args: { p_downloaded?: boolean; p_resource_id: string }
         Returns: undefined
+      }
+      reject_document_ai_suggestions: {
+        Args: { p_document_id: number; p_reason?: string; p_user_id?: string }
+        Returns: Json
       }
       release_documents_to_tenant: {
         Args: {
