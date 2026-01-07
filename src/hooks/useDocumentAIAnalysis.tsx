@@ -89,6 +89,24 @@ export function useDocumentAIAnalysis() {
         try {
           const result = await analyzeDocument(doc.id, doc.storage_path, doc.title);
           
+          // If analysis returned results, apply confidence scoring via RPC
+          if (result) {
+            try {
+              // Call the RPC to apply AI analysis with confidence thresholds
+              await supabase.rpc('apply_document_ai_analysis', {
+                p_document_id: doc.id,
+                p_category_confidence: result.confidence,
+                p_description_confidence: result.confidence,
+                p_suggested_category: result.category,
+                p_suggested_description: result.description,
+                p_reasoning: `Framework: ${result.framework_type || 'RTO'}. Type: ${result.document_type}. ${result.merge_fields.length} merge fields detected.`
+              });
+            } catch (rpcError) {
+              console.error('RPC error applying AI analysis:', rpcError);
+              // Continue even if RPC fails - the edge function already saved basic data
+            }
+          }
+          
           setDocuments(prev => prev.map(d => 
             d.id === doc.id 
               ? { 
@@ -141,20 +159,50 @@ export function useDocumentAIAnalysis() {
 
     try {
       for (const doc of acceptedDocs) {
+        const hasUserEdits = !!doc.edited?.category || !!doc.edited?.description;
         const category = doc.edited?.category || doc.result?.category;
         const description = doc.edited?.description || doc.result?.description;
         
-        const updateData: Record<string, unknown> = {};
-        if (category) updateData.document_category = category;
-        if (description) updateData.description = description;
-        
-        if (Object.keys(updateData).length > 0) {
-          const { error } = await supabase
-            .from('documents')
-            .update(updateData)
-            .eq('id', doc.id);
+        // Use the RPC to approve suggestions if no user edits
+        if (!hasUserEdits && doc.result) {
+          try {
+            await supabase.rpc('approve_document_ai_suggestions', {
+              p_document_id: doc.id,
+              p_apply_category: true,
+              p_apply_description: true
+            });
+          } catch (rpcError) {
+            console.error('RPC error approving suggestions:', rpcError);
+            // Fallback to direct update
+            const updateData: Record<string, unknown> = {
+              ai_status: 'auto_approved'
+            };
+            if (category) updateData.document_category = category;
+            if (description) updateData.description = description;
+            await supabase.from('documents').update(updateData).eq('id', doc.id);
+          }
+        } else {
+          // User made edits - update directly and mark as user-edited
+          const updateData: Record<string, unknown> = {
+            ai_status: 'auto_approved'
+          };
+          if (category) {
+            updateData.document_category = category;
+            if (doc.edited?.category) updateData.user_edited_category = true;
+          }
+          if (description) {
+            updateData.description = description;
+            if (doc.edited?.description) updateData.user_edited_description = true;
+          }
           
-          if (error) throw error;
+          if (Object.keys(updateData).length > 0) {
+            const { error } = await supabase
+              .from('documents')
+              .update(updateData)
+              .eq('id', doc.id);
+            
+            if (error) throw error;
+          }
         }
       }
 

@@ -68,6 +68,12 @@ export interface StageDocument {
     title: string;
     format: string | null;
     category: string | null;
+    document_status?: string | null;
+    ai_status?: 'pending' | 'auto_approved' | 'needs_review' | 'rejected' | null;
+    ai_confidence_score?: number | null;
+    ai_category_confidence?: number | null;
+    ai_description_confidence?: number | null;
+    ai_reasoning?: string | null;
   };
 }
 
@@ -119,7 +125,7 @@ export function useStageTemplateContent(stageId: number | null) {
           .from('stage_documents')
           .select(`
             *,
-            document:documents(id, title, format, category)
+            document:documents(id, title, format, category, document_status, ai_status, ai_confidence_score, ai_category_confidence, ai_description_confidence, ai_reasoning)
           `)
           .eq('stage_id', stageId)
           .order('sort_order', { ascending: true })
