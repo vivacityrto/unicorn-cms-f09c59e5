@@ -39,6 +39,7 @@ import { StageDocumentsTab } from '@/components/package-builder/StageDocumentsTa
 import { StageQualityPanel, StageQualityBadge } from '@/components/stage/StageQualityPanel';
 import { StageDependencySelector } from '@/components/stage/StageDependencySelector';
 import { StageFrameworkSelector, StageFrameworkBadges, updateStageFrameworks, isFrameworksNarrowed } from '@/components/stage/StageFrameworkSelector';
+import { StageStandardsSelector } from '@/components/stage/StageStandardsSelector';
 import { format } from 'date-fns';
 
 const STAGE_TYPE_OPTIONS = [
@@ -92,6 +93,9 @@ export default function AdminStageDetail() {
   const [localFrameworks, setLocalFrameworks] = useState<string[]>([]);
   const [frameworksNarrowingWarning, setFrameworksNarrowingWarning] = useState(false);
   const [pendingFrameworks, setPendingFrameworks] = useState<string[] | null>(null);
+  
+  // Standards state
+  const [localStandards, setLocalStandards] = useState<string[]>([]);
   
   const [stage, setStage] = useState<Stage | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -1253,6 +1257,22 @@ export default function AdminStageDetail() {
                     <Label>Dashboard Visible</Label>
                   </div>
                 </div>
+
+                {/* Standards Mapping Section */}
+                {isSuperAdmin && (
+                  <div className="pt-4 border-t">
+                    <StageStandardsSelector
+                      stageId={stageIdNum!}
+                      frameworks={localFrameworks}
+                      selectedStandards={stage.covers_standards || null}
+                      onUpdate={(standards) => {
+                        setStage(prev => prev ? { ...prev, covers_standards: standards } : null);
+                      }}
+                      userId={null}
+                      disabled={false}
+                    />
+                  </div>
+                )}
 
                 {/* Certification Section */}
                 <div className="pt-4 border-t space-y-4">

@@ -35,6 +35,7 @@ export interface Stage {
   version_label?: string | null;
   requires_stage_keys?: string[] | null;
   frameworks?: string[] | null;
+  covers_standards?: string[] | null;
 }
 
 export interface PackageStage {
