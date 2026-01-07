@@ -33,11 +33,12 @@ import {
   ArrowLeft, Layers, ShieldCheck, ShieldX, Settings, Users, CheckSquare, 
   Mail, FileText, BarChart3, History, Copy, AlertTriangle, Plus, Trash2, 
   User, Clock, GripVertical, Package, Info, Loader2, RefreshCw, ExternalLink,
-  Archive, Download, ChevronDown, ChevronRight, Calendar, Shield, Link2
+  Archive, Download, ChevronDown, ChevronRight, Calendar, Shield, Link2, Globe
 } from 'lucide-react';
 import { StageDocumentsTab } from '@/components/package-builder/StageDocumentsTab';
 import { StageQualityPanel, StageQualityBadge } from '@/components/stage/StageQualityPanel';
 import { StageDependencySelector } from '@/components/stage/StageDependencySelector';
+import { StageFrameworkSelector, StageFrameworkBadges, updateStageFrameworks, isFrameworksNarrowed } from '@/components/stage/StageFrameworkSelector';
 import { format } from 'date-fns';
 
 const STAGE_TYPE_OPTIONS = [
@@ -86,6 +87,11 @@ export default function AdminStageDetail() {
   // Dependencies state
   const { result: dependencyResult, refetch: refetchDependencies } = useStageDependencyCheck(stageIdNum);
   const [localDependencies, setLocalDependencies] = useState<string[]>([]);
+  
+  // Frameworks state
+  const [localFrameworks, setLocalFrameworks] = useState<string[]>([]);
+  const [frameworksNarrowingWarning, setFrameworksNarrowingWarning] = useState(false);
+  const [pendingFrameworks, setPendingFrameworks] = useState<string[] | null>(null);
   
   const [stage, setStage] = useState<Stage | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -312,6 +318,13 @@ export default function AdminStageDetail() {
     }
   }, [dependencyResult]);
 
+  // Sync local frameworks state with stage
+  useEffect(() => {
+    if (stage) {
+      setLocalFrameworks((stage as any).frameworks || []);
+    }
+  }, [stage]);
+
   const handleUpdateStage = async (updates: Partial<Stage>) => {
     if (!stage) return;
     
@@ -385,6 +398,63 @@ export default function AdminStageDetail() {
         description: 'Failed to update dependencies',
         variant: 'destructive'
       });
+    }
+  };
+
+  const handleUpdateFrameworks = async (frameworks: string[]) => {
+    if (!stage) return;
+    
+    const oldFrameworks = (stage as any).frameworks || null;
+    
+    // Check if narrowing scope on a certified stage
+    if (stage.is_certified && isFrameworksNarrowed(oldFrameworks, frameworks)) {
+      setPendingFrameworks(frameworks);
+      setFrameworksNarrowingWarning(true);
+      return;
+    }
+    
+    await applyFrameworksUpdate(frameworks);
+  };
+
+  const applyFrameworksUpdate = async (frameworks: string[]) => {
+    if (!stage) return;
+    
+    const oldFrameworks = (stage as any).frameworks || null;
+    setLocalFrameworks(frameworks);
+    
+    const success = await updateStageFrameworks(stage.id, frameworks, stage.title, oldFrameworks);
+    if (success) {
+      setStage(prev => prev ? { ...prev, frameworks } as any : null);
+      
+      // Log if certified stage was narrowed
+      if (stage.is_certified && isFrameworksNarrowed(oldFrameworks, frameworks)) {
+        await supabase.from('audit_events').insert({
+          entity: 'stage',
+          entity_id: stage.id.toString(),
+          action: 'stage.frameworks_narrowed',
+          details: {
+            old_frameworks: oldFrameworks,
+            new_frameworks: frameworks,
+            stage_title: stage.title
+          }
+        });
+      }
+    } else {
+      // Revert local state
+      setLocalFrameworks(oldFrameworks || []);
+      toast({
+        title: 'Error',
+        description: 'Failed to update frameworks',
+        variant: 'destructive'
+      });
+    }
+  };
+
+  const confirmFrameworksNarrowing = async () => {
+    setFrameworksNarrowingWarning(false);
+    if (pendingFrameworks) {
+      await applyFrameworksUpdate(pendingFrameworks);
+      setPendingFrameworks(null);
     }
   };
 
@@ -1133,6 +1203,21 @@ export default function AdminStageDetail() {
                     placeholder="Hints for AI suggestions..."
                     rows={2}
                   />
+                </div>
+
+                {/* Frameworks Section */}
+                <div className="space-y-2 pt-4 border-t">
+                  <Label className="flex items-center gap-2">
+                    <Globe className="h-4 w-4" />
+                    Applicable Frameworks
+                  </Label>
+                  <StageFrameworkSelector
+                    selectedFrameworks={localFrameworks}
+                    onChange={handleUpdateFrameworks}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Indicates which regulatory frameworks this stage is designed for.
+                  </p>
                 </div>
 
                 {/* Dependencies Section */}
@@ -2233,6 +2318,41 @@ export default function AdminStageDetail() {
             </AlertDialogCancel>
             <AlertDialogAction onClick={handleConfirmCertWithWarnings} className="bg-amber-600 hover:bg-amber-700">
               Certify Anyway
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Frameworks Narrowing Warning Dialog */}
+      <AlertDialog open={frameworksNarrowingWarning} onOpenChange={setFrameworksNarrowingWarning}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2 text-amber-600">
+              <AlertTriangle className="h-5 w-5" />
+              Narrowing Framework Scope
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              You are narrowing the compliance scope of a certified stage. This may affect how this stage can be used in packages.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="py-4 space-y-2">
+            <div className="flex items-start gap-2 text-sm">
+              <span className="font-medium">Current frameworks:</span>
+              <StageFrameworkBadges frameworks={(stage as any)?.frameworks} size="sm" />
+            </div>
+            {pendingFrameworks && (
+              <div className="flex items-start gap-2 text-sm">
+                <span className="font-medium">New frameworks:</span>
+                <StageFrameworkBadges frameworks={pendingFrameworks} size="sm" />
+              </div>
+            )}
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => { setFrameworksNarrowingWarning(false); setPendingFrameworks(null); }}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction onClick={confirmFrameworksNarrowing} className="bg-amber-600 hover:bg-amber-700">
+              Save Anyway
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

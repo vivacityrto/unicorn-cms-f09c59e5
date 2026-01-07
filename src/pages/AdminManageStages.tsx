@@ -72,6 +72,7 @@ import { AddStageDialog } from '@/components/AddStageDialog';
 import { StagePreviewDialog } from '@/components/package-builder/StagePreviewDialog';
 import { StageQualityIndicator } from '@/components/stage/StageQualityIndicator';
 import { StageDependencyIndicator } from '@/components/stage/StageDependencyIndicator';
+import { StageFrameworkBadges, formatFrameworks } from '@/components/stage/StageFrameworkSelector';
 import { Stage } from '@/hooks/usePackageBuilder';
 import { format } from 'date-fns';
 
@@ -103,6 +104,15 @@ const ARCHIVED_FILTER_OPTIONS = [
   { value: 'all', label: 'All' },
 ];
 
+const FRAMEWORK_FILTER_OPTIONS = [
+  { value: 'all', label: 'All Frameworks' },
+  { value: 'RTO', label: 'RTO' },
+  { value: 'CRICOS', label: 'CRICOS' },
+  { value: 'GTO', label: 'GTO' },
+  { value: 'Membership', label: 'Membership' },
+  { value: 'Shared', label: 'Shared' },
+];
+
 interface StageWithUsage {
   id: number;
   title: string;
@@ -115,6 +125,7 @@ interface StageWithUsage {
   certified_notes: string | null;
   is_archived: boolean;
   version_label: string | null;
+  frameworks: string[] | null;
   created_at: string;
   updated_at: string | null;
   usage_count: number;
@@ -136,6 +147,7 @@ export default function AdminManageStages() {
   const [certifiedFilter, setCertifiedFilter] = useState('all');
   const [usageFilter, setUsageFilter] = useState('all');
   const [archivedFilter, setArchivedFilter] = useState('active');
+  const [frameworkFilter, setFrameworkFilter] = useState('all');
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [previewStage, setPreviewStage] = useState<Stage | null>(null);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
@@ -210,6 +222,7 @@ export default function AdminManageStages() {
         certified_notes: stage.certified_notes,
         is_archived: stage.is_archived || false,
         version_label: stage.version_label || null,
+        frameworks: stage.frameworks || null,
         created_at: stage.created_at,
         updated_at: stage.updated_at,
         usage_count: usageCountMap[stage.id] || 0,
@@ -335,9 +348,18 @@ export default function AdminManageStages() {
         (archivedFilter === 'active' && !stage.is_archived) ||
         (archivedFilter === 'archived' && stage.is_archived);
 
-      return matchesSearch && matchesType && matchesCertified && matchesUsage && matchesArchived;
+      // Framework filter
+      const matchesFramework = (() => {
+        if (frameworkFilter === 'all') return true;
+        if (frameworkFilter === 'Shared') {
+          return !stage.frameworks || stage.frameworks.length === 0 || stage.frameworks.includes('Shared');
+        }
+        return stage.frameworks?.includes(frameworkFilter);
+      })();
+
+      return matchesSearch && matchesType && matchesCertified && matchesUsage && matchesArchived && matchesFramework;
     });
-  }, [stages, searchQuery, stageTypeFilter, certifiedFilter, usageFilter, archivedFilter]);
+  }, [stages, searchQuery, stageTypeFilter, certifiedFilter, usageFilter, archivedFilter, frameworkFilter]);
 
   const handlePreview = (stage: StageWithUsage) => {
     // Convert to Stage type for preview dialog
@@ -541,6 +563,19 @@ export default function AdminManageStages() {
           </SelectContent>
         </Select>
 
+        <Select value={frameworkFilter} onValueChange={setFrameworkFilter}>
+          <SelectTrigger className="w-[150px]">
+            <SelectValue placeholder="Framework" />
+          </SelectTrigger>
+          <SelectContent>
+            {FRAMEWORK_FILTER_OPTIONS.map((option) => (
+              <SelectItem key={option.value} value={option.value}>
+                {option.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
         <div className="text-sm text-muted-foreground ml-auto">
           Showing {filteredStages.length} of {stages.length} stages
         </div>
@@ -554,6 +589,7 @@ export default function AdminManageStages() {
               <TableHead className="font-semibold">Stage Name</TableHead>
               <TableHead className="font-semibold">Type</TableHead>
               <TableHead className="font-semibold">Version</TableHead>
+              <TableHead className="font-semibold">Frameworks</TableHead>
               <TableHead className="font-semibold text-center">Certified</TableHead>
               <TableHead className="font-semibold text-center">
                 <TooltipProvider>
@@ -667,6 +703,9 @@ export default function AdminManageStages() {
                   </TableCell>
                   <TableCell className="text-sm text-muted-foreground">
                     {stage.version_label || '—'}
+                  </TableCell>
+                  <TableCell>
+                    <StageFrameworkBadges frameworks={stage.frameworks} size="sm" />
                   </TableCell>
                   <TableCell className="text-center">
                     {stage.is_certified ? (
