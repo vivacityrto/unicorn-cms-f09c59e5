@@ -6,6 +6,8 @@ import { useStageActiveUsage } from '@/hooks/useStageActiveUsage';
 import { useStageCertification } from '@/hooks/useStageCertification';
 import { useStageDuplication } from '@/hooks/useStageDuplication';
 import { useStageReplacement } from '@/hooks/useStageReplacement';
+import { useStageAuditLog, formatActionName, generateAuditSummary } from '@/hooks/useStageAuditLog';
+import { useStageExportImport } from '@/hooks/useStageExportImport';
 import { usePackageBuilder, Stage, StaffTask, ClientTask, StageEmail, StageDocument } from '@/hooks/usePackageBuilder';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
@@ -24,13 +26,15 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { 
   ArrowLeft, Layers, ShieldCheck, ShieldX, Settings, Users, CheckSquare, 
   Mail, FileText, BarChart3, History, Copy, AlertTriangle, Plus, Trash2, 
   User, Clock, GripVertical, Package, Info, Loader2, RefreshCw, ExternalLink,
-  Archive
+  Archive, Download, ChevronDown, ChevronRight, Calendar
 } from 'lucide-react';
 import { StageDocumentsTab } from '@/components/package-builder/StageDocumentsTab';
+import { format } from 'date-fns';
 
 const STAGE_TYPE_OPTIONS = [
   { value: 'onboarding', label: 'Onboarding', color: 'bg-blue-500/10 text-blue-600 border-blue-500/20' },
@@ -59,11 +63,16 @@ export default function AdminStageDetail() {
   const { updateCertification, isUpdating: isCertUpdating } = useStageCertification();
   const { duplicateAndNavigate, isDuplicating } = useStageDuplication();
   const { replaceStageInPackages, isReplacing } = useStageReplacement();
+  const { events: auditEvents, isLoading: auditLoading } = useStageAuditLog({ stageId: stageIdNum });
+  const { downloadExport, isExporting } = useStageExportImport();
   
   const [stage, setStage] = useState<Stage | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('settings');
   const [usageCount, setUsageCount] = useState(0);
+  const [expandedAuditRows, setExpandedAuditRows] = useState<Set<string>>(new Set());
+  const [exportDialogOpen, setExportDialogOpen] = useState(false);
+  const [exportPackageId, setExportPackageId] = useState<string>('');
   const [packagesUsing, setPackagesUsing] = useState<PackageOption[]>([]);
   
   // Package context for editing tasks/emails/documents
@@ -697,6 +706,21 @@ export default function AdminStageDetail() {
                 Used in {usageCount} package{usageCount !== 1 ? 's' : ''}
               </Badge>
             )}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                if (packagesUsing.length > 0) {
+                  setExportDialogOpen(true);
+                } else {
+                  downloadExport(stage.id, stage.title);
+                }
+              }}
+              disabled={isExporting}
+            >
+              <Download className="h-3 w-3 mr-1" />
+              {isExporting ? 'Exporting...' : 'Export'}
+            </Button>
           </div>
           
           {stage.stage_key && (
@@ -1214,13 +1238,58 @@ export default function AdminStageDetail() {
                 <CardDescription>Track changes made to this stage.</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="flex flex-col items-center justify-center py-16 text-center border rounded-lg border-dashed bg-muted/20">
-                  <History className="h-12 w-12 text-muted-foreground mb-4" />
-                  <h3 className="font-semibold text-lg mb-2">Audit Log Coming Soon</h3>
-                  <p className="text-muted-foreground max-w-md">
-                    Full audit logging will be available in Phase 3.
-                  </p>
-                </div>
+                {auditLoading ? (
+                  <div className="flex items-center justify-center py-12">
+                    <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                  </div>
+                ) : auditEvents.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-16 text-center border rounded-lg border-dashed bg-muted/20">
+                    <History className="h-12 w-12 text-muted-foreground mb-4" />
+                    <h3 className="font-semibold text-lg mb-2">No Audit Events</h3>
+                    <p className="text-muted-foreground max-w-md">
+                      No changes have been recorded for this stage yet.
+                    </p>
+                  </div>
+                ) : (
+                  <ScrollArea className="h-[500px]">
+                    <div className="space-y-2">
+                      {auditEvents.map((event) => (
+                        <Collapsible key={event.id}>
+                          <div className="border rounded-lg p-3 bg-muted/20">
+                            <CollapsibleTrigger className="flex items-start gap-3 w-full text-left">
+                              <ChevronRight className="h-4 w-4 mt-0.5 text-muted-foreground transition-transform data-[state=open]:rotate-90" />
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <Badge variant="outline" className="text-xs">
+                                    {formatActionName(event.action)}
+                                  </Badge>
+                                  <span className="text-xs text-muted-foreground">
+                                    {format(new Date(event.created_at), 'PPp')}
+                                  </span>
+                                </div>
+                                <p className="text-sm mt-1">
+                                  {generateAuditSummary(event.action, event.details)}
+                                </p>
+                                {event.user_name && (
+                                  <p className="text-xs text-muted-foreground mt-1">
+                                    by {event.user_name}
+                                  </p>
+                                )}
+                              </div>
+                            </CollapsibleTrigger>
+                            <CollapsibleContent>
+                              <div className="mt-3 pt-3 border-t">
+                                <pre className="text-xs bg-muted p-2 rounded overflow-x-auto">
+                                  {JSON.stringify(event.details, null, 2)}
+                                </pre>
+                              </div>
+                            </CollapsibleContent>
+                          </div>
+                        </Collapsible>
+                      ))}
+                    </div>
+                  </ScrollArea>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
