@@ -6,6 +6,7 @@ import { Separator } from '@/components/ui/separator';
 import { supabase } from '@/integrations/supabase/client';
 import { Stage } from '@/hooks/usePackageBuilder';
 import { useStageDependencyCheck } from '@/hooks/useStageDependencies';
+import { useStandardsReference, resolveStandardCodes } from '@/hooks/useStageStandards';
 import { 
   Layers, 
   Users, 
@@ -17,7 +18,8 @@ import {
   Video,
   Clock,
   CheckCircle2,
-  Link2
+  Link2,
+  BookOpen
 } from 'lucide-react';
 
 interface StagePreviewDialogProps {
@@ -73,6 +75,13 @@ export function StagePreviewDialog({ open, onOpenChange, stage }: StagePreviewDi
   });
   
   const { result: dependencyResult } = useStageDependencyCheck(stage?.id || null);
+  const { standards: allStandards } = useStandardsReference();
+  
+  // Resolve standards codes to full references
+  const resolvedStandards = resolveStandardCodes(
+    (stage as any)?.covers_standards || null,
+    allStandards
+  );
 
   useEffect(() => {
     if (open && stage) {
@@ -253,6 +262,30 @@ export function StagePreviewDialog({ open, onOpenChange, stage }: StagePreviewDi
                   </ul>
                 </div>
               )}
+              
+              {/* Standards Coverage */}
+              <div className="mt-3">
+                <div className="flex items-center gap-2 text-sm font-medium mb-2">
+                  <BookOpen className="h-4 w-4 text-primary" />
+                  Standards Coverage
+                </div>
+                {resolvedStandards.length > 0 ? (
+                  <div className="p-3 bg-muted/30 rounded-lg">
+                    <ul className="space-y-1.5">
+                      {resolvedStandards.map((std) => (
+                        <li key={std.id} className="text-sm flex items-start gap-2">
+                          <Badge variant="outline" className="text-xs shrink-0 mt-0.5">
+                            {std.code}
+                          </Badge>
+                          <span className="text-muted-foreground">{std.title}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground">No standards mapped.</p>
+                )}
+              </div>
             </div>
 
             <Separator />

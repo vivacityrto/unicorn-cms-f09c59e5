@@ -6,9 +6,7 @@ import { Separator } from '@/components/ui/separator';
 import { CheckCircle2, XCircle, FileCheck, AlertTriangle } from 'lucide-react';
 import { StandardReference } from '@/hooks/useStageStandards';
 
-interface PackageStandardsCoverageDialogProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
+interface CoverageData {
   framework: string;
   totalStandards: number;
   coveredCount: number;
@@ -16,15 +14,18 @@ interface PackageStandardsCoverageDialogProps {
   uncoveredStandards: StandardReference[];
 }
 
+interface PackageStandardsCoverageDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  coverage: CoverageData;
+}
+
 export function PackageStandardsCoverageDialog({
   open,
   onOpenChange,
-  framework,
-  totalStandards,
-  coveredCount,
-  coveredStandards,
-  uncoveredStandards
+  coverage
 }: PackageStandardsCoverageDialogProps) {
+  const { framework, totalStandards, coveredCount, coveredStandards, uncoveredStandards } = coverage;
   const coveragePercent = totalStandards > 0 ? Math.round((coveredCount / totalStandards) * 100) : 0;
 
   return (
