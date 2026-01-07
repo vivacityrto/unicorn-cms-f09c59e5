@@ -2448,7 +2448,10 @@ export type Database = {
           is_tenant_downloadable: boolean | null
           isclientdoc: boolean | null
           merge_fields: Json | null
+          named_ranges: Json | null
           package_id: number | null
+          scan_status: string | null
+          scanned_at: string | null
           stage: number | null
           standard_refs: string[] | null
           standard_set: string | null
@@ -2480,7 +2483,10 @@ export type Database = {
           is_tenant_downloadable?: boolean | null
           isclientdoc?: boolean | null
           merge_fields?: Json | null
+          named_ranges?: Json | null
           package_id?: number | null
+          scan_status?: string | null
+          scanned_at?: string | null
           stage?: number | null
           standard_refs?: string[] | null
           standard_set?: string | null
@@ -2512,7 +2518,10 @@ export type Database = {
           is_tenant_downloadable?: boolean | null
           isclientdoc?: boolean | null
           merge_fields?: Json | null
+          named_ranges?: Json | null
           package_id?: number | null
+          scan_status?: string | null
+          scanned_at?: string | null
           stage?: number | null
           standard_refs?: string[] | null
           standard_set?: string | null
