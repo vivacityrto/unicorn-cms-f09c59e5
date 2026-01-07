@@ -13,8 +13,10 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Progress } from '@/components/ui/progress';
 import { 
   Plus, Trash2, FileText, Upload, Link2, GripVertical, 
-  Loader2, Search, X, CheckCircle2, AlertCircle, Eye, EyeOff
+  Loader2, Search, X, CheckCircle2, AlertCircle, Eye, EyeOff, History
 } from 'lucide-react';
+import { DocumentVersionBadge } from '@/components/document/DocumentVersionBadge';
+import { BulkUploadWithMetadataDialog } from '@/components/document/BulkUploadWithMetadataDialog';
 
 interface Document {
   id: number;
@@ -22,6 +24,8 @@ interface Document {
   format: string | null;
   category: string | null;
   description?: string | null;
+  document_status?: string | null;
+  current_published_version_id?: string | null;
 }
 
 interface StageDocumentItem {
@@ -34,14 +38,8 @@ interface StageDocumentItem {
   is_tenant_visible: boolean;
   is_required: boolean;
   notes: string | null;
+  pinned_version_id: string | null;
   document?: Document;
-}
-
-interface UploadProgress {
-  fileName: string;
-  progress: number;
-  status: 'pending' | 'uploading' | 'success' | 'error';
-  error?: string;
 }
 
 interface StageDocumentsPanelProps {
@@ -55,18 +53,6 @@ interface StageDocumentsPanelProps {
   wrapCertifiedAction?: (fn: () => void) => void;
 }
 
-const ALLOWED_FILE_TYPES = [
-  'application/pdf',
-  'application/msword',
-  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-  'application/vnd.ms-excel',
-  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-  'application/vnd.ms-powerpoint',
-  'application/vnd.openxmlformats-officedocument.presentationml.presentation'
-];
-
-const FILE_EXTENSIONS = ['.pdf', '.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx'];
-
 export function StageDocumentsPanel({
   stageId,
   documents,
@@ -79,11 +65,8 @@ export function StageDocumentsPanel({
 }: StageDocumentsPanelProps) {
   const { toast } = useToast();
   
-  // Upload dialog state
+  // Upload dialog state - using new metadata dialog
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
-  const [uploadFiles, setUploadFiles] = useState<File[]>([]);
-  const [uploadProgress, setUploadProgress] = useState<UploadProgress[]>([]);
-  const [isUploading, setIsUploading] = useState(false);
   
   // Link from library dialog state
   const [linkDialogOpen, setLinkDialogOpen] = useState(false);
@@ -103,163 +86,10 @@ export function StageDocumentsPanel({
     return { label: format || 'File', className: 'bg-muted text-muted-foreground' };
   };
 
-  // Handle file selection
-  const handleFilesSelected = (files: FileList | null) => {
-    if (!files) return;
-    
-    const validFiles: File[] = [];
-    const invalidFiles: string[] = [];
-    
-    Array.from(files).forEach(file => {
-      const ext = '.' + file.name.split('.').pop()?.toLowerCase();
-      if (FILE_EXTENSIONS.includes(ext) || ALLOWED_FILE_TYPES.includes(file.type)) {
-        validFiles.push(file);
-      } else {
-        invalidFiles.push(file.name);
-      }
-    });
-    
-    if (invalidFiles.length > 0) {
-      toast({
-        title: 'Invalid file types',
-        description: `The following files are not supported: ${invalidFiles.join(', ')}`,
-        variant: 'destructive'
-      });
-    }
-    
-    setUploadFiles(prev => [...prev, ...validFiles]);
-  };
-
-  // Remove file from upload queue
-  const removeUploadFile = (index: number) => {
-    setUploadFiles(prev => prev.filter((_, i) => i !== index));
-  };
-
-  // Bulk upload handler
-  const handleBulkUpload = async () => {
-    if (uploadFiles.length === 0) return;
-    
-    setIsUploading(true);
-    const progress: UploadProgress[] = uploadFiles.map(f => ({
-      fileName: f.name,
-      progress: 0,
-      status: 'pending' as const
-    }));
-    setUploadProgress(progress);
-
-    const results = { uploaded: 0, linked: 0, failed: 0 };
-    const now = new Date();
-    const year = now.getFullYear();
-    const month = String(now.getMonth() + 1).padStart(2, '0');
-
-    for (let i = 0; i < uploadFiles.length; i++) {
-      const file = uploadFiles[i];
-      const uuid = crypto.randomUUID();
-      const sanitizedName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
-      const storagePath = `stages/${stageId}/${year}/${month}/${uuid}-${sanitizedName}`;
-
-      // Update status to uploading
-      setUploadProgress(prev => prev.map((p, idx) => 
-        idx === i ? { ...p, status: 'uploading', progress: 10 } : p
-      ));
-
-      try {
-        // Upload file to storage
-        const { error: uploadError } = await supabase.storage
-          .from('document-files')
-          .upload(storagePath, file, {
-            contentType: file.type,
-            upsert: false
-          });
-
-        if (uploadError) throw uploadError;
-
-        setUploadProgress(prev => prev.map((p, idx) => 
-          idx === i ? { ...p, progress: 50 } : p
-        ));
-
-        // Create document record
-        const docName = file.name.replace(/\.[^/.]+$/, ''); // Remove extension
-        const { data: docData, error: docError } = await supabase
-          .from('documents')
-          .insert({
-            title: docName,
-            description: '',
-            format: file.name.split('.').pop()?.toUpperCase() || null,
-            is_team_only: false,
-            is_tenant_downloadable: true,
-            is_auto_generated: false,
-            uploaded_files: [storagePath],
-            file_names: [file.name]
-          })
-          .select('id')
-          .single();
-
-        if (docError) throw docError;
-
-        setUploadProgress(prev => prev.map((p, idx) => 
-          idx === i ? { ...p, progress: 75 } : p
-        ));
-
-        // Link to stage
-        const maxOrder = documents.reduce((max, d) => Math.max(max, d.sort_order), -1);
-        const { error: linkError } = await supabase
-          .from('stage_documents')
-          .insert({
-            stage_id: stageId,
-            document_id: docData.id,
-            sort_order: maxOrder + 1 + results.linked,
-            visibility: 'both',
-            delivery_type: 'manual',
-            is_tenant_visible: true,
-            is_required: false
-          });
-
-        if (linkError) throw linkError;
-
-        // Log audit event
-        await supabase.from('audit_events').insert({
-          entity: 'stage',
-          entity_id: stageId.toString(),
-          action: 'stage_document_bulk_uploaded',
-          details: { 
-            document_id: docData.id, 
-            file_name: file.name,
-            storage_path: storagePath
-          }
-        });
-
-        results.uploaded++;
-        results.linked++;
-        setUploadProgress(prev => prev.map((p, idx) => 
-          idx === i ? { ...p, status: 'success', progress: 100 } : p
-        ));
-      } catch (error: any) {
-        console.error('Upload error:', error);
-        results.failed++;
-        setUploadProgress(prev => prev.map((p, idx) => 
-          idx === i ? { ...p, status: 'error', error: error.message, progress: 100 } : p
-        ));
-      }
-    }
-
-    setIsUploading(false);
-    
-    toast({
-      title: 'Upload Complete',
-      description: `${results.uploaded} uploaded, ${results.linked} linked${results.failed > 0 ? `, ${results.failed} failed` : ''}`
-    });
-
-    if (results.linked > 0) {
-      onRefresh();
-    }
-
-    // Reset after short delay
-    setTimeout(() => {
-      setUploadDialogOpen(false);
-      setUploadFiles([]);
-      setUploadProgress([]);
-    }, 1500);
+  // Handle bulk upload success
+  const handleBulkUploadSuccess = () => {
+    setUploadDialogOpen(false);
+    onRefresh();
   };
 
   // Fetch library documents
@@ -470,6 +300,13 @@ export function StageDocumentsPanel({
                               {doc.document.category}
                             </Badge>
                           )}
+                          {doc.document && (
+                            <DocumentVersionBadge 
+                              status={(doc.document.document_status || 'draft') as 'draft' | 'published' | 'archived'} 
+                              showVersion={false}
+                              size="sm"
+                            />
+                          )}
                         </div>
                       </div>
                       <div className="flex items-center gap-4 shrink-0">
@@ -515,128 +352,13 @@ export function StageDocumentsPanel({
         </CardContent>
       </Card>
 
-      {/* Bulk Upload Dialog */}
-      <Dialog open={uploadDialogOpen} onOpenChange={setUploadDialogOpen}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Upload className="h-5 w-5" />
-              Bulk Upload Documents
-            </DialogTitle>
-            <DialogDescription>
-              Upload Word, PDF, Excel, or PowerPoint files. They'll be added to the document library and linked to this stage.
-            </DialogDescription>
-          </DialogHeader>
-
-          {uploadProgress.length === 0 ? (
-            <>
-              {/* Dropzone */}
-              <div 
-                className="border-2 border-dashed rounded-lg p-8 text-center hover:border-primary/50 transition-colors cursor-pointer"
-                onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }}
-                onDrop={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  handleFilesSelected(e.dataTransfer.files);
-                }}
-                onClick={() => document.getElementById('file-upload-input')?.click()}
-              >
-                <Upload className="h-10 w-10 mx-auto text-muted-foreground mb-3" />
-                <p className="text-sm text-muted-foreground mb-1">
-                  Drag and drop files here, or click to browse
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  Supported: {FILE_EXTENSIONS.join(', ')}
-                </p>
-                <input
-                  id="file-upload-input"
-                  type="file"
-                  multiple
-                  accept={FILE_EXTENSIONS.join(',')}
-                  className="hidden"
-                  onChange={(e) => handleFilesSelected(e.target.files)}
-                />
-              </div>
-
-              {/* Selected files */}
-              {uploadFiles.length > 0 && (
-                <div className="space-y-2 max-h-[200px] overflow-y-auto">
-                  {uploadFiles.map((file, idx) => (
-                    <div key={idx} className="flex items-center gap-2 p-2 rounded bg-muted/50 text-sm">
-                      <FileText className="h-4 w-4 text-muted-foreground shrink-0" />
-                      <span className="flex-1 truncate">{file.name}</span>
-                      <span className="text-xs text-muted-foreground shrink-0">
-                        {(file.size / 1024).toFixed(0)} KB
-                      </span>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-6 w-6"
-                        onClick={() => removeUploadFile(idx)}
-                      >
-                        <X className="h-3 w-3" />
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </>
-          ) : (
-            /* Upload progress */
-            <div className="space-y-3">
-              {uploadProgress.map((item, idx) => (
-                <div key={idx} className="space-y-1">
-                  <div className="flex items-center gap-2 text-sm">
-                    {item.status === 'success' ? (
-                      <CheckCircle2 className="h-4 w-4 text-green-600 shrink-0" />
-                    ) : item.status === 'error' ? (
-                      <AlertCircle className="h-4 w-4 text-destructive shrink-0" />
-                    ) : (
-                      <Loader2 className="h-4 w-4 animate-spin text-muted-foreground shrink-0" />
-                    )}
-                    <span className="flex-1 truncate">{item.fileName}</span>
-                    <span className="text-xs text-muted-foreground">{item.progress}%</span>
-                  </div>
-                  <Progress value={item.progress} className="h-1" />
-                  {item.error && (
-                    <p className="text-xs text-destructive">{item.error}</p>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
-
-          <DialogFooter>
-            <Button 
-              variant="outline" 
-              onClick={() => {
-                setUploadDialogOpen(false);
-                setUploadFiles([]);
-                setUploadProgress([]);
-              }}
-              disabled={isUploading}
-            >
-              Cancel
-            </Button>
-            <Button 
-              onClick={handleBulkUpload} 
-              disabled={uploadFiles.length === 0 || isUploading}
-            >
-              {isUploading ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Uploading...
-                </>
-              ) : (
-                <>
-                  <Upload className="h-4 w-4 mr-2" />
-                  Upload {uploadFiles.length} File{uploadFiles.length !== 1 ? 's' : ''}
-                </>
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {/* Bulk Upload Dialog with Metadata */}
+      <BulkUploadWithMetadataDialog
+        open={uploadDialogOpen}
+        onOpenChange={setUploadDialogOpen}
+        onSuccess={handleBulkUploadSuccess}
+        stageId={stageId}
+      />
 
       {/* Link from Library Dialog */}
       <Dialog open={linkDialogOpen} onOpenChange={setLinkDialogOpen}>
