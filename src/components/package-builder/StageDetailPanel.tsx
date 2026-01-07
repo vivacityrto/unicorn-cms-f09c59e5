@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Stage, useStageDetail, usePackageBuilder } from '@/hooks/usePackageBuilder';
 import { useStageActiveUsage } from '@/hooks/useStageActiveUsage';
+import { usePackageStageOverrides, useResolvedStageContent } from '@/hooks/useStageTemplateContent';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -18,10 +19,12 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { useToast } from '@/hooks/use-toast';
 import { 
   X, Plus, Trash2, Users, Mail, FileText, CheckSquare, 
-  GripVertical, Clock, User, Loader2, AlertTriangle, Settings, Copy, ShieldAlert
+  GripVertical, Clock, User, Loader2, AlertTriangle, Settings, Copy, ShieldAlert,
+  ExternalLink, RotateCcw, FileStack
 } from 'lucide-react';
 import { StageDocumentsTab } from './StageDocumentsTab';
 import { BulkGenerateDocumentsDialog } from './BulkGenerateDocumentsDialog';
+import { Link } from 'react-router-dom';
 
 interface StageDetailPanelProps {
   packageId: number;
@@ -42,6 +45,27 @@ const STAGE_TYPE_OPTIONS = [
 export function StageDetailPanel({ packageId, stageId, stage, allStages = [], onClose }: StageDetailPanelProps) {
   const { toast } = useToast();
   const { emailTemplates, updateStage, createStage } = usePackageBuilder();
+  
+  // Override management
+  const {
+    useOverrides,
+    loading: overridesLoading,
+    copyTemplateToOverrides,
+    resetToTemplate
+  } = usePackageStageOverrides(packageId, stageId);
+
+  // Resolved content - uses template or overrides based on flag
+  const {
+    teamTasks: resolvedTeamTasks,
+    clientTasks: resolvedClientTasks,
+    emails: resolvedEmails,
+    documents: resolvedDocuments,
+    loading: resolvedLoading,
+    source: contentSource,
+    refetch: refetchResolved
+  } = useResolvedStageContent(packageId, stageId);
+
+  // Legacy hook for package-specific editing (when overrides enabled)
   const {
     staffTasks,
     clientTasks,
@@ -77,6 +101,9 @@ export function StageDetailPanel({ packageId, stageId, stage, allStages = [], on
   const [editConfirmationOpen, setEditConfirmationOpen] = useState(false);
   const [pendingUpdate, setPendingUpdate] = useState<Partial<Stage> | null>(null);
   const [hasConfirmedEditing, setHasConfirmedEditing] = useState(false);
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
+  const [isCopying, setIsCopying] = useState(false);
+  const [isResetting, setIsResetting] = useState(false);
   
   const [taskForm, setTaskForm] = useState({
     name: '',
@@ -100,6 +127,13 @@ export function StageDetailPanel({ packageId, stageId, stage, allStages = [], on
   // Check if stage is reused
   const usageCount = stage?.usage_count || 0;
   const isReused = usageCount > 1;
+
+  // Determine which content to display
+  const displayTeamTasks = useOverrides ? staffTasks : resolvedTeamTasks;
+  const displayClientTasks = useOverrides ? clientTasks : resolvedClientTasks;
+  const displayEmails = useOverrides ? stageEmails : resolvedEmails;
+  const displayDocuments = useOverrides ? stageDocuments : resolvedDocuments;
+  const isReadOnly = !useOverrides;
 
   const handleUpdateStage = async (updates: Partial<Stage>) => {
     if (!stage) return;
@@ -168,6 +202,39 @@ export function StageDetailPanel({ packageId, stageId, stage, allStages = [], on
       });
     } finally {
       setIsDuplicatingStage(false);
+    }
+  };
+
+  const handleEnableOverrides = async () => {
+    setIsCopying(true);
+    try {
+      await copyTemplateToOverrides();
+      await refetchResolved();
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to enable overrides',
+        variant: 'destructive'
+      });
+    } finally {
+      setIsCopying(false);
+    }
+  };
+
+  const handleResetToTemplate = async () => {
+    setIsResetting(true);
+    try {
+      await resetToTemplate();
+      await refetchResolved();
+      setShowResetConfirm(false);
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to reset to template',
+        variant: 'destructive'
+      });
+    } finally {
+      setIsResetting(false);
     }
   };
 
@@ -254,7 +321,7 @@ export function StageDetailPanel({ packageId, stageId, stage, allStages = [], on
     }
   };
 
-  if (loading) {
+  if (loading || overridesLoading) {
     return (
       <Card>
         <CardHeader>
@@ -289,12 +356,86 @@ export function StageDetailPanel({ packageId, stageId, stage, allStages = [], on
                 Used in {usageCount} packages
               </Badge>
             )}
+            {useOverrides ? (
+              <Badge variant="default" className="text-xs bg-amber-500/20 text-amber-700 border-amber-500/30">
+                <FileStack className="h-3 w-3 mr-1" />
+                Package Override
+              </Badge>
+            ) : (
+              <Badge variant="outline" className="text-xs">
+                Using Template
+              </Badge>
+            )}
           </div>
         </div>
         <Button variant="ghost" size="icon" onClick={onClose}>
           <X className="h-4 w-4" />
         </Button>
       </div>
+
+      {/* Override Control Banner */}
+      <Card className="border-dashed">
+        <CardContent className="py-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <FileStack className="h-5 w-5 text-muted-foreground" />
+              <div>
+                <p className="font-medium text-sm">
+                  {useOverrides ? 'Package Override Active' : 'Using Stage Template'}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  {useOverrides 
+                    ? 'Edits apply only to this package. Other packages use the template.'
+                    : 'Content is inherited from the stage template. Enable override to customize for this package.'}
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              {useOverrides ? (
+                <>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowResetConfirm(true)}
+                    disabled={isResetting}
+                  >
+                    <RotateCcw className="h-3 w-3 mr-1" />
+                    Reset to Template
+                  </Button>
+                  <Link to={`/admin/stages/${stageId}`}>
+                    <Button variant="ghost" size="sm">
+                      <ExternalLink className="h-3 w-3 mr-1" />
+                      Edit Template
+                    </Button>
+                  </Link>
+                </>
+              ) : (
+                <>
+                  <Button
+                    variant="default"
+                    size="sm"
+                    onClick={handleEnableOverrides}
+                    disabled={isCopying}
+                  >
+                    {isCopying ? (
+                      <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                    ) : (
+                      <Copy className="h-3 w-3 mr-1" />
+                    )}
+                    Override for This Package
+                  </Button>
+                  <Link to={`/admin/stages/${stageId}`}>
+                    <Button variant="outline" size="sm">
+                      <ExternalLink className="h-3 w-3 mr-1" />
+                      Edit Template
+                    </Button>
+                  </Link>
+                </>
+              )}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Active Client Warning - shows first as it's more critical */}
       {isUsedByActiveClients && (
@@ -326,7 +467,7 @@ export function StageDetailPanel({ packageId, stageId, stage, allStages = [], on
           <AlertTriangle className="h-4 w-4 text-amber-600" />
           <AlertDescription className="flex items-center justify-between">
             <span className="text-amber-800">
-              This stage is shared across {usageCount} packages. Changes will affect all of them.
+              This stage is shared across {usageCount} packages. Template changes will affect all of them.
             </span>
             <Button 
               size="sm" 
@@ -337,6 +478,23 @@ export function StageDetailPanel({ packageId, stageId, stage, allStages = [], on
               <Copy className="h-3 w-3 mr-1" />
               {isDuplicatingStage ? 'Duplicating...' : 'Duplicate Stage'}
             </Button>
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {/* Read-only notice when using template */}
+      {isReadOnly && (
+        <Alert>
+          <AlertTriangle className="h-4 w-4" />
+          <AlertDescription>
+            Content below is read-only. To edit, either{' '}
+            <button onClick={handleEnableOverrides} className="underline font-medium">
+              enable override for this package
+            </button>{' '}
+            or{' '}
+            <Link to={`/admin/stages/${stageId}`} className="underline font-medium">
+              edit the stage template
+            </Link>.
           </AlertDescription>
         </Alert>
       )}
@@ -460,24 +618,26 @@ export function StageDetailPanel({ packageId, stageId, stage, allStages = [], on
               <div className="flex items-center justify-between">
                 <div>
                   <CardTitle className="text-base">Team Tasks</CardTitle>
-                  <CardDescription>{staffTasks.length} tasks configured</CardDescription>
+                  <CardDescription>{displayTeamTasks.length} tasks configured</CardDescription>
                 </div>
-                <Button size="sm" onClick={() => setIsAddingTask(true)}>
-                  <Plus className="h-3 w-3 mr-1" />
-                  Add Task
-                </Button>
+                {useOverrides && (
+                  <Button size="sm" onClick={() => setIsAddingTask(true)}>
+                    <Plus className="h-3 w-3 mr-1" />
+                    Add Task
+                  </Button>
+                )}
               </div>
             </CardHeader>
             <CardContent>
               <ScrollArea className="h-[350px]">
-                {staffTasks.length === 0 ? (
+                {displayTeamTasks.length === 0 ? (
                   <div className="flex flex-col items-center justify-center py-12 text-center">
                     <Users className="h-10 w-10 text-muted-foreground mb-3" />
                     <p className="text-muted-foreground">No team tasks configured</p>
                   </div>
                 ) : (
                   <div className="space-y-2">
-                    {staffTasks.map((task, index) => (
+                    {displayTeamTasks.map((task: any, index: number) => (
                       <div key={task.id} className="flex items-start gap-2 p-3 rounded-lg border bg-muted/30">
                         <GripVertical className="h-4 w-4 text-muted-foreground mt-0.5 cursor-grab" />
                         <div className="flex-1 min-w-0">
@@ -503,14 +663,16 @@ export function StageDetailPanel({ packageId, stageId, stage, allStages = [], on
                             )}
                           </div>
                         </div>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-7 w-7"
-                          onClick={() => deleteStaffTask(task.id)}
-                        >
-                          <Trash2 className="h-3 w-3" />
-                        </Button>
+                        {useOverrides && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7"
+                            onClick={() => deleteStaffTask(task.id)}
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
+                        )}
                       </div>
                     ))}
                   </div>
@@ -527,32 +689,35 @@ export function StageDetailPanel({ packageId, stageId, stage, allStages = [], on
               <div className="flex items-center justify-between">
                 <div>
                   <CardTitle className="text-base">Email Triggers</CardTitle>
-                  <CardDescription>{stageEmails.length} emails configured</CardDescription>
+                  <CardDescription>{displayEmails.length} emails configured</CardDescription>
                 </div>
-                <Button size="sm" onClick={() => setIsAddingEmail(true)}>
-                  <Plus className="h-3 w-3 mr-1" />
-                  Add Email
-                </Button>
+                {useOverrides && (
+                  <Button size="sm" onClick={() => setIsAddingEmail(true)}>
+                    <Plus className="h-3 w-3 mr-1" />
+                    Add Email
+                  </Button>
+                )}
               </div>
             </CardHeader>
             <CardContent>
               <ScrollArea className="h-[350px]">
-                {stageEmails.length === 0 ? (
+                {displayEmails.length === 0 ? (
                   <div className="flex flex-col items-center justify-center py-12 text-center">
                     <Mail className="h-10 w-10 text-muted-foreground mb-3" />
                     <p className="text-muted-foreground">No emails configured</p>
                   </div>
                 ) : (
                   <div className="space-y-2">
-                    {stageEmails.map((email) => {
-                      const template = emailTemplates.find(t => t.id === email.email_template_id);
+                    {displayEmails.map((email: any) => {
+                      const templateName = email.email_template?.internal_name || 
+                        email.email_templates?.internal_name || 
+                        emailTemplates.find(t => t.id === email.email_template_id)?.internal_name ||
+                        'Unknown Template';
                       return (
                         <div key={email.id} className="flex items-start gap-2 p-3 rounded-lg border bg-muted/30">
                           <Mail className="h-4 w-4 text-muted-foreground mt-0.5" />
                           <div className="flex-1 min-w-0">
-                            <span className="font-medium block">
-                              {template?.internal_name || 'Unknown Template'}
-                            </span>
+                            <span className="font-medium block">{templateName}</span>
                             <div className="flex items-center gap-2 mt-1">
                               <Badge variant="outline" className="text-xs capitalize">
                                 {email.trigger_type.replace('_', ' ')}
@@ -562,14 +727,16 @@ export function StageDetailPanel({ packageId, stageId, stage, allStages = [], on
                               </Badge>
                             </div>
                           </div>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-7 w-7"
-                            onClick={() => removeStageEmail(email.id)}
-                          >
-                            <Trash2 className="h-3 w-3" />
-                          </Button>
+                          {useOverrides && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7"
+                              onClick={() => removeStageEmail(email.id)}
+                            >
+                              <Trash2 className="h-3 w-3" />
+                            </Button>
+                          )}
                         </div>
                       );
                     })}
@@ -587,24 +754,26 @@ export function StageDetailPanel({ packageId, stageId, stage, allStages = [], on
               <div className="flex items-center justify-between">
                 <div>
                   <CardTitle className="text-base">Client Tasks</CardTitle>
-                  <CardDescription>{clientTasks.length} tasks visible to tenants</CardDescription>
+                  <CardDescription>{displayClientTasks.length} tasks visible to tenants</CardDescription>
                 </div>
-                <Button size="sm" onClick={() => setIsAddingClientTask(true)}>
-                  <Plus className="h-3 w-3 mr-1" />
-                  Add Task
-                </Button>
+                {useOverrides && (
+                  <Button size="sm" onClick={() => setIsAddingClientTask(true)}>
+                    <Plus className="h-3 w-3 mr-1" />
+                    Add Task
+                  </Button>
+                )}
               </div>
             </CardHeader>
             <CardContent>
               <ScrollArea className="h-[350px]">
-                {clientTasks.length === 0 ? (
+                {displayClientTasks.length === 0 ? (
                   <div className="flex flex-col items-center justify-center py-12 text-center">
                     <CheckSquare className="h-10 w-10 text-muted-foreground mb-3" />
                     <p className="text-muted-foreground">No client tasks configured</p>
                   </div>
                 ) : (
                   <div className="space-y-2">
-                    {clientTasks.map((task) => (
+                    {displayClientTasks.map((task: any) => (
                       <div key={task.id} className="flex items-start gap-2 p-3 rounded-lg border bg-muted/30">
                         <GripVertical className="h-4 w-4 text-muted-foreground mt-0.5 cursor-grab" />
                         <div className="flex-1 min-w-0">
@@ -618,14 +787,16 @@ export function StageDetailPanel({ packageId, stageId, stage, allStages = [], on
                             </span>
                           )}
                         </div>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-7 w-7"
-                          onClick={() => deleteClientTask(task.id)}
-                        >
-                          <Trash2 className="h-3 w-3" />
-                        </Button>
+                        {useOverrides && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7"
+                            onClick={() => deleteClientTask(task.id)}
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
+                        )}
                       </div>
                     ))}
                   </div>
@@ -637,17 +808,61 @@ export function StageDetailPanel({ packageId, stageId, stage, allStages = [], on
 
         {/* Documents Tab */}
         <TabsContent value="documents" className="mt-4">
-          <StageDocumentsTab
-            packageId={packageId}
-            stageId={stageId}
-            stageDocuments={stageDocuments}
-            onAddDocument={addStageDocument}
-            onAddBulkDocuments={addBulkStageDocuments}
-            onUpdateDocument={updateStageDocument}
-            onRemoveDocument={removeStageDocument}
-            onReorderDocuments={reorderStageDocuments}
-            onOpenBulkGenerate={() => setIsBulkGenerateOpen(true)}
-          />
+          {useOverrides ? (
+            <StageDocumentsTab
+              packageId={packageId}
+              stageId={stageId}
+              stageDocuments={stageDocuments}
+              onAddDocument={addStageDocument}
+              onAddBulkDocuments={addBulkStageDocuments}
+              onUpdateDocument={updateStageDocument}
+              onRemoveDocument={removeStageDocument}
+              onReorderDocuments={reorderStageDocuments}
+              onOpenBulkGenerate={() => setIsBulkGenerateOpen(true)}
+            />
+          ) : (
+            <Card>
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="text-base">Documents</CardTitle>
+                    <CardDescription>{displayDocuments.length} documents configured</CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <ScrollArea className="h-[350px]">
+                  {displayDocuments.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center py-12 text-center">
+                      <FileText className="h-10 w-10 text-muted-foreground mb-3" />
+                      <p className="text-muted-foreground">No documents configured</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      {displayDocuments.map((doc: any) => (
+                        <div key={doc.id} className="flex items-start gap-2 p-3 rounded-lg border bg-muted/30">
+                          <FileText className="h-4 w-4 text-muted-foreground mt-0.5" />
+                          <div className="flex-1 min-w-0">
+                            <span className="font-medium block">
+                              {doc.document?.title || doc.documents?.doc_name || 'Document'}
+                            </span>
+                            <div className="flex items-center gap-2 mt-1">
+                              <Badge variant="outline" className="text-xs capitalize">
+                                {doc.visibility}
+                              </Badge>
+                              <Badge variant="secondary" className="text-xs capitalize">
+                                {doc.delivery_type}
+                              </Badge>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </ScrollArea>
+              </CardContent>
+            </Card>
+          )}
         </TabsContent>
       </Tabs>
 
@@ -859,6 +1074,26 @@ export function StageDetailPanel({ packageId, stageId, stage, allStages = [], on
         stageDocuments={stageDocuments}
       />
 
+      {/* Reset Confirmation Dialog */}
+      <AlertDialog open={showResetConfirm} onOpenChange={setShowResetConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Reset to Template?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will delete all package-specific overrides for this stage and use the template content instead. 
+              This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleResetToTemplate} disabled={isResetting}>
+              {isResetting ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : null}
+              Reset to Template
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       {/* Edit Confirmation Dialog for stages in active use */}
       <AlertDialog open={editConfirmationOpen} onOpenChange={setEditConfirmationOpen}>
         <AlertDialogContent>
@@ -882,18 +1117,13 @@ export function StageDetailPanel({ packageId, stageId, stage, allStages = [], on
                   </ul>
                 </div>
               )}
-              <p className="text-sm">
-                Consider using <strong>"Duplicate & Edit Copy"</strong> to create a new version instead.
-              </p>
+              <p>Are you sure you want to proceed?</p>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction 
-              onClick={confirmAndApplyUpdate}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              Edit Anyway
+            <AlertDialogAction onClick={confirmAndApplyUpdate} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Confirm Edit
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
