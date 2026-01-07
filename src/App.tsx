@@ -75,6 +75,7 @@ import TenantUsers from "./pages/TenantUsers";
 import ClientPackageDetailWrapper from "./pages/ClientPackageDetailWrapper";
 import AdminManageStagesWrapper from "./pages/AdminManageStagesWrapper";
 import AdminStageDetailWrapper from "./pages/AdminStageDetailWrapper";
+import StageBuilder from "./pages/StageBuilder";
 
 const queryClient = new QueryClient();
 
@@ -574,6 +575,7 @@ const App = () => (
             {/* Admin Stages */}
             <Route path="/admin/stages" element={<ProtectedRoute requireSuperAdmin><AdminManageStagesWrapper /></ProtectedRoute>} />
             <Route path="/admin/stages/:stage_id" element={<ProtectedRoute requireSuperAdmin><AdminStageDetailWrapper /></ProtectedRoute>} />
+            <Route path="/admin/stage-builder" element={<ProtectedRoute requireSuperAdmin><StageBuilder /></ProtectedRoute>} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
