@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
-import { ArrowLeft, Edit, Send, Copy, Trash2, FileText, Upload, Download, Eye, X, CalendarIcon, MessageSquare, Plus, Mail, Building2, ChevronDown, ChevronUp } from 'lucide-react';
+import { ArrowLeft, Edit, Send, Copy, Trash2, FileText, Upload, Download, Eye, X, CalendarIcon, MessageSquare, Plus, Mail, Building2, ChevronDown, ChevronUp, History, Layers } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Combobox } from '@/components/ui/combobox';
@@ -21,6 +21,8 @@ import { Input } from '@/components/ui/input';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from '@/components/ui/pagination';
+import { DocumentVersionHistory } from '@/components/document/DocumentVersionHistory';
+import { DocumentStageUsagePanel } from '@/components/document/DocumentStageUsagePanel';
 
 interface Document {
   id: number;
@@ -1094,6 +1096,18 @@ export default function DocumentDetail() {
           )}
         </div>
       </div>
+
+      {/* Version History & Stage Usage - Only for Super Admin / Team Leader */}
+      {(profile?.unicorn_role === 'Super Admin' || profile?.unicorn_role === 'Team Leader') && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <DocumentVersionHistory 
+            documentId={document.id}
+            documentTitle={document.title}
+            canPublish={true}
+          />
+          <DocumentStageUsagePanel documentId={document.id} />
+        </div>
+      )}
 
       {/* Send Dialog */}
       <Dialog open={isSendDialogOpen} onOpenChange={handleSendDialogClose}>
