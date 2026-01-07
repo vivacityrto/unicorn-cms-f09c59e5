@@ -25,6 +25,8 @@ import { StageDetailPanel } from './StageDetailPanel';
 import { PackageAIAssistant } from './PackageAIAssistant';
 import { AddRecommendedStagesDialog } from './AddRecommendedStagesDialog';
 import { computePackageReadiness, PackageReadinessSummary } from './PackageReadinessIndicator';
+import { FrameworkMismatchDialog } from './FrameworkMismatchDialog';
+import { checkFrameworkCompatibility } from '@/components/stage/StageFrameworkSelector';
 import {
   DndContext,
   closestCenter,
@@ -159,6 +161,11 @@ export function PackageBuilderEditor() {
   const [showAIPanel, setShowAIPanel] = useState(false);
   const [confirmArchive, setConfirmArchive] = useState(false);
   const [isRecommendedStagesOpen, setIsRecommendedStagesOpen] = useState(false);
+  const [frameworkMismatch, setFrameworkMismatch] = useState<{
+    stageId: number;
+    stageName: string;
+    stageFrameworks: string[] | null;
+  } | null>(null);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -248,6 +255,29 @@ export function PackageBuilderEditor() {
   };
 
   const handleAddStage = async (stageId: number) => {
+    // Check framework compatibility first
+    const stage = allStages.find(s => s.id === stageId);
+    if (stage) {
+      const isCompatible = checkFrameworkCompatibility(
+        stage.frameworks as string[] | null,
+        formData.package_type
+      );
+      
+      if (!isCompatible) {
+        // Show framework mismatch warning
+        setFrameworkMismatch({
+          stageId,
+          stageName: stage.title,
+          stageFrameworks: stage.frameworks as string[] | null
+        });
+        return;
+      }
+    }
+    
+    await doAddStage(stageId);
+  };
+  
+  const doAddStage = async (stageId: number) => {
     try {
       await addStageToPackage(stageId);
       toast({
@@ -359,8 +389,31 @@ export function PackageBuilderEditor() {
   if (!stageTypes.includes('onboarding')) missingLifecycleStages.push('Onboarding');
   if (!stageTypes.includes('offboarding')) missingLifecycleStages.push('Offboarding');
 
-  // Compute package readiness
-  const packageReadiness = computePackageReadiness(packageStages);
+  // Check for framework mismatches in package
+  const frameworkMismatchStages = packageStages.filter(ps => {
+    const stageFrameworks = ps.stage?.frameworks as string[] | null;
+    return !checkFrameworkCompatibility(stageFrameworks, formData.package_type);
+  });
+
+  // Compute package readiness with framework escalation
+  const baseReadiness = computePackageReadiness(packageStages);
+  const packageReadiness = (() => {
+    if (frameworkMismatchStages.length > 0) {
+      const frameworkIssue = 'Package includes stages outside its regulatory framework';
+      const issues = [...baseReadiness.issues];
+      if (!issues.includes(frameworkIssue)) {
+        issues.push(frameworkIssue);
+      }
+      // Escalate: ready → incomplete, incomplete → risk
+      if (baseReadiness.status === 'ready') {
+        return { status: 'incomplete' as const, issues };
+      } else if (baseReadiness.status === 'incomplete') {
+        return { status: 'risk' as const, issues };
+      }
+      return { status: baseReadiness.status, issues };
+    }
+    return baseReadiness;
+  })();
 
   const selectedStage = packageStages.find(ps => ps.stage_id === selectedStageId);
 
@@ -710,6 +763,21 @@ export function PackageBuilderEditor() {
             description: `${stageIds.length} recommended stage${stageIds.length !== 1 ? 's' : ''} added to package.`
           });
         }}
+      />
+
+      {/* Framework Mismatch Warning Dialog */}
+      <FrameworkMismatchDialog
+        open={!!frameworkMismatch}
+        onOpenChange={(open) => !open && setFrameworkMismatch(null)}
+        stageName={frameworkMismatch?.stageName || ''}
+        stageFrameworks={frameworkMismatch?.stageFrameworks || null}
+        packageFramework={formData.package_type}
+        onConfirm={async () => {
+          if (frameworkMismatch) {
+            await doAddStage(frameworkMismatch.stageId);
+          }
+        }}
+        onCancel={() => setFrameworkMismatch(null)}
       />
     </div>
   );
