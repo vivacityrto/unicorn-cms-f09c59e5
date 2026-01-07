@@ -10,8 +10,10 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Upload, FileText, X, CheckCircle2, AlertCircle, Settings2 } from 'lucide-react';
+import { Upload, FileText, X, CheckCircle2, AlertCircle, Settings2, Sparkles } from 'lucide-react';
 import { useBulkDocumentUpload } from '@/hooks/useDocumentVersions';
+import { useDocumentAIAnalysis } from '@/hooks/useDocumentAIAnalysis';
+import { AIAnalysisReviewDialog } from './AIAnalysisReviewDialog';
 
 interface BulkUploadWithMetadataDialogProps {
   open: boolean;
@@ -59,6 +61,7 @@ export function BulkUploadWithMetadataDialog({
 }: BulkUploadWithMetadataDialogProps) {
   const { toast } = useToast();
   const { uploadDocuments, uploading: creatingDocs } = useBulkDocumentUpload();
+  const aiAnalysis = useDocumentAIAnalysis();
   
   const [files, setFiles] = useState<FileUploadStatus[]>([]);
   const [category, setCategory] = useState<string>('');
@@ -66,10 +69,13 @@ export function BulkUploadWithMetadataDialog({
   const [standardRefs, setStandardRefs] = useState<string>('');
   const [autoPublish, setAutoPublish] = useState(false);
   const [linkToStage, setLinkToStage] = useState(!!stageId);
+  const [enableAI, setEnableAI] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
   const [dragActive, setDragActive] = useState(false);
   const [step, setStep] = useState<'metadata' | 'files'>('metadata');
+  const [showAIReview, setShowAIReview] = useState(false);
+  const [uploadedDocsForAI, setUploadedDocsForAI] = useState<Array<{ id: number; title: string; storage_path: string }>>([]);
 
   const handleDrag = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -216,6 +222,16 @@ export function BulkUploadWithMetadataDialog({
       }
 
       setProgress(100);
+      
+      // Prepare for AI analysis if enabled
+      if (enableAI && results.length > 0) {
+        const docsForAI = results.map((r, idx) => ({
+          id: r.document_id,
+          title: uploadedDocs[idx]?.title || '',
+          storage_path: uploadedDocs[idx]?.storage_path || ''
+        }));
+        setUploadedDocsForAI(docsForAI);
+      }
     }
 
     setUploading(false);
@@ -226,10 +242,17 @@ export function BulkUploadWithMetadataDialog({
     if (failedCount === 0) {
       toast({
         title: 'Success',
-        description: `${successCount} document${successCount !== 1 ? 's' : ''} uploaded and created`
+        description: `${successCount} document${successCount !== 1 ? 's' : ''} uploaded`
       });
-      handleClose();
-      onSuccess();
+      
+      // Show AI review dialog if enabled
+      if (enableAI && uploadedDocsForAI.length > 0) {
+        setShowAIReview(true);
+        aiAnalysis.analyzeMultiple(uploadedDocsForAI);
+      } else {
+        handleClose();
+        onSuccess();
+      }
     } else {
       toast({
         title: 'Partial Success',
@@ -247,7 +270,16 @@ export function BulkUploadWithMetadataDialog({
     setAutoPublish(false);
     setProgress(0);
     setStep('metadata');
+    setShowAIReview(false);
+    setUploadedDocsForAI([]);
+    aiAnalysis.reset();
     onOpenChange(false);
+  };
+  
+  const handleAIReviewClose = () => {
+    setShowAIReview(false);
+    handleClose();
+    onSuccess();
   };
 
   const canProceedToFiles = true; // Metadata is optional
@@ -325,6 +357,19 @@ export function BulkUploadWithMetadataDialog({
             </div>
 
             {/* Link to stage */}
+            {/* AI Analysis Toggle */}
+            <div className="flex items-center gap-2 pt-2 border-t">
+              <Checkbox
+                id="enableAI"
+                checked={enableAI}
+                onCheckedChange={(checked) => setEnableAI(!!checked)}
+              />
+              <Label htmlFor="enableAI" className="cursor-pointer flex items-center gap-1">
+                <Sparkles className="h-4 w-4 text-primary" />
+                Use AI to suggest categories & descriptions
+              </Label>
+            </div>
+
             {stageId && (
               <div className="flex items-center gap-2">
                 <Checkbox
@@ -460,6 +505,18 @@ export function BulkUploadWithMetadataDialog({
           )}
         </DialogFooter>
       </DialogContent>
+      
+      {/* AI Analysis Review Dialog */}
+      <AIAnalysisReviewDialog
+        open={showAIReview}
+        onOpenChange={handleAIReviewClose}
+        documents={aiAnalysis.documents}
+        analyzing={aiAnalysis.analyzing}
+        onUpdateEdit={aiAnalysis.updateDocumentEdit}
+        onAccept={aiAnalysis.acceptSuggestion}
+        onAcceptAll={aiAnalysis.acceptAllSuggestions}
+        onSave={aiAnalysis.saveAcceptedSuggestions}
+      />
     </Dialog>
   );
 }

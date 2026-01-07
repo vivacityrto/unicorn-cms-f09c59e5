@@ -463,6 +463,13 @@ export type Database = {
             foreignKeyName: "audit_inspection_document_id_fkey"
             columns: ["document_id"]
             isOneToOne: false
+            referencedRelation: "document_stage_usage"
+            referencedColumns: ["document_id"]
+          },
+          {
+            foreignKeyName: "audit_inspection_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
             referencedRelation: "documents"
             referencedColumns: ["id"]
           },
@@ -1513,6 +1520,13 @@ export type Database = {
             foreignKeyName: "client_stage_documents_document_id_fkey"
             columns: ["document_id"]
             isOneToOne: false
+            referencedRelation: "document_stage_usage"
+            referencedColumns: ["document_id"]
+          },
+          {
+            foreignKeyName: "client_stage_documents_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
             referencedRelation: "documents"
             referencedColumns: ["id"]
           },
@@ -2327,6 +2341,13 @@ export type Database = {
             foreignKeyName: "document_data_sources_document_id_fkey"
             columns: ["document_id"]
             isOneToOne: false
+            referencedRelation: "document_stage_usage"
+            referencedColumns: ["document_id"]
+          },
+          {
+            foreignKeyName: "document_data_sources_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
             referencedRelation: "documents"
             referencedColumns: ["id"]
           },
@@ -2335,26 +2356,53 @@ export type Database = {
       document_files: {
         Row: {
           created_at: string
+          document_id: number | null
           file_path: string
+          file_size: number | null
+          file_type: string | null
           id: number
+          original_filename: string | null
           updated_at: string
           uploaded_by: string | null
         }
         Insert: {
           created_at?: string
+          document_id?: number | null
           file_path: string
+          file_size?: number | null
+          file_type?: string | null
           id?: number
+          original_filename?: string | null
           updated_at?: string
           uploaded_by?: string | null
         }
         Update: {
           created_at?: string
+          document_id?: number | null
           file_path?: string
+          file_size?: number | null
+          file_type?: string | null
           id?: number
+          original_filename?: string | null
           updated_at?: string
           uploaded_by?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "document_files_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "document_stage_usage"
+            referencedColumns: ["document_id"]
+          },
+          {
+            foreignKeyName: "document_files_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "documents"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       document_instances: {
         Row: {
@@ -2385,6 +2433,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "document_instances_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "document_stage_usage"
+            referencedColumns: ["document_id"]
+          },
           {
             foreignKeyName: "document_instances_document_id_fkey"
             columns: ["document_id"]
@@ -2441,6 +2496,13 @@ export type Database = {
             foreignKeyName: "document_source_mappings_document_id_fkey"
             columns: ["document_id"]
             isOneToOne: false
+            referencedRelation: "document_stage_usage"
+            referencedColumns: ["document_id"]
+          },
+          {
+            foreignKeyName: "document_source_mappings_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
             referencedRelation: "documents"
             referencedColumns: ["id"]
           },
@@ -2491,6 +2553,13 @@ export type Database = {
             foreignKeyName: "document_versions_document_id_fkey"
             columns: ["document_id"]
             isOneToOne: false
+            referencedRelation: "document_stage_usage"
+            referencedColumns: ["document_id"]
+          },
+          {
+            foreignKeyName: "document_versions_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
             referencedRelation: "documents"
             referencedColumns: ["id"]
           },
@@ -2517,6 +2586,13 @@ export type Database = {
             foreignKeyName: "fk_document"
             columns: ["document_id"]
             isOneToOne: false
+            referencedRelation: "document_stage_usage"
+            referencedColumns: ["document_id"]
+          },
+          {
+            foreignKeyName: "fk_document"
+            columns: ["document_id"]
+            isOneToOne: false
             referencedRelation: "documents"
             referencedColumns: ["id"]
           },
@@ -2524,17 +2600,24 @@ export type Database = {
       }
       documents: {
         Row: {
+          ai_analysis_status: string | null
+          ai_category_suggestion: string | null
+          ai_confidence: number | null
+          ai_description_draft: string | null
           category: string | null
           created_by: string | null
           createdat: string | null
           current_published_version_id: string | null
           description: string | null
+          detected_dropdown_sources: Json | null
+          detected_merge_fields: string[] | null
           document_category: string | null
           document_status: string
           dropdown_sources: Json | null
           due_date: string | null
           file_names: string[] | null
           format: string | null
+          framework_type: string | null
           id: number
           is_auto_generated: boolean | null
           is_released: boolean | null
@@ -2546,6 +2629,7 @@ export type Database = {
           package_id: number | null
           scan_status: string | null
           scanned_at: string | null
+          source_signals: Json | null
           stage: number | null
           standard_refs: string[] | null
           standard_set: string | null
@@ -2559,17 +2643,24 @@ export type Database = {
           watermark: boolean | null
         }
         Insert: {
+          ai_analysis_status?: string | null
+          ai_category_suggestion?: string | null
+          ai_confidence?: number | null
+          ai_description_draft?: string | null
           category?: string | null
           created_by?: string | null
           createdat?: string | null
           current_published_version_id?: string | null
           description?: string | null
+          detected_dropdown_sources?: Json | null
+          detected_merge_fields?: string[] | null
           document_category?: string | null
           document_status?: string
           dropdown_sources?: Json | null
           due_date?: string | null
           file_names?: string[] | null
           format?: string | null
+          framework_type?: string | null
           id?: never
           is_auto_generated?: boolean | null
           is_released?: boolean | null
@@ -2581,6 +2672,7 @@ export type Database = {
           package_id?: number | null
           scan_status?: string | null
           scanned_at?: string | null
+          source_signals?: Json | null
           stage?: number | null
           standard_refs?: string[] | null
           standard_set?: string | null
@@ -2594,17 +2686,24 @@ export type Database = {
           watermark?: boolean | null
         }
         Update: {
+          ai_analysis_status?: string | null
+          ai_category_suggestion?: string | null
+          ai_confidence?: number | null
+          ai_description_draft?: string | null
           category?: string | null
           created_by?: string | null
           createdat?: string | null
           current_published_version_id?: string | null
           description?: string | null
+          detected_dropdown_sources?: Json | null
+          detected_merge_fields?: string[] | null
           document_category?: string | null
           document_status?: string
           dropdown_sources?: Json | null
           due_date?: string | null
           file_names?: string[] | null
           format?: string | null
+          framework_type?: string | null
           id?: never
           is_auto_generated?: boolean | null
           is_released?: boolean | null
@@ -2616,6 +2715,7 @@ export type Database = {
           package_id?: number | null
           scan_status?: string | null
           scanned_at?: string | null
+          source_signals?: Json | null
           stage?: number | null
           standard_refs?: string[] | null
           standard_set?: string | null
@@ -5104,6 +5204,13 @@ export type Database = {
             foreignKeyName: "generated_documents_source_document_id_fkey"
             columns: ["source_document_id"]
             isOneToOne: false
+            referencedRelation: "document_stage_usage"
+            referencedColumns: ["document_id"]
+          },
+          {
+            foreignKeyName: "generated_documents_source_document_id_fkey"
+            columns: ["source_document_id"]
+            isOneToOne: false
             referencedRelation: "documents"
             referencedColumns: ["id"]
           },
@@ -6160,6 +6267,13 @@ export type Database = {
           visibility?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "package_stage_documents_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "document_stage_usage"
+            referencedColumns: ["document_id"]
+          },
           {
             foreignKeyName: "package_stage_documents_document_id_fkey"
             columns: ["document_id"]
@@ -7384,6 +7498,13 @@ export type Database = {
             foreignKeyName: "stage_documents_document_id_fkey"
             columns: ["document_id"]
             isOneToOne: false
+            referencedRelation: "document_stage_usage"
+            referencedColumns: ["document_id"]
+          },
+          {
+            foreignKeyName: "stage_documents_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
             referencedRelation: "documents"
             referencedColumns: ["id"]
           },
@@ -7522,6 +7643,13 @@ export type Database = {
           stage_release_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "stage_release_items_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "document_stage_usage"
+            referencedColumns: ["document_id"]
+          },
           {
             foreignKeyName: "stage_release_items_document_id_fkey"
             columns: ["document_id"]
@@ -8292,6 +8420,13 @@ export type Database = {
           tenant_id?: number
         }
         Relationships: [
+          {
+            foreignKeyName: "tenant_document_releases_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "document_stage_usage"
+            referencedColumns: ["document_id"]
+          },
           {
             foreignKeyName: "tenant_document_releases_document_id_fkey"
             columns: ["document_id"]
@@ -10679,6 +10814,15 @@ export type Database = {
           tailoring_complete: number | null
           trainer_credential_status: string | null
           untailored_documents: number | null
+        }
+        Relationships: []
+      }
+      document_stage_usage: {
+        Row: {
+          document_id: number | null
+          stage_count: number | null
+          stage_names: string[] | null
+          title: string | null
         }
         Relationships: []
       }
