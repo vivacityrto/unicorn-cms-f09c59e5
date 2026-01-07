@@ -2575,6 +2575,7 @@ export type Database = {
           is_archived: boolean
           is_certified: boolean
           is_reusable: boolean | null
+          requires_stage_keys: string[] | null
           short_name: string | null
           stage_key: string
           stage_type: string | null
@@ -2595,6 +2596,7 @@ export type Database = {
           is_archived?: boolean
           is_certified?: boolean
           is_reusable?: boolean | null
+          requires_stage_keys?: string[] | null
           short_name?: string | null
           stage_key: string
           stage_type?: string | null
@@ -2615,6 +2617,7 @@ export type Database = {
           is_archived?: boolean
           is_certified?: boolean
           is_reusable?: boolean | null
+          requires_stage_keys?: string[] | null
           short_name?: string | null
           stage_key?: string
           stage_type?: string | null
