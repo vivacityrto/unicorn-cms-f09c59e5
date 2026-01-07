@@ -32,6 +32,9 @@ export interface Stage {
   is_certified?: boolean;
   certified_notes?: string | null;
   stage_key: string;
+  version_label?: string | null;
+  requires_stage_keys?: string[] | null;
+  frameworks?: string[] | null;
 }
 
 export interface PackageStage {

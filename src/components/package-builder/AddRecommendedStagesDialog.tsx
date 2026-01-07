@@ -3,8 +3,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { CheckCircle2, ShieldCheck, Plus, AlertCircle } from 'lucide-react';
+import { CheckCircle2, ShieldCheck, Plus, AlertCircle, AlertTriangle } from 'lucide-react';
 import { Stage } from '@/hooks/usePackageBuilder';
+import { checkFrameworkCompatibility } from '@/components/stage/StageFrameworkSelector';
 
 // Recommended stage sets by package type (matched by stable stage_key)
 const RECOMMENDED_STAGE_KEYS: Record<string, string[]> = {
@@ -34,6 +35,7 @@ interface StageMatch {
   stage: Stage | null;
   alreadyInPackage: boolean;
   isCertified: boolean;
+  frameworkMismatch: boolean;
 }
 
 interface AddRecommendedStagesDialogProps {
@@ -78,21 +80,28 @@ export function AddRecommendedStagesDialog({
 
       const alreadyInPackage = bestMatch ? existingStageIds.includes(bestMatch.id) : false;
       const displayTitle = STAGE_KEY_LABELS[stageKey] || stageKey;
+      
+      // Check framework compatibility
+      const stageFrameworks = bestMatch?.frameworks as string[] | null;
+      const frameworkMismatch = bestMatch ? !checkFrameworkCompatibility(stageFrameworks, packageType) : false;
 
       return {
         stageKey,
         displayTitle,
         stage: bestMatch,
         alreadyInPackage,
-        isCertified: bestMatch?.is_certified || false
+        isCertified: bestMatch?.is_certified || false,
+        frameworkMismatch
       };
     });
 
     setStageMatches(matches);
   }, [open, packageType, allStages, existingStageIds]);
 
-  const stagesToAdd = stageMatches.filter(m => m.stage && !m.alreadyInPackage);
+  // Only include stages with compatible frameworks (or Shared)
+  const stagesToAdd = stageMatches.filter(m => m.stage && !m.alreadyInPackage && !m.frameworkMismatch);
   const missingStages = stageMatches.filter(m => !m.stage);
+  const frameworkExcludedStages = stageMatches.filter(m => m.stage && !m.alreadyInPackage && m.frameworkMismatch);
 
   const handleAdd = async () => {
     if (stagesToAdd.length === 0) return;
@@ -131,14 +140,18 @@ export function AddRecommendedStagesDialog({
                   className={`flex items-start gap-3 p-3 rounded-lg border ${
                     match.alreadyInPackage 
                       ? 'bg-muted/50 border-muted' 
-                      : match.stage 
-                        ? 'bg-background border-border'
-                        : 'bg-destructive/5 border-destructive/20'
+                      : match.frameworkMismatch
+                        ? 'bg-amber-500/5 border-amber-500/20'
+                        : match.stage 
+                          ? 'bg-background border-border'
+                          : 'bg-destructive/5 border-destructive/20'
                   }`}
                 >
                   <div className="mt-0.5">
                     {match.alreadyInPackage ? (
                       <CheckCircle2 className="h-5 w-5 text-emerald-500" />
+                    ) : match.frameworkMismatch ? (
+                      <AlertTriangle className="h-5 w-5 text-amber-500" />
                     ) : match.stage ? (
                       <Plus className="h-5 w-5 text-primary" />
                     ) : (
@@ -160,9 +173,11 @@ export function AddRecommendedStagesDialog({
                     <p className="text-xs text-muted-foreground mt-0.5">
                       {match.alreadyInPackage 
                         ? 'Already in package'
-                        : match.stage 
-                          ? 'Will be added'
-                          : `Missing recommended stage template (${match.stageKey})`
+                        : match.frameworkMismatch
+                          ? 'Not available – framework mismatch'
+                          : match.stage 
+                            ? 'Will be added'
+                            : `Missing recommended stage template (${match.stageKey})`
                       }
                     </p>
                   </div>
@@ -173,6 +188,15 @@ export function AddRecommendedStagesDialog({
                 <p className="text-xs text-muted-foreground pt-2">
                   Some recommended stages don't exist in the library. Create them with the correct stage_key first.
                 </p>
+              )}
+              
+              {frameworkExcludedStages.length > 0 && (
+                <div className="flex items-start gap-2 p-3 rounded-lg bg-amber-500/10 border border-amber-500/20 mt-3">
+                  <AlertTriangle className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" />
+                  <p className="text-xs text-amber-800">
+                    Some recommended stages are not available for this framework.
+                  </p>
+                </div>
               )}
             </div>
           </ScrollArea>
