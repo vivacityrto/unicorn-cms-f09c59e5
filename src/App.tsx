@@ -77,6 +77,7 @@ import AdminManageStagesWrapper from "./pages/AdminManageStagesWrapper";
 import AdminStageDetailWrapper from "./pages/AdminStageDetailWrapper";
 import StageBuilder from "./pages/StageBuilder";
 import AdminStageAnalytics from "./pages/AdminStageAnalytics";
+import AdminOperations from "./pages/AdminOperations";
 
 const queryClient = new QueryClient();
 
@@ -578,6 +579,7 @@ const App = () => (
             <Route path="/admin/stages/:stage_id" element={<ProtectedRoute requireSuperAdmin><AdminStageDetailWrapper /></ProtectedRoute>} />
             <Route path="/admin/stage-builder" element={<ProtectedRoute requireSuperAdmin><StageBuilder /></ProtectedRoute>} />
             <Route path="/admin/stage-analytics" element={<ProtectedRoute requireSuperAdmin><AdminStageAnalytics /></ProtectedRoute>} />
+            <Route path="/admin/operations" element={<ProtectedRoute requireSuperAdmin><AdminOperations /></ProtectedRoute>} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
