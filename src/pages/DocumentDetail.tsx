@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
-import { ArrowLeft, Edit, Send, Copy, Trash2, FileText, Upload, Download, Eye, X, CalendarIcon, MessageSquare, Plus, Mail, Building2, ChevronDown, ChevronUp, History, Layers } from 'lucide-react';
+import { ArrowLeft, Edit, Send, Copy, Trash2, FileText, Upload, Download, Eye, X, CalendarIcon, MessageSquare, Plus, Mail, Building2, ChevronDown, ChevronUp, History, Layers, Scan } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Combobox } from '@/components/ui/combobox';
@@ -27,6 +27,7 @@ import { ExcelDataSourcesTab } from '@/components/document/ExcelDataSourcesTab';
 import { MergeFieldsEditor } from '@/components/document/MergeFieldsEditor';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Database, FileText as FileTextIcon, GitBranch, Table } from 'lucide-react';
+import { DocumentScanStatus } from '@/components/document/DocumentScanStatus';
 
 interface Document {
   id: number;
@@ -1104,6 +1105,27 @@ export default function DocumentDetail() {
       {/* Version History & Stage Usage - Only for Super Admin / Team Leader */}
       {(profile?.unicorn_role === 'Super Admin' || profile?.unicorn_role === 'Team Leader') && (
         <div className="space-y-6">
+          {/* Document Scan Status */}
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base flex items-center gap-2">
+                <Scan className="h-4 w-4" />
+                Merge Fields & Named Ranges Detection
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <DocumentScanStatus
+                documentId={document.id}
+                scanStatus={(document as any).scan_status}
+                scannedAt={(document as any).scanned_at}
+                mergeFields={(document as any).merge_fields as string[] || []}
+                namedRanges={(document as any).named_ranges as string[] || []}
+                documentType={document.format || undefined}
+                onScanComplete={fetchDocument}
+              />
+            </CardContent>
+          </Card>
+
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <DocumentVersionHistory 
               documentId={document.id}

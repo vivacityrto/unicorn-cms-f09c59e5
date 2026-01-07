@@ -28,7 +28,7 @@ export function TenantPacksList({ tenantId, showAcknowledge = false }: TenantPac
       // Get signed URLs for the documents
       const { data: documents } = await supabase
         .from("documents")
-        .select("id, title, file_path")
+        .select("id, title, uploaded_files")
         .in("id", pack.document_ids);
 
       if (!documents || documents.length === 0) {
@@ -36,12 +36,13 @@ export function TenantPacksList({ tenantId, showAcknowledge = false }: TenantPac
         return;
       }
 
-      // Generate signed URLs
+      // Generate signed URLs from uploaded_files array
       for (const doc of documents) {
-        if ((doc as any).file_path) {
+        const files = (doc.uploaded_files as string[]) || [];
+        if (files.length > 0) {
           const { data: signedData } = await supabase.storage
-            .from("documents")
-            .createSignedUrl(doc.file_path, 3600); // 1 hour expiry
+            .from("document-files")
+            .createSignedUrl(files[0], 3600); // 1 hour expiry
 
           if (signedData?.signedUrl) {
             window.open(signedData.signedUrl, "_blank");
