@@ -194,6 +194,15 @@ export function StagePreviewDialog({ open, onOpenChange, stage }: StagePreviewDi
                 </p>
               )}
               
+              <p className="text-sm">
+                <span className="font-medium">Frameworks: </span>
+                <span className="text-muted-foreground">
+                  {(stage as any).frameworks && (stage as any).frameworks.length > 0 
+                    ? (stage as any).frameworks.join(', ') 
+                    : 'Shared'}
+                </span>
+              </p>
+              
               {stage.short_name && (
                 <p className="text-sm text-muted-foreground">
                   Short name: <span className="font-medium">{stage.short_name}</span>
