@@ -6038,10 +6038,13 @@ export type Database = {
           dashboard_group: string | null
           id: number
           is_required: boolean
+          last_checked_at: string | null
           last_synced_at: string | null
           package_id: number
           sort_order: number
           stage_id: number
+          stage_version_id: string | null
+          update_policy: string
           use_overrides: boolean | null
         }
         Insert: {
@@ -6050,10 +6053,13 @@ export type Database = {
           dashboard_group?: string | null
           id?: number
           is_required?: boolean
+          last_checked_at?: string | null
           last_synced_at?: string | null
           package_id: number
           sort_order?: number
           stage_id: number
+          stage_version_id?: string | null
+          update_policy?: string
           use_overrides?: boolean | null
         }
         Update: {
@@ -6062,10 +6068,13 @@ export type Database = {
           dashboard_group?: string | null
           id?: number
           is_required?: boolean
+          last_checked_at?: string | null
           last_synced_at?: string | null
           package_id?: number
           sort_order?: number
           stage_id?: number
+          stage_version_id?: string | null
+          update_policy?: string
           use_overrides?: boolean | null
         }
         Relationships: [
@@ -6081,6 +6090,13 @@ export type Database = {
             columns: ["stage_id"]
             isOneToOne: false
             referencedRelation: "documents_stages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "package_stages_stage_version_id_fkey"
+            columns: ["stage_version_id"]
+            isOneToOne: false
+            referencedRelation: "stage_versions"
             referencedColumns: ["id"]
           },
         ]
@@ -7293,6 +7309,47 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "stage_team_tasks_stage_id_fkey"
+            columns: ["stage_id"]
+            isOneToOne: false
+            referencedRelation: "documents_stages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      stage_versions: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          notes: string | null
+          snapshot: Json
+          stage_id: number
+          status: string
+          version_number: number
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          notes?: string | null
+          snapshot: Json
+          stage_id: number
+          status?: string
+          version_number: number
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          notes?: string | null
+          snapshot?: Json
+          stage_id?: number
+          status?: string
+          version_number?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stage_versions_stage_id_fkey"
             columns: ["stage_id"]
             isOneToOne: false
             referencedRelation: "documents_stages"
@@ -10117,6 +10174,14 @@ export type Database = {
         Returns: Json
       }
       advance_segment: { Args: { p_meeting_id: string }; Returns: string }
+      apply_stage_version_to_package: {
+        Args: {
+          p_package_id: number
+          p_stage_id: number
+          p_target_version_id: string
+        }
+        Returns: Json
+      }
       audit_duplicate_emails: {
         Args: never
         Returns: {
@@ -10201,6 +10266,7 @@ export type Database = {
         Args: { _qc_id: string; _user_id: string }
         Returns: boolean
       }
+      can_edit_certified_stage: { Args: { p_stage_id: number }; Returns: Json }
       can_facilitate_eos: {
         Args: { _tenant_id: number; _user_id: string }
         Returns: boolean
@@ -10470,6 +10536,10 @@ export type Database = {
           total_stages: number
         }[]
       }
+      get_stage_version_diff: {
+        Args: { p_version_from: string; p_version_to: string }
+        Returns: Json
+      }
       get_team_users: {
         Args: never
         Returns: {
@@ -10617,6 +10687,7 @@ export type Database = {
         Returns: boolean
       }
       is_qc_signed: { Args: { _qc_id: string }; Returns: boolean }
+      is_stage_in_active_use: { Args: { p_stage_id: number }; Returns: boolean }
       is_super_admin:
         | { Args: never; Returns: boolean }
         | { Args: { p_user_id: string }; Returns: boolean }
@@ -10654,6 +10725,10 @@ export type Database = {
       }
       propose_vto_change: {
         Args: { p_draft_json: Json; p_meeting_id: string }
+        Returns: string
+      }
+      publish_stage_version: {
+        Args: { p_notes?: string; p_stage_id: number }
         Returns: string
       }
       publish_vto: {
