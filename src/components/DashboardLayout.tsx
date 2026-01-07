@@ -100,6 +100,10 @@ const superAdminMenuItems = {
     label: "Manage Stages",
     path: "/admin/stages"
   }, {
+    icon: Sparkles,
+    label: "Stage Builder",
+    path: "/admin/stage-builder"
+  }, {
     icon: Mail,
     label: "Email Templates",
     path: "/admin/email-templates"
