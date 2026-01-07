@@ -42,6 +42,11 @@ export function useStageDuplication() {
       const newStageKey = `${baseName}-copy-${Date.now()}`;
 
       // 3. Create new stage (without certification)
+      // Handle version_label - append " (copy)" if original has one
+      const newVersionLabel = sourceStage.version_label 
+        ? `${sourceStage.version_label} (copy)` 
+        : null;
+
       const { data: newStage, error: createError } = await supabase
         .from('documents_stages')
         .insert({
@@ -57,6 +62,7 @@ export function useStageDuplication() {
           is_certified: false, // Always false for copies
           certified_notes: null,
           is_archived: false,
+          version_label: newVersionLabel,
         })
         .select()
         .single();

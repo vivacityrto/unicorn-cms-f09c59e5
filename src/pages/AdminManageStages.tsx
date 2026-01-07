@@ -113,6 +113,7 @@ interface StageWithUsage {
   is_certified: boolean;
   certified_notes: string | null;
   is_archived: boolean;
+  version_label: string | null;
   created_at: string;
   updated_at: string | null;
   usage_count: number;
@@ -207,6 +208,7 @@ export default function AdminManageStages() {
         is_certified: stage.is_certified || false,
         certified_notes: stage.certified_notes,
         is_archived: stage.is_archived || false,
+        version_label: stage.version_label || null,
         created_at: stage.created_at,
         updated_at: stage.updated_at,
         usage_count: usageCountMap[stage.id] || 0,
@@ -550,6 +552,7 @@ export default function AdminManageStages() {
             <TableRow className="border-b hover:bg-transparent">
               <TableHead className="font-semibold">Stage Name</TableHead>
               <TableHead className="font-semibold">Type</TableHead>
+              <TableHead className="font-semibold">Version</TableHead>
               <TableHead className="font-semibold text-center">Certified</TableHead>
               <TableHead className="font-semibold text-center">
                 <TooltipProvider>
@@ -594,16 +597,18 @@ export default function AdminManageStages() {
                 <TableRow key={i}>
                   <TableCell><Skeleton className="h-5 w-[200px]" /></TableCell>
                   <TableCell><Skeleton className="h-5 w-[80px]" /></TableCell>
+                  <TableCell><Skeleton className="h-5 w-[60px]" /></TableCell>
                   <TableCell><Skeleton className="h-5 w-[60px] mx-auto" /></TableCell>
                   <TableCell><Skeleton className="h-5 w-[40px] mx-auto" /></TableCell>
                   <TableCell><Skeleton className="h-5 w-[40px] mx-auto" /></TableCell>
                   <TableCell><Skeleton className="h-5 w-[80px]" /></TableCell>
+                  <TableCell><Skeleton className="h-5 w-[60px] mx-auto" /></TableCell>
                   <TableCell><Skeleton className="h-5 w-[80px] ml-auto" /></TableCell>
                 </TableRow>
               ))
             ) : filteredStages.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={8} className="text-center py-16">
+                <TableCell colSpan={9} className="text-center py-16">
                   <div className="space-y-3">
                     <Layers className="h-12 w-12 mx-auto text-muted-foreground/50" />
                     <p className="text-muted-foreground">
@@ -657,6 +662,9 @@ export default function AdminManageStages() {
                     >
                       {stage.stage_type}
                     </Badge>
+                  </TableCell>
+                  <TableCell className="text-sm text-muted-foreground">
+                    {stage.version_label || '—'}
                   </TableCell>
                   <TableCell className="text-center">
                     {stage.is_certified ? (

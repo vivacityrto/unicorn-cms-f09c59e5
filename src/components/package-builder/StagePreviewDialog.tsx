@@ -184,6 +184,12 @@ export function StagePreviewDialog({ open, onOpenChange, stage }: StagePreviewDi
                 )}
               </div>
               
+              {(stage as any).version_label && (
+                <p className="text-sm font-medium">
+                  Version: <span className="text-muted-foreground">{(stage as any).version_label}</span>
+                </p>
+              )}
+              
               {stage.short_name && (
                 <p className="text-sm text-muted-foreground">
                   Short name: <span className="font-medium">{stage.short_name}</span>
