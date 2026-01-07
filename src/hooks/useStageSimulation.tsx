@@ -75,6 +75,7 @@ export interface SimulationSummary {
   standards: Array<{ code: string; title: string }>;
   dependency_check: DependencyCheckResult;
   quality_check: QualityCheckResult;
+  content_source: 'template' | 'override';
 }
 
 export interface SimulationData {
@@ -224,6 +225,104 @@ async function buildMergeData(
   }
 }
 
+/**
+ * Fetch resolved content based on use_overrides flag
+ * Returns content from either stage_* (template) or package_* (override) tables
+ */
+async function fetchResolvedContent(packageId: number, stageId: number) {
+  // Check if package uses overrides for this stage
+  const { data: psData } = await supabase
+    .from('package_stages')
+    .select('use_overrides')
+    .eq('package_id', packageId)
+    .eq('stage_id', stageId)
+    .single();
+
+  const usesOverrides = psData?.use_overrides ?? false;
+
+  if (usesOverrides) {
+    // Fetch from package_* override tables
+    const [teamResult, clientResult, emailsResult, docsResult] = await Promise.all([
+      supabase
+        .from('package_staff_tasks')
+        .select('*')
+        .eq('package_id', packageId)
+        .eq('stage_id', stageId)
+        .order('order_number', { ascending: true }),
+      supabase
+        .from('package_client_tasks')
+        .select('*')
+        .eq('package_id', packageId)
+        .eq('stage_id', stageId)
+        .order('order_number', { ascending: true }),
+      supabase
+        .from('package_stage_emails')
+        .select(`
+          id, trigger_type, recipient_type, email_template_id, sort_order, is_active,
+          email_templates:email_template_id (id, internal_name, subject, html_body)
+        `)
+        .eq('package_id', packageId)
+        .eq('stage_id', stageId)
+        .order('sort_order', { ascending: true }),
+      supabase
+        .from('package_stage_documents')
+        .select(`
+          id, document_id, visibility, delivery_type, sort_order,
+          documents:document_id (id, doc_name, is_auto_generated, is_tenant_downloadable)
+        `)
+        .eq('package_id', packageId)
+        .eq('stage_id', stageId)
+        .order('sort_order', { ascending: true })
+    ]);
+
+    return {
+      source: 'override' as const,
+      teamTasks: teamResult.data || [],
+      clientTasks: clientResult.data || [],
+      emails: emailsResult.data || [],
+      documents: docsResult.data || []
+    };
+  } else {
+    // Fetch from stage_* template tables
+    const [teamResult, clientResult, emailsResult, docsResult] = await Promise.all([
+      supabase
+        .from('stage_team_tasks')
+        .select('*')
+        .eq('stage_id', stageId)
+        .order('sort_order', { ascending: true }),
+      supabase
+        .from('stage_client_tasks')
+        .select('*')
+        .eq('stage_id', stageId)
+        .order('sort_order', { ascending: true }),
+      supabase
+        .from('stage_emails')
+        .select(`
+          id, trigger_type, recipient_type, email_template_id, sort_order, is_active,
+          email_template:email_templates (id, internal_name, subject, html_body)
+        `)
+        .eq('stage_id', stageId)
+        .order('sort_order', { ascending: true }),
+      supabase
+        .from('stage_documents')
+        .select(`
+          id, document_id, visibility, delivery_type, sort_order,
+          document:documents (id, doc_name, is_auto_generated, is_tenant_downloadable)
+        `)
+        .eq('stage_id', stageId)
+        .order('sort_order', { ascending: true })
+    ]);
+
+    return {
+      source: 'template' as const,
+      teamTasks: teamResult.data || [],
+      clientTasks: clientResult.data || [],
+      emails: emailsResult.data || [],
+      documents: docsResult.data || []
+    };
+  }
+}
+
 export function useStageSimulation() {
   const [loading, setLoading] = useState(false);
   const [simulationData, setSimulationData] = useState<SimulationData | null>(null);
@@ -288,55 +387,35 @@ export function useStageSimulation() {
         stage.title
       );
 
-      // Fetch team tasks
-      const { data: teamTasksData } = await supabase
-        .from('package_staff_tasks')
-        .select('*')
-        .eq('package_id', context.packageId)
-        .eq('stage_id', stageId)
-        .order('order_number', { ascending: true });
+      // Fetch resolved content (from template or override based on use_overrides flag)
+      const resolved = await fetchResolvedContent(context.packageId, stageId);
 
-      const teamTasks: SimulationTeamTask[] = (teamTasksData || []).map((t: any) => ({
-        id: t.id,
+      // Map team tasks
+      const teamTasks: SimulationTeamTask[] = resolved.teamTasks.map((t: any) => ({
+        id: t.id?.toString() || '',
         name: t.name,
         description: t.description,
         owner_role: t.owner_role || 'Admin',
         estimated_hours: t.estimated_hours,
         is_mandatory: t.is_mandatory ?? true,
-        order_number: t.order_number,
+        order_number: t.order_number ?? t.sort_order ?? 0,
       }));
 
-      // Fetch client tasks
-      const { data: clientTasksData } = await supabase
-        .from('package_client_tasks')
-        .select('*')
-        .eq('package_id', context.packageId)
-        .eq('stage_id', stageId)
-        .order('order_number', { ascending: true });
-
-      const clientTasks: SimulationClientTask[] = (clientTasksData || []).map((t: any) => ({
-        id: t.id,
+      // Map client tasks
+      const clientTasks: SimulationClientTask[] = resolved.clientTasks.map((t: any) => ({
+        id: t.id?.toString() || '',
         name: t.name,
         description: t.description,
         instructions: t.instructions,
         due_date_offset: t.due_date_offset,
         required_documents: t.required_documents,
-        order_number: t.order_number,
+        order_number: t.order_number ?? t.sort_order ?? 0,
       }));
 
-      // Fetch emails with templates
-      const { data: emailsData } = await supabase
-        .from('package_stage_emails')
-        .select(`
-          id, trigger_type, recipient_type, email_template_id, sort_order, is_active,
-          email_templates:email_template_id (id, internal_name, subject, html_body)
-        `)
-        .eq('package_id', context.packageId)
-        .eq('stage_id', stageId)
-        .order('sort_order', { ascending: true }) as any;
-
-      const emails: SimulationEmail[] = (emailsData || []).map((e: any) => {
-        const template = e.email_templates;
+      // Map emails with template rendering
+      const emails: SimulationEmail[] = resolved.emails.map((e: any) => {
+        // Handle both override (email_templates) and template (email_template) structure
+        const template = e.email_templates || e.email_template;
         const subject = template?.subject || '';
         const htmlBody = template?.html_body || '';
         
@@ -360,27 +439,21 @@ export function useStageSimulation() {
         };
       });
 
-      // Fetch documents
-      const { data: docsData } = await supabase
-        .from('package_stage_documents')
-        .select(`
-          id, document_id, visibility, delivery_type, sort_order,
-          documents:document_id (id, doc_name, is_auto_generated, is_tenant_downloadable)
-        `)
-        .eq('package_id', context.packageId)
-        .eq('stage_id', stageId)
-        .order('sort_order', { ascending: true }) as any;
-
-      const documents: SimulationDocument[] = (docsData || []).map((d: any) => ({
-        id: d.id,
-        document_id: d.document_id,
-        doc_name: d.documents?.doc_name || 'Unknown Document',
-        visibility: d.visibility || 'both',
-        delivery_type: d.delivery_type || 'manual',
-        is_auto_generated: d.documents?.is_auto_generated ?? false,
-        is_tenant_downloadable: d.documents?.is_tenant_downloadable ?? true,
-        sort_order: d.sort_order,
-      }));
+      // Map documents
+      const documents: SimulationDocument[] = resolved.documents.map((d: any) => {
+        // Handle both override (documents) and template (document) structure
+        const doc = d.documents || d.document;
+        return {
+          id: d.id?.toString() || '',
+          document_id: d.document_id,
+          doc_name: doc?.doc_name || doc?.title || 'Unknown Document',
+          visibility: d.visibility || 'both',
+          delivery_type: d.delivery_type || 'manual',
+          is_auto_generated: doc?.is_auto_generated ?? false,
+          is_tenant_downloadable: doc?.is_tenant_downloadable ?? true,
+          sort_order: d.sort_order,
+        };
+      });
 
       // Check dependencies
       const depResult = await checkDependenciesInPackage(stageId, context.packageId);
@@ -416,6 +489,7 @@ export function useStageSimulation() {
         standards: resolvedStandards,
         dependency_check: dependencyCheck,
         quality_check: qualityCheck,
+        content_source: resolved.source,
       };
 
       setSimulationData({
