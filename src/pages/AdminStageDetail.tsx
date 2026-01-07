@@ -63,7 +63,6 @@ export default function AdminStageDetail() {
   const { updateCertification, isUpdating: isCertUpdating } = useStageCertification();
   const { duplicateAndNavigate, isDuplicating } = useStageDuplication();
   const { replaceStageInPackages, isReplacing } = useStageReplacement();
-  const { events: auditEvents, isLoading: auditLoading } = useStageAuditLog({ stageId: stageIdNum });
   const { downloadExport, isExporting } = useStageExportImport();
   
   const [stage, setStage] = useState<Stage | null>(null);
@@ -128,6 +127,25 @@ export default function AdminStageDetail() {
     email_template_id: '',
     trigger_type: 'manual',
     recipient_type: 'tenant'
+  });
+
+  // Certified edit confirmation state
+  const [certifiedEditDialogOpen, setCertifiedEditDialogOpen] = useState(false);
+  const [certifiedConfirmPhrase, setCertifiedConfirmPhrase] = useState('');
+  const [pendingCertifiedAction, setPendingCertifiedAction] = useState<(() => void) | null>(null);
+  const CERTIFIED_CONFIRM_PHRASE = 'CERTIFIED';
+  
+  // Audit log filters
+  const [auditDateFrom, setAuditDateFrom] = useState<Date | undefined>();
+  const [auditDateTo, setAuditDateTo] = useState<Date | undefined>();
+  const [auditActionFilter, setAuditActionFilter] = useState<string>('all');
+
+  // Now call audit log hook with filter state
+  const { events: auditEvents, isLoading: auditLoading, uniqueActions, refetch: refetchAudit } = useStageAuditLog({ 
+    stageId: stageIdNum,
+    dateFrom: auditDateFrom,
+    dateTo: auditDateTo,
+    actionFilter: auditActionFilter !== 'all' ? auditActionFilter : undefined,
   });
 
   const isUsedByActiveClients = activeUsage.count > 0;
@@ -416,6 +434,20 @@ export default function AdminStageDetail() {
       setReplaceDialogOpen(false);
       setSelectedPackagesForReplace([]);
       fetchUsageData();
+    }
+  };
+
+  // Helper to check if certified edit confirmation is needed
+  const requiresCertifiedConfirmation = (): boolean => {
+    return stage?.is_certified === true && !isUsedByActiveClients;
+  };
+
+  const wrapCertifiedAction = (action: () => void) => {
+    if (requiresCertifiedConfirmation()) {
+      setPendingCertifiedAction(() => action);
+      setCertifiedEditDialogOpen(true);
+    } else {
+      action();
     }
   };
 
@@ -968,7 +1000,7 @@ export default function AdminStageDetail() {
                       <CardTitle className="text-base">Team Tasks</CardTitle>
                       <CardDescription>{staffTasks.length} tasks configured</CardDescription>
                     </div>
-                    <Button size="sm" onClick={() => setIsAddingTask(true)}>
+                    <Button size="sm" onClick={() => wrapCertifiedAction(() => setIsAddingTask(true))}>
                       <Plus className="h-3 w-3 mr-1" />
                       Add Task
                     </Button>
@@ -1009,7 +1041,7 @@ export default function AdminStageDetail() {
                                 )}
                               </div>
                             </div>
-                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleDeleteStaffTask(task.id)}>
+                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => wrapCertifiedAction(() => handleDeleteStaffTask(task.id))}>
                               <Trash2 className="h-3 w-3" />
                             </Button>
                           </div>
@@ -1037,7 +1069,7 @@ export default function AdminStageDetail() {
                       <CardTitle className="text-base">Client Tasks</CardTitle>
                       <CardDescription>{clientTasks.length} tasks visible to tenants</CardDescription>
                     </div>
-                    <Button size="sm" onClick={() => setIsAddingClientTask(true)}>
+                    <Button size="sm" onClick={() => wrapCertifiedAction(() => setIsAddingClientTask(true))}>
                       <Plus className="h-3 w-3 mr-1" />
                       Add Task
                     </Button>
@@ -1066,7 +1098,7 @@ export default function AdminStageDetail() {
                                 </span>
                               )}
                             </div>
-                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleDeleteClientTask(task.id)}>
+                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => wrapCertifiedAction(() => handleDeleteClientTask(task.id))}>
                               <Trash2 className="h-3 w-3" />
                             </Button>
                           </div>
@@ -1094,7 +1126,7 @@ export default function AdminStageDetail() {
                       <CardTitle className="text-base">Email Triggers</CardTitle>
                       <CardDescription>{stageEmails.length} emails configured</CardDescription>
                     </div>
-                    <Button size="sm" onClick={() => setIsAddingEmail(true)}>
+                    <Button size="sm" onClick={() => wrapCertifiedAction(() => setIsAddingEmail(true))}>
                       <Plus className="h-3 w-3 mr-1" />
                       Add Email
                     </Button>
@@ -1128,7 +1160,7 @@ export default function AdminStageDetail() {
                                   )}
                                 </div>
                               </div>
-                              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleRemoveEmail(email.id)}>
+                              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => wrapCertifiedAction(() => handleRemoveEmail(email.id))}>
                                 <Trash2 className="h-3 w-3" />
                               </Button>
                             </div>
@@ -1234,10 +1266,70 @@ export default function AdminStageDetail() {
           <TabsContent value="audit">
             <Card>
               <CardHeader>
-                <CardTitle>Audit Log</CardTitle>
-                <CardDescription>Track changes made to this stage.</CardDescription>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle>Audit Log</CardTitle>
+                    <CardDescription>Track changes made to this stage.</CardDescription>
+                  </div>
+                  <Button variant="outline" size="sm" onClick={() => refetchAudit()}>
+                    <RefreshCw className="h-3 w-3 mr-1" />
+                    Refresh
+                  </Button>
+                </div>
               </CardHeader>
-              <CardContent>
+              <CardContent className="space-y-4">
+                {/* Filters */}
+                <div className="flex flex-wrap items-center gap-3 pb-4 border-b">
+                  <div className="flex items-center gap-2">
+                    <Label className="text-xs text-muted-foreground whitespace-nowrap">From:</Label>
+                    <Input
+                      type="date"
+                      className="w-[140px] h-8 text-xs"
+                      value={auditDateFrom ? format(auditDateFrom, 'yyyy-MM-dd') : ''}
+                      onChange={(e) => setAuditDateFrom(e.target.value ? new Date(e.target.value) : undefined)}
+                    />
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Label className="text-xs text-muted-foreground whitespace-nowrap">To:</Label>
+                    <Input
+                      type="date"
+                      className="w-[140px] h-8 text-xs"
+                      value={auditDateTo ? format(auditDateTo, 'yyyy-MM-dd') : ''}
+                      onChange={(e) => setAuditDateTo(e.target.value ? new Date(e.target.value) : undefined)}
+                    />
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Label className="text-xs text-muted-foreground whitespace-nowrap">Action:</Label>
+                    <Select value={auditActionFilter} onValueChange={setAuditActionFilter}>
+                      <SelectTrigger className="w-[160px] h-8 text-xs">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Actions</SelectItem>
+                        {uniqueActions.map(action => (
+                          <SelectItem key={action} value={action}>
+                            {formatActionName(action)}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  {(auditDateFrom || auditDateTo || auditActionFilter !== 'all') && (
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className="h-8 text-xs"
+                      onClick={() => {
+                        setAuditDateFrom(undefined);
+                        setAuditDateTo(undefined);
+                        setAuditActionFilter('all');
+                      }}
+                    >
+                      Clear Filters
+                    </Button>
+                  )}
+                </div>
+
                 {auditLoading ? (
                   <div className="flex items-center justify-center py-12">
                     <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
@@ -1247,7 +1339,9 @@ export default function AdminStageDetail() {
                     <History className="h-12 w-12 text-muted-foreground mb-4" />
                     <h3 className="font-semibold text-lg mb-2">No Audit Events</h3>
                     <p className="text-muted-foreground max-w-md">
-                      No changes have been recorded for this stage yet.
+                      {auditDateFrom || auditDateTo || auditActionFilter !== 'all' 
+                        ? 'No events match your filters.' 
+                        : 'No changes have been recorded for this stage yet.'}
                     </p>
                   </div>
                 ) : (
@@ -1721,6 +1815,143 @@ export default function AdminStageDetail() {
                 <>
                   <RefreshCw className="h-4 w-4 mr-2" />
                   Replace in {selectedPackagesForReplace.length} Package{selectedPackagesForReplace.length !== 1 ? 's' : ''}
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Certified Edit Confirmation Dialog */}
+      <AlertDialog open={certifiedEditDialogOpen} onOpenChange={(open) => {
+        setCertifiedEditDialogOpen(open);
+        if (!open) {
+          setCertifiedConfirmPhrase('');
+          setPendingCertifiedAction(null);
+        }
+      }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <ShieldCheck className="h-5 w-5 text-amber-600" />
+              Edit Certified Template
+            </AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-3">
+                <p>
+                  This is a <strong>certified template</strong>. Editing it directly may affect consistency 
+                  across packages using this stage.
+                </p>
+                <div className="flex gap-2 py-2">
+                  <Button 
+                    variant="outline" 
+                    onClick={() => {
+                      setCertifiedEditDialogOpen(false);
+                      handleDuplicateStage();
+                    }}
+                    className="flex-1"
+                  >
+                    <Copy className="h-4 w-4 mr-2" />
+                    Duplicate and Edit Copy
+                    <Badge variant="secondary" className="ml-2 text-xs">Recommended</Badge>
+                  </Button>
+                </div>
+                <div className="pt-2 border-t">
+                  <p className="text-sm mb-2">Or type <strong>{CERTIFIED_CONFIRM_PHRASE}</strong> to edit anyway:</p>
+                  <Input 
+                    value={certifiedConfirmPhrase}
+                    onChange={(e) => setCertifiedConfirmPhrase(e.target.value.toUpperCase())}
+                    placeholder={CERTIFIED_CONFIRM_PHRASE}
+                    className="font-mono"
+                  />
+                </div>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={async () => {
+                if (pendingCertifiedAction) {
+                  // Log audit event for certified edit
+                  await supabase.from('audit_events').insert({
+                    entity: 'stage',
+                    entity_id: stageIdNum?.toString() || '',
+                    action: 'stage.certified_edited',
+                    details: { stage_title: stage?.title },
+                  });
+                  pendingCertifiedAction();
+                }
+                setCertifiedEditDialogOpen(false);
+                setCertifiedConfirmPhrase('');
+                setPendingCertifiedAction(null);
+              }} 
+              disabled={certifiedConfirmPhrase !== CERTIFIED_CONFIRM_PHRASE}
+              className="bg-amber-600 text-white hover:bg-amber-700"
+            >
+              Edit Certified Template
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Export Package Context Dialog */}
+      <Dialog open={exportDialogOpen} onOpenChange={setExportDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Download className="h-5 w-5" />
+              Export Stage
+            </DialogTitle>
+            <DialogDescription>
+              Select a package context to include tasks, emails, and documents in the export.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Package Context</Label>
+              <Select value={exportPackageId} onValueChange={setExportPackageId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a package..." />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">No package (stage only)</SelectItem>
+                  {packagesUsing.map(pkg => (
+                    <SelectItem key={pkg.id} value={pkg.id.toString()}>
+                      {pkg.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                Tasks, emails, and documents are package-specific. Select a package to include them.
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setExportDialogOpen(false)}>Cancel</Button>
+            <Button 
+              onClick={() => {
+                if (stage) {
+                  downloadExport(
+                    stage.id, 
+                    stage.title, 
+                    exportPackageId && exportPackageId !== 'none' ? parseInt(exportPackageId) : undefined
+                  );
+                }
+                setExportDialogOpen(false);
+              }}
+              disabled={isExporting}
+            >
+              {isExporting ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Exporting...
+                </>
+              ) : (
+                <>
+                  <Download className="h-4 w-4 mr-2" />
+                  Export
                 </>
               )}
             </Button>
