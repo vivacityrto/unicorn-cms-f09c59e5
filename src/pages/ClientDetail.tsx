@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
-import { ClientNotesTab } from '@/components/client/ClientNotesTab';
+
 import { ClientTimelineTab } from '@/components/client/ClientTimelineTab';
 import { ClientStructuredNotesTab } from '@/components/client/ClientStructuredNotesTab';
 import { ClientActionItemsTab } from '@/components/client/ClientActionItemsTab';
@@ -324,10 +324,7 @@ export default function ClientDetail() {
           </TabsContent>
 
           <TabsContent value="notes" className="mt-0">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <ClientStructuredNotesTab tenantId={tenantIdNum!} clientId={tenant.id.toString()} />
-              <ClientNotesTab tenantId={tenantIdNum!} packages={packages} />
-            </div>
+            <ClientStructuredNotesTab tenantId={tenantIdNum!} clientId={tenant.id.toString()} />
           </TabsContent>
 
           <TabsContent value="actions" className="mt-0">
