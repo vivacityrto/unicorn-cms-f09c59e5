@@ -2581,6 +2581,7 @@ export type Database = {
           status: string | null
           title: string
           updated_at: string
+          version_label: string | null
           video_url: string | null
         }
         Insert: {
@@ -2600,6 +2601,7 @@ export type Database = {
           status?: string | null
           title: string
           updated_at?: string
+          version_label?: string | null
           video_url?: string | null
         }
         Update: {
@@ -2619,6 +2621,7 @@ export type Database = {
           status?: string | null
           title?: string
           updated_at?: string
+          version_label?: string | null
           video_url?: string | null
         }
         Relationships: [

@@ -321,6 +321,44 @@ export default function AdminStageDetail() {
     }
   };
 
+  const handleUpdateVersionLabel = async (version_label: string) => {
+    if (!stage) return;
+    
+    const oldLabel = (stage as any).version_label || null;
+    const newLabel = version_label.trim() || null;
+    
+    try {
+      const { error } = await supabase
+        .from('documents_stages')
+        .update({ version_label: newLabel })
+        .eq('id', stage.id);
+      
+      if (error) throw error;
+      
+      setStage(prev => prev ? { ...prev, version_label: newLabel } as any : null);
+      
+      // Log audit event
+      if (oldLabel !== newLabel) {
+        await supabase.from('audit_events').insert({
+          entity: 'stage',
+          entity_id: stage.id.toString(),
+          action: 'stage.version_updated',
+          details: { 
+            old_version_label: oldLabel,
+            new_version_label: newLabel,
+            stage_title: stage.title
+          }
+        });
+      }
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to update version label',
+        variant: 'destructive'
+      });
+    }
+  };
+
   const confirmAndApplyUpdate = async () => {
     // Validate the typed phrase
     if (confirmPhrase !== CONFIRM_PHRASE_REQUIRED) {
@@ -376,7 +414,10 @@ export default function AdminStageDetail() {
         return;
       }
       
-      if (quality?.status === 'warn') {
+      // Check for version label warning (soft, non-blocking)
+      const hasVersionLabelWarning = !(stage as any).version_label;
+      
+      if (quality?.status === 'warn' || hasVersionLabelWarning) {
         // Show warning confirmation
         setPendingCertNotes(certified_notes);
         setCertWarnDialogOpen(true);
@@ -828,6 +869,12 @@ export default function AdminStageDetail() {
             <p className="text-sm text-muted-foreground font-mono">Key: {stage.stage_key}</p>
           )}
 
+          {(stage as any).version_label && (
+            <p className="text-sm font-medium text-muted-foreground">
+              Version: <span className="text-foreground">{(stage as any).version_label}</span>
+            </p>
+          )}
+
           {stage.description && (
             <p className="text-muted-foreground max-w-2xl">{stage.description}</p>
           )}
@@ -1010,6 +1057,18 @@ export default function AdminStageDetail() {
                     onChange={(e) => handleUpdateStage({ video_url: e.target.value })}
                     placeholder="https://youtube.com/..."
                   />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Stage Version Label</Label>
+                  <Input
+                    value={(stage as any).version_label || ''}
+                    onChange={(e) => handleUpdateVersionLabel(e.target.value)}
+                    placeholder="e.g., v2025.1, July 2026"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Optional. Used to identify the release of this stage for audit and rollout clarity.
+                  </p>
                 </div>
 
                 <div className="space-y-2">
@@ -2085,6 +2144,12 @@ export default function AdminStageDetail() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <div className="py-4 space-y-2">
+            {!(stage as any)?.version_label && (
+              <div className="flex items-start gap-2 text-sm text-amber-700">
+                <AlertTriangle className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                <span>Consider setting a version label before certifying this stage.</span>
+              </div>
+            )}
             {qualityResult?.checks.filter(c => c.status === 'warn').map(check => (
               <div key={check.check_key} className="flex items-start gap-2 text-sm text-amber-700">
                 <AlertTriangle className="h-4 w-4 mt-0.5 flex-shrink-0" />
