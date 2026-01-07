@@ -1300,6 +1300,89 @@ export type Database = {
           },
         ]
       }
+      client_alerts: {
+        Row: {
+          alert_type: string
+          body: string | null
+          client_id: number
+          client_package_id: string | null
+          created_at: string
+          dismissed_at: string | null
+          dismissed_by: string | null
+          id: string
+          is_dismissed: boolean
+          meta: Json
+          package_id: number | null
+          severity: string
+          tenant_id: number
+          threshold_percent: number | null
+          title: string
+        }
+        Insert: {
+          alert_type: string
+          body?: string | null
+          client_id: number
+          client_package_id?: string | null
+          created_at?: string
+          dismissed_at?: string | null
+          dismissed_by?: string | null
+          id?: string
+          is_dismissed?: boolean
+          meta?: Json
+          package_id?: number | null
+          severity?: string
+          tenant_id: number
+          threshold_percent?: number | null
+          title: string
+        }
+        Update: {
+          alert_type?: string
+          body?: string | null
+          client_id?: number
+          client_package_id?: string | null
+          created_at?: string
+          dismissed_at?: string | null
+          dismissed_by?: string | null
+          id?: string
+          is_dismissed?: boolean
+          meta?: Json
+          package_id?: number | null
+          severity?: string
+          tenant_id?: number
+          threshold_percent?: number | null
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_alerts_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_alerts_client_package_id_fkey"
+            columns: ["client_package_id"]
+            isOneToOne: false
+            referencedRelation: "client_packages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_alerts_package_id_fkey"
+            columns: ["package_id"]
+            isOneToOne: false
+            referencedRelation: "packages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_alerts_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       client_audit_log: {
         Row: {
           action: string
@@ -1647,6 +1730,7 @@ export type Database = {
           created_by: string | null
           end_date: string | null
           id: string
+          included_minutes: number
           package_id: number
           start_date: string
           status: string
@@ -1658,6 +1742,7 @@ export type Database = {
           created_by?: string | null
           end_date?: string | null
           id?: string
+          included_minutes?: number
           package_id: number
           start_date?: string
           status?: string
@@ -1669,6 +1754,7 @@ export type Database = {
           created_by?: string | null
           end_date?: string | null
           id?: string
+          included_minutes?: number
           package_id?: number
           start_date?: string
           status?: string
@@ -12286,6 +12372,10 @@ export type Database = {
         }
         Returns: Json
       }
+      rpc_check_package_thresholds: {
+        Args: { p_client_id: number; p_client_package_id: string }
+        Returns: Json
+      }
       rpc_create_action_item: {
         Args: {
           p_client_id: string
@@ -12317,6 +12407,7 @@ export type Database = {
         }
         Returns: Json
       }
+      rpc_dismiss_alert: { Args: { p_alert_id: string }; Returns: Json }
       rpc_get_my_action_items: {
         Args: {
           p_include_overdue?: boolean
@@ -12339,6 +12430,10 @@ export type Database = {
           tenant_id: number
           title: string
         }[]
+      }
+      rpc_get_package_usage: {
+        Args: { p_client_id: number; p_client_package_id: string }
+        Returns: Json
       }
       rpc_set_action_item_status: {
         Args: { p_action_item_id: string; p_status: string }
