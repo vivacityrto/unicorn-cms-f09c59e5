@@ -2191,6 +2191,53 @@ export type Database = {
         }
         Relationships: []
       }
+      document_data_sources: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          document_id: number
+          id: string
+          name: string
+          row_count: number | null
+          schema: Json | null
+          source_type: string
+          storage_path: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          document_id: number
+          id?: string
+          name: string
+          row_count?: number | null
+          schema?: Json | null
+          source_type?: string
+          storage_path?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          document_id?: number
+          id?: string
+          name?: string
+          row_count?: number | null
+          schema?: Json | null
+          source_type?: string
+          storage_path?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "document_data_sources_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "documents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       document_files: {
         Row: {
           created_at: string
@@ -2256,6 +2303,51 @@ export type Database = {
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      document_source_mappings: {
+        Row: {
+          created_at: string
+          data_source_id: string
+          document_id: number
+          excel_named_range: string
+          excel_sheet: string
+          id: string
+          source_column: string
+        }
+        Insert: {
+          created_at?: string
+          data_source_id: string
+          document_id: number
+          excel_named_range: string
+          excel_sheet: string
+          id?: string
+          source_column: string
+        }
+        Update: {
+          created_at?: string
+          data_source_id?: string
+          document_id?: number
+          excel_named_range?: string
+          excel_sheet?: string
+          id?: string
+          source_column?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "document_source_mappings_data_source_id_fkey"
+            columns: ["data_source_id"]
+            isOneToOne: false
+            referencedRelation: "document_data_sources"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "document_source_mappings_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "documents"
             referencedColumns: ["id"]
           },
         ]
@@ -2345,6 +2437,7 @@ export type Database = {
           description: string | null
           document_category: string | null
           document_status: string
+          dropdown_sources: Json | null
           due_date: string | null
           file_names: string[] | null
           format: string | null
@@ -2376,6 +2469,7 @@ export type Database = {
           description?: string | null
           document_category?: string | null
           document_status?: string
+          dropdown_sources?: Json | null
           due_date?: string | null
           file_names?: string[] | null
           format?: string | null
@@ -2407,6 +2501,7 @@ export type Database = {
           description?: string | null
           document_category?: string | null
           document_status?: string
+          dropdown_sources?: Json | null
           due_date?: string | null
           file_names?: string[] | null
           format?: string | null
@@ -11116,6 +11211,14 @@ export type Database = {
         Returns: string
       }
       user_in_tenant: { Args: { p_tenant_id: number }; Returns: boolean }
+      validate_document_readiness: {
+        Args: { p_document_id: number; p_tenant_id?: number }
+        Returns: Json
+      }
+      validate_release_readiness: {
+        Args: { p_document_ids: number[]; p_tenant_id?: number }
+        Returns: Json
+      }
     }
     Enums: {
       australian_state:
