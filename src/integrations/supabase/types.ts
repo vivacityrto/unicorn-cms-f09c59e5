@@ -6005,6 +6005,7 @@ export type Database = {
           package_id: number
           sort_order: number
           stage_id: number
+          use_overrides: boolean | null
         }
         Insert: {
           created_at?: string
@@ -6015,6 +6016,7 @@ export type Database = {
           package_id: number
           sort_order?: number
           stage_id: number
+          use_overrides?: boolean | null
         }
         Update: {
           created_at?: string
@@ -6025,6 +6027,7 @@ export type Database = {
           package_id?: number
           sort_order?: number
           stage_id?: number
+          use_overrides?: boolean | null
         }
         Relationships: [
           {
@@ -6914,6 +6917,164 @@ export type Database = {
         }
         Relationships: []
       }
+      stage_client_tasks: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          description: string | null
+          due_date_offset: number | null
+          id: number
+          instructions: string | null
+          is_mandatory: boolean | null
+          name: string
+          required_documents: string[] | null
+          sort_order: number
+          stage_id: number
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          due_date_offset?: number | null
+          id?: never
+          instructions?: string | null
+          is_mandatory?: boolean | null
+          name: string
+          required_documents?: string[] | null
+          sort_order?: number
+          stage_id: number
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          due_date_offset?: number | null
+          id?: never
+          instructions?: string | null
+          is_mandatory?: boolean | null
+          name?: string
+          required_documents?: string[] | null
+          sort_order?: number
+          stage_id?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stage_client_tasks_stage_id_fkey"
+            columns: ["stage_id"]
+            isOneToOne: false
+            referencedRelation: "documents_stages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      stage_documents: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          delivery_type: string
+          document_id: number
+          id: number
+          is_auto_generated: boolean | null
+          is_team_only: boolean | null
+          is_tenant_downloadable: boolean | null
+          sort_order: number
+          stage_id: number
+          visibility: string
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          delivery_type?: string
+          document_id: number
+          id?: never
+          is_auto_generated?: boolean | null
+          is_team_only?: boolean | null
+          is_tenant_downloadable?: boolean | null
+          sort_order?: number
+          stage_id: number
+          visibility?: string
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          delivery_type?: string
+          document_id?: number
+          id?: never
+          is_auto_generated?: boolean | null
+          is_team_only?: boolean | null
+          is_tenant_downloadable?: boolean | null
+          sort_order?: number
+          stage_id?: number
+          visibility?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stage_documents_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "documents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stage_documents_stage_id_fkey"
+            columns: ["stage_id"]
+            isOneToOne: false
+            referencedRelation: "documents_stages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      stage_emails: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          email_template_id: string
+          id: number
+          is_active: boolean
+          recipient_type: string
+          sort_order: number
+          stage_id: number
+          trigger_type: string
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          email_template_id: string
+          id?: never
+          is_active?: boolean
+          recipient_type?: string
+          sort_order?: number
+          stage_id: number
+          trigger_type?: string
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          email_template_id?: string
+          id?: never
+          is_active?: boolean
+          recipient_type?: string
+          sort_order?: number
+          stage_id?: number
+          trigger_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stage_emails_email_template_id_fkey"
+            columns: ["email_template_id"]
+            isOneToOne: false
+            referencedRelation: "email_templates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stage_emails_stage_id_fkey"
+            columns: ["stage_id"]
+            isOneToOne: false
+            referencedRelation: "documents_stages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       stage_instances: {
         Row: {
           completion_date: string
@@ -7037,6 +7198,53 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "stage_task_templates_stage_id_fkey"
+            columns: ["stage_id"]
+            isOneToOne: false
+            referencedRelation: "documents_stages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      stage_team_tasks: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          description: string | null
+          estimated_hours: number | null
+          id: number
+          is_mandatory: boolean | null
+          name: string
+          owner_role: string | null
+          sort_order: number
+          stage_id: number
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          estimated_hours?: number | null
+          id?: never
+          is_mandatory?: boolean | null
+          name: string
+          owner_role?: string | null
+          sort_order?: number
+          stage_id: number
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          estimated_hours?: number | null
+          id?: never
+          is_mandatory?: boolean | null
+          name?: string
+          owner_role?: string | null
+          sort_order?: number
+          stage_id?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stage_team_tasks_stage_id_fkey"
             columns: ["stage_id"]
             isOneToOne: false
             referencedRelation: "documents_stages"
