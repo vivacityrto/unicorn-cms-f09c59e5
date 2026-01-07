@@ -14,6 +14,80 @@ export type Database = {
   }
   public: {
     Tables: {
+      active_timers: {
+        Row: {
+          client_id: number
+          created_at: string
+          id: string
+          notes: string | null
+          package_id: number | null
+          stage_id: number | null
+          start_at: string
+          task_id: string | null
+          tenant_id: number
+          updated_at: string
+          user_id: string
+          work_type: string
+        }
+        Insert: {
+          client_id: number
+          created_at?: string
+          id?: string
+          notes?: string | null
+          package_id?: number | null
+          stage_id?: number | null
+          start_at?: string
+          task_id?: string | null
+          tenant_id: number
+          updated_at?: string
+          user_id: string
+          work_type?: string
+        }
+        Update: {
+          client_id?: number
+          created_at?: string
+          id?: string
+          notes?: string | null
+          package_id?: number | null
+          stage_id?: number | null
+          start_at?: string
+          task_id?: string | null
+          tenant_id?: number
+          updated_at?: string
+          user_id?: string
+          work_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "active_timers_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "active_timers_package_id_fkey"
+            columns: ["package_id"]
+            isOneToOne: false
+            referencedRelation: "packages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "active_timers_stage_id_fkey"
+            columns: ["stage_id"]
+            isOneToOne: false
+            referencedRelation: "documents_stages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "active_timers_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ai_suggestions: {
         Row: {
           acted_entity_id: string | null
@@ -10611,6 +10685,92 @@ export type Database = {
         }
         Relationships: []
       }
+      time_entries: {
+        Row: {
+          client_id: number
+          created_at: string
+          duration_minutes: number
+          end_at: string | null
+          id: string
+          is_billable: boolean
+          notes: string | null
+          package_id: number | null
+          source: string
+          stage_id: number | null
+          start_at: string | null
+          task_id: string | null
+          tenant_id: number
+          updated_at: string
+          user_id: string
+          work_type: string
+        }
+        Insert: {
+          client_id: number
+          created_at?: string
+          duration_minutes: number
+          end_at?: string | null
+          id?: string
+          is_billable?: boolean
+          notes?: string | null
+          package_id?: number | null
+          source?: string
+          stage_id?: number | null
+          start_at?: string | null
+          task_id?: string | null
+          tenant_id: number
+          updated_at?: string
+          user_id: string
+          work_type?: string
+        }
+        Update: {
+          client_id?: number
+          created_at?: string
+          duration_minutes?: number
+          end_at?: string | null
+          id?: string
+          is_billable?: boolean
+          notes?: string | null
+          package_id?: number | null
+          source?: string
+          stage_id?: number | null
+          start_at?: string | null
+          task_id?: string | null
+          tenant_id?: number
+          updated_at?: string
+          user_id?: string
+          work_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "time_entries_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "time_entries_package_id_fkey"
+            columns: ["package_id"]
+            isOneToOne: false
+            referencedRelation: "packages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "time_entries_stage_id_fkey"
+            columns: ["stage_id"]
+            isOneToOne: false
+            referencedRelation: "documents_stages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "time_entries_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       time_tracking: {
         Row: {
           client_id: string | null
@@ -12111,6 +12271,21 @@ export type Database = {
         Args: { p_generated_document_id: string }
         Returns: Json
       }
+      rpc_add_time_entry: {
+        Args: {
+          p_client_id: number
+          p_date?: string
+          p_duration_minutes: number
+          p_is_billable?: boolean
+          p_notes?: string
+          p_package_id?: number
+          p_stage_id?: number
+          p_task_id?: string
+          p_tenant_id: number
+          p_work_type?: string
+        }
+        Returns: Json
+      }
       rpc_create_action_item: {
         Args: {
           p_client_id: string
@@ -12169,6 +12344,19 @@ export type Database = {
         Args: { p_action_item_id: string; p_status: string }
         Returns: Json
       }
+      rpc_start_timer: {
+        Args: {
+          p_client_id: number
+          p_notes?: string
+          p_package_id?: number
+          p_stage_id?: number
+          p_task_id?: string
+          p_tenant_id: number
+          p_work_type?: string
+        }
+        Returns: Json
+      }
+      rpc_stop_timer: { Args: never; Returns: Json }
       rpc_update_client_note: {
         Args: { p_note_id: string; p_updates: Json }
         Returns: Json
