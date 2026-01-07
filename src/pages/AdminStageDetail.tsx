@@ -820,9 +820,9 @@ export default function AdminStageDetail() {
   };
 
   return (
-    <div className="space-y-6 p-6 animate-fade-in">
+    <div className="p-6 animate-fade-in max-w-7xl mx-auto">
       {/* Back Button */}
-      <div>
+      <div className="mb-4">
         <Button variant="ghost" asChild className="gap-2 hover:bg-muted">
           <Link to="/admin/stages">
             <ArrowLeft className="h-4 w-4" />
@@ -831,152 +831,144 @@ export default function AdminStageDetail() {
         </Button>
       </div>
 
-      {/* Stage Header */}
-      {isLoading ? (
-        <div className="space-y-4">
-          <Skeleton className="h-8 w-[300px]" />
-          <Skeleton className="h-5 w-[200px]" />
-        </div>
-      ) : stage ? (
-        <div className="space-y-4">
-          <div className="flex items-center gap-3 flex-wrap">
-            <Layers className="h-7 w-7" />
-            <h1 className="text-[28px] font-bold">{stage.title}</h1>
-            <Badge variant="outline" className={`text-xs capitalize ${getStageTypeColor(stage.stage_type)}`}>
-              {STAGE_TYPE_OPTIONS.find(o => o.value === stage.stage_type)?.label || stage.stage_type}
-            </Badge>
-            {stage.is_certified && (
-              <Badge className="bg-emerald-500/10 text-emerald-600 border-emerald-500/20">
-                <ShieldCheck className="h-3 w-3 mr-1" />
-                Certified
-              </Badge>
-            )}
-            {usageCount > 0 && (
-              <Badge variant="secondary" className="text-xs">
-                Used in {usageCount} package{usageCount !== 1 ? 's' : ''}
-              </Badge>
-            )}
-            {isSuperAdmin && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setSimulationOpen(true)}
-              >
-                <Play className="h-3 w-3 mr-1" />
-                Simulate Stage
-              </Button>
-            )}
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                if (packagesUsing.length > 0) {
-                  setExportDialogOpen(true);
-                } else {
-                  downloadExport(stage.id, stage.title);
-                }
-              }}
-              disabled={isExporting}
-            >
-              <Download className="h-3 w-3 mr-1" />
-              {isExporting ? 'Exporting...' : 'Export'}
-            </Button>
-          </div>
-          
-          {stage.stage_key && (
-            <p className="text-sm text-muted-foreground font-mono">Key: {stage.stage_key}</p>
-          )}
+      {/* Two-Column Header Layout */}
+      <div className="grid grid-cols-1 lg:grid-cols-[2fr_1fr] gap-6 items-start">
+        {/* Left Column: Header + Warnings + Tabs */}
+        <div className="space-y-6 min-w-0">
+          {/* Stage Header */}
+          {isLoading ? (
+            <div className="space-y-4">
+              <Skeleton className="h-8 w-[300px]" />
+              <Skeleton className="h-5 w-[200px]" />
+            </div>
+          ) : stage ? (
+            <div className="space-y-3">
+              <div className="flex items-center gap-3 flex-wrap">
+                <Layers className="h-7 w-7 shrink-0" />
+                <h1 className="text-2xl font-bold">{stage.title}</h1>
+                <Badge variant="outline" className={`text-xs capitalize ${getStageTypeColor(stage.stage_type)}`}>
+                  {STAGE_TYPE_OPTIONS.find(o => o.value === stage.stage_type)?.label || stage.stage_type}
+                </Badge>
+                {stage.is_certified && (
+                  <Badge className="bg-emerald-500/10 text-emerald-600 border-emerald-500/20">
+                    <ShieldCheck className="h-3 w-3 mr-1" />
+                    Certified
+                  </Badge>
+                )}
+                {usageCount > 0 && (
+                  <Badge variant="secondary" className="text-xs">
+                    Used in {usageCount} package{usageCount !== 1 ? 's' : ''}
+                  </Badge>
+                )}
+              </div>
+              
+              {stage.stage_key && (
+                <p className="text-sm text-muted-foreground font-mono">Key: {stage.stage_key}</p>
+              )}
 
-          {(stage as any).version_label && (
-            <p className="text-sm font-medium text-muted-foreground">
-              Version: <span className="text-foreground">{(stage as any).version_label}</span>
-            </p>
-          )}
+              {(stage as any).version_label && (
+                <p className="text-sm font-medium text-muted-foreground">
+                  Version: <span className="text-foreground">{(stage as any).version_label}</span>
+                </p>
+              )}
 
-          {stage.description && (
-            <p className="text-muted-foreground max-w-2xl">{stage.description}</p>
-          )}
-        </div>
-      ) : (
-        <div className="text-center py-8">
-          <p className="text-muted-foreground">Stage not found</p>
-        </div>
-      )}
+              {stage.description && (
+                <p className="text-muted-foreground">{stage.description}</p>
+              )}
 
-      {/* Warnings */}
-      {stage && (
-        <div className="space-y-3">
-          {isUsedByActiveClients && (
-            <Alert className="border-destructive/30 bg-destructive/5">
-              <AlertTriangle className="h-4 w-4 text-destructive" />
-              <AlertTitle className="text-destructive">This stage is in use by active clients</AlertTitle>
-              <AlertDescription className="flex items-center justify-between">
-                <span className="text-destructive/80">
-                  {activeUsage.clients.length} active client{activeUsage.clients.length !== 1 ? 's' : ''} are using this stage. 
-                  Editing may affect their ongoing work.
-                </span>
-                <Button 
-                  size="sm" 
-                  variant="outline" 
-                  onClick={handleDuplicateStage}
-                  disabled={isDuplicating}
-                  className="border-destructive/30 text-destructive hover:bg-destructive/10"
+              {/* Action Buttons Row */}
+              <div className="flex items-center gap-2 flex-wrap pt-1">
+                {isSuperAdmin && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setSimulationOpen(true)}
+                  >
+                    <Play className="h-3 w-3 mr-1" />
+                    Simulate Stage
+                  </Button>
+                )}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    if (packagesUsing.length > 0) {
+                      setExportDialogOpen(true);
+                    } else {
+                      downloadExport(stage.id, stage.title);
+                    }
+                  }}
+                  disabled={isExporting}
                 >
-                  <Copy className="h-3 w-3 mr-1" />
-                  {isDuplicating ? 'Duplicating...' : 'Duplicate & Edit Copy'}
+                  <Download className="h-3 w-3 mr-1" />
+                  {isExporting ? 'Exporting...' : 'Export'}
                 </Button>
-              </AlertDescription>
-            </Alert>
+              </div>
+            </div>
+          ) : (
+            <div className="text-center py-8">
+              <p className="text-muted-foreground">Stage not found</p>
+            </div>
           )}
 
-          {stage.is_certified && !isUsedByActiveClients && (
-            <Alert className="border-amber-500/30 bg-amber-500/5">
-              <ShieldCheck className="h-4 w-4 text-amber-600" />
-              <AlertDescription className="flex items-center justify-between text-amber-800">
-                <span>This is a certified template. Prefer duplicating before making major edits.</span>
-                <Button 
-                  size="sm" 
-                  variant="outline" 
-                  onClick={handleDuplicateStage}
-                  disabled={isDuplicating}
-                >
-                  <Copy className="h-3 w-3 mr-1" />
-                  {isDuplicating ? 'Duplicating...' : 'Duplicate Stage'}
-                </Button>
-              </AlertDescription>
-            </Alert>
+          {/* Warnings */}
+          {stage && (
+            <div className="space-y-3">
+              {isUsedByActiveClients && (
+                <Alert className="border-destructive/30 bg-destructive/5">
+                  <AlertTriangle className="h-4 w-4 text-destructive" />
+                  <AlertTitle className="text-destructive">This stage is in use by active clients</AlertTitle>
+                  <AlertDescription className="flex items-center justify-between gap-2 flex-wrap">
+                    <span className="text-destructive/80">
+                      {activeUsage.clients.length} active client{activeUsage.clients.length !== 1 ? 's' : ''} are using this stage. 
+                      Editing may affect their ongoing work.
+                    </span>
+                    <Button 
+                      size="sm" 
+                      variant="outline" 
+                      onClick={handleDuplicateStage}
+                      disabled={isDuplicating}
+                      className="border-destructive/30 text-destructive hover:bg-destructive/10"
+                    >
+                      <Copy className="h-3 w-3 mr-1" />
+                      {isDuplicating ? 'Duplicating...' : 'Duplicate & Edit Copy'}
+                    </Button>
+                  </AlertDescription>
+                </Alert>
+              )}
+
+              {stage.is_certified && !isUsedByActiveClients && (
+                <Alert className="border-amber-500/30 bg-amber-500/5">
+                  <ShieldCheck className="h-4 w-4 text-amber-600" />
+                  <AlertDescription className="flex items-center justify-between gap-2 flex-wrap text-amber-800">
+                    <span>This is a certified template. Prefer duplicating before making major edits.</span>
+                    <Button 
+                      size="sm" 
+                      variant="outline" 
+                      onClick={handleDuplicateStage}
+                      disabled={isDuplicating}
+                    >
+                      <Copy className="h-3 w-3 mr-1" />
+                      {isDuplicating ? 'Duplicating...' : 'Duplicate Stage'}
+                    </Button>
+                  </AlertDescription>
+                </Alert>
+              )}
+
+              {isReused && !isUsedByActiveClients && !stage.is_certified && (
+                <Alert className="border-blue-500/30 bg-blue-500/5">
+                  <Info className="h-4 w-4 text-blue-600" />
+                  <AlertDescription className="text-blue-800">
+                    This stage is shared across {usageCount} packages. Changes will affect all of them.
+                  </AlertDescription>
+                </Alert>
+              )}
+            </div>
           )}
 
-          {isReused && !isUsedByActiveClients && !stage.is_certified && (
-            <Alert className="border-blue-500/30 bg-blue-500/5">
-              <Info className="h-4 w-4 text-blue-600" />
-              <AlertDescription className="text-blue-800">
-                This stage is shared across {usageCount} packages. Changes will affect all of them.
-              </AlertDescription>
-            </Alert>
-          )}
-        </div>
-      )}
-
-      {/* Quality Panel - inline next to main content */}
-      {stage && (
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
-          <div className="lg:col-span-3">
-            {/* Main content area - tabs will go here, handled by next block */}
-          </div>
-          <div className="lg:col-span-1">
-            <StageQualityPanel 
-              result={qualityResult} 
-              isLoading={qualityLoading}
-              onRefresh={refetchQuality}
-            />
-          </div>
-        </div>
-      )}
-
-      {/* Tabs */}
-      {stage && (
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
+          {/* Tabs - Inside left column */}
+          {stage && (
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
           <TabsList className="grid w-full grid-cols-7">
             <TabsTrigger value="settings" className="text-xs">
               <Settings className="h-3 w-3 mr-1" />
@@ -1636,8 +1628,21 @@ export default function AdminStageDetail() {
               </CardContent>
             </Card>
           </TabsContent>
-        </Tabs>
-      )}
+            </Tabs>
+          )}
+        </div>
+
+        {/* Right Column: Quality Check - Sticky on desktop */}
+        {stage && (
+          <div className="lg:sticky lg:top-6 self-start order-first lg:order-last">
+            <StageQualityPanel 
+              result={qualityResult} 
+              isLoading={qualityLoading}
+              onRefresh={refetchQuality}
+            />
+          </div>
+        )}
+      </div>
 
       {/* Dialogs */}
       
