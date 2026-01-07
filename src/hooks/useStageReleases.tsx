@@ -103,65 +103,20 @@ export function useStageReleases(tenantId?: number) {
     documentIds: number[]
   ): Promise<StageRelease | null> => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('Not authenticated');
-
-      // Create the release
-      const { data: release, error: releaseError } = await supabase
-        .from('stage_releases')
-        .insert({
-          tenant_id: tenantId,
-          package_id: packageId,
-          stage_id: stageId,
-          release_type: 'documents',
-          status: 'draft',
-          created_by: user.id
-        })
-        .select()
-        .single();
-
-      if (releaseError) throw releaseError;
-
-      // Fetch document versions for each document
-      const { data: docs } = await supabase
-        .from('documents')
-        .select('id, current_published_version_id')
-        .in('id', documentIds);
-
-      // Create release items
-      const items = documentIds.map(docId => {
-        const doc = docs?.find(d => d.id === docId);
-        return {
-          stage_release_id: release.id,
-          document_id: docId,
-          document_version_id: doc?.current_published_version_id || null,
-          is_visible_to_tenant: true,
-          include_in_pack: true,
-          generation_status: 'pending'
-        };
+      // Use the RPC for server-side validation and creation
+      const { data, error } = await supabase.rpc('create_stage_release', {
+        p_tenant_id: tenantId,
+        p_package_id: packageId,
+        p_stage_id: stageId,
+        p_document_ids: documentIds
       });
 
-      const { error: itemsError } = await supabase
-        .from('stage_release_items')
-        .insert(items);
+      if (error) throw error;
+      
+      const result = data as unknown as { success: boolean; release_id?: string; error?: string } | null;
+      if (!result?.success) throw new Error(result?.error || 'Failed to create release');
 
-      if (itemsError) throw itemsError;
-
-      // Log audit event
-      await supabase.from('client_audit_log').insert({
-        tenant_id: tenantId,
-        action: 'stage.release_created',
-        entity_type: 'stage_release',
-        entity_id: release.id,
-        actor_user_id: user.id,
-        details: {
-          stage_id: stageId,
-          package_id: packageId,
-          document_count: documentIds.length
-        }
-      });
-
-      return release as unknown as StageRelease;
+      return { id: result.release_id } as StageRelease;
     } catch (error: any) {
       toast({
         title: 'Error',
@@ -177,6 +132,25 @@ export function useStageReleases(tenantId?: number) {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) throw new Error('Not authenticated');
+
+      // Check rate limit first using RPC
+      const { data: limitData, error: limitError } = await supabase.rpc('check_rate_limit', {
+        p_tenant_id: tenantId,
+        p_action_type: 'document_generation'
+      });
+
+      if (limitError) throw limitError;
+      
+      const limitCheck = limitData as unknown as { allowed: boolean; retry_after_minutes?: number } | null;
+      if (!limitCheck?.allowed) {
+        throw new Error(`Rate limit exceeded. Try again after ${limitCheck?.retry_after_minutes || 60} minutes.`);
+      }
+
+      // Increment rate limit counter
+      await supabase.rpc('increment_rate_limit', {
+        p_tenant_id: tenantId,
+        p_action_type: 'document_generation'
+      });
 
       const response = await supabase.functions.invoke('generate-release-documents', {
         body: { release_id: releaseId }
@@ -318,24 +292,23 @@ export function useStageReleases(tenantId?: number) {
   const executeRelease = async (
     releaseId: string, 
     sendEmail: boolean = true,
-    emailTemplateId?: string
+    emailTemplateId?: string,
+    confirmOverride: boolean = false,
+    confirmPhrase?: string
   ): Promise<boolean> => {
     setReleasing(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('Not authenticated');
+      // Use the RPC for server-side validation and release
+      const { data, error } = await supabase.rpc('release_to_tenant', {
+        p_stage_release_id: releaseId,
+        p_confirm_override: confirmOverride,
+        p_confirm_phrase: confirmPhrase || null
+      });
 
-      // Update release status
-      const { error: updateError } = await supabase
-        .from('stage_releases')
-        .update({
-          status: 'released',
-          released_at: new Date().toISOString(),
-          released_by: user.id
-        })
-        .eq('id', releaseId);
-
-      if (updateError) throw updateError;
+      if (error) throw error;
+      
+      const result = data as unknown as { success: boolean; error?: string } | null;
+      if (!result?.success) throw new Error(result?.error || 'Failed to release');
 
       // If email should be sent, trigger the email function
       if (sendEmail && emailTemplateId) {
@@ -368,19 +341,6 @@ export function useStageReleases(tenantId?: number) {
           }
         }
       }
-
-      // Log audit event
-      await supabase.from('client_audit_log').insert({
-        tenant_id: tenantId,
-        action: 'stage.released',
-        entity_type: 'stage_release',
-        entity_id: releaseId,
-        actor_user_id: user.id,
-        details: {
-          email_sent: sendEmail,
-          email_template_id: emailTemplateId
-        }
-      });
 
       toast({
         title: 'Released',
