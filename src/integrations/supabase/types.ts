@@ -2262,32 +2262,50 @@ export type Database = {
       }
       document_versions: {
         Row: {
-          checksum: string | null
-          document_id: string | null
+          created_at: string
+          created_by: string | null
+          document_id: number
+          file_name: string
+          file_size: number | null
           id: string
-          storage_path: string | null
-          tenant_id: number | null
+          mime_type: string | null
+          notes: string | null
+          status: string
+          storage_path: string
+          version_number: number
         }
         Insert: {
-          checksum?: string | null
-          document_id?: string | null
-          id: string
-          storage_path?: string | null
-          tenant_id?: number | null
+          created_at?: string
+          created_by?: string | null
+          document_id: number
+          file_name: string
+          file_size?: number | null
+          id?: string
+          mime_type?: string | null
+          notes?: string | null
+          status?: string
+          storage_path: string
+          version_number: number
         }
         Update: {
-          checksum?: string | null
-          document_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          document_id?: number
+          file_name?: string
+          file_size?: number | null
           id?: string
-          storage_path?: string | null
-          tenant_id?: number | null
+          mime_type?: string | null
+          notes?: string | null
+          status?: string
+          storage_path?: string
+          version_number?: number
         }
         Relationships: [
           {
-            foreignKeyName: "document_versions_tenant_id_fkey"
-            columns: ["tenant_id"]
+            foreignKeyName: "document_versions_document_id_fkey"
+            columns: ["document_id"]
             isOneToOne: false
-            referencedRelation: "tenants"
+            referencedRelation: "documents"
             referencedColumns: ["id"]
           },
         ]
@@ -2323,7 +2341,10 @@ export type Database = {
           category: string | null
           created_by: string | null
           createdat: string | null
+          current_published_version_id: string | null
           description: string | null
+          document_category: string | null
+          document_status: string
           due_date: string | null
           file_names: string[] | null
           format: string | null
@@ -2336,6 +2357,8 @@ export type Database = {
           merge_fields: Json | null
           package_id: number | null
           stage: number | null
+          standard_refs: string[] | null
+          standard_set: string | null
           tenant_id: number | null
           title: string
           updated_at: string | null
@@ -2349,7 +2372,10 @@ export type Database = {
           category?: string | null
           created_by?: string | null
           createdat?: string | null
+          current_published_version_id?: string | null
           description?: string | null
+          document_category?: string | null
+          document_status?: string
           due_date?: string | null
           file_names?: string[] | null
           format?: string | null
@@ -2362,6 +2388,8 @@ export type Database = {
           merge_fields?: Json | null
           package_id?: number | null
           stage?: number | null
+          standard_refs?: string[] | null
+          standard_set?: string | null
           tenant_id?: number | null
           title: string
           updated_at?: string | null
@@ -2375,7 +2403,10 @@ export type Database = {
           category?: string | null
           created_by?: string | null
           createdat?: string | null
+          current_published_version_id?: string | null
           description?: string | null
+          document_category?: string | null
+          document_status?: string
           due_date?: string | null
           file_names?: string[] | null
           format?: string | null
@@ -2388,6 +2419,8 @@ export type Database = {
           merge_fields?: Json | null
           package_id?: number | null
           stage?: number | null
+          standard_refs?: string[] | null
+          standard_set?: string | null
           tenant_id?: number | null
           title?: string
           updated_at?: string | null
@@ -2410,6 +2443,13 @@ export type Database = {
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_documents_current_version"
+            columns: ["current_published_version_id"]
+            isOneToOne: false
+            referencedRelation: "document_versions"
             referencedColumns: ["id"]
           },
         ]
@@ -7035,6 +7075,7 @@ export type Database = {
           is_tenant_downloadable: boolean | null
           is_tenant_visible: boolean
           notes: string | null
+          pinned_version_id: string | null
           sort_order: number
           stage_id: number
           visibility: string
@@ -7051,6 +7092,7 @@ export type Database = {
           is_tenant_downloadable?: boolean | null
           is_tenant_visible?: boolean
           notes?: string | null
+          pinned_version_id?: string | null
           sort_order?: number
           stage_id: number
           visibility?: string
@@ -7067,6 +7109,7 @@ export type Database = {
           is_tenant_downloadable?: boolean | null
           is_tenant_visible?: boolean
           notes?: string | null
+          pinned_version_id?: string | null
           sort_order?: number
           stage_id?: number
           visibility?: string
@@ -7077,6 +7120,13 @@ export type Database = {
             columns: ["document_id"]
             isOneToOne: false
             referencedRelation: "documents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stage_documents_pinned_version_id_fkey"
+            columns: ["pinned_version_id"]
+            isOneToOne: false
+            referencedRelation: "document_versions"
             referencedColumns: ["id"]
           },
           {
@@ -7737,6 +7787,84 @@ export type Database = {
           },
           {
             foreignKeyName: "tenant_csc_assignments_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tenant_document_releases: {
+        Row: {
+          acknowledged_at: string | null
+          document_id: number
+          document_version_id: string
+          downloaded_at: string | null
+          id: string
+          is_visible_to_tenant: boolean
+          package_id: number | null
+          released_at: string
+          released_by: string | null
+          stage_id: number | null
+          tenant_id: number
+        }
+        Insert: {
+          acknowledged_at?: string | null
+          document_id: number
+          document_version_id: string
+          downloaded_at?: string | null
+          id?: string
+          is_visible_to_tenant?: boolean
+          package_id?: number | null
+          released_at?: string
+          released_by?: string | null
+          stage_id?: number | null
+          tenant_id: number
+        }
+        Update: {
+          acknowledged_at?: string | null
+          document_id?: number
+          document_version_id?: string
+          downloaded_at?: string | null
+          id?: string
+          is_visible_to_tenant?: boolean
+          package_id?: number | null
+          released_at?: string
+          released_by?: string | null
+          stage_id?: number | null
+          tenant_id?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tenant_document_releases_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "documents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tenant_document_releases_document_version_id_fkey"
+            columns: ["document_version_id"]
+            isOneToOne: false
+            referencedRelation: "document_versions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tenant_document_releases_package_id_fkey"
+            columns: ["package_id"]
+            isOneToOne: false
+            referencedRelation: "packages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tenant_document_releases_stage_id_fkey"
+            columns: ["stage_id"]
+            isOneToOne: false
+            referencedRelation: "documents_stages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tenant_document_releases_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
@@ -10104,6 +10232,10 @@ export type Database = {
         Returns: string
       }
       accept_invite: { Args: { p_token: string }; Returns: Json }
+      acknowledge_document: {
+        Args: { p_release_id: string }
+        Returns: undefined
+      }
       add_audit_response: {
         Args: {
           p_audit_question_id: number
@@ -10257,6 +10389,16 @@ export type Database = {
           profile_id: number
           user_id: string
         }[]
+      }
+      bulk_create_documents_with_versions: {
+        Args: {
+          p_auto_publish?: boolean
+          p_category?: string
+          p_documents: Json
+          p_standard_refs?: string[]
+          p_standard_set?: string
+        }
+        Returns: Json
       }
       calculate_membership_health: {
         Args: { p_package_id: number; p_tenant_id: number }
@@ -10440,6 +10582,16 @@ export type Database = {
       get_current_user_role: { Args: never; Returns: string }
       get_current_user_tenant: { Args: never; Returns: number }
       get_current_user_type: { Args: never; Returns: string }
+      get_document_stage_usage: {
+        Args: { p_document_id: number }
+        Returns: {
+          package_count: number
+          pinned_version_id: string
+          pinned_version_number: number
+          stage_id: number
+          stage_name: string
+        }[]
+      }
       get_email_automation_stats: {
         Args: { p_tenant_id: number }
         Returns: Json
@@ -10727,6 +10879,10 @@ export type Database = {
         Args: { p_draft_json: Json; p_meeting_id: string }
         Returns: string
       }
+      publish_document_version: {
+        Args: { p_document_id: number; p_notes?: string }
+        Returns: string
+      }
       publish_stage_version: {
         Args: { p_notes?: string; p_stage_id: number }
         Returns: string
@@ -10788,6 +10944,15 @@ export type Database = {
       record_resource_usage: {
         Args: { p_downloaded?: boolean; p_resource_id: string }
         Returns: undefined
+      }
+      release_documents_to_tenant: {
+        Args: {
+          p_document_ids: number[]
+          p_package_id: number
+          p_stage_id: number
+          p_tenant_id: number
+        }
+        Returns: number
       }
       remove_favourite: { Args: { p_resource_id: string }; Returns: undefined }
       search_resources: {
@@ -10857,6 +11022,10 @@ export type Database = {
       }
       tga_unlink_client: { Args: { p_client_id: string }; Returns: Json }
       toggle_favourite: { Args: { p_resource_id: string }; Returns: boolean }
+      track_document_download: {
+        Args: { p_release_id: string }
+        Returns: undefined
+      }
       transition_stage_state: {
         Args: {
           p_new_status: string
