@@ -11,6 +11,7 @@ import { useStageExportImport } from '@/hooks/useStageExportImport';
 import { useStageQualityCheck, computeStageQuality } from '@/hooks/useStageQualityCheck';
 import { usePackageBuilder, Stage } from '@/hooks/usePackageBuilder';
 import { useStageTemplateContent, usePackageStageOverrides } from '@/hooks/useStageTemplateContent';
+import { useStageImpact, useSyncStageToPackages } from '@/hooks/usePackageStageOverrides';
 import { useStageDependencyCheck, updateStageDependencies, checkDependencyCertification } from '@/hooks/useStageDependencies';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
@@ -43,6 +44,7 @@ import { StageDependencySelector } from '@/components/stage/StageDependencySelec
 import { StageFrameworkSelector, StageFrameworkBadges, updateStageFrameworks, isFrameworksNarrowed } from '@/components/stage/StageFrameworkSelector';
 import { StageStandardsSelector } from '@/components/stage/StageStandardsSelector';
 import { StageSimulationDialog } from '@/components/stage/StageSimulationDialog';
+import { StageImpactPanel } from '@/components/package-builder/StageImpactPanel';
 import { format } from 'date-fns';
 
 const STAGE_TYPE_OPTIONS = [
@@ -99,6 +101,10 @@ export default function AdminStageDetail() {
 
   // Override count for settings display
   const { overrideCount } = usePackageStageOverrides(null, stageIdNum);
+  
+  // Stage impact tracking
+  const { packageCount, overrideCount: impactOverrideCount, packages: packagesWithOverrides, refetch: refetchImpact } = useStageImpact(stageIdNum);
+  const { syncToPackages, syncing: isSyncing } = useSyncStageToPackages();
   
   // Quality check state - no package context needed for template quality
   const { result: qualityResult, isLoading: qualityLoading, refetch: refetchQuality } = useStageQualityCheck({
@@ -913,13 +919,17 @@ export default function AdminStageDetail() {
           )}
         </div>
 
-        {/* Right Column: Quality Check */}
+        {/* Right Column: Quality Check + Impact Panel */}
         {stage && (
-          <div className="lg:sticky lg:top-6 self-start">
+          <div className="lg:sticky lg:top-6 self-start space-y-4">
             <StageQualityPanel 
               result={qualityResult} 
               isLoading={qualityLoading}
               onRefresh={refetchQuality}
+            />
+            <StageImpactPanel
+              stageId={stage.id}
+              stageName={stage.title}
             />
           </div>
         )}

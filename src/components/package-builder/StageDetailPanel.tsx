@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Stage, useStageDetail, usePackageBuilder } from '@/hooks/usePackageBuilder';
 import { useStageActiveUsage } from '@/hooks/useStageActiveUsage';
 import { usePackageStageOverrides, useResolvedStageContent } from '@/hooks/useStageTemplateContent';
+import { useCopyTemplateToPackage, usePackageOverrides } from '@/hooks/usePackageStageOverrides';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -20,10 +21,11 @@ import { useToast } from '@/hooks/use-toast';
 import { 
   X, Plus, Trash2, Users, Mail, FileText, CheckSquare, 
   GripVertical, Clock, User, Loader2, AlertTriangle, Settings, Copy, ShieldAlert,
-  ExternalLink, RotateCcw, FileStack
+  ExternalLink, RotateCcw, FileStack, GitCompare
 } from 'lucide-react';
 import { StageDocumentsTab } from './StageDocumentsTab';
 import { BulkGenerateDocumentsDialog } from './BulkGenerateDocumentsDialog';
+import { StageDiffView } from './StageDiffView';
 import { Link } from 'react-router-dom';
 
 interface StageDetailPanelProps {
@@ -53,6 +55,12 @@ export function StageDetailPanel({ packageId, stageId, stage, allStages = [], on
     copyTemplateToOverrides,
     resetToTemplate
   } = usePackageStageOverrides(packageId, stageId);
+
+  // Enhanced override hook with diff tracking
+  const { diffSummary, lastSyncedAt, refetch: refetchOverrides } = usePackageOverrides(packageId, stageId);
+
+  // New RPC-based template copy with source tracking
+  const { copyTemplate, copying: isCopyingTemplate } = useCopyTemplateToPackage();
 
   // Resolved content - uses template or overrides based on flag
   const {
@@ -208,8 +216,10 @@ export function StageDetailPanel({ packageId, stageId, stage, allStages = [], on
   const handleEnableOverrides = async () => {
     setIsCopying(true);
     try {
-      await copyTemplateToOverrides();
+      // Use new RPC function with source tracking
+      await copyTemplate(packageId, stageId);
       await refetchResolved();
+      await refetchOverrides();
     } catch (error: any) {
       toast({
         title: 'Error',
@@ -501,7 +511,7 @@ export function StageDetailPanel({ packageId, stageId, stage, allStages = [], on
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-5">
+        <TabsList className="grid w-full grid-cols-6">
           <TabsTrigger value="settings" className="text-xs">
             <Settings className="h-3 w-3 mr-1" />
             Settings
@@ -522,6 +532,17 @@ export function StageDetailPanel({ packageId, stageId, stage, allStages = [], on
             <FileText className="h-3 w-3 mr-1" />
             Docs
           </TabsTrigger>
+          {useOverrides && (
+            <TabsTrigger value="diff" className="text-xs">
+              <GitCompare className="h-3 w-3 mr-1" />
+              Diff
+              {diffSummary.overridden > 0 && (
+                <span className="ml-1 bg-amber-500/20 text-amber-700 px-1 rounded text-[10px]">
+                  {diffSummary.overridden}
+                </span>
+              )}
+            </TabsTrigger>
+          )}
         </TabsList>
 
         {/* Stage Settings Tab */}
@@ -864,6 +885,17 @@ export function StageDetailPanel({ packageId, stageId, stage, allStages = [], on
             </Card>
           )}
         </TabsContent>
+
+        {/* Diff View Tab - only visible when overrides are enabled */}
+        {useOverrides && (
+          <TabsContent value="diff" className="mt-4">
+            <StageDiffView
+              packageId={packageId}
+              stageId={stageId}
+              stageName={stage?.title || 'Stage'}
+            />
+          </TabsContent>
+        )}
       </Tabs>
 
       {/* Add Staff Task Dialog */}
