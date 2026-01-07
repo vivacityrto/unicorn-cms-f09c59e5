@@ -14,6 +14,7 @@ interface SendEmailRequest {
   recipient_type: "tenant" | "internal" | "both";
   to_override?: string; // For test sends
   dry_run?: boolean; // For preview
+  stage_release_id?: string; // Track which release triggered email
 }
 
 interface MergeData {
@@ -108,7 +109,7 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     const body: SendEmailRequest = await req.json();
-    const { tenant_id, package_id, stage_id, email_template_id, recipient_type, to_override, dry_run } = body;
+    const { tenant_id, package_id, stage_id, email_template_id, recipient_type, to_override, dry_run, stage_release_id } = body;
 
     console.log("Processing send-stage-email request:", { tenant_id, package_id, stage_id, email_template_id, recipient_type, dry_run });
 
@@ -361,6 +362,7 @@ const handler = async (req: Request): Promise<Response> => {
         tenant_id: tenant_id,
         package_id: package_id || null,
         stage_id: stage_id || null,
+        stage_release_id: stage_release_id || null,
         email_template_id: email_template_id,
         email_template_version: typedTemplate.version,
         to_email: uniqueRecipients.join(","),
@@ -376,6 +378,22 @@ const handler = async (req: Request): Promise<Response> => {
       })
       .select("id")
       .single();
+
+    // Log email sent event for audit
+    if (stage_release_id && emailStatus === "sent") {
+      await supabase.from("client_audit_log").insert({
+        tenant_id: tenant_id,
+        action: "email.documents_ready_sent",
+        entity_type: "stage_release",
+        entity_id: stage_release_id,
+        actor_user_id: user.id,
+        details: {
+          email_template_id,
+          recipients: uniqueRecipients,
+          subject: renderedSubject
+        }
+      });
+    }
 
     if (logError) {
       console.error("Failed to log email send:", logError);
