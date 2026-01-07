@@ -1145,6 +1145,87 @@ export type Database = {
           },
         ]
       }
+      client_action_items: {
+        Row: {
+          client_id: string
+          completed_at: string | null
+          completed_by: string | null
+          created_at: string
+          created_by: string
+          description: string | null
+          due_date: string | null
+          id: string
+          owner_user_id: string | null
+          priority: string
+          recurrence_rule: string | null
+          related_entity_id: string | null
+          related_entity_type: string | null
+          source: string
+          source_note_id: string | null
+          status: string
+          tenant_id: number
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          client_id: string
+          completed_at?: string | null
+          completed_by?: string | null
+          created_at?: string
+          created_by: string
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          owner_user_id?: string | null
+          priority?: string
+          recurrence_rule?: string | null
+          related_entity_id?: string | null
+          related_entity_type?: string | null
+          source?: string
+          source_note_id?: string | null
+          status?: string
+          tenant_id: number
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          client_id?: string
+          completed_at?: string | null
+          completed_by?: string | null
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          owner_user_id?: string | null
+          priority?: string
+          recurrence_rule?: string | null
+          related_entity_id?: string | null
+          related_entity_type?: string | null
+          source?: string
+          source_note_id?: string | null
+          status?: string
+          tenant_id?: number
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_action_items_source_note_id_fkey"
+            columns: ["source_note_id"]
+            isOneToOne: false
+            referencedRelation: "client_notes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_action_items_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       client_audit_log: {
         Row: {
           action: string
@@ -1293,6 +1374,62 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "users"
             referencedColumns: ["user_uuid"]
+          },
+        ]
+      }
+      client_notes: {
+        Row: {
+          client_id: string
+          content: string
+          created_at: string
+          created_by: string
+          id: string
+          is_pinned: boolean
+          note_type: string
+          related_entity_id: string | null
+          related_entity_type: string | null
+          tags: string[]
+          tenant_id: number
+          title: string | null
+          updated_at: string
+        }
+        Insert: {
+          client_id: string
+          content: string
+          created_at?: string
+          created_by: string
+          id?: string
+          is_pinned?: boolean
+          note_type: string
+          related_entity_id?: string | null
+          related_entity_type?: string | null
+          tags?: string[]
+          tenant_id: number
+          title?: string | null
+          updated_at?: string
+        }
+        Update: {
+          client_id?: string
+          content?: string
+          created_at?: string
+          created_by?: string
+          id?: string
+          is_pinned?: boolean
+          note_type?: string
+          related_entity_id?: string | null
+          related_entity_type?: string | null
+          tags?: string[]
+          tenant_id?: number
+          title?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_notes_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -1686,6 +1823,59 @@ export type Database = {
             columns: ["source_import_id"]
             isOneToOne: false
             referencedRelation: "tga_import_runs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      client_timeline_events: {
+        Row: {
+          body: string | null
+          client_id: string
+          created_at: string
+          created_by: string | null
+          entity_id: string | null
+          entity_type: string | null
+          event_type: string
+          id: string
+          metadata: Json
+          source: string
+          tenant_id: number
+          title: string
+        }
+        Insert: {
+          body?: string | null
+          client_id: string
+          created_at?: string
+          created_by?: string | null
+          entity_id?: string | null
+          entity_type?: string | null
+          event_type: string
+          id?: string
+          metadata?: Json
+          source: string
+          tenant_id: number
+          title: string
+        }
+        Update: {
+          body?: string | null
+          client_id?: string
+          created_at?: string
+          created_by?: string | null
+          entity_id?: string | null
+          entity_type?: string | null
+          event_type?: string
+          id?: string
+          metadata?: Json
+          source?: string
+          tenant_id?: number
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_timeline_events_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
             referencedColumns: ["id"]
           },
         ]
@@ -11919,6 +12109,45 @@ export type Database = {
       }
       retry_failed_generation: {
         Args: { p_generated_document_id: string }
+        Returns: Json
+      }
+      rpc_create_action_item: {
+        Args: {
+          p_client_id: string
+          p_description?: string
+          p_due_date?: string
+          p_owner_user_id?: string
+          p_priority?: string
+          p_recurrence_rule?: string
+          p_related_entity_id?: string
+          p_related_entity_type?: string
+          p_source?: string
+          p_source_note_id?: string
+          p_tenant_id: number
+          p_title: string
+        }
+        Returns: Json
+      }
+      rpc_create_client_note: {
+        Args: {
+          p_client_id: string
+          p_content: string
+          p_is_pinned?: boolean
+          p_note_type: string
+          p_related_entity_id?: string
+          p_related_entity_type?: string
+          p_tags?: string[]
+          p_tenant_id: number
+          p_title: string
+        }
+        Returns: Json
+      }
+      rpc_set_action_item_status: {
+        Args: { p_action_item_id: string; p_status: string }
+        Returns: Json
+      }
+      rpc_update_client_note: {
+        Args: { p_note_id: string; p_updates: Json }
         Returns: Json
       }
       search_resources: {

@@ -3,6 +3,9 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { ClientNotesTab } from '@/components/client/ClientNotesTab';
+import { ClientTimelineTab } from '@/components/client/ClientTimelineTab';
+import { ClientStructuredNotesTab } from '@/components/client/ClientStructuredNotesTab';
+import { ClientActionItemsTab } from '@/components/client/ClientActionItemsTab';
 import { useClientProfile, useClientPackages } from '@/hooks/useClientManagement';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -20,7 +23,9 @@ import {
   FileText, 
   Settings,
   Link2,
-  StickyNote
+  StickyNote,
+  Activity,
+  CheckSquare
 } from 'lucide-react';
 import { ClientProfileForm } from '@/components/client/ClientProfileForm';
 import { ClientPackagesTab } from '@/components/client/ClientPackagesTab';
@@ -253,6 +258,20 @@ export default function ClientDetail() {
               Notes
             </TabsTrigger>
             <TabsTrigger
+              value="actions"
+              className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none bg-transparent px-1 pb-3"
+            >
+              <CheckSquare className="h-4 w-4 mr-2" />
+              Actions
+            </TabsTrigger>
+            <TabsTrigger
+              value="timeline"
+              className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none bg-transparent px-1 pb-3"
+            >
+              <Activity className="h-4 w-4 mr-2" />
+              Timeline
+            </TabsTrigger>
+            <TabsTrigger
               value="integrations"
               className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none bg-transparent px-1 pb-3"
             >
@@ -305,7 +324,18 @@ export default function ClientDetail() {
           </TabsContent>
 
           <TabsContent value="notes" className="mt-0">
-            <ClientNotesTab tenantId={tenantIdNum!} packages={packages} />
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <ClientStructuredNotesTab tenantId={tenantIdNum!} clientId={tenant.id.toString()} />
+              <ClientNotesTab tenantId={tenantIdNum!} packages={packages} />
+            </div>
+          </TabsContent>
+
+          <TabsContent value="actions" className="mt-0">
+            <ClientActionItemsTab tenantId={tenantIdNum!} clientId={tenant.id.toString()} />
+          </TabsContent>
+
+          <TabsContent value="timeline" className="mt-0">
+            <ClientTimelineTab tenantId={tenantIdNum!} clientId={tenant.id.toString()} />
           </TabsContent>
 
           <TabsContent value="integrations" className="mt-0">
