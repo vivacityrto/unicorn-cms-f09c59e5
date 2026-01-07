@@ -32,6 +32,8 @@ import { ClientPackagesTab } from '@/components/client/ClientPackagesTab';
 import { ClientIntegrationsTab } from '@/components/client/ClientIntegrationsTab';
 import { ClientDocumentsTab } from '@/components/client/ClientDocumentsTab';
 import { TenantUsersTab } from '@/components/client/TenantUsersTab';
+import { ClientTimeWidget } from '@/components/client/ClientTimeWidget';
+import { ClientTimeSummaryCard } from '@/components/client/ClientTimeSummaryCard';
 
 interface TenantBasic {
   id: number;
@@ -209,9 +211,13 @@ export default function ClientDetail() {
               </div>
             </div>
 
-            {/* Quick Stats */}
-            <div className="flex items-center gap-4">
-              <div className="text-center">
+            {/* Time Widget + Quick Stats */}
+            <div className="flex items-center gap-6">
+              <ClientTimeWidget 
+                tenantId={tenantIdNum!} 
+                clientId={tenantIdNum!}
+              />
+              <div className="text-center border-l pl-6">
                 <p className="text-2xl font-bold">{packages.length}</p>
                 <p className="text-xs text-muted-foreground">Packages</p>
               </div>
@@ -285,7 +291,11 @@ export default function ClientDetail() {
       {/* Tab Content */}
       <div className="p-6">
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsContent value="overview" className="mt-0">
+          <TabsContent value="overview" className="mt-0 space-y-6">
+            {/* Time Summary Card */}
+            <ClientTimeSummaryCard clientId={tenantIdNum!} />
+            
+            {/* Profile Form */}
             {canEdit ? (
               <ClientProfileForm
                 profile={profile}
