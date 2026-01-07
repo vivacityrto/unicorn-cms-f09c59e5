@@ -5197,6 +5197,147 @@ export type Database = {
         }
         Relationships: []
       }
+      excel_generated_files: {
+        Row: {
+          client_legacy_id: string | null
+          document_id: number
+          dropdown_data_used: Json | null
+          file_name: string | null
+          generated_at: string
+          generated_by: string | null
+          id: string
+          merge_data_used: Json | null
+          package_id: number | null
+          stage_id: number | null
+          storage_path: string
+          tenant_id: number
+        }
+        Insert: {
+          client_legacy_id?: string | null
+          document_id: number
+          dropdown_data_used?: Json | null
+          file_name?: string | null
+          generated_at?: string
+          generated_by?: string | null
+          id?: string
+          merge_data_used?: Json | null
+          package_id?: number | null
+          stage_id?: number | null
+          storage_path: string
+          tenant_id: number
+        }
+        Update: {
+          client_legacy_id?: string | null
+          document_id?: number
+          dropdown_data_used?: Json | null
+          file_name?: string | null
+          generated_at?: string
+          generated_by?: string | null
+          id?: string
+          merge_data_used?: Json | null
+          package_id?: number | null
+          stage_id?: number | null
+          storage_path?: string
+          tenant_id?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "excel_generated_files_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "document_stage_usage"
+            referencedColumns: ["document_id"]
+          },
+          {
+            foreignKeyName: "excel_generated_files_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "documents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "excel_generated_files_package_id_fkey"
+            columns: ["package_id"]
+            isOneToOne: false
+            referencedRelation: "packages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "excel_generated_files_stage_id_fkey"
+            columns: ["stage_id"]
+            isOneToOne: false
+            referencedRelation: "documents_stages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "excel_generated_files_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      excel_template_bindings: {
+        Row: {
+          binding_version: number
+          created_at: string
+          detected_dropdowns: Json
+          detected_tokens: Json
+          document_id: number
+          dropdown_bindings: Json
+          id: string
+          last_validated_at: string | null
+          status: string
+          token_bindings: Json
+          updated_at: string
+          validation_errors: Json
+        }
+        Insert: {
+          binding_version?: number
+          created_at?: string
+          detected_dropdowns?: Json
+          detected_tokens?: Json
+          document_id: number
+          dropdown_bindings?: Json
+          id?: string
+          last_validated_at?: string | null
+          status?: string
+          token_bindings?: Json
+          updated_at?: string
+          validation_errors?: Json
+        }
+        Update: {
+          binding_version?: number
+          created_at?: string
+          detected_dropdowns?: Json
+          detected_tokens?: Json
+          document_id?: number
+          dropdown_bindings?: Json
+          id?: string
+          last_validated_at?: string | null
+          status?: string
+          token_bindings?: Json
+          updated_at?: string
+          validation_errors?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "excel_template_bindings_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: true
+            referencedRelation: "document_stage_usage"
+            referencedColumns: ["document_id"]
+          },
+          {
+            foreignKeyName: "excel_template_bindings_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: true
+            referencedRelation: "documents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       generated_documents: {
         Row: {
           client_legacy_id: string | null
@@ -5480,6 +5621,85 @@ export type Database = {
           tenant_id?: string
         }
         Relationships: []
+      }
+      lookup_list_items: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          label: string | null
+          list_id: string
+          sort_order: number
+          value: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          label?: string | null
+          list_id: string
+          sort_order?: number
+          value: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          label?: string | null
+          list_id?: string
+          sort_order?: number
+          value?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lookup_list_items_list_id_fkey"
+            columns: ["list_id"]
+            isOneToOne: false
+            referencedRelation: "lookup_lists"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lookup_lists: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          key: string
+          name: string
+          tenant_id: number | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          key: string
+          name: string
+          tenant_id?: number | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          key?: string
+          name?: string
+          tenant_id?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lookup_lists_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       membership_activity: {
         Row: {
@@ -11865,9 +12085,21 @@ export type Database = {
         Args: { p_prefs: Json }
         Returns: string
       }
+      upsert_excel_template_bindings: {
+        Args: {
+          p_detected_dropdowns: Json
+          p_detected_tokens: Json
+          p_document_id: number
+        }
+        Returns: string
+      }
       user_in_tenant: { Args: { p_tenant_id: number }; Returns: boolean }
       validate_document_readiness: {
         Args: { p_document_id: number; p_tenant_id?: number }
+        Returns: Json
+      }
+      validate_excel_bindings: {
+        Args: { p_document_id: number }
         Returns: Json
       }
       validate_release_readiness: {
