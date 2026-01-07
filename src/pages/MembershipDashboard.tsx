@@ -11,6 +11,7 @@ import { MembershipGrid } from '@/components/membership/MembershipGrid';
 import { MembershipActivityFeed } from '@/components/membership/MembershipActivityFeed';
 import { LogConsultDialog, AddNoteDialog, CreateTaskDialog } from '@/components/membership/MembershipDialogs';
 import { MembershipWithDetails } from '@/types/membership';
+import { MyWorkWidget } from '@/components/dashboard/MyWorkWidget';
 
 export default function MembershipDashboard() {
   const { profile } = useAuth();
@@ -116,6 +117,9 @@ export default function MembershipDashboard() {
             activeView={savedView}
             onViewChange={setSavedView}
           />
+
+          {/* My Work Widget */}
+          <MyWorkWidget />
 
           {/* Command Bar */}
           <MembershipCommandBar

@@ -12142,6 +12142,29 @@ export type Database = {
         }
         Returns: Json
       }
+      rpc_get_my_action_items: {
+        Args: {
+          p_include_overdue?: boolean
+          p_status_filter?: string
+          p_user_id: string
+        }
+        Returns: {
+          action_item_id: string
+          client_id: string
+          client_name: string
+          created_at: string
+          description: string
+          due_date: string
+          is_overdue: boolean
+          priority: string
+          related_entity_id: string
+          related_entity_type: string
+          source: string
+          status: string
+          tenant_id: number
+          title: string
+        }[]
+      }
       rpc_set_action_item_status: {
         Args: { p_action_item_id: string; p_status: string }
         Returns: Json

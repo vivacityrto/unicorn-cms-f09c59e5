@@ -80,6 +80,7 @@ import AdminStageAnalytics from "./pages/AdminStageAnalytics";
 import AdminOperations from "./pages/AdminOperations";
 import AdminCompliancePacks from "./pages/AdminCompliancePacks";
 import AdminReviews from "./pages/AdminReviews";
+import MyWork from "./pages/MyWork";
 
 const queryClient = new QueryClient();
 
@@ -295,6 +296,14 @@ const App = () => (
                   <ClientPackageDetailWrapper />
                 </ProtectedRoute>
               } 
+            />
+            <Route 
+              path="/my-work" 
+              element={
+                <ProtectedRoute>
+                  <MyWork />
+                </ProtectedRoute>
+              }
             />
             <Route 
               path="/tasks" 
