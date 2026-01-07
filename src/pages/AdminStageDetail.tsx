@@ -831,10 +831,10 @@ export default function AdminStageDetail() {
         </Button>
       </div>
 
-      {/* Two-Column Header Layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-[2fr_1fr] gap-6 items-start">
-        {/* Left Column: Header + Warnings + Tabs */}
-        <div className="space-y-6 min-w-0">
+      {/* Two-Column Header Layout: Stage Info + Quality Check */}
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-6 items-start mb-6">
+        {/* Left Column: Header Info */}
+        <div className="space-y-3 min-w-0">
           {/* Stage Header */}
           {isLoading ? (
             <div className="space-y-4">
@@ -842,7 +842,7 @@ export default function AdminStageDetail() {
               <Skeleton className="h-5 w-[200px]" />
             </div>
           ) : stage ? (
-            <div className="space-y-3">
+            <>
               <div className="flex items-center gap-3 flex-wrap">
                 <Layers className="h-7 w-7 shrink-0" />
                 <h1 className="text-2xl font-bold">{stage.title}</h1>
@@ -904,71 +904,84 @@ export default function AdminStageDetail() {
                   {isExporting ? 'Exporting...' : 'Export'}
                 </Button>
               </div>
-            </div>
+            </>
           ) : (
             <div className="text-center py-8">
               <p className="text-muted-foreground">Stage not found</p>
             </div>
           )}
+        </div>
 
-          {/* Warnings */}
-          {stage && (
-            <div className="space-y-3">
-              {isUsedByActiveClients && (
-                <Alert className="border-destructive/30 bg-destructive/5">
-                  <AlertTriangle className="h-4 w-4 text-destructive" />
-                  <AlertTitle className="text-destructive">This stage is in use by active clients</AlertTitle>
-                  <AlertDescription className="flex items-center justify-between gap-2 flex-wrap">
-                    <span className="text-destructive/80">
-                      {activeUsage.clients.length} active client{activeUsage.clients.length !== 1 ? 's' : ''} are using this stage. 
-                      Editing may affect their ongoing work.
-                    </span>
-                    <Button 
-                      size="sm" 
-                      variant="outline" 
-                      onClick={handleDuplicateStage}
-                      disabled={isDuplicating}
-                      className="border-destructive/30 text-destructive hover:bg-destructive/10"
-                    >
-                      <Copy className="h-3 w-3 mr-1" />
-                      {isDuplicating ? 'Duplicating...' : 'Duplicate & Edit Copy'}
-                    </Button>
-                  </AlertDescription>
-                </Alert>
-              )}
+        {/* Right Column: Quality Check */}
+        {stage && (
+          <div className="lg:sticky lg:top-6 self-start">
+            <StageQualityPanel 
+              result={qualityResult} 
+              isLoading={qualityLoading}
+              onRefresh={refetchQuality}
+            />
+          </div>
+        )}
+      </div>
 
-              {stage.is_certified && !isUsedByActiveClients && (
-                <Alert className="border-amber-500/30 bg-amber-500/5">
-                  <ShieldCheck className="h-4 w-4 text-amber-600" />
-                  <AlertDescription className="flex items-center justify-between gap-2 flex-wrap text-amber-800">
-                    <span>This is a certified template. Prefer duplicating before making major edits.</span>
-                    <Button 
-                      size="sm" 
-                      variant="outline" 
-                      onClick={handleDuplicateStage}
-                      disabled={isDuplicating}
-                    >
-                      <Copy className="h-3 w-3 mr-1" />
-                      {isDuplicating ? 'Duplicating...' : 'Duplicate Stage'}
-                    </Button>
-                  </AlertDescription>
-                </Alert>
-              )}
-
-              {isReused && !isUsedByActiveClients && !stage.is_certified && (
-                <Alert className="border-blue-500/30 bg-blue-500/5">
-                  <Info className="h-4 w-4 text-blue-600" />
-                  <AlertDescription className="text-blue-800">
-                    This stage is shared across {usageCount} packages. Changes will affect all of them.
-                  </AlertDescription>
-                </Alert>
-              )}
-            </div>
+      {/* Warnings - Full Width */}
+      {stage && (
+        <div className="space-y-3 mb-6">
+          {isUsedByActiveClients && (
+            <Alert className="border-destructive/30 bg-destructive/5">
+              <AlertTriangle className="h-4 w-4 text-destructive" />
+              <AlertTitle className="text-destructive">This stage is in use by active clients</AlertTitle>
+              <AlertDescription className="flex items-center justify-between gap-2 flex-wrap">
+                <span className="text-destructive/80">
+                  {activeUsage.clients.length} active client{activeUsage.clients.length !== 1 ? 's' : ''} are using this stage. 
+                  Editing may affect their ongoing work.
+                </span>
+                <Button 
+                  size="sm" 
+                  variant="outline" 
+                  onClick={handleDuplicateStage}
+                  disabled={isDuplicating}
+                  className="border-destructive/30 text-destructive hover:bg-destructive/10"
+                >
+                  <Copy className="h-3 w-3 mr-1" />
+                  {isDuplicating ? 'Duplicating...' : 'Duplicate & Edit Copy'}
+                </Button>
+              </AlertDescription>
+            </Alert>
           )}
 
-          {/* Tabs - Inside left column */}
-          {stage && (
-            <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
+          {stage.is_certified && !isUsedByActiveClients && (
+            <Alert className="border-amber-500/30 bg-amber-500/5">
+              <ShieldCheck className="h-4 w-4 text-amber-600" />
+              <AlertDescription className="flex items-center justify-between gap-2 flex-wrap text-amber-800">
+                <span>This is a certified template. Prefer duplicating before making major edits.</span>
+                <Button 
+                  size="sm" 
+                  variant="outline" 
+                  onClick={handleDuplicateStage}
+                  disabled={isDuplicating}
+                >
+                  <Copy className="h-3 w-3 mr-1" />
+                  {isDuplicating ? 'Duplicating...' : 'Duplicate Stage'}
+                </Button>
+              </AlertDescription>
+            </Alert>
+          )}
+
+          {isReused && !isUsedByActiveClients && !stage.is_certified && (
+            <Alert className="border-blue-500/30 bg-blue-500/5">
+              <Info className="h-4 w-4 text-blue-600" />
+              <AlertDescription className="text-blue-800">
+                This stage is shared across {usageCount} packages. Changes will affect all of them.
+              </AlertDescription>
+            </Alert>
+          )}
+        </div>
+      )}
+
+      {/* Tabs - Full Width */}
+      {stage && (
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
           <TabsList className="grid w-full grid-cols-7">
             <TabsTrigger value="settings" className="text-xs">
               <Settings className="h-3 w-3 mr-1" />
@@ -1628,22 +1641,8 @@ export default function AdminStageDetail() {
               </CardContent>
             </Card>
           </TabsContent>
-            </Tabs>
-          )}
-        </div>
-
-        {/* Right Column: Quality Check - Sticky on desktop */}
-        {stage && (
-          <div className="lg:sticky lg:top-6 self-start order-first lg:order-last">
-            <StageQualityPanel 
-              result={qualityResult} 
-              isLoading={qualityLoading}
-              onRefresh={refetchQuality}
-            />
-          </div>
-        )}
-      </div>
-
+        </Tabs>
+      )}
       {/* Dialogs */}
       
       {/* Add Staff Task Dialog */}
