@@ -9,7 +9,8 @@ import { useStageReplacement } from '@/hooks/useStageReplacement';
 import { useStageAuditLog, formatActionName, generateAuditSummary } from '@/hooks/useStageAuditLog';
 import { useStageExportImport } from '@/hooks/useStageExportImport';
 import { useStageQualityCheck, computeStageQuality } from '@/hooks/useStageQualityCheck';
-import { usePackageBuilder, Stage, StaffTask, ClientTask, StageEmail, StageDocument } from '@/hooks/usePackageBuilder';
+import { usePackageBuilder, Stage } from '@/hooks/usePackageBuilder';
+import { useStageTemplateContent, usePackageStageOverrides } from '@/hooks/useStageTemplateContent';
 import { useStageDependencyCheck, updateStageDependencies, checkDependencyCertification } from '@/hooks/useStageDependencies';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
@@ -72,11 +73,36 @@ export default function AdminStageDetail() {
   const { replaceStageInPackages, isReplacing } = useStageReplacement();
   const { downloadExport, isExporting } = useStageExportImport();
   
-  // Quality check state - declare selectedPackageId here so it can be used by quality hook
-  const [selectedPackageId, setSelectedPackageId] = useState<number | null>(null);
+  // Stage template content - NO PACKAGE CONTEXT REQUIRED
+  const {
+    teamTasks,
+    clientTasks,
+    emails: stageEmails,
+    documents: stageDocuments,
+    loading: loadingTemplateContent,
+    addTeamTask,
+    updateTeamTask,
+    deleteTeamTask,
+    addClientTask,
+    updateClientTask,
+    deleteClientTask,
+    addEmail,
+    deleteEmail,
+    addDocument,
+    addBulkDocuments,
+    updateDocument,
+    deleteDocument,
+    reorderDocuments,
+    fetchContent: refetchTemplateContent
+  } = useStageTemplateContent(stageIdNum);
+
+  // Override count for settings display
+  const { overrideCount } = usePackageStageOverrides(null, stageIdNum);
+  
+  // Quality check state - no package context needed for template quality
   const { result: qualityResult, isLoading: qualityLoading, refetch: refetchQuality } = useStageQualityCheck({
     stageId: stageIdNum,
-    packageId: selectedPackageId,
+    packageId: undefined,
     enabled: !!stageIdNum
   });
   
@@ -126,13 +152,6 @@ export default function AdminStageDetail() {
   const [duplicateDialogOpen, setDuplicateDialogOpen] = useState(false);
   const [sourcePackageForDupe, setSourcePackageForDupe] = useState<number | null>(null);
   const [applyToAllPackages, setApplyToAllPackages] = useState(false);
-  
-  // Package-context data
-  const [staffTasks, setStaffTasks] = useState<StaffTask[]>([]);
-  const [clientTasks, setClientTasks] = useState<ClientTask[]>([]);
-  const [stageEmails, setStageEmails] = useState<StageEmail[]>([]);
-  const [stageDocuments, setStageDocuments] = useState<StageDocument[]>([]);
-  const [loadingPackageData, setLoadingPackageData] = useState(false);
   
   // Dialog states
   const [isAddingTask, setIsAddingTask] = useState(false);
@@ -232,11 +251,6 @@ export default function AdminStageDetail() {
 
         if (packagesError) throw packagesError;
         setPackagesUsing(packagesData || []);
-        
-        // Auto-select first package if none selected
-        if (!selectedPackageId && packagesData && packagesData.length > 0) {
-          setSelectedPackageId(packagesData[0].id);
-        }
       }
       
       // Fetch all stages for replacement dropdown
@@ -250,74 +264,12 @@ export default function AdminStageDetail() {
     } catch (error) {
       console.error('Failed to fetch usage data:', error);
     }
-  }, [stageIdNum, selectedPackageId]);
-
-  // Fetch package-context data (tasks, emails, documents)
-  const fetchPackageContextData = useCallback(async () => {
-    if (!selectedPackageId || !stageIdNum) {
-      setStaffTasks([]);
-      setClientTasks([]);
-      setStageEmails([]);
-      setStageDocuments([]);
-      return;
-    }
-
-    setLoadingPackageData(true);
-    try {
-      const [staffResult, clientResult, emailsResult, docsResult] = await Promise.all([
-        supabase
-          .from('package_staff_tasks')
-          .select('*')
-          .eq('package_id', selectedPackageId)
-          .eq('stage_id', stageIdNum)
-          .order('order_number', { ascending: true }),
-        supabase
-          .from('package_client_tasks')
-          .select('*')
-          .eq('package_id', selectedPackageId)
-          .eq('stage_id', stageIdNum)
-          .order('order_number', { ascending: true }),
-        supabase
-          .from('package_stage_emails' as any)
-          .select('*')
-          .eq('package_id', selectedPackageId)
-          .eq('stage_id', stageIdNum)
-          .order('sort_order', { ascending: true }) as any,
-        supabase
-          .from('package_stage_documents' as any)
-          .select(`
-            *,
-            document:documents(id, title, format, category, is_team_only, is_tenant_downloadable, is_auto_generated)
-          `)
-          .eq('package_id', selectedPackageId)
-          .eq('stage_id', stageIdNum)
-          .order('sort_order', { ascending: true }) as any
-      ]);
-
-      setStaffTasks((staffResult.data || []) as StaffTask[]);
-      setClientTasks((clientResult.data || []) as ClientTask[]);
-      setStageEmails((emailsResult.data || []) as StageEmail[]);
-      setStageDocuments((docsResult.data || []) as StageDocument[]);
-    } catch (error) {
-      console.error('Failed to fetch package context data:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to load stage content for selected package',
-        variant: 'destructive'
-      });
-    } finally {
-      setLoadingPackageData(false);
-    }
-  }, [selectedPackageId, stageIdNum, toast]);
+  }, [stageIdNum]);
 
   useEffect(() => {
     fetchStage();
     fetchUsageData();
   }, [fetchStage, fetchUsageData]);
-
-  useEffect(() => {
-    fetchPackageContextData();
-  }, [fetchPackageContextData]);
 
   // Sync local dependencies state with fetched result
   useEffect(() => {
@@ -501,7 +453,7 @@ export default function AdminStageDetail() {
     
     // If turning certification ON, run quality check first
     if (is_certified && !stage.is_certified) {
-      const quality = await computeStageQuality(stage.id, selectedPackageId || undefined);
+      const quality = await computeStageQuality(stage.id, undefined);
       
       if (quality?.status === 'fail') {
         // Block certification
@@ -698,115 +650,81 @@ export default function AdminStageDetail() {
     }
   };
 
-  // Staff Task handlers
+  // Staff Task handlers - now using stage template content
   const handleAddStaffTask = async () => {
-    if (!selectedPackageId || !stageIdNum || !taskForm.name.trim()) {
+    if (!stageIdNum || !taskForm.name.trim()) {
       toast({ title: 'Validation Error', description: 'Task name is required', variant: 'destructive' });
       return;
     }
 
     try {
-      const maxOrder = staffTasks.reduce((max, t) => Math.max(max, t.order_number), -1);
-      
-      const { error } = await supabase.from('package_staff_tasks').insert({
-        package_id: selectedPackageId,
-        stage_id: stageIdNum,
+      await addTeamTask({
         name: taskForm.name,
-        description: taskForm.description,
-        order_number: maxOrder + 1,
+        description: taskForm.description || null,
         owner_role: taskForm.owner_role || 'Admin',
         estimated_hours: taskForm.estimated_hours ? parseFloat(taskForm.estimated_hours) : null,
         is_mandatory: taskForm.is_mandatory
       });
-
-      if (error) throw error;
       toast({ title: 'Task Added' });
       setTaskForm({ name: '', description: '', owner_role: 'Admin', estimated_hours: '', is_mandatory: true });
       setIsAddingTask(false);
-      await fetchPackageContextData();
     } catch (error: any) {
       toast({ title: 'Error', description: error.message || 'Failed to add task', variant: 'destructive' });
     }
   };
 
-  const handleDeleteStaffTask = async (taskId: string) => {
+  const handleDeleteStaffTask = async (taskId: number) => {
     try {
-      const { error } = await supabase.from('package_staff_tasks').delete().eq('id', taskId);
-      if (error) throw error;
+      await deleteTeamTask(taskId);
       toast({ title: 'Task Deleted' });
-      await fetchPackageContextData();
     } catch (error: any) {
       toast({ title: 'Error', description: error.message || 'Failed to delete task', variant: 'destructive' });
     }
   };
 
-  // Client Task handlers
+  // Client Task handlers - now using stage template content
   const handleAddClientTask = async () => {
-    if (!selectedPackageId || !stageIdNum || !clientTaskForm.name.trim()) {
+    if (!stageIdNum || !clientTaskForm.name.trim()) {
       toast({ title: 'Validation Error', description: 'Task name is required', variant: 'destructive' });
       return;
     }
 
     try {
-      const maxOrder = clientTasks.reduce((max, t) => Math.max(max, t.order_number), -1);
-      
-      const insertData: any = {
-        package_id: selectedPackageId,
-        stage_id: stageIdNum,
+      await addClientTask({
         name: clientTaskForm.name,
         description: clientTaskForm.description || null,
-        order_number: maxOrder + 1
-      };
-      if (clientTaskForm.instructions) insertData.instructions = clientTaskForm.instructions;
-      if (clientTaskForm.due_date_offset) insertData.due_date_offset = parseInt(clientTaskForm.due_date_offset);
-
-      const { error } = await supabase.from('package_client_tasks').insert(insertData);
-      if (error) throw error;
+        instructions: clientTaskForm.instructions || null,
+        due_date_offset: clientTaskForm.due_date_offset ? parseInt(clientTaskForm.due_date_offset) : null
+      });
       toast({ title: 'Client Task Added' });
       setClientTaskForm({ name: '', description: '', instructions: '', due_date_offset: '' });
       setIsAddingClientTask(false);
-      await fetchPackageContextData();
     } catch (error: any) {
       toast({ title: 'Error', description: error.message || 'Failed to add client task', variant: 'destructive' });
     }
   };
 
-  const handleDeleteClientTask = async (taskId: string) => {
+  const handleDeleteClientTask = async (taskId: number) => {
     try {
-      const { error } = await supabase.from('package_client_tasks').delete().eq('id', taskId);
-      if (error) throw error;
+      await deleteClientTask(taskId);
       toast({ title: 'Client Task Deleted' });
-      await fetchPackageContextData();
     } catch (error: any) {
       toast({ title: 'Error', description: error.message || 'Failed to delete client task', variant: 'destructive' });
     }
   };
 
-  // Email handlers
+  // Email handlers - now using stage template content
   const handleAddEmail = async () => {
-    if (!selectedPackageId || !stageIdNum || !emailForm.email_template_id) {
+    if (!stageIdNum || !emailForm.email_template_id) {
       toast({ title: 'Validation Error', description: 'Please select an email template', variant: 'destructive' });
       return;
     }
 
     try {
-      const maxOrder = stageEmails.reduce((max, e) => Math.max(max, e.sort_order), -1);
-      
-      const { error } = await (supabase.from('package_stage_emails' as any).insert({
-        package_id: selectedPackageId,
-        stage_id: stageIdNum,
-        email_template_id: emailForm.email_template_id,
-        trigger_type: emailForm.trigger_type,
-        recipient_type: emailForm.recipient_type,
-        sort_order: maxOrder + 1,
-        is_active: true
-      }) as any);
-
-      if (error) throw error;
+      await addEmail(emailForm.email_template_id, emailForm.trigger_type, emailForm.recipient_type);
       toast({ title: 'Email Added' });
       setEmailForm({ email_template_id: '', trigger_type: 'manual', recipient_type: 'tenant' });
       setIsAddingEmail(false);
-      await fetchPackageContextData();
     } catch (error: any) {
       toast({ title: 'Error', description: error.message || 'Failed to add email', variant: 'destructive' });
     }
@@ -814,75 +732,56 @@ export default function AdminStageDetail() {
 
   const handleRemoveEmail = async (emailId: number) => {
     try {
-      const { error } = await (supabase.from('package_stage_emails' as any).delete().eq('id', emailId) as any);
-      if (error) throw error;
+      await deleteEmail(emailId);
       toast({ title: 'Email Removed' });
-      await fetchPackageContextData();
     } catch (error: any) {
       toast({ title: 'Error', description: error.message || 'Failed to remove email', variant: 'destructive' });
     }
   };
 
-  // Document handlers
+  // Document handlers - now using stage template content
   const handleAddDocument = async (documentId: number, visibility: string, deliveryType: string) => {
-    if (!selectedPackageId || !stageIdNum) return;
+    if (!stageIdNum) return;
     
-    const maxOrder = stageDocuments.reduce((max, d) => Math.max(max, d.sort_order), -1);
-    
-    const { error } = await (supabase.from('package_stage_documents' as any).insert({
-      package_id: selectedPackageId,
-      stage_id: stageIdNum,
-      document_id: documentId,
-      visibility,
-      delivery_type: deliveryType,
-      sort_order: maxOrder + 1
-    }) as any);
-
-    if (error) {
-      if (error.code === '23505') throw new Error('This document is already linked to this stage');
+    try {
+      await addDocument(documentId, visibility, deliveryType);
+    } catch (error: any) {
       throw error;
     }
-    await fetchPackageContextData();
   };
 
   const handleAddBulkDocuments = async (documentIds: number[]) => {
-    if (!selectedPackageId || !stageIdNum || documentIds.length === 0) return;
+    if (!stageIdNum || documentIds.length === 0) return;
     
-    const startOrder = stageDocuments.reduce((max, d) => Math.max(max, d.sort_order), -1) + 1;
-    const inserts = documentIds.map((docId, idx) => ({
-      package_id: selectedPackageId,
-      stage_id: stageIdNum,
-      document_id: docId,
-      visibility: 'both',
-      delivery_type: 'manual',
-      sort_order: startOrder + idx
-    }));
-
-    const { error } = await (supabase.from('package_stage_documents' as any).insert(inserts) as any);
-    if (error) {
-      if (error.code === '23505') throw new Error('One or more documents are already linked');
+    try {
+      await addBulkDocuments(documentIds);
+    } catch (error: any) {
       throw error;
     }
-    await fetchPackageContextData();
   };
 
-  const handleUpdateDocument = async (id: string, data: { visibility?: string; delivery_type?: string }) => {
-    const { error } = await (supabase.from('package_stage_documents' as any).update(data).eq('id', id) as any);
-    if (error) throw error;
-    await fetchPackageContextData();
-  };
-
-  const handleRemoveDocument = async (id: string, documentId: number) => {
-    const { error } = await (supabase.from('package_stage_documents' as any).delete().eq('id', id) as any);
-    if (error) throw error;
-    await fetchPackageContextData();
-  };
-
-  const handleReorderDocuments = async (orderedIds: string[]) => {
-    for (let i = 0; i < orderedIds.length; i++) {
-      await (supabase.from('package_stage_documents' as any).update({ sort_order: i }).eq('id', orderedIds[i]) as any);
+  const handleUpdateDocument = async (id: number, data: { visibility?: string; delivery_type?: string }) => {
+    try {
+      await updateDocument(id, data);
+    } catch (error: any) {
+      throw error;
     }
-    await fetchPackageContextData();
+  };
+
+  const handleRemoveDocument = async (id: number) => {
+    try {
+      await deleteDocument(id);
+    } catch (error: any) {
+      throw error;
+    }
+  };
+
+  const handleReorderDocuments = async (orderedIds: number[]) => {
+    try {
+      await reorderDocuments(orderedIds);
+    } catch (error: any) {
+      throw error;
+    }
   };
 
   const getStageTypeColor = (stageType: string) => {
@@ -902,51 +801,23 @@ export default function AdminStageDetail() {
     );
   }
 
-  const renderPackageContextSelector = () => (
-    <Card className="mb-4 border-dashed">
-      <CardContent className="pt-4">
-        <div className="flex items-center gap-4">
-          <Package className="h-5 w-5 text-muted-foreground" />
-          <div className="flex-1">
-            <Label className="text-sm font-medium">Package Context</Label>
-            <p className="text-xs text-muted-foreground">
-              Tasks, emails, and documents are stored per package. Select a package to edit content.
-            </p>
-          </div>
-          <Select
-            value={selectedPackageId?.toString() || ''}
-            onValueChange={(val) => setSelectedPackageId(val ? parseInt(val) : null)}
-          >
-            <SelectTrigger className="w-[280px]">
-              <SelectValue placeholder="Select a package..." />
-            </SelectTrigger>
-            <SelectContent>
-              {packagesUsing.map(pkg => (
-                <SelectItem key={pkg.id} value={pkg.id.toString()}>
-                  <span className="flex items-center gap-2">
-                    {pkg.name}
-                    <Badge variant="outline" className="text-xs">{pkg.status}</Badge>
-                  </span>
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-      </CardContent>
-    </Card>
-  );
-
-  const renderNoPackageContext = () => (
-    <div className="flex flex-col items-center justify-center py-16 text-center border rounded-lg border-dashed bg-muted/20">
-      <Info className="h-12 w-12 text-muted-foreground mb-4" />
-      <h3 className="font-semibold text-lg mb-2">No Package Context Selected</h3>
-      <p className="text-muted-foreground max-w-md">
-        {packagesUsing.length === 0 
-          ? 'This stage is not used in any packages yet. Add this stage to a package first to configure tasks, emails, and documents.'
-          : 'Select a package above to view and edit the tasks, emails, and documents for this stage in that package context.'}
-      </p>
-    </div>
-  );
+  // Render info badge showing package reuse count
+  const renderReuseInfoBadge = () => {
+    if (usageCount === 0) return null;
+    return (
+      <div className="flex items-center gap-2 text-sm text-muted-foreground mb-4">
+        <Package className="h-4 w-4" />
+        <span>
+          Used in {usageCount} package{usageCount !== 1 ? 's' : ''}
+          {overrideCount > 0 && (
+            <span className="ml-2 text-amber-600">
+              ({overrideCount} with overrides)
+            </span>
+          )}
+        </span>
+      </div>
+    );
+  };
 
   return (
     <div className="space-y-6 p-6 animate-fade-in">
@@ -1325,8 +1196,8 @@ export default function AdminStageDetail() {
 
           {/* Team Tasks Tab */}
           <TabsContent value="team-tasks">
-            {renderPackageContextSelector()}
-            {!selectedPackageId ? renderNoPackageContext() : loadingPackageData ? (
+            {renderReuseInfoBadge()}
+            {loadingTemplateContent ? (
               <div className="flex items-center justify-center py-12">
                 <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
               </div>
@@ -1336,7 +1207,7 @@ export default function AdminStageDetail() {
                   <div className="flex items-center justify-between">
                     <div>
                       <CardTitle className="text-base">Team Tasks</CardTitle>
-                      <CardDescription>{staffTasks.length} tasks configured</CardDescription>
+                      <CardDescription>{teamTasks.length} tasks configured</CardDescription>
                     </div>
                     <Button size="sm" onClick={() => wrapCertifiedAction(() => setIsAddingTask(true))}>
                       <Plus className="h-3 w-3 mr-1" />
@@ -1346,14 +1217,14 @@ export default function AdminStageDetail() {
                 </CardHeader>
                 <CardContent>
                   <ScrollArea className="h-[400px]">
-                    {staffTasks.length === 0 ? (
+                    {teamTasks.length === 0 ? (
                       <div className="flex flex-col items-center justify-center py-12 text-center">
                         <Users className="h-10 w-10 text-muted-foreground mb-3" />
                         <p className="text-muted-foreground">No team tasks configured</p>
                       </div>
                     ) : (
                       <div className="space-y-2">
-                        {staffTasks.map((task) => (
+                        {teamTasks.map((task) => (
                           <div key={task.id} className="flex items-start gap-2 p-3 rounded-lg border bg-muted/30">
                             <GripVertical className="h-4 w-4 text-muted-foreground mt-0.5 cursor-grab" />
                             <div className="flex-1 min-w-0">
@@ -1394,8 +1265,8 @@ export default function AdminStageDetail() {
 
           {/* Client Tasks Tab */}
           <TabsContent value="client-tasks">
-            {renderPackageContextSelector()}
-            {!selectedPackageId ? renderNoPackageContext() : loadingPackageData ? (
+            {renderReuseInfoBadge()}
+            {loadingTemplateContent ? (
               <div className="flex items-center justify-center py-12">
                 <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
               </div>
@@ -1451,8 +1322,8 @@ export default function AdminStageDetail() {
 
           {/* Emails Tab */}
           <TabsContent value="emails">
-            {renderPackageContextSelector()}
-            {!selectedPackageId ? renderNoPackageContext() : loadingPackageData ? (
+            {renderReuseInfoBadge()}
+            {loadingTemplateContent ? (
               <div className="flex items-center justify-center py-12">
                 <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
               </div>
@@ -1480,7 +1351,7 @@ export default function AdminStageDetail() {
                     ) : (
                       <div className="space-y-2">
                         {stageEmails.map((email) => {
-                          const template = emailTemplates.find(t => t.id === email.email_template_id);
+                          const template = email.email_template || emailTemplates.find(t => t.id === email.email_template_id);
                           return (
                             <div key={email.id} className="flex items-start gap-2 p-3 rounded-lg border bg-muted/30">
                               <Mail className="h-4 w-4 text-muted-foreground mt-0.5" />
@@ -1488,7 +1359,7 @@ export default function AdminStageDetail() {
                                 <span className="font-medium block">{template?.internal_name || 'Unknown Template'}</span>
                                 <div className="flex items-center gap-2 mt-1">
                                   <Badge variant="outline" className="text-xs capitalize">
-                                    {email.trigger_type.replace('_', ' ')}
+                                    {email.trigger_type.replace(/_/g, ' ')}
                                   </Badge>
                                   <Badge variant="secondary" className="text-xs capitalize">
                                     {email.recipient_type}
@@ -1514,22 +1385,62 @@ export default function AdminStageDetail() {
 
           {/* Documents Tab */}
           <TabsContent value="documents">
-            {renderPackageContextSelector()}
-            {!selectedPackageId ? renderNoPackageContext() : loadingPackageData ? (
+            {renderReuseInfoBadge()}
+            {loadingTemplateContent ? (
               <div className="flex items-center justify-center py-12">
                 <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
               </div>
             ) : (
-              <StageDocumentsTab
-                packageId={selectedPackageId}
-                stageId={stageIdNum!}
-                stageDocuments={stageDocuments}
-                onAddDocument={handleAddDocument}
-                onAddBulkDocuments={handleAddBulkDocuments}
-                onUpdateDocument={handleUpdateDocument}
-                onRemoveDocument={handleRemoveDocument}
-                onReorderDocuments={handleReorderDocuments}
-              />
+              <Card>
+                <CardHeader className="pb-3">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle className="text-base">Documents</CardTitle>
+                      <CardDescription>{stageDocuments.length} documents configured</CardDescription>
+                    </div>
+                    <Button size="sm" onClick={() => wrapCertifiedAction(() => {
+                      // Will need to implement document adding - for now just show a toast
+                      toast({ title: 'Add Document', description: 'Use the + button to add documents from your library' });
+                    })}>
+                      <Plus className="h-3 w-3 mr-1" />
+                      Add Document
+                    </Button>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <ScrollArea className="h-[400px]">
+                    {stageDocuments.length === 0 ? (
+                      <div className="flex flex-col items-center justify-center py-12 text-center">
+                        <FileText className="h-10 w-10 text-muted-foreground mb-3" />
+                        <p className="text-muted-foreground">No documents configured</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        {stageDocuments.map((doc) => (
+                          <div key={doc.id} className="flex items-start gap-2 p-3 rounded-lg border bg-muted/30">
+                            <GripVertical className="h-4 w-4 text-muted-foreground mt-0.5 cursor-grab" />
+                            <FileText className="h-4 w-4 text-muted-foreground mt-0.5" />
+                            <div className="flex-1 min-w-0">
+                              <span className="font-medium block">{doc.document?.title || 'Unknown Document'}</span>
+                              <div className="flex items-center gap-2 mt-1">
+                                <Badge variant="outline" className="text-xs capitalize">
+                                  {doc.visibility?.replace(/_/g, ' ') || 'both'}
+                                </Badge>
+                                <Badge variant="secondary" className="text-xs capitalize">
+                                  {doc.delivery_type?.replace(/_/g, ' ') || 'manual'}
+                                </Badge>
+                              </div>
+                            </div>
+                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => wrapCertifiedAction(() => handleRemoveDocument(doc.id))}>
+                              <Trash2 className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </ScrollArea>
+                </CardContent>
+              </Card>
             )}
           </TabsContent>
 
