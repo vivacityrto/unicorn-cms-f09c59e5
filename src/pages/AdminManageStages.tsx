@@ -71,6 +71,7 @@ import {
 import { AddStageDialog } from '@/components/AddStageDialog';
 import { StagePreviewDialog } from '@/components/package-builder/StagePreviewDialog';
 import { StageQualityIndicator } from '@/components/stage/StageQualityIndicator';
+import { StageDependencyIndicator } from '@/components/stage/StageDependencyIndicator';
 import { Stage } from '@/hooks/usePackageBuilder';
 import { format } from 'date-fns';
 
@@ -648,6 +649,7 @@ export default function AdminManageStages() {
                           Archived
                         </Badge>
                       )}
+                      <StageDependencyIndicator stageId={stage.id} />
                     </div>
                     {stage.stage_key && (
                       <p className="text-xs text-muted-foreground mt-0.5 font-mono">

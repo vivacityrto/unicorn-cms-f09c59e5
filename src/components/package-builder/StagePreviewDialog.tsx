@@ -5,6 +5,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { supabase } from '@/integrations/supabase/client';
 import { Stage } from '@/hooks/usePackageBuilder';
+import { useStageDependencyCheck } from '@/hooks/useStageDependencies';
 import { 
   Layers, 
   Users, 
@@ -15,7 +16,8 @@ import {
   ShieldCheck,
   Video,
   Clock,
-  CheckCircle2
+  CheckCircle2,
+  Link2
 } from 'lucide-react';
 
 interface StagePreviewDialogProps {
@@ -69,6 +71,8 @@ export function StagePreviewDialog({ open, onOpenChange, stage }: StagePreviewDi
     emails: [],
     documents: []
   });
+  
+  const { result: dependencyResult } = useStageDependencyCheck(stage?.id || null);
 
   useEffect(() => {
     if (open && stage) {
@@ -218,6 +222,27 @@ export function StagePreviewDialog({ open, onOpenChange, stage }: StagePreviewDi
                 <p className="text-sm text-muted-foreground">
                   Used in <span className="font-medium">{stage.usage_count}</span> package{stage.usage_count !== 1 ? 's' : ''}
                 </p>
+              )}
+              
+              {/* Dependencies */}
+              {dependencyResult?.has_dependencies && (
+                <div className="mt-3 p-3 bg-blue-500/5 border border-blue-500/20 rounded-lg">
+                  <div className="flex items-center gap-2 text-sm font-medium text-blue-700 mb-2">
+                    <Link2 className="h-4 w-4" />
+                    Depends on:
+                  </div>
+                  <ul className="space-y-1">
+                    {dependencyResult.resolved_dependencies.map((dep) => (
+                      <li key={dep.stage_key} className="text-sm flex items-center gap-2">
+                        <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
+                        {dep.title}
+                        {dep.version_label && (
+                          <span className="text-muted-foreground">({dep.version_label})</span>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
               )}
             </div>
 

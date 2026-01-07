@@ -10,6 +10,7 @@ import { useStageAuditLog, formatActionName, generateAuditSummary } from '@/hook
 import { useStageExportImport } from '@/hooks/useStageExportImport';
 import { useStageQualityCheck, computeStageQuality } from '@/hooks/useStageQualityCheck';
 import { usePackageBuilder, Stage, StaffTask, ClientTask, StageEmail, StageDocument } from '@/hooks/usePackageBuilder';
+import { useStageDependencyCheck, updateStageDependencies, checkDependencyCertification } from '@/hooks/useStageDependencies';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -32,10 +33,11 @@ import {
   ArrowLeft, Layers, ShieldCheck, ShieldX, Settings, Users, CheckSquare, 
   Mail, FileText, BarChart3, History, Copy, AlertTriangle, Plus, Trash2, 
   User, Clock, GripVertical, Package, Info, Loader2, RefreshCw, ExternalLink,
-  Archive, Download, ChevronDown, ChevronRight, Calendar, Shield
+  Archive, Download, ChevronDown, ChevronRight, Calendar, Shield, Link2
 } from 'lucide-react';
 import { StageDocumentsTab } from '@/components/package-builder/StageDocumentsTab';
 import { StageQualityPanel, StageQualityBadge } from '@/components/stage/StageQualityPanel';
+import { StageDependencySelector } from '@/components/stage/StageDependencySelector';
 import { format } from 'date-fns';
 
 const STAGE_TYPE_OPTIONS = [
@@ -79,6 +81,11 @@ export default function AdminStageDetail() {
   const [certBlockDialogOpen, setCertBlockDialogOpen] = useState(false);
   const [certWarnDialogOpen, setCertWarnDialogOpen] = useState(false);
   const [pendingCertNotes, setPendingCertNotes] = useState<string | null>(null);
+  const [certWarningMessages, setCertWarningMessages] = useState<string[]>([]);
+  
+  // Dependencies state
+  const { result: dependencyResult, refetch: refetchDependencies } = useStageDependencyCheck(stageIdNum);
+  const [localDependencies, setLocalDependencies] = useState<string[]>([]);
   
   const [stage, setStage] = useState<Stage | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -298,6 +305,13 @@ export default function AdminStageDetail() {
     fetchPackageContextData();
   }, [fetchPackageContextData]);
 
+  // Sync local dependencies state with fetched result
+  useEffect(() => {
+    if (dependencyResult) {
+      setLocalDependencies(dependencyResult.requires_stage_keys);
+    }
+  }, [dependencyResult]);
+
   const handleUpdateStage = async (updates: Partial<Stage>) => {
     if (!stage) return;
     
@@ -359,6 +373,21 @@ export default function AdminStageDetail() {
     }
   };
 
+  const handleUpdateDependencies = async (stageKeys: string[]) => {
+    if (!stage) return;
+    setLocalDependencies(stageKeys);
+    const success = await updateStageDependencies(stage.id, stageKeys, stage.title);
+    if (success) {
+      refetchDependencies();
+    } else {
+      toast({
+        title: 'Error',
+        description: 'Failed to update dependencies',
+        variant: 'destructive'
+      });
+    }
+  };
+
   const confirmAndApplyUpdate = async () => {
     // Validate the typed phrase
     if (confirmPhrase !== CONFIRM_PHRASE_REQUIRED) {
@@ -414,12 +443,33 @@ export default function AdminStageDetail() {
         return;
       }
       
-      // Check for version label warning (soft, non-blocking)
-      const hasVersionLabelWarning = !(stage as any).version_label;
+      // Collect warning messages
+      const warningMessages: string[] = [];
       
-      if (quality?.status === 'warn' || hasVersionLabelWarning) {
+      // Check for version label warning (soft, non-blocking)
+      if (!(stage as any).version_label) {
+        warningMessages.push('Consider setting a version label before certifying this stage.');
+      }
+      
+      // Check if dependencies are on non-certified stages
+      if (localDependencies.length > 0) {
+        const depCheck = await checkDependencyCertification(localDependencies);
+        if (!depCheck.allCertified) {
+          warningMessages.push(`This stage depends on non-certified stages: ${depCheck.uncertified.join(', ')}`);
+        }
+      }
+      
+      // Quality warnings
+      if (quality?.status === 'warn') {
+        quality.checks
+          .filter(c => c.status === 'warn')
+          .forEach(c => warningMessages.push(c.message));
+      }
+      
+      if (warningMessages.length > 0) {
         // Show warning confirmation
         setPendingCertNotes(certified_notes);
+        setCertWarningMessages(warningMessages);
         setCertWarnDialogOpen(true);
         return;
       }
@@ -437,18 +487,22 @@ export default function AdminStageDetail() {
         setStage(prev => prev ? { ...prev, is_certified, certified_notes } : null);
         refetchQuality();
         
-        // Log if certified with warnings
-        if (is_certified && qualityResult?.status === 'warn') {
+        // Log if certified with warnings (including dependency warnings)
+        if (is_certified && certWarningMessages.length > 0) {
+          const hasDependencyWarning = certWarningMessages.some(m => m.includes('non-certified stages'));
+          
           await supabase.from('audit_events').insert({
             entity: 'stage',
             entity_id: stage.id.toString(),
-            action: 'stage.certified_with_warnings',
+            action: hasDependencyWarning ? 'stage.certified_with_dependency_warning' : 'stage.certified_with_warnings',
             details: { 
-              warning_checks: qualityResult.checks.filter(c => c.status === 'warn').map(c => c.check_key),
+              warning_messages: certWarningMessages,
               stage_title: stage.title
             }
           });
         }
+        
+        setCertWarningMessages([]);
       }
     } catch (error: any) {
       toast({
@@ -1079,6 +1133,22 @@ export default function AdminStageDetail() {
                     placeholder="Hints for AI suggestions..."
                     rows={2}
                   />
+                </div>
+
+                {/* Dependencies Section */}
+                <div className="space-y-2 pt-4 border-t">
+                  <Label className="flex items-center gap-2">
+                    <Link2 className="h-4 w-4" />
+                    Required Stages
+                  </Label>
+                  <StageDependencySelector
+                    currentStageKey={stage.stage_key}
+                    selectedStageKeys={localDependencies}
+                    onChange={handleUpdateDependencies}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Select stages that must also exist in a package when this stage is used.
+                  </p>
                 </div>
 
                 <div className="flex items-center gap-6 pt-4 border-t">
