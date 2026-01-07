@@ -13,13 +13,15 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Progress } from '@/components/ui/progress';
 import { 
   Plus, Trash2, FileText, Upload, Link2, GripVertical, 
-  Loader2, Search, X, CheckCircle2, AlertCircle, Eye, EyeOff, History, Package, Layers, AlertTriangle
+  Loader2, Search, X, CheckCircle2, AlertCircle, Eye, EyeOff, History, Package, Layers, AlertTriangle, Filter
 } from 'lucide-react';
 import { DocumentVersionBadge } from '@/components/document/DocumentVersionBadge';
 import { BulkUploadWithMetadataDialog } from '@/components/document/BulkUploadWithMetadataDialog';
 import { DocumentReadinessBadge } from '@/components/document/DocumentReadinessBadge';
 import { GeneratePackDialog } from '@/components/document/GeneratePackDialog';
 import { DocumentReuseWarningDialog } from '@/components/document/DocumentReuseWarningDialog';
+import { AIConfidenceBadge, type AIStatus } from '@/components/document/AIConfidenceBadge';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 interface Document {
   id: number;
@@ -29,6 +31,8 @@ interface Document {
   description?: string | null;
   document_status?: string | null;
   current_published_version_id?: string | null;
+  ai_status?: AIStatus;
+  ai_confidence_score?: number | null;
 }
 
 interface StageDocumentItem {
@@ -90,6 +94,9 @@ export function StageDocumentsPanel({
   
   // Stage counts for documents
   const [documentStageCounts, setDocumentStageCounts] = useState<Map<number, { count: number; names: string[] }>>(new Map());
+  
+  // AI status filter
+  const [aiStatusFilter, setAiStatusFilter] = useState<string>('all');
 
   // Get file type badge color
   const getFileTypeBadge = (format: string | null) => {
@@ -357,9 +364,21 @@ export function StageDocumentsPanel({
       <Card>
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between">
-            <div>
+            <div className="flex items-center gap-2">
               <CardTitle className="text-base">Documents</CardTitle>
-              <CardDescription>{documents.length} documents linked to this stage</CardDescription>
+              <Select value={aiStatusFilter} onValueChange={setAiStatusFilter}>
+                <SelectTrigger className="h-7 w-[140px] text-xs">
+                  <Filter className="h-3 w-3 mr-1" />
+                  <SelectValue placeholder="AI Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Statuses</SelectItem>
+                  <SelectItem value="auto_approved">Auto-approved</SelectItem>
+                  <SelectItem value="needs_review">Needs Review</SelectItem>
+                  <SelectItem value="rejected">Rejected</SelectItem>
+                  <SelectItem value="pending">Pending</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
             <div className="flex items-center gap-2">
               {tenantId && documents.length > 0 && (
@@ -413,7 +432,13 @@ export function StageDocumentsPanel({
           ) : (
             <ScrollArea className="h-[400px]">
               <div className="space-y-2">
-                {documents.map((doc) => {
+                {documents
+                  .filter(doc => {
+                    if (aiStatusFilter === 'all') return true;
+                    const docAiStatus = doc.document?.ai_status || 'pending';
+                    return docAiStatus === aiStatusFilter;
+                  })
+                  .map((doc) => {
                   const fileType = getFileTypeBadge(doc.document?.format || null);
                   const stageData = documentStageCounts.get(doc.document_id);
                   const stageCount = stageData?.count || 0;
@@ -461,6 +486,13 @@ export function StageDocumentsPanel({
                               documentId={doc.document.id}
                               tenantId={tenantId}
                               isExcel={doc.document.format?.toLowerCase().includes('excel') || doc.document.format?.toLowerCase().includes('xls')}
+                              compact
+                            />
+                          )}
+                          {doc.document?.ai_status && (
+                            <AIConfidenceBadge
+                              aiStatus={doc.document.ai_status}
+                              overallConfidence={doc.document.ai_confidence_score}
                               compact
                             />
                           )}
