@@ -5605,10 +5605,13 @@ export type Database = {
           due_date_offset: number | null
           id: string
           instructions: string | null
+          is_deleted: boolean
+          is_override: boolean
           name: string
           order_number: number
           package_id: number
           required_documents: string[] | null
+          source_stage_task_id: number | null
           stage_id: number
           updated_at: string
         }
@@ -5618,10 +5621,13 @@ export type Database = {
           due_date_offset?: number | null
           id?: string
           instructions?: string | null
+          is_deleted?: boolean
+          is_override?: boolean
           name: string
           order_number?: number
           package_id: number
           required_documents?: string[] | null
+          source_stage_task_id?: number | null
           stage_id: number
           updated_at?: string
         }
@@ -5631,10 +5637,13 @@ export type Database = {
           due_date_offset?: number | null
           id?: string
           instructions?: string | null
+          is_deleted?: boolean
+          is_override?: boolean
           name?: string
           order_number?: number
           package_id?: number
           required_documents?: string[] | null
+          source_stage_task_id?: number | null
           stage_id?: number
           updated_at?: string
         }
@@ -5775,11 +5784,14 @@ export type Database = {
           due_date_offset: number | null
           estimated_hours: number | null
           id: string
+          is_deleted: boolean
           is_mandatory: boolean | null
+          is_override: boolean
           name: string
           order_number: number
           owner_role: string | null
           package_id: number
+          source_stage_task_id: number | null
           stage_id: number
           updated_at: string
         }
@@ -5789,11 +5801,14 @@ export type Database = {
           due_date_offset?: number | null
           estimated_hours?: number | null
           id?: string
+          is_deleted?: boolean
           is_mandatory?: boolean | null
+          is_override?: boolean
           name: string
           order_number?: number
           owner_role?: string | null
           package_id: number
+          source_stage_task_id?: number | null
           stage_id: number
           updated_at?: string
         }
@@ -5803,11 +5818,14 @@ export type Database = {
           due_date_offset?: number | null
           estimated_hours?: number | null
           id?: string
+          is_deleted?: boolean
           is_mandatory?: boolean | null
+          is_override?: boolean
           name?: string
           order_number?: number
           owner_role?: string | null
           package_id?: number
+          source_stage_task_id?: number | null
           stage_id?: number
           updated_at?: string
         }
@@ -5834,8 +5852,11 @@ export type Database = {
           delivery_type: string
           document_id: number
           id: string
+          is_deleted: boolean
+          is_override: boolean
           package_id: number
           sort_order: number
+          source_stage_document_id: number | null
           stage_id: number
           updated_at: string
           visibility: string
@@ -5845,8 +5866,11 @@ export type Database = {
           delivery_type?: string
           document_id: number
           id?: string
+          is_deleted?: boolean
+          is_override?: boolean
           package_id: number
           sort_order?: number
+          source_stage_document_id?: number | null
           stage_id: number
           updated_at?: string
           visibility?: string
@@ -5856,8 +5880,11 @@ export type Database = {
           delivery_type?: string
           document_id?: number
           id?: string
+          is_deleted?: boolean
+          is_override?: boolean
           package_id?: number
           sort_order?: number
+          source_stage_document_id?: number | null
           stage_id?: number
           updated_at?: string
           visibility?: string
@@ -5893,9 +5920,12 @@ export type Database = {
           email_template_id: string
           id: number
           is_active: boolean
+          is_deleted: boolean
+          is_override: boolean
           package_id: number
           recipient_type: string
           sort_order: number
+          source_stage_email_id: number | null
           stage_id: number
           trigger_type: string
         }
@@ -5905,9 +5935,12 @@ export type Database = {
           email_template_id: string
           id?: never
           is_active?: boolean
+          is_deleted?: boolean
+          is_override?: boolean
           package_id: number
           recipient_type?: string
           sort_order?: number
+          source_stage_email_id?: number | null
           stage_id: number
           trigger_type?: string
         }
@@ -5917,9 +5950,12 @@ export type Database = {
           email_template_id?: string
           id?: never
           is_active?: boolean
+          is_deleted?: boolean
+          is_override?: boolean
           package_id?: number
           recipient_type?: string
           sort_order?: number
+          source_stage_email_id?: number | null
           stage_id?: number
           trigger_type?: string
         }
@@ -6002,6 +6038,7 @@ export type Database = {
           dashboard_group: string | null
           id: number
           is_required: boolean
+          last_synced_at: string | null
           package_id: number
           sort_order: number
           stage_id: number
@@ -6013,6 +6050,7 @@ export type Database = {
           dashboard_group?: string | null
           id?: number
           is_required?: boolean
+          last_synced_at?: string | null
           package_id: number
           sort_order?: number
           stage_id: number
@@ -6024,6 +6062,7 @@ export type Database = {
           dashboard_group?: string | null
           id?: number
           is_required?: boolean
+          last_synced_at?: string | null
           package_id?: number
           sort_order?: number
           stage_id?: number
@@ -10192,6 +10231,10 @@ export type Database = {
         Returns: Json
       }
       client_tga_link_verify: { Args: { p_tenant_id: number }; Returns: Json }
+      copy_stage_template_to_package: {
+        Args: { p_package_id: number; p_stage_id: number }
+        Returns: undefined
+      }
       create_audit: {
         Args: { p_client_id: string; p_created_by: string; p_tenant_id: number }
         Returns: number
@@ -10705,6 +10748,10 @@ export type Database = {
           p_tenant_id: number
         }
         Returns: string
+      }
+      sync_stage_template_to_packages: {
+        Args: { p_stage_id: number }
+        Returns: Json
       }
       tenant_has_package: {
         Args: { p_package_id: number; p_tenant_id: number }
