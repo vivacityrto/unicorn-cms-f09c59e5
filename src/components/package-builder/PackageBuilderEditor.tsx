@@ -27,6 +27,7 @@ import { AddRecommendedStagesDialog } from './AddRecommendedStagesDialog';
 import { computePackageReadiness, PackageReadinessSummary } from './PackageReadinessIndicator';
 import { FrameworkMismatchDialog } from './FrameworkMismatchDialog';
 import { PackageStandardsCoverageDialog } from './PackageStandardsCoverageDialog';
+import { PackageStageVersionBadge } from './PackageStageVersionBadge';
 import { checkFrameworkCompatibility } from '@/components/stage/StageFrameworkSelector';
 import { usePackageStandardsCoverage } from '@/hooks/useStageStandards';
 import {
@@ -52,6 +53,7 @@ interface SortableStageItemProps {
   stage: any;
   index: number;
   isSelected: boolean;
+  packageId: number;
   onClick: () => void;
   onRemove: () => void;
   getStageTypeColor: (type: string) => string;
@@ -62,6 +64,7 @@ function SortableStageItem({
   stage, 
   index, 
   isSelected, 
+  packageId,
   onClick, 
   onRemove,
   getStageTypeColor 
@@ -108,11 +111,17 @@ function SortableStageItem({
         <div className="flex items-center gap-2">
           <span className="font-medium text-sm truncate">{stage.stage?.title}</span>
         </div>
-        {stage.stage?.stage_type && (
-          <Badge variant="outline" className={`text-xs mt-1 ${getStageTypeColor(stage.stage.stage_type)}`}>
-            {stage.stage.stage_type}
-          </Badge>
-        )}
+        <div className="flex items-center gap-2 mt-1 flex-wrap">
+          {stage.stage?.stage_type && (
+            <Badge variant="outline" className={`text-xs ${getStageTypeColor(stage.stage.stage_type)}`}>
+              {stage.stage.stage_type}
+            </Badge>
+          )}
+          <PackageStageVersionBadge 
+            packageId={packageId} 
+            stageId={stage.stage_id} 
+          />
+        </div>
       </div>
       <Button
         variant="ghost"
@@ -583,6 +592,7 @@ export function PackageBuilderEditor() {
                             stage={ps}
                             index={index}
                             isSelected={selectedStageId === ps.stage_id}
+                            packageId={packageId!}
                             onClick={() => setSelectedStageId(ps.stage_id)}
                             onRemove={() => setStageToRemove(ps.id)}
                             getStageTypeColor={getStageTypeColor}
