@@ -7,27 +7,56 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// TGA Production SOAP Endpoints (uppercase WebServices per official WSDL)
+// TGA Production SOAP Endpoints (TGA Web Services Specification v13r1)
+// Environment: Production
+// Access level: Web Services Read
 const TGA_ENDPOINTS = {
   organisation: 'https://ws.training.gov.au/Deewr.Tga.WebServices/OrganisationServiceV13.svc',
   training: 'https://ws.training.gov.au/Deewr.Tga.WebServices/TrainingComponentServiceV13.svc',
   classification: 'https://ws.training.gov.au/Deewr.Tga.WebServices/ClassificationServiceV13.svc',
 };
 
+// Credentials loaded from Supabase secrets
 const TGA_WS_USERNAME = Deno.env.get('TGA_WS_USERNAME');
 const TGA_WS_PASSWORD = Deno.env.get('TGA_WS_PASSWORD');
 
-// SOAP namespaces
+// SOAP namespaces per TGA Web Services Specification
 const SOAP_NS = {
   soap: 'http://www.w3.org/2003/05/soap-envelope',
   org: 'http://training.gov.au/services/Organisation',
   tc: 'http://training.gov.au/services/TrainingComponent',
 };
 
-// Build Basic Auth header
+// Log helper (redacts sensitive data)
+function log(level: 'info' | 'warn' | 'error', message: string, data?: Record<string, unknown>) {
+  const sanitized = data ? { ...data } : {};
+  // Never log passwords or full credentials
+  delete sanitized.password;
+  delete sanitized.credentials;
+  delete sanitized.auth;
+  console.log(`[TGA-SYNC] [${level.toUpperCase()}] ${message}`, JSON.stringify(sanitized));
+}
+
+// Validate credentials are configured
+function validateCredentials(): { valid: boolean; error?: string } {
+  if (!TGA_WS_USERNAME) {
+    return { valid: false, error: 'TGA_WS_USERNAME secret not configured' };
+  }
+  if (!TGA_WS_PASSWORD) {
+    return { valid: false, error: 'TGA_WS_PASSWORD secret not configured' };
+  }
+  // Validate username format (should be an email for TGA)
+  if (!TGA_WS_USERNAME.includes('@')) {
+    log('warn', 'TGA_WS_USERNAME may not be in correct format (expected email)');
+  }
+  return { valid: true };
+}
+
+// Build Basic Auth header (HTTP Basic Authentication per TGA spec)
 function getBasicAuthHeader(): string {
-  if (!TGA_WS_USERNAME || !TGA_WS_PASSWORD) {
-    throw new Error('TGA SOAP credentials not configured');
+  const validation = validateCredentials();
+  if (!validation.valid) {
+    throw new Error(validation.error || 'TGA credentials not configured');
   }
   const credentials = btoa(`${TGA_WS_USERNAME}:${TGA_WS_PASSWORD}`);
   return `Basic ${credentials}`;
@@ -95,28 +124,70 @@ function buildTCSoapRequest(action: string, body: string): string {
 </soap12:Envelope>`;
 }
 
-// Make SOAP request
+// Make SOAP request with enhanced error handling
 async function makeSoapRequest(endpoint: string, soapAction: string, body: string): Promise<string> {
-  console.log(`[TGA SOAP] Request to ${endpoint}, action: ${soapAction}`);
+  log('info', 'SOAP request starting', { endpoint, action: soapAction });
   
-  const response = await fetch(endpoint, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/soap+xml; charset=utf-8',
-      'Authorization': getBasicAuthHeader(),
-    },
-    body,
-  });
+  const startTime = Date.now();
+  
+  try {
+    const response = await fetch(endpoint, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/soap+xml; charset=utf-8',
+        'Authorization': getBasicAuthHeader(),
+      },
+      body,
+    });
 
-  if (!response.ok) {
-    const errorText = await response.text();
-    console.error(`[TGA SOAP] Error ${response.status}:`, errorText.substring(0, 500));
-    throw new Error(`SOAP request failed: ${response.status} ${response.statusText}`);
+    const duration = Date.now() - startTime;
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      
+      // Parse specific error types
+      let errorDetail = `HTTP ${response.status}`;
+      if (response.status === 401) {
+        errorDetail = 'Authentication failed - check TGA_WS_USERNAME and TGA_WS_PASSWORD secrets';
+        log('error', 'TGA authentication failed', { status: 401, duration });
+      } else if (response.status === 403) {
+        errorDetail = 'Access denied - account may not have Web Services Read permission';
+        log('error', 'TGA access denied', { status: 403, duration });
+      } else if (errorText.includes('Fault')) {
+        // Extract SOAP fault message
+        const faultMatch = errorText.match(/<(?:a:)?Text[^>]*>([^<]+)<\/(?:a:)?Text>/i);
+        if (faultMatch) {
+          errorDetail = faultMatch[1];
+        }
+        log('error', 'SOAP fault received', { status: response.status, fault: errorDetail, duration });
+      } else {
+        log('error', 'SOAP request failed', { status: response.status, statusText: response.statusText, duration });
+      }
+      
+      throw new Error(`TGA API error: ${errorDetail}`);
+    }
+
+    const xmlResponse = await response.text();
+    log('info', 'SOAP request successful', { 
+      endpoint, 
+      action: soapAction, 
+      responseLength: xmlResponse.length,
+      duration 
+    });
+    
+    return xmlResponse;
+  } catch (error: unknown) {
+    const duration = Date.now() - startTime;
+    const errorMsg = error instanceof Error ? error.message : String(error);
+    
+    // Network errors
+    if (errorMsg.includes('fetch')) {
+      log('error', 'Network error connecting to TGA', { error: errorMsg, duration });
+      throw new Error('Cannot connect to TGA Web Services - check network connectivity');
+    }
+    
+    throw error;
   }
-
-  const xmlResponse = await response.text();
-  console.log(`[TGA SOAP] Response length: ${xmlResponse.length}`);
-  return xmlResponse;
 }
 
 // Parse training component from XML
@@ -263,17 +334,84 @@ async function searchByModifiedDate(since: Date, componentType?: string): Promis
   }
 }
 
-// Test connection
-async function testConnection(): Promise<{ success: boolean; message: string }> {
+// Test connection with comprehensive validation
+async function testConnection(): Promise<{ 
+  success: boolean; 
+  message: string; 
+  details?: {
+    username?: string;
+    endpoint?: string;
+    testCode?: string;
+    testResult?: string;
+    timestamp?: string;
+  }
+}> {
+  log('info', 'Testing TGA connection', { 
+    username: TGA_WS_USERNAME ? `${TGA_WS_USERNAME.substring(0, 5)}...` : 'NOT_SET',
+    endpoint: TGA_ENDPOINTS.training 
+  });
+  
+  // Step 1: Validate credentials are configured
+  const credValidation = validateCredentials();
+  if (!credValidation.valid) {
+    log('error', 'Credential validation failed', { error: credValidation.error });
+    return { 
+      success: false, 
+      message: credValidation.error || 'Credentials not configured',
+      details: {
+        username: TGA_WS_USERNAME ? 'configured' : 'missing',
+        timestamp: new Date().toISOString()
+      }
+    };
+  }
+  
+  // Step 2: Try to fetch a known training component (BSB30120 - Certificate III in Business)
+  const testCode = 'BSB30120';
   try {
-    // Try to fetch a known training component
-    const result = await fetchTrainingComponent('BSB30120');
+    log('info', 'Attempting test fetch', { testCode });
+    const result = await fetchTrainingComponent(testCode);
+    
     if (result.data) {
-      return { success: true, message: `Connected. Test fetch: ${result.data.title}` };
+      log('info', 'TGA connection test successful', { 
+        testCode, 
+        title: result.data.title 
+      });
+      return { 
+        success: true, 
+        message: `Connected successfully. Verified with: ${result.data.title}`,
+        details: {
+          username: TGA_WS_USERNAME,
+          endpoint: TGA_ENDPOINTS.training,
+          testCode,
+          testResult: result.data.title,
+          timestamp: new Date().toISOString()
+        }
+      };
     }
-    return { success: false, message: result.error || 'Unknown error' };
+    
+    log('warn', 'TGA connection succeeded but parse failed', { error: result.error });
+    return { 
+      success: false, 
+      message: result.error || 'Connected but could not parse response',
+      details: {
+        username: TGA_WS_USERNAME,
+        testCode,
+        timestamp: new Date().toISOString()
+      }
+    };
   } catch (error: unknown) {
-    return { success: false, message: error instanceof Error ? error.message : String(error) };
+    const errorMsg = error instanceof Error ? error.message : String(error);
+    log('error', 'TGA connection test failed', { error: errorMsg });
+    return { 
+      success: false, 
+      message: errorMsg,
+      details: {
+        username: TGA_WS_USERNAME,
+        endpoint: TGA_ENDPOINTS.training,
+        testCode,
+        timestamp: new Date().toISOString()
+      }
+    };
   }
 }
 
