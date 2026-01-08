@@ -140,7 +140,11 @@ const App = () => (
             />
             <Route 
               path="/calendar/outlook-callback" 
-              element={<OutlookCallback />} 
+              element={
+                <ProtectedRoute>
+                  <OutlookCallback />
+                </ProtectedRoute>
+              } 
             />
             <Route 
               path="/messages" 
