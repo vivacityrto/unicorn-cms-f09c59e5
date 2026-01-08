@@ -2860,6 +2860,83 @@ export type Database = {
         }
         Relationships: []
       }
+      document_activity_log: {
+        Row: {
+          activity_type: string
+          actor_role: string | null
+          actor_user_id: string | null
+          client_id: number | null
+          created_at: string
+          document_id: number
+          file_name: string | null
+          id: string
+          metadata: Json
+          occurred_at: string
+          package_id: number | null
+          stage_id: number | null
+          tenant_id: number
+        }
+        Insert: {
+          activity_type: string
+          actor_role?: string | null
+          actor_user_id?: string | null
+          client_id?: number | null
+          created_at?: string
+          document_id: number
+          file_name?: string | null
+          id?: string
+          metadata?: Json
+          occurred_at?: string
+          package_id?: number | null
+          stage_id?: number | null
+          tenant_id: number
+        }
+        Update: {
+          activity_type?: string
+          actor_role?: string | null
+          actor_user_id?: string | null
+          client_id?: number | null
+          created_at?: string
+          document_id?: number
+          file_name?: string | null
+          id?: string
+          metadata?: Json
+          occurred_at?: string
+          package_id?: number | null
+          stage_id?: number | null
+          tenant_id?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "document_activity_log_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "document_activity_log_package_id_fkey"
+            columns: ["package_id"]
+            isOneToOne: false
+            referencedRelation: "packages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "document_activity_log_stage_id_fkey"
+            columns: ["stage_id"]
+            isOneToOne: false
+            referencedRelation: "documents_stages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "document_activity_log_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       document_ai_audit: {
         Row: {
           action: string
@@ -12930,6 +13007,20 @@ export type Database = {
             }
             Returns: Json[]
           }
+      rpc_log_document_activity: {
+        Args: {
+          p_activity_type: string
+          p_actor_role?: string
+          p_client_id: number
+          p_document_id: number
+          p_file_name: string
+          p_metadata?: Json
+          p_package_id: number
+          p_stage_id: number
+          p_tenant_id: number
+        }
+        Returns: Json
+      }
       rpc_post_time_draft: { Args: { p_draft_id: string }; Returns: Json }
       rpc_run_time_draft_worker: {
         Args: { p_tenant_id?: number }
