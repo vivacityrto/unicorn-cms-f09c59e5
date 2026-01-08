@@ -12,6 +12,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { NotificationDropdown } from "@/components/NotificationDropdown";
 import unicornLogo from "@/assets/unicorn-logo-full.png";
 import Footer from "@/components/layout/Footer";
+import { TimeInboxBanner } from "@/components/dashboard/TimeInboxWidget";
 const baseMenuItems = [{
   icon: LayoutDashboard,
   label: "Dashboard",
@@ -670,6 +671,9 @@ export const DashboardLayout = ({
               </DropdownMenu>}
           </div>
         </header>
+
+        {/* Time Inbox Banner */}
+        <TimeInboxBanner />
 
         {/* Page Content */}
         <main className="flex-1 p-6 overflow-y-auto">{children}</main>
