@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Progress } from '@/components/ui/progress';
 import { Upload, FileText, X, CheckCircle2, AlertCircle } from 'lucide-react';
 import { ClientPackage } from '@/hooks/useClientManagement';
+import { useDocumentActivity } from '@/hooks/useDocumentActivity';
 
 interface BulkUploadDialogProps {
   open: boolean;
@@ -34,6 +35,7 @@ export function BulkUploadDialog({
   categories
 }: BulkUploadDialogProps) {
   const { toast } = useToast();
+  const { logUpload } = useDocumentActivity();
   const [files, setFiles] = useState<FileUploadStatus[]>([]);
   const [packageId, setPackageId] = useState<string>('');
   const [category, setCategory] = useState<string>('');
@@ -119,7 +121,7 @@ export function BulkUploadDialog({
         // Create document record
         const docTitle = fileStatus.file.name.replace(/\.[^/.]+$/, ''); // Remove extension
         
-        const { error: insertError } = await supabase
+        const { data: insertedDoc, error: insertError } = await supabase
           .from('documents')
           .insert({
             title: docTitle,
@@ -129,9 +131,23 @@ export function BulkUploadDialog({
             is_released: releaseToClient,
             category: category || null,
             isclientdoc: true
-          });
+          })
+          .select('id')
+          .single();
 
         if (insertError) throw insertError;
+
+        // Log upload activity for timeline
+        if (insertedDoc?.id) {
+          logUpload({
+            tenantId: tenantId,
+            clientId: tenantId,
+            packageId: parseInt(packageId),
+            documentId: insertedDoc.id,
+            fileName: docTitle,
+            actorRole: 'internal'
+          });
+        }
 
         // Update status to success
         setFiles(prev => prev.map((f, idx) => 
