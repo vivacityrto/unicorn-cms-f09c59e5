@@ -18,38 +18,70 @@ serve(async (req) => {
   }
 
   try {
-    const url = new URL(req.url);
-    const action = url.searchParams.get('action');
+    // Parse action from body instead of URL params for consistency
+    let action: string | null = null;
+    let body: Record<string, unknown> = {};
+    
+    try {
+      body = await req.json();
+      action = body.action as string || null;
+    } catch {
+      // Fall back to URL params
+      const url = new URL(req.url);
+      action = url.searchParams.get('action');
+    }
+
+    console.log('[outlook-auth] Action:', action);
+    console.log('[outlook-auth] Request received at:', new Date().toISOString());
 
     // Get user from auth header
     const authHeader = req.headers.get('Authorization');
-    if (!authHeader && action !== 'callback') {
-      return new Response(
-        JSON.stringify({ error: 'Missing authorization header' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
+    
     const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
     
+    // Helper to get authenticated user
+    const getUser = async () => {
+      if (!authHeader) {
+        console.log('[outlook-auth] No auth header');
+        return null;
+      }
+      const { data: { user }, error } = await supabaseAdmin.auth.getUser(
+        authHeader.replace('Bearer ', '')
+      );
+      if (error) {
+        console.error('[outlook-auth] Auth error:', error.message);
+        return null;
+      }
+      return user;
+    };
+
     // Action: Get auth URL to redirect user to Microsoft login
     if (action === 'get-auth-url') {
-      const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(
-        authHeader?.replace('Bearer ', '') || ''
-      );
-      
-      if (authError || !user) {
+      const user = await getUser();
+      if (!user) {
         return new Response(
           JSON.stringify({ error: 'Unauthorized' }),
           { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
 
-      const body = await req.json();
-      const redirectUri = body.redirect_uri;
-      const tenantId = body.tenant_id;
+      const redirectUri = body.redirect_uri as string;
+      const tenantId = body.tenant_id as number;
 
-      // Store state for CSRF protection
+      console.log('[outlook-auth] get-auth-url:', {
+        userId: user.id,
+        tenantId,
+        redirectUri
+      });
+
+      if (!redirectUri) {
+        return new Response(
+          JSON.stringify({ error: 'redirect_uri is required' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // Generate and store state for CSRF protection
       const state = crypto.randomUUID();
       const stateData = {
         user_id: user.id,
@@ -58,12 +90,20 @@ serve(async (req) => {
         created_at: new Date().toISOString()
       };
 
-      // Store state temporarily
-      await supabaseAdmin.from('oauth_states').upsert({
+      // Store state in database (canonical source of truth)
+      const { error: stateError } = await supabaseAdmin.from('oauth_states').upsert({
         state,
         data: stateData,
         expires_at: new Date(Date.now() + 10 * 60 * 1000).toISOString() // 10 min expiry
       });
+
+      if (stateError) {
+        console.error('[outlook-auth] Failed to store state:', stateError);
+        return new Response(
+          JSON.stringify({ error: 'Failed to initialize OAuth' }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
 
       const authUrl = new URL('https://login.microsoftonline.com/common/oauth2/v2.0/authorize');
       authUrl.searchParams.set('client_id', MICROSOFT_CLIENT_ID);
@@ -74,6 +114,7 @@ serve(async (req) => {
       authUrl.searchParams.set('response_mode', 'query');
 
       console.log('[outlook-auth] Generated auth URL for user:', user.id);
+      console.log('[outlook-auth] State stored:', state.substring(0, 8) + '...');
 
       return new Response(
         JSON.stringify({ auth_url: authUrl.toString(), state }),
@@ -83,26 +124,71 @@ serve(async (req) => {
 
     // Action: Exchange code for tokens
     if (action === 'exchange-code') {
-      const body = await req.json();
-      const { code, redirect_uri, state } = body;
+      const code = body.code as string;
+      const redirectUri = body.redirect_uri as string;
+      const state = body.state as string;
 
-      // Verify state
-      const { data: stateRecord } = await supabaseAdmin
+      console.log('[outlook-auth] exchange-code:', {
+        hasCode: !!code,
+        codeLength: code?.length,
+        redirectUri,
+        state: state?.substring(0, 8) + '...'
+      });
+
+      if (!code || !state) {
+        return new Response(
+          JSON.stringify({ error: 'code and state are required' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // Verify state from database
+      const { data: stateRecord, error: stateError } = await supabaseAdmin
         .from('oauth_states')
         .select('*')
         .eq('state', state)
         .single();
 
-      if (!stateRecord) {
+      console.log('[outlook-auth] State lookup result:', {
+        found: !!stateRecord,
+        error: stateError?.message
+      });
+
+      if (stateError || !stateRecord) {
+        console.error('[outlook-auth] Invalid state - not found in database');
         return new Response(
-          JSON.stringify({ error: 'Invalid state' }),
+          JSON.stringify({ error: 'Invalid or expired state. Please try connecting again.' }),
           { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
 
-      const stateData = stateRecord.data as { user_id: string; tenant_id: number };
+      // Check if state is expired
+      if (new Date(stateRecord.expires_at) < new Date()) {
+        console.error('[outlook-auth] State expired');
+        await supabaseAdmin.from('oauth_states').delete().eq('state', state);
+        return new Response(
+          JSON.stringify({ error: 'OAuth session expired. Please try connecting again.' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
 
-      // Exchange code for tokens
+      const stateData = stateRecord.data as { 
+        user_id: string; 
+        tenant_id: number; 
+        redirect_uri: string 
+      };
+
+      // Use the redirect_uri from the stored state (canonical)
+      const canonicalRedirectUri = stateData.redirect_uri;
+
+      console.log('[outlook-auth] Exchanging code:', {
+        userId: stateData.user_id,
+        tenantId: stateData.tenant_id,
+        canonicalRedirectUri,
+        providedRedirectUri: redirectUri
+      });
+
+      // Exchange code for tokens with Microsoft
       const tokenResponse = await fetch('https://login.microsoftonline.com/common/oauth2/v2.0/token', {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -110,26 +196,56 @@ serve(async (req) => {
           client_id: MICROSOFT_CLIENT_ID,
           client_secret: MICROSOFT_CLIENT_SECRET,
           code,
-          redirect_uri,
+          redirect_uri: canonicalRedirectUri, // Use the URI from when auth was initiated
           grant_type: 'authorization_code',
           scope: 'openid profile email offline_access Calendars.Read'
         })
       });
 
+      const tokenText = await tokenResponse.text();
+      
       if (!tokenResponse.ok) {
-        const errorText = await tokenResponse.text();
-        console.error('[outlook-auth] Token exchange failed:', errorText);
+        console.error('[outlook-auth] Token exchange failed:', {
+          status: tokenResponse.status,
+          body: tokenText
+        });
+        
+        let errorMessage = 'Token exchange failed';
+        try {
+          const errorJson = JSON.parse(tokenText);
+          errorMessage = errorJson.error_description || errorJson.error || errorMessage;
+        } catch {
+          // Use default message
+        }
+        
         return new Response(
-          JSON.stringify({ error: 'Token exchange failed' }),
+          JSON.stringify({ error: errorMessage }),
           { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
 
-      const tokens = await tokenResponse.json();
+      let tokens;
+      try {
+        tokens = JSON.parse(tokenText);
+      } catch {
+        console.error('[outlook-auth] Failed to parse token response');
+        return new Response(
+          JSON.stringify({ error: 'Invalid token response from Microsoft' }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      console.log('[outlook-auth] Token exchange successful:', {
+        hasAccessToken: !!tokens.access_token,
+        hasRefreshToken: !!tokens.refresh_token,
+        expiresIn: tokens.expires_in,
+        scope: tokens.scope
+      });
+
       const expiresAt = new Date(Date.now() + tokens.expires_in * 1000);
 
-      // Store tokens
-      await supabaseAdmin.from('oauth_tokens').upsert({
+      // Store tokens - upsert to handle reconnection
+      const { error: upsertError } = await supabaseAdmin.from('oauth_tokens').upsert({
         user_id: stateData.user_id,
         tenant_id: stateData.tenant_id,
         provider: 'microsoft',
@@ -140,10 +256,18 @@ serve(async (req) => {
         updated_at: new Date().toISOString()
       }, { onConflict: 'user_id,provider' });
 
+      if (upsertError) {
+        console.error('[outlook-auth] Failed to store tokens:', upsertError);
+        return new Response(
+          JSON.stringify({ error: 'Failed to store tokens' }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
       // Clean up state
       await supabaseAdmin.from('oauth_states').delete().eq('state', state);
 
-      console.log('[outlook-auth] Tokens stored for user:', stateData.user_id);
+      console.log('[outlook-auth] Tokens stored successfully for user:', stateData.user_id);
 
       return new Response(
         JSON.stringify({ success: true }),
@@ -153,23 +277,25 @@ serve(async (req) => {
 
     // Action: Check connection status
     if (action === 'status') {
-      const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(
-        authHeader?.replace('Bearer ', '') || ''
-      );
-      
-      if (authError || !user) {
+      const user = await getUser();
+      if (!user) {
         return new Response(
-          JSON.stringify({ error: 'Unauthorized' }),
-          { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          JSON.stringify({ connected: false, error: 'Not authenticated' }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
 
-      const { data: token } = await supabaseAdmin
+      const { data: token, error: tokenError } = await supabaseAdmin
         .from('oauth_tokens')
         .select('expires_at, updated_at')
         .eq('user_id', user.id)
         .eq('provider', 'microsoft')
         .single();
+
+      console.log('[outlook-auth] Status check for user:', user.id, {
+        found: !!token,
+        error: tokenError?.message
+      });
 
       return new Response(
         JSON.stringify({ 
@@ -183,16 +309,15 @@ serve(async (req) => {
 
     // Action: Disconnect
     if (action === 'disconnect') {
-      const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(
-        authHeader?.replace('Bearer ', '') || ''
-      );
-      
-      if (authError || !user) {
+      const user = await getUser();
+      if (!user) {
         return new Response(
           JSON.stringify({ error: 'Unauthorized' }),
           { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
+
+      console.log('[outlook-auth] Disconnecting user:', user.id);
 
       await supabaseAdmin.from('oauth_tokens').delete()
         .eq('user_id', user.id)
@@ -203,7 +328,7 @@ serve(async (req) => {
         .eq('user_id', user.id)
         .eq('provider', 'outlook');
 
-      console.log('[outlook-auth] Disconnected user:', user.id);
+      console.log('[outlook-auth] User disconnected:', user.id);
 
       return new Response(
         JSON.stringify({ success: true }),
@@ -211,13 +336,15 @@ serve(async (req) => {
       );
     }
 
+    console.log('[outlook-auth] Invalid action:', action);
+
     return new Response(
       JSON.stringify({ error: 'Invalid action' }),
       { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 
   } catch (error) {
-    console.error('[outlook-auth] Error:', error);
+    console.error('[outlook-auth] Unhandled error:', error);
     const message = error instanceof Error ? error.message : 'Unknown error';
     return new Response(
       JSON.stringify({ error: message }),

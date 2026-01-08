@@ -35,6 +35,18 @@ export interface TimeDraft {
   status: string;
 }
 
+// Determine the canonical redirect URI based on current origin
+export function getOutlookRedirectUri(): string {
+  const origin = window.location.origin;
+  const path = '/calendar/outlook-callback';
+  
+  // Log for debugging
+  console.log('[useOutlookCalendar] Current origin:', origin);
+  console.log('[useOutlookCalendar] Full redirect URI:', `${origin}${path}`);
+  
+  return `${origin}${path}`;
+}
+
 export function useOutlookCalendar() {
   const { user, profile } = useAuth();
   const { toast } = useToast();
@@ -46,14 +58,15 @@ export function useOutlookCalendar() {
 
   const checkConnection = useCallback(async () => {
     if (!user) {
+      console.log('[useOutlookCalendar] No user, skipping connection check');
       setInitializing(false);
       return false;
     }
     
     try {
       console.log('[useOutlookCalendar] Checking connection for user:', user.id);
-      const { data, error } = await supabase.functions.invoke('outlook-auth?action=status', {
-        body: {}
+      const { data, error } = await supabase.functions.invoke('outlook-auth', {
+        body: { action: 'status' }
       });
       
       if (error) {
@@ -85,30 +98,56 @@ export function useOutlookCalendar() {
   }, [user, checkConnection]);
 
   const connect = useCallback(async (tenantId: number) => {
-    if (!user) return;
-    
-    const redirectUri = `${window.location.origin}/calendar/outlook-callback`;
-    
-    const { data, error } = await supabase.functions.invoke('outlook-auth?action=get-auth-url', {
-      body: { redirect_uri: redirectUri, tenant_id: tenantId }
-    });
-    
-    if (error || !data?.auth_url) {
-      toast({ title: 'Failed to start connection', variant: 'destructive' });
+    if (!user) {
+      toast({ title: 'Please log in first', variant: 'destructive' });
       return;
     }
     
-    // Store state in localStorage for callback
-    localStorage.setItem('outlook_oauth_state', data.state);
-    localStorage.setItem('outlook_oauth_redirect', redirectUri);
+    const redirectUri = getOutlookRedirectUri();
     
-    // Redirect to Microsoft login
-    window.location.href = data.auth_url;
+    console.log('[useOutlookCalendar] Starting OAuth with redirect URI:', redirectUri);
+    console.log('[useOutlookCalendar] Tenant ID:', tenantId);
+    
+    setLoading(true);
+    
+    try {
+      const { data, error } = await supabase.functions.invoke('outlook-auth', {
+        body: { 
+          action: 'get-auth-url',
+          redirect_uri: redirectUri, 
+          tenant_id: tenantId 
+        }
+      });
+      
+      if (error || !data?.auth_url) {
+        console.error('[useOutlookCalendar] Failed to get auth URL:', error, data);
+        toast({ title: 'Failed to start connection', description: error?.message || 'Unknown error', variant: 'destructive' });
+        setLoading(false);
+        return;
+      }
+      
+      console.log('[useOutlookCalendar] Got auth URL, state:', data.state);
+      console.log('[useOutlookCalendar] Redirect URI saved in state:', redirectUri);
+      
+      // Store state in localStorage as backup (server has the canonical state)
+      localStorage.setItem('outlook_oauth_state', data.state);
+      localStorage.setItem('outlook_oauth_redirect', redirectUri);
+      
+      // Redirect to Microsoft login
+      console.log('[useOutlookCalendar] Redirecting to Microsoft...');
+      window.location.href = data.auth_url;
+    } catch (err) {
+      console.error('[useOutlookCalendar] Connect error:', err);
+      toast({ title: 'Connection failed', variant: 'destructive' });
+      setLoading(false);
+    }
   }, [user, toast]);
 
   const disconnect = useCallback(async () => {
     setLoading(true);
-    const { error } = await supabase.functions.invoke('outlook-auth?action=disconnect', {});
+    const { error } = await supabase.functions.invoke('outlook-auth', {
+      body: { action: 'disconnect' }
+    });
     
     if (error) {
       toast({ title: 'Failed to disconnect', variant: 'destructive' });
@@ -251,6 +290,46 @@ export function useOutlookCalendar() {
     return true;
   }, [toast, fetchDrafts]);
 
+  // Debug function to test connection
+  const runDiagnostics = useCallback(async () => {
+    console.log('=== OUTLOOK CALENDAR DIAGNOSTICS ===');
+    console.log('User ID:', user?.id);
+    console.log('Current origin:', window.location.origin);
+    console.log('Expected redirect URI:', getOutlookRedirectUri());
+    
+    // Check oauth_tokens
+    const { data: tokens, error: tokenError } = await supabase
+      .from('oauth_tokens')
+      .select('id, user_id, provider, expires_at, updated_at')
+      .eq('provider', 'microsoft');
+    
+    console.log('OAuth tokens:', tokens, tokenError);
+    
+    // Check calendar_events count
+    const { count, error: eventError } = await supabase
+      .from('calendar_events')
+      .select('*', { count: 'exact', head: true })
+      .eq('provider', 'outlook');
+    
+    console.log('Calendar events count:', count, eventError);
+    
+    // Check connection status via edge function
+    const { data: status, error: statusError } = await supabase.functions.invoke('outlook-auth', {
+      body: { action: 'status' }
+    });
+    
+    console.log('Connection status from edge function:', status, statusError);
+    
+    return {
+      userId: user?.id,
+      origin: window.location.origin,
+      redirectUri: getOutlookRedirectUri(),
+      tokensCount: tokens?.length || 0,
+      eventsCount: count || 0,
+      connected: status?.connected || false
+    };
+  }, [user]);
+
   return {
     loading,
     initializing,
@@ -266,6 +345,7 @@ export function useOutlookCalendar() {
     createDraft,
     updateDraft,
     postDraft,
-    discardDraft
+    discardDraft,
+    runDiagnostics
   };
 }

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { format, subDays, addDays } from 'date-fns';
-import { Calendar, Clock, Users, Video, Plus, RefreshCw, Check, X, Sparkles, Link2, Loader2 } from 'lucide-react';
+import { Calendar, Clock, Users, Video, Plus, RefreshCw, Check, X, Sparkles, Link2, Loader2, Bug, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -13,18 +13,178 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { useOutlookCalendar, CalendarEvent, TimeDraft } from '@/hooks/useOutlookCalendar';
+import { useOutlookCalendar, CalendarEvent, TimeDraft, getOutlookRedirectUri } from '@/hooks/useOutlookCalendar';
 import { useAuth } from '@/hooks/useAuth';
+import { useRBAC } from '@/hooks/useRBAC';
 import { supabase } from '@/integrations/supabase/client';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+
+// Debug panel for admins
+interface DiagnosticsResult {
+  tokenCount: number;
+  eventsCount: number;
+  lastSync: string | null;
+  connected: boolean;
+  redirectUri: string;
+  origin: string;
+}
+
+function AdminDebugPanel() {
+  const [diagnostics, setDiagnostics] = useState<DiagnosticsResult | null>(null);
+  const [running, setRunning] = useState(false);
+  const [testResults, setTestResults] = useState<{
+    connection: 'pending' | 'pass' | 'fail';
+    tokens: 'pending' | 'pass' | 'fail';
+    sync: 'pending' | 'pass' | 'fail';
+    events: 'pending' | 'pass' | 'fail';
+  }>({
+    connection: 'pending',
+    tokens: 'pending',
+    sync: 'pending',
+    events: 'pending'
+  });
+
+  const runDiagnostics = async () => {
+    setRunning(true);
+    setTestResults({ connection: 'pending', tokens: 'pending', sync: 'pending', events: 'pending' });
+
+    try {
+      // Test 1: Connection status
+      const { data: statusData } = await supabase.functions.invoke('outlook-auth', {
+        body: { action: 'status' }
+      });
+      setTestResults(prev => ({ ...prev, connection: statusData?.connected ? 'pass' : 'fail' }));
+
+      // Test 2: Check tokens in database
+      const { count: tokenCount } = await supabase
+        .from('oauth_tokens')
+        .select('*', { count: 'exact', head: true })
+        .eq('provider', 'microsoft');
+      setTestResults(prev => ({ ...prev, tokens: (tokenCount || 0) > 0 ? 'pass' : 'fail' }));
+
+      // Test 3: Try sync (if connected)
+      if (statusData?.connected) {
+        try {
+          const { data: syncData, error: syncError } = await supabase.functions.invoke('sync-outlook-calendar', {});
+          setTestResults(prev => ({ ...prev, sync: syncError ? 'fail' : 'pass' }));
+        } catch {
+          setTestResults(prev => ({ ...prev, sync: 'fail' }));
+        }
+      } else {
+        setTestResults(prev => ({ ...prev, sync: 'fail' }));
+      }
+
+      // Test 4: Check events in database
+      const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+      const { count: eventsCount } = await supabase
+        .from('calendar_events')
+        .select('*', { count: 'exact', head: true })
+        .eq('provider', 'outlook')
+        .gte('last_synced_at', sevenDaysAgo);
+      setTestResults(prev => ({ ...prev, events: (eventsCount || 0) > 0 ? 'pass' : 'fail' }));
+
+      // Get last sync time
+      const { data: lastEvent } = await supabase
+        .from('calendar_events')
+        .select('last_synced_at')
+        .eq('provider', 'outlook')
+        .order('last_synced_at', { ascending: false })
+        .limit(1)
+        .single();
+
+      setDiagnostics({
+        tokenCount: tokenCount || 0,
+        eventsCount: eventsCount || 0,
+        lastSync: lastEvent?.last_synced_at || null,
+        connected: statusData?.connected || false,
+        redirectUri: getOutlookRedirectUri(),
+        origin: window.location.origin
+      });
+    } catch (error) {
+      console.error('Diagnostics error:', error);
+    } finally {
+      setRunning(false);
+    }
+  };
+
+  const getStatusIcon = (status: 'pending' | 'pass' | 'fail') => {
+    switch (status) {
+      case 'pass': return <CheckCircle className="h-4 w-4 text-green-500" />;
+      case 'fail': return <XCircle className="h-4 w-4 text-red-500" />;
+      default: return <AlertCircle className="h-4 w-4 text-muted-foreground" />;
+    }
+  };
+
+  return (
+    <Collapsible>
+      <CollapsibleTrigger asChild>
+        <Button variant="ghost" size="sm" className="text-xs text-muted-foreground">
+          <Bug className="h-3 w-3 mr-1" /> Debug
+        </Button>
+      </CollapsibleTrigger>
+      <CollapsibleContent>
+        <Card className="mt-2">
+          <CardHeader className="py-3">
+            <CardTitle className="text-sm flex items-center gap-2">
+              <Bug className="h-4 w-4" />
+              Outlook Integration Diagnostics
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <Button size="sm" onClick={runDiagnostics} disabled={running}>
+              {running ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : null}
+              Run Diagnostics
+            </Button>
+
+            <div className="space-y-2 text-sm">
+              <div className="flex items-center gap-2">
+                {getStatusIcon(testResults.connection)}
+                <span>Connection Status</span>
+                <span className="text-muted-foreground ml-auto">{testResults.connection.toUpperCase()}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                {getStatusIcon(testResults.tokens)}
+                <span>Token Stored</span>
+                <span className="text-muted-foreground ml-auto">{testResults.tokens.toUpperCase()}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                {getStatusIcon(testResults.sync)}
+                <span>Sync Works</span>
+                <span className="text-muted-foreground ml-auto">{testResults.sync.toUpperCase()}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                {getStatusIcon(testResults.events)}
+                <span>Events Visible</span>
+                <span className="text-muted-foreground ml-auto">{testResults.events.toUpperCase()}</span>
+              </div>
+            </div>
+
+            {diagnostics && (
+              <div className="mt-3 p-2 bg-muted rounded text-xs space-y-1">
+                <p><strong>Redirect URI:</strong> {diagnostics.redirectUri}</p>
+                <p><strong>Origin:</strong> {diagnostics.origin}</p>
+                <p><strong>Tokens:</strong> {diagnostics.tokenCount}</p>
+                <p><strong>Events (7d):</strong> {diagnostics.eventsCount}</p>
+                <p><strong>Last Sync:</strong> {diagnostics.lastSync ? format(new Date(diagnostics.lastSync), 'PPpp') : 'Never'}</p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </CollapsibleContent>
+    </Collapsible>
+  );
+}
 
 export default function CalendarTimeCapture() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { profile } = useAuth();
+  const { canAccessAdmin } = useRBAC();
   const { 
     loading, initializing, connected, events, drafts,
     connect, disconnect, syncCalendar, 
-    fetchEvents, fetchDrafts, createDraft, updateDraft, postDraft, discardDraft 
+    fetchEvents, fetchDrafts, createDraft, updateDraft, postDraft, discardDraft,
+    runDiagnostics
   } = useOutlookCalendar();
 
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
