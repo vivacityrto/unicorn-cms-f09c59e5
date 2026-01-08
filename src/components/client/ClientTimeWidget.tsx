@@ -119,11 +119,20 @@ export function ClientTimeWidget({ tenantId, clientId }: ClientTimeWidgetProps) 
                 </Badge>
               </TooltipTrigger>
               <TooltipContent side="bottom" className="max-w-xs">
-                <div className="space-y-1 text-xs">
+                <div className="space-y-1.5 text-xs">
                   <p><strong>Remaining:</strong> {formatHours(usage.remaining_minutes)}</p>
-                  <p><strong>Last 30 days:</strong> {formatHours(usage.trailing_30d_minutes)}</p>
+                  <div className="pt-1 border-t border-border/50">
+                    <p className="text-muted-foreground mb-1">This month breakdown:</p>
+                    <div className="flex gap-2 text-[10px]">
+                      <span>Calendar {formatHours(usage.calendar_minutes_30d || 0)}</span>
+                      <span>•</span>
+                      <span>Timer {formatHours(usage.timer_minutes_30d || 0)}</span>
+                      <span>•</span>
+                      <span>Manual {formatHours(usage.manual_minutes_30d || 0)}</span>
+                    </div>
+                  </div>
                   {usage.forecast_days_to_zero !== null && (
-                    <p className="flex items-center gap-1">
+                    <p className="flex items-center gap-1 pt-1 border-t border-border/50">
                       <TrendingDown className="h-3 w-3" />
                       {formatForecast(usage.forecast_days_to_zero)}
                     </p>

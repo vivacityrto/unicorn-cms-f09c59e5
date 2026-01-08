@@ -2,12 +2,13 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { Clock, TrendingUp, DollarSign, ExternalLink, AlertTriangle, X, TrendingDown } from 'lucide-react';
+import { Clock, TrendingUp, DollarSign, ExternalLink, AlertTriangle, X, TrendingDown, Calendar, Timer, PenLine } from 'lucide-react';
 import { useTimeTracking, formatDuration } from '@/hooks/useTimeTracking';
 import { usePackageUsage, formatHours, formatForecast } from '@/hooks/usePackageUsage';
 import { useState } from 'react';
 import { TimeLogDrawer } from './TimeLogDrawer';
 import { Skeleton } from '@/components/ui/skeleton';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 
 interface ClientTimeSummaryCardProps {
   clientId: number;
@@ -23,6 +24,7 @@ export function ClientTimeSummaryCard({ clientId }: ClientTimeSummaryCardProps) 
     loading: usageLoading 
   } = usePackageUsage(clientId);
   const [logOpen, setLogOpen] = useState(false);
+  const [sourceFilter, setSourceFilter] = useState<'all' | 'calendar' | 'timer' | 'manual'>('all');
 
   const loading = timeLoading || usageLoading;
 
@@ -135,7 +137,7 @@ export function ClientTimeSummaryCard({ clientId }: ClientTimeSummaryCardProps) 
           <CardHeader className="pb-2">
             <CardTitle className="text-base flex items-center gap-2">
               <TrendingDown className="h-4 w-4" />
-              Package Usage
+              Package Burn-down
               {selectedPackage && (
                 <Badge variant="outline" className="ml-auto text-xs font-normal">
                   {selectedPackage.package_name}
@@ -146,19 +148,60 @@ export function ClientTimeSummaryCard({ clientId }: ClientTimeSummaryCardProps) 
           <CardContent>
             {usage && usage.included_minutes > 0 ? (
               <div className="space-y-4">
+                {/* Source filter toggle */}
+                <ToggleGroup type="single" value={sourceFilter} onValueChange={(v) => v && setSourceFilter(v as typeof sourceFilter)} className="justify-start">
+                  <ToggleGroupItem value="all" size="sm" className="text-xs h-7 px-2">All</ToggleGroupItem>
+                  <ToggleGroupItem value="calendar" size="sm" className="text-xs h-7 px-2 gap-1">
+                    <Calendar className="h-3 w-3" />
+                    Calendar
+                  </ToggleGroupItem>
+                  <ToggleGroupItem value="timer" size="sm" className="text-xs h-7 px-2 gap-1">
+                    <Timer className="h-3 w-3" />
+                    Timer
+                  </ToggleGroupItem>
+                  <ToggleGroupItem value="manual" size="sm" className="text-xs h-7 px-2 gap-1">
+                    <PenLine className="h-3 w-3" />
+                    Manual
+                  </ToggleGroupItem>
+                </ToggleGroup>
+
                 {/* Progress bar */}
-                <div className="space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Used</span>
-                    <span className={`font-medium ${isOverBudget ? 'text-destructive' : isNearLimit ? 'text-yellow-600' : ''}`}>
-                      {formatHours(usage.used_minutes)} / {formatHours(usage.included_minutes)}
-                    </span>
-                  </div>
-                  <Progress 
-                    value={Math.min(usedPercent, 100)} 
-                    className={`h-2 ${isOverBudget ? '[&>div]:bg-destructive' : isNearLimit ? '[&>div]:bg-yellow-500' : ''}`}
-                  />
-                </div>
+                {(() => {
+                  const displayMinutes = sourceFilter === 'all' 
+                    ? usage.used_minutes 
+                    : sourceFilter === 'calendar' 
+                      ? (usage.calendar_minutes_total || 0)
+                      : sourceFilter === 'timer' 
+                        ? (usage.timer_minutes_total || 0)
+                        : (usage.manual_minutes_total || 0);
+                  const displayPercent = usage.included_minutes > 0 
+                    ? Math.round((displayMinutes / usage.included_minutes) * 100) 
+                    : 0;
+                  
+                  return (
+                    <div className="space-y-2">
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">
+                          {sourceFilter === 'all' ? 'Used' : `${sourceFilter.charAt(0).toUpperCase() + sourceFilter.slice(1)} time`}
+                        </span>
+                        <span className={`font-medium ${isOverBudget && sourceFilter === 'all' ? 'text-destructive' : isNearLimit && sourceFilter === 'all' ? 'text-yellow-600' : ''}`}>
+                          {formatHours(displayMinutes)} / {formatHours(usage.included_minutes)}
+                        </span>
+                      </div>
+                      <Progress 
+                        value={Math.min(displayPercent, 100)} 
+                        className={`h-2 ${isOverBudget && sourceFilter === 'all' ? '[&>div]:bg-destructive' : isNearLimit && sourceFilter === 'all' ? '[&>div]:bg-yellow-500' : ''}`}
+                      />
+                      {sourceFilter === 'all' && (
+                        <div className="text-[10px] text-muted-foreground flex gap-3 mt-1">
+                          <span className="flex items-center gap-1"><Calendar className="h-2.5 w-2.5" /> Calendar {formatHours(usage.calendar_minutes_total || 0)}</span>
+                          <span className="flex items-center gap-1"><Timer className="h-2.5 w-2.5" /> Timer {formatHours(usage.timer_minutes_total || 0)}</span>
+                          <span className="flex items-center gap-1"><PenLine className="h-2.5 w-2.5" /> Manual {formatHours(usage.manual_minutes_total || 0)}</span>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
 
                 {/* Stats grid */}
                 <div className="grid grid-cols-2 gap-4 pt-2">
@@ -173,6 +216,11 @@ export function ClientTimeSummaryCard({ clientId }: ClientTimeSummaryCardProps) 
                     <p className="text-lg font-semibold">
                       {formatHours(usage.trailing_30d_minutes)}
                     </p>
+                    <div className="text-[10px] text-muted-foreground flex gap-2">
+                      <span>{formatHours(usage.calendar_minutes_30d || 0)} cal</span>
+                      <span>{formatHours(usage.timer_minutes_30d || 0)} tmr</span>
+                      <span>{formatHours(usage.manual_minutes_30d || 0)} man</span>
+                    </div>
                   </div>
                 </div>
 
