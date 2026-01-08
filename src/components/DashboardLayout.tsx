@@ -50,6 +50,10 @@ const baseMenuItemsWithoutDocs = [{
   label: "Calendar",
   path: "/calendar"
 }, {
+  icon: Clock,
+  label: "Time Capture",
+  path: "/calendar/time-capture"
+}, {
   icon: FileText,
   label: "Documents",
   path: "/manage-documents"
