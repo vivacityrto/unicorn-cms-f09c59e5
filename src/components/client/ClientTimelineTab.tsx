@@ -25,6 +25,7 @@ const EVENT_ICONS: Record<string, React.ElementType> = {
   time_posted: Timer,
   time_ignored: Timer,
   email_sent: Mail,
+  email_failed: Mail,
   document_uploaded: FileText,
   document_downloaded: FileDown,
   task_completed_team: CheckSquare,
@@ -40,6 +41,7 @@ const EVENT_COLORS: Record<string, string> = {
   time_posted: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
   time_ignored: 'bg-muted text-muted-foreground',
   email_sent: 'bg-cyan-100 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-400',
+  email_failed: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
   document_uploaded: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
   document_downloaded: 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400',
   task_completed_team: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400',
@@ -54,6 +56,7 @@ const FILTER_OPTIONS = [
   { value: 'all', label: 'All', icon: Activity },
   { value: 'meetings', label: 'Meetings', icon: Calendar },
   { value: 'time', label: 'Time', icon: Timer },
+  { value: 'emails', label: 'Emails', icon: Mail },
   { value: 'notes', label: 'Notes', icon: StickyNote }
 ];
 

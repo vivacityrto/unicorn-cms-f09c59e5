@@ -8,6 +8,7 @@ const corsHeaders = {
 
 interface SendEmailRequest {
   tenant_id: number;
+  client_id?: number; // Client ID for timeline tracking
   package_id?: number;
   stage_id?: number;
   email_template_id: string;
@@ -109,7 +110,7 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     const body: SendEmailRequest = await req.json();
-    const { tenant_id, package_id, stage_id, email_template_id, recipient_type, to_override, dry_run, stage_release_id } = body;
+    const { tenant_id, client_id, package_id, stage_id, email_template_id, recipient_type, to_override, dry_run, stage_release_id } = body;
 
     console.log("Processing send-stage-email request:", { tenant_id, package_id, stage_id, email_template_id, recipient_type, dry_run });
 
@@ -355,11 +356,12 @@ const handler = async (req: Request): Promise<Response> => {
 
     console.log("Mailgun response:", mailgunResponse.status, mailgunResult);
 
-    // 8. Log the send
+    // 8. Log the send (this triggers timeline event via DB trigger)
     const { data: logEntry, error: logError } = await supabase
       .from("email_send_log")
       .insert({
         tenant_id: tenant_id,
+        client_id: client_id || tenant_id, // Use client_id if provided, fallback to tenant_id
         package_id: package_id || null,
         stage_id: stage_id || null,
         stage_release_id: stage_release_id || null,
@@ -367,12 +369,15 @@ const handler = async (req: Request): Promise<Response> => {
         email_template_version: typedTemplate.version,
         to_email: uniqueRecipients.join(","),
         cc_emails: [],
+        bcc_emails: [],
+        from_email: mailgunFromEmail,
         subject: renderedSubject,
         body_html: renderedBody,
         body_text: plainText,
         merge_data: mergeData,
         status: emailStatus,
         error_message: errorMessage,
+        provider: 'mailgun',
         sent_at: emailStatus === "sent" ? new Date().toISOString() : null,
         created_by: user.id,
       })
