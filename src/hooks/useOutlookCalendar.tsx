@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
+import { Json } from '@/integrations/supabase/types';
 
 export interface CalendarEvent {
   id: string;
@@ -14,7 +15,7 @@ export interface CalendarEvent {
   start_at: string;
   end_at: string;
   organizer_email: string | null;
-  attendees: { list: Array<{ email: string; name: string }>; emails: string[] };
+  attendees: Json;
   meeting_url: string | null;
   status: string;
   location: string | null;
@@ -30,7 +31,7 @@ export interface TimeDraft {
   work_date: string;
   notes: string | null;
   confidence: number;
-  suggestion: Record<string, unknown>;
+  suggestion: Json;
   status: string;
 }
 
@@ -164,10 +165,15 @@ export function useOutlookCalendar() {
     return result.draft_id;
   }, [toast, fetchDrafts]);
 
-  const updateDraft = useCallback(async (draftId: string, updates: Partial<TimeDraft>) => {
+  const updateDraft = useCallback(async (draftId: string, updates: Partial<Omit<TimeDraft, 'suggestion'>> & { suggestion?: Json }) => {
+    const { suggestion, ...rest } = updates;
+    const updatePayload: Record<string, unknown> = { ...rest, updated_at: new Date().toISOString() };
+    if (suggestion !== undefined) {
+      updatePayload.suggestion = suggestion;
+    }
     const { error } = await supabase
       .from('calendar_time_drafts')
-      .update({ ...updates, updated_at: new Date().toISOString() })
+      .update(updatePayload as { updated_at: string })
       .eq('id', draftId);
     
     if (error) {
