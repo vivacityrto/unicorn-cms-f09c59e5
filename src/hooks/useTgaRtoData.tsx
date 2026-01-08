@@ -2,8 +2,6 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
-const SUPABASE_URL = "https://yxkgdalkbrriasiyyrwk.supabase.co";
-
 // Types for the new TGA data model
 export interface TGARtoData {
   legal_name: string | null;
@@ -310,50 +308,29 @@ export function useTgaRtoData(tenantId: number | null, rtoCode: string | null, c
           tenant_id: tenantId 
         });
 
-        const { data: fnData, error: fnError } = await supabase.functions.invoke('tga-sync', {
+        // Use supabase.functions.invoke with action in body (not header) to avoid CORS issues
+        const { data: liveData, error: fnError } = await supabase.functions.invoke('tga-sync', {
           body: {
+            action: 'sync-client',
             client_id: clientData.id,
             rto_number: rtoCode,
             tenant_id: tenantId.toString(),
           },
-          headers: {
-            'x-action': 'sync-client',
-          },
         });
 
-        // supabase.functions.invoke uses a different URL pattern, need to use fetch for query params
-        const session = await supabase.auth.getSession();
-        const response = await fetch(
-          `${SUPABASE_URL}/functions/v1/tga-sync?action=sync-client`,
-          {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${session.data.session?.access_token}`,
-            },
-            body: JSON.stringify({
-              client_id: clientData.id,
-              rto_number: rtoCode,
-              tenant_id: tenantId.toString(),
-            }),
-          }
-        );
-
-        if (!response.ok) {
-          const errorText = await response.text();
-          console.error('Edge function error:', response.status, errorText);
+        if (fnError) {
+          console.error('Edge function error:', fnError);
           toast({
             title: 'Sync Failed',
-            description: `Edge function error: ${response.status}`,
+            description: fnError.message || 'Edge function error',
             variant: 'destructive'
           });
-          return { success: false, error: `Edge function error: ${response.status}` };
+          return { success: false, error: fnError.message };
         }
 
-        const liveData = await response.json();
         console.log('Live sync response:', liveData);
 
-        if (liveData.success) {
+        if (liveData?.success) {
           toast({
             title: 'TGA Sync Complete',
             description: `Synced live data for RTO ${rtoCode}: ${liveData.rto_data?.legal_name || liveData.rto_data?.legalName || 'Success'}`,
@@ -363,10 +340,10 @@ export function useTgaRtoData(tenantId: number | null, rtoCode: string | null, c
         } else {
           toast({
             title: 'Sync Failed',
-            description: liveData.error || 'Failed to sync from TGA',
+            description: liveData?.error || 'Failed to sync from TGA',
             variant: 'destructive'
           });
-          return { success: false, error: liveData.error };
+          return { success: false, error: liveData?.error };
         }
       }
 

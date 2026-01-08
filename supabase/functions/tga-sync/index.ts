@@ -4,7 +4,8 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  'Access-Control-Allow-Headers': 'authorization, apikey, content-type, x-client-info',
 };
 
 // TGA Production SOAP Endpoints (TGA Web Services Specification v13r1)
@@ -416,8 +417,9 @@ async function testConnection(): Promise<{
 }
 
 serve(async (req) => {
+  // Handle CORS preflight
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { status: 200, headers: corsHeaders });
   }
 
   try {
@@ -452,8 +454,21 @@ serve(async (req) => {
 
     const isSuperAdmin = userProfile?.global_role === 'SuperAdmin';
 
+    // Parse request body for action (preferred) or fall back to query param
+    let requestBody: Record<string, unknown> = {};
+    if (req.method === 'POST') {
+      try {
+        requestBody = await req.json();
+      } catch {
+        // Body may be empty for some actions
+      }
+    }
+
     const url = new URL(req.url);
-    const action = url.searchParams.get('action') || 'status';
+    // Read action from body first, then query param, default to 'status'
+    const action = (requestBody.action as string) || url.searchParams.get('action') || 'status';
+    
+    log('info', 'Request received', { action, method: req.method, userId: user.id });
 
     // Health check / test connection
     if (action === 'test' || action === 'health') {
@@ -521,8 +536,8 @@ serve(async (req) => {
 
     // Live sync for a specific client/RTO
     if (action === 'sync-client') {
-      const body = await req.json();
-      const { client_id, rto_number, tenant_id } = body;
+      // Use requestBody already parsed above (don't re-parse req.json())
+      const { client_id, rto_number, tenant_id } = requestBody as { client_id?: string; rto_number?: string; tenant_id?: string };
       
       if (!rto_number) {
         return new Response(JSON.stringify({ error: 'rto_number required' }), {
