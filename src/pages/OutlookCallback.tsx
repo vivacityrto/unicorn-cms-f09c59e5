@@ -104,44 +104,24 @@ export default function OutlookCallback() {
         // This can happen if user is on a different domain than where they started
       }
 
-      // Wait for Supabase session
+      // Session is OPTIONAL for this callback.
+      // Why: Microsoft may redirect back to a different preview domain (lovable.app vs lovableproject.com),
+      // which would not share localStorage with the origin where the user originally logged in.
+      // Token exchange is secured by the server-stored `state` and does not require the user session.
       setStatus('waiting-session');
-      setMessage('Waiting for session...');
-      
-      console.log('[OutlookCallback] Waiting for Supabase session...');
-      
-      let session = null;
-      let retries = 0;
-      const maxRetries = 10; // Increased retries
+      setMessage('Finalizing connection...');
 
-      while (!session && retries < maxRetries) {
-        const { data, error: sessionError } = await supabase.auth.getSession();
-        session = data.session;
-        
-        if (sessionError) {
-          console.error('[OutlookCallback] Session error:', sessionError);
-        }
-        
-        if (!session) {
-          console.log(`[OutlookCallback] Session not ready, retry ${retries + 1}/${maxRetries}`);
-          await new Promise(r => setTimeout(r, 500));
-          retries++;
-        }
+      let sessionAvailable = false;
+      try {
+        const { data } = await supabase.auth.getSession();
+        sessionAvailable = !!data.session;
+      } catch {
+        // ignore
       }
 
-      setDiagnostics(prev => ({ ...prev, sessionAvailable: !!session }));
+      setDiagnostics(prev => ({ ...prev, sessionAvailable }));
 
-      if (!session) {
-        console.error('[OutlookCallback] No session after retries');
-        setStatus('error');
-        setMessage('Your session has expired. Please log in again and try connecting.');
-        return;
-      }
-
-      console.log('[OutlookCallback] Session available:', {
-        userId: session.user.id,
-        email: session.user.email
-      });
+      console.log('[OutlookCallback] Session available:', sessionAvailable);
 
       // Exchange code for tokens
       setStatus('exchanging');
@@ -213,11 +193,21 @@ export default function OutlookCallback() {
         setStatus('success');
         setMessage('Successfully connected to Outlook!');
 
-        console.log('[OutlookCallback] SUCCESS - redirecting to time capture');
+        console.log('[OutlookCallback] SUCCESS - redirecting');
 
-        // Redirect to time capture page
-        setTimeout(() => {
-          navigate('/calendar/time-capture');
+        // If user session exists on this origin, return to Time Capture.
+        // Otherwise, send them to login (common when redirect returns to a different preview domain).
+        setTimeout(async () => {
+          try {
+            const { data } = await supabase.auth.getSession();
+            if (data.session) {
+              navigate('/calendar/time-capture');
+              return;
+            }
+          } catch {
+            // ignore
+          }
+          navigate('/login');
         }, 2000);
 
       } catch (err) {
