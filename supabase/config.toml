@@ -32,3 +32,9 @@ verify_jwt = false
 
 [functions.export-compliance-pack]
 verify_jwt = false
+
+[functions.outlook-auth]
+verify_jwt = false
+
+[functions.sync-outlook-calendar]
+verify_jwt = false

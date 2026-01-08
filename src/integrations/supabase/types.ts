@@ -1081,6 +1081,170 @@ export type Database = {
           },
         ]
       }
+      calendar_events: {
+        Row: {
+          attendees: Json
+          calendar_id: string
+          created_at: string
+          description: string | null
+          end_at: string
+          id: string
+          last_synced_at: string
+          location: string | null
+          meeting_url: string | null
+          organizer_email: string | null
+          provider: string
+          provider_event_id: string
+          raw: Json
+          start_at: string
+          status: string
+          tenant_id: number
+          title: string
+          user_id: string
+        }
+        Insert: {
+          attendees?: Json
+          calendar_id: string
+          created_at?: string
+          description?: string | null
+          end_at: string
+          id?: string
+          last_synced_at?: string
+          location?: string | null
+          meeting_url?: string | null
+          organizer_email?: string | null
+          provider?: string
+          provider_event_id: string
+          raw?: Json
+          start_at: string
+          status?: string
+          tenant_id: number
+          title: string
+          user_id: string
+        }
+        Update: {
+          attendees?: Json
+          calendar_id?: string
+          created_at?: string
+          description?: string | null
+          end_at?: string
+          id?: string
+          last_synced_at?: string
+          location?: string | null
+          meeting_url?: string | null
+          organizer_email?: string | null
+          provider?: string
+          provider_event_id?: string
+          raw?: Json
+          start_at?: string
+          status?: string
+          tenant_id?: number
+          title?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "calendar_events_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      calendar_time_drafts: {
+        Row: {
+          calendar_event_id: string
+          client_id: number | null
+          confidence: number
+          created_at: string
+          created_by: string
+          id: string
+          minutes: number
+          notes: string | null
+          package_id: number | null
+          posted_time_entry_id: string | null
+          stage_id: number | null
+          status: string
+          suggestion: Json
+          tenant_id: number
+          updated_at: string
+          work_date: string
+        }
+        Insert: {
+          calendar_event_id: string
+          client_id?: number | null
+          confidence?: number
+          created_at?: string
+          created_by: string
+          id?: string
+          minutes: number
+          notes?: string | null
+          package_id?: number | null
+          posted_time_entry_id?: string | null
+          stage_id?: number | null
+          status?: string
+          suggestion?: Json
+          tenant_id: number
+          updated_at?: string
+          work_date: string
+        }
+        Update: {
+          calendar_event_id?: string
+          client_id?: number | null
+          confidence?: number
+          created_at?: string
+          created_by?: string
+          id?: string
+          minutes?: number
+          notes?: string | null
+          package_id?: number | null
+          posted_time_entry_id?: string | null
+          stage_id?: number | null
+          status?: string
+          suggestion?: Json
+          tenant_id?: number
+          updated_at?: string
+          work_date?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "calendar_time_drafts_calendar_event_id_fkey"
+            columns: ["calendar_event_id"]
+            isOneToOne: false
+            referencedRelation: "calendar_events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "calendar_time_drafts_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "calendar_time_drafts_package_id_fkey"
+            columns: ["package_id"]
+            isOneToOne: false
+            referencedRelation: "packages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "calendar_time_drafts_stage_id_fkey"
+            columns: ["stage_id"]
+            isOneToOne: false
+            referencedRelation: "documents_stages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "calendar_time_drafts_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       clickup_integration: {
         Row: {
           access_token: string
@@ -6588,6 +6752,74 @@ export type Database = {
           },
         ]
       }
+      oauth_states: {
+        Row: {
+          created_at: string
+          data: Json
+          expires_at: string
+          state: string
+        }
+        Insert: {
+          created_at?: string
+          data: Json
+          expires_at: string
+          state: string
+        }
+        Update: {
+          created_at?: string
+          data?: Json
+          expires_at?: string
+          state?: string
+        }
+        Relationships: []
+      }
+      oauth_tokens: {
+        Row: {
+          access_token: string
+          created_at: string
+          expires_at: string
+          id: string
+          provider: string
+          refresh_token: string
+          scope: string | null
+          tenant_id: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          access_token: string
+          created_at?: string
+          expires_at: string
+          id?: string
+          provider?: string
+          refresh_token: string
+          scope?: string | null
+          tenant_id: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          access_token?: string
+          created_at?: string
+          expires_at?: string
+          id?: string
+          provider?: string
+          refresh_token?: string
+          scope?: string | null
+          tenant_id?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "oauth_tokens_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       package_builder_audit_log: {
         Row: {
           action: string
@@ -10773,6 +11005,7 @@ export type Database = {
       }
       time_entries: {
         Row: {
+          calendar_event_id: string | null
           client_id: number
           created_at: string
           duration_minutes: number
@@ -10791,6 +11024,7 @@ export type Database = {
           work_type: string
         }
         Insert: {
+          calendar_event_id?: string | null
           client_id: number
           created_at?: string
           duration_minutes: number
@@ -10809,6 +11043,7 @@ export type Database = {
           work_type?: string
         }
         Update: {
+          calendar_event_id?: string | null
           client_id?: number
           created_at?: string
           duration_minutes?: number
@@ -10827,6 +11062,13 @@ export type Database = {
           work_type?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "time_entries_calendar_event_id_fkey"
+            columns: ["calendar_event_id"]
+            isOneToOne: false
+            referencedRelation: "calendar_events"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "time_entries_client_id_fkey"
             columns: ["client_id"]
@@ -12407,6 +12649,11 @@ export type Database = {
         }
         Returns: Json
       }
+      rpc_create_time_draft_from_event: {
+        Args: { p_event_id: string }
+        Returns: Json
+      }
+      rpc_discard_time_draft: { Args: { p_draft_id: string }; Returns: Json }
       rpc_dismiss_alert: { Args: { p_alert_id: string }; Returns: Json }
       rpc_get_my_action_items: {
         Args: {
@@ -12435,6 +12682,7 @@ export type Database = {
         Args: { p_client_id: number; p_client_package_id: string }
         Returns: Json
       }
+      rpc_post_time_draft: { Args: { p_draft_id: string }; Returns: Json }
       rpc_set_action_item_status: {
         Args: { p_action_item_id: string; p_status: string }
         Returns: Json
