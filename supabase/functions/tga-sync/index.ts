@@ -8,23 +8,34 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, apikey, content-type, x-client-info',
 };
 
-// TGA Production SOAP Endpoints (verified working - NO V13 suffix)
-// The V13 endpoints return 404 - use base service URLs
+// TGA Production SOAP Endpoints - WCF basicHttpBinding (SOAP 1.1)
+// Per TGA Web Services Specification v13r1
+// Note: The V13 suffix endpoints and SOAP 1.2 both return 404 - use base URLs with SOAP 1.1
 const TGA_ENDPOINTS = {
   organisation: 'https://ws.training.gov.au/Deewr.Tga.WebServices/OrganisationService.svc',
   training: 'https://ws.training.gov.au/Deewr.Tga.WebServices/TrainingComponentService.svc',
   classification: 'https://ws.training.gov.au/Deewr.Tga.WebServices/ClassificationService.svc',
 };
 
-const FUNCTION_VERSION = '1.0.1';
+// Correct SOAP action URIs per TGA WSDL
+const SOAP_ACTIONS = {
+  getOrganisationDetails: 'http://training.gov.au/services/Organisation/IOrganisationService/GetDetails',
+  searchOrganisation: 'http://training.gov.au/services/Organisation/IOrganisationService/Search',
+  getTrainingComponentDetails: 'http://training.gov.au/services/TrainingComponent/ITrainingComponentService/GetDetails',
+  searchTrainingComponent: 'http://training.gov.au/services/TrainingComponent/ITrainingComponentService/Search',
+};
+
+const FUNCTION_VERSION = '1.0.2';
 
 // Credentials loaded from Supabase secrets
 const TGA_WS_USERNAME = Deno.env.get('TGA_WS_USERNAME');
 const TGA_WS_PASSWORD = Deno.env.get('TGA_WS_PASSWORD');
 
 // SOAP namespaces per TGA Web Services Specification
+// Using SOAP 1.1 (basicHttpBinding) - SOAP 1.2 returns 404
 const SOAP_NS = {
-  soap: 'http://www.w3.org/2003/05/soap-envelope',
+  soap11: 'http://schemas.xmlsoap.org/soap/envelope/',
+  soap12: 'http://www.w3.org/2003/05/soap-envelope',
   org: 'http://training.gov.au/services/Organisation',
   tc: 'http://training.gov.au/services/TrainingComponent',
 };
@@ -102,90 +113,162 @@ function extractMultiple(xml: string, containerTag: string, itemTag: string): st
   return items;
 }
 
-// Build SOAP envelope for Organisation service
+// Build SOAP 1.1 envelope for Organisation service (basicHttpBinding)
 function buildOrgSoapRequest(action: string, body: string): string {
   return `<?xml version="1.0" encoding="utf-8"?>
-<soap12:Envelope xmlns:soap12="${SOAP_NS.soap}" xmlns:org="${SOAP_NS.org}">
-  <soap12:Body>
+<soap:Envelope xmlns:soap="${SOAP_NS.soap11}" xmlns:org="${SOAP_NS.org}">
+  <soap:Body>
     <org:${action}>
       ${body}
     </org:${action}>
-  </soap12:Body>
-</soap12:Envelope>`;
+  </soap:Body>
+</soap:Envelope>`;
 }
 
-// Build SOAP envelope for Training Component service
+// Build SOAP 1.1 envelope for Training Component service (basicHttpBinding)
 function buildTCSoapRequest(action: string, body: string): string {
   return `<?xml version="1.0" encoding="utf-8"?>
-<soap12:Envelope xmlns:soap12="${SOAP_NS.soap}" xmlns:tc="${SOAP_NS.tc}">
-  <soap12:Body>
+<soap:Envelope xmlns:soap="${SOAP_NS.soap11}" xmlns:tc="${SOAP_NS.tc}">
+  <soap:Body>
     <tc:${action}>
       ${body}
     </tc:${action}>
-  </soap12:Body>
-</soap12:Envelope>`;
+  </soap:Body>
+</soap:Envelope>`;
 }
 
-// Make SOAP request with enhanced error handling
+// Make SOAP request with enhanced error handling and detailed logging
 async function makeSoapRequest(endpoint: string, soapAction: string, body: string): Promise<string> {
-  log('info', 'SOAP request starting', { endpoint, action: soapAction });
-  
   const startTime = Date.now();
   
+  // Build request details for logging
+  const requestDetails = {
+    endpoint,
+    soapAction,
+    method: 'POST',
+    soapVersion: '1.1',
+    contentType: 'text/xml; charset=utf-8',
+    bodyLength: body.length,
+    bodyPreview: body.substring(0, 200) + '...',
+  };
+  
+  log('info', 'SOAP request starting', requestDetails);
+  
   try {
+    // SOAP 1.1 uses text/xml and SOAPAction header
+    const headers: Record<string, string> = {
+      'Content-Type': 'text/xml; charset=utf-8',
+      'SOAPAction': soapAction,
+      'Authorization': getBasicAuthHeader(),
+    };
+    
+    log('info', 'Request headers prepared', {
+      contentType: headers['Content-Type'],
+      soapAction: headers['SOAPAction'],
+      authPresent: !!headers['Authorization'],
+    });
+    
     const response = await fetch(endpoint, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/soap+xml; charset=utf-8',
-        'Authorization': getBasicAuthHeader(),
-      },
+      headers,
       body,
     });
 
     const duration = Date.now() - startTime;
+    const responseText = await response.text();
+    
+    // Log response details (truncated for security)
+    const responseDetails = {
+      status: response.status,
+      statusText: response.statusText,
+      duration,
+      responseLength: responseText.length,
+      responsePreview: responseText.substring(0, 300),
+      headers: {
+        contentType: response.headers.get('content-type'),
+        server: response.headers.get('server'),
+      },
+    };
+    
+    log('info', 'SOAP response received', responseDetails);
 
     if (!response.ok) {
-      const errorText = await response.text();
-      
       // Parse specific error types
       let errorDetail = `HTTP ${response.status}`;
-      if (response.status === 401) {
+      
+      if (response.status === 404) {
+        errorDetail = `HTTP 404 - Endpoint not found: ${endpoint}`;
+        log('error', 'TGA endpoint not found (404)', {
+          endpoint,
+          soapAction,
+          soapVersion: '1.1',
+          responsePreview: responseText.substring(0, 300),
+          duration,
+        });
+      } else if (response.status === 401) {
         errorDetail = 'Authentication failed - check TGA_WS_USERNAME and TGA_WS_PASSWORD secrets';
         log('error', 'TGA authentication failed', { status: 401, duration });
       } else if (response.status === 403) {
         errorDetail = 'Access denied - account may not have Web Services Read permission';
         log('error', 'TGA access denied', { status: 403, duration });
-      } else if (errorText.includes('Fault')) {
+      } else if (response.status === 415) {
+        errorDetail = 'Unsupported Media Type - Content-Type or SOAP version mismatch';
+        log('error', 'TGA content type rejected', { 
+          status: 415, 
+          contentTypeSent: headers['Content-Type'],
+          soapVersion: '1.1',
+          duration 
+        });
+      } else if (responseText.includes('Fault')) {
         // Extract SOAP fault message
-        const faultMatch = errorText.match(/<(?:a:)?Text[^>]*>([^<]+)<\/(?:a:)?Text>/i);
+        const faultMatch = responseText.match(/<(?:a:)?Text[^>]*>([^<]+)<\/(?:a:)?Text>/i) ||
+                          responseText.match(/<faultstring[^>]*>([^<]+)<\/faultstring>/i);
         if (faultMatch) {
           errorDetail = faultMatch[1];
         }
         log('error', 'SOAP fault received', { status: response.status, fault: errorDetail, duration });
       } else {
-        log('error', 'SOAP request failed', { status: response.status, statusText: response.statusText, duration });
+        log('error', 'SOAP request failed', { 
+          status: response.status, 
+          statusText: response.statusText, 
+          responsePreview: responseText.substring(0, 300),
+          duration 
+        });
       }
       
       throw new Error(`TGA API error: ${errorDetail}`);
     }
 
-    const xmlResponse = await response.text();
     log('info', 'SOAP request successful', { 
       endpoint, 
       action: soapAction, 
-      responseLength: xmlResponse.length,
+      responseLength: responseText.length,
       duration 
     });
     
-    return xmlResponse;
+    return responseText;
   } catch (error: unknown) {
     const duration = Date.now() - startTime;
     const errorMsg = error instanceof Error ? error.message : String(error);
     
     // Network errors
-    if (errorMsg.includes('fetch')) {
-      log('error', 'Network error connecting to TGA', { error: errorMsg, duration });
+    if (errorMsg.includes('fetch') || errorMsg.includes('network') || errorMsg.includes('connect')) {
+      log('error', 'Network error connecting to TGA', { 
+        error: errorMsg, 
+        endpoint,
+        duration 
+      });
       throw new Error('Cannot connect to TGA Web Services - check network connectivity');
+    }
+    
+    // Re-throw with enhanced context if not already a TGA API error
+    if (!errorMsg.includes('TGA API error')) {
+      log('error', 'Unexpected error in SOAP request', {
+        error: errorMsg,
+        endpoint,
+        soapAction,
+        duration,
+      });
     }
     
     throw error;
@@ -282,7 +365,11 @@ function parseOrganisation(xml: string): ParsedOrganisation | null {
 async function fetchTrainingComponent(code: string): Promise<{ data: ParsedTrainingComponent | null; raw: string; error: string | null }> {
   try {
     const body = buildTCSoapRequest('GetDetails', `<tc:request><tc:Code>${code}</tc:Code></tc:request>`);
-    const response = await makeSoapRequest(TGA_ENDPOINTS.training, 'GetDetails', body);
+    const response = await makeSoapRequest(
+      TGA_ENDPOINTS.training, 
+      SOAP_ACTIONS.getTrainingComponentDetails, 
+      body
+    );
     
     const parsed = parseTrainingComponent(response);
     return { data: parsed, raw: response, error: parsed ? null : 'Could not parse response' };
@@ -296,7 +383,11 @@ async function fetchTrainingComponent(code: string): Promise<{ data: ParsedTrain
 async function fetchOrganisation(code: string): Promise<{ data: ParsedOrganisation | null; raw: string; error: string | null }> {
   try {
     const body = buildOrgSoapRequest('GetDetails', `<org:request><org:Code>${code}</org:Code></org:request>`);
-    const response = await makeSoapRequest(TGA_ENDPOINTS.organisation, 'GetDetails', body);
+    const response = await makeSoapRequest(
+      TGA_ENDPOINTS.organisation, 
+      SOAP_ACTIONS.getOrganisationDetails, 
+      body
+    );
     
     const parsed = parseOrganisation(response);
     return { data: parsed, raw: response, error: parsed ? null : 'Could not parse response' };
@@ -321,7 +412,11 @@ async function searchByModifiedDate(since: Date, componentType?: string): Promis
       </tc:request>
     `);
     
-    const response = await makeSoapRequest(TGA_ENDPOINTS.training, 'Search', body);
+    const response = await makeSoapRequest(
+      TGA_ENDPOINTS.training, 
+      SOAP_ACTIONS.searchTrainingComponent, 
+      body
+    );
     const items = extractMultiple(response, 'TrainingComponents', 'TrainingComponent');
     
     const parsed = items
