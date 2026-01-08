@@ -10,11 +10,11 @@ const corsHeaders = {
 
 // TGA Production SOAP Endpoints - WCF basicHttpBinding (SOAP 1.1)
 // Per TGA Web Services Specification v13r1
-// Note: The V13 suffix endpoints and SOAP 1.2 both return 404 - use base URLs with SOAP 1.1
+// IMPORTANT: Path is case-sensitive - must use 'Webservices' (lowercase 's') and V13 suffix
 const TGA_ENDPOINTS = {
-  organisation: 'https://ws.training.gov.au/Deewr.Tga.WebServices/OrganisationService.svc',
-  training: 'https://ws.training.gov.au/Deewr.Tga.WebServices/TrainingComponentService.svc',
-  classification: 'https://ws.training.gov.au/Deewr.Tga.WebServices/ClassificationService.svc',
+  organisation: 'https://ws.training.gov.au/Deewr.Tga.Webservices/OrganisationServiceV13.svc',
+  training: 'https://ws.training.gov.au/Deewr.Tga.Webservices/TrainingComponentServiceV13.svc',
+  classification: 'https://ws.training.gov.au/Deewr.Tga.Webservices/ClassificationServiceV13.svc',
 };
 
 // Correct SOAP action URIs per TGA WSDL
@@ -25,7 +25,7 @@ const SOAP_ACTIONS = {
   searchTrainingComponent: 'http://training.gov.au/services/TrainingComponent/ITrainingComponentService/Search',
 };
 
-const FUNCTION_VERSION = '1.0.2';
+const FUNCTION_VERSION = '1.0.3';
 
 // Credentials loaded from Supabase secrets
 const TGA_WS_USERNAME = Deno.env.get('TGA_WS_USERNAME');
