@@ -519,6 +519,158 @@ serve(async (req) => {
       });
     }
 
+    // Live sync for a specific client/RTO
+    if (action === 'sync-client') {
+      const body = await req.json();
+      const { client_id, rto_number, tenant_id } = body;
+      
+      if (!rto_number) {
+        return new Response(JSON.stringify({ error: 'rto_number required' }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      log('info', 'Starting live client sync', { rto_number, client_id, tenant_id });
+
+      try {
+        // Fetch RTO details via SOAP
+        const orgResult = await fetchOrganisation(rto_number);
+        
+        if (!orgResult.data) {
+          // Update link status to indicate not found
+          if (client_id) {
+            await supabase
+              .from('tga_links')
+              .upsert({
+                client_id,
+                rto_number,
+                is_linked: false,
+                link_status: 'not_found',
+                last_sync_at: new Date().toISOString(),
+                last_sync_status: 'failed',
+                last_sync_error: orgResult.error || 'RTO not found in TGA registry',
+                updated_at: new Date().toISOString(),
+              }, { onConflict: 'client_id' });
+          }
+          
+          return new Response(JSON.stringify({
+            success: false,
+            error: orgResult.error || 'RTO not found in TGA registry',
+            rto_number,
+          }), {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        }
+
+        // We got RTO data - upsert to tga_rtos for local cache
+        await supabase
+          .from('tga_rtos')
+          .upsert({
+            rto_number: orgResult.data.code,
+            legal_name: orgResult.data.legalName,
+            trading_name: orgResult.data.tradingName,
+            abn: orgResult.data.abn,
+            status: orgResult.data.status,
+            registration_start: orgResult.data.registrationStartDate,
+            registration_end: orgResult.data.registrationEndDate,
+            phone: orgResult.data.phone,
+            email: orgResult.data.email,
+            website: orgResult.data.website,
+            updated_at: new Date().toISOString(),
+          }, { onConflict: 'rto_number' });
+
+        // Update link status
+        let linkId = null;
+        if (client_id) {
+          const { data: linkData } = await supabase
+            .from('tga_links')
+            .upsert({
+              client_id,
+              rto_number,
+              is_linked: true,
+              link_status: 'linked',
+              last_sync_at: new Date().toISOString(),
+              last_sync_status: 'success',
+              last_sync_error: null,
+              updated_at: new Date().toISOString(),
+            }, { onConflict: 'client_id' })
+            .select('id')
+            .single();
+          
+          linkId = linkData?.id;
+        }
+
+        // Audit log
+        if (tenant_id) {
+          await supabase.from('client_audit_log').insert({
+            tenant_id: parseInt(tenant_id),
+            entity_type: 'tga_integration',
+            entity_id: client_id || rto_number,
+            action: 'live_sync_completed',
+            actor_user_id: user.id,
+            details: {
+              rto_number,
+              legal_name: orgResult.data.legalName,
+              status: orgResult.data.status,
+            },
+          });
+        }
+
+        log('info', 'Live client sync completed', { 
+          rto_number, 
+          legalName: orgResult.data.legalName 
+        });
+
+        return new Response(JSON.stringify({
+          success: true,
+          rto_number,
+          link_id: linkId,
+          rto_data: {
+            legal_name: orgResult.data.legalName,
+            trading_name: orgResult.data.tradingName,
+            abn: orgResult.data.abn,
+            status: orgResult.data.status,
+            registration_start: orgResult.data.registrationStartDate,
+            registration_end: orgResult.data.registrationEndDate,
+            phone: orgResult.data.phone,
+            email: orgResult.data.email,
+            website: orgResult.data.website,
+          },
+        }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      } catch (error: unknown) {
+        const errorMsg = error instanceof Error ? error.message : String(error);
+        log('error', 'Live client sync failed', { error: errorMsg, rto_number });
+        
+        // Update link with error
+        if (client_id) {
+          await supabase
+            .from('tga_links')
+            .upsert({
+              client_id,
+              rto_number,
+              is_linked: false,
+              link_status: 'error',
+              last_sync_at: new Date().toISOString(),
+              last_sync_status: 'failed',
+              last_sync_error: errorMsg,
+              updated_at: new Date().toISOString(),
+            }, { onConflict: 'client_id' });
+        }
+        
+        return new Response(JSON.stringify({
+          success: false,
+          error: errorMsg,
+          rto_number,
+        }), {
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+    }
+
     // Run sync job
     if (action === 'sync') {
       if (!isSuperAdmin) {

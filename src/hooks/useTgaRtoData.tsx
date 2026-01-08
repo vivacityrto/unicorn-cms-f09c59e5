@@ -290,7 +290,7 @@ export function useTgaRtoData(tenantId: number | null, rtoCode: string | null, c
     try {
       setSyncing(true);
 
-      // Call the new RPC function to sync tenant data from local dataset
+      // First try RPC function for local dataset sync
       const { data, error } = await supabase.rpc('tga_sync_tenant', {
         p_tenant_id: tenantId,
         p_rto_number: rtoCode
@@ -318,6 +318,57 @@ export function useTgaRtoData(tenantId: number | null, rtoCode: string | null, c
           skill_sets: number;
         };
       };
+
+      // If dataset sync failed due to missing RTO, try live SOAP sync
+      if (!result.success && result.error?.includes('not found in dataset')) {
+        console.log('Dataset empty, attempting live SOAP sync...');
+        
+        // Get client_id for this tenant
+        const { data: clientData } = await supabase
+          .from('clients_legacy')
+          .select('id')
+          .eq('tenant_id', tenantId)
+          .single();
+
+        if (clientData?.id && rtoCode) {
+          // Call live sync edge function with action query param
+          const session = await supabase.auth.getSession();
+          const response = await fetch(
+            `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/tga-sync?action=sync-client`,
+            {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${session.data.session?.access_token}`,
+                'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
+              },
+              body: JSON.stringify({
+                client_id: clientData.id,
+                rto_number: rtoCode,
+                tenant_id: tenantId.toString(),
+              }),
+            }
+          );
+
+          const liveData = await response.json();
+
+          if (liveData.success) {
+            toast({
+              title: 'TGA Sync Complete',
+              description: `Synced live data for RTO ${rtoCode}: ${liveData.rto_data?.legal_name || 'Unknown'}`,
+            });
+            await fetchData();
+            return { success: true };
+          } else {
+            toast({
+              title: 'Sync Failed',
+              description: liveData.error || 'Failed to sync from TGA',
+              variant: 'destructive'
+            });
+            return { success: false, error: liveData.error };
+          }
+        }
+      }
 
       if (!result.success) {
         toast({
