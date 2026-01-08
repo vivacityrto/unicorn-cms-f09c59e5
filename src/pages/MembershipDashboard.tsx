@@ -12,6 +12,7 @@ import { MembershipActivityFeed } from '@/components/membership/MembershipActivi
 import { LogConsultDialog, AddNoteDialog, CreateTaskDialog } from '@/components/membership/MembershipDialogs';
 import { MembershipWithDetails } from '@/types/membership';
 import { MyWorkWidget } from '@/components/dashboard/MyWorkWidget';
+import { TimeInboxWidget } from '@/components/dashboard/TimeInboxWidget';
 
 export default function MembershipDashboard() {
   const { profile } = useAuth();
@@ -120,6 +121,9 @@ export default function MembershipDashboard() {
 
           {/* My Work Widget */}
           <MyWorkWidget />
+
+          {/* Time Inbox Widget */}
+          <TimeInboxWidget />
 
           {/* Command Bar */}
           <MembershipCommandBar
