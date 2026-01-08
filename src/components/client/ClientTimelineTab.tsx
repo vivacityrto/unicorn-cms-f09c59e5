@@ -6,12 +6,14 @@ import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { 
   Activity, FileText, Mail, CheckSquare, StickyNote, 
-  Package, Layers, Clock, User, Filter, Loader2, RefreshCw
+  Clock, Loader2, RefreshCw, Calendar, Timer, Search,
+  Plus, X, ChevronDown, ChevronUp, FileDown
 } from 'lucide-react';
-import { formatDistanceToNow } from 'date-fns';
+import { formatDistanceToNow, format } from 'date-fns';
 
 interface ClientTimelineTabProps {
   tenantId: number;
@@ -19,41 +21,94 @@ interface ClientTimelineTabProps {
 }
 
 const EVENT_ICONS: Record<string, React.ElementType> = {
-  note: StickyNote,
-  action_item: CheckSquare,
-  document: FileText,
-  email: Mail,
-  package: Package,
-  stage: Layers,
-  task: CheckSquare
+  meeting_synced: Calendar,
+  time_posted: Timer,
+  time_ignored: Timer,
+  email_sent: Mail,
+  document_uploaded: FileText,
+  document_downloaded: FileDown,
+  task_completed_team: CheckSquare,
+  task_completed_client: CheckSquare,
+  note_added: StickyNote
 };
 
 const EVENT_COLORS: Record<string, string> = {
-  note_created: 'bg-blue-100 text-blue-700',
-  note_updated: 'bg-blue-50 text-blue-600',
-  action_item_created: 'bg-purple-100 text-purple-700',
-  action_item_completed: 'bg-green-100 text-green-700',
-  action_item_updated: 'bg-purple-50 text-purple-600',
-  document_released: 'bg-amber-100 text-amber-700',
-  email_sent: 'bg-cyan-100 text-cyan-700',
-  stage_started: 'bg-indigo-100 text-indigo-700',
-  stage_completed: 'bg-green-100 text-green-700',
-  package_added: 'bg-orange-100 text-orange-700',
-  task_completed: 'bg-green-100 text-green-700',
-  risk_flagged: 'bg-red-100 text-red-700'
+  meeting_synced: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
+  time_posted: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
+  time_ignored: 'bg-muted text-muted-foreground',
+  email_sent: 'bg-cyan-100 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-400',
+  document_uploaded: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
+  document_downloaded: 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400',
+  task_completed_team: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400',
+  task_completed_client: 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400',
+  note_added: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400'
 };
 
-export function ClientTimelineTab({ tenantId, clientId }: ClientTimelineTabProps) {
-  const [filter, setFilter] = useState('all');
-  const { events, loading, hasMore, refresh, loadMore } = useClientTimeline(tenantId, clientId);
+const FILTER_OPTIONS = [
+  { value: 'all', label: 'All', icon: Activity },
+  { value: 'meetings', label: 'Meetings', icon: Calendar },
+  { value: 'time', label: 'Time', icon: Timer },
+  { value: 'tasks', label: 'Tasks', icon: CheckSquare },
+  { value: 'emails', label: 'Emails', icon: Mail },
+  { value: 'docs', label: 'Documents', icon: FileText },
+  { value: 'notes', label: 'Notes', icon: StickyNote }
+];
 
-  const getEventIcon = (event: TimelineEvent) => {
-    const Icon = EVENT_ICONS[event.entity_type || ''] || Activity;
-    return Icon;
+export function ClientTimelineTab({ tenantId, clientId }: ClientTimelineTabProps) {
+  const { 
+    events, 
+    loading, 
+    hasMore, 
+    filter, 
+    setFilter, 
+    search, 
+    setSearch, 
+    refresh, 
+    loadMore,
+    addQuickNote 
+  } = useClientTimeline(tenantId, clientId);
+  
+  const [showAddNote, setShowAddNote] = useState(false);
+  const [noteTitle, setNoteTitle] = useState('');
+  const [noteContent, setNoteContent] = useState('');
+  const [addingNote, setAddingNote] = useState(false);
+  const [expandedEvents, setExpandedEvents] = useState<Set<string>>(new Set());
+
+  const handleAddNote = async () => {
+    if (!noteContent.trim()) return;
+    
+    setAddingNote(true);
+    const success = await addQuickNote(noteTitle.trim() || 'Quick note', noteContent.trim());
+    if (success) {
+      setNoteTitle('');
+      setNoteContent('');
+      setShowAddNote(false);
+    }
+    setAddingNote(false);
+  };
+
+  const toggleExpand = (eventId: string) => {
+    setExpandedEvents(prev => {
+      const next = new Set(prev);
+      if (next.has(eventId)) {
+        next.delete(eventId);
+      } else {
+        next.add(eventId);
+      }
+      return next;
+    });
+  };
+
+  const getEventIcon = (eventType: string) => {
+    return EVENT_ICONS[eventType] || Activity;
   };
 
   const getEventColor = (eventType: string) => {
     return EVENT_COLORS[eventType] || 'bg-muted text-muted-foreground';
+  };
+
+  const formatEventLabel = (eventType: string) => {
+    return eventType.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
   };
 
   if (loading && events.length === 0) {
@@ -91,26 +146,81 @@ export function ClientTimelineTab({ tenantId, clientId }: ClientTimelineTabProps
             Timeline
           </CardTitle>
           <div className="flex items-center gap-2">
-            <Select value={filter} onValueChange={setFilter}>
-              <SelectTrigger className="w-[140px] h-8">
-                <Filter className="h-3 w-3 mr-1" />
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Activity</SelectItem>
-                <SelectItem value="notes">Notes</SelectItem>
-                <SelectItem value="actions">Action Items</SelectItem>
-                <SelectItem value="docs">Documents</SelectItem>
-                <SelectItem value="emails">Emails</SelectItem>
-                <SelectItem value="tasks">Tasks</SelectItem>
-              </SelectContent>
-            </Select>
+            <Button
+              variant={showAddNote ? 'secondary' : 'outline'}
+              size="sm"
+              onClick={() => setShowAddNote(!showAddNote)}
+            >
+              {showAddNote ? <X className="h-4 w-4 mr-1" /> : <Plus className="h-4 w-4 mr-1" />}
+              {showAddNote ? 'Cancel' : 'Add Note'}
+            </Button>
             <Button variant="ghost" size="icon" onClick={refresh} className="h-8 w-8">
-              <RefreshCw className="h-4 w-4" />
+              <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
             </Button>
           </div>
         </div>
+        
+        {/* Quick Add Note */}
+        {showAddNote && (
+          <div className="mt-4 p-4 border rounded-lg bg-muted/30 space-y-3">
+            <Input
+              placeholder="Note title (optional)"
+              value={noteTitle}
+              onChange={(e) => setNoteTitle(e.target.value)}
+            />
+            <Textarea
+              placeholder="Write your note..."
+              value={noteContent}
+              onChange={(e) => setNoteContent(e.target.value)}
+              rows={3}
+            />
+            <div className="flex justify-end">
+              <Button 
+                size="sm" 
+                onClick={handleAddNote}
+                disabled={!noteContent.trim() || addingNote}
+              >
+                {addingNote && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                Add Note
+              </Button>
+            </div>
+          </div>
+        )}
+        
+        {/* Filters */}
+        <div className="mt-4 space-y-3">
+          {/* Filter chips */}
+          <div className="flex flex-wrap gap-2">
+            {FILTER_OPTIONS.map(option => {
+              const Icon = option.icon;
+              return (
+                <Button
+                  key={option.value}
+                  variant={filter === option.value ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setFilter(option.value)}
+                  className="h-7 text-xs"
+                >
+                  <Icon className="h-3 w-3 mr-1" />
+                  {option.label}
+                </Button>
+              );
+            })}
+          </div>
+          
+          {/* Search */}
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search timeline..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="pl-9 h-9"
+            />
+          </div>
+        </div>
       </CardHeader>
+      
       <CardContent>
         {events.length === 0 ? (
           <div className="text-center py-12 text-muted-foreground">
@@ -119,15 +229,18 @@ export function ClientTimelineTab({ tenantId, clientId }: ClientTimelineTabProps
             <p className="text-sm mt-1">Events will appear here as you work with this client</p>
           </div>
         ) : (
-          <ScrollArea className="h-[500px] pr-4">
+          <ScrollArea className="h-[600px] pr-4">
             <div className="relative">
               {/* Timeline line */}
               <div className="absolute left-5 top-0 bottom-0 w-px bg-border" />
               
               <div className="space-y-4">
-                {events.map((event, index) => {
-                  const Icon = getEventIcon(event);
+                {events.map((event) => {
+                  const Icon = getEventIcon(event.event_type);
                   const colorClass = getEventColor(event.event_type);
+                  const isExpanded = expandedEvents.has(event.id);
+                  const hasDetails = event.body || Object.keys(event.metadata || {}).length > 0;
+                  const occurredAt = event.occurred_at || event.created_at;
                   
                   return (
                     <div key={event.id} className="flex gap-4 relative">
@@ -139,26 +252,68 @@ export function ClientTimelineTab({ tenantId, clientId }: ClientTimelineTabProps
                       {/* Content */}
                       <div className="flex-1 min-w-0 pb-4">
                         <div className="flex items-start justify-between gap-2">
-                          <div className="min-w-0">
+                          <div className="min-w-0 flex-1">
                             <p className="font-medium text-sm">{event.title}</p>
-                            {event.body && (
-                              <p className="text-sm text-muted-foreground mt-0.5 line-clamp-2">
+                            {event.body && !isExpanded && (
+                              <p className="text-sm text-muted-foreground mt-0.5 line-clamp-1">
                                 {event.body}
                               </p>
                             )}
                           </div>
                           <div className="flex items-center gap-2 shrink-0">
                             <Badge variant="outline" className="text-xs">
-                              {event.event_type.replace(/_/g, ' ')}
+                              {formatEventLabel(event.event_type)}
                             </Badge>
+                            {hasDetails && (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-6 w-6"
+                                onClick={() => toggleExpand(event.id)}
+                              >
+                                {isExpanded ? (
+                                  <ChevronUp className="h-3 w-3" />
+                                ) : (
+                                  <ChevronDown className="h-3 w-3" />
+                                )}
+                              </Button>
+                            )}
                           </div>
                         </div>
                         
+                        {/* Expanded details */}
+                        {isExpanded && (
+                          <div className="mt-2 p-3 rounded-md bg-muted/50 space-y-2">
+                            {event.body && (
+                              <p className="text-sm whitespace-pre-wrap">{event.body}</p>
+                            )}
+                            {event.metadata && Object.keys(event.metadata).length > 0 && (
+                              <div className="text-xs space-y-1">
+                                {Object.entries(event.metadata).map(([key, value]) => {
+                                  if (value === null || value === undefined) return null;
+                                  return (
+                                    <div key={key} className="flex gap-2">
+                                      <span className="text-muted-foreground capitalize">
+                                        {key.replace(/_/g, ' ')}:
+                                      </span>
+                                      <span className="font-medium">
+                                        {typeof value === 'object' 
+                                          ? JSON.stringify(value)
+                                          : String(value)}
+                                      </span>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            )}
+                          </div>
+                        )}
+                        
                         {/* Meta */}
                         <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground">
-                          <span className="flex items-center gap-1">
+                          <span className="flex items-center gap-1" title={format(new Date(occurredAt), 'PPpp')}>
                             <Clock className="h-3 w-3" />
-                            {formatDistanceToNow(new Date(event.created_at), { addSuffix: true })}
+                            {formatDistanceToNow(new Date(occurredAt), { addSuffix: true })}
                           </span>
                           {event.creator && (
                             <span className="flex items-center gap-1">

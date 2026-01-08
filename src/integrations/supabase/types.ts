@@ -2206,6 +2206,7 @@ export type Database = {
           event_type: string
           id: string
           metadata: Json
+          occurred_at: string
           source: string
           tenant_id: number
           title: string
@@ -2220,6 +2221,7 @@ export type Database = {
           event_type: string
           id?: string
           metadata?: Json
+          occurred_at?: string
           source: string
           tenant_id: number
           title: string
@@ -2234,6 +2236,7 @@ export type Database = {
           event_type?: string
           id?: string
           metadata?: Json
+          occurred_at?: string
           source?: string
           tenant_id?: number
           title?: string
@@ -12855,6 +12858,21 @@ export type Database = {
         Returns: Json
       }
       rpc_get_time_inbox_stats: { Args: never; Returns: Json }
+      rpc_insert_timeline_event: {
+        Args: {
+          p_body?: string
+          p_client_id: number
+          p_created_by?: string
+          p_entity_id?: string
+          p_entity_type?: string
+          p_event_type: string
+          p_metadata?: Json
+          p_occurred_at?: string
+          p_tenant_id: number
+          p_title: string
+        }
+        Returns: Json
+      }
       rpc_list_time_drafts:
         | {
             Args: { p_from?: string; p_status?: string; p_to?: string }
@@ -12897,6 +12915,31 @@ export type Database = {
       rpc_run_time_draft_worker: {
         Args: { p_tenant_id?: number }
         Returns: Json
+      }
+      rpc_search_timeline_events: {
+        Args: {
+          p_client_id: number
+          p_event_types?: string[]
+          p_limit?: number
+          p_offset?: number
+          p_search?: string
+          p_tenant_id: number
+        }
+        Returns: {
+          body: string
+          client_id: string
+          created_at: string
+          created_by: string
+          entity_id: string
+          entity_type: string
+          event_type: string
+          id: string
+          metadata: Json
+          occurred_at: string
+          source: string
+          tenant_id: number
+          title: string
+        }[]
       }
       rpc_set_action_item_status: {
         Args: { p_action_item_id: string; p_status: string }
