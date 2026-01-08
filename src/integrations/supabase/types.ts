@@ -12930,6 +12930,25 @@ export type Database = {
       rpc_discard_time_draft: { Args: { p_draft_id: string }; Returns: Json }
       rpc_dismiss_alert: { Args: { p_alert_id: string }; Returns: Json }
       rpc_dismiss_time_inbox_banner: { Args: never; Returns: Json }
+      rpc_export_client_timeline: {
+        Args: {
+          p_client_id: number
+          p_event_types?: string[]
+          p_from_date?: string
+          p_tenant_id: number
+          p_to_date?: string
+        }
+        Returns: {
+          body: string
+          created_by: string
+          creator_name: string
+          event_type: string
+          id: string
+          metadata: Json
+          occurred_at: string
+          title: string
+        }[]
+      }
       rpc_get_client_time_rollup: {
         Args: { p_client_id: number; p_days?: number }
         Returns: Json
@@ -13042,10 +13061,12 @@ export type Database = {
         Args: {
           p_client_id: number
           p_event_types?: string[]
+          p_from_date?: string
           p_limit?: number
           p_offset?: number
           p_search?: string
           p_tenant_id: number
+          p_to_date?: string
         }
         Returns: {
           body: string

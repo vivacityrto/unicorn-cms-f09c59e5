@@ -11,13 +11,15 @@ import { Textarea } from '@/components/ui/textarea';
 import { 
   Activity, FileText, Mail, CheckSquare, StickyNote, 
   Clock, Loader2, RefreshCw, Calendar, Timer, Search,
-  Plus, X, ChevronDown, ChevronUp, FileDown, Pin, PinOff
+  Plus, X, ChevronDown, ChevronUp, FileDown, Pin, PinOff, Download
 } from 'lucide-react';
 import { formatDistanceToNow, format } from 'date-fns';
+import { TimelineExportDialog } from './TimelineExportDialog';
 
 interface ClientTimelineTabProps {
   tenantId: number;
   clientId: string;
+  clientName?: string;
 }
 
 const EVENT_ICONS: Record<string, React.ElementType> = {
@@ -62,7 +64,7 @@ const FILTER_OPTIONS = [
   { value: 'notes', label: 'Notes', icon: StickyNote }
 ];
 
-export function ClientTimelineTab({ tenantId, clientId }: ClientTimelineTabProps) {
+export function ClientTimelineTab({ tenantId, clientId, clientName }: ClientTimelineTabProps) {
   const { 
     events, 
     pinnedNotes,
@@ -84,6 +86,7 @@ export function ClientTimelineTab({ tenantId, clientId }: ClientTimelineTabProps
   const [addingNote, setAddingNote] = useState(false);
   const [expandedEvents, setExpandedEvents] = useState<Set<string>>(new Set());
   const [expandedPinnedNotes, setExpandedPinnedNotes] = useState<Set<string>>(new Set());
+  const [showExportDialog, setShowExportDialog] = useState(false);
 
   const handleAddNote = async () => {
     if (!noteContent.trim()) return;
