@@ -91,16 +91,68 @@ const EVENT_TYPE_FILTERS: Record<string, string[]> = {
   tasks: ['task_completed_team', 'task_completed_client'],
   emails: ['email_sent'],
   docs: ['document_uploaded', 'document_downloaded'],
-  notes: ['note_added']
+  notes: ['note_added', 'note_created', 'note_pinned', 'note_unpinned']
 };
+
+export interface PinnedNote {
+  id: string;
+  title: string | null;
+  content: string;
+  is_pinned: boolean;
+  created_at: string;
+  updated_at: string;
+  created_by: string;
+  note_type: string;
+  creator?: {
+    first_name: string;
+    last_name: string;
+    avatar_url: string | null;
+  };
+}
 
 export function useClientTimeline(tenantId: number | null, clientId: string | null) {
   const [events, setEvents] = useState<TimelineEvent[]>([]);
+  const [pinnedNotes, setPinnedNotes] = useState<PinnedNote[]>([]);
   const [loading, setLoading] = useState(false);
   const [hasMore, setHasMore] = useState(true);
   const [filter, setFilter] = useState('all');
   const [search, setSearch] = useState('');
   const { toast } = useToast();
+
+  const fetchPinnedNotes = useCallback(async () => {
+    if (!tenantId || !clientId) return;
+    
+    try {
+      const { data, error } = await supabase
+        .from('client_notes')
+        .select('*')
+        .eq('tenant_id', tenantId)
+        .eq('client_id', clientId)
+        .eq('is_pinned', true)
+        .order('updated_at', { ascending: false });
+      
+      if (error) throw error;
+      
+      // Fetch creators
+      const creatorIds = [...new Set((data || []).map(n => n.created_by).filter(Boolean))];
+      let creatorsMap = new Map();
+      
+      if (creatorIds.length > 0) {
+        const { data: users } = await supabase
+          .from('users')
+          .select('user_uuid, first_name, last_name, avatar_url')
+          .in('user_uuid', creatorIds);
+        creatorsMap = new Map(users?.map(u => [u.user_uuid, u]) || []);
+      }
+      
+      setPinnedNotes((data || []).map(note => ({
+        ...note,
+        creator: creatorsMap.get(note.created_by)
+      })));
+    } catch (error) {
+      console.error('Error fetching pinned notes:', error);
+    }
+  }, [tenantId, clientId]);
 
   const fetchEvents = useCallback(async (
     limit = 30,
@@ -163,7 +215,8 @@ export function useClientTimeline(tenantId: number | null, clientId: string | nu
 
   useEffect(() => {
     fetchEvents();
-  }, [fetchEvents]);
+    fetchPinnedNotes();
+  }, [fetchEvents, fetchPinnedNotes]);
 
   const addQuickNote = useCallback(async (title: string, content: string) => {
     if (!tenantId || !clientId) return false;
@@ -196,17 +249,47 @@ export function useClientTimeline(tenantId: number | null, clientId: string | nu
     }
   }, [tenantId, clientId, toast, fetchEvents]);
 
+  const toggleNotePin = useCallback(async (noteId: string, isPinned: boolean) => {
+    try {
+      const { data, error } = await supabase.rpc('rpc_toggle_client_note_pin', {
+        p_note_id: noteId,
+        p_is_pinned: isPinned
+      });
+
+      if (error) throw error;
+      
+      const result = data as { success: boolean; error?: string };
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to update pin status');
+      }
+      
+      toast({ title: isPinned ? 'Note pinned' : 'Note unpinned' });
+      fetchEvents();
+      fetchPinnedNotes();
+      return true;
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: error.message,
+        variant: 'destructive'
+      });
+      return false;
+    }
+  }, [toast, fetchEvents, fetchPinnedNotes]);
+
   return {
     events,
+    pinnedNotes,
     loading,
     hasMore,
     filter,
     setFilter,
     search,
     setSearch,
-    refresh: () => fetchEvents(),
+    refresh: () => { fetchEvents(); fetchPinnedNotes(); },
     loadMore: (offset: number) => fetchEvents(30, offset),
-    addQuickNote
+    addQuickNote,
+    toggleNotePin
   };
 }
 

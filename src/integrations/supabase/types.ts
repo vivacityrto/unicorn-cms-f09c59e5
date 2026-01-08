@@ -12962,6 +12962,10 @@ export type Database = {
         Returns: Json
       }
       rpc_stop_timer: { Args: never; Returns: Json }
+      rpc_toggle_client_note_pin: {
+        Args: { p_is_pinned: boolean; p_note_id: string }
+        Returns: Json
+      }
       rpc_update_client_note: {
         Args: { p_note_id: string; p_updates: Json }
         Returns: Json
