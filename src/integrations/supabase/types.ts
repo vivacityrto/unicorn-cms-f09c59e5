@@ -2040,6 +2040,8 @@ export type Database = {
       client_tasks: {
         Row: {
           client_package_stage_id: string
+          completed_at: string | null
+          completed_by: string | null
           created_at: string | null
           due_date: string | null
           id: string
@@ -2051,6 +2053,8 @@ export type Database = {
         }
         Insert: {
           client_package_stage_id: string
+          completed_at?: string | null
+          completed_by?: string | null
           created_at?: string | null
           due_date?: string | null
           id?: string
@@ -2062,6 +2066,8 @@ export type Database = {
         }
         Update: {
           client_package_stage_id?: string
+          completed_at?: string | null
+          completed_by?: string | null
           created_at?: string | null
           due_date?: string | null
           id?: string
@@ -2084,6 +2090,8 @@ export type Database = {
       client_team_tasks: {
         Row: {
           client_package_stage_id: string
+          completed_at: string | null
+          completed_by: string | null
           created_at: string | null
           estimated_hours: number | null
           id: string
@@ -2097,6 +2105,8 @@ export type Database = {
         }
         Insert: {
           client_package_stage_id: string
+          completed_at?: string | null
+          completed_by?: string | null
           created_at?: string | null
           estimated_hours?: number | null
           id?: string
@@ -2110,6 +2120,8 @@ export type Database = {
         }
         Update: {
           client_package_stage_id?: string
+          completed_at?: string | null
+          completed_by?: string | null
           created_at?: string | null
           estimated_hours?: number | null
           id?: string

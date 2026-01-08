@@ -58,6 +58,7 @@ const FILTER_OPTIONS = [
   { value: 'time', label: 'Time', icon: Timer },
   { value: 'emails', label: 'Emails', icon: Mail },
   { value: 'docs', label: 'Documents', icon: FileText },
+  { value: 'tasks', label: 'Tasks', icon: CheckSquare },
   { value: 'notes', label: 'Notes', icon: StickyNote }
 ];
 
