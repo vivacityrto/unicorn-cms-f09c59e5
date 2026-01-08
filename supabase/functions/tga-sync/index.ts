@@ -10,43 +10,61 @@ const corsHeaders = {
 
 // TGA Production SOAP Endpoints - WCF basicHttpBinding (SOAP 1.1)
 // Per TGA Web Services Specification v13r1
-// IMPORTANT: 
-// - OrganisationService uses 'WebServices' (capital S)
-// - TrainingComponentService and ClassificationService use 'Webservices' (lowercase s)  
-// - V13 is in the SOAP contract/action, NOT in the URL path
+// IMPORTANT: V13 IS in the URL path for all services
+// - OrganisationServiceV13.svc uses 'WebServices' (capital S)
+// - TrainingComponentServiceV13.svc uses 'Webservices' (lowercase s)
+// - ClassificationServiceV13.svc uses 'Webservices' (lowercase s)
 const TGA_ENV = Deno.env.get('TGA_ENV') || 'prod';
 const TGA_BASE_HOST = TGA_ENV === 'sandbox' 
   ? 'ws.sandbox.training.gov.au' 
   : 'ws.training.gov.au';
 
+// Endpoints include V13 in the service name (confirmed working pattern)
 const TGA_ENDPOINTS = {
-  organisation: `https://${TGA_BASE_HOST}/Deewr.Tga.WebServices/OrganisationService.svc`,
-  training: `https://${TGA_BASE_HOST}/Deewr.Tga.Webservices/TrainingComponentService.svc`,
-  classification: `https://${TGA_BASE_HOST}/Deewr.Tga.Webservices/ClassificationService.svc`,
+  // Note: OrganisationService uses WebServices (capital S), V13 in name
+  organisation: `https://${TGA_BASE_HOST}/Deewr.Tga.WebServices/OrganisationServiceV13.svc`,
+  // Note: TrainingComponent uses Webservices (lowercase s), V13 in name
+  training: `https://${TGA_BASE_HOST}/Deewr.Tga.Webservices/TrainingComponentServiceV13.svc`,
+  classification: `https://${TGA_BASE_HOST}/Deewr.Tga.Webservices/ClassificationServiceV13.svc`,
 };
 
-// Correct SOAP action URIs per TGA WSDL (v13 in contract, not URL)
+// TGA V13 namespace - per WSDL
+const TGA_V13_NAMESPACE = 'http://training.gov.au/services/13/';
+
+// SOAP action patterns to try (ordered by likelihood)
 const SOAP_ACTIONS = {
-  getOrganisationDetails: 'http://training.gov.au/services/Organisation/IOrganisationService/GetDetails',
-  searchOrganisation: 'http://training.gov.au/services/Organisation/IOrganisationService/Search',
-  getTrainingComponentDetails: 'http://training.gov.au/services/TrainingComponent/ITrainingComponentService/GetDetails',
-  searchTrainingComponent: 'http://training.gov.au/services/TrainingComponent/ITrainingComponentService/Search',
+  // Organisation service - use V13 namespace with I prefix
+  getOrganisationDetails: `${TGA_V13_NAMESPACE}IOrganisationService/GetOrganisation`,
+  searchOrganisation: `${TGA_V13_NAMESPACE}IOrganisationService/SearchOrganisation`,
+  // Training component service
+  getTrainingComponentDetails: `${TGA_V13_NAMESPACE}ITrainingComponentService/GetDetails`,
+  searchTrainingComponent: `${TGA_V13_NAMESPACE}ITrainingComponentService/Search`,
 };
 
-const FUNCTION_VERSION = '1.0.6';
+const FUNCTION_VERSION = '1.0.7';
 
-// Credentials loaded from Supabase secrets
-const TGA_WS_USERNAME = Deno.env.get('TGA_WS_USERNAME');
-const TGA_WS_PASSWORD = Deno.env.get('TGA_WS_PASSWORD');
+// Credentials loaded from Supabase secrets (try new names first, fall back to old)
+const TGA_WS_USERNAME = Deno.env.get('TGA_USERNAME') || Deno.env.get('TGA_WS_USERNAME');
+const TGA_WS_PASSWORD = Deno.env.get('TGA_PASSWORD') || Deno.env.get('TGA_WS_PASSWORD');
 
 // SOAP namespaces per TGA Web Services Specification
-// Using SOAP 1.1 (basicHttpBinding) - SOAP 1.2 returns 404
+// Using SOAP 1.1 (basicHttpBinding) with WS-Security
 const SOAP_NS = {
   soap11: 'http://schemas.xmlsoap.org/soap/envelope/',
-  soap12: 'http://www.w3.org/2003/05/soap-envelope',
-  org: 'http://training.gov.au/services/Organisation',
-  tc: 'http://training.gov.au/services/TrainingComponent',
+  wsse: 'http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-secext-1.0.xsd',
+  wsu: 'http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-utility-1.0.xsd',
+  tns: TGA_V13_NAMESPACE,
 };
+
+// XML escape helper
+function escapeXml(unsafe: string): string {
+  return unsafe
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&apos;');
+}
 
 // Log helper (redacts sensitive data)
 function log(level: 'info' | 'warn' | 'error', message: string, data?: Record<string, unknown>) {
@@ -73,14 +91,27 @@ function validateCredentials(): { valid: boolean; error?: string } {
   return { valid: true };
 }
 
-// Build Basic Auth header (HTTP Basic Authentication per TGA spec)
-function getBasicAuthHeader(): string {
+// Build WS-Security header for SOAP envelope (per TGA WSDL)
+function buildWsSecurityHeader(): string {
   const validation = validateCredentials();
   if (!validation.valid) {
     throw new Error(validation.error || 'TGA credentials not configured');
   }
-  const credentials = btoa(`${TGA_WS_USERNAME}:${TGA_WS_PASSWORD}`);
-  return `Basic ${credentials}`;
+  
+  const now = new Date();
+  const expires = new Date(now.getTime() + 5 * 60 * 1000); // 5 minutes
+  
+  return `
+    <wsse:Security xmlns:wsse="${SOAP_NS.wsse}" xmlns:wsu="${SOAP_NS.wsu}">
+      <wsu:Timestamp wsu:Id="Timestamp-${Date.now()}">
+        <wsu:Created>${now.toISOString()}</wsu:Created>
+        <wsu:Expires>${expires.toISOString()}</wsu:Expires>
+      </wsu:Timestamp>
+      <wsse:UsernameToken wsu:Id="UsernameToken-${Date.now()}">
+        <wsse:Username>${escapeXml(TGA_WS_USERNAME!)}</wsse:Username>
+        <wsse:Password Type="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-username-token-profile-1.0#PasswordText">${escapeXml(TGA_WS_PASSWORD!)}</wsse:Password>
+      </wsse:UsernameToken>
+    </wsse:Security>`;
 }
 
 // Compute deterministic hash for source data
@@ -121,26 +152,32 @@ function extractMultiple(xml: string, containerTag: string, itemTag: string): st
   return items;
 }
 
-// Build SOAP 1.1 envelope for Organisation service (basicHttpBinding)
+// Build SOAP 1.1 envelope with WS-Security for Organisation service
 function buildOrgSoapRequest(action: string, body: string): string {
   return `<?xml version="1.0" encoding="utf-8"?>
-<soap:Envelope xmlns:soap="${SOAP_NS.soap11}" xmlns:org="${SOAP_NS.org}">
+<soap:Envelope xmlns:soap="${SOAP_NS.soap11}" xmlns:tns="${SOAP_NS.tns}">
+  <soap:Header>
+    ${buildWsSecurityHeader()}
+  </soap:Header>
   <soap:Body>
-    <org:${action}>
+    <tns:${action}>
       ${body}
-    </org:${action}>
+    </tns:${action}>
   </soap:Body>
 </soap:Envelope>`;
 }
 
-// Build SOAP 1.1 envelope for Training Component service (basicHttpBinding)
+// Build SOAP 1.1 envelope with WS-Security for Training Component service
 function buildTCSoapRequest(action: string, body: string): string {
   return `<?xml version="1.0" encoding="utf-8"?>
-<soap:Envelope xmlns:soap="${SOAP_NS.soap11}" xmlns:tc="${SOAP_NS.tc}">
+<soap:Envelope xmlns:soap="${SOAP_NS.soap11}" xmlns:tns="${SOAP_NS.tns}">
+  <soap:Header>
+    ${buildWsSecurityHeader()}
+  </soap:Header>
   <soap:Body>
-    <tc:${action}>
+    <tns:${action}>
       ${body}
-    </tc:${action}>
+    </tns:${action}>
   </soap:Body>
 </soap:Envelope>`;
 }
@@ -164,16 +201,18 @@ async function makeSoapRequest(endpoint: string, soapAction: string, body: strin
   
   try {
     // SOAP 1.1 uses text/xml and SOAPAction header
+    // WS-Security is included in the SOAP envelope itself, not as HTTP header
     const headers: Record<string, string> = {
       'Content-Type': 'text/xml; charset=utf-8',
-      'SOAPAction': soapAction,
-      'Authorization': getBasicAuthHeader(),
+      'SOAPAction': `"${soapAction}"`,
+      'Accept': 'text/xml',
+      'User-Agent': 'Unicorn2.0/1.0',
     };
     
     log('info', 'Request headers prepared', {
       contentType: headers['Content-Type'],
       soapAction: headers['SOAPAction'],
-      authPresent: !!headers['Authorization'],
+      wsSecurityIncluded: true,
     });
     
     const response = await fetch(endpoint, {
@@ -210,7 +249,7 @@ async function makeSoapRequest(endpoint: string, soapAction: string, body: strin
           endpoint,
           soapAction,
           soapVersion: '1.1',
-          hint: 'Check endpoint URL matches TGA documentation. V13 should NOT be in the URL path.',
+          hint: 'Endpoint should include V13 in path (e.g., OrganisationServiceV13.svc)',
           responsePreview: responseText.substring(0, 300),
           duration,
         });
@@ -373,7 +412,7 @@ function parseOrganisation(xml: string): ParsedOrganisation | null {
 // Fetch training component by code
 async function fetchTrainingComponent(code: string): Promise<{ data: ParsedTrainingComponent | null; raw: string; error: string | null }> {
   try {
-    const body = buildTCSoapRequest('GetDetails', `<tc:request><tc:Code>${code}</tc:Code></tc:request>`);
+    const body = buildTCSoapRequest('GetDetails', `<tns:code>${escapeXml(code)}</tns:code>`);
     const response = await makeSoapRequest(
       TGA_ENDPOINTS.training, 
       SOAP_ACTIONS.getTrainingComponentDetails, 
@@ -391,7 +430,8 @@ async function fetchTrainingComponent(code: string): Promise<{ data: ParsedTrain
 // Fetch organisation by code
 async function fetchOrganisation(code: string): Promise<{ data: ParsedOrganisation | null; raw: string; error: string | null }> {
   try {
-    const body = buildOrgSoapRequest('GetDetails', `<org:request><org:Code>${code}</org:Code></org:request>`);
+    // Use TGA V13 namespace format for GetOrganisation operation
+    const body = buildOrgSoapRequest('GetOrganisation', `<tns:code>${escapeXml(code)}</tns:code>`);
     const response = await makeSoapRequest(
       TGA_ENDPOINTS.organisation, 
       SOAP_ACTIONS.getOrganisationDetails, 
