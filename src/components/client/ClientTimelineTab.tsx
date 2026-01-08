@@ -44,14 +44,11 @@ const EVENT_COLORS: Record<string, string> = {
   note_added: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400'
 };
 
+// V1: Only show Meetings and Time filters
 const FILTER_OPTIONS = [
   { value: 'all', label: 'All', icon: Activity },
   { value: 'meetings', label: 'Meetings', icon: Calendar },
-  { value: 'time', label: 'Time', icon: Timer },
-  { value: 'tasks', label: 'Tasks', icon: CheckSquare },
-  { value: 'emails', label: 'Emails', icon: Mail },
-  { value: 'docs', label: 'Documents', icon: FileText },
-  { value: 'notes', label: 'Notes', icon: StickyNote }
+  { value: 'time', label: 'Time', icon: Timer }
 ];
 
 export function ClientTimelineTab({ tenantId, clientId }: ClientTimelineTabProps) {
