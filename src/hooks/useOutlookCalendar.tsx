@@ -19,6 +19,8 @@ export interface CalendarEvent {
   meeting_url: string | null;
   status: string;
   location: string | null;
+  processed_users?: Json;
+  processed_at?: string | null;
 }
 
 export interface TimeDraft {

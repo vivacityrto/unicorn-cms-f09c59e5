@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { format, subDays, addDays } from 'date-fns';
-import { Calendar, Clock, Users, Video, Plus, RefreshCw, Check, X, Sparkles, Link2, Loader2, Bug, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
+import { Calendar, Clock, Users, Video, Plus, RefreshCw, Check, X, Sparkles, Link2, Loader2, Bug, CheckCircle, XCircle, AlertCircle, Bot } from 'lucide-react';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -178,7 +178,7 @@ function AdminDebugPanel() {
 export default function CalendarTimeCapture() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { profile } = useAuth();
+  const { user, profile } = useAuth();
   const { canAccessAdmin } = useRBAC();
   const { 
     loading, initializing, connected, events, drafts,
@@ -521,6 +521,8 @@ export default function CalendarTimeCapture() {
                 events.map(event => {
                   const draft = getEventDraft(event.id);
                   const duration = getDurationMinutes(event);
+                  const isProcessed = user && Array.isArray(event.processed_users) && 
+                    (event.processed_users as string[]).includes(user.id);
                   return (
                     <div 
                       key={event.id}
@@ -531,7 +533,22 @@ export default function CalendarTimeCapture() {
                     >
                       <div className="flex items-start justify-between">
                         <div className="flex-1 min-w-0">
-                          <h4 className="font-medium truncate">{event.title}</h4>
+                          <div className="flex items-center gap-2">
+                            <h4 className="font-medium truncate">{event.title}</h4>
+                            {isProcessed && !draft && (
+                              <Tooltip>
+                                <TooltipTrigger>
+                                  <Badge variant="outline" className="text-xs gap-1">
+                                    <Bot className="h-3 w-3" />
+                                    Processed
+                                  </Badge>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  Auto-processed by time capture worker
+                                </TooltipContent>
+                              </Tooltip>
+                            )}
+                          </div>
                           <div className="flex items-center gap-2 text-sm text-muted-foreground mt-1">
                             <Clock className="h-3 w-3" />
                             {format(new Date(event.start_at), 'MMM d, h:mm a')}
