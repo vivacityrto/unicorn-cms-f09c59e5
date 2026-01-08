@@ -182,7 +182,7 @@ export default function CalendarTimeCapture() {
   const { canAccessAdmin } = useRBAC();
   const { 
     loading, initializing, connected, events, drafts,
-    connect, disconnect, syncCalendar, 
+    connect, disconnect, syncCalendar, checkConnection,
     fetchEvents, fetchDrafts, createDraft, updateDraft, postDraft, discardDraft,
     runDiagnostics
   } = useOutlookCalendar();
@@ -193,6 +193,10 @@ export default function CalendarTimeCapture() {
   const [clients, setClients] = useState<Array<{ id: number; name: string }>>([]);
   const [packages, setPackages] = useState<Array<{ id: number; name: string }>>([]);
   const [stages, setStages] = useState<Array<{ id: number; name: string }>>([]);
+
+  // Iframe OAuth flow state
+  const [awaitingOAuthReturn, setAwaitingOAuthReturn] = useState(false);
+  const [pendingAuthUrl, setPendingAuthUrl] = useState<string | null>(null);
 
   // Filter state
   const [dateRange, setDateRange] = useState({
@@ -257,9 +261,30 @@ export default function CalendarTimeCapture() {
     }
   };
 
-  const handleConnect = () => {
+  const handleConnect = async () => {
     const tenantId = profile?.tenant_id || 1; // Default to 1 for now
-    connect(tenantId);
+    const result = await connect(tenantId);
+    
+    if (result) {
+      if (result.openedInNewTab) {
+        // User needs to complete OAuth in new tab, then refresh connection
+        setAwaitingOAuthReturn(true);
+      } else if (result.authUrl) {
+        // Popup was blocked, show fallback link
+        setPendingAuthUrl(result.authUrl);
+      }
+    }
+  };
+
+  const handleRefreshConnection = async () => {
+    const isNowConnected = await checkConnection();
+    if (isNowConnected) {
+      setAwaitingOAuthReturn(false);
+      setPendingAuthUrl(null);
+      // Trigger initial sync and fetch
+      await syncCalendar();
+      await fetchEvents({ startDate: dateRange.start, endDate: dateRange.end });
+    }
   };
 
   const handleCreateDraft = async (event: CalendarEvent) => {
@@ -367,10 +392,59 @@ export default function CalendarTimeCapture() {
                 Connect your Microsoft Outlook calendar to import meetings and create time entries.
               </CardDescription>
             </CardHeader>
-            <CardContent>
-              <Button onClick={handleConnect} disabled={loading}>
-                {loading ? 'Connecting...' : 'Connect Outlook'}
-              </Button>
+            <CardContent className="space-y-4">
+              {awaitingOAuthReturn ? (
+                <>
+                  <p className="text-sm text-amber-600 dark:text-amber-400">
+                    Complete the Microsoft login in the new tab, then click below.
+                  </p>
+                  <Button onClick={handleRefreshConnection} disabled={loading}>
+                    {loading ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Checking...
+                      </>
+                    ) : (
+                      <>
+                        <RefreshCw className="h-4 w-4 mr-2" />
+                        Refresh Connection
+                      </>
+                    )}
+                  </Button>
+                </>
+              ) : pendingAuthUrl ? (
+                <>
+                  <p className="text-sm text-amber-600 dark:text-amber-400">
+                    Popup was blocked. Click the link below to open Microsoft login:
+                  </p>
+                  <a 
+                    href={pendingAuthUrl} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="text-primary underline text-sm"
+                    onClick={() => setAwaitingOAuthReturn(true)}
+                  >
+                    Open Microsoft Login
+                  </a>
+                  <Button onClick={handleRefreshConnection} variant="outline" size="sm" disabled={loading}>
+                    <RefreshCw className="h-4 w-4 mr-2" />
+                    I've completed login
+                  </Button>
+                </>
+              ) : (
+                <Button onClick={handleConnect} disabled={loading}>
+                  {loading ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Connecting...
+                    </>
+                  ) : (
+                    'Connect Outlook'
+                  )}
+                </Button>
+              )}
+              
+              {canAccessAdmin && <AdminDebugPanel />}
             </CardContent>
           </Card>
         </div>
