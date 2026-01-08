@@ -8,14 +8,15 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, apikey, content-type, x-client-info',
 };
 
-// TGA Production SOAP Endpoints (TGA Web Services Specification v13r1)
-// Environment: Production
-// Access level: Web Services Read
+// TGA Production SOAP Endpoints (verified working - NO V13 suffix)
+// The V13 endpoints return 404 - use base service URLs
 const TGA_ENDPOINTS = {
-  organisation: 'https://ws.training.gov.au/Deewr.Tga.WebServices/OrganisationServiceV13.svc',
-  training: 'https://ws.training.gov.au/Deewr.Tga.WebServices/TrainingComponentServiceV13.svc',
-  classification: 'https://ws.training.gov.au/Deewr.Tga.WebServices/ClassificationServiceV13.svc',
+  organisation: 'https://ws.training.gov.au/Deewr.Tga.WebServices/OrganisationService.svc',
+  training: 'https://ws.training.gov.au/Deewr.Tga.WebServices/TrainingComponentService.svc',
+  classification: 'https://ws.training.gov.au/Deewr.Tga.WebServices/ClassificationService.svc',
 };
+
+const FUNCTION_VERSION = '1.0.1';
 
 // Credentials loaded from Supabase secrets
 const TGA_WS_USERNAME = Deno.env.get('TGA_WS_USERNAME');
@@ -469,6 +470,35 @@ serve(async (req) => {
     const action = (requestBody.action as string) || url.searchParams.get('action') || 'status';
     
     log('info', 'Request received', { action, method: req.method, userId: user.id });
+
+    // Ping action - returns version and confirms TGA host is reachable
+    if (action === 'ping') {
+      const pingResult: Record<string, unknown> = {
+        version: FUNCTION_VERSION,
+        timestamp: new Date().toISOString(),
+        endpoints: TGA_ENDPOINTS,
+        credentials_configured: !!(TGA_WS_USERNAME && TGA_WS_PASSWORD),
+      };
+
+      // Try to reach TGA host (HEAD request to check connectivity)
+      try {
+        const pingStart = Date.now();
+        const pingResponse = await fetch(TGA_ENDPOINTS.organisation, {
+          method: 'GET',
+          headers: { 'Accept': 'text/html' },
+        });
+        pingResult.tga_reachable = pingResponse.ok || pingResponse.status === 200;
+        pingResult.tga_status = pingResponse.status;
+        pingResult.ping_ms = Date.now() - pingStart;
+      } catch (pingError: unknown) {
+        pingResult.tga_reachable = false;
+        pingResult.tga_error = pingError instanceof Error ? pingError.message : String(pingError);
+      }
+
+      return new Response(JSON.stringify(pingResult), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
 
     // Health check / test connection
     if (action === 'test' || action === 'health') {
