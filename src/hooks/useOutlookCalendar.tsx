@@ -97,7 +97,7 @@ export function useOutlookCalendar() {
     }
   }, [user, checkConnection]);
 
-  const connect = useCallback(async (tenantId: number) => {
+  const connect = useCallback(async (tenantId: number): Promise<{ openedInNewTab?: boolean; authUrl?: string } | void> => {
     if (!user) {
       toast({ title: 'Please log in first', variant: 'destructive' });
       return;
@@ -133,9 +133,39 @@ export function useOutlookCalendar() {
       localStorage.setItem('outlook_oauth_state', data.state);
       localStorage.setItem('outlook_oauth_redirect', redirectUri);
       
-      // Redirect to Microsoft login
-      console.log('[useOutlookCalendar] Redirecting to Microsoft...');
-      window.location.href = data.auth_url;
+      // Check if running in an iframe (e.g., Lovable preview)
+      // Microsoft login blocks rendering in iframes via X-Frame-Options
+      const isInIframe = window.self !== window.top;
+      console.log('[useOutlookCalendar] Is in iframe:', isInIframe);
+      
+      if (isInIframe) {
+        // Open Microsoft login in a new tab to avoid iframe blocking
+        console.log('[useOutlookCalendar] Opening Microsoft login in new tab (iframe detected)');
+        const newWindow = window.open(data.auth_url, '_blank', 'noopener,noreferrer');
+        
+        setLoading(false);
+        
+        if (!newWindow) {
+          // Popup blocked - return the URL for manual fallback
+          toast({ 
+            title: 'Popup blocked', 
+            description: 'Please allow popups or click the link to continue.', 
+            variant: 'destructive' 
+          });
+          return { openedInNewTab: false, authUrl: data.auth_url };
+        }
+        
+        toast({ 
+          title: 'Complete login in new tab', 
+          description: "Finish signing in with Microsoft, then return here and click 'Refresh Connection'." 
+        });
+        
+        return { openedInNewTab: true };
+      } else {
+        // Normal redirect for non-iframe environments
+        console.log('[useOutlookCalendar] Redirecting to Microsoft...');
+        window.location.href = data.auth_url;
+      }
     } catch (err) {
       console.error('[useOutlookCalendar] Connect error:', err);
       toast({ title: 'Connection failed', variant: 'destructive' });
@@ -330,10 +360,14 @@ export function useOutlookCalendar() {
     };
   }, [user]);
 
+  // Expose isConnected alias for consistency
+  const isConnected = connected;
+  
   return {
     loading,
     initializing,
     connected,
+    isConnected,
     events,
     drafts,
     checkConnection,
