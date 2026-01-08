@@ -10,11 +10,14 @@ const corsHeaders = {
 
 // TGA Production SOAP Endpoints - WCF basicHttpBinding (SOAP 1.1)
 // Per TGA Web Services Specification v13r1
-// IMPORTANT: Path is case-sensitive - must use 'Webservices' (lowercase 's') and V13 suffix
+// IMPORTANT: Path is case-sensitive. Configurable via TGA_SOAP_BASE_URL env var.
+const TGA_SOAP_BASE_URL = Deno.env.get('TGA_SOAP_BASE_URL') || 
+  'https://ws.training.gov.au/Deewr.Tga.WebServices';  // Note: uppercase 'S' in WebServices
+
 const TGA_ENDPOINTS = {
-  organisation: 'https://ws.training.gov.au/Deewr.Tga.Webservices/OrganisationServiceV13.svc',
-  training: 'https://ws.training.gov.au/Deewr.Tga.Webservices/TrainingComponentServiceV13.svc',
-  classification: 'https://ws.training.gov.au/Deewr.Tga.Webservices/ClassificationServiceV13.svc',
+  organisation: `${TGA_SOAP_BASE_URL}/OrganisationServiceV13.svc`,
+  training: `${TGA_SOAP_BASE_URL}/TrainingComponentServiceV13.svc`,
+  classification: `${TGA_SOAP_BASE_URL}/ClassificationServiceV13.svc`,
 };
 
 // Correct SOAP action URIs per TGA WSDL
@@ -25,7 +28,7 @@ const SOAP_ACTIONS = {
   searchTrainingComponent: 'http://training.gov.au/services/TrainingComponent/ITrainingComponentService/Search',
 };
 
-const FUNCTION_VERSION = '1.0.3';
+const FUNCTION_VERSION = '1.0.4';
 
 // Credentials loaded from Supabase secrets
 const TGA_WS_USERNAME = Deno.env.get('TGA_WS_USERNAME');
@@ -197,11 +200,13 @@ async function makeSoapRequest(endpoint: string, soapAction: string, body: strin
       let errorDetail = `HTTP ${response.status}`;
       
       if (response.status === 404) {
-        errorDetail = `HTTP 404 - Endpoint not found: ${endpoint}`;
+        errorDetail = `HTTP 404 - Endpoint not found. URL: ${endpoint}, Service: ${soapAction.split('/').pop()}`;
         log('error', 'TGA endpoint not found (404)', {
           endpoint,
+          baseUrl: TGA_SOAP_BASE_URL,
           soapAction,
           soapVersion: '1.1',
+          hint: 'Check that TGA_SOAP_BASE_URL is correct. The path is case-sensitive (WebServices vs Webservices).',
           responsePreview: responseText.substring(0, 300),
           duration,
         });
@@ -566,28 +571,40 @@ serve(async (req) => {
     
     log('info', 'Request received', { action, method: req.method, userId: user.id });
 
-    // Ping action - returns version and confirms TGA host is reachable
+    // Ping action - returns version, config, and confirms TGA host is reachable
     if (action === 'ping') {
       const pingResult: Record<string, unknown> = {
+        success: true,
         version: FUNCTION_VERSION,
         timestamp: new Date().toISOString(),
-        endpoints: TGA_ENDPOINTS,
-        credentials_configured: !!(TGA_WS_USERNAME && TGA_WS_PASSWORD),
+        config: {
+          baseUrl: TGA_SOAP_BASE_URL,
+          endpoints: TGA_ENDPOINTS,
+          credentialsConfigured: !!(TGA_WS_USERNAME && TGA_WS_PASSWORD),
+        },
       };
 
-      // Try to reach TGA host (HEAD request to check connectivity)
+      // Probe TGA endpoint reachability with HEAD/GET request
       try {
+        const probeUrl = TGA_ENDPOINTS.organisation;
         const pingStart = Date.now();
-        const pingResponse = await fetch(TGA_ENDPOINTS.organisation, {
+        const pingResponse = await fetch(probeUrl, {
           method: 'GET',
           headers: { 'Accept': 'text/html' },
         });
-        pingResult.tga_reachable = pingResponse.ok || pingResponse.status === 200;
-        pingResult.tga_status = pingResponse.status;
-        pingResult.ping_ms = Date.now() - pingStart;
+        pingResult.probe = {
+          url: probeUrl,
+          reachable: pingResponse.status !== 0,
+          status: pingResponse.status,
+          statusText: pingResponse.statusText,
+          pingMs: Date.now() - pingStart,
+        };
       } catch (pingError: unknown) {
-        pingResult.tga_reachable = false;
-        pingResult.tga_error = pingError instanceof Error ? pingError.message : String(pingError);
+        pingResult.probe = {
+          url: TGA_ENDPOINTS.organisation,
+          reachable: false,
+          error: pingError instanceof Error ? pingError.message : String(pingError),
+        };
       }
 
       return new Response(JSON.stringify(pingResult), {
