@@ -13,6 +13,7 @@ import { Separator } from "@/components/ui/separator";
 import { MissingMergeFieldsDialog } from "@/components/tenant/MissingMergeFieldsDialog";
 import { useMissingMergeFields, MissingField } from "@/hooks/useMissingMergeFields";
 import { useExcelGeneration, isExcelDocument } from "@/hooks/useExcelGeneration";
+import { useDocumentActivity } from "@/hooks/useDocumentActivity";
 
 interface Document {
   id: number;
@@ -45,6 +46,7 @@ export default function TenantDocuments() {
   const [packageId, setPackageId] = useState<number | null>(null);
   const [filesDialogOpen, setFilesDialogOpen] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState<string[]>([]);
+  const [selectedFilesDoc, setSelectedFilesDoc] = useState<Document | null>(null);
   
   // Missing merge fields state
   const [missingFieldsDialogOpen, setMissingFieldsDialogOpen] = useState(false);
@@ -56,6 +58,7 @@ export default function TenantDocuments() {
   const parsedTenantId = tenantId ? parseInt(tenantId) : null;
   const { detectMissingFields } = useMissingMergeFields(parsedTenantId);
   const { generateAndDownload, isDocumentGenerating, generating } = useExcelGeneration();
+  const { logDownload } = useDocumentActivity();
 
   // Get packageId from URL params if provided
   const urlPackageId = searchParams.get('packageId');
@@ -193,7 +196,7 @@ export default function TenantDocuments() {
     navigate(`/tenant/${tenantId}/document/${doc.id}${packageId ? `?packageId=${packageId}` : ''}`);
   };
 
-  const handleDownload = async (filePath: string, e: React.MouseEvent) => {
+  const handleDownload = async (filePath: string, doc: Document, e: React.MouseEvent) => {
     e.stopPropagation();
     try {
       const { data, error } = await supabase.storage
@@ -210,6 +213,19 @@ export default function TenantDocuments() {
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
+      
+      // Log download activity
+      if (parsedTenantId) {
+        logDownload({
+          tenantId: parsedTenantId,
+          clientId: parsedTenantId,
+          packageId: doc.package_id || undefined,
+          stageId: doc.stage || undefined,
+          documentId: doc.id,
+          fileName: doc.title || filePath.split('/').pop() || 'document',
+          actorRole: 'tenant'
+        });
+      }
       
       toast({
         title: "Success",
@@ -419,6 +435,7 @@ export default function TenantDocuments() {
                           onClick={(e) => {
                             e.stopPropagation();
                             setSelectedFiles(doc.uploaded_files || []);
+                            setSelectedFilesDoc(doc);
                             setFilesDialogOpen(true);
                           }}
                           className="text-xs whitespace-nowrap hover:bg-[hsl(196deg_100%_93.53%/79%)] hover:text-black [&:hover_svg]:text-black"
@@ -507,15 +524,19 @@ export default function TenantDocuments() {
               return (
                 <div key={i}>
                   {i > 0 && <Separator className="my-2" />}
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleDownload(filePath, new MouseEvent('click') as any)}
-                    className="w-full justify-start h-auto py-2 px-3 text-sm hover:bg-primary/10"
-                  >
-                    <Download className="h-4 w-4 mr-2 flex-shrink-0" />
-                    <span className="truncate">{fileName}</span>
-                  </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={(e) => {
+                        if (selectedFilesDoc) {
+                          handleDownload(filePath, selectedFilesDoc, e);
+                        }
+                      }}
+                      className="w-full justify-start h-auto py-2 px-3 text-sm hover:bg-primary/10"
+                    >
+                      <Download className="h-4 w-4 mr-2 flex-shrink-0" />
+                      <span className="truncate">{fileName}</span>
+                    </Button>
                 </div>
               );
             })}

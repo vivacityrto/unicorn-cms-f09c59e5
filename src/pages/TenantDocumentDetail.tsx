@@ -8,6 +8,7 @@ import { ArrowLeft, FileText, Download, Calendar, CheckCircle2, XCircle, Externa
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "@/components/ui/separator";
+import { useDocumentActivity } from "@/hooks/useDocumentActivity";
 
 interface PackageDocument {
   id: number;
@@ -32,6 +33,9 @@ export default function TenantDocumentDetail() {
   const [loading, setLoading] = useState(true);
   const [docData, setDocData] = useState<PackageDocument | null>(null);
   const [tenantName, setTenantName] = useState("");
+  const { logDownload } = useDocumentActivity();
+  
+  const parsedTenantId = tenantId ? parseInt(tenantId) : null;
 
   // Get packageId from URL params if provided
   const urlPackageId = searchParams.get('packageId');
@@ -98,6 +102,19 @@ export default function TenantDocumentDetail() {
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
+      
+      // Log download activity
+      if (parsedTenantId && docData) {
+        logDownload({
+          tenantId: parsedTenantId,
+          clientId: parsedTenantId,
+          packageId: docData.package_id || undefined,
+          stageId: docData.stage || undefined,
+          documentId: docData.id,
+          fileName: docData.title || filePath.split('/').pop() || 'document',
+          actorRole: 'tenant'
+        });
+      }
       
       toast({
         title: "Success",

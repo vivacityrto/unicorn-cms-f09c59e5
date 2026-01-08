@@ -57,6 +57,7 @@ const FILTER_OPTIONS = [
   { value: 'meetings', label: 'Meetings', icon: Calendar },
   { value: 'time', label: 'Time', icon: Timer },
   { value: 'emails', label: 'Emails', icon: Mail },
+  { value: 'docs', label: 'Documents', icon: FileText },
   { value: 'notes', label: 'Notes', icon: StickyNote }
 ];
 
