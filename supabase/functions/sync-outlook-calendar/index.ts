@@ -42,10 +42,11 @@ async function refreshTokenIfNeeded(
   
   // Refresh if expires in less than 5 minutes
   if (expiresAt.getTime() - now.getTime() > 5 * 60 * 1000) {
+    console.log('[sync-outlook] Token still valid, expires at:', token.expires_at);
     return token.access_token;
   }
 
-  console.log('[sync-outlook] Refreshing token for user:', userId);
+  console.log('[sync-outlook] Token expired or expiring soon, refreshing for user:', userId);
 
   const tokenResponse = await fetch('https://login.microsoftonline.com/common/oauth2/v2.0/token', {
     method: 'POST',
@@ -60,11 +61,15 @@ async function refreshTokenIfNeeded(
   });
 
   if (!tokenResponse.ok) {
-    throw new Error('Failed to refresh token');
+    const errorText = await tokenResponse.text();
+    console.error('[sync-outlook] Token refresh failed:', errorText);
+    throw new Error('Failed to refresh token - user may need to reconnect');
   }
 
   const tokens = await tokenResponse.json();
   const newExpiresAt = new Date(Date.now() + tokens.expires_in * 1000);
+
+  console.log('[sync-outlook] Token refreshed successfully, new expiry:', newExpiresAt.toISOString());
 
   await supabaseAdmin.from('oauth_tokens').update({
     access_token: tokens.access_token,
@@ -87,17 +92,32 @@ async function fetchCalendarEvents(accessToken: string): Promise<CalendarEvent[]
   url.searchParams.set('$orderby', 'start/dateTime');
   url.searchParams.set('$top', '250');
 
+  console.log('[sync-outlook] Fetching events from Graph API...');
+
   const response = await fetch(url.toString(), {
     headers: { 'Authorization': `Bearer ${accessToken}` }
   });
 
   if (!response.ok) {
     const errorText = await response.text();
-    console.error('[sync-outlook] Graph API error:', errorText);
-    throw new Error(`Graph API error: ${response.status}`);
+    console.error('[sync-outlook] Graph API error:', {
+      status: response.status,
+      statusText: response.statusText,
+      body: errorText
+    });
+    
+    if (response.status === 401) {
+      throw new Error('Token expired or invalid - user needs to reconnect');
+    }
+    if (response.status === 403) {
+      throw new Error('Insufficient permissions - user needs to re-authorize');
+    }
+    
+    throw new Error(`Graph API error: ${response.status} ${response.statusText}`);
   }
 
   const data = await response.json();
+  console.log('[sync-outlook] Fetched', data.value?.length || 0, 'events from Graph API');
   return data.value || [];
 }
 
@@ -106,9 +126,12 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  console.log('[sync-outlook] Sync request received at:', new Date().toISOString());
+
   try {
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
+      console.log('[sync-outlook] No auth header');
       return new Response(
         JSON.stringify({ error: 'Missing authorization header' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -123,11 +146,14 @@ serve(async (req) => {
     );
     
     if (authError || !user) {
+      console.log('[sync-outlook] Auth failed:', authError?.message);
       return new Response(
         JSON.stringify({ error: 'Unauthorized' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
+
+    console.log('[sync-outlook] Syncing for user:', user.id);
 
     // Get OAuth token
     const { data: tokenRecord, error: tokenError } = await supabaseAdmin
@@ -138,19 +164,40 @@ serve(async (req) => {
       .single();
 
     if (tokenError || !tokenRecord) {
+      console.log('[sync-outlook] No token found:', tokenError?.message);
       return new Response(
-        JSON.stringify({ error: 'Not connected to Outlook' }),
+        JSON.stringify({ error: 'Not connected to Outlook. Please connect first.' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
+    console.log('[sync-outlook] Found token, tenant:', (tokenRecord as TokenRecord).tenant_id);
+
     // Refresh token if needed
-    const accessToken = await refreshTokenIfNeeded(supabaseAdmin, user.id, tokenRecord as TokenRecord);
+    let accessToken: string;
+    try {
+      accessToken = await refreshTokenIfNeeded(supabaseAdmin, user.id, tokenRecord as TokenRecord);
+    } catch (refreshError) {
+      console.error('[sync-outlook] Token refresh failed:', refreshError);
+      return new Response(
+        JSON.stringify({ error: 'Token expired. Please reconnect to Outlook.' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
     // Fetch events from Microsoft Graph
-    console.log('[sync-outlook] Fetching events for user:', user.id);
-    const events = await fetchCalendarEvents(accessToken);
-    console.log('[sync-outlook] Fetched', events.length, 'events');
+    let events: CalendarEvent[];
+    try {
+      events = await fetchCalendarEvents(accessToken);
+    } catch (graphError) {
+      console.error('[sync-outlook] Graph API failed:', graphError);
+      return new Response(
+        JSON.stringify({ error: graphError instanceof Error ? graphError.message : 'Failed to fetch events' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    console.log('[sync-outlook] Processing', events.length, 'events');
 
     // Upsert events to database
     let synced = 0;
@@ -166,7 +213,7 @@ serve(async (req) => {
 
         const attendeeEmails = attendees.map(a => a.email).filter(Boolean);
 
-        await supabaseAdmin.from('calendar_events').upsert({
+        const { error: upsertError } = await supabaseAdmin.from('calendar_events').upsert({
           tenant_id: (tokenRecord as TokenRecord).tenant_id,
           user_id: user.id,
           provider: 'outlook',
@@ -188,14 +235,19 @@ serve(async (req) => {
           ignoreDuplicates: false 
         });
         
-        synced++;
+        if (upsertError) {
+          console.error('[sync-outlook] Event upsert error:', upsertError);
+          errors++;
+        } else {
+          synced++;
+        }
       } catch (e) {
-        console.error('[sync-outlook] Error upserting event:', e);
+        console.error('[sync-outlook] Error processing event:', e);
         errors++;
       }
     }
 
-    console.log('[sync-outlook] Sync complete:', { synced, errors });
+    console.log('[sync-outlook] Sync complete:', { synced, errors, total: events.length });
 
     return new Response(
       JSON.stringify({ 
@@ -208,7 +260,7 @@ serve(async (req) => {
     );
 
   } catch (error) {
-    console.error('[sync-outlook] Error:', error);
+    console.error('[sync-outlook] Unhandled error:', error);
     const message = error instanceof Error ? error.message : 'Unknown error';
     return new Response(
       JSON.stringify({ error: message }),
