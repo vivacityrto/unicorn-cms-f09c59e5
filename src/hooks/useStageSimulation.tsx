@@ -160,12 +160,14 @@ async function buildMergeData(
       return { mergeData: baseData, source: 'Sample data' };
     }
 
-    // Get the linked client_legacy record
+    // Get the linked client_legacy record (use limit 1 to avoid 406 on duplicates)
     const { data: client } = await supabase
       .from('clients_legacy')
       .select('*')
       .eq('tenant_id', parseInt(tenantId))
-      .single();
+      .order('created_at', { ascending: true })
+      .limit(1)
+      .maybeSingle();
 
     if (!client) {
       return { 
