@@ -27,7 +27,7 @@ const baseMenuItems = [{
   path: "/reports"
 }, {
   icon: Calendar,
-  label: "Calendar",
+  label: "Event Calendar",
   path: "/calendar"
 }, {
   icon: MessageSquare,
@@ -48,7 +48,7 @@ const baseMenuItemsWithoutDocs = [{
   path: "/manage-tenants"
 }, {
   icon: Calendar,
-  label: "Calendar",
+  label: "Event Calendar",
   path: "/calendar"
 }, {
   icon: Clock,
