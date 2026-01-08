@@ -292,12 +292,14 @@ export function useTgaRtoData(tenantId: number | null, rtoCode: string | null, c
     try {
       setSyncing(true);
 
-      // Get client_id for this tenant first
+      // Get client_id for this tenant first (use limit 1 to avoid 406 on duplicates)
       const { data: clientData } = await supabase
         .from('clients_legacy')
         .select('id')
         .eq('tenant_id', tenantId)
-        .single();
+        .order('created_at', { ascending: true })
+        .limit(1)
+        .maybeSingle();
 
       // If we have a client and rto code, call the live sync edge function directly
       // This bypasses the RPC which relies on pre-imported dataset

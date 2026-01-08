@@ -66,12 +66,14 @@ export function useMissingMergeFields(tenantId: number | null) {
 
       if (defError) throw defError;
 
-      // Get client_legacy data linked to this tenant
+      // Get client_legacy data linked to this tenant (use limit 1 to avoid 406 on duplicates)
       const { data: clientData, error: clientError } = await supabase
         .from('clients_legacy')
         .select('*')
         .eq('tenant_id', tenantId)
-        .single();
+        .order('created_at', { ascending: true })
+        .limit(1)
+        .maybeSingle();
 
       if (clientError && clientError.code !== 'PGRST116') {
         console.warn('Could not fetch client data:', clientError);
@@ -178,12 +180,14 @@ export function useMissingMergeFields(tenantId: number | null) {
         .eq('id', tenantId)
         .single();
 
-      // Get assigned CSC user for this tenant
+      // Get assigned CSC user for this tenant (use limit 1 to avoid 406 on duplicates)
       const { data: clientData } = await supabase
         .from('clients_legacy')
         .select('manager')
         .eq('tenant_id', tenantId)
-        .single();
+        .order('created_at', { ascending: true })
+        .limit(1)
+        .maybeSingle();
 
       // Get CSC user ID if manager is set
       let cscUserId: string | null = null;
@@ -272,12 +276,14 @@ export function useMissingMergeFields(tenantId: number | null) {
     if (!tenantId) return false;
 
     try {
-      // Get client_legacy_id for this tenant
+      // Get client_legacy_id for this tenant (use limit 1 to avoid 406 on duplicates)
       const { data: clientData } = await supabase
         .from('clients_legacy')
         .select('id')
         .eq('tenant_id', tenantId)
-        .single();
+        .order('created_at', { ascending: true })
+        .limit(1)
+        .maybeSingle();
 
       if (!clientData) {
         throw new Error('Client not found for this tenant');
@@ -336,12 +342,14 @@ export function useMissingMergeFields(tenantId: number | null) {
     if (!tenantId) return {};
 
     try {
-      // Get client_legacy data
+      // Get client_legacy data (use limit 1 to avoid 406 on duplicates)
       const { data: clientData } = await supabase
         .from('clients_legacy')
         .select('*')
         .eq('tenant_id', tenantId)
-        .single();
+        .order('created_at', { ascending: true })
+        .limit(1)
+        .maybeSingle();
 
       // Get tenant_merge_data
       const { data: mergeData } = await (supabase

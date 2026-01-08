@@ -2513,7 +2513,7 @@ export type Database = {
           {
             foreignKeyName: "clients_legacy_tenant_id_fkey"
             columns: ["tenant_id"]
-            isOneToOne: false
+            isOneToOne: true
             referencedRelation: "tenants"
             referencedColumns: ["id"]
           },
