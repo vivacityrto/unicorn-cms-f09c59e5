@@ -46,13 +46,24 @@ export function useOutlookCalendar() {
   const checkConnection = useCallback(async () => {
     if (!user) return;
     
-    const { data } = await supabase.functions.invoke('outlook-auth', {
-      body: {},
-      headers: { 'Content-Type': 'application/json' }
-    });
-    
-    setConnected(data?.connected || false);
-    return data?.connected;
+    try {
+      const { data, error } = await supabase.functions.invoke('outlook-auth?action=status', {
+        body: {}
+      });
+      
+      if (error) {
+        console.error('Check connection error:', error);
+        setConnected(false);
+        return false;
+      }
+      
+      setConnected(data?.connected || false);
+      return data?.connected;
+    } catch (err) {
+      console.error('Check connection failed:', err);
+      setConnected(false);
+      return false;
+    }
   }, [user]);
 
   const connect = useCallback(async (tenantId: number) => {
