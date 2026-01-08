@@ -77,27 +77,30 @@ export function ClientWorkboardTab({ tenantId, clientId }: ClientWorkboardTabPro
       .order('first_name');
     setTeamMembers(users || []);
 
-    // Fetch packages for this client
+    // Fetch packages for this client (client_packages uses tenant_id as client_id)
     const { data: pkgs } = await supabase
       .from('client_packages')
-      .select('package_id, packages(id, name)')
-      .eq('client_id', clientId);
+      .select('package_id')
+      .eq('tenant_id', clientId);
     
-    const uniquePackages: PackageOption[] = [];
-    (pkgs || []).forEach((cp: any) => {
-      if (cp.packages && !uniquePackages.find(p => p.id === cp.packages.id)) {
-        uniquePackages.push({ id: cp.packages.id, name: cp.packages.name });
-      }
-    });
-    setPackages(uniquePackages);
+    if (pkgs && pkgs.length > 0) {
+      const packageIds = [...new Set(pkgs.map(cp => cp.package_id))] as number[];
+      const { data: packageData } = await supabase
+        .from('packages')
+        .select('id, name')
+        .in('id', packageIds);
+      setPackages((packageData || []).map(p => ({ id: p.id, name: p.name })));
+    } else {
+      setPackages([]);
+    }
 
     // Fetch stages
     const { data: stageData } = await supabase
       .from('documents_stages')
-      .select('id, stage_name')
-      .order('stage_name')
+      .select('id, title')
+      .order('title')
       .limit(100);
-    setStages((stageData || []).map(s => ({ id: s.id, name: s.stage_name })));
+    setStages((stageData || []).map(s => ({ id: s.id, name: s.title })));
   };
 
   // Apply search filter
