@@ -11,6 +11,14 @@ export interface PackageUsage {
   daily_rate_minutes: number;
   forecast_days_to_zero: number | null;
   package_id: number;
+  // Source breakdown - totals
+  manual_minutes_total: number;
+  timer_minutes_total: number;
+  calendar_minutes_total: number;
+  // Source breakdown - 30 day
+  manual_minutes_30d: number;
+  timer_minutes_30d: number;
+  calendar_minutes_30d: number;
 }
 
 export interface ClientAlert {
