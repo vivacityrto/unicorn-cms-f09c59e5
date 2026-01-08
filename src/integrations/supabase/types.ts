@@ -1166,16 +1166,20 @@ export type Database = {
           created_at: string
           created_by: string
           id: string
+          is_billable: boolean
+          last_viewed_at: string | null
           minutes: number
           notes: string | null
           package_id: number | null
           posted_time_entry_id: string | null
+          snoozed_until: string | null
           stage_id: number | null
           status: string
           suggestion: Json
           tenant_id: number
           updated_at: string
           work_date: string
+          work_type: string | null
         }
         Insert: {
           calendar_event_id: string
@@ -1184,16 +1188,20 @@ export type Database = {
           created_at?: string
           created_by: string
           id?: string
+          is_billable?: boolean
+          last_viewed_at?: string | null
           minutes: number
           notes?: string | null
           package_id?: number | null
           posted_time_entry_id?: string | null
+          snoozed_until?: string | null
           stage_id?: number | null
           status?: string
           suggestion?: Json
           tenant_id: number
           updated_at?: string
           work_date: string
+          work_type?: string | null
         }
         Update: {
           calendar_event_id?: string
@@ -1202,16 +1210,20 @@ export type Database = {
           created_at?: string
           created_by?: string
           id?: string
+          is_billable?: boolean
+          last_viewed_at?: string | null
           minutes?: number
           notes?: string | null
           package_id?: number | null
           posted_time_entry_id?: string | null
+          snoozed_until?: string | null
           stage_id?: number | null
           status?: string
           suggestion?: Json
           tenant_id?: number
           updated_at?: string
           work_date?: string
+          work_type?: string | null
         }
         Relationships: [
           {
@@ -12671,6 +12683,14 @@ export type Database = {
         }
         Returns: Json
       }
+      rpc_bulk_discard_time_drafts: {
+        Args: { p_draft_ids: string[] }
+        Returns: Json
+      }
+      rpc_bulk_post_time_drafts: {
+        Args: { p_draft_ids: string[] }
+        Returns: Json
+      }
       rpc_check_package_thresholds: {
         Args: { p_client_id: number; p_client_package_id: string }
         Returns: Json
@@ -12739,6 +12759,35 @@ export type Database = {
         Args: { p_client_id: number; p_client_package_id: string }
         Returns: Json
       }
+      rpc_get_time_inbox_stats: { Args: never; Returns: Json }
+      rpc_list_time_drafts: {
+        Args: { p_from?: string; p_status?: string; p_to?: string }
+        Returns: {
+          calendar_event_id: string
+          client_id: number
+          client_name: string
+          confidence: number
+          created_at: string
+          created_by: string
+          event_end_at: string
+          event_start_at: string
+          event_title: string
+          id: string
+          is_billable: boolean
+          last_viewed_at: string
+          minutes: number
+          notes: string
+          package_id: number
+          snoozed_until: string
+          stage_id: number
+          status: string
+          suggestion: Json
+          tenant_id: number
+          updated_at: string
+          work_date: string
+          work_type: string
+        }[]
+      }
       rpc_post_time_draft: { Args: { p_draft_id: string }; Returns: Json }
       rpc_run_time_draft_worker: {
         Args: { p_tenant_id?: number }
@@ -12763,6 +12812,10 @@ export type Database = {
       rpc_stop_timer: { Args: never; Returns: Json }
       rpc_update_client_note: {
         Args: { p_note_id: string; p_updates: Json }
+        Returns: Json
+      }
+      rpc_update_time_draft: {
+        Args: { p_draft_id: string; p_fields: Json }
         Returns: Json
       }
       search_resources: {

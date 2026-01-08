@@ -1,0 +1,314 @@
+import { useState, useCallback, useEffect } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
+import { useToast } from '@/hooks/use-toast';
+import { format, subDays } from 'date-fns';
+
+export interface TimeDraftRow {
+  id: string;
+  tenant_id: number;
+  created_by: string;
+  calendar_event_id: string;
+  client_id: number | null;
+  package_id: number | null;
+  stage_id: number | null;
+  minutes: number;
+  work_date: string;
+  notes: string | null;
+  confidence: number;
+  suggestion: Record<string, unknown>;
+  status: string;
+  work_type: string | null;
+  is_billable: boolean;
+  last_viewed_at: string | null;
+  snoozed_until: string | null;
+  created_at: string;
+  updated_at: string;
+  event_title: string | null;
+  event_start_at: string | null;
+  event_end_at: string | null;
+  client_name: string | null;
+}
+
+export interface TimeInboxStats {
+  recent_count: number;
+  overdue_count: number;
+  total_drafts: number;
+}
+
+export type DateFilter = 'today' | 'yesterday' | 'last7days' | 'custom';
+export type ConfidenceFilter = 'all' | 'high' | 'medium' | 'low';
+
+export function useTimeInbox() {
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const [loading, setLoading] = useState(true);
+  const [drafts, setDrafts] = useState<TimeDraftRow[]>([]);
+  const [stats, setStats] = useState<TimeInboxStats | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+
+  // Filters
+  const [dateFilter, setDateFilter] = useState<DateFilter>('last7days');
+  const [customDateRange, setCustomDateRange] = useState({
+    from: format(subDays(new Date(), 7), 'yyyy-MM-dd'),
+    to: format(new Date(), 'yyyy-MM-dd')
+  });
+  const [confidenceFilter, setConfidenceFilter] = useState<ConfidenceFilter>('all');
+
+  const getDateRange = useCallback(() => {
+    const today = new Date();
+    switch (dateFilter) {
+      case 'today':
+        return { from: format(today, 'yyyy-MM-dd'), to: format(today, 'yyyy-MM-dd') };
+      case 'yesterday':
+        const yesterday = subDays(today, 1);
+        return { from: format(yesterday, 'yyyy-MM-dd'), to: format(yesterday, 'yyyy-MM-dd') };
+      case 'last7days':
+        return { from: format(subDays(today, 7), 'yyyy-MM-dd'), to: format(today, 'yyyy-MM-dd') };
+      case 'custom':
+        return customDateRange;
+      default:
+        return { from: format(subDays(today, 7), 'yyyy-MM-dd'), to: format(today, 'yyyy-MM-dd') };
+    }
+  }, [dateFilter, customDateRange]);
+
+  const fetchDrafts = useCallback(async () => {
+    if (!user) return;
+    
+    setLoading(true);
+    try {
+      const range = getDateRange();
+      const { data, error } = await supabase.rpc('rpc_list_time_drafts', {
+        p_from: range.from,
+        p_to: range.to,
+        p_status: 'draft'
+      });
+
+      if (error) {
+        console.error('[useTimeInbox] Error fetching drafts:', error);
+        toast({ title: 'Error', description: 'Failed to load drafts', variant: 'destructive' });
+        return;
+      }
+
+      let filteredData = (data || []) as TimeDraftRow[];
+
+      // Apply confidence filter
+      if (confidenceFilter !== 'all') {
+        filteredData = filteredData.filter(d => {
+          const conf = d.confidence || 0;
+          switch (confidenceFilter) {
+            case 'high': return conf >= 0.85;
+            case 'medium': return conf >= 0.5 && conf < 0.85;
+            case 'low': return conf < 0.5;
+            default: return true;
+          }
+        });
+      }
+
+      setDrafts(filteredData);
+      setSelectedIds(new Set());
+    } catch (err) {
+      console.error('[useTimeInbox] Unexpected error:', err);
+    } finally {
+      setLoading(false);
+    }
+  }, [user, getDateRange, confidenceFilter, toast]);
+
+  const fetchStats = useCallback(async () => {
+    if (!user) return;
+
+    try {
+      const { data, error } = await supabase.rpc('rpc_get_time_inbox_stats');
+      if (!error && data) {
+        setStats(data as unknown as TimeInboxStats);
+      }
+    } catch (err) {
+      console.error('[useTimeInbox] Error fetching stats:', err);
+    }
+  }, [user]);
+
+  useEffect(() => {
+    fetchDrafts();
+  }, [fetchDrafts]);
+
+  useEffect(() => {
+    fetchStats();
+  }, [fetchStats]);
+
+  const updateDraft = useCallback(async (draftId: string, fields: Record<string, unknown>) => {
+    try {
+      const { data, error } = await supabase.rpc('rpc_update_time_draft', {
+        p_draft_id: draftId,
+        p_fields: fields as unknown as Record<string, never>
+      });
+
+      if (error) {
+        toast({ title: 'Error', description: 'Failed to update draft', variant: 'destructive' });
+        return false;
+      }
+
+      const result = data as { success: boolean; error?: string };
+      if (!result.success) {
+        toast({ title: 'Error', description: result.error || 'Failed to update', variant: 'destructive' });
+        return false;
+      }
+
+      await fetchDrafts();
+      return true;
+    } catch (err) {
+      console.error('[useTimeInbox] Update error:', err);
+      return false;
+    }
+  }, [fetchDrafts, toast]);
+
+  const postDraft = useCallback(async (draftId: string) => {
+    try {
+      const { data, error } = await supabase.rpc('rpc_bulk_post_time_drafts', {
+        p_draft_ids: [draftId]
+      });
+
+      if (error) {
+        toast({ title: 'Error', description: 'Failed to post draft', variant: 'destructive' });
+        return false;
+      }
+
+      const result = data as { success: boolean; posted_count: number; errors: Array<{ draft_id: string; error: string }> };
+      
+      if (result.errors?.length > 0) {
+        toast({ title: 'Error', description: result.errors[0].error, variant: 'destructive' });
+        return false;
+      }
+
+      toast({ title: 'Time entry posted' });
+      await fetchDrafts();
+      await fetchStats();
+      return true;
+    } catch (err) {
+      console.error('[useTimeInbox] Post error:', err);
+      return false;
+    }
+  }, [fetchDrafts, fetchStats, toast]);
+
+  const discardDraft = useCallback(async (draftId: string) => {
+    try {
+      const { data, error } = await supabase.rpc('rpc_bulk_discard_time_drafts', {
+        p_draft_ids: [draftId]
+      });
+
+      if (error) {
+        toast({ title: 'Error', description: 'Failed to discard draft', variant: 'destructive' });
+        return false;
+      }
+
+      toast({ title: 'Draft discarded' });
+      await fetchDrafts();
+      await fetchStats();
+      return true;
+    } catch (err) {
+      console.error('[useTimeInbox] Discard error:', err);
+      return false;
+    }
+  }, [fetchDrafts, fetchStats, toast]);
+
+  const bulkPost = useCallback(async () => {
+    if (selectedIds.size === 0) return false;
+
+    try {
+      const { data, error } = await supabase.rpc('rpc_bulk_post_time_drafts', {
+        p_draft_ids: Array.from(selectedIds)
+      });
+
+      if (error) {
+        toast({ title: 'Error', description: 'Failed to post drafts', variant: 'destructive' });
+        return false;
+      }
+
+      const result = data as { success: boolean; posted_count: number; errors: Array<{ draft_id: string; error: string }> };
+      
+      if (result.errors?.length > 0) {
+        toast({ 
+          title: `Posted ${result.posted_count}, ${result.errors.length} failed`, 
+          description: result.errors[0].error, 
+          variant: 'destructive' 
+        });
+      } else {
+        toast({ title: `Posted ${result.posted_count} time entries` });
+      }
+
+      await fetchDrafts();
+      await fetchStats();
+      return true;
+    } catch (err) {
+      console.error('[useTimeInbox] Bulk post error:', err);
+      return false;
+    }
+  }, [selectedIds, fetchDrafts, fetchStats, toast]);
+
+  const bulkDiscard = useCallback(async () => {
+    if (selectedIds.size === 0) return false;
+
+    try {
+      const { data, error } = await supabase.rpc('rpc_bulk_discard_time_drafts', {
+        p_draft_ids: Array.from(selectedIds)
+      });
+
+      if (error) {
+        toast({ title: 'Error', description: 'Failed to discard drafts', variant: 'destructive' });
+        return false;
+      }
+
+      const result = data as { success: boolean; discarded_count: number };
+      toast({ title: `Discarded ${result.discarded_count} drafts` });
+
+      await fetchDrafts();
+      await fetchStats();
+      return true;
+    } catch (err) {
+      console.error('[useTimeInbox] Bulk discard error:', err);
+      return false;
+    }
+  }, [selectedIds, fetchDrafts, fetchStats, toast]);
+
+  const toggleSelection = useCallback((id: string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  }, []);
+
+  const selectAll = useCallback(() => {
+    setSelectedIds(new Set(drafts.map(d => d.id)));
+  }, [drafts]);
+
+  const clearSelection = useCallback(() => {
+    setSelectedIds(new Set());
+  }, []);
+
+  return {
+    loading,
+    drafts,
+    stats,
+    selectedIds,
+    dateFilter,
+    setDateFilter,
+    customDateRange,
+    setCustomDateRange,
+    confidenceFilter,
+    setConfidenceFilter,
+    fetchDrafts,
+    fetchStats,
+    updateDraft,
+    postDraft,
+    discardDraft,
+    bulkPost,
+    bulkDiscard,
+    toggleSelection,
+    selectAll,
+    clearSelection
+  };
+}

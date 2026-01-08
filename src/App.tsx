@@ -83,6 +83,7 @@ import AdminReviews from "./pages/AdminReviews";
 import MyWork from "./pages/MyWork";
 import CalendarTimeCapture from "./pages/CalendarTimeCapture";
 import OutlookCallback from "./pages/OutlookCallback";
+import TimeInbox from "./pages/TimeInbox";
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -119,6 +120,14 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <Dashboard />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/time-inbox" 
+              element={
+                <ProtectedRoute>
+                  <TimeInbox />
                 </ProtectedRoute>
               } 
             />
