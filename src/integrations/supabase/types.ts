@@ -1427,8 +1427,51 @@ export type Database = {
           },
         ]
       }
+      client_action_item_comments: {
+        Row: {
+          action_item_id: string
+          body: string
+          created_at: string
+          created_by: string | null
+          id: string
+          tenant_id: number
+        }
+        Insert: {
+          action_item_id: string
+          body: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          tenant_id: number
+        }
+        Update: {
+          action_item_id?: string
+          body?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          tenant_id?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_action_item_comments_action_item_id_fkey"
+            columns: ["action_item_id"]
+            isOneToOne: false
+            referencedRelation: "client_action_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_action_item_comments_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       client_action_items: {
         Row: {
+          assignee_user_id: string | null
           client_id: string
           completed_at: string | null
           completed_by: string | null
@@ -1437,19 +1480,24 @@ export type Database = {
           description: string | null
           due_date: string | null
           id: string
+          item_type: string
           owner_user_id: string | null
+          package_id: number | null
           priority: string
           recurrence_rule: string | null
           related_entity_id: string | null
           related_entity_type: string | null
+          sort_order: number
           source: string
           source_note_id: string | null
+          stage_id: number | null
           status: string
           tenant_id: number
           title: string
           updated_at: string
         }
         Insert: {
+          assignee_user_id?: string | null
           client_id: string
           completed_at?: string | null
           completed_by?: string | null
@@ -1458,19 +1506,24 @@ export type Database = {
           description?: string | null
           due_date?: string | null
           id?: string
+          item_type?: string
           owner_user_id?: string | null
+          package_id?: number | null
           priority?: string
           recurrence_rule?: string | null
           related_entity_id?: string | null
           related_entity_type?: string | null
+          sort_order?: number
           source?: string
           source_note_id?: string | null
+          stage_id?: number | null
           status?: string
           tenant_id: number
           title: string
           updated_at?: string
         }
         Update: {
+          assignee_user_id?: string | null
           client_id?: string
           completed_at?: string | null
           completed_by?: string | null
@@ -1479,13 +1532,17 @@ export type Database = {
           description?: string | null
           due_date?: string | null
           id?: string
+          item_type?: string
           owner_user_id?: string | null
+          package_id?: number | null
           priority?: string
           recurrence_rule?: string | null
           related_entity_id?: string | null
           related_entity_type?: string | null
+          sort_order?: number
           source?: string
           source_note_id?: string | null
+          stage_id?: number | null
           status?: string
           tenant_id?: number
           title?: string
@@ -1504,6 +1561,20 @@ export type Database = {
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_client_action_items_package"
+            columns: ["package_id"]
+            isOneToOne: false
+            referencedRelation: "packages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_client_action_items_stage"
+            columns: ["stage_id"]
+            isOneToOne: false
+            referencedRelation: "documents_stages"
             referencedColumns: ["id"]
           },
         ]
