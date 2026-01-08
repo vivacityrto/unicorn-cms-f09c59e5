@@ -5,9 +5,9 @@
  * Per TGA Web Services Specification v13r1.
  * 
  * IMPORTANT:
- * - OrganisationService uses 'WebServices' (capital S)
- * - TrainingComponentService and ClassificationService use 'Webservices' (lowercase s)
- * - V13 is in the SOAP contract/action, NOT in the URL path
+ * - OrganisationServiceV13 uses 'WebServices' (capital S)
+ * - TrainingComponentServiceV13 and ClassificationServiceV13 use 'Webservices' (lowercase s)
+ * - V13 IS part of the URL path (e.g., OrganisationServiceV13.svc)
  */
 
 export type TGAEnvironment = 'prod' | 'sandbox';
@@ -30,26 +30,31 @@ export function getTgaEndpoints(env: TGAEnvironment = 'prod'): TGAEndpoints {
     : 'ws.training.gov.au';
 
   return {
-    // OrganisationService uses WebServices (capital S)
-    organisation: `https://${baseHost}/Deewr.Tga.WebServices/OrganisationService.svc`,
-    // TrainingComponentService and ClassificationService use Webservices (lowercase s)
-    training: `https://${baseHost}/Deewr.Tga.Webservices/TrainingComponentService.svc`,
-    classification: `https://${baseHost}/Deewr.Tga.Webservices/ClassificationService.svc`,
+    // OrganisationServiceV13 uses WebServices (capital S)
+    organisation: `https://${baseHost}/Deewr.Tga.WebServices/OrganisationServiceV13.svc`,
+    // TrainingComponentServiceV13 and ClassificationServiceV13 use Webservices (lowercase s)
+    training: `https://${baseHost}/Deewr.Tga.Webservices/TrainingComponentServiceV13.svc`,
+    classification: `https://${baseHost}/Deewr.Tga.Webservices/ClassificationServiceV13.svc`,
   };
 }
 
 /**
+ * TGA V13 namespace for SOAP actions per WSDL
+ */
+export const TGA_V13_NAMESPACE = 'http://training.gov.au/services/13/';
+
+/**
  * SOAP Action URIs for TGA services.
- * These include the version number (v13) in the namespace.
+ * These use the V13 namespace with interface-style names.
  */
 export const TGA_SOAP_ACTIONS = {
   // Organisation service operations
-  getOrganisationDetails: 'http://training.gov.au/services/Organisation/IOrganisationService/GetDetails',
-  searchOrganisation: 'http://training.gov.au/services/Organisation/IOrganisationService/Search',
+  getOrganisationDetails: `${TGA_V13_NAMESPACE}IOrganisationService/GetOrganisation`,
+  searchOrganisation: `${TGA_V13_NAMESPACE}IOrganisationService/SearchOrganisation`,
   
   // Training component service operations  
-  getTrainingComponentDetails: 'http://training.gov.au/services/TrainingComponent/ITrainingComponentService/GetDetails',
-  searchTrainingComponent: 'http://training.gov.au/services/TrainingComponent/ITrainingComponentService/Search',
+  getTrainingComponentDetails: `${TGA_V13_NAMESPACE}ITrainingComponentService/GetDetails`,
+  searchTrainingComponent: `${TGA_V13_NAMESPACE}ITrainingComponentService/Search`,
 } as const;
 
 /**
@@ -58,7 +63,9 @@ export const TGA_SOAP_ACTIONS = {
 export const TGA_SOAP_NAMESPACES = {
   // SOAP 1.1 envelope (TGA uses basicHttpBinding)
   soap11: 'http://schemas.xmlsoap.org/soap/envelope/',
-  // Service-specific namespaces
-  organisation: 'http://training.gov.au/services/Organisation',
-  trainingComponent: 'http://training.gov.au/services/TrainingComponent',
+  // WS-Security namespaces
+  wsse: 'http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-secext-1.0.xsd',
+  wsu: 'http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-utility-1.0.xsd',
+  // Service namespace (V13)
+  tns: TGA_V13_NAMESPACE,
 } as const;
