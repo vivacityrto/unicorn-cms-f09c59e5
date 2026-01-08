@@ -3919,18 +3919,22 @@ export type Database = {
       }
       email_send_log: {
         Row: {
+          bcc_emails: string[] | null
           body_html: string
           body_text: string | null
           cc_emails: string[] | null
+          client_id: number | null
           created_at: string
           created_by: string | null
           email_template_id: string
           email_template_version: number
           error_message: string | null
+          from_email: string | null
           id: string
           last_retry_at: string | null
           merge_data: Json | null
           package_id: number | null
+          provider: string | null
           retry_count: number | null
           sent_at: string | null
           stage_id: number | null
@@ -3941,18 +3945,22 @@ export type Database = {
           to_email: string
         }
         Insert: {
+          bcc_emails?: string[] | null
           body_html: string
           body_text?: string | null
           cc_emails?: string[] | null
+          client_id?: number | null
           created_at?: string
           created_by?: string | null
           email_template_id: string
           email_template_version?: number
           error_message?: string | null
+          from_email?: string | null
           id?: string
           last_retry_at?: string | null
           merge_data?: Json | null
           package_id?: number | null
+          provider?: string | null
           retry_count?: number | null
           sent_at?: string | null
           stage_id?: number | null
@@ -3963,18 +3971,22 @@ export type Database = {
           to_email: string
         }
         Update: {
+          bcc_emails?: string[] | null
           body_html?: string
           body_text?: string | null
           cc_emails?: string[] | null
+          client_id?: number | null
           created_at?: string
           created_by?: string | null
           email_template_id?: string
           email_template_version?: number
           error_message?: string | null
+          from_email?: string | null
           id?: string
           last_retry_at?: string | null
           merge_data?: Json | null
           package_id?: number | null
+          provider?: string | null
           retry_count?: number | null
           sent_at?: string | null
           stage_id?: number | null
@@ -3985,6 +3997,13 @@ export type Database = {
           to_email?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "email_send_log_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "email_send_log_email_template_id_fkey"
             columns: ["email_template_id"]

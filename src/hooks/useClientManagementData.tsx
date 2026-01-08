@@ -89,7 +89,7 @@ const EVENT_TYPE_FILTERS: Record<string, string[]> = {
   meetings: ['meeting_synced'],
   time: ['time_posted', 'time_ignored'],
   tasks: ['task_completed_team', 'task_completed_client'],
-  emails: ['email_sent'],
+  emails: ['email_sent', 'email_failed'],
   docs: ['document_uploaded', 'document_downloaded'],
   notes: ['note_added', 'note_created', 'note_pinned', 'note_unpinned']
 };
