@@ -11,6 +11,7 @@ export interface TimelineEvent {
   tenant_id: number;
   client_id: string;
   created_at: string;
+  occurred_at: string;
   created_by: string | null;
   source: 'system' | 'user';
   event_type: string;
@@ -83,48 +84,47 @@ export interface ActionItem {
 // Timeline Hook
 // =============================================
 
+const EVENT_TYPE_FILTERS: Record<string, string[]> = {
+  all: [],
+  meetings: ['meeting_synced'],
+  time: ['time_posted', 'time_ignored'],
+  tasks: ['task_completed_team', 'task_completed_client'],
+  emails: ['email_sent'],
+  docs: ['document_uploaded', 'document_downloaded'],
+  notes: ['note_added']
+};
+
 export function useClientTimeline(tenantId: number | null, clientId: string | null) {
   const [events, setEvents] = useState<TimelineEvent[]>([]);
   const [loading, setLoading] = useState(false);
   const [hasMore, setHasMore] = useState(true);
+  const [filter, setFilter] = useState('all');
+  const [search, setSearch] = useState('');
   const { toast } = useToast();
 
   const fetchEvents = useCallback(async (
-    limit = 20,
-    offset = 0,
-    filter?: string
+    limit = 30,
+    offset = 0
   ) => {
     if (!tenantId || !clientId) return;
 
     setLoading(true);
     try {
-      let query = supabase
-        .from('client_timeline_events')
-        .select('*')
-        .eq('tenant_id', tenantId)
-        .eq('client_id', clientId)
-        .order('created_at', { ascending: false })
-        .range(offset, offset + limit - 1);
+      const eventTypes = filter !== 'all' ? EVENT_TYPE_FILTERS[filter] || null : null;
+      
+      const { data, error } = await supabase.rpc('rpc_search_timeline_events', {
+        p_tenant_id: tenantId,
+        p_client_id: parseInt(clientId),
+        p_search: search || null,
+        p_event_types: eventTypes,
+        p_limit: limit,
+        p_offset: offset
+      });
 
-      if (filter && filter !== 'all') {
-        // Map filter to entity_type
-        const entityMap: Record<string, string[]> = {
-          tasks: ['task'],
-          docs: ['document'],
-          emails: ['email'],
-          notes: ['note'],
-          actions: ['action_item']
-        };
-        if (entityMap[filter]) {
-          query = query.in('entity_type', entityMap[filter]);
-        }
-      }
-
-      const { data, error } = await query;
       if (error) throw error;
 
       // Fetch creator info
-      const creatorIds = [...new Set((data || []).map(e => e.created_by).filter(Boolean))];
+      const creatorIds = [...new Set((data || []).map((e: any) => e.created_by).filter(Boolean))];
       let creatorsMap = new Map();
       
       if (creatorIds.length > 0) {
@@ -136,7 +136,7 @@ export function useClientTimeline(tenantId: number | null, clientId: string | nu
         creatorsMap = new Map(users?.map(u => [u.user_uuid, u]) || []);
       }
 
-      const eventsWithCreators = (data || []).map(event => ({
+      const eventsWithCreators = (data || []).map((event: any) => ({
         ...event,
         metadata: event.metadata as Record<string, unknown>,
         creator: creatorsMap.get(event.created_by)
@@ -159,18 +159,54 @@ export function useClientTimeline(tenantId: number | null, clientId: string | nu
     } finally {
       setLoading(false);
     }
-  }, [tenantId, clientId, toast]);
+  }, [tenantId, clientId, filter, search, toast]);
 
   useEffect(() => {
     fetchEvents();
   }, [fetchEvents]);
 
+  const addQuickNote = useCallback(async (title: string, content: string) => {
+    if (!tenantId || !clientId) return false;
+
+    try {
+      const { error } = await supabase.rpc('rpc_create_client_note', {
+        p_tenant_id: tenantId,
+        p_client_id: clientId,
+        p_note_type: 'general',
+        p_title: title,
+        p_content: content,
+        p_tags: [],
+        p_related_entity_type: null,
+        p_related_entity_id: null,
+        p_is_pinned: false
+      });
+
+      if (error) throw error;
+      
+      toast({ title: 'Note added' });
+      fetchEvents();
+      return true;
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: error.message,
+        variant: 'destructive'
+      });
+      return false;
+    }
+  }, [tenantId, clientId, toast, fetchEvents]);
+
   return {
     events,
     loading,
     hasMore,
+    filter,
+    setFilter,
+    search,
+    setSearch,
     refresh: () => fetchEvents(),
-    loadMore: (offset: number) => fetchEvents(20, offset)
+    loadMore: (offset: number) => fetchEvents(30, offset),
+    addQuickNote
   };
 }
 
