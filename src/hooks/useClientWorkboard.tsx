@@ -174,9 +174,9 @@ export function useClientWorkboard(tenantId: number | null, clientId: number | n
       if (stageIds.length > 0) {
         const { data: stages } = await supabase
           .from('documents_stages')
-          .select('id, stage_name')
+          .select('id, title')
           .in('id', stageIds);
-        stagesMap = new Map(stages?.map(s => [s.id, { id: s.id, name: s.stage_name }]) || []);
+        stagesMap = new Map(stages?.map(s => [s.id, { id: s.id, name: s.title }]) || []);
       }
 
       const itemsWithRelations: WorkboardItem[] = (data || []).map(item => ({
@@ -265,11 +265,12 @@ export function useClientWorkboard(tenantId: number | null, clientId: number | n
   ) => {
     try {
       // If completing, set completed fields
-      const finalUpdates: any = { ...updates };
-      if (updates.status === 'done') {
+      const finalUpdates: Record<string, unknown> = { ...updates };
+      const statusStr = updates.status as string;
+      if (statusStr === 'done') {
         finalUpdates.completed_at = new Date().toISOString();
         finalUpdates.completed_by = user?.id;
-      } else if (updates.status && updates.status !== 'done') {
+      } else if (updates.status && statusStr !== 'done') {
         finalUpdates.completed_at = null;
         finalUpdates.completed_by = null;
       }
