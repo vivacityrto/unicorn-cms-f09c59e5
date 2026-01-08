@@ -81,7 +81,8 @@ import AdminOperations from "./pages/AdminOperations";
 import AdminCompliancePacks from "./pages/AdminCompliancePacks";
 import AdminReviews from "./pages/AdminReviews";
 import MyWork from "./pages/MyWork";
-
+import CalendarTimeCapture from "./pages/CalendarTimeCapture";
+import OutlookCallback from "./pages/OutlookCallback";
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -128,6 +129,18 @@ const App = () => (
                   <CalendarWrapper />
                 </ProtectedRoute>
               } 
+            />
+            <Route 
+              path="/calendar/time-capture" 
+              element={
+                <ProtectedRoute>
+                  <CalendarTimeCapture />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/calendar/outlook-callback" 
+              element={<OutlookCallback />} 
             />
             <Route 
               path="/messages" 

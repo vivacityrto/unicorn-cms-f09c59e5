@@ -25,7 +25,8 @@ import {
   Link2,
   StickyNote,
   Activity,
-  CheckSquare
+  CheckSquare,
+  Calendar
 } from 'lucide-react';
 import { ClientProfileForm } from '@/components/client/ClientProfileForm';
 import { ClientPackagesTab } from '@/components/client/ClientPackagesTab';
@@ -212,12 +213,20 @@ export default function ClientDetail() {
             </div>
 
             {/* Time Widget + Quick Stats */}
-            <div className="flex items-center gap-6">
+            <div className="flex items-center gap-4">
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => navigate(`/calendar/time-capture?client=${tenantIdNum}`)}
+              >
+                <Calendar className="h-4 w-4 mr-2" />
+                Add time from meeting
+              </Button>
               <ClientTimeWidget 
                 tenantId={tenantIdNum!} 
                 clientId={tenantIdNum!}
               />
-              <div className="text-center border-l pl-6">
+              <div className="text-center border-l pl-4">
                 <p className="text-2xl font-bold">{packages.length}</p>
                 <p className="text-xs text-muted-foreground">Packages</p>
               </div>
