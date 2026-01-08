@@ -2,6 +2,8 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
+const SUPABASE_URL = "https://yxkgdalkbrriasiyyrwk.supabase.co";
+
 // Types for the new TGA data model
 export interface TGARtoData {
   legal_name: string | null;
@@ -290,7 +292,83 @@ export function useTgaRtoData(tenantId: number | null, rtoCode: string | null, c
     try {
       setSyncing(true);
 
-      // First try RPC function for local dataset sync
+      // Get client_id for this tenant first
+      const { data: clientData } = await supabase
+        .from('clients_legacy')
+        .select('id')
+        .eq('tenant_id', tenantId)
+        .single();
+
+      // If we have a client and rto code, call the live sync edge function directly
+      // This bypasses the RPC which relies on pre-imported dataset
+      if (clientData?.id && rtoCode) {
+        console.log('Calling tga-sync edge function for live SOAP sync...', { 
+          client_id: clientData.id, 
+          rto_number: rtoCode, 
+          tenant_id: tenantId 
+        });
+
+        const { data: fnData, error: fnError } = await supabase.functions.invoke('tga-sync', {
+          body: {
+            client_id: clientData.id,
+            rto_number: rtoCode,
+            tenant_id: tenantId.toString(),
+          },
+          headers: {
+            'x-action': 'sync-client',
+          },
+        });
+
+        // supabase.functions.invoke uses a different URL pattern, need to use fetch for query params
+        const session = await supabase.auth.getSession();
+        const response = await fetch(
+          `${SUPABASE_URL}/functions/v1/tga-sync?action=sync-client`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${session.data.session?.access_token}`,
+            },
+            body: JSON.stringify({
+              client_id: clientData.id,
+              rto_number: rtoCode,
+              tenant_id: tenantId.toString(),
+            }),
+          }
+        );
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error('Edge function error:', response.status, errorText);
+          toast({
+            title: 'Sync Failed',
+            description: `Edge function error: ${response.status}`,
+            variant: 'destructive'
+          });
+          return { success: false, error: `Edge function error: ${response.status}` };
+        }
+
+        const liveData = await response.json();
+        console.log('Live sync response:', liveData);
+
+        if (liveData.success) {
+          toast({
+            title: 'TGA Sync Complete',
+            description: `Synced live data for RTO ${rtoCode}: ${liveData.rto_data?.legal_name || liveData.rto_data?.legalName || 'Success'}`,
+          });
+          await fetchData();
+          return { success: true };
+        } else {
+          toast({
+            title: 'Sync Failed',
+            description: liveData.error || 'Failed to sync from TGA',
+            variant: 'destructive'
+          });
+          return { success: false, error: liveData.error };
+        }
+      }
+
+      // Fallback: try the RPC function for local dataset sync
       const { data, error } = await supabase.rpc('tga_sync_tenant', {
         p_tenant_id: tenantId,
         p_rto_number: rtoCode
@@ -318,57 +396,6 @@ export function useTgaRtoData(tenantId: number | null, rtoCode: string | null, c
           skill_sets: number;
         };
       };
-
-      // If dataset sync failed due to missing RTO, try live SOAP sync
-      if (!result.success && result.error?.includes('not found in dataset')) {
-        console.log('Dataset empty, attempting live SOAP sync...');
-        
-        // Get client_id for this tenant
-        const { data: clientData } = await supabase
-          .from('clients_legacy')
-          .select('id')
-          .eq('tenant_id', tenantId)
-          .single();
-
-        if (clientData?.id && rtoCode) {
-          // Call live sync edge function with action query param
-          const session = await supabase.auth.getSession();
-          const response = await fetch(
-            `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/tga-sync?action=sync-client`,
-            {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${session.data.session?.access_token}`,
-                'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
-              },
-              body: JSON.stringify({
-                client_id: clientData.id,
-                rto_number: rtoCode,
-                tenant_id: tenantId.toString(),
-              }),
-            }
-          );
-
-          const liveData = await response.json();
-
-          if (liveData.success) {
-            toast({
-              title: 'TGA Sync Complete',
-              description: `Synced live data for RTO ${rtoCode}: ${liveData.rto_data?.legal_name || 'Unknown'}`,
-            });
-            await fetchData();
-            return { success: true };
-          } else {
-            toast({
-              title: 'Sync Failed',
-              description: liveData.error || 'Failed to sync from TGA',
-              variant: 'destructive'
-            });
-            return { success: false, error: liveData.error };
-          }
-        }
-      }
 
       if (!result.success) {
         toast({
