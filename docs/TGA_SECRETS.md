@@ -1,45 +1,74 @@
-# TGA Integration Secrets
+# TGA Integration Configuration
 
-The following secrets must be configured in Supabase for the TGA integration to work:
+Unicorn 2.0 integrates with training.gov.au (TGA) using TGA Web Services Specification v13r1.
+
+## Current Configuration
+
+| Setting | Value |
+|---------|-------|
+| **Environment** | Production |
+| **Username** | support@vivacity.com.au |
+| **Access Level** | Web Services Read |
+| **Auth Method** | HTTP Basic Authentication |
 
 ## Required Secrets
 
-| Secret Name | Description | Required |
-|-------------|-------------|----------|
-| `TGA_MODE` | API mode: `REST` or `SOAP` (default: `REST`) | Optional |
-| `TGA_API_TOKEN` | Bearer token for TGA REST API | For REST mode |
-| `TGA_WS_USERNAME` | Username for TGA SOAP web services | For SOAP mode |
-| `TGA_WS_PASSWORD` | Password for TGA SOAP web services | For SOAP mode |
+Configure these in Supabase Edge Function Secrets:
 
-## Optional Secrets
+| Secret Name | Description | Status |
+|-------------|-------------|--------|
+| `TGA_WS_USERNAME` | TGA Web Services username (email) | Required |
+| `TGA_WS_PASSWORD` | TGA Web Services password | Required |
 
-| Secret Name | Description | Default |
-|-------------|-------------|---------|
-| `TGA_API_BASE` | Base URL for TGA REST API | `https://training.gov.au` |
-| `TGA_WS_BASE` | Base URL for TGA SOAP services | `https://ws.sandbox.training.gov.au` |
+## TGA Web Services Endpoints (Production)
+
+| Service | Endpoint |
+|---------|----------|
+| Organisation | `https://ws.training.gov.au/Deewr.Tga.WebServices/OrganisationServiceV13.svc` |
+| Training Component | `https://ws.training.gov.au/Deewr.Tga.WebServices/TrainingComponentServiceV13.svc` |
+| Classification | `https://ws.training.gov.au/Deewr.Tga.WebServices/ClassificationServiceV13.svc` |
+
+## Sync Scope
+
+The integration provides **read-only** access to:
+
+- Organisation details (RTOs)
+- RTO registration status
+- Scope of registration
+- Qualifications, units, skill sets
+- Delivery locations
 
 ## How to Configure
 
-1. Go to the Supabase Dashboard
-2. Navigate to **Project Settings** → **Edge Functions** → **Secrets**
-3. Add each secret with its value
+1. Go to **Supabase Dashboard** → **Project Settings** → **Edge Functions** → **Secrets**
+2. Add `TGA_WS_USERNAME` with value: `support@vivacity.com.au`
+3. Add `TGA_WS_PASSWORD` with the confirmed password
 
-## API Modes
+## Validation
 
-### REST Mode (Default)
-Uses Training.gov.au's public search API. May work without authentication for basic searches.
+After configuring secrets, validate authentication:
 
-### SOAP Mode
-Uses the Training.gov.au SOAP web services. Requires valid credentials from training.gov.au.
+1. Navigate to **Admin** → **TGA Integration**
+2. Click **Test Connection**
+3. Verify successful response with a test component
 
-To obtain SOAP credentials:
-1. Visit [training.gov.au](https://training.gov.au)
-2. Register for API access
-3. Request sandbox credentials for testing
-4. Request production credentials when ready
+## Troubleshooting
+
+| Error | Cause | Solution |
+|-------|-------|----------|
+| `TGA_WS_USERNAME secret not configured` | Missing secret | Add secret in Supabase |
+| `Authentication failed` | Wrong credentials | Verify username/password |
+| `Access denied` | No permissions | Contact TGA for Web Services Read access |
+| `Cannot connect` | Network issue | Check Supabase function network |
 
 ## Security Notes
 
-- Never commit secrets to version control
-- Secrets are only accessible in Edge Functions (server-side)
-- The TGA API token and credentials are never exposed to the frontend
+- Credentials are stored as Supabase Edge Function secrets (encrypted)
+- Never commit credentials to version control
+- Secrets are only accessible server-side in Edge Functions
+- Read-only access means no data can be modified in TGA
+
+## Reference
+
+- TGA Web Services Specification v13r1
+- TGA Logical Data Model v1.14.0
