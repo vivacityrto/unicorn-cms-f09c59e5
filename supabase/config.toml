@@ -41,3 +41,6 @@ verify_jwt = false
 
 [functions.outlook-time-draft-worker]
 verify_jwt = false
+
+[functions.export-client-timeline-pdf]
+verify_jwt = false

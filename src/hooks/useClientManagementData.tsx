@@ -110,6 +110,11 @@ export interface PinnedNote {
   };
 }
 
+export interface DateRange {
+  from: Date | null;
+  to: Date | null;
+}
+
 export function useClientTimeline(tenantId: number | null, clientId: string | null) {
   const [events, setEvents] = useState<TimelineEvent[]>([]);
   const [pinnedNotes, setPinnedNotes] = useState<PinnedNote[]>([]);
@@ -117,6 +122,7 @@ export function useClientTimeline(tenantId: number | null, clientId: string | nu
   const [hasMore, setHasMore] = useState(true);
   const [filter, setFilter] = useState('all');
   const [search, setSearch] = useState('');
+  const [dateRange, setDateRange] = useState<DateRange>({ from: null, to: null });
   const { toast } = useToast();
 
   const fetchPinnedNotes = useCallback(async () => {
@@ -170,7 +176,9 @@ export function useClientTimeline(tenantId: number | null, clientId: string | nu
         p_search: search || null,
         p_event_types: eventTypes,
         p_limit: limit,
-        p_offset: offset
+        p_offset: offset,
+        p_from_date: dateRange.from?.toISOString() || null,
+        p_to_date: dateRange.to?.toISOString() || null
       });
 
       if (error) throw error;
@@ -211,7 +219,7 @@ export function useClientTimeline(tenantId: number | null, clientId: string | nu
     } finally {
       setLoading(false);
     }
-  }, [tenantId, clientId, filter, search, toast]);
+  }, [tenantId, clientId, filter, search, dateRange, toast]);
 
   useEffect(() => {
     fetchEvents();
@@ -286,6 +294,8 @@ export function useClientTimeline(tenantId: number | null, clientId: string | nu
     setFilter,
     search,
     setSearch,
+    dateRange,
+    setDateRange,
     refresh: () => { fetchEvents(); fetchPinnedNotes(); },
     loadMore: (offset: number) => fetchEvents(30, offset),
     addQuickNote,
