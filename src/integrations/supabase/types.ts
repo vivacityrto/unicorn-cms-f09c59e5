@@ -1168,6 +1168,8 @@ export type Database = {
           id: string
           is_billable: boolean
           last_viewed_at: string | null
+          match_confidence: number | null
+          match_reason: string | null
           minutes: number
           notes: string | null
           package_id: number | null
@@ -1175,6 +1177,8 @@ export type Database = {
           snoozed_until: string | null
           stage_id: number | null
           status: string
+          suggested_client_id: number | null
+          suggested_package_id: number | null
           suggestion: Json
           tenant_id: number
           updated_at: string
@@ -1190,6 +1194,8 @@ export type Database = {
           id?: string
           is_billable?: boolean
           last_viewed_at?: string | null
+          match_confidence?: number | null
+          match_reason?: string | null
           minutes: number
           notes?: string | null
           package_id?: number | null
@@ -1197,6 +1203,8 @@ export type Database = {
           snoozed_until?: string | null
           stage_id?: number | null
           status?: string
+          suggested_client_id?: number | null
+          suggested_package_id?: number | null
           suggestion?: Json
           tenant_id: number
           updated_at?: string
@@ -1212,6 +1220,8 @@ export type Database = {
           id?: string
           is_billable?: boolean
           last_viewed_at?: string | null
+          match_confidence?: number | null
+          match_reason?: string | null
           minutes?: number
           notes?: string | null
           package_id?: number | null
@@ -1219,6 +1229,8 @@ export type Database = {
           snoozed_until?: string | null
           stage_id?: number | null
           status?: string
+          suggested_client_id?: number | null
+          suggested_package_id?: number | null
           suggestion?: Json
           tenant_id?: number
           updated_at?: string
@@ -1252,6 +1264,20 @@ export type Database = {
             columns: ["stage_id"]
             isOneToOne: false
             referencedRelation: "documents_stages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "calendar_time_drafts_suggested_client_id_fkey"
+            columns: ["suggested_client_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "calendar_time_drafts_suggested_package_id_fkey"
+            columns: ["suggested_package_id"]
+            isOneToOne: false
+            referencedRelation: "packages"
             referencedColumns: ["id"]
           },
           {
@@ -12199,6 +12225,18 @@ export type Database = {
       current_user_tenant_ids: { Args: never; Returns: string[] }
       drop_rock_to_issue: { Args: { p_rock_id: string }; Returns: string }
       fn_auth_user_id_by_email: { Args: { p_email: string }; Returns: string }
+      fn_match_client_for_event: {
+        Args: {
+          p_attendee_emails: string[]
+          p_event_title: string
+          p_tenant_id: number
+        }
+        Returns: {
+          client_id: number
+          confidence: number
+          reason: string
+        }[]
+      }
       generate_findings: {
         Args: { p_audit_id: number }
         Returns: {
@@ -12683,12 +12721,24 @@ export type Database = {
         }
         Returns: Json
       }
+      rpc_apply_draft_suggestion: {
+        Args: {
+          p_apply_client?: boolean
+          p_apply_package?: boolean
+          p_draft_id: string
+        }
+        Returns: Json
+      }
       rpc_bulk_discard_time_drafts: {
         Args: { p_draft_ids: string[] }
         Returns: Json
       }
       rpc_bulk_post_time_drafts: {
         Args: { p_draft_ids: string[] }
+        Returns: Json
+      }
+      rpc_bulk_update_time_drafts: {
+        Args: { p_draft_ids: string[]; p_fields: Json }
         Returns: Json
       }
       rpc_check_package_thresholds: {
@@ -12732,6 +12782,10 @@ export type Database = {
       }
       rpc_discard_time_draft: { Args: { p_draft_id: string }; Returns: Json }
       rpc_dismiss_alert: { Args: { p_alert_id: string }; Returns: Json }
+      rpc_get_client_time_rollup: {
+        Args: { p_client_id: number; p_days?: number }
+        Returns: Json
+      }
       rpc_get_my_action_items: {
         Args: {
           p_include_overdue?: boolean
@@ -12754,6 +12808,10 @@ export type Database = {
           tenant_id: number
           title: string
         }[]
+      }
+      rpc_get_package_time_rollup: {
+        Args: { p_client_id: number; p_days?: number; p_package_id: number }
+        Returns: Json
       }
       rpc_get_package_usage: {
         Args: { p_client_id: number; p_client_package_id: string }

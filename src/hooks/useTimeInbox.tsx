@@ -28,6 +28,13 @@ export interface TimeDraftRow {
   event_start_at: string | null;
   event_end_at: string | null;
   client_name: string | null;
+  // Suggestion fields
+  suggested_client_id: number | null;
+  suggested_package_id: number | null;
+  match_confidence: number;
+  match_reason: string | null;
+  suggested_client_name?: string | null;
+  suggested_package_name?: string | null;
 }
 
 export interface TimeInboxStats {
@@ -244,6 +251,84 @@ export function useTimeInbox() {
     }
   }, [selectedIds, fetchDrafts, fetchStats, toast]);
 
+  const bulkUpdateClient = useCallback(async (clientId: number) => {
+    if (selectedIds.size === 0) return false;
+
+    try {
+      const { data, error } = await supabase.rpc('rpc_bulk_update_time_drafts', {
+        p_draft_ids: Array.from(selectedIds),
+        p_fields: { client_id: clientId }
+      });
+
+      if (error) {
+        toast({ title: 'Error', description: 'Failed to update drafts', variant: 'destructive' });
+        return false;
+      }
+
+      const result = data as { success: boolean; updated_count: number; errors: Array<{ draft_id: string; error: string }> };
+      toast({ title: `Updated ${result.updated_count} drafts` });
+
+      await fetchDrafts();
+      return true;
+    } catch (err) {
+      console.error('[useTimeInbox] Bulk update client error:', err);
+      return false;
+    }
+  }, [selectedIds, fetchDrafts, toast]);
+
+  const bulkUpdatePackage = useCallback(async (packageId: number) => {
+    if (selectedIds.size === 0) return false;
+
+    try {
+      const { data, error } = await supabase.rpc('rpc_bulk_update_time_drafts', {
+        p_draft_ids: Array.from(selectedIds),
+        p_fields: { package_id: packageId }
+      });
+
+      if (error) {
+        toast({ title: 'Error', description: 'Failed to update drafts', variant: 'destructive' });
+        return false;
+      }
+
+      const result = data as { success: boolean; updated_count: number; errors: Array<{ draft_id: string; error: string }> };
+      toast({ title: `Updated ${result.updated_count} drafts` });
+
+      await fetchDrafts();
+      return true;
+    } catch (err) {
+      console.error('[useTimeInbox] Bulk update package error:', err);
+      return false;
+    }
+  }, [selectedIds, fetchDrafts, toast]);
+
+  const applySuggestion = useCallback(async (draftId: string, applyClient = true, applyPackage = true) => {
+    try {
+      const { data, error } = await supabase.rpc('rpc_apply_draft_suggestion', {
+        p_draft_id: draftId,
+        p_apply_client: applyClient,
+        p_apply_package: applyPackage
+      });
+
+      if (error) {
+        toast({ title: 'Error', description: 'Failed to apply suggestion', variant: 'destructive' });
+        return false;
+      }
+
+      const result = data as { success: boolean; error?: string };
+      if (!result.success) {
+        toast({ title: 'Error', description: result.error || 'Failed to apply', variant: 'destructive' });
+        return false;
+      }
+
+      toast({ title: 'Suggestion applied' });
+      await fetchDrafts();
+      return true;
+    } catch (err) {
+      console.error('[useTimeInbox] Apply suggestion error:', err);
+      return false;
+    }
+  }, [fetchDrafts, toast]);
+
   const bulkDiscard = useCallback(async () => {
     if (selectedIds.size === 0) return false;
 
@@ -307,6 +392,9 @@ export function useTimeInbox() {
     discardDraft,
     bulkPost,
     bulkDiscard,
+    bulkUpdateClient,
+    bulkUpdatePackage,
+    applySuggestion,
     toggleSelection,
     selectAll,
     clearSelection

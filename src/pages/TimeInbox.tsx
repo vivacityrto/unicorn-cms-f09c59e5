@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { format, differenceInMinutes } from 'date-fns';
-import { Inbox, Clock, Calendar, Check, X, Edit, ChevronDown, Filter, Users, Building2, DollarSign, FileText, Sparkles, AlertCircle } from 'lucide-react';
+import { Inbox, Clock, Calendar, Check, X, Edit, ChevronDown, Filter, Users, Building2, DollarSign, FileText, Sparkles, AlertCircle, RefreshCw, Package, Wand2 } from 'lucide-react';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -14,10 +14,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator, DropdownMenuLabel } from '@/components/ui/dropdown-menu';
 import { useTimeInbox, TimeDraftRow, DateFilter, ConfidenceFilter } from '@/hooks/useTimeInbox';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { useToast } from '@/hooks/use-toast';
 
 function ConfidenceBadge({ confidence }: { confidence: number }) {
   if (confidence >= 0.85) {
@@ -31,6 +32,7 @@ function ConfidenceBadge({ confidence }: { confidence: number }) {
 
 export default function TimeInbox() {
   const { profile } = useAuth();
+  const { toast } = useToast();
   const {
     loading,
     drafts,
@@ -48,10 +50,17 @@ export default function TimeInbox() {
     discardDraft,
     bulkPost,
     bulkDiscard,
+    bulkUpdateClient,
+    bulkUpdatePackage,
+    applySuggestion,
     toggleSelection,
     selectAll,
     clearSelection
   } = useTimeInbox();
+
+  // Sync state
+  const [syncing, setSyncing] = useState(false);
+  const [lastSync, setLastSync] = useState<{ time: Date; created: number; updated: number; skipped: number } | null>(null);
 
   // Drawer state
   const [editingDraft, setEditingDraft] = useState<TimeDraftRow | null>(null);
@@ -75,9 +84,87 @@ export default function TimeInbox() {
   const [packages, setPackages] = useState<Array<{ id: number; name: string }>>([]);
   const [stages, setStages] = useState<Array<{ id: number; name: string }>>([]);
 
+  // Bulk action state
+  const [bulkClientId, setBulkClientId] = useState<number | null>(null);
+  const [bulkPackages, setBulkPackages] = useState<Array<{ id: number; name: string }>>([]);
+
   useEffect(() => {
     fetchClients();
   }, []);
+
+  // Fetch packages when bulk client changes
+  useEffect(() => {
+    if (bulkClientId) {
+      fetchPackagesForBulk(bulkClientId);
+    } else {
+      setBulkPackages([]);
+    }
+  }, [bulkClientId]);
+
+  const fetchPackagesForBulk = async (clientId: number) => {
+    const { data } = await supabase
+      .from('client_packages')
+      .select('id, package_id, packages(name)')
+      .eq('tenant_id', clientId)
+      .eq('status', 'active');
+    if (data) {
+      setBulkPackages(data.map(p => ({ 
+        id: p.package_id, 
+        name: (p.packages as { name: string })?.name || 'Unknown' 
+      })));
+    }
+  };
+
+  const handleSyncOutlook = async () => {
+    setSyncing(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('sync-outlook-calendar');
+      
+      if (error) {
+        if (error.message?.includes('Not connected') || error.message?.includes('Token expired')) {
+          toast({ 
+            title: 'Outlook not connected', 
+            description: 'Please reconnect your Outlook calendar in Settings.',
+            variant: 'destructive'
+          });
+        } else {
+          toast({ 
+            title: 'Sync failed', 
+            description: error.message,
+            variant: 'destructive'
+          });
+        }
+        return;
+      }
+
+      setLastSync({
+        time: new Date(),
+        created: data?.synced || 0,
+        updated: 0,
+        skipped: data?.errors || 0
+      });
+
+      // Trigger draft worker after calendar sync
+      await supabase.functions.invoke('outlook-time-draft-worker');
+      
+      toast({ title: 'Outlook synced', description: `${data?.synced || 0} events processed` });
+      fetchDrafts();
+    } catch (err) {
+      console.error('[TimeInbox] Sync error:', err);
+      toast({ title: 'Sync failed', variant: 'destructive' });
+    } finally {
+      setSyncing(false);
+    }
+  };
+
+  const handleBulkSetClient = async (clientId: number) => {
+    setBulkClientId(clientId);
+    await bulkUpdateClient(clientId);
+  };
+
+  const handleBulkSetPackage = async (packageId: number) => {
+    await bulkUpdatePackage(packageId);
+  };
 
   const fetchClients = async () => {
     const { data } = await supabase
@@ -258,7 +345,16 @@ export default function TimeInbox() {
                 </Select>
               </div>
 
-              <div className="ml-auto flex items-center gap-2">
+              <div className="ml-auto flex items-center gap-3">
+                {lastSync && (
+                  <span className="text-xs text-muted-foreground">
+                    Last sync: {format(lastSync.time, 'h:mm a')} ({lastSync.created} synced)
+                  </span>
+                )}
+                <Button variant="outline" size="sm" onClick={handleSyncOutlook} disabled={syncing}>
+                  <RefreshCw className={`h-4 w-4 mr-1 ${syncing ? 'animate-spin' : ''}`} />
+                  {syncing ? 'Syncing...' : 'Sync Outlook'}
+                </Button>
                 <Button variant="outline" size="sm" onClick={fetchDrafts}>
                   Refresh
                 </Button>
@@ -271,9 +367,55 @@ export default function TimeInbox() {
         {selectedIds.size > 0 && (
           <Card className="border-primary bg-primary/5">
             <CardContent className="py-3">
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between flex-wrap gap-3">
                 <span className="text-sm font-medium">{selectedIds.size} selected</span>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
+                  {/* Bulk Set Client */}
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button size="sm" variant="outline">
+                        <Building2 className="h-4 w-4 mr-1" />
+                        Set Client
+                        <ChevronDown className="h-3 w-3 ml-1" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="start" className="max-h-[300px] overflow-y-auto">
+                      <DropdownMenuLabel>Select client for all</DropdownMenuLabel>
+                      <DropdownMenuSeparator />
+                      {clients.map(c => (
+                        <DropdownMenuItem key={c.id} onClick={() => handleBulkSetClient(c.id)}>
+                          {c.name}
+                        </DropdownMenuItem>
+                      ))}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+
+                  {/* Bulk Set Package */}
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button size="sm" variant="outline" disabled={!bulkClientId || bulkPackages.length === 0}>
+                        <Package className="h-4 w-4 mr-1" />
+                        Set Package
+                        <ChevronDown className="h-3 w-3 ml-1" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="start" className="max-h-[300px] overflow-y-auto">
+                      <DropdownMenuLabel>Select package for all</DropdownMenuLabel>
+                      <DropdownMenuSeparator />
+                      {bulkPackages.length === 0 ? (
+                        <DropdownMenuItem disabled>Set client first</DropdownMenuItem>
+                      ) : (
+                        bulkPackages.map(p => (
+                          <DropdownMenuItem key={p.id} onClick={() => handleBulkSetPackage(p.id)}>
+                            {p.name}
+                          </DropdownMenuItem>
+                        ))
+                      )}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+
+                  <DropdownMenuSeparator className="h-6 w-px bg-border mx-1" />
+
                   <Button size="sm" onClick={bulkPost}>
                     <Check className="h-4 w-4 mr-1" />
                     Post Selected
@@ -282,7 +424,7 @@ export default function TimeInbox() {
                     <X className="h-4 w-4 mr-1" />
                     Discard Selected
                   </Button>
-                  <Button size="sm" variant="ghost" onClick={clearSelection}>
+                  <Button size="sm" variant="ghost" onClick={() => { clearSelection(); setBulkClientId(null); }}>
                     Clear
                   </Button>
                 </div>
@@ -319,6 +461,7 @@ export default function TimeInbox() {
               drafts.map(draft => {
                 const duration = getDuration(draft);
                 const isSelected = selectedIds.has(draft.id);
+                const hasSuggestion = draft.suggested_client_id && !draft.client_id;
                 return (
                   <div
                     key={draft.id}
@@ -348,12 +491,31 @@ export default function TimeInbox() {
                               <span>{formatDuration(duration)}</span>
                             </div>
                           </div>
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-2 flex-wrap justify-end">
                             {draft.client_name ? (
                               <Badge variant="secondary" className="flex items-center gap-1">
                                 <Building2 className="h-3 w-3" />
                                 {draft.client_name}
                               </Badge>
+                            ) : hasSuggestion ? (
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Badge 
+                                    variant="outline" 
+                                    className="flex items-center gap-1 border-purple-500 text-purple-600 cursor-pointer hover:bg-purple-50"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      applySuggestion(draft.id);
+                                    }}
+                                  >
+                                    <Wand2 className="h-3 w-3" />
+                                    {draft.suggested_client_name || 'Suggested'}
+                                  </Badge>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p className="text-xs">Click to apply: {draft.match_reason || 'Auto-matched'}</p>
+                                </TooltipContent>
+                              </Tooltip>
                             ) : (
                               <Badge variant="outline" className="text-amber-600 border-amber-600">
                                 No client
