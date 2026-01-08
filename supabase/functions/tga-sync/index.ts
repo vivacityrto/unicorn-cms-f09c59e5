@@ -10,14 +10,12 @@ const corsHeaders = {
 
 // TGA Production SOAP Endpoints - WCF basicHttpBinding (SOAP 1.1)
 // Per TGA Web Services Specification v13r1
-// IMPORTANT: Path is case-sensitive. Configurable via TGA_SOAP_BASE_URL env var.
-const TGA_SOAP_BASE_URL = Deno.env.get('TGA_SOAP_BASE_URL') || 
-  'https://ws.training.gov.au/Deewr.Tga.WebServices';  // Note: uppercase 'S' in WebServices
-
+// IMPORTANT: V13 is in the SOAP contract/action, NOT in the URL path.
+// Production endpoints per TGA Web Services Specification:
 const TGA_ENDPOINTS = {
-  organisation: `${TGA_SOAP_BASE_URL}/OrganisationServiceV13.svc`,
-  training: `${TGA_SOAP_BASE_URL}/TrainingComponentServiceV13.svc`,
-  classification: `${TGA_SOAP_BASE_URL}/ClassificationServiceV13.svc`,
+  organisation: 'https://ws.training.gov.au/Deewr.Tga.WebServices/OrganisationService.svc',
+  training: 'https://ws.training.gov.au/Deewr.Tga.Webservices/TrainingComponentService.svc',
+  classification: 'https://ws.training.gov.au/Deewr.Tga.Webservices/ClassificationService.svc',
 };
 
 // Correct SOAP action URIs per TGA WSDL
@@ -28,7 +26,7 @@ const SOAP_ACTIONS = {
   searchTrainingComponent: 'http://training.gov.au/services/TrainingComponent/ITrainingComponentService/Search',
 };
 
-const FUNCTION_VERSION = '1.0.4';
+const FUNCTION_VERSION = '1.0.5';
 
 // Credentials loaded from Supabase secrets
 const TGA_WS_USERNAME = Deno.env.get('TGA_WS_USERNAME');
@@ -203,10 +201,9 @@ async function makeSoapRequest(endpoint: string, soapAction: string, body: strin
         errorDetail = `HTTP 404 - Endpoint not found. URL: ${endpoint}, Service: ${soapAction.split('/').pop()}`;
         log('error', 'TGA endpoint not found (404)', {
           endpoint,
-          baseUrl: TGA_SOAP_BASE_URL,
           soapAction,
           soapVersion: '1.1',
-          hint: 'Check that TGA_SOAP_BASE_URL is correct. The path is case-sensitive (WebServices vs Webservices).',
+          hint: 'Check endpoint URL matches TGA documentation. V13 should NOT be in the URL path.',
           responsePreview: responseText.substring(0, 300),
           duration,
         });
@@ -578,7 +575,6 @@ serve(async (req) => {
         version: FUNCTION_VERSION,
         timestamp: new Date().toISOString(),
         config: {
-          baseUrl: TGA_SOAP_BASE_URL,
           endpoints: TGA_ENDPOINTS,
           credentialsConfigured: !!(TGA_WS_USERNAME && TGA_WS_PASSWORD),
         },
