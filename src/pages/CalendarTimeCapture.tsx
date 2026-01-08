@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { format, subDays, addDays } from 'date-fns';
-import { Calendar, Clock, Users, Video, Plus, RefreshCw, Check, X, Sparkles, Link2 } from 'lucide-react';
+import { Calendar, Clock, Users, Video, Plus, RefreshCw, Check, X, Sparkles, Link2, Loader2 } from 'lucide-react';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -22,8 +22,8 @@ export default function CalendarTimeCapture() {
   const [searchParams] = useSearchParams();
   const { profile } = useAuth();
   const { 
-    loading, connected, events, drafts,
-    checkConnection, connect, disconnect, syncCalendar, 
+    loading, initializing, connected, events, drafts,
+    connect, disconnect, syncCalendar, 
     fetchEvents, fetchDrafts, createDraft, updateDraft, postDraft, discardDraft 
   } = useOutlookCalendar();
 
@@ -51,7 +51,6 @@ export default function CalendarTimeCapture() {
   });
 
   useEffect(() => {
-    checkConnection();
     fetchClients();
   }, []);
 
@@ -175,6 +174,20 @@ export default function CalendarTimeCapture() {
   const getEventDraft = (eventId: string) => {
     return drafts.find(d => d.calendar_event_id === eventId);
   };
+
+  // Show loading state while checking connection
+  if (initializing) {
+    return (
+      <DashboardLayout>
+        <div className="p-6 flex items-center justify-center min-h-[400px]">
+          <div className="text-center space-y-4">
+            <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" />
+            <p className="text-muted-foreground">Loading calendar...</p>
+          </div>
+        </div>
+      </DashboardLayout>
+    );
+  }
 
   if (!connected) {
     return (

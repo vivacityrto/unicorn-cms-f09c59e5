@@ -15,13 +15,21 @@ export default function OutlookCallback() {
       const state = searchParams.get('state');
       const error = searchParams.get('error');
 
+      console.log('[OutlookCallback] Processing callback:', {
+        hasCode: !!code,
+        hasState: !!state,
+        error
+      });
+
       if (error) {
+        console.error('[OutlookCallback] OAuth error from Microsoft:', error);
         setStatus('error');
         setMessage(`Authentication failed: ${searchParams.get('error_description') || error}`);
         return;
       }
 
       if (!code || !state) {
+        console.error('[OutlookCallback] Missing code or state');
         setStatus('error');
         setMessage('Missing authentication parameters');
         return;
@@ -31,11 +39,43 @@ export default function OutlookCallback() {
       const savedState = localStorage.getItem('outlook_oauth_state');
       const redirectUri = localStorage.getItem('outlook_oauth_redirect');
 
+      console.log('[OutlookCallback] State verification:', {
+        stateMatches: state === savedState,
+        hasRedirectUri: !!redirectUri
+      });
+
       if (state !== savedState) {
+        console.error('[OutlookCallback] State mismatch - possible CSRF');
         setStatus('error');
         setMessage('Invalid state parameter - possible CSRF attack');
         return;
       }
+
+      // Wait for Supabase session to be available (may take a moment after redirect)
+      console.log('[OutlookCallback] Waiting for session...');
+      let session = null;
+      let retries = 0;
+      const maxRetries = 5;
+
+      while (!session && retries < maxRetries) {
+        const { data } = await supabase.auth.getSession();
+        session = data.session;
+        if (!session) {
+          console.log(`[OutlookCallback] Session not ready, retry ${retries + 1}/${maxRetries}`);
+          await new Promise(r => setTimeout(r, 500));
+          retries++;
+        }
+      }
+
+      if (!session) {
+        console.error('[OutlookCallback] No session after retries');
+        setStatus('error');
+        setMessage('Session expired. Please log in and try again.');
+        setTimeout(() => navigate('/login'), 2000);
+        return;
+      }
+
+      console.log('[OutlookCallback] Session available, exchanging code...');
 
       try {
         // Exchange code for tokens
@@ -46,8 +86,10 @@ export default function OutlookCallback() {
           }
         );
 
+        console.log('[OutlookCallback] Exchange response:', { data, error: exchangeError });
+
         if (exchangeError || !data?.success) {
-          throw new Error(exchangeError?.message || 'Token exchange failed');
+          throw new Error(exchangeError?.message || data?.error || 'Token exchange failed');
         }
 
         // Clean up localStorage
@@ -58,6 +100,7 @@ export default function OutlookCallback() {
         setMessage('Successfully connected to Outlook!');
 
         // Trigger initial sync
+        console.log('[OutlookCallback] Triggering initial calendar sync...');
         await supabase.functions.invoke('sync-outlook-calendar', {});
 
         // Redirect to time capture page
@@ -66,7 +109,7 @@ export default function OutlookCallback() {
         }, 1500);
 
       } catch (err) {
-        console.error('OAuth callback error:', err);
+        console.error('[OutlookCallback] Exchange error:', err);
         setStatus('error');
         setMessage(err instanceof Error ? err.message : 'Authentication failed');
       }

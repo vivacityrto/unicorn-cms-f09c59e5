@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
@@ -39,32 +39,50 @@ export function useOutlookCalendar() {
   const { user, profile } = useAuth();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
+  const [initializing, setInitializing] = useState(true);
   const [connected, setConnected] = useState(false);
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [drafts, setDrafts] = useState<TimeDraft[]>([]);
 
   const checkConnection = useCallback(async () => {
-    if (!user) return;
+    if (!user) {
+      setInitializing(false);
+      return false;
+    }
     
     try {
+      console.log('[useOutlookCalendar] Checking connection for user:', user.id);
       const { data, error } = await supabase.functions.invoke('outlook-auth?action=status', {
         body: {}
       });
       
       if (error) {
-        console.error('Check connection error:', error);
+        console.error('[useOutlookCalendar] Check connection error:', error);
         setConnected(false);
+        setInitializing(false);
         return false;
       }
       
+      console.log('[useOutlookCalendar] Connection status:', data?.connected);
       setConnected(data?.connected || false);
+      setInitializing(false);
       return data?.connected;
     } catch (err) {
-      console.error('Check connection failed:', err);
+      console.error('[useOutlookCalendar] Check connection failed:', err);
       setConnected(false);
+      setInitializing(false);
       return false;
     }
   }, [user]);
+
+  // Auto-check connection when user becomes available
+  useEffect(() => {
+    if (user) {
+      checkConnection();
+    } else {
+      setInitializing(false);
+    }
+  }, [user, checkConnection]);
 
   const connect = useCallback(async (tenantId: number) => {
     if (!user) return;
@@ -235,6 +253,7 @@ export function useOutlookCalendar() {
 
   return {
     loading,
+    initializing,
     connected,
     events,
     drafts,
