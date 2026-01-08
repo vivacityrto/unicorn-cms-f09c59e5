@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Inbox, Clock, AlertCircle } from 'lucide-react';
+import { Inbox, Clock, AlertCircle, X } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -11,6 +11,7 @@ interface TimeInboxStats {
   recent_count: number;
   overdue_count: number;
   total_drafts: number;
+  is_dismissed?: boolean;
 }
 
 export function TimeInboxWidget() {
@@ -65,7 +66,8 @@ export function TimeInboxWidget() {
 
 export function TimeInboxBanner() {
   const { user } = useAuth();
-  const [overdueCount, setOverdueCount] = useState(0);
+  const [stats, setStats] = useState<TimeInboxStats | null>(null);
+  const [dismissed, setDismissed] = useState(false);
 
   useEffect(() => {
     if (!user) return;
@@ -73,26 +75,45 @@ export function TimeInboxBanner() {
     const fetchStats = async () => {
       const { data } = await supabase.rpc('rpc_get_time_inbox_stats');
       if (data) {
-        const stats = data as unknown as TimeInboxStats;
-        setOverdueCount(stats.overdue_count);
+        const s = data as unknown as TimeInboxStats;
+        setStats(s);
+        setDismissed(s.is_dismissed ?? false);
       }
     };
     
     fetchStats();
   }, [user]);
 
-  if (overdueCount === 0) return null;
+  const handleDismiss = async () => {
+    const { error } = await supabase.rpc('rpc_dismiss_time_inbox_banner');
+    if (!error) {
+      setDismissed(true);
+    }
+  };
+
+  if (!stats || stats.overdue_count === 0 || dismissed) return null;
 
   return (
     <div className="bg-amber-500/10 border-b border-amber-500/20 px-4 py-2">
       <div className="flex items-center justify-between max-w-screen-2xl mx-auto">
         <div className="flex items-center gap-2 text-sm text-amber-700 dark:text-amber-400">
           <AlertCircle className="h-4 w-4" />
-          <span>You have {overdueCount} unposted time draft{overdueCount !== 1 ? 's' : ''} older than 2 days</span>
+          <span>You have {stats.overdue_count} unposted time draft{stats.overdue_count !== 1 ? 's' : ''} older than 2 days</span>
         </div>
-        <Button asChild size="sm" variant="outline" className="text-amber-700 border-amber-500/50 hover:bg-amber-500/10">
-          <Link to="/time-inbox">Review Now</Link>
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button asChild size="sm" variant="outline" className="text-amber-700 border-amber-500/50 hover:bg-amber-500/10">
+            <Link to="/time-inbox">Review Now</Link>
+          </Button>
+          <Button 
+            size="sm" 
+            variant="ghost" 
+            className="text-amber-700 hover:bg-amber-500/10 h-8 w-8 p-0"
+            onClick={handleDismiss}
+            title="Dismiss for today"
+          >
+            <X className="h-4 w-4" />
+          </Button>
+        </div>
       </div>
     </div>
   );

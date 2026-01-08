@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { format, differenceInMinutes } from 'date-fns';
-import { Inbox, Clock, Calendar, Check, X, Edit, ChevronDown, Filter, Users, Building2, DollarSign, FileText, Sparkles, AlertCircle, RefreshCw, Package, Wand2 } from 'lucide-react';
+import { Inbox, Clock, Calendar, Check, X, Edit, ChevronDown, Filter, Users, Building2, DollarSign, FileText, Sparkles, AlertCircle, RefreshCw, Package, Wand2, AlarmClock } from 'lucide-react';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -44,12 +44,16 @@ export default function TimeInbox() {
     setCustomDateRange,
     confidenceFilter,
     setConfidenceFilter,
+    showOverdueOnly,
+    setShowOverdueOnly,
     fetchDrafts,
     updateDraft,
     postDraft,
     discardDraft,
+    snoozeDraft,
     bulkPost,
     bulkDiscard,
+    bulkSnooze,
     bulkUpdateClient,
     bulkUpdatePackage,
     applySuggestion,
@@ -345,6 +349,18 @@ export default function TimeInbox() {
                 </Select>
               </div>
 
+              {/* Overdue filter */}
+              <div className="flex items-center gap-2">
+                <Switch
+                  id="overdue-filter"
+                  checked={showOverdueOnly}
+                  onCheckedChange={setShowOverdueOnly}
+                />
+                <Label htmlFor="overdue-filter" className="text-sm text-muted-foreground cursor-pointer">
+                  Overdue only
+                </Label>
+              </div>
+
               <div className="ml-auto flex items-center gap-3">
                 {lastSync && (
                   <span className="text-xs text-muted-foreground">
@@ -419,6 +435,14 @@ export default function TimeInbox() {
                   <Button size="sm" onClick={bulkPost}>
                     <Check className="h-4 w-4 mr-1" />
                     Post Selected
+                  </Button>
+                  <Button size="sm" variant="outline" onClick={() => {
+                    const tomorrow = new Date();
+                    tomorrow.setDate(tomorrow.getDate() + 1);
+                    bulkSnooze(format(tomorrow, 'yyyy-MM-dd'));
+                  }}>
+                    <AlarmClock className="h-4 w-4 mr-1" />
+                    Snooze Until Tomorrow
                   </Button>
                   <Button size="sm" variant="outline" onClick={bulkDiscard}>
                     <X className="h-4 w-4 mr-1" />
@@ -547,6 +571,23 @@ export default function TimeInbox() {
                             </Button>
                           </TooltipTrigger>
                           <TooltipContent>Post</TooltipContent>
+                        </Tooltip>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button 
+                              size="icon" 
+                              variant="ghost" 
+                              className="text-amber-600 hover:text-amber-700"
+                              onClick={() => {
+                                const tomorrow = new Date();
+                                tomorrow.setDate(tomorrow.getDate() + 1);
+                                snoozeDraft(draft.id, format(tomorrow, 'yyyy-MM-dd'));
+                              }}
+                            >
+                              <AlarmClock className="h-4 w-4" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>Snooze until tomorrow</TooltipContent>
                         </Tooltip>
                         <Tooltip>
                           <TooltipTrigger asChild>

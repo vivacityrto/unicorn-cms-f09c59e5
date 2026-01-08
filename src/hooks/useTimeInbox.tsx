@@ -45,6 +45,7 @@ export interface TimeInboxStats {
 
 export type DateFilter = 'today' | 'yesterday' | 'last7days' | 'custom';
 export type ConfidenceFilter = 'all' | 'high' | 'medium' | 'low';
+export type StatusFilter = 'draft' | 'overdue' | 'all';
 
 export function useTimeInbox() {
   const { user } = useAuth();
@@ -61,6 +62,7 @@ export function useTimeInbox() {
     to: format(new Date(), 'yyyy-MM-dd')
   });
   const [confidenceFilter, setConfidenceFilter] = useState<ConfidenceFilter>('all');
+  const [showOverdueOnly, setShowOverdueOnly] = useState(false);
 
   const getDateRange = useCallback(() => {
     const today = new Date();
@@ -86,9 +88,10 @@ export function useTimeInbox() {
     try {
       const range = getDateRange();
       const { data, error } = await supabase.rpc('rpc_list_time_drafts', {
-        p_from: range.from,
-        p_to: range.to,
-        p_status: 'draft'
+        p_from: showOverdueOnly ? null : range.from,
+        p_to: showOverdueOnly ? null : range.to,
+        p_status: 'draft',
+        p_overdue_only: showOverdueOnly
       });
 
       if (error) {
@@ -97,7 +100,7 @@ export function useTimeInbox() {
         return;
       }
 
-      let filteredData = (data || []) as TimeDraftRow[];
+      let filteredData = ((data || []) as unknown as TimeDraftRow[]);
 
       // Apply confidence filter
       if (confidenceFilter !== 'all') {
@@ -354,6 +357,60 @@ export function useTimeInbox() {
     }
   }, [selectedIds, fetchDrafts, fetchStats, toast]);
 
+  const snoozeDraft = useCallback(async (draftId: string, until: string) => {
+    try {
+      const { data, error } = await supabase.rpc('rpc_snooze_time_draft', {
+        p_draft_id: draftId,
+        p_until: until
+      });
+
+      if (error) {
+        toast({ title: 'Error', description: 'Failed to snooze draft', variant: 'destructive' });
+        return false;
+      }
+
+      const result = data as { success: boolean; error?: string };
+      if (!result.success) {
+        toast({ title: 'Error', description: result.error || 'Failed to snooze', variant: 'destructive' });
+        return false;
+      }
+
+      toast({ title: 'Draft snoozed' });
+      await fetchDrafts();
+      await fetchStats();
+      return true;
+    } catch (err) {
+      console.error('[useTimeInbox] Snooze error:', err);
+      return false;
+    }
+  }, [fetchDrafts, fetchStats, toast]);
+
+  const bulkSnooze = useCallback(async (until: string) => {
+    if (selectedIds.size === 0) return false;
+
+    try {
+      const { data, error } = await supabase.rpc('rpc_bulk_snooze_time_drafts', {
+        p_draft_ids: Array.from(selectedIds),
+        p_until: until
+      });
+
+      if (error) {
+        toast({ title: 'Error', description: 'Failed to snooze drafts', variant: 'destructive' });
+        return false;
+      }
+
+      const result = data as { success: boolean; snoozed_count: number };
+      toast({ title: `Snoozed ${result.snoozed_count} drafts` });
+
+      await fetchDrafts();
+      await fetchStats();
+      return true;
+    } catch (err) {
+      console.error('[useTimeInbox] Bulk snooze error:', err);
+      return false;
+    }
+  }, [selectedIds, fetchDrafts, fetchStats, toast]);
+
   const toggleSelection = useCallback((id: string) => {
     setSelectedIds(prev => {
       const next = new Set(prev);
@@ -385,13 +442,17 @@ export function useTimeInbox() {
     setCustomDateRange,
     confidenceFilter,
     setConfidenceFilter,
+    showOverdueOnly,
+    setShowOverdueOnly,
     fetchDrafts,
     fetchStats,
     updateDraft,
     postDraft,
     discardDraft,
+    snoozeDraft,
     bulkPost,
     bulkDiscard,
+    bulkSnooze,
     bulkUpdateClient,
     bulkUpdatePackage,
     applySuggestion,

@@ -11611,6 +11611,38 @@ export type Database = {
           },
         ]
       }
+      user_time_inbox_dismissals: {
+        Row: {
+          created_at: string
+          dismiss_date: string
+          id: string
+          tenant_id: number
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          dismiss_date: string
+          id?: string
+          tenant_id: number
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          dismiss_date?: string
+          id?: string
+          tenant_id?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_time_inbox_dismissals_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       users: {
         Row: {
           abn: string | null
@@ -12737,6 +12769,10 @@ export type Database = {
         Args: { p_draft_ids: string[] }
         Returns: Json
       }
+      rpc_bulk_snooze_time_drafts: {
+        Args: { p_draft_ids: string[]; p_until: string }
+        Returns: Json
+      }
       rpc_bulk_update_time_drafts: {
         Args: { p_draft_ids: string[]; p_fields: Json }
         Returns: Json
@@ -12782,6 +12818,7 @@ export type Database = {
       }
       rpc_discard_time_draft: { Args: { p_draft_id: string }; Returns: Json }
       rpc_dismiss_alert: { Args: { p_alert_id: string }; Returns: Json }
+      rpc_dismiss_time_inbox_banner: { Args: never; Returns: Json }
       rpc_get_client_time_rollup: {
         Args: { p_client_id: number; p_days?: number }
         Returns: Json
@@ -12818,34 +12855,44 @@ export type Database = {
         Returns: Json
       }
       rpc_get_time_inbox_stats: { Args: never; Returns: Json }
-      rpc_list_time_drafts: {
-        Args: { p_from?: string; p_status?: string; p_to?: string }
-        Returns: {
-          calendar_event_id: string
-          client_id: number
-          client_name: string
-          confidence: number
-          created_at: string
-          created_by: string
-          event_end_at: string
-          event_start_at: string
-          event_title: string
-          id: string
-          is_billable: boolean
-          last_viewed_at: string
-          minutes: number
-          notes: string
-          package_id: number
-          snoozed_until: string
-          stage_id: number
-          status: string
-          suggestion: Json
-          tenant_id: number
-          updated_at: string
-          work_date: string
-          work_type: string
-        }[]
-      }
+      rpc_list_time_drafts:
+        | {
+            Args: { p_from?: string; p_status?: string; p_to?: string }
+            Returns: {
+              calendar_event_id: string
+              client_id: number
+              client_name: string
+              confidence: number
+              created_at: string
+              created_by: string
+              event_end_at: string
+              event_start_at: string
+              event_title: string
+              id: string
+              is_billable: boolean
+              last_viewed_at: string
+              minutes: number
+              notes: string
+              package_id: number
+              snoozed_until: string
+              stage_id: number
+              status: string
+              suggestion: Json
+              tenant_id: number
+              updated_at: string
+              work_date: string
+              work_type: string
+            }[]
+          }
+        | {
+            Args: {
+              p_from?: string
+              p_overdue_only?: boolean
+              p_status?: string
+              p_to?: string
+            }
+            Returns: Json[]
+          }
       rpc_post_time_draft: { Args: { p_draft_id: string }; Returns: Json }
       rpc_run_time_draft_worker: {
         Args: { p_tenant_id?: number }
@@ -12853,6 +12900,10 @@ export type Database = {
       }
       rpc_set_action_item_status: {
         Args: { p_action_item_id: string; p_status: string }
+        Returns: Json
+      }
+      rpc_snooze_time_draft: {
+        Args: { p_draft_id: string; p_until: string }
         Returns: Json
       }
       rpc_start_timer: {
