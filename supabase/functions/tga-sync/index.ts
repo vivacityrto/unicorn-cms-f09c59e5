@@ -4,21 +4,28 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
-  'Access-Control-Allow-Headers': 'authorization, apikey, content-type, x-client-info',
+  'Access-Control-Allow-Methods': 'POST, GET, OPTIONS',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-action',
 };
 
 // TGA Production SOAP Endpoints - WCF basicHttpBinding (SOAP 1.1)
 // Per TGA Web Services Specification v13r1
-// IMPORTANT: V13 is in the SOAP contract/action, NOT in the URL path.
-// Production endpoints per TGA Web Services Specification:
+// IMPORTANT: 
+// - OrganisationService uses 'WebServices' (capital S)
+// - TrainingComponentService and ClassificationService use 'Webservices' (lowercase s)  
+// - V13 is in the SOAP contract/action, NOT in the URL path
+const TGA_ENV = Deno.env.get('TGA_ENV') || 'prod';
+const TGA_BASE_HOST = TGA_ENV === 'sandbox' 
+  ? 'ws.sandbox.training.gov.au' 
+  : 'ws.training.gov.au';
+
 const TGA_ENDPOINTS = {
-  organisation: 'https://ws.training.gov.au/Deewr.Tga.WebServices/OrganisationService.svc',
-  training: 'https://ws.training.gov.au/Deewr.Tga.Webservices/TrainingComponentService.svc',
-  classification: 'https://ws.training.gov.au/Deewr.Tga.Webservices/ClassificationService.svc',
+  organisation: `https://${TGA_BASE_HOST}/Deewr.Tga.WebServices/OrganisationService.svc`,
+  training: `https://${TGA_BASE_HOST}/Deewr.Tga.Webservices/TrainingComponentService.svc`,
+  classification: `https://${TGA_BASE_HOST}/Deewr.Tga.Webservices/ClassificationService.svc`,
 };
 
-// Correct SOAP action URIs per TGA WSDL
+// Correct SOAP action URIs per TGA WSDL (v13 in contract, not URL)
 const SOAP_ACTIONS = {
   getOrganisationDetails: 'http://training.gov.au/services/Organisation/IOrganisationService/GetDetails',
   searchOrganisation: 'http://training.gov.au/services/Organisation/IOrganisationService/Search',
@@ -26,7 +33,7 @@ const SOAP_ACTIONS = {
   searchTrainingComponent: 'http://training.gov.au/services/TrainingComponent/ITrainingComponentService/Search',
 };
 
-const FUNCTION_VERSION = '1.0.5';
+const FUNCTION_VERSION = '1.0.6';
 
 // Credentials loaded from Supabase secrets
 const TGA_WS_USERNAME = Deno.env.get('TGA_WS_USERNAME');
@@ -574,15 +581,19 @@ serve(async (req) => {
         success: true,
         version: FUNCTION_VERSION,
         timestamp: new Date().toISOString(),
+        environment: TGA_ENV,
         config: {
+          baseHost: TGA_BASE_HOST,
           endpoints: TGA_ENDPOINTS,
           credentialsConfigured: !!(TGA_WS_USERNAME && TGA_WS_PASSWORD),
+          usernameFormat: TGA_WS_USERNAME?.includes('@') ? 'email' : 'unknown',
         },
       };
 
-      // Probe TGA endpoint reachability with HEAD/GET request
+      // Probe TGA endpoint reachability with GET request
       try {
         const probeUrl = TGA_ENDPOINTS.organisation;
+        log('info', 'Probing TGA endpoint', { url: probeUrl });
         const pingStart = Date.now();
         const pingResponse = await fetch(probeUrl, {
           method: 'GET',
@@ -590,17 +601,19 @@ serve(async (req) => {
         });
         pingResult.probe = {
           url: probeUrl,
-          reachable: pingResponse.status !== 0,
+          reachable: true,
           status: pingResponse.status,
           statusText: pingResponse.statusText,
           pingMs: Date.now() - pingStart,
         };
+        log('info', 'TGA probe result', pingResult.probe as Record<string, unknown>);
       } catch (pingError: unknown) {
         pingResult.probe = {
           url: TGA_ENDPOINTS.organisation,
           reachable: false,
           error: pingError instanceof Error ? pingError.message : String(pingError),
         };
+        log('warn', 'TGA probe failed', pingResult.probe as Record<string, unknown>);
       }
 
       return new Response(JSON.stringify(pingResult), {
@@ -795,7 +808,17 @@ serve(async (req) => {
         });
       } catch (error: unknown) {
         const errorMsg = error instanceof Error ? error.message : String(error);
-        log('error', 'Live client sync failed', { error: errorMsg, rto_number });
+        
+        // Extract status code from error message if present
+        const statusMatch = errorMsg.match(/HTTP (\d+)/);
+        const upstreamStatus = statusMatch ? parseInt(statusMatch[1]) : null;
+        
+        log('error', 'Live client sync failed', { 
+          error: errorMsg, 
+          rto_number,
+          endpoint: TGA_ENDPOINTS.organisation,
+          upstreamStatus,
+        });
         
         // Update link with error
         if (client_id) {
@@ -817,6 +840,8 @@ serve(async (req) => {
           success: false,
           error: errorMsg,
           rto_number,
+          endpoint: TGA_ENDPOINTS.organisation,
+          status: upstreamStatus,
         }), {
           status: 500,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
