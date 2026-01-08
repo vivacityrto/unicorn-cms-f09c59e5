@@ -38,3 +38,6 @@ verify_jwt = false
 
 [functions.sync-outlook-calendar]
 verify_jwt = false
+
+[functions.outlook-time-draft-worker]
+verify_jwt = false

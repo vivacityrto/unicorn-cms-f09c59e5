@@ -1093,6 +1093,8 @@ export type Database = {
           location: string | null
           meeting_url: string | null
           organizer_email: string | null
+          processed_at: string | null
+          processed_users: Json
           provider: string
           provider_event_id: string
           raw: Json
@@ -1113,6 +1115,8 @@ export type Database = {
           location?: string | null
           meeting_url?: string | null
           organizer_email?: string | null
+          processed_at?: string | null
+          processed_users?: Json
           provider?: string
           provider_event_id: string
           raw?: Json
@@ -1133,6 +1137,8 @@ export type Database = {
           location?: string | null
           meeting_url?: string | null
           organizer_email?: string | null
+          processed_at?: string | null
+          processed_users?: Json
           provider?: string
           provider_event_id?: string
           raw?: Json
@@ -11523,6 +11529,50 @@ export type Database = {
           },
         ]
       }
+      user_time_capture_settings: {
+        Row: {
+          auto_create_meeting_drafts: boolean
+          created_at: string
+          id: string
+          include_organizer_only: boolean
+          max_minutes: number
+          min_minutes: number
+          tenant_id: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          auto_create_meeting_drafts?: boolean
+          created_at?: string
+          id?: string
+          include_organizer_only?: boolean
+          max_minutes?: number
+          min_minutes?: number
+          tenant_id: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          auto_create_meeting_drafts?: boolean
+          created_at?: string
+          id?: string
+          include_organizer_only?: boolean
+          max_minutes?: number
+          min_minutes?: number
+          tenant_id?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_time_capture_settings_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       users: {
         Row: {
           abn: string | null
@@ -12690,6 +12740,10 @@ export type Database = {
         Returns: Json
       }
       rpc_post_time_draft: { Args: { p_draft_id: string }; Returns: Json }
+      rpc_run_time_draft_worker: {
+        Args: { p_tenant_id?: number }
+        Returns: Json
+      }
       rpc_set_action_item_status: {
         Args: { p_action_item_id: string; p_status: string }
         Returns: Json
