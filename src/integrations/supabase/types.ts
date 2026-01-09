@@ -9748,6 +9748,7 @@ export type Database = {
           address_line_2: string | null
           created_at: string | null
           cricos_number: string | null
+          legal_name: string | null
           notes: string | null
           org_type: string | null
           postcode: string | null
@@ -9761,6 +9762,7 @@ export type Database = {
           trading_name: string | null
           updated_at: string | null
           updated_by: string | null
+          website: string | null
         }
         Insert: {
           abn?: string | null
@@ -9769,6 +9771,7 @@ export type Database = {
           address_line_2?: string | null
           created_at?: string | null
           cricos_number?: string | null
+          legal_name?: string | null
           notes?: string | null
           org_type?: string | null
           postcode?: string | null
@@ -9782,6 +9785,7 @@ export type Database = {
           trading_name?: string | null
           updated_at?: string | null
           updated_by?: string | null
+          website?: string | null
         }
         Update: {
           abn?: string | null
@@ -9790,6 +9794,7 @@ export type Database = {
           address_line_2?: string | null
           created_at?: string | null
           cricos_number?: string | null
+          legal_name?: string | null
           notes?: string | null
           org_type?: string | null
           postcode?: string | null
@@ -9803,6 +9808,7 @@ export type Database = {
           trading_name?: string | null
           updated_at?: string | null
           updated_by?: string | null
+          website?: string | null
         }
         Relationships: [
           {

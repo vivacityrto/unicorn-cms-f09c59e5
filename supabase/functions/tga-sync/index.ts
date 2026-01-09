@@ -307,6 +307,19 @@ function parseContacts(xml: string, correlationId?: string): ParsedContact[] {
     const contactElements = extractAllTags(normalized, 'Contact');
     log('info', `Found ${contactElements.length} generic Contact elements`, {}, correlationId);
     
+    // Debug: log the first few contact types we find
+    const debugTypes: string[] = [];
+    for (let i = 0; i < Math.min(5, contactElements.length); i++) {
+      const contactXml = contactElements[i];
+      // Try multiple ways to extract contact type
+      const typeSection = extractSection(contactXml, 'ContactType');
+      const typeCode = typeSection ? extractValue(typeSection, 'Code') : null;
+      const typeDesc = typeSection ? extractValue(typeSection, 'Description') : null;
+      const directType = extractValue(contactXml, 'ContactType') || extractValue(contactXml, 'Type');
+      debugTypes.push(`code=${typeCode || 'null'}, desc=${typeDesc || 'null'}, direct=${directType || 'null'}`);
+    }
+    log('info', 'Sample contact types found', { samples: debugTypes }, correlationId);
+    
     for (const contactXml of contactElements) {
       if (seenTypes.size >= 3) break;
       
@@ -314,14 +327,24 @@ function parseContacts(xml: string, correlationId?: string): ParsedContact[] {
       const isCurrent = !endDate || endDate >= today;
       if (!isCurrent) continue;
       
-      const rawType = extractValue(contactXml, 'ContactType') || extractValue(contactXml, 'Type') || '';
+      // Extract contact type - try Code inside ContactType first, then Description, then direct value
+      const typeSection = extractSection(contactXml, 'ContactType');
+      const typeCode = typeSection ? extractValue(typeSection, 'Code') : null;
+      const typeDesc = typeSection ? (extractValue(typeSection, 'Description') || extractValue(typeSection, 'Name')) : null;
+      const directType = extractValue(contactXml, 'ContactType') || extractValue(contactXml, 'Type');
+      const rawType = typeCode || typeDesc || directType || '';
+      const rawTypeLower = rawType.toLowerCase();
+      
       let normalizedType = '';
       
-      if (rawType.includes('Chief') || rawType.includes('CEO') || rawType.includes('Principal') || rawType.includes('Executive')) {
+      // Match on various patterns for the 3 main contact types
+      if (rawTypeLower.includes('chief') || rawTypeLower.includes('ceo') || 
+          rawTypeLower.includes('principal') || rawTypeLower.includes('executive') ||
+          rawTypeLower === 'ce' || rawTypeLower === 'cex') {
         normalizedType = 'ChiefExecutive';
-      } else if (rawType.includes('Public')) {
+      } else if (rawTypeLower.includes('public') || rawTypeLower === 'pe' || rawTypeLower === 'pub') {
         normalizedType = 'PublicEnquiries';
-      } else if (rawType.includes('Registration')) {
+      } else if (rawTypeLower.includes('registration') || rawTypeLower === 're' || rawTypeLower === 'reg') {
         normalizedType = 'RegistrationEnquiries';
       }
       
