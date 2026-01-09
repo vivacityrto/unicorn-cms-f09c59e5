@@ -393,24 +393,354 @@ function parseTrainingComponent(xml: string): ParsedTrainingComponent | null {
   };
 }
 
-// Parse organisation from XML
+// Parse organisation from XML - comprehensive data extraction
+interface ParsedContact {
+  contactType: string;
+  name: string | null;
+  position: string | null;
+  phone: string | null;
+  mobile: string | null;
+  fax: string | null;
+  email: string | null;
+  address: string | null;
+  organisationName: string | null;
+}
+
+interface ParsedAddress {
+  addressType: string;
+  addressLine1: string | null;
+  addressLine2: string | null;
+  suburb: string | null;
+  state: string | null;
+  postcode: string | null;
+  country: string | null;
+  phone: string | null;
+  fax: string | null;
+  email: string | null;
+  website: string | null;
+}
+
+interface ParsedDeliveryLocation {
+  locationName: string | null;
+  addressLine1: string | null;
+  addressLine2: string | null;
+  suburb: string | null;
+  state: string | null;
+  postcode: string | null;
+  country: string | null;
+}
+
+interface ParsedScopeItem {
+  code: string;
+  title: string | null;
+  status: string | null;
+  usageRecommendation: string | null;
+  extent: string | null;
+  startDate: string | null;
+  endDate: string | null;
+  deliveryNotification: string | null;
+  trainingPackageCode: string | null;
+  trainingPackageTitle: string | null;
+  isExplicit: boolean;
+  isCurrent: boolean;
+}
+
+interface ParsedScope {
+  qualifications: ParsedScopeItem[];
+  skillSets: ParsedScopeItem[];
+  units: ParsedScopeItem[];
+  courses: ParsedScopeItem[];
+}
+
 interface ParsedOrganisation {
   code: string;
   legalName: string;
   tradingName: string | null;
   organisationType: string | null;
   abn: string | null;
+  acn: string | null;
   status: string | null;
+  webAddress: string | null;
+  initialRegistrationDate: string | null;
   registrationStartDate: string | null;
   registrationEndDate: string | null;
-  addressLine1: string | null;
-  suburb: string | null;
-  state: string | null;
-  postcode: string | null;
-  country: string | null;
-  phone: string | null;
-  email: string | null;
-  website: string | null;
+  // Nested collections
+  contacts: ParsedContact[];
+  addresses: ParsedAddress[];
+  deliveryLocations: ParsedDeliveryLocation[];
+  scope: ParsedScope;
+}
+
+// Helper to extract all items from a collection
+function extractItems(xml: string, containerPattern: RegExp, itemPattern: RegExp): string[] {
+  const containerMatch = xml.match(containerPattern);
+  if (!containerMatch) return [];
+  
+  const items: string[] = [];
+  let match;
+  while ((match = itemPattern.exec(containerMatch[1])) !== null) {
+    items.push(match[1]);
+  }
+  return items;
+}
+
+// Parse contacts from XML
+function parseContacts(xml: string): ParsedContact[] {
+  const contacts: ParsedContact[] = [];
+  
+  // Look for Contacts container
+  const contactsMatch = xml.match(/<(?:a:)?Contacts[^>]*>([\s\S]*?)<\/(?:a:)?Contacts>/i);
+  if (!contactsMatch) return contacts;
+  
+  // Extract individual contact items - they may be keyed by contact type
+  const contactTypes = [
+    'ChiefExecutive', 'CEO', 'PrincipalExecutive',
+    'RegistrationEnquiries', 'PublicEnquiries',
+    'FinanceContact', 'TrainingContact'
+  ];
+  
+  for (const contactType of contactTypes) {
+    const contactMatch = contactsMatch[1].match(new RegExp(`<(?:a:)?${contactType}[^>]*>([\\s\\S]*?)<\\/(?:a:)?${contactType}>`, 'i'));
+    if (contactMatch) {
+      contacts.push({
+        contactType,
+        name: extractValue(contactMatch[1], 'Name') || extractValue(contactMatch[1], 'FullName'),
+        position: extractValue(contactMatch[1], 'Position') || extractValue(contactMatch[1], 'JobTitle'),
+        phone: extractValue(contactMatch[1], 'Phone') || extractValue(contactMatch[1], 'PhoneNumber'),
+        mobile: extractValue(contactMatch[1], 'Mobile') || extractValue(contactMatch[1], 'MobileNumber'),
+        fax: extractValue(contactMatch[1], 'Fax') || extractValue(contactMatch[1], 'FaxNumber'),
+        email: extractValue(contactMatch[1], 'Email') || extractValue(contactMatch[1], 'EmailAddress'),
+        address: extractValue(contactMatch[1], 'Address'),
+        organisationName: extractValue(contactMatch[1], 'OrganisationName'),
+      });
+    }
+  }
+  
+  // Also look for Contact array items
+  const contactItemPattern = /<(?:a:)?Contact[^>]*>([\s\S]*?)<\/(?:a:)?Contact>/gi;
+  let match;
+  while ((match = contactItemPattern.exec(contactsMatch[1])) !== null) {
+    const contactXml = match[1];
+    contacts.push({
+      contactType: extractValue(contactXml, 'ContactType') || extractValue(contactXml, 'Type') || 'Unknown',
+      name: extractValue(contactXml, 'Name') || extractValue(contactXml, 'FullName'),
+      position: extractValue(contactXml, 'Position') || extractValue(contactXml, 'JobTitle'),
+      phone: extractValue(contactXml, 'Phone') || extractValue(contactXml, 'PhoneNumber'),
+      mobile: extractValue(contactXml, 'Mobile') || extractValue(contactXml, 'MobileNumber'),
+      fax: extractValue(contactXml, 'Fax') || extractValue(contactXml, 'FaxNumber'),
+      email: extractValue(contactXml, 'Email') || extractValue(contactXml, 'EmailAddress'),
+      address: extractValue(contactXml, 'Address'),
+      organisationName: extractValue(contactXml, 'OrganisationName'),
+    });
+  }
+  
+  return contacts;
+}
+
+// Parse addresses from XML
+function parseAddresses(xml: string): ParsedAddress[] {
+  const addresses: ParsedAddress[] = [];
+  
+  // Look for address containers - TGA uses specific address types
+  const addressTypes = [
+    { tag: 'HeadOfficePhysicalAddress', type: 'HeadOfficePhysical' },
+    { tag: 'HeadOfficePostalAddress', type: 'HeadOfficePostal' },
+    { tag: 'PhysicalAddress', type: 'Physical' },
+    { tag: 'PostalAddress', type: 'Postal' },
+    { tag: 'BusinessAddress', type: 'Business' },
+  ];
+  
+  for (const { tag, type } of addressTypes) {
+    const addrMatch = xml.match(new RegExp(`<(?:a:)?${tag}[^>]*>([\\s\\S]*?)<\\/(?:a:)?${tag}>`, 'i'));
+    if (addrMatch) {
+      addresses.push({
+        addressType: type,
+        addressLine1: extractValue(addrMatch[1], 'Line1') || extractValue(addrMatch[1], 'AddressLine1') || extractValue(addrMatch[1], 'Street'),
+        addressLine2: extractValue(addrMatch[1], 'Line2') || extractValue(addrMatch[1], 'AddressLine2'),
+        suburb: extractValue(addrMatch[1], 'Suburb') || extractValue(addrMatch[1], 'City'),
+        state: extractValue(addrMatch[1], 'State') || extractValue(addrMatch[1], 'StateTerritory'),
+        postcode: extractValue(addrMatch[1], 'Postcode') || extractValue(addrMatch[1], 'PostCode'),
+        country: extractValue(addrMatch[1], 'Country'),
+        phone: extractValue(addrMatch[1], 'Phone'),
+        fax: extractValue(addrMatch[1], 'Fax'),
+        email: extractValue(addrMatch[1], 'Email'),
+        website: extractValue(addrMatch[1], 'Website'),
+      });
+    }
+  }
+  
+  // Also look for Addresses container with Address items
+  const addressesMatch = xml.match(/<(?:a:)?Addresses[^>]*>([\s\S]*?)<\/(?:a:)?Addresses>/i);
+  if (addressesMatch) {
+    const addressItemPattern = /<(?:a:)?Address[^>]*>([\s\S]*?)<\/(?:a:)?Address>/gi;
+    let match;
+    while ((match = addressItemPattern.exec(addressesMatch[1])) !== null) {
+      const addrXml = match[1];
+      addresses.push({
+        addressType: extractValue(addrXml, 'AddressType') || extractValue(addrXml, 'Type') || 'Unknown',
+        addressLine1: extractValue(addrXml, 'Line1') || extractValue(addrXml, 'AddressLine1'),
+        addressLine2: extractValue(addrXml, 'Line2') || extractValue(addrXml, 'AddressLine2'),
+        suburb: extractValue(addrXml, 'Suburb'),
+        state: extractValue(addrXml, 'State'),
+        postcode: extractValue(addrXml, 'Postcode'),
+        country: extractValue(addrXml, 'Country'),
+        phone: extractValue(addrXml, 'Phone'),
+        fax: extractValue(addrXml, 'Fax'),
+        email: extractValue(addrXml, 'Email'),
+        website: extractValue(addrXml, 'Website'),
+      });
+    }
+  }
+  
+  return addresses;
+}
+
+// Parse delivery locations from XML
+function parseDeliveryLocations(xml: string): ParsedDeliveryLocation[] {
+  const locations: ParsedDeliveryLocation[] = [];
+  
+  const locationsMatch = xml.match(/<(?:a:)?DeliveryLocations[^>]*>([\s\S]*?)<\/(?:a:)?DeliveryLocations>/i);
+  if (!locationsMatch) return locations;
+  
+  const locationPattern = /<(?:a:)?DeliveryLocation[^>]*>([\s\S]*?)<\/(?:a:)?DeliveryLocation>/gi;
+  let match;
+  while ((match = locationPattern.exec(locationsMatch[1])) !== null) {
+    const locXml = match[1];
+    locations.push({
+      locationName: extractValue(locXml, 'Name') || extractValue(locXml, 'LocationName'),
+      addressLine1: extractValue(locXml, 'Line1') || extractValue(locXml, 'AddressLine1'),
+      addressLine2: extractValue(locXml, 'Line2') || extractValue(locXml, 'AddressLine2'),
+      suburb: extractValue(locXml, 'Suburb'),
+      state: extractValue(locXml, 'State'),
+      postcode: extractValue(locXml, 'Postcode'),
+      country: extractValue(locXml, 'Country'),
+    });
+  }
+  
+  return locations;
+}
+
+// Parse scope items (qualifications, skill sets, units, courses)
+function parseScope(xml: string): ParsedScope {
+  const scope: ParsedScope = {
+    qualifications: [],
+    skillSets: [],
+    units: [],
+    courses: [],
+  };
+  
+  // Helper to parse a single scope item
+  const parseScopeItem = (itemXml: string, isExplicitDefault: boolean): ParsedScopeItem | null => {
+    const code = extractValue(itemXml, 'Code') || extractValue(itemXml, 'NrtCode') || extractValue(itemXml, 'TrainingComponentCode');
+    if (!code) return null;
+    
+    const isExplicitVal = extractValue(itemXml, 'IsExplicit');
+    const isExplicit = isExplicitVal ? isExplicitVal.toLowerCase() === 'true' : isExplicitDefault;
+    
+    return {
+      code,
+      title: extractValue(itemXml, 'Title') || extractValue(itemXml, 'Name'),
+      status: extractValue(itemXml, 'Status') || extractValue(itemXml, 'ScopeStatus'),
+      usageRecommendation: extractValue(itemXml, 'UsageRecommendation'),
+      extent: extractValue(itemXml, 'Extent') || extractValue(itemXml, 'ScopeExtent'),
+      startDate: extractValue(itemXml, 'StartDate') || extractValue(itemXml, 'ScopeStartDate'),
+      endDate: extractValue(itemXml, 'EndDate') || extractValue(itemXml, 'ScopeEndDate'),
+      deliveryNotification: extractValue(itemXml, 'DeliveryNotification') || extractValue(itemXml, 'DeliveryNotificationRequired'),
+      trainingPackageCode: extractValue(itemXml, 'TrainingPackageCode') || extractValue(itemXml, 'ParentCode'),
+      trainingPackageTitle: extractValue(itemXml, 'TrainingPackageTitle') || extractValue(itemXml, 'ParentTitle'),
+      isExplicit,
+      isCurrent: extractValue(itemXml, 'IsCurrent')?.toLowerCase() === 'true' || 
+                 extractValue(itemXml, 'Status')?.toLowerCase() === 'current',
+    };
+  };
+  
+  // Parse Qualifications - look in Scope/Qualifications or RegistrationScope/Qualifications
+  const qualsPatterns = [
+    /<(?:a:)?Qualifications[^>]*>([\s\S]*?)<\/(?:a:)?Qualifications>/gi,
+  ];
+  
+  for (const pattern of qualsPatterns) {
+    let containerMatch;
+    while ((containerMatch = pattern.exec(xml)) !== null) {
+      const qualItemPattern = /<(?:a:)?(?:Qualification|TrainingComponent)[^>]*>([\s\S]*?)<\/(?:a:)?(?:Qualification|TrainingComponent)>/gi;
+      let match;
+      while ((match = qualItemPattern.exec(containerMatch[1])) !== null) {
+        const item = parseScopeItem(match[1], true);
+        if (item && !scope.qualifications.some(q => q.code === item.code)) {
+          scope.qualifications.push(item);
+        }
+      }
+    }
+  }
+  
+  // Parse Skill Sets
+  const skillsPatterns = [
+    /<(?:a:)?SkillSets[^>]*>([\s\S]*?)<\/(?:a:)?SkillSets>/gi,
+  ];
+  
+  for (const pattern of skillsPatterns) {
+    let containerMatch;
+    while ((containerMatch = pattern.exec(xml)) !== null) {
+      const skillItemPattern = /<(?:a:)?(?:SkillSet|TrainingComponent)[^>]*>([\s\S]*?)<\/(?:a:)?(?:SkillSet|TrainingComponent)>/gi;
+      let match;
+      while ((match = skillItemPattern.exec(containerMatch[1])) !== null) {
+        const item = parseScopeItem(match[1], true);
+        if (item && !scope.skillSets.some(s => s.code === item.code)) {
+          scope.skillSets.push(item);
+        }
+      }
+    }
+  }
+  
+  // Parse Units - ONLY explicit units per user requirement
+  const unitsPatterns = [
+    /<(?:a:)?Units[^>]*>([\s\S]*?)<\/(?:a:)?Units>/gi,
+    /<(?:a:)?ExplicitUnits[^>]*>([\s\S]*?)<\/(?:a:)?ExplicitUnits>/gi,
+  ];
+  
+  for (const pattern of unitsPatterns) {
+    let containerMatch;
+    while ((containerMatch = pattern.exec(xml)) !== null) {
+      const unitItemPattern = /<(?:a:)?(?:Unit|UnitOfCompetency|TrainingComponent)[^>]*>([\s\S]*?)<\/(?:a:)?(?:Unit|UnitOfCompetency|TrainingComponent)>/gi;
+      let match;
+      while ((match = unitItemPattern.exec(containerMatch[1])) !== null) {
+        const item = parseScopeItem(match[1], false); // Default false, check IsExplicit
+        // Only include explicit units
+        if (item && item.isExplicit && !scope.units.some(u => u.code === item.code)) {
+          scope.units.push(item);
+        }
+      }
+    }
+  }
+  
+  // Parse Accredited Courses
+  const coursesPatterns = [
+    /<(?:a:)?AccreditedCourses[^>]*>([\s\S]*?)<\/(?:a:)?AccreditedCourses>/gi,
+    /<(?:a:)?Courses[^>]*>([\s\S]*?)<\/(?:a:)?Courses>/gi,
+  ];
+  
+  for (const pattern of coursesPatterns) {
+    let containerMatch;
+    while ((containerMatch = pattern.exec(xml)) !== null) {
+      const courseItemPattern = /<(?:a:)?(?:Course|AccreditedCourse|TrainingComponent)[^>]*>([\s\S]*?)<\/(?:a:)?(?:Course|AccreditedCourse|TrainingComponent)>/gi;
+      let match;
+      while ((match = courseItemPattern.exec(containerMatch[1])) !== null) {
+        const item = parseScopeItem(match[1], true);
+        if (item && !scope.courses.some(c => c.code === item.code)) {
+          scope.courses.push(item);
+        }
+      }
+    }
+  }
+  
+  log('info', 'Parsed scope items', {
+    qualifications: scope.qualifications.length,
+    skillSets: scope.skillSets.length,
+    units: scope.units.length,
+    courses: scope.courses.length,
+  });
+  
+  return scope;
 }
 
 function parseOrganisation(xml: string): ParsedOrganisation | null {
@@ -423,19 +753,18 @@ function parseOrganisation(xml: string): ParsedOrganisation | null {
     code,
     legalName,
     tradingName: extractValue(xml, 'TradingName'),
-    organisationType: extractValue(xml, 'OrganisationType'),
+    organisationType: extractValue(xml, 'OrganisationType') || extractValue(xml, 'Type'),
     abn: extractValue(xml, 'ABN'),
+    acn: extractValue(xml, 'ACN'),
     status: extractValue(xml, 'Status'),
+    webAddress: extractValue(xml, 'WebAddress') || extractValue(xml, 'Website') || extractValue(xml, 'URL'),
+    initialRegistrationDate: extractValue(xml, 'InitialRegistrationDate'),
     registrationStartDate: extractValue(xml, 'RegistrationStartDate'),
     registrationEndDate: extractValue(xml, 'RegistrationEndDate'),
-    addressLine1: extractValue(xml, 'AddressLine1') || extractValue(xml, 'Line1'),
-    suburb: extractValue(xml, 'Suburb'),
-    state: extractValue(xml, 'State'),
-    postcode: extractValue(xml, 'Postcode'),
-    country: extractValue(xml, 'Country'),
-    phone: extractValue(xml, 'Phone'),
-    email: extractValue(xml, 'Email'),
-    website: extractValue(xml, 'Website'),
+    contacts: parseContacts(xml),
+    addresses: parseAddresses(xml),
+    deliveryLocations: parseDeliveryLocations(xml),
+    scope: parseScope(xml),
   };
 }
 
@@ -803,22 +1132,212 @@ serve(async (req) => {
           });
         }
 
+        const orgData = orgResult.data;
+        const tenantIdNum = tenant_id ? parseInt(tenant_id) : null;
+        const fetchedAt = new Date().toISOString();
+
         // We got RTO data - upsert to tga_rtos for local cache
         await supabase
           .from('tga_rtos')
           .upsert({
-            rto_number: orgResult.data.code,
-            legal_name: orgResult.data.legalName,
-            trading_name: orgResult.data.tradingName,
-            abn: orgResult.data.abn,
-            status: orgResult.data.status,
-            registration_start: orgResult.data.registrationStartDate,
-            registration_end: orgResult.data.registrationEndDate,
-            phone: orgResult.data.phone,
-            email: orgResult.data.email,
-            website: orgResult.data.website,
-            updated_at: new Date().toISOString(),
+            rto_number: orgData.code,
+            legal_name: orgData.legalName,
+            trading_name: orgData.tradingName,
+            abn: orgData.abn,
+            status: orgData.status,
+            registration_start: orgData.registrationStartDate,
+            registration_end: orgData.registrationEndDate,
+            phone: orgData.addresses[0]?.phone || null,
+            email: orgData.addresses[0]?.email || null,
+            website: orgData.webAddress,
+            updated_at: fetchedAt,
           }, { onConflict: 'rto_number' });
+
+        // Store to tga_rto_summary if we have tenant_id
+        if (tenantIdNum) {
+          // Upsert summary
+          await supabase
+            .from('tga_rto_summary')
+            .upsert({
+              tenant_id: tenantIdNum,
+              rto_code: orgData.code,
+              legal_name: orgData.legalName,
+              trading_name: orgData.tradingName,
+              organisation_type: orgData.organisationType,
+              abn: orgData.abn,
+              acn: orgData.acn,
+              status: orgData.status,
+              web_address: orgData.webAddress,
+              initial_registration_date: orgData.initialRegistrationDate,
+              registration_start_date: orgData.registrationStartDate,
+              registration_end_date: orgData.registrationEndDate,
+              fetched_at: fetchedAt,
+              updated_at: fetchedAt,
+            }, { onConflict: 'tenant_id,rto_code' });
+
+          // Delete and re-insert contacts
+          await supabase.from('tga_rto_contacts').delete().eq('tenant_id', tenantIdNum).eq('rto_code', orgData.code);
+          if (orgData.contacts.length > 0) {
+            await supabase.from('tga_rto_contacts').insert(
+              orgData.contacts.map(c => ({
+                tenant_id: tenantIdNum,
+                rto_code: orgData.code,
+                contact_type: c.contactType,
+                name: c.name,
+                position: c.position,
+                phone: c.phone,
+                mobile: c.mobile,
+                fax: c.fax,
+                email: c.email,
+                address: c.address,
+                organisation_name: c.organisationName,
+                fetched_at: fetchedAt,
+              }))
+            );
+          }
+
+          // Delete and re-insert addresses
+          await supabase.from('tga_rto_addresses').delete().eq('tenant_id', tenantIdNum).eq('rto_code', orgData.code);
+          if (orgData.addresses.length > 0) {
+            await supabase.from('tga_rto_addresses').insert(
+              orgData.addresses.map(a => ({
+                tenant_id: tenantIdNum,
+                rto_code: orgData.code,
+                address_type: a.addressType,
+                address_line_1: a.addressLine1,
+                address_line_2: a.addressLine2,
+                suburb: a.suburb,
+                state: a.state,
+                postcode: a.postcode,
+                country: a.country,
+                phone: a.phone,
+                fax: a.fax,
+                email: a.email,
+                website: a.website,
+                fetched_at: fetchedAt,
+              }))
+            );
+          }
+
+          // Delete and re-insert delivery locations
+          await supabase.from('tga_rto_delivery_locations').delete().eq('tenant_id', tenantIdNum).eq('rto_code', orgData.code);
+          if (orgData.deliveryLocations.length > 0) {
+            await supabase.from('tga_rto_delivery_locations').insert(
+              orgData.deliveryLocations.map(loc => ({
+                tenant_id: tenantIdNum,
+                rto_code: orgData.code,
+                location_name: loc.locationName,
+                address_line_1: loc.addressLine1,
+                address_line_2: loc.addressLine2,
+                suburb: loc.suburb,
+                state: loc.state,
+                postcode: loc.postcode,
+                country: loc.country,
+                fetched_at: fetchedAt,
+              }))
+            );
+          }
+
+          // Delete and re-insert qualifications
+          await supabase.from('tga_scope_qualifications').delete().eq('tenant_id', tenantIdNum).eq('rto_code', orgData.code);
+          if (orgData.scope.qualifications.length > 0) {
+            await supabase.from('tga_scope_qualifications').insert(
+              orgData.scope.qualifications.map(q => ({
+                tenant_id: tenantIdNum,
+                rto_code: orgData.code,
+                qualification_code: q.code,
+                qualification_title: q.title,
+                training_package_code: q.trainingPackageCode,
+                training_package_title: q.trainingPackageTitle,
+                scope_start_date: q.startDate,
+                scope_end_date: q.endDate,
+                status: q.status,
+                is_current: q.isCurrent,
+                extent: q.extent,
+                delivery_notification: q.deliveryNotification,
+                usage_recommendation: q.usageRecommendation,
+                fetched_at: fetchedAt,
+              }))
+            );
+          }
+
+          // Delete and re-insert skill sets
+          await supabase.from('tga_scope_skillsets').delete().eq('tenant_id', tenantIdNum).eq('rto_code', orgData.code);
+          if (orgData.scope.skillSets.length > 0) {
+            await supabase.from('tga_scope_skillsets').insert(
+              orgData.scope.skillSets.map(s => ({
+                tenant_id: tenantIdNum,
+                rto_code: orgData.code,
+                skillset_code: s.code,
+                skillset_title: s.title,
+                training_package_code: s.trainingPackageCode,
+                scope_start_date: s.startDate,
+                scope_end_date: s.endDate,
+                status: s.status,
+                is_current: s.isCurrent,
+                extent: s.extent,
+                usage_recommendation: s.usageRecommendation,
+                fetched_at: fetchedAt,
+              }))
+            );
+          }
+
+          // Delete and re-insert units - ONLY EXPLICIT UNITS (already filtered in parseScope)
+          await supabase.from('tga_scope_units').delete().eq('tenant_id', tenantIdNum).eq('rto_code', orgData.code);
+          if (orgData.scope.units.length > 0) {
+            await supabase.from('tga_scope_units').insert(
+              orgData.scope.units.map(u => ({
+                tenant_id: tenantIdNum,
+                rto_code: orgData.code,
+                unit_code: u.code,
+                unit_title: u.title,
+                training_package_code: u.trainingPackageCode,
+                scope_start_date: u.startDate,
+                scope_end_date: u.endDate,
+                status: u.status,
+                is_current: u.isCurrent,
+                is_explicit: true, // These are explicitly on scope
+                extent: u.extent,
+                delivery_notification: u.deliveryNotification,
+                usage_recommendation: u.usageRecommendation,
+                fetched_at: fetchedAt,
+              }))
+            );
+          }
+
+          // Delete and re-insert courses
+          await supabase.from('tga_scope_courses').delete().eq('tenant_id', tenantIdNum).eq('rto_code', orgData.code);
+          if (orgData.scope.courses.length > 0) {
+            await supabase.from('tga_scope_courses').insert(
+              orgData.scope.courses.map(c => ({
+                tenant_id: tenantIdNum,
+                rto_code: orgData.code,
+                course_code: c.code,
+                course_title: c.title,
+                scope_start_date: c.startDate,
+                scope_end_date: c.endDate,
+                status: c.status,
+                is_current: c.isCurrent,
+                extent: c.extent,
+                delivery_notification: c.deliveryNotification,
+                usage_recommendation: c.usageRecommendation,
+                fetched_at: fetchedAt,
+              }))
+            );
+          }
+
+          log('info', 'Stored TGA data to tenant tables', {
+            tenant_id: tenantIdNum,
+            rto_code: orgData.code,
+            contacts: orgData.contacts.length,
+            addresses: orgData.addresses.length,
+            deliveryLocations: orgData.deliveryLocations.length,
+            qualifications: orgData.scope.qualifications.length,
+            skillSets: orgData.scope.skillSets.length,
+            units: orgData.scope.units.length,
+            courses: orgData.scope.courses.length,
+          });
+        }
 
         // Update link status
         let linkId = null;
@@ -830,10 +1349,10 @@ serve(async (req) => {
               rto_number,
               is_linked: true,
               link_status: 'linked',
-              last_sync_at: new Date().toISOString(),
+              last_sync_at: fetchedAt,
               last_sync_status: 'success',
               last_sync_error: null,
-              updated_at: new Date().toISOString(),
+              updated_at: fetchedAt,
             }, { onConflict: 'client_id' })
             .select('id')
             .single();
@@ -842,24 +1361,36 @@ serve(async (req) => {
         }
 
         // Audit log
-        if (tenant_id) {
+        if (tenantIdNum) {
           await supabase.from('client_audit_log').insert({
-            tenant_id: parseInt(tenant_id),
+            tenant_id: tenantIdNum,
             entity_type: 'tga_integration',
             entity_id: client_id || rto_number,
             action: 'live_sync_completed',
             actor_user_id: user.id,
             details: {
               rto_number,
-              legal_name: orgResult.data.legalName,
-              status: orgResult.data.status,
+              legal_name: orgData.legalName,
+              status: orgData.status,
+              scope_counts: {
+                qualifications: orgData.scope.qualifications.length,
+                skillSets: orgData.scope.skillSets.length,
+                units: orgData.scope.units.length,
+                courses: orgData.scope.courses.length,
+              },
             },
           });
         }
 
         log('info', 'Live client sync completed', { 
           rto_number, 
-          legalName: orgResult.data.legalName 
+          legalName: orgData.legalName,
+          scopeTotals: {
+            quals: orgData.scope.qualifications.length,
+            skills: orgData.scope.skillSets.length,
+            units: orgData.scope.units.length,
+            courses: orgData.scope.courses.length,
+          }
         });
 
         return new Response(JSON.stringify({
@@ -867,15 +1398,22 @@ serve(async (req) => {
           rto_number,
           link_id: linkId,
           rto_data: {
-            legal_name: orgResult.data.legalName,
-            trading_name: orgResult.data.tradingName,
-            abn: orgResult.data.abn,
-            status: orgResult.data.status,
-            registration_start: orgResult.data.registrationStartDate,
-            registration_end: orgResult.data.registrationEndDate,
-            phone: orgResult.data.phone,
-            email: orgResult.data.email,
-            website: orgResult.data.website,
+            legal_name: orgData.legalName,
+            trading_name: orgData.tradingName,
+            abn: orgData.abn,
+            acn: orgData.acn,
+            status: orgData.status,
+            organisation_type: orgData.organisationType,
+            web_address: orgData.webAddress,
+            initial_registration_date: orgData.initialRegistrationDate,
+            registration_start: orgData.registrationStartDate,
+            registration_end: orgData.registrationEndDate,
+          },
+          scope_counts: {
+            qualifications: orgData.scope.qualifications.length,
+            skillSets: orgData.scope.skillSets.length,
+            units: orgData.scope.units.length,
+            courses: orgData.scope.courses.length,
           },
         }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },

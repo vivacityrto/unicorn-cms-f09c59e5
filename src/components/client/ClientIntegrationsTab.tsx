@@ -329,7 +329,7 @@ export function ClientIntegrationsTab({
 
                 <TabsContent value="summary" className="mt-4">
                   {tgaData.summary ? (
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                       <div className="space-y-1">
                         <p className="text-sm text-muted-foreground">Legal Name</p>
                         <p className="font-medium">{tgaData.summary.legal_name || '-'}</p>
@@ -339,14 +339,43 @@ export function ClientIntegrationsTab({
                         <p className="font-medium">{tgaData.summary.trading_name || '-'}</p>
                       </div>
                       <div className="space-y-1">
+                        <p className="text-sm text-muted-foreground">Organisation Type</p>
+                        <p className="font-medium">{tgaData.summary.organisation_type || '-'}</p>
+                      </div>
+                      <div className="space-y-1">
                         <p className="text-sm text-muted-foreground">ABN</p>
                         <p className="font-medium">{tgaData.summary.abn || '-'}</p>
+                      </div>
+                      <div className="space-y-1">
+                        <p className="text-sm text-muted-foreground">ACN</p>
+                        <p className="font-medium">{tgaData.summary.acn || '-'}</p>
                       </div>
                       <div className="space-y-1">
                         <p className="text-sm text-muted-foreground">Status</p>
                         <Badge variant={tgaData.summary.status === 'Registered' ? 'default' : 'secondary'}>
                           {tgaData.summary.status || 'Unknown'}
                         </Badge>
+                      </div>
+                      <div className="space-y-1">
+                        <p className="text-sm text-muted-foreground">Website</p>
+                        {tgaData.summary.web_address ? (
+                          <a 
+                            href={tgaData.summary.web_address.startsWith('http') 
+                              ? tgaData.summary.web_address 
+                              : `https://${tgaData.summary.web_address}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-primary hover:underline font-medium"
+                          >
+                            {tgaData.summary.web_address}
+                          </a>
+                        ) : (
+                          <p className="font-medium">-</p>
+                        )}
+                      </div>
+                      <div className="space-y-1">
+                        <p className="text-sm text-muted-foreground">Initial Registration</p>
+                        <p className="font-medium">{tgaData.summary.initial_registration_date || '-'}</p>
                       </div>
                       <div className="space-y-1">
                         <p className="text-sm text-muted-foreground">Registration Start</p>
@@ -356,6 +385,13 @@ export function ClientIntegrationsTab({
                         <p className="text-sm text-muted-foreground">Registration End</p>
                         <p className="font-medium">{tgaData.summary.registration_end_date || '-'}</p>
                       </div>
+                      {tgaData.summary.fetched_at && (
+                        <div className="space-y-1 col-span-2 md:col-span-3 pt-2 border-t">
+                          <p className="text-xs text-muted-foreground">
+                            Data last synced: {new Date(tgaData.summary.fetched_at).toLocaleString()}
+                          </p>
+                        </div>
+                      )}
                     </div>
                   ) : (
                     <p className="text-muted-foreground text-sm">No summary data available</p>

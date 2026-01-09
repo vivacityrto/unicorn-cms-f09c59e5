@@ -10410,12 +10410,16 @@ export type Database = {
       }
       tga_rto_contacts: {
         Row: {
+          address: string | null
           contact_type: string | null
           created_at: string
           email: string | null
+          fax: string | null
           fetched_at: string
           id: string
+          mobile: string | null
           name: string | null
+          organisation_name: string | null
           phone: string | null
           position: string | null
           rto_code: string
@@ -10423,12 +10427,16 @@ export type Database = {
           tenant_id: number
         }
         Insert: {
+          address?: string | null
           contact_type?: string | null
           created_at?: string
           email?: string | null
+          fax?: string | null
           fetched_at?: string
           id?: string
+          mobile?: string | null
           name?: string | null
+          organisation_name?: string | null
           phone?: string | null
           position?: string | null
           rto_code: string
@@ -10436,12 +10444,16 @@ export type Database = {
           tenant_id: number
         }
         Update: {
+          address?: string | null
           contact_type?: string | null
           created_at?: string
           email?: string | null
+          fax?: string | null
           fetched_at?: string
           id?: string
+          mobile?: string | null
           name?: string | null
+          organisation_name?: string | null
           phone?: string | null
           position?: string | null
           rto_code?: string
@@ -10588,9 +10600,11 @@ export type Database = {
       tga_rto_summary: {
         Row: {
           abn: string | null
+          acn: string | null
           created_at: string
           fetched_at: string
           id: string
+          initial_registration_date: string | null
           legal_name: string | null
           organisation_type: string | null
           registration_end_date: string | null
@@ -10602,12 +10616,15 @@ export type Database = {
           tenant_id: number
           trading_name: string | null
           updated_at: string
+          web_address: string | null
         }
         Insert: {
           abn?: string | null
+          acn?: string | null
           created_at?: string
           fetched_at?: string
           id?: string
+          initial_registration_date?: string | null
           legal_name?: string | null
           organisation_type?: string | null
           registration_end_date?: string | null
@@ -10619,12 +10636,15 @@ export type Database = {
           tenant_id: number
           trading_name?: string | null
           updated_at?: string
+          web_address?: string | null
         }
         Update: {
           abn?: string | null
+          acn?: string | null
           created_at?: string
           fetched_at?: string
           id?: string
+          initial_registration_date?: string | null
           legal_name?: string | null
           organisation_type?: string | null
           registration_end_date?: string | null
@@ -10636,6 +10656,7 @@ export type Database = {
           tenant_id?: number
           trading_name?: string | null
           updated_at?: string
+          web_address?: string | null
         }
         Relationships: [
           {
@@ -10711,6 +10732,8 @@ export type Database = {
           course_code: string
           course_title: string | null
           created_at: string
+          delivery_notification: string | null
+          extent: string | null
           fetched_at: string
           id: string
           is_current: boolean | null
@@ -10720,11 +10743,14 @@ export type Database = {
           source_payload: Json | null
           status: string | null
           tenant_id: number
+          usage_recommendation: string | null
         }
         Insert: {
           course_code: string
           course_title?: string | null
           created_at?: string
+          delivery_notification?: string | null
+          extent?: string | null
           fetched_at?: string
           id?: string
           is_current?: boolean | null
@@ -10734,11 +10760,14 @@ export type Database = {
           source_payload?: Json | null
           status?: string | null
           tenant_id: number
+          usage_recommendation?: string | null
         }
         Update: {
           course_code?: string
           course_title?: string | null
           created_at?: string
+          delivery_notification?: string | null
+          extent?: string | null
           fetched_at?: string
           id?: string
           is_current?: boolean | null
@@ -10748,6 +10777,7 @@ export type Database = {
           source_payload?: Json | null
           status?: string | null
           tenant_id?: number
+          usage_recommendation?: string | null
         }
         Relationships: [
           {
@@ -10816,6 +10846,8 @@ export type Database = {
       tga_scope_qualifications: {
         Row: {
           created_at: string
+          delivery_notification: string | null
+          extent: string | null
           fetched_at: string
           id: string
           is_current: boolean | null
@@ -10829,9 +10861,12 @@ export type Database = {
           tenant_id: number
           training_package_code: string | null
           training_package_title: string | null
+          usage_recommendation: string | null
         }
         Insert: {
           created_at?: string
+          delivery_notification?: string | null
+          extent?: string | null
           fetched_at?: string
           id?: string
           is_current?: boolean | null
@@ -10845,9 +10880,12 @@ export type Database = {
           tenant_id: number
           training_package_code?: string | null
           training_package_title?: string | null
+          usage_recommendation?: string | null
         }
         Update: {
           created_at?: string
+          delivery_notification?: string | null
+          extent?: string | null
           fetched_at?: string
           id?: string
           is_current?: boolean | null
@@ -10861,6 +10899,7 @@ export type Database = {
           tenant_id?: number
           training_package_code?: string | null
           training_package_title?: string | null
+          usage_recommendation?: string | null
         }
         Relationships: [
           {
@@ -10875,6 +10914,7 @@ export type Database = {
       tga_scope_skillsets: {
         Row: {
           created_at: string
+          extent: string | null
           fetched_at: string
           id: string
           is_current: boolean | null
@@ -10888,9 +10928,11 @@ export type Database = {
           tenant_id: number
           training_package_code: string | null
           training_package_title: string | null
+          usage_recommendation: string | null
         }
         Insert: {
           created_at?: string
+          extent?: string | null
           fetched_at?: string
           id?: string
           is_current?: boolean | null
@@ -10904,9 +10946,11 @@ export type Database = {
           tenant_id: number
           training_package_code?: string | null
           training_package_title?: string | null
+          usage_recommendation?: string | null
         }
         Update: {
           created_at?: string
+          extent?: string | null
           fetched_at?: string
           id?: string
           is_current?: boolean | null
@@ -10920,6 +10964,7 @@ export type Database = {
           tenant_id?: number
           training_package_code?: string | null
           training_package_title?: string | null
+          usage_recommendation?: string | null
         }
         Relationships: [
           {
@@ -10934,6 +10979,8 @@ export type Database = {
       tga_scope_units: {
         Row: {
           created_at: string
+          delivery_notification: string | null
+          extent: string | null
           fetched_at: string
           id: string
           is_current: boolean | null
@@ -10948,9 +10995,12 @@ export type Database = {
           training_package_title: string | null
           unit_code: string
           unit_title: string | null
+          usage_recommendation: string | null
         }
         Insert: {
           created_at?: string
+          delivery_notification?: string | null
+          extent?: string | null
           fetched_at?: string
           id?: string
           is_current?: boolean | null
@@ -10965,9 +11015,12 @@ export type Database = {
           training_package_title?: string | null
           unit_code: string
           unit_title?: string | null
+          usage_recommendation?: string | null
         }
         Update: {
           created_at?: string
+          delivery_notification?: string | null
+          extent?: string | null
           fetched_at?: string
           id?: string
           is_current?: boolean | null
@@ -10982,6 +11035,7 @@ export type Database = {
           training_package_title?: string | null
           unit_code?: string
           unit_title?: string | null
+          usage_recommendation?: string | null
         }
         Relationships: [
           {
