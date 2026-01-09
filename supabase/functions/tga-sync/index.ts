@@ -48,7 +48,7 @@ const SOAP_ACTIONS = {
   searchTrainingComponent: `${TGA_V13_NAMESPACE}ITrainingComponentService/Search`,
 };
 
-const FUNCTION_VERSION = '1.7.0';
+const FUNCTION_VERSION = '1.8.0';
 
 // TGA State Code mapping
 const TGA_STATE_CODES: Record<string, string> = {
@@ -83,6 +83,21 @@ function escapeXml(unsafe: string): string {
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&apos;');
+}
+
+// Decode XML/HTML entities (e.g. &amp; -> &, &#39; -> ', &quot; -> ")
+function decodeXmlEntities(text: string | null): string | null {
+  if (!text) return null;
+  return text
+    .replace(/&amp;/gi, '&')
+    .replace(/&lt;/gi, '<')
+    .replace(/&gt;/gi, '>')
+    .replace(/&quot;/gi, '"')
+    .replace(/&apos;/gi, "'")
+    .replace(/&#39;/gi, "'")
+    .replace(/&#x27;/gi, "'")
+    .replace(/&#(\d+);/g, (_, dec) => String.fromCharCode(parseInt(dec, 10)))
+    .replace(/&#x([0-9a-fA-F]+);/g, (_, hex) => String.fromCharCode(parseInt(hex, 16)));
 }
 
 // Strip all namespace prefixes from XML to normalize tag names
@@ -139,17 +154,30 @@ function buildWsSecurityHeader(): string {
 
 // ==================== REGEX-BASED XML PARSING ====================
 
-// Extract single value from XML (namespace-agnostic)
+// Extract single value from XML (namespace-agnostic, decodes entities)
 function extractValue(xml: string, tagName: string): string | null {
+  // Patterns to handle namespaced and non-namespaced tags
   const patterns = [
-    new RegExp(`<(?:\\w+:)?${tagName}[^>]*>([^<]*)</(?:\\w+:)?${tagName}>`, 'i'),
+    // Namespaced: <ns:TagName>value</ns:TagName>
+    new RegExp(`<[A-Za-z0-9_]+:${tagName}[^>]*>([^<]*)</[A-Za-z0-9_]+:${tagName}>`, 'i'),
+    // Non-namespaced: <TagName>value</TagName>
     new RegExp(`<${tagName}[^>]*>([^<]*)</${tagName}>`, 'i'),
   ];
   for (const pattern of patterns) {
     const match = xml.match(pattern);
-    if (match) return match[1].trim() || null;
+    if (match) {
+      const raw = match[1].trim();
+      return raw ? decodeXmlEntities(raw) : null;
+    }
   }
   return null;
+}
+
+// Check if a tag exists in the XML (any namespace)
+function tagExists(xml: string, tagName: string): boolean {
+  // Match <TagName or <ns:TagName
+  const pattern = new RegExp(`<(?:[A-Za-z0-9_]+:)?${tagName}[\\s>]`, 'i');
+  return pattern.test(xml);
 }
 
 // Extract a section of XML by tag name (gets content between tags)
@@ -833,6 +861,7 @@ function parseSummary(xml: string, canonicalRtoCode: string, correlationId?: str
     'initialRegistrationDate' | 'registrationStartDate' | 'registrationEndDate'
   > | null;
   fieldPresence: Record<string, boolean>;
+  extractedFrom: Record<string, string | null>;
   orgNodeExcerpt: string | null;
 } {
   const normalized = stripXmlPrefixes(xml);
@@ -854,65 +883,79 @@ function parseSummary(xml: string, canonicalRtoCode: string, correlationId?: str
 
   const scoped = orgNode || normalized;
 
-  // Presence checks are scoped to the organisation node when available
-  const hasTag = (tag: string) => new RegExp(`<(?:\\w+:)?${tag}[^>]*>`, 'i').test(scoped);
+  // Helper to check tag presence using the new tagExists function
+  const checkTag = (tag: string) => tagExists(scoped, tag);
+  
+  // Track which tag each field was extracted from
+  const extractedFrom: Record<string, string | null> = {};
+  
+  // Extract with tracking
+  const extractWithSource = (tags: string[]): { value: string | null; source: string | null } => {
+    for (const tag of tags) {
+      if (checkTag(tag)) {
+        const val = extractValue(scoped, tag);
+        if (val) return { value: val, source: tag };
+      }
+    }
+    // Check if any tag exists but has no value (empty tag)
+    for (const tag of tags) {
+      if (checkTag(tag)) {
+        return { value: null, source: `${tag}:empty` };
+      }
+    }
+    return { value: null, source: null };
+  };
 
-  const legalName = extractValue(scoped, 'LegalName') ||
-    extractValue(scoped, 'OrganisationLegalName') ||
-    extractValue(scoped, 'OrganisationName') ||
-    extractValue(scoped, 'Name');
+  const legalNameResult = extractWithSource(['LegalName', 'OrganisationLegalName', 'OrganisationName', 'Name']);
+  const tradingNameResult = extractWithSource(['TradingName', 'TradingAs', 'BusinessName']);
+  const abnResult = extractWithSource(['ABN', 'Abn', 'AustralianBusinessNumber', 'BusinessNumber']);
+  const acnResult = extractWithSource(['ACN', 'Acn', 'AustralianCompanyNumber', 'CompanyNumber']);
+  const webAddressResult = extractWithSource(['WebAddress', 'Website', 'WebSiteAddress', 'HomePage', 'Url', 'URL']);
+  const organisationTypeResult = extractWithSource(['OrganisationType', 'OrganisationTypeDescription', 'OrganisationTypeCode', 'OrgType']);
+  const statusResult = extractWithSource(['Status', 'RegistrationStatus', 'CurrentStatus']);
+  const initialRegDateResult = extractWithSource(['InitialRegistrationDate', 'FirstRegistered']);
+  const regStartDateResult = extractWithSource(['RegistrationStartDate', 'CurrentRegistrationStart']);
+  const regEndDateResult = extractWithSource(['RegistrationEndDate', 'RegistrationExpiryDate']);
 
-  const tradingName = extractValue(scoped, 'TradingName') ||
-    extractValue(scoped, 'TradingAs') ||
-    extractValue(scoped, 'BusinessName');
+  extractedFrom.LegalName = legalNameResult.source;
+  extractedFrom.TradingName = tradingNameResult.source;
+  extractedFrom.ABN = abnResult.source;
+  extractedFrom.ACN = acnResult.source;
+  extractedFrom.WebAddress = webAddressResult.source;
+  extractedFrom.OrganisationType = organisationTypeResult.source;
+  extractedFrom.Status = statusResult.source;
+  extractedFrom.InitialRegistrationDate = initialRegDateResult.source;
+  extractedFrom.RegistrationStartDate = regStartDateResult.source;
+  extractedFrom.RegistrationEndDate = regEndDateResult.source;
 
-  const abn = extractValue(scoped, 'ABN') || extractValue(scoped, 'Abn') ||
-    extractValue(scoped, 'AustralianBusinessNumber') || extractValue(scoped, 'BusinessNumber');
+  const legalName = legalNameResult.value;
+  const tradingName = tradingNameResult.value;
+  const abn = abnResult.value;
+  const acn = acnResult.value;
+  const webAddress = webAddressResult.value;
+  const organisationType = organisationTypeResult.value;
+  const status = statusResult.value;
+  const initialRegistrationDate = initialRegDateResult.value;
+  const registrationStartDate = regStartDateResult.value;
+  const registrationEndDate = regEndDateResult.value;
 
-  const acn = extractValue(scoped, 'ACN') || extractValue(scoped, 'Acn') ||
-    extractValue(scoped, 'AustralianCompanyNumber') || extractValue(scoped, 'CompanyNumber');
-
-  const webAddress = extractValue(scoped, 'WebAddress') ||
-    extractValue(scoped, 'Website') ||
-    extractValue(scoped, 'WebSiteAddress') ||
-    extractValue(scoped, 'HomePage') ||
-    extractValue(scoped, 'Url') ||
-    extractValue(scoped, 'URL');
-
-  const organisationType = extractValue(scoped, 'OrganisationType') ||
-    extractValue(scoped, 'OrganisationTypeDescription') ||
-    extractValue(scoped, 'OrganisationTypeCode') ||
-    extractValue(scoped, 'OrgType');
-
-  const status = extractValue(scoped, 'Status') ||
-    extractValue(scoped, 'RegistrationStatus') ||
-    extractValue(scoped, 'CurrentStatus');
-
-  const initialRegistrationDate = extractValue(scoped, 'InitialRegistrationDate') ||
-    extractValue(scoped, 'FirstRegistered');
-
-  const registrationStartDate = extractValue(scoped, 'RegistrationStartDate') ||
-    extractValue(scoped, 'CurrentRegistrationStart');
-
-  const registrationEndDate = extractValue(scoped, 'RegistrationEndDate') ||
-    extractValue(scoped, 'RegistrationExpiryDate');
-
+  // Field presence: true if any relevant tag exists in XML
   const fieldPresence: Record<string, boolean> = {
-    LegalName: hasTag('LegalName') || hasTag('OrganisationLegalName') || hasTag('OrganisationName') || hasTag('Name'),
-    TradingName: hasTag('TradingName') || hasTag('TradingAs') || hasTag('BusinessName'),
-    ABN: hasTag('ABN') || hasTag('Abn') || hasTag('AustralianBusinessNumber') || hasTag('BusinessNumber'),
-    ACN: hasTag('ACN') || hasTag('Acn') || hasTag('AustralianCompanyNumber') || hasTag('CompanyNumber'),
-    WebAddress: hasTag('WebAddress') || hasTag('Website') || hasTag('WebSiteAddress') || hasTag('HomePage') || hasTag('Url') || hasTag('URL'),
-    OrganisationType: hasTag('OrganisationType') || hasTag('OrganisationTypeDescription') || hasTag('OrganisationTypeCode') || hasTag('OrgType'),
-    Status: hasTag('Status') || hasTag('RegistrationStatus') || hasTag('CurrentStatus'),
-    InitialRegistrationDate: hasTag('InitialRegistrationDate') || hasTag('FirstRegistered'),
-    RegistrationStartDate: hasTag('RegistrationStartDate') || hasTag('CurrentRegistrationStart'),
-    RegistrationEndDate: hasTag('RegistrationEndDate') || hasTag('RegistrationExpiryDate'),
+    LegalName: checkTag('LegalName') || checkTag('OrganisationLegalName') || checkTag('OrganisationName') || checkTag('Name'),
+    TradingName: checkTag('TradingName') || checkTag('TradingAs') || checkTag('BusinessName'),
+    ABN: checkTag('ABN') || checkTag('Abn') || checkTag('AustralianBusinessNumber') || checkTag('BusinessNumber'),
+    ACN: checkTag('ACN') || checkTag('Acn') || checkTag('AustralianCompanyNumber') || checkTag('CompanyNumber'),
+    WebAddress: checkTag('WebAddress') || checkTag('Website') || checkTag('WebSiteAddress') || checkTag('HomePage') || checkTag('Url') || checkTag('URL'),
+    OrganisationType: checkTag('OrganisationType') || checkTag('OrganisationTypeDescription') || checkTag('OrganisationTypeCode') || checkTag('OrgType'),
+    Status: checkTag('Status') || checkTag('RegistrationStatus') || checkTag('CurrentStatus'),
+    InitialRegistrationDate: checkTag('InitialRegistrationDate') || checkTag('FirstRegistered'),
+    RegistrationStartDate: checkTag('RegistrationStartDate') || checkTag('CurrentRegistrationStart'),
+    RegistrationEndDate: checkTag('RegistrationEndDate') || checkTag('RegistrationExpiryDate'),
   };
 
   if (!legalName) {
-    log('error', 'No legal name found in organisation response (scoped)', { canonicalRtoCode }, correlationId);
-    return { summary: null, fieldPresence, orgNodeExcerpt: orgNode ? orgNode.slice(0, 1500) : null };
+    log('error', 'No legal name found in organisation response (scoped)', { canonicalRtoCode, fieldPresence, extractedFrom }, correlationId);
+    return { summary: null, fieldPresence, extractedFrom, orgNodeExcerpt: orgNode ? orgNode.slice(0, 3000) : null };
   }
 
   log('info', 'Parsed org summary fields (scoped)', {
@@ -924,6 +967,7 @@ function parseSummary(xml: string, canonicalRtoCode: string, correlationId?: str
     webAddress: webAddress ?? 'null',
     organisationType: organisationType ?? 'null',
     status: status ?? 'null',
+    extractedFrom,
   }, correlationId);
 
   return {
@@ -941,7 +985,8 @@ function parseSummary(xml: string, canonicalRtoCode: string, correlationId?: str
       registrationEndDate,
     },
     fieldPresence,
-    orgNodeExcerpt: orgNode ? orgNode.slice(0, 1500) : null,
+    extractedFrom,
+    orgNodeExcerpt: orgNode ? orgNode.slice(0, 3000) : null,
   };
 }
 
@@ -957,10 +1002,10 @@ function simpleHash(str: string): string {
 }
 
 function buildSummaryDebugPayload(xml: string, canonicalRtoCode: string, correlationId?: string) {
-  const normalized = stripXmlPrefixes(xml);
-  const rawXmlExcerpt = normalized.slice(0, 20000); // Capture up to 20k chars
+  // Store up to 50k chars of raw XML for complete proof
+  const rawXmlExcerpt = xml.slice(0, 50000);
   const rawXmlHash = simpleHash(xml);
-  const { summary, fieldPresence, orgNodeExcerpt } = parseSummary(xml, canonicalRtoCode, correlationId);
+  const { summary, fieldPresence, extractedFrom, orgNodeExcerpt } = parseSummary(xml, canonicalRtoCode, correlationId);
 
   // Track which fields were present in XML but could not be parsed
   const parseFailed: string[] = [];
@@ -968,8 +1013,7 @@ function buildSummaryDebugPayload(xml: string, canonicalRtoCode: string, correla
   
   for (const [field, present] of Object.entries(fieldPresence)) {
     if (present) {
-      // Field tag exists in XML
-      const fieldKey = field.toLowerCase().replace(/([a-z])([A-Z])/g, '$1_$2').toLowerCase();
+      // Field tag exists in XML - check if we got a value
       const summaryValue = summary ? (summary as Record<string, unknown>)[
         field === 'LegalName' ? 'legalName' :
         field === 'TradingName' ? 'tradingName' :
@@ -993,14 +1037,15 @@ function buildSummaryDebugPayload(xml: string, canonicalRtoCode: string, correla
 
   return {
     endpoint: 'GetDetails',
-    raw_xml_excerpt: rawXmlExcerpt,
-    raw_xml_hash: rawXmlHash,
-    raw_xml_length: xml.length,
-    org_node_excerpt: orgNodeExcerpt,
-    field_presence: fieldPresence,
-    parsed_summary: summary,
-    missing_fields: missing,
-    parse_failed_fields: parseFailed,
+    rawXml: rawXmlExcerpt,
+    rawXmlLength: xml.length,
+    rawXmlHash,
+    orgNodeExcerpt,
+    fieldPresence,
+    extractedFrom,
+    extractedSummary: summary,
+    missingFields: missing,
+    parseFailedFields: parseFailed,
   };
 }
 

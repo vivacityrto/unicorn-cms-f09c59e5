@@ -94,11 +94,25 @@ function SummaryField({ label, value, fieldKey, fieldPresence, parseFailed, isLi
     
     if (!displayValue) {
       if (didFail) {
-        statusMessage = <span className="text-destructive italic text-xs">Parse failed, see Debug Panel</span>;
+        // This is a PARSING BUG - tag exists but we failed to extract
+        statusMessage = (
+          <span className="inline-flex items-center gap-1">
+            <Badge variant="destructive" className="text-[10px]">PARSING BUG</Badge>
+            <span className="text-destructive italic text-xs">See Debug Panel</span>
+          </span>
+        );
       } else if (isPresent === false) {
         statusMessage = <span className="text-muted-foreground italic">Not provided by TGA</span>;
       } else if (isPresent === undefined) {
         statusMessage = <span className="text-muted-foreground italic">No debug payload, run Sync Now</span>;
+      } else if (isPresent === true) {
+        // Tag is present but value is null - this is also a parsing issue or empty tag
+        statusMessage = (
+          <span className="inline-flex items-center gap-1">
+            <Badge variant="outline" className="text-[10px]">Empty tag</Badge>
+            <span className="text-muted-foreground italic text-xs">TGA returned empty value</span>
+          </span>
+        );
       } else {
         statusMessage = <span className="text-muted-foreground italic">Not provided by TGA</span>;
       }
@@ -145,14 +159,18 @@ interface SummaryTabProps {
     fetched_at?: string | null;
   } | null;
   debugPayload?: {
+    // Support both old (snake_case) and new (camelCase) payload formats
     field_presence?: Record<string, boolean>;
+    fieldPresence?: Record<string, boolean>;
     parse_failed_fields?: string[];
+    parseFailedFields?: string[];
   };
 }
 
 function SummaryTab({ summary, debugPayload }: SummaryTabProps) {
-  const fieldPresence = debugPayload?.field_presence;
-  const parseFailed = debugPayload?.parse_failed_fields;
+  // Support both old and new payload format
+  const fieldPresence = debugPayload?.fieldPresence ?? debugPayload?.field_presence;
+  const parseFailed = debugPayload?.parseFailedFields ?? debugPayload?.parse_failed_fields;
 
   if (!summary) {
     return (
@@ -959,82 +977,95 @@ export function ClientIntegrationsTab({
                       <p>{new Date(debugInfo.debugPayload.fetched_at).toLocaleString()}</p>
                     </div>
 
-                    {debugInfo.debugPayload.payload?.raw_xml_hash && (
+                    {(debugInfo.debugPayload.payload?.rawXmlHash || debugInfo.debugPayload.payload?.raw_xml_hash) && (
                       <div>
                         <p className="text-muted-foreground">Raw XML Hash</p>
-                        <p className="font-mono text-xs">{debugInfo.debugPayload.payload.raw_xml_hash}</p>
+                        <p className="font-mono text-xs">{debugInfo.debugPayload.payload.rawXmlHash || debugInfo.debugPayload.payload.raw_xml_hash}</p>
                       </div>
                     )}
 
-                    {debugInfo.debugPayload.payload?.raw_xml_length && (
+                    {(debugInfo.debugPayload.payload?.rawXmlLength || debugInfo.debugPayload.payload?.raw_xml_length) && (
                       <div>
                         <p className="text-muted-foreground">Raw XML Length</p>
-                        <p className="font-mono text-xs">{debugInfo.debugPayload.payload.raw_xml_length.toLocaleString()} chars</p>
+                        <p className="font-mono text-xs">{(debugInfo.debugPayload.payload.rawXmlLength || debugInfo.debugPayload.payload.raw_xml_length).toLocaleString()} chars</p>
                       </div>
                     )}
 
-                    {debugInfo.debugPayload.payload?.field_presence && (
+                    {/* Field Presence - support both formats */}
+                    {(debugInfo.debugPayload.payload?.fieldPresence || debugInfo.debugPayload.payload?.field_presence) && (
                       <div className="col-span-2">
                         <p className="text-muted-foreground">Summary Field Presence (from raw XML)</p>
                         <div className="mt-2 grid grid-cols-2 gap-2 text-xs">
-                          {Object.entries(debugInfo.debugPayload.payload.field_presence as Record<string, boolean>).map(([k, v]) => (
-                            <div key={k} className="flex items-center justify-between rounded-md border bg-muted/30 px-2 py-1">
-                              <span className="font-medium">{k}</span>
-                              <Badge variant={v ? 'default' : 'secondary'} className="text-[10px]">{v ? 'present' : 'missing'}</Badge>
-                            </div>
-                          ))}
+                          {Object.entries((debugInfo.debugPayload.payload.fieldPresence || debugInfo.debugPayload.payload.field_presence) as Record<string, boolean>).map(([k, v]) => {
+                            const extractedFrom = debugInfo.debugPayload?.payload?.extractedFrom?.[k];
+                            const parseFailed = (debugInfo.debugPayload?.payload?.parseFailedFields || debugInfo.debugPayload?.payload?.parse_failed_fields || []) as string[];
+                            const isParseBug = v && parseFailed.includes(k);
+                            return (
+                              <div key={k} className="flex items-center justify-between rounded-md border bg-muted/30 px-2 py-1">
+                                <span className="font-medium">{k}</span>
+                                <div className="flex items-center gap-1">
+                                  {isParseBug ? (
+                                    <Badge variant="destructive" className="text-[10px]">PARSING BUG</Badge>
+                                  ) : (
+                                    <Badge variant={v ? 'default' : 'secondary'} className="text-[10px]">{v ? 'present' : 'missing'}</Badge>
+                                  )}
+                                  {extractedFrom && <span className="text-[9px] text-muted-foreground">({extractedFrom})</span>}
+                                </div>
+                              </div>
+                            );
+                          })}
                         </div>
                       </div>
                     )}
 
-                    {debugInfo.debugPayload.payload?.missing_fields?.length > 0 && (
+                    {(debugInfo.debugPayload.payload?.missingFields?.length > 0 || debugInfo.debugPayload.payload?.missing_fields?.length > 0) && (
                       <div className="col-span-2">
                         <p className="text-muted-foreground">Missing Fields (not in XML)</p>
                         <p className="text-xs text-muted-foreground mt-1">
-                          {debugInfo.debugPayload.payload.missing_fields.join(', ')}
+                          {(debugInfo.debugPayload.payload.missingFields || debugInfo.debugPayload.payload.missing_fields).join(', ')}
                         </p>
                       </div>
                     )}
 
-                    {debugInfo.debugPayload.payload?.parse_failed_fields?.length > 0 && (
+                    {(debugInfo.debugPayload.payload?.parseFailedFields?.length > 0 || debugInfo.debugPayload.payload?.parse_failed_fields?.length > 0) && (
                       <div className="col-span-2">
                         <p className="text-muted-foreground text-destructive">Parse Failed Fields (tag exists but no value)</p>
                         <p className="text-xs text-destructive mt-1">
-                          {debugInfo.debugPayload.payload.parse_failed_fields.join(', ')}
+                          {(debugInfo.debugPayload.payload.parseFailedFields || debugInfo.debugPayload.payload.parse_failed_fields).join(', ')}
                         </p>
                       </div>
                     )}
 
-                    {debugInfo.debugPayload.payload?.parsed_summary && (
+                    {(debugInfo.debugPayload.payload?.extractedSummary || debugInfo.debugPayload.payload?.parsed_summary) && (
                       <div className="col-span-2">
                         <Collapsible>
                           <CollapsibleTrigger asChild>
                             <Button variant="ghost" size="sm" className="w-full justify-between">
-                              <span className="text-muted-foreground">Parsed Summary JSON</span>
+                              <span className="text-muted-foreground">Extracted Summary JSON</span>
                               <ChevronDown className="h-4 w-4" />
                             </Button>
                           </CollapsibleTrigger>
                           <CollapsibleContent>
                             <pre className="text-xs bg-muted/50 p-2 rounded overflow-x-auto max-h-48">
-                              {JSON.stringify(debugInfo.debugPayload.payload.parsed_summary, null, 2)}
+                              {JSON.stringify(debugInfo.debugPayload.payload.extractedSummary || debugInfo.debugPayload.payload.parsed_summary, null, 2)}
                             </pre>
                           </CollapsibleContent>
                         </Collapsible>
                       </div>
                     )}
 
-                    {debugInfo.debugPayload.payload?.raw_xml_excerpt && (
+                    {(debugInfo.debugPayload.payload?.rawXml || debugInfo.debugPayload.payload?.raw_xml_excerpt) && (
                       <div className="col-span-2">
                         <Collapsible>
                           <CollapsibleTrigger asChild>
                             <Button variant="ghost" size="sm" className="w-full justify-between">
-                              <span className="text-muted-foreground">Raw XML Sample (first 20k chars)</span>
+                              <span className="text-muted-foreground">Raw XML (first 50k chars)</span>
                               <ChevronDown className="h-4 w-4" />
                             </Button>
                           </CollapsibleTrigger>
                           <CollapsibleContent>
                             <pre className="text-xs bg-muted/50 p-2 rounded overflow-x-auto max-h-96 whitespace-pre-wrap break-all">
-                              {debugInfo.debugPayload.payload.raw_xml_excerpt}
+                              {debugInfo.debugPayload.payload.rawXml || debugInfo.debugPayload.payload.raw_xml_excerpt}
                             </pre>
                           </CollapsibleContent>
                         </Collapsible>
