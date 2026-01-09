@@ -27,26 +27,10 @@ function log(level: 'info' | 'warn' | 'error', message: string, data?: Record<st
   console.log(`[TGA_REST_SYNC] [${level.toUpperCase()}] [${timestamp}] ${message}`, data ? JSON.stringify(data) : '');
 }
 
-// Fetch a single scope type (no pipe characters - simple filter)
-async function fetchScopeSingleType(rtoId: string, componentType: string): Promise<{ items: any[]; urls: string[]; error?: string }> {
-  const items: any[] = [];
-  const urls: string[] = [];
-  let offset = 0;
-  let hasMore = true;
-  
-  // Delivery filter - skillSets don't have delivery
-  const delivery = componentType === 'skillSet' ? 'false' : 'true';
-  
-  // Build filter - ONLY fetch explicit scope items (isImplicit==false)
-  // Use simple componentType (no pipes!)
-  const filter = `componentType==${componentType};isImplicit==false`;
-  
-  while (hasMore) {
-    const url = `https://training.gov.au/api/organisation/${encodeURIComponent(rtoId)}/scope?api-version=1.0&offset=${offset}&pageSize=${PAGE_SIZE}&delivery=${delivery}&filters=${encodeURIComponent(filter)}&sorts=code`;
-    urls.push(url);
-    
-    log('info', `Fetching ${componentType} at offset ${offset}`, { url });
-    
+// Retry helper with exponential backoff
+async function fetchWithRetry(url: string, maxRetries = 3): Promise<Response> {
+  let lastError: Error | null = null;
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
     try {
       const response = await fetch(url, {
         headers: {
@@ -54,6 +38,46 @@ async function fetchScopeSingleType(rtoId: string, componentType: string): Promi
           'Accept': 'application/json'
         }
       });
+      // If we get 500, retry (could be transient)
+      if (response.status === 500 && attempt < maxRetries - 1) {
+        const delay = Math.pow(2, attempt) * 300; // 300ms, 600ms, 1200ms
+        log('warn', `TGA returned 500, retrying in ${delay}ms (attempt ${attempt + 1}/${maxRetries})`, { url });
+        await new Promise(r => setTimeout(r, delay));
+        continue;
+      }
+      return response;
+    } catch (err) {
+      lastError = err instanceof Error ? err : new Error(String(err));
+      if (attempt < maxRetries - 1) {
+        const delay = Math.pow(2, attempt) * 300;
+        log('warn', `Fetch error, retrying in ${delay}ms`, { error: lastError.message });
+        await new Promise(r => setTimeout(r, delay));
+      }
+    }
+  }
+  throw lastError || new Error('Max retries exceeded');
+}
+
+// Fetch a single scope type (no pipe characters - simple filter)
+// Uses minimal URL params to avoid TGA 500 errors
+async function fetchScopeSingleType(rtoId: string, componentType: string): Promise<{ items: any[]; urls: string[]; error?: string }> {
+  const items: any[] = [];
+  const urls: string[] = [];
+  let offset = 0;
+  let hasMore = true;
+  
+  // Build filter - ONLY fetch explicit scope items (isImplicit==false)
+  const filter = `componentType==${componentType};isImplicit==false`;
+  
+  while (hasMore) {
+    // MINIMAL URL: no delivery param, no sorts (these may cause TGA 500s)
+    const url = `https://training.gov.au/api/organisation/${encodeURIComponent(rtoId)}/scope?api-version=1.0&offset=${offset}&pageSize=${PAGE_SIZE}&filters=${encodeURIComponent(filter)}`;
+    urls.push(url);
+    
+    log('info', `Fetching ${componentType} at offset ${offset}`, { url });
+    
+    try {
+      const response = await fetchWithRetry(url);
       
       if (!response.ok) {
         const responseText = await response.text();
@@ -66,7 +90,9 @@ async function fetchScopeSingleType(rtoId: string, componentType: string): Promi
       
       log('info', `Got ${pageItems.length} ${componentType}(s) at offset ${offset}`, { total: data.count });
       
-      items.push(...pageItems);
+      // Double-check isImplicit filter locally (safety net)
+      const explicitItems = pageItems.filter((item: any) => item.isImplicit !== true);
+      items.push(...explicitItems);
       
       if (pageItems.length < PAGE_SIZE) {
         hasMore = false;
@@ -396,6 +422,95 @@ serve(async (req) => {
       log('warn', 'Could not upsert tga_rto_summary', { error: summaryError.message });
     } else {
       log('info', 'Updated tga_rto_summary', { rtoCode: rtoId, abn, acn, website });
+    }
+
+    // =====================================================================
+    // PERSIST ADDRESSES (Head Office, Postal) and DELIVERY LOCATIONS
+    // =====================================================================
+    
+    // Parse addresses from orgData.addresses array
+    const addresses = orgData.addresses || [];
+    const currentAddresses = addresses.filter((addr: any) => !addr.endDate);
+    
+    // Separate by type
+    const headOfficeAddrs = currentAddresses.filter((a: any) => a.addressType === 'headOffice');
+    const postalAddrs = currentAddresses.filter((a: any) => a.addressType === 'postal');
+    const deliveryLocationAddrs = currentAddresses.filter((a: any) => a.addressType === 'deliveryLocation');
+    
+    log('info', 'Parsing addresses', { 
+      total: addresses.length,
+      current: currentAddresses.length,
+      headOffice: headOfficeAddrs.length,
+      postal: postalAddrs.length,
+      deliveryLocations: deliveryLocationAddrs.length
+    });
+
+    // Delete existing addresses for this tenant+rto, then insert fresh
+    await supabaseAdmin
+      .from('tga_rto_addresses')
+      .delete()
+      .eq('tenant_id', tenantIdNum)
+      .eq('rto_code', rtoId);
+
+    // Insert head office and postal addresses
+    const addressRows = [...headOfficeAddrs, ...postalAddrs].map((addr: any) => ({
+      tenant_id: tenantIdNum,
+      rto_code: rtoId,
+      address_type: addr.addressType,
+      line1: addr.address?.line1 || addr.line1 || null,
+      line2: addr.address?.line2 || addr.line2 || null,
+      suburb: addr.address?.suburb || addr.suburb || null,
+      state: addr.address?.state || addr.state || null,
+      postcode: addr.address?.postcode || addr.postcode || null,
+      country: addr.address?.country || addr.country || 'Australia',
+      start_date: addr.startDate || null,
+      raw_data: addr,
+    }));
+
+    if (addressRows.length > 0) {
+      const { error: addrError } = await supabaseAdmin
+        .from('tga_rto_addresses')
+        .insert(addressRows);
+      
+      if (addrError) {
+        log('warn', 'Could not insert addresses', { error: addrError.message });
+      } else {
+        log('info', `Inserted ${addressRows.length} addresses`);
+      }
+    }
+
+    // Delete existing delivery locations, then insert fresh
+    await supabaseAdmin
+      .from('tga_rto_delivery_locations')
+      .delete()
+      .eq('tenant_id', tenantIdNum)
+      .eq('rto_code', rtoId);
+
+    // Insert delivery locations
+    const deliveryRows = deliveryLocationAddrs.map((addr: any) => ({
+      tenant_id: tenantIdNum,
+      rto_code: rtoId,
+      location_name: addr.address?.locationName || addr.locationName || 'Unnamed Location',
+      line1: addr.address?.line1 || addr.line1 || null,
+      line2: addr.address?.line2 || addr.line2 || null,
+      suburb: addr.address?.suburb || addr.suburb || null,
+      state: addr.address?.state || addr.state || null,
+      postcode: addr.address?.postcode || addr.postcode || null,
+      country: addr.address?.country || addr.country || 'Australia',
+      start_date: addr.startDate || null,
+      raw_data: addr,
+    }));
+
+    if (deliveryRows.length > 0) {
+      const { error: delError } = await supabaseAdmin
+        .from('tga_rto_delivery_locations')
+        .insert(deliveryRows);
+      
+      if (delError) {
+        log('warn', 'Could not insert delivery locations', { error: delError.message });
+      } else {
+        log('info', `Inserted ${deliveryRows.length} delivery locations`);
+      }
     }
 
     // 6. Mark job done
