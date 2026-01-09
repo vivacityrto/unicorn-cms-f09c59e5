@@ -1176,62 +1176,147 @@ serve(async (req) => {
 
     // ==================== SYNC CLIENT ACTION ====================
     if (action === 'sync-client') {
-      const { client_id, rto_number, tenant_id } = requestBody as { client_id?: string; rto_number?: string; tenant_id?: string };
-      
-      if (!rto_number) {
-        return new Response(JSON.stringify({ error: 'rto_number required' }), {
+      // Canonical identifier is tenant_id (matches /clients/:id)
+      const { tenant_id, rto_number } = requestBody as { tenant_id?: string; rto_number?: string };
+
+      if (!tenant_id) {
+        return new Response(JSON.stringify({ error: 'tenant_id required' }), {
           status: 400,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
       }
 
-      log('info', 'Starting client sync', { rto_number, client_id, tenant_id }, correlationId);
+      const tenantIdNum = parseInt(tenant_id);
+      if (!Number.isFinite(tenantIdNum)) {
+        return new Response(JSON.stringify({ error: `Invalid tenant_id: ${tenant_id}` }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      // Validate tenant exists + handle merged tenants explicitly
+      const { data: tenantRow, error: tenantErr } = await supabase
+        .from('tenants')
+        .select('id, name, status, metadata')
+        .eq('id', tenantIdNum)
+        .single();
+
+      if (tenantErr || !tenantRow) {
+        return new Response(JSON.stringify({ error: `Tenant ${tenantIdNum} not found` }), {
+          status: 404,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      if (tenantRow.status === 'inactive') {
+        const metadata = tenantRow.metadata as Record<string, unknown> | null;
+        const mergedInto = metadata?.merged_into;
+        return new Response(JSON.stringify({
+          error: mergedInto
+            ? `Tenant ${tenantIdNum} was merged into tenant ${mergedInto}`
+            : `Tenant ${tenantIdNum} is inactive`,
+          tenant_id: tenantIdNum,
+          merged_into: mergedInto ?? null,
+        }), {
+          status: 409,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      // Ensure tenant_profile exists
+      const { data: tenantProfile } = await supabase
+        .from('tenant_profile')
+        .select('tenant_id, rto_number')
+        .eq('tenant_id', tenantIdNum)
+        .maybeSingle();
+
+      if (!tenantProfile) {
+        await supabase.from('tenant_profile').insert({
+          tenant_id: tenantIdNum,
+          trading_name: tenantRow.name,
+          updated_at: new Date().toISOString(),
+        });
+      }
+
+      const effectiveRto = (rto_number || tenantProfile?.rto_number || null)?.toString().trim() || null;
+      if (!effectiveRto) {
+        return new Response(JSON.stringify({
+          error: `Tenant ${tenantIdNum} has no tenant_profile.rto_number configured`,
+          tenant_id: tenantIdNum,
+        }), {
+          status: 422,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      log('info', 'Starting tenant sync', { tenant_id: tenantIdNum, rto_number: effectiveRto }, correlationId);
+
+      let runId: string | null = null;
+      let jobId: string | null = null;
 
       try {
-        const orgResult = await fetchOrganisation(rto_number, correlationId);
-        
-        // Store debug payload for visibility
-        const tenantIdForDebug = tenant_id ? parseInt(tenant_id) : null;
-        await supabase.from('tga_debug_payloads').insert({
-          tenant_id: tenantIdForDebug,
-          rto_code: rto_number,
-          endpoint: 'GetDetails',
-          http_status: orgResult.data ? 200 : 404,
-          record_count: orgResult.data ? 
-            (orgResult.data.contacts.length + orgResult.data.addresses.length + orgResult.data.deliveryLocations.length) : 0,
-          payload: {
-            hasData: !!orgResult.data,
-            error: orgResult.error,
-            contactCount: orgResult.data?.contacts?.length ?? 0,
-            addressCount: orgResult.data?.addresses?.length ?? 0,
-            deliveryLocationCount: orgResult.data?.deliveryLocations?.length ?? 0,
-            qualificationCount: orgResult.data?.scope?.qualifications?.length ?? 0,
-            sectionPresence: orgResult.sectionPresence,
-            rawXmlSample: orgResult.raw?.substring(0, 5000), // First 5KB for debugging
+        const orgResult = await fetchOrganisation(effectiveRto, correlationId);
+
+        // Store debug payload(s) for visibility (one per stage-like section)
+        await supabase.from('tga_debug_payloads').insert([
+          {
+            tenant_id: tenantIdNum,
+            rto_code: effectiveRto,
+            endpoint: 'GetDetails:summary',
+            http_status: orgResult.data ? 200 : 404,
+            record_count: orgResult.data ? 1 : 0,
+            payload: {
+              tenant_id: tenantIdNum,
+              rto_number: effectiveRto,
+              hasData: !!orgResult.data,
+              error: orgResult.error,
+            },
           },
-        });
-        
+          {
+            tenant_id: tenantIdNum,
+            rto_code: effectiveRto,
+            endpoint: 'GetDetails:contacts',
+            http_status: orgResult.data ? 200 : 404,
+            record_count: orgResult.data?.contacts?.length ?? 0,
+            payload: {
+              tenant_id: tenantIdNum,
+              rto_number: effectiveRto,
+              sectionPresence: orgResult.sectionPresence,
+            },
+          },
+          {
+            tenant_id: tenantIdNum,
+            rto_code: effectiveRto,
+            endpoint: 'GetDetails:addresses',
+            http_status: orgResult.data ? 200 : 404,
+            record_count: orgResult.data?.addresses?.length ?? 0,
+            payload: {
+              tenant_id: tenantIdNum,
+              rto_number: effectiveRto,
+              sectionPresence: orgResult.sectionPresence,
+            },
+          },
+          {
+            tenant_id: tenantIdNum,
+            rto_code: effectiveRto,
+            endpoint: 'GetDetails:delivery_sites',
+            http_status: orgResult.data ? 200 : 404,
+            record_count: orgResult.data?.deliveryLocations?.length ?? 0,
+            payload: {
+              tenant_id: tenantIdNum,
+              rto_number: effectiveRto,
+              sectionPresence: orgResult.sectionPresence,
+            },
+          },
+        ]);
+
         if (!orgResult.data) {
-          if (client_id) {
-            await supabase
-              .from('tga_links')
-              .upsert({
-                client_id,
-                rto_number,
-                is_linked: false,
-                link_status: 'not_found',
-                last_sync_at: new Date().toISOString(),
-                last_sync_status: 'failed',
-                last_sync_error: orgResult.error || 'RTO not found in TGA registry',
-                updated_at: new Date().toISOString(),
-              }, { onConflict: 'client_id' });
-          }
-          
           return new Response(JSON.stringify({
             success: false,
             correlationId,
             error: orgResult.error || 'RTO not found in TGA registry',
-            rto_number,
+            rto_number: effectiveRto,
+            tenant_id: tenantIdNum,
           }), {
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
           });
@@ -1239,11 +1324,53 @@ serve(async (req) => {
 
         const orgData = orgResult.data;
         const sectionPresence = orgResult.sectionPresence;
-        const tenantIdNum = tenant_id ? parseInt(tenant_id) : null;
         const fetchedAt = new Date().toISOString();
-        
+
+        // Create a run + job record (monitoring/retry visibility)
+        const { data: runRow } = await supabase
+          .from('tga_import_runs')
+          .insert({
+            run_type: 'staged_sync',
+            status: 'running',
+            started_at: fetchedAt,
+            source_ref: `tenant:${tenantIdNum}:rto:${effectiveRto}`,
+            records_processed: 0,
+            error_message: null,
+            created_by: user.id,
+            notes: `sync-client ${correlationId}`,
+          })
+          .select('id')
+          .single();
+
+        runId = runRow?.id ?? null;
+
+        const { data: jobRow } = await supabase
+          .from('tga_rto_import_jobs')
+          .insert({
+            tenant_id: tenantIdNum,
+            rto_code: effectiveRto,
+            status: 'processing',
+            job_type: 'sync_now',
+            stage: 'sync_now',
+            attempts: 1,
+            max_attempts: 1,
+            run_id: runId,
+            created_by: user.id,
+            started_at: fetchedAt,
+            payload_meta: { correlationId },
+            summary_fetched: false,
+            contacts_fetched: false,
+            addresses_fetched: false,
+            scope_fetched: false,
+          })
+          .select('id')
+          .single();
+
+        jobId = jobRow?.id ?? null;
+
         // Track what was replaced vs skipped
         const syncStatus: Record<string, { replaced: boolean; count: number; reason?: string }> = {};
+
 
         // Upsert to tga_rtos cache
         await supabase
@@ -1481,6 +1608,20 @@ serve(async (req) => {
             syncStatus,
           }, correlationId);
           
+          // Backfill tenant_profile from TGA (keeps merge fields reliable)
+          await supabase
+            .from('tenant_profile')
+            .upsert({
+              tenant_id: tenantIdNum,
+              rto_number: orgData.code,
+              trading_name: orgData.tradingName || tenantRow.name,
+              legal_name: orgData.legalName,
+              abn: orgData.abn,
+              website: orgData.webAddress,
+              updated_at: fetchedAt,
+              updated_by: user.id,
+            }, { onConflict: 'tenant_id' });
+
           // Write audit log
           await supabase.from('tga_import_audit').insert({
             tenant_id: tenantIdNum,
@@ -1492,34 +1633,50 @@ serve(async (req) => {
             metadata: { syncStatus, sectionPresence, correlationId },
           });
           
-          // Update import state on success
-          await supabase.from('tga_import_state')
-            .update({ 
-              latest_success: fetchedAt,
-              updated_at: fetchedAt,
-            })
-            .eq('id', 1);
-        }
+          // Update run/job tracking
+          const rowsAffected = Object.values(syncStatus).reduce((sum, s) => sum + (s.count || 0), 0);
 
-        // Update link status
-        if (client_id) {
-          await supabase
-            .from('tga_links')
-            .upsert({
-              client_id,
-              rto_number: orgData.code,
-              is_linked: true,
-              link_status: 'synced',
-              last_sync_at: fetchedAt,
-              last_sync_status: 'success',
-              last_sync_error: null,
-              updated_at: fetchedAt,
-            }, { onConflict: 'client_id' });
+          if (jobId) {
+            await supabase
+              .from('tga_rto_import_jobs')
+              .update({
+                status: 'completed',
+                completed_at: fetchedAt,
+                finished_at: fetchedAt,
+                error_message: null,
+                last_error: null,
+                summary_fetched: true,
+                contacts_fetched: (syncStatus.contacts?.replaced ?? false) || (syncStatus.contacts?.reason === 'not_in_response'),
+                addresses_fetched: (syncStatus.addresses?.replaced ?? false) || (syncStatus.addresses?.reason === 'not_in_response'),
+                scope_fetched: true,
+                qualifications_count: syncStatus.qualifications?.count ?? 0,
+                skillsets_count: syncStatus.skillSets?.count ?? 0,
+                units_count: syncStatus.units?.count ?? 0,
+                courses_count: syncStatus.courses?.count ?? 0,
+                payload_meta: { correlationId, syncStatus, sectionPresence },
+              })
+              .eq('id', jobId);
+          }
+
+          if (runId) {
+            await supabase
+              .from('tga_import_runs')
+              .update({
+                status: 'completed',
+                finished_at: fetchedAt,
+                records_processed: rowsAffected,
+                error_message: null,
+              })
+              .eq('id', runId);
+          }
+
+          // Keep tenant registry link management in the app layer; sync is tenant-scoped.
         }
 
         return new Response(JSON.stringify({
           success: true,
           correlationId,
+          tenant_id: tenantIdNum,
           rto_code: orgData.code,
           legal_name: orgData.legalName,
           synced: {
@@ -1538,28 +1695,14 @@ serve(async (req) => {
         });
       } catch (error: unknown) {
         const errorMsg = error instanceof Error ? error.message : String(error);
-        log('error', 'Client sync failed', { error: errorMsg, rto_number, client_id }, correlationId);
-        
-        if (client_id) {
-          await supabase
-            .from('tga_links')
-            .upsert({
-              client_id,
-              rto_number,
-              is_linked: false,
-              link_status: 'error',
-              last_sync_at: new Date().toISOString(),
-              last_sync_status: 'failed',
-              last_sync_error: errorMsg,
-              updated_at: new Date().toISOString(),
-            }, { onConflict: 'client_id' });
-        }
-        
+        log('error', 'Tenant sync failed', { error: errorMsg, tenant_id: tenantIdNum, rto_number: effectiveRto }, correlationId);
+
         return new Response(JSON.stringify({
           success: false,
           correlationId,
           error: errorMsg,
-          rto_number,
+          tenant_id: tenantIdNum,
+          rto_number: effectiveRto,
         }), {
           status: 500,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
