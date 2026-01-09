@@ -788,6 +788,125 @@ function parseDeliveryLocations(xml: string, correlationId?: string, logRawSampl
   return { locations, rawSample };
 }
 
+// ==================== REST API SCOPE FETCHING ====================
+
+interface RestScopeItem {
+  code: string;
+  title: string | null;
+  status: string | null;
+  trainingPackageCode: string | null;
+  trainingPackageTitle: string | null;
+  startDate: string | null;
+  endDate: string | null;
+  isExplicit: boolean;
+}
+
+/**
+ * Fetch scope items from TGA REST API with pagination.
+ * Returns all items for the given component type.
+ */
+async function fetchScopeFromRest(
+  rtoId: string,
+  componentType: 'qualification' | 'skillSet' | 'unit' | 'accreditedCourse',
+  correlationId?: string
+): Promise<RestScopeItem[]> {
+  const allItems: RestScopeItem[] = [];
+  const pageSize = 500;
+  let offset = 0;
+  let hasMore = true;
+  
+  // Map component type to API filter value
+  const filterMap: Record<string, string> = {
+    'qualification': 'qualification',
+    'skillSet': 'skillSet',
+    'unit': 'unit|accreditedUnit',
+    'accreditedCourse': 'accreditedCourse',
+  };
+  
+  const componentFilter = filterMap[componentType] || componentType;
+  
+  log('info', `Fetching ${componentType} from REST API`, { rtoId, componentFilter }, correlationId);
+  
+  while (hasMore) {
+    const url = `https://training.gov.au/api/organisation/${encodeURIComponent(rtoId)}/scope?api-version=1.0&offset=${offset}&pageSize=${pageSize}&filters=componentType==${componentFilter}&sorts=code`;
+    
+    log('info', `REST API request`, { url, offset, pageSize }, correlationId);
+    
+    try {
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'User-Agent': 'Unicorn/2.0',
+          'Accept': 'application/json',
+        },
+      });
+      
+      if (!response.ok) {
+        log('warn', `REST API returned ${response.status} for ${componentType}`, { status: response.status, url }, correlationId);
+        break;
+      }
+      
+      const data = await response.json();
+      const items = data.value || [];
+      
+      log('info', `REST API returned ${items.length} ${componentType} items`, { offset, count: items.length }, correlationId);
+      
+      // Map REST response to our structure
+      for (const item of items) {
+        allItems.push({
+          code: item.code || item.trainingProductCode || '',
+          title: item.title || item.trainingProductTitle || null,
+          status: item.statusLabel || item.status || 'current',
+          trainingPackageCode: item.trainingPackageCode || null,
+          trainingPackageTitle: item.trainingPackageTitle || null,
+          startDate: item.startDate || null,
+          endDate: item.endDate || null,
+          isExplicit: item.isImplicit === false || item.isExplicit === true,
+        });
+      }
+      
+      // Check if we need to fetch more pages
+      if (items.length < pageSize) {
+        hasMore = false;
+      } else {
+        offset += pageSize;
+        // Safety limit to prevent infinite loops
+        if (offset > 10000) {
+          log('warn', `Stopping pagination at offset ${offset} for safety`, { componentType }, correlationId);
+          hasMore = false;
+        }
+      }
+    } catch (err) {
+      const error = err instanceof Error ? err : new Error(String(err));
+      log('error', `REST API error for ${componentType}`, { error: error.message, url }, correlationId);
+      break;
+    }
+  }
+  
+  log('info', `REST API total: ${allItems.length} ${componentType} items`, { rtoId }, correlationId);
+  return allItems;
+}
+
+/**
+ * Convert REST scope items to ParsedScopeItem format for storage.
+ */
+function convertRestToParsedScope(items: RestScopeItem[]): ParsedScopeItem[] {
+  return items.map(item => ({
+    code: item.code,
+    title: item.title,
+    status: item.status,
+    usageRecommendation: null,
+    extent: null,
+    startDate: item.startDate,
+    endDate: item.endDate,
+    deliveryNotification: null,
+    trainingPackageCode: item.trainingPackageCode,
+    trainingPackageTitle: item.trainingPackageTitle,
+    isExplicit: item.isExplicit,
+    isCurrent: item.status?.toLowerCase() === 'current',
+  }));
+}
+
 function parseScope(xml: string, correlationId?: string): ParsedScope {
   const scope: ParsedScope = {
     qualifications: [],
@@ -2058,6 +2177,30 @@ serve(async (req) => {
             await supabase.from('tga_rto_delivery_locations').delete().eq('tenant_id', tenantIdNum).eq('rto_code', orgData.code);
             syncStatus.deliveryLocations = { replaced: true, count: 0, reason: 'not_in_response' };
           }
+
+          // ==================== FETCH SCOPE FROM REST API ====================
+          // SOAP GetDetails does NOT include scope data, so we MUST fetch from REST API
+          log('info', 'Fetching scope data from TGA REST API', { rto: orgData.code }, correlationId);
+          
+          const [restQuals, restSkills, restUnits, restCourses] = await Promise.all([
+            fetchScopeFromRest(orgData.code, 'qualification', correlationId),
+            fetchScopeFromRest(orgData.code, 'skillSet', correlationId),
+            fetchScopeFromRest(orgData.code, 'unit', correlationId),
+            fetchScopeFromRest(orgData.code, 'accreditedCourse', correlationId),
+          ]);
+          
+          // Override the empty SOAP scope with REST data
+          orgData.scope.qualifications = convertRestToParsedScope(restQuals);
+          orgData.scope.skillSets = convertRestToParsedScope(restSkills);
+          orgData.scope.units = convertRestToParsedScope(restUnits);
+          orgData.scope.courses = convertRestToParsedScope(restCourses);
+          
+          log('info', 'REST API scope fetch complete', {
+            qualifications: orgData.scope.qualifications.length,
+            skillSets: orgData.scope.skillSets.length,
+            units: orgData.scope.units.length,
+            courses: orgData.scope.courses.length,
+          }, correlationId);
 
           // QUALIFICATIONS - with safety guardrail
           if (orgData.scope.qualifications.length > 0) {
