@@ -74,8 +74,9 @@ export function ClientIntegrationsTab({
   const [updating, setUpdating] = useState(false);
   const [tenantStatus, setTenantStatus] = useState<{ status: string; mergedInto?: number } | null>(null);
   const [debugInfo, setDebugInfo] = useState<{
-    lastSyncRun?: { id: string; status: string; created_at: string } | null;
-    debugPayload?: { record_count: number; fetched_at: string } | null;
+    lastSyncRun?: { id: string; status: string; created_at: string; stage?: string; last_error?: string | null; payload_meta?: unknown } | null;
+    debugPayload?: { record_count: number; fetched_at: string; endpoint?: string } | null;
+    stageJobs?: Array<{ stage: string; status: string; count?: number; reason?: string }>;
   } | null>(null);
   const [showDebug, setShowDebug] = useState(false);
   const [syncCounter, setSyncCounter] = useState(0); // Track sync completions to refresh debug panel
@@ -734,10 +735,33 @@ export function ClientIntegrationsTab({
                     </div>
                     <div>
                       <p className="text-muted-foreground">Last Sync Status</p>
-                      <Badge variant={debugInfo.lastSyncRun.status === 'completed' ? 'default' : 'secondary'}>
+                      <Badge variant={debugInfo.lastSyncRun.status === 'success' || debugInfo.lastSyncRun.status === 'completed' ? 'default' : 'secondary'}>
                         {debugInfo.lastSyncRun.status}
                       </Badge>
                     </div>
+                    {debugInfo.lastSyncRun.last_error && (
+                      <div className="col-span-2">
+                        <p className="text-muted-foreground">Last Error</p>
+                        <p className="text-xs text-destructive">{debugInfo.lastSyncRun.last_error}</p>
+                      </div>
+                    )}
+                    {debugInfo.lastSyncRun.payload_meta && (
+                      <div className="col-span-2">
+                        <p className="text-muted-foreground">Sync Status by Section</p>
+                        <div className="text-xs mt-1 space-y-1">
+                          {Object.entries((debugInfo.lastSyncRun.payload_meta as Record<string, unknown>).syncStatus || {}).map(([key, val]) => {
+                            const v = val as { count?: number; reason?: string; replaced?: boolean };
+                            return (
+                              <div key={key} className="flex items-center gap-2">
+                                <span className="font-medium">{key}:</span>
+                                <span>{v.count ?? 0} records</span>
+                                {v.reason && <Badge variant="outline" className="text-xs">{v.reason}</Badge>}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
                   </>
                 )}
                 {debugInfo?.debugPayload && (

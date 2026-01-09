@@ -48,7 +48,7 @@ const SOAP_ACTIONS = {
   searchTrainingComponent: `${TGA_V13_NAMESPACE}ITrainingComponentService/Search`,
 };
 
-const FUNCTION_VERSION = '1.4.0';
+const FUNCTION_VERSION = '1.5.0';
 
 const STAGES = ['rto_summary', 'contacts', 'addresses', 'delivery_sites', 'scope_quals', 'scope_units', 'scope_skills', 'scope_courses'] as const;
 type SyncStage = typeof STAGES[number];
@@ -168,6 +168,7 @@ function extractAllTags(xml: string, tagName: string): string[] {
 
 interface ParsedContact {
   contactType: string;
+  contactTypeRaw: string | null; // Store raw type for debugging
   name: string | null;
   position: string | null;
   phone: string | null;
@@ -261,24 +262,71 @@ function parseContacts(xml: string, correlationId?: string): ParsedContact[] {
   
   log('info', 'Parsing contacts with enhanced regex', {}, correlationId);
   
-  // Look for Contacts container first
-  const contactsSection = extractSection(normalized, 'Contacts') || normalized;
-  
-  // Extract ALL Contact elements
-  const contactElements = extractAllTags(contactsSection, 'Contact');
-  log('info', `Found ${contactElements.length} Contact elements`, {}, correlationId);
-  
-  // Debug: log first contact's structure
-  if (contactElements.length > 0) {
-    const sample = contactElements[0].substring(0, 2000);
-    log('info', 'First Contact XML sample', { sample }, correlationId);
-  }
+  // TGA uses specific contact containers like ContactChiefExecutive, ContactPublicEnquiries
+  const contactTypeContainers = [
+    { container: 'ContactChiefExecutive', type: 'ChiefExecutive' },
+    { container: 'ContactPublicEnquiries', type: 'PublicEnquiries' },
+    { container: 'ContactRegistrationEnquiries', type: 'RegistrationEnquiries' },
+    { container: 'ChiefExecutive', type: 'ChiefExecutive' },
+    { container: 'PublicEnquiries', type: 'PublicEnquiries' },
+    { container: 'RegistrationEnquiries', type: 'RegistrationEnquiries' },
+  ];
   
   const seenTypes = new Set<string>();
-  const allParsedContacts: ParsedContact[] = [];
+  
+  // First, try specific contact type containers (TGA standard format)
+  for (const { container, type } of contactTypeContainers) {
+    if (seenTypes.has(type)) continue;
+    
+    const containerXml = extractFullTag(normalized, container);
+    if (containerXml) {
+      log('info', `Found contact container: ${container}`, { sampleLength: containerXml.length }, correlationId);
+      
+      // Check if contact is current
+      const endDate = extractValue(containerXml, 'EndDate') || extractValue(containerXml, 'EffectiveTo');
+      if (endDate && endDate < today) continue;
+      
+      const name = extractValue(containerXml, 'Name') || 
+                  extractValue(containerXml, 'FullName') ||
+                  extractValue(containerXml, 'ContactName') ||
+                  [extractValue(containerXml, 'FirstName'), extractValue(containerXml, 'LastName')].filter(Boolean).join(' ') || 
+                  null;
+      
+      if (name || extractValue(containerXml, 'Email') || extractValue(containerXml, 'Phone')) {
+        seenTypes.add(type);
+        contacts.push({
+          contactType: type,
+          contactTypeRaw: container,
+          name,
+          position: extractValue(containerXml, 'Position') || extractValue(containerXml, 'JobTitle') || extractValue(containerXml, 'Title'),
+          phone: extractValue(containerXml, 'Phone') || extractValue(containerXml, 'PhoneNumber') || extractValue(containerXml, 'BusinessPhone') || extractValue(containerXml, 'Telephone'),
+          mobile: extractValue(containerXml, 'Mobile') || extractValue(containerXml, 'MobileNumber') || extractValue(containerXml, 'MobilePhone'),
+          fax: extractValue(containerXml, 'Fax') || extractValue(containerXml, 'FaxNumber'),
+          email: extractValue(containerXml, 'Email') || extractValue(containerXml, 'EmailAddress'),
+          address: extractValue(containerXml, 'Address') || extractValue(containerXml, 'StreetAddress'),
+          organisationName: extractValue(containerXml, 'OrganisationName') || extractValue(containerXml, 'Organisation'),
+        });
+        log('info', `Added contact from container ${container}`, { type, name }, correlationId);
+      }
+    }
+  }
+  
+  // Also try generic Contact elements in Contacts container
+  const contactsSection = extractSection(normalized, 'Contacts') || normalized;
+  const contactElements = extractAllTags(contactsSection, 'Contact');
+  
+  if (contactElements.length > 0) {
+    log('info', `Found ${contactElements.length} generic Contact elements`, {}, correlationId);
+    
+    // Debug: log first contact's structure
+    if (contactElements.length > 0 && contacts.length === 0) {
+      const sample = contactElements[0].substring(0, 2000);
+      log('info', 'First Contact XML sample', { sample }, correlationId);
+    }
+  }
   
   for (const contactXml of contactElements) {
-    // Check if contact is current (no end date or end date in future)
+    // Check if contact is current
     const endDate = extractValue(contactXml, 'EndDate') || extractValue(contactXml, 'EffectiveTo');
     if (endDate && endDate < today) continue;
     
@@ -303,7 +351,6 @@ function parseContacts(xml: string, correlationId?: string): ParsedContact[] {
     
     // Approach 3: Look for type attribute or simple text in Type element
     if (!rawType) {
-      // Try to get any text content that might indicate type
       const typeMatch = contactXml.match(/<(?:\w+:)?Type[^>]*>([^<]+)</i) ||
                         contactXml.match(/<(?:\w+:)?ContactType[^>]*>([^<]+)</i);
       if (typeMatch) rawType = typeMatch[1].trim();
@@ -332,10 +379,13 @@ function parseContacts(xml: string, correlationId?: string): ParsedContact[] {
     } else if (rawTypeLower.includes('admin') || rawTypeLower.includes('manager') ||
                rawTypeLower.includes('director') || rawTypeLower.includes('officer')) {
       normalizedType = 'Administrative';
-    } else if (rawType) {
-      // Use the raw type as-is if we found something but couldn't categorize it
+    } else if (rawType && rawType !== '0') {
+      // Use the raw type as-is if we found something meaningful
       normalizedType = rawType;
     }
+    
+    // Skip if we already have this type from the specific containers
+    if (normalizedType && seenTypes.has(normalizedType)) continue;
     
     // Extract contact details
     const name = extractValue(contactXml, 'Name') || 
@@ -344,56 +394,37 @@ function parseContacts(xml: string, correlationId?: string): ParsedContact[] {
                 [extractValue(contactXml, 'FirstName'), extractValue(contactXml, 'LastName')].filter(Boolean).join(' ') || 
                 null;
     
-    const contact: ParsedContact = {
-      contactType: normalizedType || 'Unknown',
-      name,
-      position: extractValue(contactXml, 'Position') || extractValue(contactXml, 'JobTitle') || extractValue(contactXml, 'Title'),
-      phone: extractValue(contactXml, 'Phone') || extractValue(contactXml, 'PhoneNumber') || extractValue(contactXml, 'BusinessPhone') || extractValue(contactXml, 'Telephone'),
-      mobile: extractValue(contactXml, 'Mobile') || extractValue(contactXml, 'MobileNumber') || extractValue(contactXml, 'MobilePhone'),
-      fax: extractValue(contactXml, 'Fax') || extractValue(contactXml, 'FaxNumber'),
-      email: extractValue(contactXml, 'Email') || extractValue(contactXml, 'EmailAddress'),
-      address: extractValue(contactXml, 'Address') || extractValue(contactXml, 'StreetAddress'),
-      organisationName: extractValue(contactXml, 'OrganisationName') || extractValue(contactXml, 'Organisation'),
-    };
-    
-    allParsedContacts.push(contact);
-    
-    // Log each contact found
-    log('info', 'Parsed contact', { 
-      type: normalizedType || 'Unknown', 
-      rawType, 
-      name, 
-      hasPhone: !!contact.phone, 
-      hasEmail: !!contact.email 
-    }, correlationId);
-  }
-  
-  // Priority order: CE, PE, RE, then others
-  const priorityTypes = ['ChiefExecutive', 'PublicEnquiries', 'RegistrationEnquiries'];
-  
-  // Add priority contacts first (one of each type)
-  for (const priorityType of priorityTypes) {
-    if (!seenTypes.has(priorityType)) {
-      const found = allParsedContacts.find(c => c.contactType === priorityType);
-      if (found) {
-        seenTypes.add(priorityType);
-        contacts.push(found);
-      }
-    }
-  }
-  
-  // Also add any other contacts (admin, unknown, etc.) up to a reasonable limit
-  for (const contact of allParsedContacts) {
-    if (!priorityTypes.includes(contact.contactType) && contacts.length < 10) {
-      const key = `${contact.contactType}-${contact.name || contact.email}`;
-      if (!seenTypes.has(key)) {
-        seenTypes.add(key);
+    // Only add if we have meaningful data
+    if (name || extractValue(contactXml, 'Email') || extractValue(contactXml, 'Phone')) {
+      const contact: ParsedContact = {
+        contactType: normalizedType || 'Unknown',
+        contactTypeRaw: rawType || null,
+        name,
+        position: extractValue(contactXml, 'Position') || extractValue(contactXml, 'JobTitle') || extractValue(contactXml, 'Title'),
+        phone: extractValue(contactXml, 'Phone') || extractValue(contactXml, 'PhoneNumber') || extractValue(contactXml, 'BusinessPhone') || extractValue(contactXml, 'Telephone'),
+        mobile: extractValue(contactXml, 'Mobile') || extractValue(contactXml, 'MobileNumber') || extractValue(contactXml, 'MobilePhone'),
+        fax: extractValue(contactXml, 'Fax') || extractValue(contactXml, 'FaxNumber'),
+        email: extractValue(contactXml, 'Email') || extractValue(contactXml, 'EmailAddress'),
+        address: extractValue(contactXml, 'Address') || extractValue(contactXml, 'StreetAddress'),
+        organisationName: extractValue(contactXml, 'OrganisationName') || extractValue(contactXml, 'Organisation'),
+      };
+      
+      if (normalizedType) seenTypes.add(normalizedType);
+      
+      if (contacts.length < 10) {
         contacts.push(contact);
+        log('info', 'Parsed generic contact', { 
+          type: normalizedType || 'Unknown', 
+          rawType, 
+          name, 
+          hasPhone: !!contact.phone, 
+          hasEmail: !!contact.email 
+        }, correlationId);
       }
     }
   }
   
-  log('info', `Contact parsing complete: ${contacts.length} contacts from ${allParsedContacts.length} parsed`, 
+  log('info', `Contact parsing complete: ${contacts.length} contacts`, 
       { types: contacts.map(c => c.contactType) }, correlationId);
   return contacts;
 }
@@ -478,9 +509,10 @@ function parseAddresses(xml: string, correlationId?: string): ParsedAddress[] {
   return addresses;
 }
 
-function parseDeliveryLocations(xml: string, correlationId?: string): ParsedDeliveryLocation[] {
+function parseDeliveryLocations(xml: string, correlationId?: string, logRawSample = false): { locations: ParsedDeliveryLocation[]; rawSample?: string } {
   const locations: ParsedDeliveryLocation[] = [];
   const normalized = stripXmlPrefixes(xml);
+  let rawSample: string | undefined;
   
   log('info', 'Parsing delivery locations with regex', {}, correlationId);
   
@@ -491,7 +523,11 @@ function parseDeliveryLocations(xml: string, correlationId?: string): ParsedDeli
   for (const name of containerNames) {
     containerXml = extractSection(normalized, name);
     if (containerXml) {
-      log('info', `Found locations container: ${name}`, {}, correlationId);
+      log('info', `Found locations container: ${name}`, { length: containerXml.length }, correlationId);
+      // Save raw sample for debugging (first 3000 chars)
+      if (logRawSample) {
+        rawSample = containerXml.substring(0, 3000);
+      }
       break;
     }
   }
@@ -499,7 +535,7 @@ function parseDeliveryLocations(xml: string, correlationId?: string): ParsedDeli
   // Also try to find location elements directly in the full XML if no container found
   const searchXml = containerXml || normalized;
   
-  const locationNames = ['DeliveryLocation', 'Location', 'Site', 'TrainingLocation'];
+  const locationNames = ['DeliveryLocation', 'Location', 'Site', 'TrainingLocation', 'SiteLocation'];
   const seenLocations = new Set<string>();
   
   for (const locName of locationNames) {
@@ -507,7 +543,10 @@ function parseDeliveryLocations(xml: string, correlationId?: string): ParsedDeli
     
     // Log first element for debugging
     if (locationElements.length > 0 && locations.length === 0) {
-      log('info', `Found ${locationElements.length} ${locName} elements`, { sample: locationElements[0].substring(0, 500) }, correlationId);
+      log('info', `Found ${locationElements.length} ${locName} elements`, {}, correlationId);
+      if (logRawSample && !rawSample) {
+        rawSample = locationElements[0].substring(0, 1500);
+      }
     }
     
     for (const locXml of locationElements) {
@@ -530,7 +569,7 @@ function parseDeliveryLocations(xml: string, correlationId?: string): ParsedDeli
                     extractValue(locXml, 'City');
       
       const postcode = extractValue(locXml, 'Postcode') || extractValue(locXml, 'PostCode');
-      const state = extractValue(locXml, 'State') || extractValue(locXml, 'StateCode');
+      const state = extractValue(locXml, 'State') || extractValue(locXml, 'StateCode') || extractValue(locXml, 'StateTerritory');
       
       // Create a unique key to avoid duplicates
       const key = `${locationName || ''}|${line1 || ''}|${suburb || ''}|${postcode || ''}`;
@@ -551,7 +590,7 @@ function parseDeliveryLocations(xml: string, correlationId?: string): ParsedDeli
   }
   
   log('info', `Delivery locations parsing complete: ${locations.length} locations`, {}, correlationId);
-  return locations;
+  return { locations, rawSample };
 }
 
 function parseScope(xml: string, correlationId?: string): ParsedScope {
@@ -724,7 +763,7 @@ function parseOrganisation(xml: string, canonicalRtoCode: string, correlationId?
     registrationEndDate: extractValue(normalized, 'RegistrationEndDate'),
     contacts: parseContacts(normalized, correlationId),
     addresses: parseAddresses(normalized, correlationId),
-    deliveryLocations: parseDeliveryLocations(normalized, correlationId),
+    deliveryLocations: parseDeliveryLocations(normalized, correlationId).locations,
     scope: parseScope(normalized, correlationId),
   };
 }
@@ -1334,6 +1373,10 @@ serve(async (req) => {
               tenant_id: tenantIdNum,
               rto_number: effectiveRto,
               sectionPresence: orgResult.sectionPresence,
+              // Store raw XML sample for debugging if parse returns 0 but section is present
+              rawXmlSample: (orgResult.sectionPresence?.locations && orgResult.data?.deliveryLocations?.length === 0) 
+                ? parseDeliveryLocations(orgResult.raw, correlationId, true).rawSample
+                : undefined,
             },
           },
         ]);
@@ -1675,7 +1718,7 @@ serve(async (req) => {
             await supabase
               .from('tga_rto_import_jobs')
               .update({
-                status: 'completed',
+                status: 'success',
                 completed_at: fetchedAt,
                 finished_at: fetchedAt,
                 error_message: null,
@@ -1697,7 +1740,7 @@ serve(async (req) => {
             await supabase
               .from('tga_import_runs')
               .update({
-                status: 'completed',
+                status: 'success',
                 finished_at: fetchedAt,
                 records_processed: rowsAffected,
                 error_message: null,
@@ -1731,6 +1774,30 @@ serve(async (req) => {
       } catch (error: unknown) {
         const errorMsg = error instanceof Error ? error.message : String(error);
         log('error', 'Tenant sync failed', { error: errorMsg, tenant_id: tenantIdNum, rto_number: effectiveRto }, correlationId);
+
+        // Update job/run status to 'failed'
+        const failedAt = new Date().toISOString();
+        if (jobId) {
+          await supabase
+            .from('tga_rto_import_jobs')
+            .update({
+              status: 'failed',
+              finished_at: failedAt,
+              last_error: errorMsg,
+              error_message: errorMsg,
+            })
+            .eq('id', jobId);
+        }
+        if (runId) {
+          await supabase
+            .from('tga_import_runs')
+            .update({
+              status: 'failed',
+              finished_at: failedAt,
+              error_message: errorMsg,
+            })
+            .eq('id', runId);
+        }
 
         return new Response(JSON.stringify({
           success: false,
