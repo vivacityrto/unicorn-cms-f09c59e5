@@ -10308,7 +10308,7 @@ export type Database = {
       }
       tga_links: {
         Row: {
-          client_id: string
+          client_id: string | null
           created_at: string
           id: string
           is_linked: boolean
@@ -10317,11 +10317,11 @@ export type Database = {
           last_sync_status: string | null
           link_status: string
           rto_number: string
-          tenant_id: number | null
+          tenant_id: number
           updated_at: string
         }
         Insert: {
-          client_id: string
+          client_id?: string | null
           created_at?: string
           id?: string
           is_linked?: boolean
@@ -10330,11 +10330,11 @@ export type Database = {
           last_sync_status?: string | null
           link_status?: string
           rto_number: string
-          tenant_id?: number | null
+          tenant_id: number
           updated_at?: string
         }
         Update: {
-          client_id?: string
+          client_id?: string | null
           created_at?: string
           id?: string
           is_linked?: boolean
@@ -10343,7 +10343,7 @@ export type Database = {
           last_sync_status?: string | null
           link_status?: string
           rto_number?: string
-          tenant_id?: number | null
+          tenant_id?: number
           updated_at?: string
         }
         Relationships: [
