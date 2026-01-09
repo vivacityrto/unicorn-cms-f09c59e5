@@ -43,10 +43,12 @@ export interface ClientSummary {
 
 export interface ClientProfile {
   tenant_id: number;
+  legal_name: string | null;
   trading_name: string | null;
   abn: string | null;
   acn: string | null;
   org_type: string | null;
+  website: string | null;
   primary_contact_name: string | null;
   primary_contact_email: string | null;
   primary_contact_phone: string | null;

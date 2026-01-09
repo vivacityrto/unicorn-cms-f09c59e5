@@ -5,13 +5,16 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Loader2, Save } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Loader2, Save, ExternalLink } from 'lucide-react';
 import { ClientProfile } from '@/hooks/useClientManagement';
 
 interface ClientProfileFormProps {
   profile: ClientProfile | null;
   onSave: (updates: Partial<ClientProfile>) => Promise<boolean>;
   loading?: boolean;
+  tgaLinked?: boolean;
 }
 
 const ORG_TYPES = [
@@ -33,7 +36,28 @@ const STATES = [
   { value: 'ACT', label: 'Australian Capital Territory' }
 ];
 
-export function ClientProfileForm({ profile, onSave, loading }: ClientProfileFormProps) {
+// Fields that are synced from TGA when linked
+const TGA_SYNCED_FIELDS = ['legal_name', 'trading_name', 'abn', 'acn', 'website', 'org_type'] as const;
+
+function TgaBadge() {
+  return (
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Badge variant="outline" className="ml-2 text-xs bg-primary/5 text-primary border-primary/20">
+            <ExternalLink className="h-3 w-3 mr-1" />
+            TGA
+          </Badge>
+        </TooltipTrigger>
+        <TooltipContent>
+          <p>This field is synced from training.gov.au</p>
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  );
+}
+
+export function ClientProfileForm({ profile, onSave, loading, tgaLinked }: ClientProfileFormProps) {
   const [formData, setFormData] = useState<Partial<ClientProfile>>({});
   const [saving, setSaving] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
@@ -59,6 +83,11 @@ export function ClientProfileForm({ profile, onSave, loading }: ClientProfileFor
     }
   };
 
+  // Check if a field is synced from TGA and should be read-only
+  const isTgaField = (field: string) => {
+    return tgaLinked && TGA_SYNCED_FIELDS.includes(field as any);
+  };
+
   return (
     <div className="space-y-6">
       {/* Organisation Details */}
@@ -67,24 +96,48 @@ export function ClientProfileForm({ profile, onSave, loading }: ClientProfileFor
           <CardTitle className="text-lg">Organisation Details</CardTitle>
         </CardHeader>
         <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Legal Name - TGA synced field */}
+          <div className="space-y-2 md:col-span-2">
+            <Label htmlFor="legal_name" className="flex items-center">
+              Legal Name
+              {isTgaField('legal_name') && <TgaBadge />}
+            </Label>
+            <Input
+              id="legal_name"
+              value={formData.legal_name || ''}
+              onChange={(e) => handleChange('legal_name', e.target.value)}
+              disabled={loading || isTgaField('legal_name')}
+              placeholder={isTgaField('legal_name') && !formData.legal_name ? 'Not provided by TGA' : ''}
+              className={isTgaField('legal_name') ? 'bg-muted' : ''}
+            />
+          </div>
+
           <div className="space-y-2">
-            <Label htmlFor="trading_name">Trading Name</Label>
+            <Label htmlFor="trading_name" className="flex items-center">
+              Trading Name
+              {isTgaField('trading_name') && <TgaBadge />}
+            </Label>
             <Input
               id="trading_name"
               value={formData.trading_name || ''}
               onChange={(e) => handleChange('trading_name', e.target.value)}
-              disabled={loading}
+              disabled={loading || isTgaField('trading_name')}
+              placeholder={isTgaField('trading_name') && !formData.trading_name ? 'Not provided by TGA' : ''}
+              className={isTgaField('trading_name') ? 'bg-muted' : ''}
             />
           </div>
           
           <div className="space-y-2">
-            <Label htmlFor="org_type">Organisation Type</Label>
+            <Label htmlFor="org_type" className="flex items-center">
+              Organisation Type
+              {isTgaField('org_type') && <TgaBadge />}
+            </Label>
             <Select
               value={formData.org_type || ''}
               onValueChange={(value) => handleChange('org_type', value)}
-              disabled={loading}
+              disabled={loading || isTgaField('org_type')}
             >
-              <SelectTrigger>
+              <SelectTrigger className={isTgaField('org_type') ? 'bg-muted' : ''}>
                 <SelectValue placeholder="Select type..." />
               </SelectTrigger>
               <SelectContent>
@@ -98,24 +151,48 @@ export function ClientProfileForm({ profile, onSave, loading }: ClientProfileFor
           </div>
           
           <div className="space-y-2">
-            <Label htmlFor="abn">ABN</Label>
+            <Label htmlFor="abn" className="flex items-center">
+              ABN
+              {isTgaField('abn') && <TgaBadge />}
+            </Label>
             <Input
               id="abn"
               value={formData.abn || ''}
               onChange={(e) => handleChange('abn', e.target.value)}
-              placeholder="XX XXX XXX XXX"
-              disabled={loading}
+              placeholder={isTgaField('abn') && !formData.abn ? 'Not provided by TGA' : 'XX XXX XXX XXX'}
+              disabled={loading || isTgaField('abn')}
+              className={isTgaField('abn') ? 'bg-muted' : ''}
             />
           </div>
           
           <div className="space-y-2">
-            <Label htmlFor="acn">ACN</Label>
+            <Label htmlFor="acn" className="flex items-center">
+              ACN
+              {isTgaField('acn') && <TgaBadge />}
+            </Label>
             <Input
               id="acn"
               value={formData.acn || ''}
               onChange={(e) => handleChange('acn', e.target.value)}
-              placeholder="XXX XXX XXX"
-              disabled={loading}
+              placeholder={isTgaField('acn') && !formData.acn ? 'Not provided by TGA' : 'XXX XXX XXX'}
+              disabled={loading || isTgaField('acn')}
+              className={isTgaField('acn') ? 'bg-muted' : ''}
+            />
+          </div>
+
+          {/* Website - TGA synced field */}
+          <div className="space-y-2">
+            <Label htmlFor="website" className="flex items-center">
+              Website
+              {isTgaField('website') && <TgaBadge />}
+            </Label>
+            <Input
+              id="website"
+              value={formData.website || ''}
+              onChange={(e) => handleChange('website', e.target.value)}
+              placeholder={isTgaField('website') && !formData.website ? 'Not provided by TGA' : 'https://...'}
+              disabled={loading || isTgaField('website')}
+              className={isTgaField('website') ? 'bg-muted' : ''}
             />
           </div>
           
