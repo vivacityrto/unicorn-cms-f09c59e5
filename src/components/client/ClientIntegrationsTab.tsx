@@ -30,6 +30,7 @@ import { ClientProfile, RegistryLink } from '@/hooks/useClientManagement';
 import { useTgaRtoData } from '@/hooks/useTgaRtoData';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
+import { formatDate, formatDateTime } from '@/lib/utils';
 
 interface ClientIntegrationsTabProps {
   profile: ClientProfile | null;
@@ -79,11 +80,17 @@ interface SummaryFieldProps {
   fieldPresence?: Record<string, boolean>;
   parseFailed?: string[];
   isLink?: boolean;
+  isDate?: boolean;
   decode?: boolean;
 }
 
-function SummaryField({ label, value, fieldKey, fieldPresence, parseFailed, isLink, decode }: SummaryFieldProps) {
-  const displayValue = decode ? decodeHtmlEntities(value) : value;
+function SummaryField({ label, value, fieldKey, fieldPresence, parseFailed, isLink, isDate, decode }: SummaryFieldProps) {
+  let displayValue = decode ? decodeHtmlEntities(value) : value;
+  
+  // Format dates using DD/MM/YYYY format
+  if (isDate && displayValue) {
+    displayValue = formatDate(displayValue);
+  }
   
   // Determine status based on debug info
   let statusMessage: React.ReactNode = null;
@@ -92,7 +99,7 @@ function SummaryField({ label, value, fieldKey, fieldPresence, parseFailed, isLi
     const isPresent = fieldPresence[fieldKey];
     const didFail = parseFailed?.includes(fieldKey);
     
-    if (!displayValue) {
+    if (!displayValue || displayValue === "—") {
       if (didFail) {
         // This is a PARSING BUG - tag exists but we failed to extract
         statusMessage = (
@@ -117,7 +124,7 @@ function SummaryField({ label, value, fieldKey, fieldPresence, parseFailed, isLi
         statusMessage = <span className="text-muted-foreground italic">Not provided by TGA</span>;
       }
     }
-  } else if (!displayValue) {
+  } else if (!displayValue || displayValue === "—") {
     statusMessage = <span className="text-muted-foreground italic">—</span>;
   }
 
@@ -125,7 +132,7 @@ function SummaryField({ label, value, fieldKey, fieldPresence, parseFailed, isLi
   return (
     <div className="space-y-1">
       <div className="text-sm text-muted-foreground">{label}</div>
-      {displayValue ? (
+      {displayValue && displayValue !== "—" ? (
         isLink ? (
           <a 
             href={displayValue.startsWith('http') ? displayValue : `https://${displayValue}`}
@@ -286,6 +293,7 @@ function SummaryTab({ summary, debugPayload }: SummaryTabProps) {
         fieldKey="InitialRegistrationDate" 
         fieldPresence={fieldPresence}
         parseFailed={parseFailed}
+        isDate
       />
       <SummaryField 
         label="Registration Start" 
@@ -293,6 +301,7 @@ function SummaryTab({ summary, debugPayload }: SummaryTabProps) {
         fieldKey="RegistrationStartDate" 
         fieldPresence={fieldPresence}
         parseFailed={parseFailed}
+        isDate
       />
       <SummaryField 
         label="Registration End" 
@@ -300,11 +309,12 @@ function SummaryTab({ summary, debugPayload }: SummaryTabProps) {
         fieldKey="RegistrationEndDate" 
         fieldPresence={fieldPresence}
         parseFailed={parseFailed}
+        isDate
       />
       {summary.fetched_at && (
         <div className="space-y-1 col-span-2 md:col-span-3 pt-2 border-t">
           <p className="text-xs text-muted-foreground">
-            Data last synced: {new Date(summary.fetched_at).toLocaleString()}
+            Data last synced: {formatDateTime(summary.fetched_at)}
           </p>
         </div>
       )}
