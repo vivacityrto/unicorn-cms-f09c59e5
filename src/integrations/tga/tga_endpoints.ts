@@ -5,9 +5,9 @@
  * Per TGA Web Services Specification v13r1.
  * 
  * IMPORTANT:
- * - OrganisationServiceV13 uses 'WebServices' (capital S)
- * - TrainingComponentServiceV13 and ClassificationServiceV13 use 'Webservices' (lowercase s)
- * - V13 IS part of the URL path (e.g., OrganisationServiceV13.svc)
+ * - OrganisationService uses 'WebServices' (capital S)
+ * - TrainingComponentService and ClassificationService use 'Webservices' (lowercase s)
+ * - V13 is NOT in the URL path - it's only in the SOAP namespace
  */
 
 export type TGAEnvironment = 'prod' | 'sandbox';
@@ -30,11 +30,11 @@ export function getTgaEndpoints(env: TGAEnvironment = 'prod'): TGAEndpoints {
     : 'ws.training.gov.au';
 
   return {
-    // OrganisationServiceV13 uses WebServices (capital S)
-    organisation: `https://${baseHost}/Deewr.Tga.WebServices/OrganisationServiceV13.svc`,
-    // TrainingComponentServiceV13 and ClassificationServiceV13 use Webservices (lowercase s)
-    training: `https://${baseHost}/Deewr.Tga.Webservices/TrainingComponentServiceV13.svc`,
-    classification: `https://${baseHost}/Deewr.Tga.Webservices/ClassificationServiceV13.svc`,
+    // OrganisationService uses WebServices (capital S)
+    organisation: `https://${baseHost}/Deewr.Tga.WebServices/OrganisationService.svc`,
+    // TrainingComponentService and ClassificationService use Webservices (lowercase s)
+    training: `https://${baseHost}/Deewr.Tga.Webservices/TrainingComponentService.svc`,
+    classification: `https://${baseHost}/Deewr.Tga.Webservices/ClassificationService.svc`,
   };
 }
 

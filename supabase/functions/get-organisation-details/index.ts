@@ -1,9 +1,9 @@
 import { corsHeaders } from '../_shared/cors.ts';
 
-// TGA SOAP Endpoints - correct production URLs
+// TGA SOAP Endpoints - V13 is NOT in URL path, only in SOAP namespace
 const TGA_WS_BASE = Deno.env.get('TGA_WS_BASE') || 'https://ws.training.gov.au';
 const TGA_ENDPOINT = Deno.env.get('TGA_ORG_ENDPOINT') || 
-  `${TGA_WS_BASE}/Deewr.Tga.WebServices/OrganisationServiceV13.svc`;
+  `${TGA_WS_BASE}/Deewr.Tga.WebServices/OrganisationService.svc`;
 
 // Production credentials
 const TGA_USERNAME = Deno.env.get('TGA_WS_USERNAME') || '';

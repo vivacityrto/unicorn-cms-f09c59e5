@@ -24,9 +24,9 @@ Configure these in Supabase Edge Function Secrets:
 
 | Service | Endpoint |
 |---------|----------|
-| Organisation | `https://ws.training.gov.au/Deewr.Tga.WebServices/OrganisationServiceV13.svc` |
-| Training Component | `https://ws.training.gov.au/Deewr.Tga.WebServices/TrainingComponentServiceV13.svc` |
-| Classification | `https://ws.training.gov.au/Deewr.Tga.WebServices/ClassificationServiceV13.svc` |
+| Organisation | `https://ws.training.gov.au/Deewr.Tga.WebServices/OrganisationService.svc` |
+| Training Component | `https://ws.training.gov.au/Deewr.Tga.Webservices/TrainingComponentService.svc` |
+| Classification | `https://ws.training.gov.au/Deewr.Tga.Webservices/ClassificationService.svc` |
 
 ## Sync Scope
 

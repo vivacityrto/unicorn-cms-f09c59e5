@@ -10,22 +10,22 @@ const corsHeaders = {
 
 // TGA Production SOAP Endpoints - WCF basicHttpBinding (SOAP 1.1)
 // Per TGA Web Services Specification v13r1
-// IMPORTANT: V13 IS in the URL path for all services
-// - OrganisationServiceV13.svc uses 'WebServices' (capital S)
-// - TrainingComponentServiceV13.svc uses 'Webservices' (lowercase s)
-// - ClassificationServiceV13.svc uses 'Webservices' (lowercase s)
+// IMPORTANT: V13 is NOT in the URL path - it's only in the SOAP namespace
+// - OrganisationService uses 'WebServices' (capital S)
+// - TrainingComponentService uses 'Webservices' (lowercase s)
+// - ClassificationService uses 'Webservices' (lowercase s)
 const TGA_ENV = Deno.env.get('TGA_ENV') || 'prod';
 const TGA_BASE_HOST = TGA_ENV === 'sandbox' 
   ? 'ws.sandbox.training.gov.au' 
   : 'ws.training.gov.au';
 
-// Endpoints include V13 in the service name (confirmed working pattern)
+// Endpoints do NOT include V13 in the service name - V13 is only in SOAP namespace
 const TGA_ENDPOINTS = {
-  // Note: OrganisationService uses WebServices (capital S), V13 in name
-  organisation: `https://${TGA_BASE_HOST}/Deewr.Tga.WebServices/OrganisationServiceV13.svc`,
-  // Note: TrainingComponent uses Webservices (lowercase s), V13 in name
-  training: `https://${TGA_BASE_HOST}/Deewr.Tga.Webservices/TrainingComponentServiceV13.svc`,
-  classification: `https://${TGA_BASE_HOST}/Deewr.Tga.Webservices/ClassificationServiceV13.svc`,
+  // OrganisationService uses WebServices (capital S)
+  organisation: `https://${TGA_BASE_HOST}/Deewr.Tga.WebServices/OrganisationService.svc`,
+  // TrainingComponentService uses Webservices (lowercase s)
+  training: `https://${TGA_BASE_HOST}/Deewr.Tga.Webservices/TrainingComponentService.svc`,
+  classification: `https://${TGA_BASE_HOST}/Deewr.Tga.Webservices/ClassificationService.svc`,
 };
 
 // TGA V13 namespace - per WSDL
@@ -41,7 +41,7 @@ const SOAP_ACTIONS = {
   searchTrainingComponent: `${TGA_V13_NAMESPACE}ITrainingComponentService/Search`,
 };
 
-const FUNCTION_VERSION = '1.0.7';
+const FUNCTION_VERSION = '1.0.8';
 
 // Credentials loaded from Supabase secrets (try new names first, fall back to old)
 const TGA_WS_USERNAME = Deno.env.get('TGA_USERNAME') || Deno.env.get('TGA_WS_USERNAME');
@@ -249,7 +249,7 @@ async function makeSoapRequest(endpoint: string, soapAction: string, body: strin
           endpoint,
           soapAction,
           soapVersion: '1.1',
-          hint: 'Endpoint should include V13 in path (e.g., OrganisationServiceV13.svc)',
+          hint: 'URL should NOT include V13 in path. V13 is only in SOAP namespace.',
           responsePreview: responseText.substring(0, 300),
           duration,
         });
