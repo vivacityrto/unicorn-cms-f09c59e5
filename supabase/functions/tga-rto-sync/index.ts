@@ -42,8 +42,8 @@ async function fetchAllScope(rtoId: string, componentType: string): Promise<{ it
   // Delivery filter - skillSets don't have delivery
   const delivery = componentType === 'skillSet' ? 'false' : 'true';
   
-  // Build properly encoded filter
-  const filter = `componentType==${componentFilter}`;
+  // Build properly encoded filter - ONLY fetch explicit scope items (isImplicit==false)
+  const filter = `componentType==${componentFilter};isImplicit==false`;
   
   while (hasMore) {
     const url = `https://training.gov.au/api/organisation/${encodeURIComponent(rtoId)}/scope?api-version=1.0&offset=${offset}&pageSize=${PAGE_SIZE}&delivery=${delivery}&filters=${encodeURIComponent(filter)}&sorts=code`;
@@ -341,22 +341,31 @@ serve(async (req) => {
       }, { onConflict: 'tenant_id' });
     
     // Also upsert tga_rto_summary for the Summary tab UI
-    await supabaseAdmin
+    // Columns: rto_code (not rto_id), web_address (not website), source_payload (not raw_payload)
+    const { error: summaryError } = await supabaseAdmin
       .from('tga_rto_summary')
       .upsert({
-        rto_id: rtoId,
+        tenant_id: tenantIdNum,
+        rto_code: rtoId,
         legal_name: legalName,
         trading_name: tradingName,
         abn: abn,
         acn: acn,
-        website: website,
+        web_address: website,
         registration_start_date: registrationStartDate,
         registration_end_date: registrationEndDate,
         organisation_type: organisationType,
         status: orgData.status || 'Registered',
-        raw_payload: orgData,
+        source_payload: orgData,
+        fetched_at: now,
         updated_at: now,
-      }, { onConflict: 'rto_id' });
+      }, { onConflict: 'rto_code' });
+    
+    if (summaryError) {
+      log('warn', 'Could not upsert tga_rto_summary', { error: summaryError.message });
+    } else {
+      log('info', 'Updated tga_rto_summary', { rtoCode: rtoId, abn, acn, website });
+    }
 
     // 6. Mark job done
     const totalItems = Object.values(scopeCounts).reduce((a, b) => a + b, 0);
