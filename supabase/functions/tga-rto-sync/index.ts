@@ -457,14 +457,18 @@ serve(async (req) => {
       tenant_id: tenantIdNum,
       rto_code: rtoId,
       address_type: addr.addressType,
-      line1: addr.address?.line1 || addr.line1 || null,
-      line2: addr.address?.line2 || addr.line2 || null,
+      address_line_1: addr.address?.line1 || addr.line1 || null,
+      address_line_2: addr.address?.line2 || addr.line2 || null,
       suburb: addr.address?.suburb || addr.suburb || null,
       state: addr.address?.state || addr.state || null,
       postcode: addr.address?.postcode || addr.postcode || null,
       country: addr.address?.country || addr.country || 'Australia',
-      start_date: addr.startDate || null,
-      raw_data: addr,
+      phone: addr.phone || null,
+      fax: addr.fax || null,
+      email: addr.email || null,
+      website: addr.webAddress || null,
+      source_payload: addr,
+      fetched_at: now,
     }));
 
     if (addressRows.length > 0) {
@@ -491,14 +495,14 @@ serve(async (req) => {
       tenant_id: tenantIdNum,
       rto_code: rtoId,
       location_name: addr.address?.locationName || addr.locationName || 'Unnamed Location',
-      line1: addr.address?.line1 || addr.line1 || null,
-      line2: addr.address?.line2 || addr.line2 || null,
+      address_line_1: addr.address?.line1 || addr.line1 || null,
+      address_line_2: addr.address?.line2 || addr.line2 || null,
       suburb: addr.address?.suburb || addr.suburb || null,
       state: addr.address?.state || addr.state || null,
       postcode: addr.address?.postcode || addr.postcode || null,
       country: addr.address?.country || addr.country || 'Australia',
-      start_date: addr.startDate || null,
-      raw_data: addr,
+      source_payload: addr,
+      fetched_at: now,
     }));
 
     if (deliveryRows.length > 0) {
