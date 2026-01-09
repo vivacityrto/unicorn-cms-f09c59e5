@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -21,10 +21,13 @@ import {
   GraduationCap,
   Layers,
   BookOpen,
-  Award
+  Award,
+  Bug
 } from 'lucide-react';
 import { ClientProfile, RegistryLink } from '@/hooks/useClientManagement';
 import { useTgaRtoData } from '@/hooks/useTgaRtoData';
+import { useAuth } from '@/hooks/useAuth';
+import { supabase } from '@/integrations/supabase/client';
 
 interface ClientIntegrationsTabProps {
   profile: ClientProfile | null;
@@ -69,11 +72,70 @@ export function ClientIntegrationsTab({
   loading 
 }: ClientIntegrationsTabProps) {
   const [updating, setUpdating] = useState(false);
+  const [tenantStatus, setTenantStatus] = useState<{ status: string; mergedInto?: number } | null>(null);
+  const [debugInfo, setDebugInfo] = useState<{
+    lastSyncRun?: { id: string; status: string; created_at: string } | null;
+    debugPayload?: { record_count: number; fetched_at: string } | null;
+  } | null>(null);
+  const [showDebug, setShowDebug] = useState(false);
+  const { isSuperAdmin } = useAuth();
 
   const hasRtoNumber = !!profile?.rto_number;
   const currentStatus = registryLink?.link_status || 'not_linked';
   const statusConfig = STATUS_CONFIG[currentStatus] || STATUS_CONFIG.not_linked;
   const isLinked = currentStatus === 'linked';
+
+  // Check tenant status
+  useEffect(() => {
+    if (!profile?.tenant_id) return;
+    
+    const fetchTenantStatus = async () => {
+      const { data } = await supabase
+        .from('tenants')
+        .select('status, metadata')
+        .eq('id', profile.tenant_id)
+        .single();
+      
+      if (data) {
+        const metadata = data.metadata as Record<string, unknown> | null;
+        setTenantStatus({
+          status: data.status,
+          mergedInto: metadata?.merged_into as number | undefined
+        });
+      }
+    };
+    
+    fetchTenantStatus();
+  }, [profile?.tenant_id]);
+
+  // Fetch debug info for SuperAdmins
+  useEffect(() => {
+    if (!isSuperAdmin || !profile?.tenant_id || !showDebug) return;
+    
+    const fetchDebugInfo = async () => {
+      const [runRes, payloadRes] = await Promise.all([
+        supabase.from('tga_rto_import_jobs')
+          .select('id, status, created_at')
+          .eq('tenant_id', profile.tenant_id)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle(),
+        supabase.from('tga_debug_payloads')
+          .select('record_count, fetched_at')
+          .eq('tenant_id', profile.tenant_id)
+          .order('fetched_at', { ascending: false })
+          .limit(1)
+          .maybeSingle()
+      ]);
+      
+      setDebugInfo({
+        lastSyncRun: runRes.data,
+        debugPayload: payloadRes.data
+      });
+    };
+    
+    fetchDebugInfo();
+  }, [isSuperAdmin, profile?.tenant_id, showDebug]);
 
   // Fetch TGA data when linked - use the new dataset-based approach
   // Note: We pass tenant_id as a string identifier since that's what we have
@@ -113,6 +175,22 @@ export function ClientIntegrationsTab({
   const handleSyncNow = async () => {
     await tgaData.triggerSync();
   };
+
+  // Show merged tenant warning
+  if (tenantStatus?.status === 'inactive' && tenantStatus?.mergedInto) {
+    return (
+      <div className="space-y-6">
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Tenant Merged</AlertTitle>
+          <AlertDescription>
+            This tenant has been merged into tenant {tenantStatus.mergedInto}. 
+            Please navigate to the active tenant to manage TGA integrations.
+          </AlertDescription>
+        </Alert>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -601,6 +679,77 @@ export function ClientIntegrationsTab({
               </Tabs>
             )}
           </CardContent>
+        </Card>
+      )}
+
+      {/* SuperAdmin Debug Panel */}
+      {isSuperAdmin && (
+        <Card>
+          <CardHeader className="pb-2">
+            <div className="flex items-center justify-between">
+              <CardTitle className="flex items-center gap-2 text-sm">
+                <Bug className="h-4 w-4" />
+                TGA Debug Panel
+              </CardTitle>
+              <Button 
+                variant="ghost" 
+                size="sm"
+                onClick={() => setShowDebug(!showDebug)}
+              >
+                {showDebug ? 'Hide' : 'Show'}
+              </Button>
+            </div>
+          </CardHeader>
+          {showDebug && (
+            <CardContent className="pt-0">
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <p className="text-muted-foreground">Tenant ID</p>
+                  <p className="font-mono">{profile?.tenant_id ?? 'N/A'}</p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground">RTO Number</p>
+                  <p className="font-mono">{profile?.rto_number ?? 'Not set'}</p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground">Tenant Status</p>
+                  <Badge variant={tenantStatus?.status === 'active' ? 'default' : 'secondary'}>
+                    {tenantStatus?.status ?? 'Unknown'}
+                  </Badge>
+                </div>
+                <div>
+                  <p className="text-muted-foreground">Link Status</p>
+                  <Badge variant="outline">{currentStatus}</Badge>
+                </div>
+                {debugInfo?.lastSyncRun && (
+                  <>
+                    <div>
+                      <p className="text-muted-foreground">Last Sync Job ID</p>
+                      <p className="font-mono text-xs">{debugInfo.lastSyncRun.id}</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground">Last Sync Status</p>
+                      <Badge variant={debugInfo.lastSyncRun.status === 'completed' ? 'default' : 'secondary'}>
+                        {debugInfo.lastSyncRun.status}
+                      </Badge>
+                    </div>
+                  </>
+                )}
+                {debugInfo?.debugPayload && (
+                  <>
+                    <div>
+                      <p className="text-muted-foreground">Debug Record Count</p>
+                      <p>{debugInfo.debugPayload.record_count}</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground">Last Fetched</p>
+                      <p>{new Date(debugInfo.debugPayload.fetched_at).toLocaleString()}</p>
+                    </div>
+                  </>
+                )}
+              </div>
+            </CardContent>
+          )}
         </Card>
       )}
 
