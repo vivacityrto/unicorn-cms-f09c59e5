@@ -48,7 +48,7 @@ const SOAP_ACTIONS = {
   searchTrainingComponent: `${TGA_V13_NAMESPACE}ITrainingComponentService/Search`,
 };
 
-const FUNCTION_VERSION = '1.2.0';
+const FUNCTION_VERSION = '1.3.0';
 
 const TGA_WS_USERNAME = Deno.env.get('TGA_USERNAME') || Deno.env.get('TGA_WS_USERNAME');
 const TGA_WS_PASSWORD = Deno.env.get('TGA_PASSWORD') || Deno.env.get('TGA_WS_PASSWORD');
@@ -122,6 +122,7 @@ function buildWsSecurityHeader(): string {
 }
 
 // ==================== REGEX-BASED XML PARSING ====================
+
 // Extract single value from XML (namespace-agnostic)
 function extractValue(xml: string, tagName: string): string | null {
   const patterns = [
@@ -135,20 +136,27 @@ function extractValue(xml: string, tagName: string): string | null {
   return null;
 }
 
-// Extract a section of XML by tag name
+// Extract a section of XML by tag name (gets content between tags)
 function extractSection(xml: string, tagName: string): string | null {
   const pattern = new RegExp(`<(?:\\w+:)?${tagName}[^>]*>([\\s\\S]*?)</(?:\\w+:)?${tagName}>`, 'i');
   const match = xml.match(pattern);
   return match ? match[1] : null;
 }
 
-// Extract all occurrences of a tag
-function extractAllSections(xml: string, tagName: string): string[] {
+// Extract the full tag including its content
+function extractFullTag(xml: string, tagName: string): string | null {
+  const pattern = new RegExp(`<(?:\\w+:)?${tagName}[^>]*>[\\s\\S]*?</(?:\\w+:)?${tagName}>`, 'i');
+  const match = xml.match(pattern);
+  return match ? match[0] : null;
+}
+
+// Extract all occurrences of a tag (returns full tag with content)
+function extractAllTags(xml: string, tagName: string): string[] {
   const results: string[] = [];
-  const pattern = new RegExp(`<(?:\\w+:)?${tagName}[^>]*>([\\s\\S]*?)</(?:\\w+:)?${tagName}>`, 'gi');
+  const pattern = new RegExp(`<(?:\\w+:)?${tagName}[^>]*>[\\s\\S]*?</(?:\\w+:)?${tagName}>`, 'gi');
   let match;
   while ((match = pattern.exec(xml)) !== null) {
-    results.push(match[1]);
+    results.push(match[0]);
   }
   return results;
 }
@@ -241,53 +249,50 @@ interface SectionPresence {
   courses: boolean;
 }
 
-// ==================== DOM-BASED PARSING FUNCTIONS ====================
+// ==================== REGEX-BASED PARSING FUNCTIONS ====================
 
-// Extract the 3 current contact types using DOM
-function parseContactsDOM(doc: Document, correlationId?: string): ParsedContact[] {
+function parseContacts(xml: string, correlationId?: string): ParsedContact[] {
   const contacts: ParsedContact[] = [];
   const today = new Date().toISOString().split('T')[0];
+  const normalized = stripXmlPrefixes(xml);
   
-  log('info', 'Parsing contacts with DOM', {}, correlationId);
+  log('info', 'Parsing contacts with regex', {}, correlationId);
   
-  // Find all Contact elements
-  const contactElements = findAllByLocalName(doc, 'Contact');
-  log('info', `Found ${contactElements.length} Contact elements`, {}, correlationId);
-  
-  // Also look for specific contact type containers
-  const contactTypeContainers = [
-    { names: ['ContactChiefExecutive', 'ChiefExecutive', 'CEO'], type: 'ChiefExecutive' },
-    { names: ['ContactPublicEnquiries', 'PublicEnquiries'], type: 'PublicEnquiries' },
-    { names: ['ContactRegistrationEnquiries', 'RegistrationEnquiries'], type: 'RegistrationEnquiries' },
+  // Look for specific contact type containers first
+  const contactMappings = [
+    { tags: ['ContactChiefExecutive', 'ChiefExecutive'], type: 'ChiefExecutive' },
+    { tags: ['ContactPublicEnquiries', 'PublicEnquiries'], type: 'PublicEnquiries' },
+    { tags: ['ContactRegistrationEnquiries', 'RegistrationEnquiries'], type: 'RegistrationEnquiries' },
   ];
   
   const seenTypes = new Set<string>();
   
-  // Try specific containers first
-  for (const { names, type } of contactTypeContainers) {
-    for (const name of names) {
-      const container = findFirstByLocalName(doc, name);
-      if (container && !seenTypes.has(type)) {
-        const endDate = getChildText(container, 'EndDate') || getChildText(container, 'EffectiveTo');
+  for (const { tags, type } of contactMappings) {
+    if (seenTypes.has(type)) continue;
+    
+    for (const tag of tags) {
+      const section = extractFullTag(normalized, tag);
+      if (section) {
+        const endDate = extractValue(section, 'EndDate') || extractValue(section, 'EffectiveTo');
         const isCurrent = !endDate || endDate >= today;
         
         if (isCurrent) {
-          const name = getChildText(container, 'Name') || 
-                      getChildText(container, 'FullName') ||
-                      [getChildText(container, 'FirstName'), getChildText(container, 'LastName')].filter(Boolean).join(' ') || null;
+          const name = extractValue(section, 'Name') || 
+                      extractValue(section, 'FullName') ||
+                      [extractValue(section, 'FirstName'), extractValue(section, 'LastName')].filter(Boolean).join(' ') || null;
           
           if (name) {
             seenTypes.add(type);
             contacts.push({
               contactType: type,
               name,
-              position: getChildText(container, 'Position') || getChildText(container, 'JobTitle') || type,
-              phone: getChildText(container, 'Phone') || getChildText(container, 'PhoneNumber') || getChildText(container, 'BusinessPhone'),
-              mobile: getChildText(container, 'Mobile') || getChildText(container, 'MobileNumber'),
-              fax: getChildText(container, 'Fax') || getChildText(container, 'FaxNumber'),
-              email: getChildText(container, 'Email') || getChildText(container, 'EmailAddress'),
-              address: getChildText(container, 'Address') || getChildText(container, 'StreetAddress'),
-              organisationName: getChildText(container, 'OrganisationName') || getChildText(container, 'Organisation'),
+              position: extractValue(section, 'Position') || extractValue(section, 'JobTitle') || type,
+              phone: extractValue(section, 'Phone') || extractValue(section, 'PhoneNumber') || extractValue(section, 'BusinessPhone'),
+              mobile: extractValue(section, 'Mobile') || extractValue(section, 'MobileNumber'),
+              fax: extractValue(section, 'Fax') || extractValue(section, 'FaxNumber'),
+              email: extractValue(section, 'Email') || extractValue(section, 'EmailAddress'),
+              address: extractValue(section, 'Address') || extractValue(section, 'StreetAddress'),
+              organisationName: extractValue(section, 'OrganisationName') || extractValue(section, 'Organisation'),
             });
             log('info', `Added ${type} contact from container`, { name }, correlationId);
             break;
@@ -297,41 +302,47 @@ function parseContactsDOM(doc: Document, correlationId?: string): ParsedContact[
     }
   }
   
-  // Fall back to generic Contact elements
-  for (const contactEl of contactElements) {
-    if (seenTypes.size >= 3) break;
+  // Also look for generic Contact elements if we haven't found all 3
+  if (seenTypes.size < 3) {
+    const contactElements = extractAllTags(normalized, 'Contact');
+    log('info', `Found ${contactElements.length} generic Contact elements`, {}, correlationId);
     
-    const endDate = getChildText(contactEl, 'EndDate') || getChildText(contactEl, 'EffectiveTo');
-    const isCurrent = !endDate || endDate >= today;
-    if (!isCurrent) continue;
-    
-    const rawType = getChildText(contactEl, 'ContactType') || getChildText(contactEl, 'Type') || '';
-    let normalizedType = '';
-    if (rawType.includes('Chief') || rawType.includes('CEO') || rawType.includes('Principal') || rawType.includes('Executive')) {
-      normalizedType = 'ChiefExecutive';
-    } else if (rawType.includes('Public')) {
-      normalizedType = 'PublicEnquiries';
-    } else if (rawType.includes('Registration')) {
-      normalizedType = 'RegistrationEnquiries';
-    }
-    
-    if (normalizedType && !seenTypes.has(normalizedType)) {
-      seenTypes.add(normalizedType);
-      const name = getChildText(contactEl, 'Name') || getChildText(contactEl, 'FullName') ||
-                  [getChildText(contactEl, 'FirstName'), getChildText(contactEl, 'LastName')].filter(Boolean).join(' ') || null;
+    for (const contactXml of contactElements) {
+      if (seenTypes.size >= 3) break;
       
-      contacts.push({
-        contactType: normalizedType,
-        name,
-        position: getChildText(contactEl, 'Position') || getChildText(contactEl, 'JobTitle'),
-        phone: getChildText(contactEl, 'Phone') || getChildText(contactEl, 'PhoneNumber'),
-        mobile: getChildText(contactEl, 'Mobile') || getChildText(contactEl, 'MobileNumber'),
-        fax: getChildText(contactEl, 'Fax') || getChildText(contactEl, 'FaxNumber'),
-        email: getChildText(contactEl, 'Email') || getChildText(contactEl, 'EmailAddress'),
-        address: getChildText(contactEl, 'Address'),
-        organisationName: getChildText(contactEl, 'OrganisationName'),
-      });
-      log('info', `Added ${normalizedType} contact from Contact element`, { name, rawType }, correlationId);
+      const endDate = extractValue(contactXml, 'EndDate') || extractValue(contactXml, 'EffectiveTo');
+      const isCurrent = !endDate || endDate >= today;
+      if (!isCurrent) continue;
+      
+      const rawType = extractValue(contactXml, 'ContactType') || extractValue(contactXml, 'Type') || '';
+      let normalizedType = '';
+      
+      if (rawType.includes('Chief') || rawType.includes('CEO') || rawType.includes('Principal') || rawType.includes('Executive')) {
+        normalizedType = 'ChiefExecutive';
+      } else if (rawType.includes('Public')) {
+        normalizedType = 'PublicEnquiries';
+      } else if (rawType.includes('Registration')) {
+        normalizedType = 'RegistrationEnquiries';
+      }
+      
+      if (normalizedType && !seenTypes.has(normalizedType)) {
+        seenTypes.add(normalizedType);
+        const name = extractValue(contactXml, 'Name') || extractValue(contactXml, 'FullName') ||
+                    [extractValue(contactXml, 'FirstName'), extractValue(contactXml, 'LastName')].filter(Boolean).join(' ') || null;
+        
+        contacts.push({
+          contactType: normalizedType,
+          name,
+          position: extractValue(contactXml, 'Position') || extractValue(contactXml, 'JobTitle'),
+          phone: extractValue(contactXml, 'Phone') || extractValue(contactXml, 'PhoneNumber'),
+          mobile: extractValue(contactXml, 'Mobile') || extractValue(contactXml, 'MobileNumber'),
+          fax: extractValue(contactXml, 'Fax') || extractValue(contactXml, 'FaxNumber'),
+          email: extractValue(contactXml, 'Email') || extractValue(contactXml, 'EmailAddress'),
+          address: extractValue(contactXml, 'Address'),
+          organisationName: extractValue(contactXml, 'OrganisationName'),
+        });
+        log('info', `Added ${normalizedType} contact from generic Contact`, { name, rawType }, correlationId);
+      }
     }
   }
   
@@ -339,43 +350,45 @@ function parseContactsDOM(doc: Document, correlationId?: string): ParsedContact[
   return contacts;
 }
 
-// Parse addresses using DOM
-function parseAddressesDOM(doc: Document, correlationId?: string): ParsedAddress[] {
+function parseAddresses(xml: string, correlationId?: string): ParsedAddress[] {
   const addresses: ParsedAddress[] = [];
+  const normalized = stripXmlPrefixes(xml);
   
-  log('info', 'Parsing addresses with DOM', {}, correlationId);
+  log('info', 'Parsing addresses with regex', {}, correlationId);
   
-  // Look for specific address elements
+  // Look for specific address type containers
   const addressMappings = [
-    { names: ['HeadOfficeLocation', 'HeadOfficePhysicalAddress', 'PhysicalAddress'], type: 'HeadOffice' },
-    { names: ['HeadOfficePostalAddress', 'PostalAddress'], type: 'Postal' },
-    { names: ['BusinessAddress'], type: 'Business' },
+    { tags: ['HeadOfficeLocation', 'HeadOfficePhysicalAddress', 'PhysicalAddress'], type: 'HeadOffice' },
+    { tags: ['HeadOfficePostalAddress', 'PostalAddress'], type: 'Postal' },
+    { tags: ['BusinessAddress'], type: 'Business' },
   ];
   
   const seenTypes = new Set<string>();
   
-  for (const { names, type } of addressMappings) {
-    for (const name of names) {
-      const container = findFirstByLocalName(doc, name);
-      if (container && !seenTypes.has(type)) {
-        const line1 = getChildText(container, 'Line1') || getChildText(container, 'AddressLine1') || 
-                     getChildText(container, 'Street') || getChildText(container, 'StreetAddress');
-        const suburb = getChildText(container, 'Suburb') || getChildText(container, 'City') || getChildText(container, 'Locality');
+  for (const { tags, type } of addressMappings) {
+    if (seenTypes.has(type)) continue;
+    
+    for (const tag of tags) {
+      const section = extractFullTag(normalized, tag);
+      if (section) {
+        const line1 = extractValue(section, 'Line1') || extractValue(section, 'AddressLine1') || 
+                     extractValue(section, 'Street') || extractValue(section, 'StreetAddress');
+        const suburb = extractValue(section, 'Suburb') || extractValue(section, 'City') || extractValue(section, 'Locality');
         
         if (line1 || suburb) {
           seenTypes.add(type);
           addresses.push({
             addressType: type,
             addressLine1: line1,
-            addressLine2: getChildText(container, 'Line2') || getChildText(container, 'AddressLine2'),
+            addressLine2: extractValue(section, 'Line2') || extractValue(section, 'AddressLine2'),
             suburb,
-            state: getChildText(container, 'State') || getChildText(container, 'StateTerritory') || getChildText(container, 'StateCode'),
-            postcode: getChildText(container, 'Postcode') || getChildText(container, 'PostCode'),
-            country: getChildText(container, 'Country'),
-            phone: getChildText(container, 'Phone') || getChildText(container, 'PhoneNumber'),
-            fax: getChildText(container, 'Fax') || getChildText(container, 'FaxNumber'),
-            email: getChildText(container, 'Email') || getChildText(container, 'EmailAddress'),
-            website: getChildText(container, 'Website') || getChildText(container, 'WebAddress'),
+            state: extractValue(section, 'State') || extractValue(section, 'StateTerritory') || extractValue(section, 'StateCode'),
+            postcode: extractValue(section, 'Postcode') || extractValue(section, 'PostCode'),
+            country: extractValue(section, 'Country'),
+            phone: extractValue(section, 'Phone') || extractValue(section, 'PhoneNumber'),
+            fax: extractValue(section, 'Fax') || extractValue(section, 'FaxNumber'),
+            email: extractValue(section, 'Email') || extractValue(section, 'EmailAddress'),
+            website: extractValue(section, 'Website') || extractValue(section, 'WebAddress'),
           });
           log('info', `Added ${type} address`, { line1, suburb }, correlationId);
           break;
@@ -385,28 +398,28 @@ function parseAddressesDOM(doc: Document, correlationId?: string): ParsedAddress
   }
   
   // Also look for Address elements in an Addresses container
-  const addressesContainer = findFirstByLocalName(doc, 'Addresses');
-  if (addressesContainer) {
-    const addressElements = findAllByLocalName(addressesContainer, 'Address');
-    for (const addrEl of addressElements) {
-      const addrType = getChildText(addrEl, 'AddressType') || getChildText(addrEl, 'Type') || 'Unknown';
+  const addressesSection = extractSection(normalized, 'Addresses');
+  if (addressesSection) {
+    const addressElements = extractAllTags(addressesSection, 'Address');
+    for (const addrXml of addressElements) {
+      const addrType = extractValue(addrXml, 'AddressType') || extractValue(addrXml, 'Type') || 'Unknown';
       if (!seenTypes.has(addrType)) {
-        const line1 = getChildText(addrEl, 'Line1') || getChildText(addrEl, 'AddressLine1');
-        const suburb = getChildText(addrEl, 'Suburb') || getChildText(addrEl, 'Locality');
+        const line1 = extractValue(addrXml, 'Line1') || extractValue(addrXml, 'AddressLine1');
+        const suburb = extractValue(addrXml, 'Suburb') || extractValue(addrXml, 'Locality');
         if (line1 || suburb) {
           seenTypes.add(addrType);
           addresses.push({
             addressType: addrType,
             addressLine1: line1,
-            addressLine2: getChildText(addrEl, 'Line2') || getChildText(addrEl, 'AddressLine2'),
+            addressLine2: extractValue(addrXml, 'Line2') || extractValue(addrXml, 'AddressLine2'),
             suburb,
-            state: getChildText(addrEl, 'State') || getChildText(addrEl, 'StateCode'),
-            postcode: getChildText(addrEl, 'Postcode') || getChildText(addrEl, 'PostCode'),
-            country: getChildText(addrEl, 'Country'),
-            phone: getChildText(addrEl, 'Phone'),
-            fax: getChildText(addrEl, 'Fax'),
-            email: getChildText(addrEl, 'Email'),
-            website: getChildText(addrEl, 'Website'),
+            state: extractValue(addrXml, 'State') || extractValue(addrXml, 'StateCode'),
+            postcode: extractValue(addrXml, 'Postcode') || extractValue(addrXml, 'PostCode'),
+            country: extractValue(addrXml, 'Country'),
+            phone: extractValue(addrXml, 'Phone'),
+            fax: extractValue(addrXml, 'Fax'),
+            email: extractValue(addrXml, 'Email'),
+            website: extractValue(addrXml, 'Website'),
           });
         }
       }
@@ -417,44 +430,44 @@ function parseAddressesDOM(doc: Document, correlationId?: string): ParsedAddress
   return addresses;
 }
 
-// Parse delivery locations using DOM
-function parseDeliveryLocationsDOM(doc: Document, correlationId?: string): ParsedDeliveryLocation[] {
+function parseDeliveryLocations(xml: string, correlationId?: string): ParsedDeliveryLocation[] {
   const locations: ParsedDeliveryLocation[] = [];
+  const normalized = stripXmlPrefixes(xml);
   
-  log('info', 'Parsing delivery locations with DOM', {}, correlationId);
+  log('info', 'Parsing delivery locations with regex', {}, correlationId);
   
   // Look for location containers
   const containerNames = ['DeliveryLocations', 'Locations', 'SiteLocations'];
-  let container: Element | null = null;
+  let containerXml: string | null = null;
   
   for (const name of containerNames) {
-    container = findFirstByLocalName(doc, name);
-    if (container) {
+    containerXml = extractSection(normalized, name);
+    if (containerXml) {
       log('info', `Found locations container: ${name}`, {}, correlationId);
       break;
     }
   }
   
-  if (container) {
+  if (containerXml) {
     const locationNames = ['DeliveryLocation', 'Location', 'Site'];
     for (const locName of locationNames) {
-      const locationElements = findAllByLocalName(container, locName);
-      for (const locEl of locationElements) {
-        const locationName = getChildText(locEl, 'Name') || getChildText(locEl, 'LocationName') || 
-                           getChildText(locEl, 'SiteName') || getChildText(locEl, 'Description');
-        const line1 = getChildText(locEl, 'Line1') || getChildText(locEl, 'AddressLine1') ||
-                     getChildText(locEl, 'Street') || getChildText(locEl, 'StreetAddress');
-        const suburb = getChildText(locEl, 'Suburb') || getChildText(locEl, 'Locality') || getChildText(locEl, 'City');
+      const locationElements = extractAllTags(containerXml, locName);
+      for (const locXml of locationElements) {
+        const locationName = extractValue(locXml, 'Name') || extractValue(locXml, 'LocationName') || 
+                            extractValue(locXml, 'SiteName') || extractValue(locXml, 'Description');
+        const line1 = extractValue(locXml, 'Line1') || extractValue(locXml, 'AddressLine1') ||
+                     extractValue(locXml, 'Street') || extractValue(locXml, 'StreetAddress');
+        const suburb = extractValue(locXml, 'Suburb') || extractValue(locXml, 'Locality') || extractValue(locXml, 'City');
         
         if (locationName || line1 || suburb) {
           locations.push({
             locationName,
             addressLine1: line1,
-            addressLine2: getChildText(locEl, 'Line2') || getChildText(locEl, 'AddressLine2'),
+            addressLine2: extractValue(locXml, 'Line2') || extractValue(locXml, 'AddressLine2'),
             suburb,
-            state: getChildText(locEl, 'State') || getChildText(locEl, 'StateCode'),
-            postcode: getChildText(locEl, 'Postcode') || getChildText(locEl, 'PostCode'),
-            country: getChildText(locEl, 'Country'),
+            state: extractValue(locXml, 'State') || extractValue(locXml, 'StateCode'),
+            postcode: extractValue(locXml, 'Postcode') || extractValue(locXml, 'PostCode'),
+            country: extractValue(locXml, 'Country'),
           });
         }
       }
@@ -465,54 +478,55 @@ function parseDeliveryLocationsDOM(doc: Document, correlationId?: string): Parse
   return locations;
 }
 
-// Parse scope items using DOM
-function parseScopeDOM(doc: Document, correlationId?: string): ParsedScope {
+function parseScope(xml: string, correlationId?: string): ParsedScope {
   const scope: ParsedScope = {
     qualifications: [],
     skillSets: [],
     units: [],
     courses: [],
   };
+  const normalized = stripXmlPrefixes(xml);
   
-  log('info', 'Parsing scope with DOM', {}, correlationId);
+  log('info', 'Parsing scope with regex', {}, correlationId);
   
-  const parseScopeItem = (el: Element, isExplicitDefault: boolean): ParsedScopeItem | null => {
-    const code = getChildText(el, 'Code') || getChildText(el, 'NrtCode') || 
-                getChildText(el, 'TrainingComponentCode') || getChildText(el, 'NationalCode');
+  const parseScopeItem = (itemXml: string, isExplicitDefault: boolean): ParsedScopeItem | null => {
+    const code = extractValue(itemXml, 'Code') || extractValue(itemXml, 'NrtCode') || 
+                extractValue(itemXml, 'TrainingComponentCode') || extractValue(itemXml, 'NationalCode');
     if (!code) return null;
     
-    const isExplicitVal = getChildText(el, 'IsExplicit') || getChildText(el, 'Explicit');
+    const isExplicitVal = extractValue(itemXml, 'IsExplicit') || extractValue(itemXml, 'Explicit');
     const isExplicit = isExplicitVal ? isExplicitVal.toLowerCase() === 'true' : isExplicitDefault;
     
     return {
       code,
-      title: getChildText(el, 'Title') || getChildText(el, 'Name') || getChildText(el, 'Description'),
-      status: getChildText(el, 'Status') || getChildText(el, 'ScopeStatus') || getChildText(el, 'NrtStatus'),
-      usageRecommendation: getChildText(el, 'UsageRecommendation') || getChildText(el, 'Recommendation'),
-      extent: getChildText(el, 'Extent') || getChildText(el, 'ScopeExtent') || getChildText(el, 'DeliveryScope'),
-      startDate: getChildText(el, 'StartDate') || getChildText(el, 'ScopeStartDate') || getChildText(el, 'EffectiveFrom'),
-      endDate: getChildText(el, 'EndDate') || getChildText(el, 'ScopeEndDate') || getChildText(el, 'EffectiveTo'),
-      deliveryNotification: getChildText(el, 'DeliveryNotification') || getChildText(el, 'NotificationRequired'),
-      trainingPackageCode: getChildText(el, 'TrainingPackageCode') || getChildText(el, 'ParentCode'),
-      trainingPackageTitle: getChildText(el, 'TrainingPackageTitle') || getChildText(el, 'ParentTitle'),
+      title: extractValue(itemXml, 'Title') || extractValue(itemXml, 'Name') || extractValue(itemXml, 'Description'),
+      status: extractValue(itemXml, 'Status') || extractValue(itemXml, 'ScopeStatus') || extractValue(itemXml, 'NrtStatus'),
+      usageRecommendation: extractValue(itemXml, 'UsageRecommendation') || extractValue(itemXml, 'Recommendation'),
+      extent: extractValue(itemXml, 'Extent') || extractValue(itemXml, 'ScopeExtent') || extractValue(itemXml, 'DeliveryScope'),
+      startDate: extractValue(itemXml, 'StartDate') || extractValue(itemXml, 'ScopeStartDate') || extractValue(itemXml, 'EffectiveFrom'),
+      endDate: extractValue(itemXml, 'EndDate') || extractValue(itemXml, 'ScopeEndDate') || extractValue(itemXml, 'EffectiveTo'),
+      deliveryNotification: extractValue(itemXml, 'DeliveryNotification') || extractValue(itemXml, 'NotificationRequired'),
+      trainingPackageCode: extractValue(itemXml, 'TrainingPackageCode') || extractValue(itemXml, 'ParentCode'),
+      trainingPackageTitle: extractValue(itemXml, 'TrainingPackageTitle') || extractValue(itemXml, 'ParentTitle'),
       isExplicit,
-      isCurrent: getChildText(el, 'IsCurrent')?.toLowerCase() === 'true' || 
-                getChildText(el, 'Status')?.toLowerCase() === 'current',
+      isCurrent: extractValue(itemXml, 'IsCurrent')?.toLowerCase() === 'true' || 
+                extractValue(itemXml, 'Status')?.toLowerCase() === 'current',
     };
   };
   
   // Parse qualifications
-  const qualContainers = ['RtoDeliveredQualifications', 'Qualifications', 'QualificationScope'];
-  for (const containerName of qualContainers) {
-    const container = findFirstByLocalName(doc, containerName);
+  const qualContainerNames = ['RtoDeliveredQualifications', 'Qualifications', 'QualificationScope'];
+  for (const containerName of qualContainerNames) {
+    const container = extractSection(normalized, containerName);
     if (container) {
-      const items = findAllByLocalName(container, 'RtoDeliveredQualification') 
-                   .concat(findAllByLocalName(container, 'Qualification'))
-                   .concat(findAllByLocalName(container, 'TrainingComponent'));
-      for (const el of items) {
-        const item = parseScopeItem(el, true);
-        if (item && !scope.qualifications.some(q => q.code === item.code)) {
-          scope.qualifications.push(item);
+      const itemTags = ['RtoDeliveredQualification', 'Qualification', 'TrainingComponent'];
+      for (const tag of itemTags) {
+        const items = extractAllTags(container, tag);
+        for (const itemXml of items) {
+          const item = parseScopeItem(itemXml, true);
+          if (item && !scope.qualifications.some(q => q.code === item.code)) {
+            scope.qualifications.push(item);
+          }
         }
       }
       break;
@@ -520,16 +534,18 @@ function parseScopeDOM(doc: Document, correlationId?: string): ParsedScope {
   }
   
   // Parse skill sets
-  const skillContainers = ['RtoDeliveredSkillSets', 'SkillSets', 'SkillSetScope'];
-  for (const containerName of skillContainers) {
-    const container = findFirstByLocalName(doc, containerName);
+  const skillContainerNames = ['RtoDeliveredSkillSets', 'SkillSets', 'SkillSetScope'];
+  for (const containerName of skillContainerNames) {
+    const container = extractSection(normalized, containerName);
     if (container) {
-      const items = findAllByLocalName(container, 'RtoDeliveredSkillSet')
-                   .concat(findAllByLocalName(container, 'SkillSet'));
-      for (const el of items) {
-        const item = parseScopeItem(el, true);
-        if (item && !scope.skillSets.some(s => s.code === item.code)) {
-          scope.skillSets.push(item);
+      const itemTags = ['RtoDeliveredSkillSet', 'SkillSet'];
+      for (const tag of itemTags) {
+        const items = extractAllTags(container, tag);
+        for (const itemXml of items) {
+          const item = parseScopeItem(itemXml, true);
+          if (item && !scope.skillSets.some(s => s.code === item.code)) {
+            scope.skillSets.push(item);
+          }
         }
       }
       break;
@@ -537,17 +553,18 @@ function parseScopeDOM(doc: Document, correlationId?: string): ParsedScope {
   }
   
   // Parse units - only explicit ones
-  const unitContainers = ['RtoDeliveredUnits', 'Units', 'ExplicitUnits', 'UnitScope'];
-  for (const containerName of unitContainers) {
-    const container = findFirstByLocalName(doc, containerName);
+  const unitContainerNames = ['RtoDeliveredUnits', 'Units', 'ExplicitUnits', 'UnitScope'];
+  for (const containerName of unitContainerNames) {
+    const container = extractSection(normalized, containerName);
     if (container) {
-      const items = findAllByLocalName(container, 'RtoDeliveredUnit')
-                   .concat(findAllByLocalName(container, 'Unit'))
-                   .concat(findAllByLocalName(container, 'UnitOfCompetency'));
-      for (const el of items) {
-        const item = parseScopeItem(el, false); // Default to not explicit, check IsExplicit field
-        if (item && item.isExplicit && !scope.units.some(u => u.code === item.code)) {
-          scope.units.push(item);
+      const itemTags = ['RtoDeliveredUnit', 'Unit', 'UnitOfCompetency'];
+      for (const tag of itemTags) {
+        const items = extractAllTags(container, tag);
+        for (const itemXml of items) {
+          const item = parseScopeItem(itemXml, false);
+          if (item && item.isExplicit && !scope.units.some(u => u.code === item.code)) {
+            scope.units.push(item);
+          }
         }
       }
       break;
@@ -555,17 +572,18 @@ function parseScopeDOM(doc: Document, correlationId?: string): ParsedScope {
   }
   
   // Parse accredited courses
-  const courseContainers = ['RtoDeliveredAccreditedCourses', 'AccreditedCourses', 'Courses'];
-  for (const containerName of courseContainers) {
-    const container = findFirstByLocalName(doc, containerName);
+  const courseContainerNames = ['RtoDeliveredAccreditedCourses', 'AccreditedCourses', 'Courses'];
+  for (const containerName of courseContainerNames) {
+    const container = extractSection(normalized, containerName);
     if (container) {
-      const items = findAllByLocalName(container, 'RtoDeliveredAccreditedCourse')
-                   .concat(findAllByLocalName(container, 'AccreditedCourse'))
-                   .concat(findAllByLocalName(container, 'Course'));
-      for (const el of items) {
-        const item = parseScopeItem(el, true);
-        if (item && !scope.courses.some(c => c.code === item.code)) {
-          scope.courses.push(item);
+      const itemTags = ['RtoDeliveredAccreditedCourse', 'AccreditedCourse', 'Course'];
+      for (const tag of itemTags) {
+        const items = extractAllTags(container, tag);
+        for (const itemXml of items) {
+          const item = parseScopeItem(itemXml, true);
+          if (item && !scope.courses.some(c => c.code === item.code)) {
+            scope.courses.push(item);
+          }
         }
       }
       break;
@@ -596,54 +614,42 @@ function checkSectionPresence(xml: string): SectionPresence {
   };
 }
 
-// Parse organisation using DOM
-function parseOrganisationDOM(xml: string, canonicalRtoCode: string, correlationId?: string): ParsedOrganisation | null {
-  const doc = parseXmlDocument(xml);
-  if (!doc) {
-    log('error', 'Failed to parse XML document', {}, correlationId);
-    return null;
-  }
+// Parse organisation from XML
+function parseOrganisation(xml: string, canonicalRtoCode: string, correlationId?: string): ParsedOrganisation | null {
+  const normalized = stripXmlPrefixes(xml);
   
-  // Find Organisation element - try various containers
-  let orgElement = findFirstByLocalName(doc, 'OrganisationDetailsResponse') ||
-                   findFirstByLocalName(doc, 'GetDetailsResult') ||
-                   findFirstByLocalName(doc, 'Organisation');
-  
-  if (!orgElement) {
-    log('error', 'No organisation element found in response', {}, correlationId);
-    return null;
-  }
+  log('info', 'Parsing organisation with regex', { canonicalRtoCode }, correlationId);
   
   // Get basic info
-  const legalName = getChildText(orgElement, 'LegalName') || getChildText(orgElement, 'Name');
+  const legalName = extractValue(normalized, 'LegalName') || extractValue(normalized, 'Name');
   if (!legalName) {
-    log('error', 'No legal name found in organisation', {}, correlationId);
+    log('error', 'No legal name found in organisation response', {}, correlationId);
     return null;
   }
   
-  // Try to get RTO code from specific element, but use canonical as primary
-  const xmlCode = getChildText(orgElement, 'Code') || getChildText(orgElement, 'RtoCode') || getChildText(orgElement, 'NationalProviderId');
+  // Get RTO code from XML
+  const xmlCode = extractValue(normalized, 'Code') || extractValue(normalized, 'RtoCode') || extractValue(normalized, 'NationalProviderId');
   
   if (xmlCode && xmlCode !== canonicalRtoCode) {
     log('warn', `XML RTO code "${xmlCode}" differs from canonical "${canonicalRtoCode}". Using canonical.`, {}, correlationId);
   }
   
   return {
-    code: canonicalRtoCode, // Always use the RTO code we requested
+    code: canonicalRtoCode,
     legalName,
-    tradingName: getChildText(orgElement, 'TradingName'),
-    organisationType: getChildText(orgElement, 'OrganisationType') || getChildText(orgElement, 'Type'),
-    abn: getChildText(orgElement, 'Abn') || getChildText(orgElement, 'ABN'),
-    acn: getChildText(orgElement, 'Acn') || getChildText(orgElement, 'ACN'),
-    status: getChildText(orgElement, 'Status') || getChildText(orgElement, 'RegistrationStatus'),
-    webAddress: getChildText(orgElement, 'WebAddress') || getChildText(orgElement, 'Website'),
-    initialRegistrationDate: getChildText(orgElement, 'InitialRegistrationDate'),
-    registrationStartDate: getChildText(orgElement, 'RegistrationStartDate'),
-    registrationEndDate: getChildText(orgElement, 'RegistrationEndDate'),
-    contacts: parseContactsDOM(doc, correlationId),
-    addresses: parseAddressesDOM(doc, correlationId),
-    deliveryLocations: parseDeliveryLocationsDOM(doc, correlationId),
-    scope: parseScopeDOM(doc, correlationId),
+    tradingName: extractValue(normalized, 'TradingName'),
+    organisationType: extractValue(normalized, 'OrganisationType') || extractValue(normalized, 'Type'),
+    abn: extractValue(normalized, 'Abn') || extractValue(normalized, 'ABN'),
+    acn: extractValue(normalized, 'Acn') || extractValue(normalized, 'ACN'),
+    status: extractValue(normalized, 'Status') || extractValue(normalized, 'RegistrationStatus'),
+    webAddress: extractValue(normalized, 'WebAddress') || extractValue(normalized, 'Website'),
+    initialRegistrationDate: extractValue(normalized, 'InitialRegistrationDate'),
+    registrationStartDate: extractValue(normalized, 'RegistrationStartDate'),
+    registrationEndDate: extractValue(normalized, 'RegistrationEndDate'),
+    contacts: parseContacts(normalized, correlationId),
+    addresses: parseAddresses(normalized, correlationId),
+    deliveryLocations: parseDeliveryLocations(normalized, correlationId),
+    scope: parseScope(normalized, correlationId),
   };
 }
 
@@ -695,7 +701,7 @@ async function makeSoapRequest(endpoint: string, soapAction: string, body: strin
       'Content-Type': 'text/xml; charset=utf-8',
       'SOAPAction': `"${soapAction}"`,
       'Accept': 'text/xml',
-      'User-Agent': 'Unicorn2.0/1.2',
+      'User-Agent': 'Unicorn2.0/1.3',
     };
     
     const response = await fetch(endpoint, {
@@ -759,18 +765,6 @@ interface ParsedTrainingComponent {
   isCurrent: boolean;
   usageRecommendation: string | null;
   nominalHours: number | null;
-}
-
-function extractValue(xml: string, tagName: string): string | null {
-  const patterns = [
-    new RegExp(`<(?:\\w+:)?${tagName}>([^<]*)<\\/(?:\\w+:)?${tagName}>`, 'i'),
-    new RegExp(`<${tagName}[^>]*>([^<]*)<\\/${tagName}>`, 'i'),
-  ];
-  for (const pattern of patterns) {
-    const match = xml.match(pattern);
-    if (match) return match[1].trim() || null;
-  }
-  return null;
 }
 
 function parseTrainingComponent(xml: string): ParsedTrainingComponent | null {
@@ -856,7 +850,7 @@ async function fetchOrganisation(code: string, correlationId?: string): Promise<
       ...sectionPresence 
     }, correlationId);
     
-    const parsed = parseOrganisationDOM(response, code, correlationId);
+    const parsed = parseOrganisation(response, code, correlationId);
     
     log('info', 'Organisation parsing complete', {
       code,
@@ -886,16 +880,7 @@ async function fetchOrganisation(code: string, correlationId?: string): Promise<
   }
 }
 
-// Test connection
-async function testConnection(correlationId?: string): Promise<{ 
-  success: boolean; 
-  message: string; 
-  details?: Record<string, unknown>;
-}> {
-  log('info', 'Testing TGA connection', { 
-    username: TGA_WS_USERNAME ? `${TGA_WS_USERNAME.substring(0, 5)}...` : 'NOT_SET',
-  }, correlationId);
-  
+async function testConnection(correlationId?: string): Promise<{ success: boolean; message: string; details?: Record<string, unknown> }> {
   const credValidation = validateCredentials();
   if (!credValidation.valid) {
     return { 
@@ -1250,11 +1235,9 @@ serve(async (req) => {
             );
             syncStatus.contacts = { replaced: true, count: orgData.contacts.length };
           } else if (sectionPresence.contacts) {
-            // Section exists in XML but we parsed 0 - DON'T DELETE existing data
             log('warn', 'Contacts section present but parsed 0 - skipping delete to prevent data loss', {}, correlationId);
             syncStatus.contacts = { replaced: false, count: 0, reason: 'parse_failed_safety' };
           } else {
-            // Section not in XML - safe to delete
             await supabase.from('tga_rto_contacts').delete().eq('tenant_id', tenantIdNum).eq('rto_code', orgData.code);
             syncStatus.contacts = { replaced: true, count: 0, reason: 'not_in_response' };
           }
@@ -1325,13 +1308,12 @@ serve(async (req) => {
                 qualification_code: q.code,
                 qualification_title: q.title,
                 training_package_code: q.trainingPackageCode,
-                scope_start_date: q.startDate,
-                scope_end_date: q.endDate,
+                training_package_title: q.trainingPackageTitle,
                 status: q.status,
-                is_current: q.isCurrent,
-                extent: q.extent,
-                delivery_notification: q.deliveryNotification,
                 usage_recommendation: q.usageRecommendation,
+                extent: q.extent,
+                start_date: q.startDate,
+                end_date: q.endDate,
                 fetched_at: fetchedAt,
               }))
             );
@@ -1340,7 +1322,6 @@ serve(async (req) => {
             log('warn', 'Qualifications section present but parsed 0 - skipping delete', {}, correlationId);
             syncStatus.qualifications = { replaced: false, count: 0, reason: 'parse_failed_safety' };
           } else {
-            // Note: For scope, TGA may simply not return it if empty - don't delete existing
             syncStatus.qualifications = { replaced: false, count: 0, reason: 'not_in_response' };
           }
 
@@ -1354,12 +1335,11 @@ serve(async (req) => {
                 skillset_code: s.code,
                 skillset_title: s.title,
                 training_package_code: s.trainingPackageCode,
-                scope_start_date: s.startDate,
-                scope_end_date: s.endDate,
+                training_package_title: s.trainingPackageTitle,
                 status: s.status,
-                is_current: s.isCurrent,
-                extent: s.extent,
                 usage_recommendation: s.usageRecommendation,
+                start_date: s.startDate,
+                end_date: s.endDate,
                 fetched_at: fetchedAt,
               }))
             );
@@ -1380,15 +1360,11 @@ serve(async (req) => {
                 rto_code: orgData.code,
                 unit_code: u.code,
                 unit_title: u.title,
-                training_package_code: u.trainingPackageCode,
-                scope_start_date: u.startDate,
-                scope_end_date: u.endDate,
                 status: u.status,
-                is_current: u.isCurrent,
-                is_explicit: true,
-                extent: u.extent,
-                delivery_notification: u.deliveryNotification,
                 usage_recommendation: u.usageRecommendation,
+                is_explicit: u.isExplicit,
+                start_date: u.startDate,
+                end_date: u.endDate,
                 fetched_at: fetchedAt,
               }))
             );
@@ -1409,13 +1385,9 @@ serve(async (req) => {
                 rto_code: orgData.code,
                 course_code: c.code,
                 course_title: c.title,
-                scope_start_date: c.startDate,
-                scope_end_date: c.endDate,
                 status: c.status,
-                is_current: c.isCurrent,
-                extent: c.extent,
-                delivery_notification: c.deliveryNotification,
-                usage_recommendation: c.usageRecommendation,
+                start_date: c.startDate,
+                end_date: c.endDate,
                 fetched_at: fetchedAt,
               }))
             );
@@ -1426,92 +1398,59 @@ serve(async (req) => {
           } else {
             syncStatus.courses = { replaced: false, count: 0, reason: 'not_in_response' };
           }
-
+          
           log('info', 'Stored TGA data to tenant tables', {
             tenant_id: tenantIdNum,
             rto_code: orgData.code,
+            contacts: syncStatus.contacts?.count ?? 0,
+            addresses: syncStatus.addresses?.count ?? 0,
+            deliveryLocations: syncStatus.deliveryLocations?.count ?? 0,
+            qualifications: syncStatus.qualifications?.count ?? 0,
+            skillSets: syncStatus.skillSets?.count ?? 0,
+            units: syncStatus.units?.count ?? 0,
+            courses: syncStatus.courses?.count ?? 0,
             syncStatus,
           }, correlationId);
         }
 
         // Update link status
-        let linkId = null;
         if (client_id) {
-          const { data: linkData } = await supabase
+          await supabase
             .from('tga_links')
             .upsert({
               client_id,
-              rto_number,
+              rto_number: orgData.code,
               is_linked: true,
-              link_status: 'linked',
+              link_status: 'synced',
               last_sync_at: fetchedAt,
               last_sync_status: 'success',
               last_sync_error: null,
               updated_at: fetchedAt,
-            }, { onConflict: 'client_id' })
-            .select('id')
-            .single();
-          
-          linkId = linkData?.id;
+            }, { onConflict: 'client_id' });
         }
-
-        // Audit log
-        if (tenantIdNum) {
-          await supabase.from('client_audit_log').insert({
-            tenant_id: tenantIdNum,
-            entity_type: 'tga_integration',
-            entity_id: client_id || rto_number,
-            action: 'live_sync_completed',
-            actor_user_id: user.id,
-            details: {
-              correlationId,
-              rto_number,
-              legal_name: orgData.legalName,
-              status: orgData.status,
-              syncStatus,
-              sectionPresence,
-            },
-          });
-        }
-
-        log('info', 'Client sync completed', { 
-          rto_number, 
-          legalName: orgData.legalName,
-          syncStatus,
-        }, correlationId);
 
         return new Response(JSON.stringify({
           success: true,
           correlationId,
-          rto_number,
-          link_id: linkId,
-          rto_data: {
-            legal_name: orgData.legalName,
-            trading_name: orgData.tradingName,
-            abn: orgData.abn,
-            acn: orgData.acn,
-            status: orgData.status,
-            organisation_type: orgData.organisationType,
-            web_address: orgData.webAddress,
-            initial_registration_date: orgData.initialRegistrationDate,
-            registration_start: orgData.registrationStartDate,
-            registration_end: orgData.registrationEndDate,
+          rto_code: orgData.code,
+          legal_name: orgData.legalName,
+          synced: {
+            contacts: syncStatus.contacts?.count ?? 0,
+            addresses: syncStatus.addresses?.count ?? 0,
+            deliveryLocations: syncStatus.deliveryLocations?.count ?? 0,
+            qualifications: syncStatus.qualifications?.count ?? 0,
+            skillSets: syncStatus.skillSets?.count ?? 0,
+            units: syncStatus.units?.count ?? 0,
+            courses: syncStatus.courses?.count ?? 0,
           },
-          sync_status: syncStatus,
-          section_presence: sectionPresence,
-          scope_counts: {
-            qualifications: orgData.scope.qualifications.length,
-            skillSets: orgData.scope.skillSets.length,
-            units: orgData.scope.units.length,
-            courses: orgData.scope.courses.length,
-          },
+          syncStatus,
+          sectionPresence,
         }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
       } catch (error: unknown) {
         const errorMsg = error instanceof Error ? error.message : String(error);
-        
-        log('error', 'Client sync failed', { error: errorMsg, rto_number }, correlationId);
+        log('error', 'Client sync failed', { error: errorMsg, rto_number, client_id }, correlationId);
         
         if (client_id) {
           await supabase
@@ -1540,9 +1479,11 @@ serve(async (req) => {
       }
     }
 
-    // ==================== STATUS ACTION (default) ====================
+    // ==================== STATUS ACTION ====================
     if (action === 'status') {
-      const { data: status } = await supabase
+      const credValidation = validateCredentials();
+      
+      const { data: syncStatus } = await supabase
         .from('tga_sync_status')
         .select('*')
         .eq('id', 1)
@@ -1551,19 +1492,22 @@ serve(async (req) => {
       return new Response(JSON.stringify({
         correlationId,
         version: FUNCTION_VERSION,
-        status: status || { connection_status: 'unknown' },
+        environment: TGA_ENV,
+        credentials: {
+          username: TGA_WS_USERNAME ? `${TGA_WS_USERNAME.substring(0, 3)}...` : 'not configured',
+          valid: credValidation.valid,
+        },
         endpoints: TGA_ENDPOINTS,
-        credentialsConfigured: !!(TGA_WS_USERNAME && TGA_WS_PASSWORD),
+        syncStatus: syncStatus || null,
       }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
-    // Unknown action
     return new Response(JSON.stringify({ 
       error: `Unknown action: ${action}`,
+      availableActions: ['ping', 'status', 'test', 'health', 'diagnostics', 'debug-org', 'probe', 'sync-client'],
       correlationId,
-      validActions: ['ping', 'test', 'health', 'diagnostics', 'debug-org', 'probe', 'sync-client', 'status'],
     }), {
       status: 400,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -1573,7 +1517,10 @@ serve(async (req) => {
     const errorMsg = error instanceof Error ? error.message : String(error);
     log('error', 'Request handler error', { error: errorMsg }, correlationId);
     
-    return new Response(JSON.stringify({ error: errorMsg, correlationId }), {
+    return new Response(JSON.stringify({ 
+      error: errorMsg,
+      correlationId,
+    }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
