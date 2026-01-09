@@ -9873,6 +9873,59 @@ export type Database = {
           },
         ]
       }
+      tenant_rto_scope: {
+        Row: {
+          code: string
+          created_at: string | null
+          id: string
+          is_superseded: boolean | null
+          last_refreshed_at: string | null
+          scope_type: string
+          status: string | null
+          superseded_by: string | null
+          tenant_id: number
+          tga_data: Json | null
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          code: string
+          created_at?: string | null
+          id?: string
+          is_superseded?: boolean | null
+          last_refreshed_at?: string | null
+          scope_type: string
+          status?: string | null
+          superseded_by?: string | null
+          tenant_id: number
+          tga_data?: Json | null
+          title?: string
+          updated_at?: string | null
+        }
+        Update: {
+          code?: string
+          created_at?: string | null
+          id?: string
+          is_superseded?: boolean | null
+          last_refreshed_at?: string | null
+          scope_type?: string
+          status?: string | null
+          superseded_by?: string | null
+          tenant_id?: number
+          tga_data?: Json | null
+          title?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tenant_rto_scope_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tenant_stages: {
         Row: {
           client_tasks: Json | null
@@ -9989,6 +10042,11 @@ export type Database = {
           stage_ids: number[] | null
           state: Database["public"]["Enums"]["australian_state"] | null
           status: string
+          tga_connected_at: string | null
+          tga_last_synced_at: string | null
+          tga_legal_name: string | null
+          tga_snapshot: Json | null
+          tga_status: string | null
           tga_sync_status: string | null
           updated_at: string
         }
@@ -10008,6 +10066,11 @@ export type Database = {
           stage_ids?: number[] | null
           state?: Database["public"]["Enums"]["australian_state"] | null
           status?: string
+          tga_connected_at?: string | null
+          tga_last_synced_at?: string | null
+          tga_legal_name?: string | null
+          tga_snapshot?: Json | null
+          tga_status?: string | null
           tga_sync_status?: string | null
           updated_at?: string
         }
@@ -10027,6 +10090,11 @@ export type Database = {
           stage_ids?: number[] | null
           state?: Database["public"]["Enums"]["australian_state"] | null
           status?: string
+          tga_connected_at?: string | null
+          tga_last_synced_at?: string | null
+          tga_legal_name?: string | null
+          tga_snapshot?: Json | null
+          tga_status?: string | null
           tga_sync_status?: string | null
           updated_at?: string
         }
@@ -10448,6 +10516,50 @@ export type Database = {
         }
         Relationships: []
       }
+      tga_rest_sync_jobs: {
+        Row: {
+          created_at: string | null
+          id: string
+          last_error: string | null
+          payload: Json | null
+          rto_id: string
+          scope_counts: Json | null
+          status: string | null
+          tenant_id: number
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          last_error?: string | null
+          payload?: Json | null
+          rto_id: string
+          scope_counts?: Json | null
+          status?: string | null
+          tenant_id: number
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          last_error?: string | null
+          payload?: Json | null
+          rto_id?: string
+          scope_counts?: Json | null
+          status?: string | null
+          tenant_id?: number
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tga_rest_sync_jobs_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tga_rto_addresses: {
         Row: {
           address_line_1: string | null
@@ -10729,6 +10841,44 @@ export type Database = {
           },
           {
             foreignKeyName: "tga_rto_import_jobs_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tga_rto_snapshots: {
+        Row: {
+          created_at: string | null
+          id: string
+          payload: Json
+          raw_sha256: string | null
+          rto_id: string
+          source_url: string | null
+          tenant_id: number
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          payload: Json
+          raw_sha256?: string | null
+          rto_id: string
+          source_url?: string | null
+          tenant_id: number
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          payload?: Json
+          raw_sha256?: string | null
+          rto_id?: string
+          source_url?: string | null
+          tenant_id?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tga_rto_snapshots_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
@@ -12887,6 +13037,24 @@ export type Database = {
           working_hours: Json
         }[]
       }
+      get_tenant_scope_items: {
+        Args: { p_scope_type?: string; p_tenant_id: number }
+        Returns: {
+          code: string
+          id: string
+          is_superseded: boolean
+          last_refreshed_at: string
+          scope_type: string
+          status: string
+          superseded_by: string
+          tga_data: Json
+          title: string
+        }[]
+      }
+      get_tenant_scope_sync_status: {
+        Args: { p_tenant_id: number }
+        Returns: Json
+      }
       get_timezones: {
         Args: never
         Returns: {
@@ -13027,6 +13195,10 @@ export type Database = {
         }[]
       }
       normalize_company_key: { Args: { txt: string }; Returns: string }
+      persist_tga_scope_items: {
+        Args: { p_scope_items: Json; p_scope_type: string; p_tenant_id: number }
+        Returns: Json
+      }
       propose_chart_change: {
         Args: { p_draft_json: Json; p_meeting_id: string }
         Returns: string

@@ -42,5 +42,11 @@ verify_jwt = false
 [functions.outlook-time-draft-worker]
 verify_jwt = false
 
-[functions.export-client-timeline-pdf]
+[functions.tga-rto-preview]
+verify_jwt = false
+
+[functions.tga-fetch-scope]
+verify_jwt = false
+
+[functions.tga-rto-sync]
 verify_jwt = false
