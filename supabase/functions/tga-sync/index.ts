@@ -48,7 +48,20 @@ const SOAP_ACTIONS = {
   searchTrainingComponent: `${TGA_V13_NAMESPACE}ITrainingComponentService/Search`,
 };
 
-const FUNCTION_VERSION = '1.5.0';
+const FUNCTION_VERSION = '1.6.0';
+
+// TGA State Code mapping
+const TGA_STATE_CODES: Record<string, string> = {
+  '01': 'NSW',
+  '02': 'VIC',
+  '03': 'QLD',
+  '04': 'SA',
+  '05': 'WA',
+  '06': 'TAS',
+  '07': 'NT',
+  '08': 'ACT',
+  '09': 'OT',
+};
 
 const STAGES = ['rto_summary', 'contacts', 'addresses', 'delivery_sites', 'scope_quals', 'scope_units', 'scope_skills', 'scope_courses'] as const;
 type SyncStage = typeof STAGES[number];
@@ -272,12 +285,10 @@ function parseContacts(xml: string, correlationId?: string): ParsedContact[] {
     { container: 'RegistrationEnquiries', type: 'RegistrationEnquiries' },
   ];
   
-  const seenTypes = new Set<string>();
+  const seenContacts = new Set<string>(); // Track by name+email to avoid duplicates
   
   // First, try specific contact type containers (TGA standard format)
   for (const { container, type } of contactTypeContainers) {
-    if (seenTypes.has(type)) continue;
-    
     const containerXml = extractFullTag(normalized, container);
     if (containerXml) {
       log('info', `Found contact container: ${container}`, { sampleLength: containerXml.length }, correlationId);
@@ -292,8 +303,11 @@ function parseContacts(xml: string, correlationId?: string): ParsedContact[] {
                   [extractValue(containerXml, 'FirstName'), extractValue(containerXml, 'LastName')].filter(Boolean).join(' ') || 
                   null;
       
-      if (name || extractValue(containerXml, 'Email') || extractValue(containerXml, 'Phone')) {
-        seenTypes.add(type);
+      const email = extractValue(containerXml, 'Email') || extractValue(containerXml, 'EmailAddress');
+      const contactKey = `${name || ''}|${email || ''}`;
+      
+      if ((name || email || extractValue(containerXml, 'Phone')) && !seenContacts.has(contactKey)) {
+        seenContacts.add(contactKey);
         contacts.push({
           contactType: type,
           contactTypeRaw: container,
@@ -302,7 +316,7 @@ function parseContacts(xml: string, correlationId?: string): ParsedContact[] {
           phone: extractValue(containerXml, 'Phone') || extractValue(containerXml, 'PhoneNumber') || extractValue(containerXml, 'BusinessPhone') || extractValue(containerXml, 'Telephone'),
           mobile: extractValue(containerXml, 'Mobile') || extractValue(containerXml, 'MobileNumber') || extractValue(containerXml, 'MobilePhone'),
           fax: extractValue(containerXml, 'Fax') || extractValue(containerXml, 'FaxNumber'),
-          email: extractValue(containerXml, 'Email') || extractValue(containerXml, 'EmailAddress'),
+          email,
           address: extractValue(containerXml, 'Address') || extractValue(containerXml, 'StreetAddress'),
           organisationName: extractValue(containerXml, 'OrganisationName') || extractValue(containerXml, 'Organisation'),
         });
@@ -330,7 +344,16 @@ function parseContacts(xml: string, correlationId?: string): ParsedContact[] {
     const endDate = extractValue(contactXml, 'EndDate') || extractValue(contactXml, 'EffectiveTo');
     if (endDate && endDate < today) continue;
     
-    // Try multiple approaches to get contact type
+    // Extract contact details first
+    const name = extractValue(contactXml, 'Name') || 
+                extractValue(contactXml, 'FullName') ||
+                extractValue(contactXml, 'ContactName') ||
+                [extractValue(contactXml, 'FirstName'), extractValue(contactXml, 'LastName')].filter(Boolean).join(' ') || 
+                null;
+    const email = extractValue(contactXml, 'Email') || extractValue(contactXml, 'EmailAddress');
+    const position = extractValue(contactXml, 'Position') || extractValue(contactXml, 'JobTitle') || extractValue(contactXml, 'Title');
+    
+    // Try to determine contact type from various sources
     let rawType = '';
     
     // Approach 1: Look for Type/ContactType with nested Code/Description
@@ -356,67 +379,89 @@ function parseContacts(xml: string, correlationId?: string): ParsedContact[] {
       if (typeMatch) rawType = typeMatch[1].trim();
     }
     
-    // Approach 4: Look for role/position-based identification
-    if (!rawType) {
-      const position = extractValue(contactXml, 'Position') || extractValue(contactXml, 'JobTitle') || '';
-      if (position) rawType = position;
-    }
-    
-    // Normalize the type
-    const rawTypeLower = rawType.toLowerCase();
+    // Infer contact type from position if no type found
     let normalizedType = '';
+    const positionLower = (position || '').toLowerCase();
+    const emailLower = (email || '').toLowerCase();
+    const rawTypeLower = rawType.toLowerCase();
     
+    // Priority 1: Check if rawType has useful info
     if (rawTypeLower.includes('chief') || rawTypeLower.includes('ceo') || 
-        rawTypeLower.includes('principal') || rawTypeLower.includes('executive') ||
-        rawTypeLower === 'ce' || rawTypeLower === 'cex' || rawTypeLower === 'c') {
+        rawTypeLower.includes('executive') || rawTypeLower === 'ce' || rawTypeLower === 'cex') {
       normalizedType = 'ChiefExecutive';
-    } else if (rawTypeLower.includes('public') || rawTypeLower === 'pe' || 
-               rawTypeLower === 'pub' || rawTypeLower === 'p' || rawTypeLower.includes('enquir')) {
+    } else if (rawTypeLower.includes('public') || rawTypeLower === 'pe' || rawTypeLower === 'pub') {
       normalizedType = 'PublicEnquiries';
-    } else if (rawTypeLower.includes('registration') || rawTypeLower === 're' || 
-               rawTypeLower === 'reg' || rawTypeLower === 'r') {
+    } else if (rawTypeLower.includes('registration') || rawTypeLower === 're' || rawTypeLower === 'reg') {
       normalizedType = 'RegistrationEnquiries';
-    } else if (rawTypeLower.includes('admin') || rawTypeLower.includes('manager') ||
-               rawTypeLower.includes('director') || rawTypeLower.includes('officer')) {
-      normalizedType = 'Administrative';
-    } else if (rawType && rawType !== '0') {
-      // Use the raw type as-is if we found something meaningful
-      normalizedType = rawType;
     }
     
-    // Skip if we already have this type from the specific containers
-    if (normalizedType && seenTypes.has(normalizedType)) continue;
+    // Priority 2: Infer from position title
+    if (!normalizedType) {
+      if (positionLower.includes('ceo') || positionLower.includes('chief executive') || 
+          positionLower.includes('managing director') || positionLower.includes('principal')) {
+        normalizedType = 'ChiefExecutive';
+      } else if (positionLower.includes('compliance') || positionLower.includes('quality') || 
+                 positionLower.includes('registration') || positionLower.includes('rto manager')) {
+        normalizedType = 'RegistrationEnquiries';
+      } else if (positionLower.includes('admin') || positionLower.includes('reception') || 
+                 positionLower.includes('enquir') || positionLower.includes('customer')) {
+        normalizedType = 'PublicEnquiries';
+      } else if (positionLower.includes('director') || positionLower.includes('manager')) {
+        normalizedType = 'Administrative';
+      } else if (positionLower.includes('training') || positionLower.includes('educator') ||
+                 positionLower.includes('teacher') || positionLower.includes('facilitator')) {
+        normalizedType = 'Training';
+      }
+    }
     
-    // Extract contact details
-    const name = extractValue(contactXml, 'Name') || 
-                extractValue(contactXml, 'FullName') ||
-                extractValue(contactXml, 'ContactName') ||
-                [extractValue(contactXml, 'FirstName'), extractValue(contactXml, 'LastName')].filter(Boolean).join(' ') || 
-                null;
+    // Priority 3: Infer from email patterns
+    if (!normalizedType && email) {
+      if (emailLower.includes('ceo@') || emailLower.includes('chief@') || emailLower.includes('director@')) {
+        normalizedType = 'ChiefExecutive';
+      } else if (emailLower.includes('compliance@') || emailLower.includes('registration@') || 
+                 emailLower.includes('quality@')) {
+        normalizedType = 'RegistrationEnquiries';
+      } else if (emailLower.includes('info@') || emailLower.includes('admin@') || 
+                 emailLower.includes('enquiries@') || emailLower.includes('hello@')) {
+        normalizedType = 'PublicEnquiries';
+      }
+    }
     
-    // Only add if we have meaningful data
-    if (name || extractValue(contactXml, 'Email') || extractValue(contactXml, 'Phone')) {
+    // Fallback: use raw type as-is if meaningful, otherwise Unknown
+    if (!normalizedType) {
+      if (rawType && rawType !== '0' && rawType.length > 1) {
+        normalizedType = rawType;
+      } else {
+        normalizedType = 'Unknown';
+      }
+    }
+    
+    const contactKey = `${name || ''}|${email || ''}`;
+    
+    // Only add if we have meaningful data and haven't seen this contact
+    if ((name || email) && !seenContacts.has(contactKey)) {
+      seenContacts.add(contactKey);
+      
       const contact: ParsedContact = {
-        contactType: normalizedType || 'Unknown',
+        contactType: normalizedType,
         contactTypeRaw: rawType || null,
         name,
-        position: extractValue(contactXml, 'Position') || extractValue(contactXml, 'JobTitle') || extractValue(contactXml, 'Title'),
+        position,
         phone: extractValue(contactXml, 'Phone') || extractValue(contactXml, 'PhoneNumber') || extractValue(contactXml, 'BusinessPhone') || extractValue(contactXml, 'Telephone'),
         mobile: extractValue(contactXml, 'Mobile') || extractValue(contactXml, 'MobileNumber') || extractValue(contactXml, 'MobilePhone'),
         fax: extractValue(contactXml, 'Fax') || extractValue(contactXml, 'FaxNumber'),
-        email: extractValue(contactXml, 'Email') || extractValue(contactXml, 'EmailAddress'),
+        email,
         address: extractValue(contactXml, 'Address') || extractValue(contactXml, 'StreetAddress'),
         organisationName: extractValue(contactXml, 'OrganisationName') || extractValue(contactXml, 'Organisation'),
       };
       
-      if (normalizedType) seenTypes.add(normalizedType);
-      
-      if (contacts.length < 10) {
+      if (contacts.length < 20) { // Reasonable limit
         contacts.push(contact);
-        log('info', 'Parsed generic contact', { 
-          type: normalizedType || 'Unknown', 
+        log('info', 'Parsed contact', { 
+          type: normalizedType, 
           rawType, 
           name, 
+          position,
           hasPhone: !!contact.phone, 
           hasEmail: !!contact.email 
         }, correlationId);
@@ -516,75 +561,127 @@ function parseDeliveryLocations(xml: string, correlationId?: string, logRawSampl
   
   log('info', 'Parsing delivery locations with regex', {}, correlationId);
   
-  // Look for location containers - TGA uses various naming
-  const containerNames = ['DeliveryLocations', 'Locations', 'SiteLocations', 'TrainingLocations'];
-  let containerXml: string | null = null;
+  // TGA uses OrganisationLocation elements with nested Address
+  // Format: <OrganisationLocation><Address><Line1>...</Line1><Suburb>...</Suburb>...</Address></OrganisationLocation>
+  const orgLocationElements = extractAllTags(normalized, 'OrganisationLocation');
   
-  for (const name of containerNames) {
-    containerXml = extractSection(normalized, name);
-    if (containerXml) {
-      log('info', `Found locations container: ${name}`, { length: containerXml.length }, correlationId);
-      // Save raw sample for debugging (first 3000 chars)
-      if (logRawSample) {
-        rawSample = containerXml.substring(0, 3000);
-      }
-      break;
-    }
-  }
-  
-  // Also try to find location elements directly in the full XML if no container found
-  const searchXml = containerXml || normalized;
-  
-  const locationNames = ['DeliveryLocation', 'Location', 'Site', 'TrainingLocation', 'SiteLocation'];
-  const seenLocations = new Set<string>();
-  
-  for (const locName of locationNames) {
-    const locationElements = extractAllTags(searchXml, locName);
-    
-    // Log first element for debugging
-    if (locationElements.length > 0 && locations.length === 0) {
-      log('info', `Found ${locationElements.length} ${locName} elements`, {}, correlationId);
-      if (logRawSample && !rawSample) {
-        rawSample = locationElements[0].substring(0, 1500);
-      }
+  if (orgLocationElements.length > 0) {
+    log('info', `Found ${orgLocationElements.length} OrganisationLocation elements`, {}, correlationId);
+    if (logRawSample) {
+      rawSample = orgLocationElements[0].substring(0, 2000);
     }
     
-    for (const locXml of locationElements) {
-      // Try multiple field name patterns for location name
-      const locationName = extractValue(locXml, 'Name') || 
-                          extractValue(locXml, 'LocationName') || 
-                          extractValue(locXml, 'SiteName') || 
-                          extractValue(locXml, 'Description') ||
-                          extractValue(locXml, 'Title');
+    const today = new Date().toISOString().split('T')[0];
+    const seenLocations = new Set<string>();
+    
+    for (const locXml of orgLocationElements) {
+      // Check if location is current (no EndDate or EndDate >= today)
+      const endDate = extractValue(locXml, 'EndDate');
+      if (endDate && endDate < today) {
+        continue; // Skip expired locations
+      }
       
-      // Try multiple field name patterns for address line
-      const line1 = extractValue(locXml, 'Line1') || 
-                   extractValue(locXml, 'AddressLine1') ||
-                   extractValue(locXml, 'Street') || 
-                   extractValue(locXml, 'StreetAddress') ||
-                   extractValue(locXml, 'Address');
+      // Extract address from nested Address element
+      const addressXml = extractFullTag(locXml, 'Address') || locXml;
       
-      const suburb = extractValue(locXml, 'Suburb') || 
-                    extractValue(locXml, 'Locality') || 
-                    extractValue(locXml, 'City');
+      const line1 = extractValue(addressXml, 'Line1') || 
+                   extractValue(addressXml, 'AddressLine1') ||
+                   extractValue(addressXml, 'Street');
+      const line2 = extractValue(addressXml, 'Line2') || extractValue(addressXml, 'AddressLine2');
+      const suburb = extractValue(addressXml, 'Suburb') || extractValue(addressXml, 'Locality');
+      const postcode = extractValue(addressXml, 'Postcode') || extractValue(addressXml, 'PostCode');
       
-      const postcode = extractValue(locXml, 'Postcode') || extractValue(locXml, 'PostCode');
-      const state = extractValue(locXml, 'State') || extractValue(locXml, 'StateCode') || extractValue(locXml, 'StateTerritory');
+      // StateCode is numeric in TGA, map to abbreviation
+      const stateCode = extractValue(addressXml, 'StateCode') || extractValue(addressXml, 'State');
+      const state = stateCode ? (TGA_STATE_CODES[stateCode] || stateCode) : null;
       
-      // Create a unique key to avoid duplicates
-      const key = `${locationName || ''}|${line1 || ''}|${suburb || ''}|${postcode || ''}`;
+      // CountryCode 1101 = Australia
+      const countryCode = extractValue(addressXml, 'CountryCode');
+      const country = countryCode === '1101' ? 'Australia' : (countryCode || null);
       
-      if ((locationName || line1 || suburb) && !seenLocations.has(key)) {
+      // Create unique key to avoid duplicates
+      const key = `${line1 || ''}|${suburb || ''}|${postcode || ''}`;
+      
+      if ((line1 || suburb) && !seenLocations.has(key)) {
         seenLocations.add(key);
         locations.push({
-          locationName,
+          locationName: extractValue(locXml, 'LocationName') || extractValue(locXml, 'Name') || suburb || null,
           addressLine1: line1,
-          addressLine2: extractValue(locXml, 'Line2') || extractValue(locXml, 'AddressLine2'),
+          addressLine2: line2,
           suburb,
           state,
           postcode,
-          country: extractValue(locXml, 'Country'),
+          country,
         });
+      }
+    }
+  }
+  
+  // Fallback: also check for DeliveryLocation, Location, etc.
+  if (locations.length === 0) {
+    const containerNames = ['DeliveryLocations', 'Locations', 'SiteLocations', 'TrainingLocations'];
+    let containerXml: string | null = null;
+    
+    for (const name of containerNames) {
+      containerXml = extractSection(normalized, name);
+      if (containerXml) {
+        log('info', `Found locations container: ${name}`, { length: containerXml.length }, correlationId);
+        if (logRawSample && !rawSample) {
+          rawSample = containerXml.substring(0, 2000);
+        }
+        break;
+      }
+    }
+    
+    const searchXml = containerXml || normalized;
+    const locationNames = ['DeliveryLocation', 'Location', 'Site', 'TrainingLocation', 'SiteLocation'];
+    const seenLocations = new Set<string>();
+    
+    for (const locName of locationNames) {
+      const locationElements = extractAllTags(searchXml, locName);
+      
+      if (locationElements.length > 0 && locations.length === 0) {
+        log('info', `Found ${locationElements.length} ${locName} elements`, {}, correlationId);
+        if (logRawSample && !rawSample) {
+          rawSample = locationElements[0].substring(0, 1500);
+        }
+      }
+      
+      for (const locXml of locationElements) {
+        const locationName = extractValue(locXml, 'Name') || 
+                            extractValue(locXml, 'LocationName') || 
+                            extractValue(locXml, 'SiteName') || 
+                            extractValue(locXml, 'Description') ||
+                            extractValue(locXml, 'Title');
+        
+        const line1 = extractValue(locXml, 'Line1') || 
+                     extractValue(locXml, 'AddressLine1') ||
+                     extractValue(locXml, 'Street') || 
+                     extractValue(locXml, 'StreetAddress') ||
+                     extractValue(locXml, 'Address');
+        
+        const suburb = extractValue(locXml, 'Suburb') || 
+                      extractValue(locXml, 'Locality') || 
+                      extractValue(locXml, 'City');
+        
+        const postcode = extractValue(locXml, 'Postcode') || extractValue(locXml, 'PostCode');
+        const stateCode = extractValue(locXml, 'State') || extractValue(locXml, 'StateCode') || extractValue(locXml, 'StateTerritory');
+        const state = stateCode ? (TGA_STATE_CODES[stateCode] || stateCode) : null;
+        
+        const key = `${locationName || ''}|${line1 || ''}|${suburb || ''}|${postcode || ''}`;
+        
+        if ((locationName || line1 || suburb) && !seenLocations.has(key)) {
+          seenLocations.add(key);
+          locations.push({
+            locationName,
+            addressLine1: line1,
+            addressLine2: extractValue(locXml, 'Line2') || extractValue(locXml, 'AddressLine2'),
+            suburb,
+            state,
+            postcode,
+            country: extractValue(locXml, 'Country'),
+          });
+        }
       }
     }
   }
@@ -1496,6 +1593,7 @@ serve(async (req) => {
                 tenant_id: tenantIdNum,
                 rto_code: orgData.code,
                 contact_type: c.contactType,
+                contact_type_raw: c.contactTypeRaw,
                 name: c.name,
                 position: c.position,
                 phone: c.phone,

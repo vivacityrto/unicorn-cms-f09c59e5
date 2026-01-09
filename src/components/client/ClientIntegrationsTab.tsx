@@ -497,7 +497,16 @@ export function ClientIntegrationsTab({
                       <TableBody>
                         {tgaData.contacts.map((contact) => (
                           <TableRow key={contact.id}>
-                            <TableCell>{contact.contact_type || '-'}</TableCell>
+                            <TableCell>
+                              <Badge variant={
+                                contact.contact_type === 'ChiefExecutive' ? 'default' :
+                                contact.contact_type === 'PublicEnquiries' ? 'secondary' :
+                                contact.contact_type === 'RegistrationEnquiries' ? 'outline' :
+                                'secondary'
+                              }>
+                                {contact.contact_type || 'Unknown'}
+                              </Badge>
+                            </TableCell>
                             <TableCell className="font-medium">{contact.name || '-'}</TableCell>
                             <TableCell>{contact.position || '-'}</TableCell>
                             <TableCell>{contact.phone || '-'}</TableCell>
@@ -556,7 +565,13 @@ export function ClientIntegrationsTab({
                       </div>
                     )}
                     {tgaData.addresses.length === 0 && tgaData.deliveryLocations.length === 0 && (
-                      <p className="text-muted-foreground text-sm">No addresses found</p>
+                      <Alert>
+                        <AlertCircle className="h-4 w-4" />
+                        <AlertTitle>No address data</AlertTitle>
+                        <AlertDescription>
+                          Address data was not provided by TGA for this RTO, or could not be parsed.
+                        </AlertDescription>
+                      </Alert>
                     )}
                   </div>
                 </TabsContent>
@@ -588,7 +603,13 @@ export function ClientIntegrationsTab({
                       </TableBody>
                     </Table>
                   ) : (
-                    <p className="text-muted-foreground text-sm">No qualifications found</p>
+                    <Alert>
+                      <AlertCircle className="h-4 w-4" />
+                      <AlertTitle>No qualifications data</AlertTitle>
+                      <AlertDescription>
+                        Qualifications scope was not provided by TGA for this RTO.
+                      </AlertDescription>
+                    </Alert>
                   )}
                 </TabsContent>
 
@@ -619,7 +640,13 @@ export function ClientIntegrationsTab({
                       </TableBody>
                     </Table>
                   ) : (
-                    <p className="text-muted-foreground text-sm">No skill sets found</p>
+                    <Alert>
+                      <AlertCircle className="h-4 w-4" />
+                      <AlertTitle>No skill sets data</AlertTitle>
+                      <AlertDescription>
+                        Skill sets scope was not provided by TGA for this RTO.
+                      </AlertDescription>
+                    </Alert>
                   )}
                 </TabsContent>
 
@@ -650,7 +677,13 @@ export function ClientIntegrationsTab({
                       </TableBody>
                     </Table>
                   ) : (
-                    <p className="text-muted-foreground text-sm">No explicit units found</p>
+                    <Alert>
+                      <AlertCircle className="h-4 w-4" />
+                      <AlertTitle>No explicit units data</AlertTitle>
+                      <AlertDescription>
+                        Explicit units scope was not provided by TGA for this RTO.
+                      </AlertDescription>
+                    </Alert>
                   )}
                 </TabsContent>
 
@@ -679,7 +712,13 @@ export function ClientIntegrationsTab({
                       </TableBody>
                     </Table>
                   ) : (
-                    <p className="text-muted-foreground text-sm">No accredited courses found</p>
+                    <Alert>
+                      <AlertCircle className="h-4 w-4" />
+                      <AlertTitle>No accredited courses data</AlertTitle>
+                      <AlertDescription>
+                        Accredited courses scope was not provided by TGA for this RTO.
+                      </AlertDescription>
+                    </Alert>
                   )}
                 </TabsContent>
               </Tabs>
