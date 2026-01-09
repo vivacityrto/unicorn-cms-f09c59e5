@@ -48,7 +48,7 @@ const SOAP_ACTIONS = {
   searchTrainingComponent: `${TGA_V13_NAMESPACE}ITrainingComponentService/Search`,
 };
 
-const FUNCTION_VERSION = '1.9.0';
+const FUNCTION_VERSION = '2.0.0';
 
 // TGA State Code mapping
 const TGA_STATE_CODES: Record<string, string> = {
@@ -328,10 +328,18 @@ interface ParsedScope {
   courses: ParsedScopeItem[];
 }
 
+// Trading name with full history
+interface ParsedTradingName {
+  name: string;
+  startDate: string | null;
+  endDate: string | null;
+}
+
 interface ParsedOrganisation {
   code: string;
   legalName: string;
   tradingName: string | null;
+  tradingNames: ParsedTradingName[];
   organisationType: string | null;
   abn: string | null;
   acn: string | null;
@@ -916,15 +924,100 @@ function checkSectionPresence(xml: string): SectionPresence {
   };
 }
 
+/**
+ * Parse all trading names from TradingNames container.
+ * TGA structure: <TradingNames><TradingName><Name>...</Name><StartDate>...</StartDate><EndDate>...</EndDate></TradingName>...</TradingNames>
+ * Returns array of ParsedTradingName and the "current" trading name.
+ */
+function parseTradingNames(xml: string, correlationId?: string): { 
+  tradingNames: ParsedTradingName[]; 
+  currentTradingName: string | null;
+  tagExists: boolean;
+} {
+  const normalized = stripXmlPrefixes(xml);
+  
+  // First check if TradingNames or TradingName tag exists at all
+  const hasTradingNamesContainer = tagExists(normalized, 'TradingNames');
+  const hasTradingNameTag = tagExists(normalized, 'TradingName');
+  
+  if (!hasTradingNamesContainer && !hasTradingNameTag) {
+    return { tradingNames: [], currentTradingName: null, tagExists: false };
+  }
+  
+  const tradingNames: ParsedTradingName[] = [];
+  
+  // Try to get TradingNames container first
+  let tradingNamesContainer = extractSection(normalized, 'TradingNames');
+  if (!tradingNamesContainer) {
+    // Fall back to searching the whole document
+    tradingNamesContainer = normalized;
+  }
+  
+  // Extract all TradingName elements
+  const tradingNameElements = extractAllTags(tradingNamesContainer, 'TradingName');
+  
+  log('info', `Found ${tradingNameElements.length} TradingName elements`, {}, correlationId);
+  
+  for (const tnXml of tradingNameElements) {
+    // The name is in a child <Name> element, NOT the text content of <TradingName>
+    const name = decodeXmlEntities(extractValue(tnXml, 'Name'));
+    const startDate = extractValue(tnXml, 'StartDate');
+    const endDate = extractValue(tnXml, 'EndDate');
+    
+    if (name && name.trim()) {
+      tradingNames.push({
+        name: name.trim(),
+        startDate,
+        endDate,
+      });
+      log('info', `Extracted trading name: "${name}", start: ${startDate}, end: ${endDate}`, {}, correlationId);
+    } else {
+      // Log when Name child is missing for debugging
+      log('warn', 'TradingName element found but <Name> child is missing or empty', { 
+        tnXmlSample: tnXml.substring(0, 500) 
+      }, correlationId);
+    }
+  }
+  
+  // Determine current trading name:
+  // 1. Prefer records with no EndDate (still active)
+  // 2. If all have EndDate, pick the one with latest StartDate
+  let currentTradingName: string | null = null;
+  
+  const activeNames = tradingNames.filter(tn => !tn.endDate);
+  if (activeNames.length > 0) {
+    // Pick the one with the latest start date among active names
+    activeNames.sort((a, b) => {
+      if (!a.startDate && !b.startDate) return 0;
+      if (!a.startDate) return 1;
+      if (!b.startDate) return -1;
+      return b.startDate.localeCompare(a.startDate);
+    });
+    currentTradingName = activeNames[0].name;
+  } else if (tradingNames.length > 0) {
+    // All have end dates, pick latest start date
+    tradingNames.sort((a, b) => {
+      if (!a.startDate && !b.startDate) return 0;
+      if (!a.startDate) return 1;
+      if (!b.startDate) return -1;
+      return b.startDate.localeCompare(a.startDate);
+    });
+    currentTradingName = tradingNames[0].name;
+  }
+  
+  return { tradingNames, currentTradingName, tagExists: true };
+}
+
 // Parse and debug organisation summary from XML (node-scoped)
 function parseSummary(xml: string, canonicalRtoCode: string, correlationId?: string): {
   summary: Pick<ParsedOrganisation,
-    'code' | 'legalName' | 'tradingName' | 'organisationType' | 'abn' | 'acn' | 'status' | 'webAddress' |
+    'code' | 'legalName' | 'tradingName' | 'tradingNames' | 'organisationType' | 'abn' | 'acn' | 'status' | 'webAddress' |
     'initialRegistrationDate' | 'registrationStartDate' | 'registrationEndDate'
   > | null;
   fieldPresence: Record<string, boolean>;
   extractedFrom: Record<string, string | null>;
   orgNodeExcerpt: string | null;
+  tradingNamesArray: ParsedTradingName[];
 } {
   const normalized = stripXmlPrefixes(xml);
 
@@ -980,7 +1073,16 @@ function parseSummary(xml: string, canonicalRtoCode: string, correlationId?: str
   };
 
   const legalNameResult = extractWithSource('LegalName', ['LegalName', 'OrganisationLegalName', 'OrganisationName', 'Name']);
-  const tradingNameResult = extractWithSource('TradingName', ['TradingName', 'TradingAs', 'BusinessName']);
+  
+  // Parse trading names properly (with nested Name child element)
+  const tradingNamesResult = parseTradingNames(scoped, correlationId);
+  const tradingName = tradingNamesResult.currentTradingName;
+  const tradingNames = tradingNamesResult.tradingNames;
+  
+  // Set trading name field presence
+  tagStates.TradingName = { exists: tradingNamesResult.tagExists, isEmpty: tradingNamesResult.tagExists && !tradingName };
+  extractedFrom.TradingName = tradingName ? 'TradingNames/TradingName/Name' : (tradingNamesResult.tagExists ? 'TradingName:empty' : null);
+  
   const abnResult = extractWithSource('ABN', ['ABN', 'Abn', 'AustralianBusinessNumber', 'BusinessNumber']);
   const acnResult = extractWithSource('ACN', ['ACN', 'Acn', 'AustralianCompanyNumber', 'CompanyNumber']);
   const webAddressResult = extractWithSource('WebAddress', ['WebAddress', 'Website', 'WebSiteAddress', 'HomePage', 'Url', 'URL']);
@@ -991,7 +1093,6 @@ function parseSummary(xml: string, canonicalRtoCode: string, correlationId?: str
   const regEndDateResult = extractWithSource('RegistrationEndDate', ['RegistrationEndDate', 'RegistrationExpiryDate']);
 
   extractedFrom.LegalName = legalNameResult.source;
-  extractedFrom.TradingName = tradingNameResult.source;
   extractedFrom.ABN = abnResult.source;
   extractedFrom.ACN = acnResult.source;
   extractedFrom.WebAddress = webAddressResult.source;
@@ -1002,7 +1103,6 @@ function parseSummary(xml: string, canonicalRtoCode: string, correlationId?: str
   extractedFrom.RegistrationEndDate = regEndDateResult.source;
 
   const legalName = legalNameResult.value;
-  const tradingName = tradingNameResult.value;
   const abn = abnResult.value;
   const acn = acnResult.value;
   const webAddress = webAddressResult.value;
@@ -1020,13 +1120,14 @@ function parseSummary(xml: string, canonicalRtoCode: string, correlationId?: str
 
   if (!legalName) {
     log('error', 'No legal name found in organisation response (scoped)', { canonicalRtoCode, fieldPresence, extractedFrom }, correlationId);
-    return { summary: null, fieldPresence, extractedFrom, orgNodeExcerpt: orgNode ? orgNode.slice(0, 3000) : null };
+    return { summary: null, fieldPresence, extractedFrom, orgNodeExcerpt: orgNode ? orgNode.slice(0, 3000) : null, tradingNamesArray: [] };
   }
 
   log('info', 'Parsed org summary fields (scoped)', {
     canonicalRtoCode,
     legalName,
     tradingName: tradingName ?? 'null',
+    tradingNamesCount: tradingNames.length,
     abn: abn ?? 'null',
     acn: acn ?? 'null',
     webAddress: webAddress ?? 'null',
@@ -1040,6 +1141,7 @@ function parseSummary(xml: string, canonicalRtoCode: string, correlationId?: str
       code: canonicalRtoCode,
       legalName,
       tradingName,
+      tradingNames,
       organisationType,
       abn,
       acn,
@@ -1052,6 +1154,7 @@ function parseSummary(xml: string, canonicalRtoCode: string, correlationId?: str
     fieldPresence,
     extractedFrom,
     orgNodeExcerpt: orgNode ? orgNode.slice(0, 3000) : null,
+    tradingNamesArray: tradingNames,
   };
 }
 
@@ -1070,7 +1173,7 @@ function buildSummaryDebugPayload(xml: string, canonicalRtoCode: string, correla
   // Store up to 50k chars of raw XML for complete proof
   const rawXmlExcerpt = xml.slice(0, 50000);
   const rawXmlHash = simpleHash(xml);
-  const { summary, fieldPresence, extractedFrom, orgNodeExcerpt } = parseSummary(xml, canonicalRtoCode, correlationId);
+  const { summary, fieldPresence, extractedFrom, orgNodeExcerpt, tradingNamesArray } = parseSummary(xml, canonicalRtoCode, correlationId);
 
   // Categorize fields: missing (not in XML), empty (tag exists but no content), parseFailed (tag with content but extraction failed)
   const emptyFields: string[] = [];
@@ -1116,6 +1219,8 @@ function buildSummaryDebugPayload(xml: string, canonicalRtoCode: string, correla
     fieldPresence,
     extractedFrom,
     extractedSummary: summary,
+    tradingNamesArray,
+    tradingNamesCount: tradingNamesArray.length,
     missingFields,
     emptyFields,
     parseFailedFields,
