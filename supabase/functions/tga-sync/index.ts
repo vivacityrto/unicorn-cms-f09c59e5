@@ -310,16 +310,26 @@ function parseContacts(xml: string, correlationId?: string): ParsedContact[] {
     const contactElements = extractAllTags(normalized, 'Contact');
     log('info', `Found ${contactElements.length} generic Contact elements`, {}, correlationId);
     
+    // Debug: log the first contact's raw XML structure (truncated)
+    if (contactElements.length > 0) {
+      const sampleContact = contactElements[0].substring(0, 1500);
+      log('info', 'Sample contact XML structure', { xml: sampleContact }, correlationId);
+    }
+    
     // Debug: log the first few contact types we find
     const debugTypes: string[] = [];
     for (let i = 0; i < Math.min(5, contactElements.length); i++) {
       const contactXml = contactElements[i];
-      // Try multiple ways to extract contact type
+      // Try multiple ways to extract contact type - including looking for Type child elements
       const typeSection = extractSection(contactXml, 'ContactType');
+      const typeFullTag = extractFullTag(contactXml, 'ContactType');
       const typeCode = typeSection ? extractValue(typeSection, 'Code') : null;
       const typeDesc = typeSection ? extractValue(typeSection, 'Description') : null;
+      const typeFromType = extractSection(contactXml, 'Type');
+      const typeCodeFromType = typeFromType ? extractValue(typeFromType, 'Code') : null;
+      const typeDescFromType = typeFromType ? extractValue(typeFromType, 'Description') : null;
       const directType = extractValue(contactXml, 'ContactType') || extractValue(contactXml, 'Type');
-      debugTypes.push(`code=${typeCode || 'null'}, desc=${typeDesc || 'null'}, direct=${directType || 'null'}`);
+      debugTypes.push(`code=${typeCode || typeCodeFromType || 'null'}, desc=${typeDesc || typeDescFromType || 'null'}, direct=${directType || 'null'}, hasTypeSection=${!!typeSection}, hasFullTag=${!!typeFullTag}`);
     }
     log('info', 'Sample contact types found', { samples: debugTypes }, correlationId);
     
