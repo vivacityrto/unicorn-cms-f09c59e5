@@ -48,7 +48,7 @@ const SOAP_ACTIONS = {
   searchTrainingComponent: `${TGA_V13_NAMESPACE}ITrainingComponentService/Search`,
 };
 
-const FUNCTION_VERSION = '1.6.0';
+const FUNCTION_VERSION = '1.7.0';
 
 // TGA State Code mapping
 const TGA_STATE_CODES: Record<string, string> = {
@@ -846,18 +846,60 @@ function parseOrganisation(xml: string, canonicalRtoCode: string, correlationId?
     log('warn', `XML RTO code "${xmlCode}" differs from canonical "${canonicalRtoCode}". Using canonical.`, {}, correlationId);
   }
   
+  // Enhanced extraction with multiple fallback patterns for ABN, ACN, web address
+  const abn = extractValue(normalized, 'Abn') || 
+              extractValue(normalized, 'ABN') || 
+              extractValue(normalized, 'AustralianBusinessNumber') ||
+              extractValue(normalized, 'BusinessNumber');
+  
+  const acn = extractValue(normalized, 'Acn') || 
+              extractValue(normalized, 'ACN') || 
+              extractValue(normalized, 'AustralianCompanyNumber') ||
+              extractValue(normalized, 'CompanyNumber');
+  
+  const webAddress = extractValue(normalized, 'WebAddress') || 
+                     extractValue(normalized, 'Website') ||
+                     extractValue(normalized, 'Url') ||
+                     extractValue(normalized, 'URL') ||
+                     extractValue(normalized, 'WebSiteAddress') ||
+                     extractValue(normalized, 'HomePage');
+  
+  const tradingName = extractValue(normalized, 'TradingName') ||
+                      extractValue(normalized, 'TradingAs') ||
+                      extractValue(normalized, 'BusinessName');
+  
+  const organisationType = extractValue(normalized, 'OrganisationType') || 
+                           extractValue(normalized, 'Type') ||
+                           extractValue(normalized, 'OrgType') ||
+                           extractValue(normalized, 'OrganisationTypeDescription');
+  
+  const status = extractValue(normalized, 'Status') || 
+                 extractValue(normalized, 'RegistrationStatus') ||
+                 extractValue(normalized, 'CurrentStatus');
+  
+  log('info', 'Parsed org summary fields', {
+    canonicalRtoCode,
+    legalName,
+    tradingName: tradingName ?? 'null',
+    abn: abn ?? 'null',
+    acn: acn ?? 'null',
+    webAddress: webAddress ?? 'null',
+    organisationType: organisationType ?? 'null',
+    status: status ?? 'null',
+  }, correlationId);
+  
   return {
     code: canonicalRtoCode,
     legalName,
-    tradingName: extractValue(normalized, 'TradingName'),
-    organisationType: extractValue(normalized, 'OrganisationType') || extractValue(normalized, 'Type'),
-    abn: extractValue(normalized, 'Abn') || extractValue(normalized, 'ABN'),
-    acn: extractValue(normalized, 'Acn') || extractValue(normalized, 'ACN'),
-    status: extractValue(normalized, 'Status') || extractValue(normalized, 'RegistrationStatus'),
-    webAddress: extractValue(normalized, 'WebAddress') || extractValue(normalized, 'Website'),
-    initialRegistrationDate: extractValue(normalized, 'InitialRegistrationDate'),
-    registrationStartDate: extractValue(normalized, 'RegistrationStartDate'),
-    registrationEndDate: extractValue(normalized, 'RegistrationEndDate'),
+    tradingName,
+    organisationType,
+    abn,
+    acn,
+    status,
+    webAddress,
+    initialRegistrationDate: extractValue(normalized, 'InitialRegistrationDate') || extractValue(normalized, 'FirstRegistered'),
+    registrationStartDate: extractValue(normalized, 'RegistrationStartDate') || extractValue(normalized, 'CurrentRegistrationStart'),
+    registrationEndDate: extractValue(normalized, 'RegistrationEndDate') || extractValue(normalized, 'RegistrationExpiryDate'),
     contacts: parseContacts(normalized, correlationId),
     addresses: parseAddresses(normalized, correlationId),
     deliveryLocations: parseDeliveryLocations(normalized, correlationId).locations,
@@ -1846,7 +1888,19 @@ serve(async (req) => {
               .eq('id', runId);
           }
 
-          // Keep tenant registry link management in the app layer; sync is tenant-scoped.
+          // Update tga_links with last sync status using tenant_id + rto_number
+          await supabase
+            .from('tga_links')
+            .update({
+              last_sync_at: fetchedAt,
+              last_sync_status: 'success',
+              last_sync_error: null,
+              updated_at: fetchedAt,
+            })
+            .eq('tenant_id', tenantIdNum)
+            .eq('rto_number', orgData.code);
+          
+          log('info', 'Updated tga_links sync status', { tenant_id: tenantIdNum, rto_number: orgData.code }, correlationId);
         }
 
         return new Response(JSON.stringify({
@@ -1895,6 +1949,20 @@ serve(async (req) => {
               error_message: errorMsg,
             })
             .eq('id', runId);
+        }
+
+        // Update tga_links with failure status
+        if (effectiveRto) {
+          await supabase
+            .from('tga_links')
+            .update({
+              last_sync_at: failedAt,
+              last_sync_status: 'failed',
+              last_sync_error: errorMsg,
+              updated_at: failedAt,
+            })
+            .eq('tenant_id', tenantIdNum)
+            .eq('rto_number', effectiveRto);
         }
 
         return new Response(JSON.stringify({

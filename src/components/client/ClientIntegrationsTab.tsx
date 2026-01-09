@@ -416,27 +416,27 @@ export function ClientIntegrationsTab({
                     <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                       <div className="space-y-1">
                         <p className="text-sm text-muted-foreground">Legal Name</p>
-                        <p className="font-medium">{tgaData.summary.legal_name || '-'}</p>
+                        <p className="font-medium">{tgaData.summary.legal_name || <span className="text-muted-foreground italic">Not provided by TGA</span>}</p>
                       </div>
                       <div className="space-y-1">
                         <p className="text-sm text-muted-foreground">Trading Name</p>
-                        <p className="font-medium">{tgaData.summary.trading_name || '-'}</p>
+                        <p className="font-medium">{tgaData.summary.trading_name || <span className="text-muted-foreground italic">Not provided by TGA</span>}</p>
                       </div>
                       <div className="space-y-1">
                         <p className="text-sm text-muted-foreground">Organisation Type</p>
-                        <p className="font-medium">{tgaData.summary.organisation_type || '-'}</p>
+                        <p className="font-medium">{tgaData.summary.organisation_type || <span className="text-muted-foreground italic">Not provided by TGA</span>}</p>
                       </div>
                       <div className="space-y-1">
                         <p className="text-sm text-muted-foreground">ABN</p>
-                        <p className="font-medium">{tgaData.summary.abn || '-'}</p>
+                        <p className="font-medium">{tgaData.summary.abn || <span className="text-muted-foreground italic">Not provided by TGA</span>}</p>
                       </div>
                       <div className="space-y-1">
                         <p className="text-sm text-muted-foreground">ACN</p>
-                        <p className="font-medium">{tgaData.summary.acn || '-'}</p>
+                        <p className="font-medium">{tgaData.summary.acn || <span className="text-muted-foreground italic">Not provided by TGA</span>}</p>
                       </div>
                       <div className="space-y-1">
                         <p className="text-sm text-muted-foreground">Status</p>
-                        <Badge variant={tgaData.summary.status === 'Registered' ? 'default' : 'secondary'}>
+                        <Badge variant={tgaData.summary.status === 'Registered' || tgaData.summary.status === 'Current' ? 'default' : 'secondary'}>
                           {tgaData.summary.status || 'Unknown'}
                         </Badge>
                       </div>
@@ -454,20 +454,20 @@ export function ClientIntegrationsTab({
                             {tgaData.summary.web_address}
                           </a>
                         ) : (
-                          <p className="font-medium">-</p>
+                          <p className="font-medium text-muted-foreground italic">Not provided by TGA</p>
                         )}
                       </div>
                       <div className="space-y-1">
                         <p className="text-sm text-muted-foreground">Initial Registration</p>
-                        <p className="font-medium">{tgaData.summary.initial_registration_date || '-'}</p>
+                        <p className="font-medium">{tgaData.summary.initial_registration_date || <span className="text-muted-foreground italic">Not provided by TGA</span>}</p>
                       </div>
                       <div className="space-y-1">
                         <p className="text-sm text-muted-foreground">Registration Start</p>
-                        <p className="font-medium">{tgaData.summary.registration_start_date || '-'}</p>
+                        <p className="font-medium">{tgaData.summary.registration_start_date || <span className="text-muted-foreground italic">Not provided by TGA</span>}</p>
                       </div>
                       <div className="space-y-1">
                         <p className="text-sm text-muted-foreground">Registration End</p>
-                        <p className="font-medium">{tgaData.summary.registration_end_date || '-'}</p>
+                        <p className="font-medium">{tgaData.summary.registration_end_date || <span className="text-muted-foreground italic">Not provided by TGA</span>}</p>
                       </div>
                       {tgaData.summary.fetched_at && (
                         <div className="space-y-1 col-span-2 md:col-span-3 pt-2 border-t">
@@ -478,7 +478,13 @@ export function ClientIntegrationsTab({
                       )}
                     </div>
                   ) : (
-                    <p className="text-muted-foreground text-sm">No summary data available</p>
+                    <Alert>
+                      <AlertCircle className="h-4 w-4" />
+                      <AlertTitle>No summary data</AlertTitle>
+                      <AlertDescription>
+                        Summary data has not been synced yet. Click "Sync Now" to import data from TGA.
+                      </AlertDescription>
+                    </Alert>
                   )}
                 </TabsContent>
 
