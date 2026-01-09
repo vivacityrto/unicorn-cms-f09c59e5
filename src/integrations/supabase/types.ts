@@ -10317,6 +10317,7 @@ export type Database = {
           last_sync_status: string | null
           link_status: string
           rto_number: string
+          tenant_id: number | null
           updated_at: string
         }
         Insert: {
@@ -10329,6 +10330,7 @@ export type Database = {
           last_sync_status?: string | null
           link_status?: string
           rto_number: string
+          tenant_id?: number | null
           updated_at?: string
         }
         Update: {
@@ -10341,6 +10343,7 @@ export type Database = {
           last_sync_status?: string | null
           link_status?: string
           rto_number?: string
+          tenant_id?: number | null
           updated_at?: string
         }
         Relationships: [
@@ -10356,6 +10359,13 @@ export type Database = {
             columns: ["client_id"]
             isOneToOne: true
             referencedRelation: "dashboard_client_snapshot"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tga_links_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
             referencedColumns: ["id"]
           },
         ]
@@ -10510,6 +10520,7 @@ export type Database = {
         Row: {
           address: string | null
           contact_type: string | null
+          contact_type_raw: string | null
           created_at: string
           email: string | null
           fax: string | null
@@ -10527,6 +10538,7 @@ export type Database = {
         Insert: {
           address?: string | null
           contact_type?: string | null
+          contact_type_raw?: string | null
           created_at?: string
           email?: string | null
           fax?: string | null
@@ -10544,6 +10556,7 @@ export type Database = {
         Update: {
           address?: string | null
           contact_type?: string | null
+          contact_type_raw?: string | null
           created_at?: string
           email?: string | null
           fax?: string | null
@@ -11172,6 +11185,24 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      tga_state_codes: {
+        Row: {
+          abbreviation: string
+          code: string
+          name: string
+        }
+        Insert: {
+          abbreviation: string
+          code: string
+          name: string
+        }
+        Update: {
+          abbreviation?: string
+          code?: string
+          name?: string
+        }
+        Relationships: []
       }
       tga_sync_jobs: {
         Row: {
