@@ -826,58 +826,96 @@ function checkSectionPresence(xml: string): SectionPresence {
   };
 }
 
-// Parse organisation from XML
-function parseOrganisation(xml: string, canonicalRtoCode: string, correlationId?: string): ParsedOrganisation | null {
+// Parse and debug organisation summary from XML (node-scoped)
+function parseSummary(xml: string, canonicalRtoCode: string, correlationId?: string): {
+  summary: Pick<ParsedOrganisation,
+    'code' | 'legalName' | 'tradingName' | 'organisationType' | 'abn' | 'acn' | 'status' | 'webAddress' |
+    'initialRegistrationDate' | 'registrationStartDate' | 'registrationEndDate'
+  > | null;
+  fieldPresence: Record<string, boolean>;
+  orgNodeExcerpt: string | null;
+} {
   const normalized = stripXmlPrefixes(xml);
-  
-  log('info', 'Parsing organisation with regex', { canonicalRtoCode }, correlationId);
-  
-  // Get basic info
-  const legalName = extractValue(normalized, 'LegalName') || extractValue(normalized, 'Name');
+
+  // Prefer an Organisation node that matches the canonical code.
+  const orgNodes = extractAllTags(normalized, 'Organisation');
+  let orgNode: string | null = null;
+
+  for (const node of orgNodes) {
+    const code = extractValue(node, 'Code') || extractValue(node, 'RtoCode') || extractValue(node, 'NationalProviderId');
+    if (code && code.toString().trim() === canonicalRtoCode) {
+      orgNode = node;
+      break;
+    }
+  }
+
+  // Fallback: try OrganisationDetails, otherwise any Organisation
+  orgNode ||= extractFullTag(normalized, 'OrganisationDetails') || extractFullTag(normalized, 'Organisation') || null;
+
+  const scoped = orgNode || normalized;
+
+  // Presence checks are scoped to the organisation node when available
+  const hasTag = (tag: string) => new RegExp(`<(?:\\w+:)?${tag}[^>]*>`, 'i').test(scoped);
+
+  const legalName = extractValue(scoped, 'LegalName') ||
+    extractValue(scoped, 'OrganisationLegalName') ||
+    extractValue(scoped, 'OrganisationName') ||
+    extractValue(scoped, 'Name');
+
+  const tradingName = extractValue(scoped, 'TradingName') ||
+    extractValue(scoped, 'TradingAs') ||
+    extractValue(scoped, 'BusinessName');
+
+  const abn = extractValue(scoped, 'ABN') || extractValue(scoped, 'Abn') ||
+    extractValue(scoped, 'AustralianBusinessNumber') || extractValue(scoped, 'BusinessNumber');
+
+  const acn = extractValue(scoped, 'ACN') || extractValue(scoped, 'Acn') ||
+    extractValue(scoped, 'AustralianCompanyNumber') || extractValue(scoped, 'CompanyNumber');
+
+  const webAddress = extractValue(scoped, 'WebAddress') ||
+    extractValue(scoped, 'Website') ||
+    extractValue(scoped, 'WebSiteAddress') ||
+    extractValue(scoped, 'HomePage') ||
+    extractValue(scoped, 'Url') ||
+    extractValue(scoped, 'URL');
+
+  const organisationType = extractValue(scoped, 'OrganisationType') ||
+    extractValue(scoped, 'OrganisationTypeDescription') ||
+    extractValue(scoped, 'OrganisationTypeCode') ||
+    extractValue(scoped, 'OrgType');
+
+  const status = extractValue(scoped, 'Status') ||
+    extractValue(scoped, 'RegistrationStatus') ||
+    extractValue(scoped, 'CurrentStatus');
+
+  const initialRegistrationDate = extractValue(scoped, 'InitialRegistrationDate') ||
+    extractValue(scoped, 'FirstRegistered');
+
+  const registrationStartDate = extractValue(scoped, 'RegistrationStartDate') ||
+    extractValue(scoped, 'CurrentRegistrationStart');
+
+  const registrationEndDate = extractValue(scoped, 'RegistrationEndDate') ||
+    extractValue(scoped, 'RegistrationExpiryDate');
+
+  const fieldPresence: Record<string, boolean> = {
+    LegalName: hasTag('LegalName') || hasTag('OrganisationLegalName') || hasTag('OrganisationName') || hasTag('Name'),
+    TradingName: hasTag('TradingName') || hasTag('TradingAs') || hasTag('BusinessName'),
+    ABN: hasTag('ABN') || hasTag('Abn') || hasTag('AustralianBusinessNumber') || hasTag('BusinessNumber'),
+    ACN: hasTag('ACN') || hasTag('Acn') || hasTag('AustralianCompanyNumber') || hasTag('CompanyNumber'),
+    WebAddress: hasTag('WebAddress') || hasTag('Website') || hasTag('WebSiteAddress') || hasTag('HomePage') || hasTag('Url') || hasTag('URL'),
+    OrganisationType: hasTag('OrganisationType') || hasTag('OrganisationTypeDescription') || hasTag('OrganisationTypeCode') || hasTag('OrgType'),
+    Status: hasTag('Status') || hasTag('RegistrationStatus') || hasTag('CurrentStatus'),
+    InitialRegistrationDate: hasTag('InitialRegistrationDate') || hasTag('FirstRegistered'),
+    RegistrationStartDate: hasTag('RegistrationStartDate') || hasTag('CurrentRegistrationStart'),
+    RegistrationEndDate: hasTag('RegistrationEndDate') || hasTag('RegistrationExpiryDate'),
+  };
+
   if (!legalName) {
-    log('error', 'No legal name found in organisation response', {}, correlationId);
-    return null;
+    log('error', 'No legal name found in organisation response (scoped)', { canonicalRtoCode }, correlationId);
+    return { summary: null, fieldPresence, orgNodeExcerpt: orgNode ? orgNode.slice(0, 1500) : null };
   }
-  
-  // Get RTO code from XML
-  const xmlCode = extractValue(normalized, 'Code') || extractValue(normalized, 'RtoCode') || extractValue(normalized, 'NationalProviderId');
-  
-  if (xmlCode && xmlCode !== canonicalRtoCode) {
-    log('warn', `XML RTO code "${xmlCode}" differs from canonical "${canonicalRtoCode}". Using canonical.`, {}, correlationId);
-  }
-  
-  // Enhanced extraction with multiple fallback patterns for ABN, ACN, web address
-  const abn = extractValue(normalized, 'Abn') || 
-              extractValue(normalized, 'ABN') || 
-              extractValue(normalized, 'AustralianBusinessNumber') ||
-              extractValue(normalized, 'BusinessNumber');
-  
-  const acn = extractValue(normalized, 'Acn') || 
-              extractValue(normalized, 'ACN') || 
-              extractValue(normalized, 'AustralianCompanyNumber') ||
-              extractValue(normalized, 'CompanyNumber');
-  
-  const webAddress = extractValue(normalized, 'WebAddress') || 
-                     extractValue(normalized, 'Website') ||
-                     extractValue(normalized, 'Url') ||
-                     extractValue(normalized, 'URL') ||
-                     extractValue(normalized, 'WebSiteAddress') ||
-                     extractValue(normalized, 'HomePage');
-  
-  const tradingName = extractValue(normalized, 'TradingName') ||
-                      extractValue(normalized, 'TradingAs') ||
-                      extractValue(normalized, 'BusinessName');
-  
-  const organisationType = extractValue(normalized, 'OrganisationType') || 
-                           extractValue(normalized, 'Type') ||
-                           extractValue(normalized, 'OrgType') ||
-                           extractValue(normalized, 'OrganisationTypeDescription');
-  
-  const status = extractValue(normalized, 'Status') || 
-                 extractValue(normalized, 'RegistrationStatus') ||
-                 extractValue(normalized, 'CurrentStatus');
-  
-  log('info', 'Parsed org summary fields', {
+
+  log('info', 'Parsed org summary fields (scoped)', {
     canonicalRtoCode,
     legalName,
     tradingName: tradingName ?? 'null',
@@ -887,19 +925,55 @@ function parseOrganisation(xml: string, canonicalRtoCode: string, correlationId?
     organisationType: organisationType ?? 'null',
     status: status ?? 'null',
   }, correlationId);
-  
+
   return {
-    code: canonicalRtoCode,
-    legalName,
-    tradingName,
-    organisationType,
-    abn,
-    acn,
-    status,
-    webAddress,
-    initialRegistrationDate: extractValue(normalized, 'InitialRegistrationDate') || extractValue(normalized, 'FirstRegistered'),
-    registrationStartDate: extractValue(normalized, 'RegistrationStartDate') || extractValue(normalized, 'CurrentRegistrationStart'),
-    registrationEndDate: extractValue(normalized, 'RegistrationEndDate') || extractValue(normalized, 'RegistrationExpiryDate'),
+    summary: {
+      code: canonicalRtoCode,
+      legalName,
+      tradingName,
+      organisationType,
+      abn,
+      acn,
+      status,
+      webAddress,
+      initialRegistrationDate,
+      registrationStartDate,
+      registrationEndDate,
+    },
+    fieldPresence,
+    orgNodeExcerpt: orgNode ? orgNode.slice(0, 1500) : null,
+  };
+}
+
+function buildSummaryDebugPayload(xml: string, canonicalRtoCode: string, correlationId?: string) {
+  const rawXmlExcerpt = stripXmlPrefixes(xml).slice(0, 9000);
+  const { summary, fieldPresence } = parseSummary(xml, canonicalRtoCode, correlationId);
+
+  return {
+    endpoint: 'GetDetails',
+    raw_xml_excerpt: rawXmlExcerpt,
+    field_presence: fieldPresence,
+    parsed_summary: summary,
+  };
+}
+
+// Parse organisation from XML
+function parseOrganisation(xml: string, canonicalRtoCode: string, correlationId?: string): ParsedOrganisation | null {
+  const normalized = stripXmlPrefixes(xml);
+
+  log('info', 'Parsing organisation with regex', { canonicalRtoCode }, correlationId);
+
+  // RTO code from XML (for warnings only)
+  const xmlCode = extractValue(normalized, 'Code') || extractValue(normalized, 'RtoCode') || extractValue(normalized, 'NationalProviderId');
+  if (xmlCode && xmlCode !== canonicalRtoCode) {
+    log('warn', `XML RTO code "${xmlCode}" differs from canonical "${canonicalRtoCode}". Using canonical.`, {}, correlationId);
+  }
+
+  const parsedSummary = parseSummary(normalized, canonicalRtoCode, correlationId);
+  if (!parsedSummary.summary) return null;
+
+  return {
+    ...parsedSummary.summary,
     contacts: parseContacts(normalized, correlationId),
     addresses: parseAddresses(normalized, correlationId),
     deliveryLocations: parseDeliveryLocations(normalized, correlationId).locations,
@@ -1462,6 +1536,7 @@ serve(async (req) => {
 
       try {
         const orgResult = await fetchOrganisation(effectiveRto, correlationId);
+        const summaryDebug = buildSummaryDebugPayload(orgResult.raw, effectiveRto, correlationId);
 
         // Store debug payload(s) for visibility (one per stage-like section)
         await supabase.from('tga_debug_payloads').insert([
@@ -1476,6 +1551,7 @@ serve(async (req) => {
               rto_number: effectiveRto,
               hasData: !!orgResult.data,
               error: orgResult.error,
+              ...summaryDebug,
             },
           },
           {
@@ -1513,7 +1589,7 @@ serve(async (req) => {
               rto_number: effectiveRto,
               sectionPresence: orgResult.sectionPresence,
               // Store raw XML sample for debugging if parse returns 0 but section is present
-              rawXmlSample: (orgResult.sectionPresence?.locations && orgResult.data?.deliveryLocations?.length === 0) 
+              rawXmlSample: (orgResult.sectionPresence?.locations && orgResult.data?.deliveryLocations?.length === 0)
                 ? parseDeliveryLocations(orgResult.raw, correlationId, true).rawSample
                 : undefined,
             },
@@ -1835,7 +1911,9 @@ serve(async (req) => {
               trading_name: orgData.tradingName || tenantRow.name,
               legal_name: orgData.legalName,
               abn: orgData.abn,
+              acn: orgData.acn,
               website: orgData.webAddress,
+              org_type: orgData.organisationType,
               updated_at: fetchedAt,
               updated_by: user.id,
             }, { onConflict: 'tenant_id' });

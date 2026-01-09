@@ -73,9 +73,10 @@ export function ClientIntegrationsTab({
 }: ClientIntegrationsTabProps) {
   const [updating, setUpdating] = useState(false);
   const [tenantStatus, setTenantStatus] = useState<{ status: string; mergedInto?: number } | null>(null);
+  const [tgaLinkRow, setTgaLinkRow] = useState<{ last_sync_at: string | null; last_sync_status: string | null; last_sync_error: string | null } | null>(null);
   const [debugInfo, setDebugInfo] = useState<{
     lastSyncRun?: { id: string; status: string; created_at: string; stage?: string; last_error?: string | null; payload_meta?: unknown } | null;
-    debugPayload?: { record_count: number; fetched_at: string; endpoint?: string } | null;
+    debugPayload?: { record_count: number; fetched_at: string; endpoint?: string; http_status?: number | null; payload?: any } | null;
     stageJobs?: Array<{ stage: string; status: string; count?: number; reason?: string }>;
   } | null>(null);
   const [showDebug, setShowDebug] = useState(false);
@@ -90,14 +91,14 @@ export function ClientIntegrationsTab({
   // Check tenant status
   useEffect(() => {
     if (!profile?.tenant_id) return;
-    
+
     const fetchTenantStatus = async () => {
       const { data } = await supabase
         .from('tenants')
         .select('status, metadata')
         .eq('id', profile.tenant_id)
         .single();
-      
+
       if (data) {
         const metadata = data.metadata as Record<string, unknown> | null;
         setTenantStatus({
@@ -106,9 +107,27 @@ export function ClientIntegrationsTab({
         });
       }
     };
-    
+
     fetchTenantStatus();
   }, [profile?.tenant_id]);
+
+  // Fetch current tga_links sync status (source of truth for last sync)
+  useEffect(() => {
+    if (!profile?.tenant_id || !profile?.rto_number) return;
+
+    const fetchTgaLinkRow = async () => {
+      const { data } = await supabase
+        .from('tga_links')
+        .select('last_sync_at, last_sync_status, last_sync_error')
+        .eq('tenant_id', profile.tenant_id)
+        .eq('rto_number', profile.rto_number)
+        .maybeSingle();
+
+      setTgaLinkRow(data ?? null);
+    };
+
+    fetchTgaLinkRow();
+  }, [profile?.tenant_id, profile?.rto_number, syncCounter]);
 
   // Fetch debug info for SuperAdmins - refresh when syncCounter changes
   useEffect(() => {
@@ -123,8 +142,9 @@ export function ClientIntegrationsTab({
           .limit(1)
           .maybeSingle(),
         supabase.from('tga_debug_payloads')
-          .select('record_count, fetched_at, endpoint, http_status')
+          .select('record_count, fetched_at, endpoint, http_status, payload')
           .eq('tenant_id', profile.tenant_id)
+          .eq('rto_code', profile.rto_number)
           .order('fetched_at', { ascending: false })
           .limit(1)
           .maybeSingle()
@@ -299,10 +319,10 @@ export function ClientIntegrationsTab({
                     <CheckCircle2 className="h-4 w-4 text-green-600" />
                     <AlertTitle className="text-green-600">Successfully Linked</AlertTitle>
                     <AlertDescription>
-                      This client is linked to TGA. 
-                      {registryLink?.last_synced_at && (
+                      This client is linked to TGA.
+                      {tgaLinkRow?.last_sync_at && (
                         <span className="block mt-1">
-                          Last synced: {new Date(registryLink.last_synced_at).toLocaleString()}
+                          Last synced: {new Date(tgaLinkRow.last_sync_at).toLocaleString()} ({tgaLinkRow.last_sync_status || 'unknown'})
                         </span>
                       )}
                     </AlertDescription>
@@ -819,6 +839,20 @@ export function ClientIntegrationsTab({
                       <p className="text-muted-foreground">Last Fetched</p>
                       <p>{new Date(debugInfo.debugPayload.fetched_at).toLocaleString()}</p>
                     </div>
+
+                    {debugInfo.debugPayload.payload?.field_presence && (
+                      <div className="col-span-2">
+                        <p className="text-muted-foreground">Summary Field Presence (from raw XML)</p>
+                        <div className="mt-2 grid grid-cols-2 gap-2 text-xs">
+                          {Object.entries(debugInfo.debugPayload.payload.field_presence as Record<string, boolean>).map(([k, v]) => (
+                            <div key={k} className="flex items-center justify-between rounded-md border bg-muted/30 px-2 py-1">
+                              <span className="font-medium">{k}</span>
+                              <Badge variant={v ? 'default' : 'secondary'} className="text-[10px]">{v ? 'present' : 'missing'}</Badge>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </>
                 )}
               </div>
