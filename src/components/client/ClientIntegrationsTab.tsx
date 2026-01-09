@@ -813,7 +813,7 @@ export function ClientIntegrationsTab({
                       <AlertCircle className="h-4 w-4" />
                       <AlertTitle>No qualifications data</AlertTitle>
                       <AlertDescription>
-                        Qualifications scope was not provided by TGA for this RTO.
+                        TGA did not return qualifications scope for this RTO. This may be normal — not all RTOs have scope data published via the web service.
                       </AlertDescription>
                     </Alert>
                   )}
@@ -850,7 +850,7 @@ export function ClientIntegrationsTab({
                       <AlertCircle className="h-4 w-4" />
                       <AlertTitle>No skill sets data</AlertTitle>
                       <AlertDescription>
-                        Skill sets scope was not provided by TGA for this RTO.
+                        TGA did not return skill sets scope for this RTO. This may be normal — not all RTOs have scope data published via the web service.
                       </AlertDescription>
                     </Alert>
                   )}
@@ -887,7 +887,7 @@ export function ClientIntegrationsTab({
                       <AlertCircle className="h-4 w-4" />
                       <AlertTitle>No explicit units data</AlertTitle>
                       <AlertDescription>
-                        Explicit units scope was not provided by TGA for this RTO.
+                        TGA did not return explicit units scope for this RTO. This may be normal — not all RTOs have explicit units published via the web service.
                       </AlertDescription>
                     </Alert>
                   )}
@@ -922,7 +922,7 @@ export function ClientIntegrationsTab({
                       <AlertCircle className="h-4 w-4" />
                       <AlertTitle>No accredited courses data</AlertTitle>
                       <AlertDescription>
-                        Accredited courses scope was not provided by TGA for this RTO.
+                        TGA did not return accredited courses scope for this RTO. This may be normal — not all RTOs have scope data published via the web service.
                       </AlertDescription>
                     </Alert>
                   )}
@@ -1041,6 +1041,23 @@ export function ClientIntegrationsTab({
                       </div>
                     )}
 
+                    {/* Section Presence - shows which data sections TGA returned */}
+                    {debugInfo.debugPayload.payload?.sectionPresence && (
+                      <div className="col-span-2">
+                        <p className="text-muted-foreground">Sections in TGA Response</p>
+                        <div className="mt-2 grid grid-cols-4 gap-2 text-xs">
+                          {Object.entries(debugInfo.debugPayload.payload.sectionPresence as Record<string, boolean>).map(([section, present]) => (
+                            <div key={section} className="flex items-center gap-1">
+                              <span className={present ? 'text-green-600' : 'text-muted-foreground'}>
+                                {present ? '✓' : '✗'}
+                              </span>
+                              <span className={present ? '' : 'text-muted-foreground'}>{section}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
                     {/* Field Presence - support both formats */}
                     {(debugInfo.debugPayload.payload?.fieldPresence || debugInfo.debugPayload.payload?.field_presence) && (
                       <div className="col-span-2">
@@ -1070,7 +1087,7 @@ export function ClientIntegrationsTab({
 
                     {(debugInfo.debugPayload.payload?.missingFields?.length > 0 || debugInfo.debugPayload.payload?.missing_fields?.length > 0) && (
                       <div className="col-span-2">
-                        <p className="text-muted-foreground">Missing Fields (not in XML)</p>
+                        <p className="text-muted-foreground">Fields not returned by TGA endpoint</p>
                         <p className="text-xs text-muted-foreground mt-1">
                           {(debugInfo.debugPayload.payload.missingFields || debugInfo.debugPayload.payload.missing_fields).join(', ')}
                         </p>
@@ -1079,7 +1096,7 @@ export function ClientIntegrationsTab({
 
                     {(debugInfo.debugPayload.payload?.emptyFields?.length > 0 || debugInfo.debugPayload.payload?.empty_fields?.length > 0) && (
                       <div className="col-span-2">
-                        <p className="text-muted-foreground">Empty Fields (tag exists but no value)</p>
+                        <p className="text-muted-foreground">Fields returned empty by TGA</p>
                         <p className="text-xs text-amber-600 mt-1">
                           {(debugInfo.debugPayload.payload.emptyFields || debugInfo.debugPayload.payload.empty_fields).join(', ')}
                         </p>
@@ -1088,7 +1105,7 @@ export function ClientIntegrationsTab({
 
                     {(debugInfo.debugPayload.payload?.parseFailedFields?.length > 0 || debugInfo.debugPayload.payload?.parse_failed_fields?.length > 0) && (
                       <div className="col-span-2">
-                        <p className="text-muted-foreground text-destructive">Parse Failed Fields (extraction error)</p>
+                        <p className="text-muted-foreground text-destructive">Parsing errors</p>
                         <p className="text-xs text-destructive mt-1">
                           {(debugInfo.debugPayload.payload.parseFailedFields || debugInfo.debugPayload.payload.parse_failed_fields).join(', ')}
                         </p>

@@ -1821,6 +1821,7 @@ serve(async (req) => {
               rto_number: effectiveRto,
               hasData: !!orgResult.data,
               error: orgResult.error,
+              sectionPresence: orgResult.sectionPresence,
               ...summaryDebug,
             },
           },
