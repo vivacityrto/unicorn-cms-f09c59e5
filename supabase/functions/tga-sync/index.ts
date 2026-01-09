@@ -484,8 +484,8 @@ function parseDeliveryLocations(xml: string, correlationId?: string): ParsedDeli
   
   log('info', 'Parsing delivery locations with regex', {}, correlationId);
   
-  // Look for location containers
-  const containerNames = ['DeliveryLocations', 'Locations', 'SiteLocations'];
+  // Look for location containers - TGA uses various naming
+  const containerNames = ['DeliveryLocations', 'Locations', 'SiteLocations', 'TrainingLocations'];
   let containerXml: string | null = null;
   
   for (const name of containerNames) {
@@ -496,28 +496,56 @@ function parseDeliveryLocations(xml: string, correlationId?: string): ParsedDeli
     }
   }
   
-  if (containerXml) {
-    const locationNames = ['DeliveryLocation', 'Location', 'Site'];
-    for (const locName of locationNames) {
-      const locationElements = extractAllTags(containerXml, locName);
-      for (const locXml of locationElements) {
-        const locationName = extractValue(locXml, 'Name') || extractValue(locXml, 'LocationName') || 
-                            extractValue(locXml, 'SiteName') || extractValue(locXml, 'Description');
-        const line1 = extractValue(locXml, 'Line1') || extractValue(locXml, 'AddressLine1') ||
-                     extractValue(locXml, 'Street') || extractValue(locXml, 'StreetAddress');
-        const suburb = extractValue(locXml, 'Suburb') || extractValue(locXml, 'Locality') || extractValue(locXml, 'City');
-        
-        if (locationName || line1 || suburb) {
-          locations.push({
-            locationName,
-            addressLine1: line1,
-            addressLine2: extractValue(locXml, 'Line2') || extractValue(locXml, 'AddressLine2'),
-            suburb,
-            state: extractValue(locXml, 'State') || extractValue(locXml, 'StateCode'),
-            postcode: extractValue(locXml, 'Postcode') || extractValue(locXml, 'PostCode'),
-            country: extractValue(locXml, 'Country'),
-          });
-        }
+  // Also try to find location elements directly in the full XML if no container found
+  const searchXml = containerXml || normalized;
+  
+  const locationNames = ['DeliveryLocation', 'Location', 'Site', 'TrainingLocation'];
+  const seenLocations = new Set<string>();
+  
+  for (const locName of locationNames) {
+    const locationElements = extractAllTags(searchXml, locName);
+    
+    // Log first element for debugging
+    if (locationElements.length > 0 && locations.length === 0) {
+      log('info', `Found ${locationElements.length} ${locName} elements`, { sample: locationElements[0].substring(0, 500) }, correlationId);
+    }
+    
+    for (const locXml of locationElements) {
+      // Try multiple field name patterns for location name
+      const locationName = extractValue(locXml, 'Name') || 
+                          extractValue(locXml, 'LocationName') || 
+                          extractValue(locXml, 'SiteName') || 
+                          extractValue(locXml, 'Description') ||
+                          extractValue(locXml, 'Title');
+      
+      // Try multiple field name patterns for address line
+      const line1 = extractValue(locXml, 'Line1') || 
+                   extractValue(locXml, 'AddressLine1') ||
+                   extractValue(locXml, 'Street') || 
+                   extractValue(locXml, 'StreetAddress') ||
+                   extractValue(locXml, 'Address');
+      
+      const suburb = extractValue(locXml, 'Suburb') || 
+                    extractValue(locXml, 'Locality') || 
+                    extractValue(locXml, 'City');
+      
+      const postcode = extractValue(locXml, 'Postcode') || extractValue(locXml, 'PostCode');
+      const state = extractValue(locXml, 'State') || extractValue(locXml, 'StateCode');
+      
+      // Create a unique key to avoid duplicates
+      const key = `${locationName || ''}|${line1 || ''}|${suburb || ''}|${postcode || ''}`;
+      
+      if ((locationName || line1 || suburb) && !seenLocations.has(key)) {
+        seenLocations.add(key);
+        locations.push({
+          locationName,
+          addressLine1: line1,
+          addressLine2: extractValue(locXml, 'Line2') || extractValue(locXml, 'AddressLine2'),
+          suburb,
+          state,
+          postcode,
+          country: extractValue(locXml, 'Country'),
+        });
       }
     }
   }
@@ -1327,31 +1355,35 @@ serve(async (req) => {
         const fetchedAt = new Date().toISOString();
 
         // Create a run + job record (monitoring/retry visibility)
-        const { data: runRow } = await supabase
+        // Note: run_type must be 'manual' or 'scheduled' per constraint
+        // Note: stage must be one of: rto_summary, addresses, contacts, delivery_sites, scope_*, full_sync
+        const { data: runRow, error: runError } = await supabase
           .from('tga_import_runs')
           .insert({
-            run_type: 'staged_sync',
+            run_type: 'manual',
             status: 'running',
             started_at: fetchedAt,
             source_ref: `tenant:${tenantIdNum}:rto:${effectiveRto}`,
             records_processed: 0,
             error_message: null,
             created_by: user.id,
-            notes: `sync-client ${correlationId}`,
           })
           .select('id')
           .single();
 
+        if (runError) {
+          log('warn', 'Failed to create run record', { error: runError.message }, correlationId);
+        }
         runId = runRow?.id ?? null;
 
-        const { data: jobRow } = await supabase
+        const { data: jobRow, error: jobError } = await supabase
           .from('tga_rto_import_jobs')
           .insert({
             tenant_id: tenantIdNum,
             rto_code: effectiveRto,
             status: 'processing',
-            job_type: 'sync_now',
-            stage: 'sync_now',
+            job_type: 'full',
+            stage: 'full_sync',
             attempts: 1,
             max_attempts: 1,
             run_id: runId,
@@ -1366,6 +1398,9 @@ serve(async (req) => {
           .select('id')
           .single();
 
+        if (jobError) {
+          log('warn', 'Failed to create job record', { error: jobError.message }, correlationId);
+        }
         jobId = jobRow?.id ?? null;
 
         // Track what was replaced vs skipped
