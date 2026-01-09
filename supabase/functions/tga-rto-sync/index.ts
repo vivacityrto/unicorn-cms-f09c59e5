@@ -170,15 +170,72 @@ serve(async (req) => {
     const orgRawText = JSON.stringify(orgData);
     const rawSha256 = await computeSha256(orgRawText);
     
-    // Extract parsed org info
-    const currentLegalName = orgData.legalNames?.find((ln: any) => !ln.endDate);
-    const currentTradingNames = orgData.tradingNames?.filter((tn: any) => !tn.endDate) || [];
-    const legalName = currentLegalName?.name || null;
-    const tradingName = currentTradingNames[0]?.name || null;
-    const abn = currentLegalName?.abns?.[0]?.abn || currentLegalName?.abn || null;
-    const acn = currentLegalName?.acn || orgData.acn || null;
+    // =====================================================================
+    // PARSE ORG DETAILS FROM REST PAYLOAD (correctly mapping real TGA structure)
+    // =====================================================================
     
-    log('info', 'Fetched org details', { legalName, tradingName, abn, sha256: rawSha256.substring(0, 16) });
+    // Legal Name: find current (no endDate)
+    const currentLegalName = orgData.legalNames?.find((ln: any) => !ln.endDate);
+    const legalName = currentLegalName?.name || null;
+    
+    // Trading Names: filter current (no endDate), take first
+    const currentTradingNames = orgData.tradingNames?.filter((tn: any) => !tn.endDate) || [];
+    const tradingName = currentTradingNames[0]?.name || null;
+    
+    // ABN: in legalNames[].abns[] - may be string/number or { abn: ... }
+    let abn: string | null = null;
+    if (currentLegalName?.abns && currentLegalName.abns.length > 0) {
+      const abnEntry = currentLegalName.abns[0];
+      // Handle both formats: { abn: "123" } or just "123" or 123
+      if (typeof abnEntry === 'object' && abnEntry.abn) {
+        abn = String(abnEntry.abn);
+      } else if (abnEntry) {
+        abn = String(abnEntry);
+      }
+    }
+    
+    // ACN: in legalNames[].acn
+    const acn = currentLegalName?.acn || null;
+    
+    // Website: from webAddresses[] current entry (no endDate), field is "webAddress"
+    const currentWebEntry = orgData.webAddresses?.find((w: any) => !w.endDate);
+    const website = currentWebEntry?.webAddress || null;
+    
+    // Registration dates: from registrations[] - pick current/most recent
+    let registrationStartDate: string | null = null;
+    let registrationEndDate: string | null = null;
+    if (orgData.registrations && orgData.registrations.length > 0) {
+      // Find current registration (no endDate or future endDate)
+      const now = new Date();
+      const currentReg = orgData.registrations.find((r: any) => 
+        !r.endDate || new Date(r.endDate) > now
+      ) || orgData.registrations[orgData.registrations.length - 1]; // fallback to last
+      
+      if (currentReg) {
+        registrationStartDate = currentReg.startDate || null;
+        registrationEndDate = currentReg.endDate || null;
+      }
+    }
+    
+    // Organisation Type: from classifications[] where schemeDescription == 'Training Organisation Type'
+    // Pick primary + current (no endDate), use valueDescription
+    let organisationType: string | null = null;
+    if (orgData.classifications && orgData.classifications.length > 0) {
+      const orgTypeClass = orgData.classifications.find((c: any) => 
+        c.schemeDescription === 'Training Organisation Type' && 
+        !c.endDate && 
+        c.isPrimary !== false
+      );
+      if (orgTypeClass) {
+        organisationType = orgTypeClass.valueDescription || orgTypeClass.value || null;
+      }
+    }
+    
+    log('info', 'Parsed org details', { 
+      legalName, tradingName, abn, acn, website, 
+      registrationStartDate, registrationEndDate, organisationType,
+      sha256: rawSha256.substring(0, 16) 
+    });
 
     // 3. Insert snapshot row
     let snapshotId: string | null = null;
@@ -266,7 +323,7 @@ serve(async (req) => {
       log('warn', 'Could not update tenant TGA status', { error: tenantUpdateError.message });
     }
 
-    // Also update tenant_profile for merge fields
+    // Also update tenant_profile for merge fields - with all parsed fields
     await supabaseAdmin
       .from('tenant_profile')
       .upsert({
@@ -276,10 +333,30 @@ serve(async (req) => {
         trading_name: tradingName,
         abn: abn,
         acn: acn,
-        website: orgData.webAddress || null,
-        org_type: orgData.organisationType?.label || orgData.organisationType || null,
+        website: website,
+        org_type: organisationType,
+        registration_start_date: registrationStartDate,
+        registration_end_date: registrationEndDate,
         updated_at: now,
       }, { onConflict: 'tenant_id' });
+    
+    // Also upsert tga_rto_summary for the Summary tab UI
+    await supabaseAdmin
+      .from('tga_rto_summary')
+      .upsert({
+        rto_id: rtoId,
+        legal_name: legalName,
+        trading_name: tradingName,
+        abn: abn,
+        acn: acn,
+        website: website,
+        registration_start_date: registrationStartDate,
+        registration_end_date: registrationEndDate,
+        organisation_type: organisationType,
+        status: orgData.status || 'Registered',
+        raw_payload: orgData,
+        updated_at: now,
+      }, { onConflict: 'rto_id' });
 
     // 6. Mark job done
     const totalItems = Object.values(scopeCounts).reduce((a, b) => a + b, 0);
