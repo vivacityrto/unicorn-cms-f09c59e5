@@ -10102,6 +10102,78 @@ export type Database = {
           },
         ]
       }
+      tga_debug_payloads: {
+        Row: {
+          endpoint: string
+          fetched_at: string
+          http_status: number | null
+          id: string
+          payload: Json | null
+          record_count: number | null
+        }
+        Insert: {
+          endpoint: string
+          fetched_at?: string
+          http_status?: number | null
+          id?: string
+          payload?: Json | null
+          record_count?: number | null
+        }
+        Update: {
+          endpoint?: string
+          fetched_at?: string
+          http_status?: number | null
+          id?: string
+          payload?: Json | null
+          record_count?: number | null
+        }
+        Relationships: []
+      }
+      tga_import_audit: {
+        Row: {
+          action: string
+          created_at: string | null
+          error_message: string | null
+          id: string
+          metadata: Json | null
+          rows_affected: number | null
+          rto_code: string
+          run_id: string | null
+          stage: string | null
+          status: string | null
+          tenant_id: number
+          triggered_by: string | null
+        }
+        Insert: {
+          action?: string
+          created_at?: string | null
+          error_message?: string | null
+          id?: string
+          metadata?: Json | null
+          rows_affected?: number | null
+          rto_code: string
+          run_id?: string | null
+          stage?: string | null
+          status?: string | null
+          tenant_id: number
+          triggered_by?: string | null
+        }
+        Update: {
+          action?: string
+          created_at?: string | null
+          error_message?: string | null
+          id?: string
+          metadata?: Json | null
+          rows_affected?: number | null
+          rto_code?: string
+          run_id?: string | null
+          stage?: string | null
+          status?: string | null
+          tenant_id?: number
+          triggered_by?: string | null
+        }
+        Relationships: []
+      }
       tga_import_jobs: {
         Row: {
           codes: string[]
@@ -10155,6 +10227,7 @@ export type Database = {
           error_message: string | null
           finished_at: string | null
           id: string
+          notes: string | null
           records_processed: number
           run_type: string
           source_checksum: string | null
@@ -10167,6 +10240,7 @@ export type Database = {
           error_message?: string | null
           finished_at?: string | null
           id?: string
+          notes?: string | null
           records_processed?: number
           run_type: string
           source_checksum?: string | null
@@ -10179,6 +10253,7 @@ export type Database = {
           error_message?: string | null
           finished_at?: string | null
           id?: string
+          notes?: string | null
           records_processed?: number
           run_type?: string
           source_checksum?: string | null
@@ -10191,16 +10266,19 @@ export type Database = {
       tga_import_state: {
         Row: {
           id: number
+          latest_success: string | null
           latest_success_import_id: string | null
           updated_at: string
         }
         Insert: {
           id?: number
+          latest_success?: string | null
           latest_success_import_id?: string | null
           updated_at?: string
         }
         Update: {
           id?: number
+          latest_success?: string | null
           latest_success_import_id?: string | null
           updated_at?: string
         }
@@ -10535,18 +10613,25 @@ export type Database = {
       tga_rto_import_jobs: {
         Row: {
           addresses_fetched: boolean | null
+          attempts: number | null
           completed_at: string | null
           contacts_fetched: boolean | null
           courses_count: number | null
           created_at: string
           created_by: string | null
           error_message: string | null
+          finished_at: string | null
           id: string
           job_type: string
+          last_error: string | null
+          max_attempts: number | null
+          payload_meta: Json | null
           qualifications_count: number | null
           rto_code: string
+          run_id: string | null
           scope_fetched: boolean | null
           skillsets_count: number | null
+          stage: string | null
           started_at: string | null
           status: string
           summary_fetched: boolean | null
@@ -10555,18 +10640,25 @@ export type Database = {
         }
         Insert: {
           addresses_fetched?: boolean | null
+          attempts?: number | null
           completed_at?: string | null
           contacts_fetched?: boolean | null
           courses_count?: number | null
           created_at?: string
           created_by?: string | null
           error_message?: string | null
+          finished_at?: string | null
           id?: string
           job_type?: string
+          last_error?: string | null
+          max_attempts?: number | null
+          payload_meta?: Json | null
           qualifications_count?: number | null
           rto_code: string
+          run_id?: string | null
           scope_fetched?: boolean | null
           skillsets_count?: number | null
+          stage?: string | null
           started_at?: string | null
           status?: string
           summary_fetched?: boolean | null
@@ -10575,18 +10667,25 @@ export type Database = {
         }
         Update: {
           addresses_fetched?: boolean | null
+          attempts?: number | null
           completed_at?: string | null
           contacts_fetched?: boolean | null
           courses_count?: number | null
           created_at?: string
           created_by?: string | null
           error_message?: string | null
+          finished_at?: string | null
           id?: string
           job_type?: string
+          last_error?: string | null
+          max_attempts?: number | null
+          payload_meta?: Json | null
           qualifications_count?: number | null
           rto_code?: string
+          run_id?: string | null
           scope_fetched?: boolean | null
           skillsets_count?: number | null
+          stage?: string | null
           started_at?: string | null
           status?: string
           summary_fetched?: boolean | null
@@ -10594,6 +10693,13 @@ export type Database = {
           units_count?: number | null
         }
         Relationships: [
+          {
+            foreignKeyName: "tga_rto_import_jobs_run_id_fkey"
+            columns: ["run_id"]
+            isOneToOne: false
+            referencedRelation: "tga_import_runs"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "tga_rto_import_jobs_tenant_id_fkey"
             columns: ["tenant_id"]
@@ -10739,14 +10845,14 @@ export type Database = {
           course_title: string | null
           created_at: string
           delivery_notification: string | null
+          end_date: string | null
           extent: string | null
           fetched_at: string
           id: string
           is_current: boolean | null
           rto_code: string
-          scope_end_date: string | null
-          scope_start_date: string | null
           source_payload: Json | null
+          start_date: string | null
           status: string | null
           tenant_id: number
           usage_recommendation: string | null
@@ -10756,14 +10862,14 @@ export type Database = {
           course_title?: string | null
           created_at?: string
           delivery_notification?: string | null
+          end_date?: string | null
           extent?: string | null
           fetched_at?: string
           id?: string
           is_current?: boolean | null
           rto_code: string
-          scope_end_date?: string | null
-          scope_start_date?: string | null
           source_payload?: Json | null
+          start_date?: string | null
           status?: string | null
           tenant_id: number
           usage_recommendation?: string | null
@@ -10773,14 +10879,14 @@ export type Database = {
           course_title?: string | null
           created_at?: string
           delivery_notification?: string | null
+          end_date?: string | null
           extent?: string | null
           fetched_at?: string
           id?: string
           is_current?: boolean | null
           rto_code?: string
-          scope_end_date?: string | null
-          scope_start_date?: string | null
           source_payload?: Json | null
+          start_date?: string | null
           status?: string | null
           tenant_id?: number
           usage_recommendation?: string | null
@@ -10853,6 +10959,7 @@ export type Database = {
         Row: {
           created_at: string
           delivery_notification: string | null
+          end_date: string | null
           extent: string | null
           fetched_at: string
           id: string
@@ -10860,9 +10967,8 @@ export type Database = {
           qualification_code: string
           qualification_title: string | null
           rto_code: string
-          scope_end_date: string | null
-          scope_start_date: string | null
           source_payload: Json | null
+          start_date: string | null
           status: string | null
           tenant_id: number
           training_package_code: string | null
@@ -10872,6 +10978,7 @@ export type Database = {
         Insert: {
           created_at?: string
           delivery_notification?: string | null
+          end_date?: string | null
           extent?: string | null
           fetched_at?: string
           id?: string
@@ -10879,9 +10986,8 @@ export type Database = {
           qualification_code: string
           qualification_title?: string | null
           rto_code: string
-          scope_end_date?: string | null
-          scope_start_date?: string | null
           source_payload?: Json | null
+          start_date?: string | null
           status?: string | null
           tenant_id: number
           training_package_code?: string | null
@@ -10891,6 +10997,7 @@ export type Database = {
         Update: {
           created_at?: string
           delivery_notification?: string | null
+          end_date?: string | null
           extent?: string | null
           fetched_at?: string
           id?: string
@@ -10898,9 +11005,8 @@ export type Database = {
           qualification_code?: string
           qualification_title?: string | null
           rto_code?: string
-          scope_end_date?: string | null
-          scope_start_date?: string | null
           source_payload?: Json | null
+          start_date?: string | null
           status?: string | null
           tenant_id?: number
           training_package_code?: string | null
@@ -10920,16 +11026,16 @@ export type Database = {
       tga_scope_skillsets: {
         Row: {
           created_at: string
+          end_date: string | null
           extent: string | null
           fetched_at: string
           id: string
           is_current: boolean | null
           rto_code: string
-          scope_end_date: string | null
-          scope_start_date: string | null
           skillset_code: string
           skillset_title: string | null
           source_payload: Json | null
+          start_date: string | null
           status: string | null
           tenant_id: number
           training_package_code: string | null
@@ -10938,16 +11044,16 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          end_date?: string | null
           extent?: string | null
           fetched_at?: string
           id?: string
           is_current?: boolean | null
           rto_code: string
-          scope_end_date?: string | null
-          scope_start_date?: string | null
           skillset_code: string
           skillset_title?: string | null
           source_payload?: Json | null
+          start_date?: string | null
           status?: string | null
           tenant_id: number
           training_package_code?: string | null
@@ -10956,16 +11062,16 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          end_date?: string | null
           extent?: string | null
           fetched_at?: string
           id?: string
           is_current?: boolean | null
           rto_code?: string
-          scope_end_date?: string | null
-          scope_start_date?: string | null
           skillset_code?: string
           skillset_title?: string | null
           source_payload?: Json | null
+          start_date?: string | null
           status?: string | null
           tenant_id?: number
           training_package_code?: string | null
@@ -10986,15 +11092,15 @@ export type Database = {
         Row: {
           created_at: string
           delivery_notification: string | null
+          end_date: string | null
           extent: string | null
           fetched_at: string
           id: string
           is_current: boolean | null
           is_explicit: boolean | null
           rto_code: string
-          scope_end_date: string | null
-          scope_start_date: string | null
           source_payload: Json | null
+          start_date: string | null
           status: string | null
           tenant_id: number
           training_package_code: string | null
@@ -11006,15 +11112,15 @@ export type Database = {
         Insert: {
           created_at?: string
           delivery_notification?: string | null
+          end_date?: string | null
           extent?: string | null
           fetched_at?: string
           id?: string
           is_current?: boolean | null
           is_explicit?: boolean | null
           rto_code: string
-          scope_end_date?: string | null
-          scope_start_date?: string | null
           source_payload?: Json | null
+          start_date?: string | null
           status?: string | null
           tenant_id: number
           training_package_code?: string | null
@@ -11026,15 +11132,15 @@ export type Database = {
         Update: {
           created_at?: string
           delivery_notification?: string | null
+          end_date?: string | null
           extent?: string | null
           fetched_at?: string
           id?: string
           is_current?: boolean | null
           is_explicit?: boolean | null
           rto_code?: string
-          scope_end_date?: string | null
-          scope_start_date?: string | null
           source_payload?: Json | null
+          start_date?: string | null
           status?: string | null
           tenant_id?: number
           training_package_code?: string | null
@@ -13291,6 +13397,7 @@ export type Database = {
         Returns: boolean
       }
       tga_get_client_data: { Args: { p_client_id: string }; Returns: Json }
+      tga_get_sync_progress: { Args: { p_run_id: string }; Returns: Json }
       tga_get_tenant_data: { Args: { p_tenant_id: number }; Returns: Json }
       tga_health_check:
         | { Args: never; Returns: Json }
@@ -13300,6 +13407,14 @@ export type Database = {
           }
       tga_queue_sync: {
         Args: { p_codes: string[]; p_tenant_id: number }
+        Returns: Json
+      }
+      tga_start_staged_sync: {
+        Args: {
+          p_rto_code: string
+          p_tenant_id: number
+          p_triggered_by?: string
+        }
         Returns: Json
       }
       tga_sync_client: {

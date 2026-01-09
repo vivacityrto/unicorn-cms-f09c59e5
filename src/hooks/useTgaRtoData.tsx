@@ -88,9 +88,11 @@ export interface TGADeliveryLocation {
   id: string;
   location_name: string | null;
   address_line_1: string | null;
+  address_line_2: string | null;
   suburb: string | null;
   state: string | null;
   postcode: string | null;
+  country: string | null;
 }
 
 export interface TGAQualification {
@@ -306,9 +308,7 @@ export function useTgaRtoData(tenantId: number | null, rtoCode: string | null, c
         .maybeSingle();
 
       // If we have a client and rto code, call the live sync edge function directly
-      // This bypasses the RPC which relies on pre-imported dataset
       if (clientData?.id && rtoCode) {
-        // Use supabase.functions.invoke with action in body (not header) to avoid CORS issues
         const { data: liveData, error: fnError } = await supabase.functions.invoke('tga-sync', {
           body: {
             action: 'sync-client',
@@ -328,9 +328,20 @@ export function useTgaRtoData(tenantId: number | null, rtoCode: string | null, c
         }
 
         if (liveData?.success) {
+          const synced = liveData.synced || {};
+          const counts = [
+            synced.contacts && `${synced.contacts} contacts`,
+            synced.addresses && `${synced.addresses} addresses`,
+            synced.deliveryLocations && `${synced.deliveryLocations} delivery sites`,
+            synced.qualifications && `${synced.qualifications} quals`,
+            synced.skillSets && `${synced.skillSets} skill sets`,
+            synced.units && `${synced.units} units`,
+            synced.courses && `${synced.courses} courses`,
+          ].filter(Boolean).join(', ');
+          
           toast({
             title: 'TGA Sync Complete',
-            description: `Synced live data for RTO ${rtoCode}: ${liveData.rto_data?.legal_name || liveData.rto_data?.legalName || 'Success'}`,
+            description: counts || `Synced data for RTO ${rtoCode}`,
           });
           await fetchData();
           return { success: true };
