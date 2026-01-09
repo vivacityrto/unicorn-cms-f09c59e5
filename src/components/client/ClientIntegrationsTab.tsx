@@ -6,6 +6,8 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { ChevronDown } from 'lucide-react';
 import { 
   Link2, 
   ExternalLink, 
@@ -61,6 +63,193 @@ const STATUS_CONFIG: Record<string, { color: string; icon: React.ReactNode; labe
     label: 'Error'
   }
 };
+
+// Decode HTML entities (e.g. &amp; -> &, &#39; -> ')
+function decodeHtmlEntities(text: string | null | undefined): string | null {
+  if (!text) return null;
+  const txt = document.createElement('textarea');
+  txt.innerHTML = text;
+  return txt.value;
+}
+
+interface SummaryFieldProps {
+  label: string;
+  value: string | null | undefined;
+  fieldKey: string;
+  fieldPresence?: Record<string, boolean>;
+  parseFailed?: string[];
+  isLink?: boolean;
+  decode?: boolean;
+}
+
+function SummaryField({ label, value, fieldKey, fieldPresence, parseFailed, isLink, decode }: SummaryFieldProps) {
+  const displayValue = decode ? decodeHtmlEntities(value) : value;
+  
+  // Determine status based on debug info
+  let statusMessage: React.ReactNode = null;
+  
+  if (fieldPresence) {
+    const isPresent = fieldPresence[fieldKey];
+    const didFail = parseFailed?.includes(fieldKey);
+    
+    if (!displayValue) {
+      if (didFail) {
+        statusMessage = <span className="text-destructive italic text-xs">Parse failed, see Debug Panel</span>;
+      } else if (isPresent === false) {
+        statusMessage = <span className="text-muted-foreground italic">Not provided by TGA</span>;
+      } else if (isPresent === undefined) {
+        statusMessage = <span className="text-muted-foreground italic">No debug payload, run Sync Now</span>;
+      } else {
+        statusMessage = <span className="text-muted-foreground italic">Not provided by TGA</span>;
+      }
+    }
+  } else if (!displayValue) {
+    statusMessage = <span className="text-muted-foreground italic">No debug payload, run Sync Now</span>;
+  }
+
+  return (
+    <div className="space-y-1">
+      <p className="text-sm text-muted-foreground">{label}</p>
+      {displayValue ? (
+        isLink ? (
+          <a 
+            href={displayValue.startsWith('http') ? displayValue : `https://${displayValue}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-primary hover:underline font-medium"
+          >
+            {displayValue}
+          </a>
+        ) : (
+          <p className="font-medium">{displayValue}</p>
+        )
+      ) : (
+        <p className="font-medium">{statusMessage}</p>
+      )}
+    </div>
+  );
+}
+
+interface SummaryTabProps {
+  summary: {
+    legal_name?: string | null;
+    trading_name?: string | null;
+    organisation_type?: string | null;
+    abn?: string | null;
+    acn?: string | null;
+    status?: string | null;
+    web_address?: string | null;
+    initial_registration_date?: string | null;
+    registration_start_date?: string | null;
+    registration_end_date?: string | null;
+    fetched_at?: string | null;
+  } | null;
+  debugPayload?: {
+    field_presence?: Record<string, boolean>;
+    parse_failed_fields?: string[];
+  };
+}
+
+function SummaryTab({ summary, debugPayload }: SummaryTabProps) {
+  const fieldPresence = debugPayload?.field_presence;
+  const parseFailed = debugPayload?.parse_failed_fields;
+
+  if (!summary) {
+    return (
+      <Alert>
+        <AlertCircle className="h-4 w-4" />
+        <AlertTitle>No summary data</AlertTitle>
+        <AlertDescription>
+          Summary data has not been synced yet. Click "Sync Now" to import data from TGA.
+        </AlertDescription>
+      </Alert>
+    );
+  }
+
+  return (
+    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+      <SummaryField 
+        label="Legal Name" 
+        value={summary.legal_name} 
+        fieldKey="LegalName" 
+        fieldPresence={fieldPresence}
+        parseFailed={parseFailed}
+        decode
+      />
+      <SummaryField 
+        label="Trading Name" 
+        value={summary.trading_name} 
+        fieldKey="TradingName" 
+        fieldPresence={fieldPresence}
+        parseFailed={parseFailed}
+        decode
+      />
+      <SummaryField 
+        label="Organisation Type" 
+        value={summary.organisation_type} 
+        fieldKey="OrganisationType" 
+        fieldPresence={fieldPresence}
+        parseFailed={parseFailed}
+      />
+      <SummaryField 
+        label="ABN" 
+        value={summary.abn} 
+        fieldKey="ABN" 
+        fieldPresence={fieldPresence}
+        parseFailed={parseFailed}
+      />
+      <SummaryField 
+        label="ACN" 
+        value={summary.acn} 
+        fieldKey="ACN" 
+        fieldPresence={fieldPresence}
+        parseFailed={parseFailed}
+      />
+      <div className="space-y-1">
+        <p className="text-sm text-muted-foreground">Status</p>
+        <Badge variant={summary.status === 'Registered' || summary.status === 'Current' ? 'default' : 'secondary'}>
+          {summary.status || 'Unknown'}
+        </Badge>
+      </div>
+      <SummaryField 
+        label="Website" 
+        value={summary.web_address} 
+        fieldKey="WebAddress" 
+        fieldPresence={fieldPresence}
+        parseFailed={parseFailed}
+        isLink
+      />
+      <SummaryField 
+        label="Initial Registration" 
+        value={summary.initial_registration_date} 
+        fieldKey="InitialRegistrationDate" 
+        fieldPresence={fieldPresence}
+        parseFailed={parseFailed}
+      />
+      <SummaryField 
+        label="Registration Start" 
+        value={summary.registration_start_date} 
+        fieldKey="RegistrationStartDate" 
+        fieldPresence={fieldPresence}
+        parseFailed={parseFailed}
+      />
+      <SummaryField 
+        label="Registration End" 
+        value={summary.registration_end_date} 
+        fieldKey="RegistrationEndDate" 
+        fieldPresence={fieldPresence}
+        parseFailed={parseFailed}
+      />
+      {summary.fetched_at && (
+        <div className="space-y-1 col-span-2 md:col-span-3 pt-2 border-t">
+          <p className="text-xs text-muted-foreground">
+            Data last synced: {new Date(summary.fetched_at).toLocaleString()}
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}
 
 export function ClientIntegrationsTab({ 
   profile, 
@@ -432,80 +621,10 @@ export function ClientIntegrationsTab({
                 </TabsList>
 
                 <TabsContent value="summary" className="mt-4">
-                  {tgaData.summary ? (
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                      <div className="space-y-1">
-                        <p className="text-sm text-muted-foreground">Legal Name</p>
-                        <p className="font-medium">{tgaData.summary.legal_name || <span className="text-muted-foreground italic">Not provided by TGA</span>}</p>
-                      </div>
-                      <div className="space-y-1">
-                        <p className="text-sm text-muted-foreground">Trading Name</p>
-                        <p className="font-medium">{tgaData.summary.trading_name || <span className="text-muted-foreground italic">Not provided by TGA</span>}</p>
-                      </div>
-                      <div className="space-y-1">
-                        <p className="text-sm text-muted-foreground">Organisation Type</p>
-                        <p className="font-medium">{tgaData.summary.organisation_type || <span className="text-muted-foreground italic">Not provided by TGA</span>}</p>
-                      </div>
-                      <div className="space-y-1">
-                        <p className="text-sm text-muted-foreground">ABN</p>
-                        <p className="font-medium">{tgaData.summary.abn || <span className="text-muted-foreground italic">Not provided by TGA</span>}</p>
-                      </div>
-                      <div className="space-y-1">
-                        <p className="text-sm text-muted-foreground">ACN</p>
-                        <p className="font-medium">{tgaData.summary.acn || <span className="text-muted-foreground italic">Not provided by TGA</span>}</p>
-                      </div>
-                      <div className="space-y-1">
-                        <p className="text-sm text-muted-foreground">Status</p>
-                        <Badge variant={tgaData.summary.status === 'Registered' || tgaData.summary.status === 'Current' ? 'default' : 'secondary'}>
-                          {tgaData.summary.status || 'Unknown'}
-                        </Badge>
-                      </div>
-                      <div className="space-y-1">
-                        <p className="text-sm text-muted-foreground">Website</p>
-                        {tgaData.summary.web_address ? (
-                          <a 
-                            href={tgaData.summary.web_address.startsWith('http') 
-                              ? tgaData.summary.web_address 
-                              : `https://${tgaData.summary.web_address}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-primary hover:underline font-medium"
-                          >
-                            {tgaData.summary.web_address}
-                          </a>
-                        ) : (
-                          <p className="font-medium text-muted-foreground italic">Not provided by TGA</p>
-                        )}
-                      </div>
-                      <div className="space-y-1">
-                        <p className="text-sm text-muted-foreground">Initial Registration</p>
-                        <p className="font-medium">{tgaData.summary.initial_registration_date || <span className="text-muted-foreground italic">Not provided by TGA</span>}</p>
-                      </div>
-                      <div className="space-y-1">
-                        <p className="text-sm text-muted-foreground">Registration Start</p>
-                        <p className="font-medium">{tgaData.summary.registration_start_date || <span className="text-muted-foreground italic">Not provided by TGA</span>}</p>
-                      </div>
-                      <div className="space-y-1">
-                        <p className="text-sm text-muted-foreground">Registration End</p>
-                        <p className="font-medium">{tgaData.summary.registration_end_date || <span className="text-muted-foreground italic">Not provided by TGA</span>}</p>
-                      </div>
-                      {tgaData.summary.fetched_at && (
-                        <div className="space-y-1 col-span-2 md:col-span-3 pt-2 border-t">
-                          <p className="text-xs text-muted-foreground">
-                            Data last synced: {new Date(tgaData.summary.fetched_at).toLocaleString()}
-                          </p>
-                        </div>
-                      )}
-                    </div>
-                  ) : (
-                    <Alert>
-                      <AlertCircle className="h-4 w-4" />
-                      <AlertTitle>No summary data</AlertTitle>
-                      <AlertDescription>
-                        Summary data has not been synced yet. Click "Sync Now" to import data from TGA.
-                      </AlertDescription>
-                    </Alert>
-                  )}
+                  <SummaryTab 
+                    summary={tgaData.summary} 
+                    debugPayload={debugInfo?.debugPayload?.payload}
+                  />
                 </TabsContent>
 
                 <TabsContent value="contacts" className="mt-4">
@@ -840,6 +959,20 @@ export function ClientIntegrationsTab({
                       <p>{new Date(debugInfo.debugPayload.fetched_at).toLocaleString()}</p>
                     </div>
 
+                    {debugInfo.debugPayload.payload?.raw_xml_hash && (
+                      <div>
+                        <p className="text-muted-foreground">Raw XML Hash</p>
+                        <p className="font-mono text-xs">{debugInfo.debugPayload.payload.raw_xml_hash}</p>
+                      </div>
+                    )}
+
+                    {debugInfo.debugPayload.payload?.raw_xml_length && (
+                      <div>
+                        <p className="text-muted-foreground">Raw XML Length</p>
+                        <p className="font-mono text-xs">{debugInfo.debugPayload.payload.raw_xml_length.toLocaleString()} chars</p>
+                      </div>
+                    )}
+
                     {debugInfo.debugPayload.payload?.field_presence && (
                       <div className="col-span-2">
                         <p className="text-muted-foreground">Summary Field Presence (from raw XML)</p>
@@ -851,6 +984,60 @@ export function ClientIntegrationsTab({
                             </div>
                           ))}
                         </div>
+                      </div>
+                    )}
+
+                    {debugInfo.debugPayload.payload?.missing_fields?.length > 0 && (
+                      <div className="col-span-2">
+                        <p className="text-muted-foreground">Missing Fields (not in XML)</p>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {debugInfo.debugPayload.payload.missing_fields.join(', ')}
+                        </p>
+                      </div>
+                    )}
+
+                    {debugInfo.debugPayload.payload?.parse_failed_fields?.length > 0 && (
+                      <div className="col-span-2">
+                        <p className="text-muted-foreground text-destructive">Parse Failed Fields (tag exists but no value)</p>
+                        <p className="text-xs text-destructive mt-1">
+                          {debugInfo.debugPayload.payload.parse_failed_fields.join(', ')}
+                        </p>
+                      </div>
+                    )}
+
+                    {debugInfo.debugPayload.payload?.parsed_summary && (
+                      <div className="col-span-2">
+                        <Collapsible>
+                          <CollapsibleTrigger asChild>
+                            <Button variant="ghost" size="sm" className="w-full justify-between">
+                              <span className="text-muted-foreground">Parsed Summary JSON</span>
+                              <ChevronDown className="h-4 w-4" />
+                            </Button>
+                          </CollapsibleTrigger>
+                          <CollapsibleContent>
+                            <pre className="text-xs bg-muted/50 p-2 rounded overflow-x-auto max-h-48">
+                              {JSON.stringify(debugInfo.debugPayload.payload.parsed_summary, null, 2)}
+                            </pre>
+                          </CollapsibleContent>
+                        </Collapsible>
+                      </div>
+                    )}
+
+                    {debugInfo.debugPayload.payload?.raw_xml_excerpt && (
+                      <div className="col-span-2">
+                        <Collapsible>
+                          <CollapsibleTrigger asChild>
+                            <Button variant="ghost" size="sm" className="w-full justify-between">
+                              <span className="text-muted-foreground">Raw XML Sample (first 20k chars)</span>
+                              <ChevronDown className="h-4 w-4" />
+                            </Button>
+                          </CollapsibleTrigger>
+                          <CollapsibleContent>
+                            <pre className="text-xs bg-muted/50 p-2 rounded overflow-x-auto max-h-96 whitespace-pre-wrap break-all">
+                              {debugInfo.debugPayload.payload.raw_xml_excerpt}
+                            </pre>
+                          </CollapsibleContent>
+                        </Collapsible>
                       </div>
                     )}
                   </>

@@ -945,15 +945,62 @@ function parseSummary(xml: string, canonicalRtoCode: string, correlationId?: str
   };
 }
 
+// Generate SHA256 hash for raw XML (async not available here, use simple hash)
+function simpleHash(str: string): string {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    const char = str.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash;
+  }
+  return Math.abs(hash).toString(16).padStart(8, '0');
+}
+
 function buildSummaryDebugPayload(xml: string, canonicalRtoCode: string, correlationId?: string) {
-  const rawXmlExcerpt = stripXmlPrefixes(xml).slice(0, 9000);
-  const { summary, fieldPresence } = parseSummary(xml, canonicalRtoCode, correlationId);
+  const normalized = stripXmlPrefixes(xml);
+  const rawXmlExcerpt = normalized.slice(0, 20000); // Capture up to 20k chars
+  const rawXmlHash = simpleHash(xml);
+  const { summary, fieldPresence, orgNodeExcerpt } = parseSummary(xml, canonicalRtoCode, correlationId);
+
+  // Track which fields were present in XML but could not be parsed
+  const parseFailed: string[] = [];
+  const missing: string[] = [];
+  
+  for (const [field, present] of Object.entries(fieldPresence)) {
+    if (present) {
+      // Field tag exists in XML
+      const fieldKey = field.toLowerCase().replace(/([a-z])([A-Z])/g, '$1_$2').toLowerCase();
+      const summaryValue = summary ? (summary as Record<string, unknown>)[
+        field === 'LegalName' ? 'legalName' :
+        field === 'TradingName' ? 'tradingName' :
+        field === 'ABN' ? 'abn' :
+        field === 'ACN' ? 'acn' :
+        field === 'WebAddress' ? 'webAddress' :
+        field === 'OrganisationType' ? 'organisationType' :
+        field === 'Status' ? 'status' :
+        field === 'InitialRegistrationDate' ? 'initialRegistrationDate' :
+        field === 'RegistrationStartDate' ? 'registrationStartDate' :
+        field === 'RegistrationEndDate' ? 'registrationEndDate' : field
+      ] : null;
+      
+      if (!summaryValue && summaryValue !== false) {
+        parseFailed.push(field);
+      }
+    } else {
+      missing.push(field);
+    }
+  }
 
   return {
     endpoint: 'GetDetails',
     raw_xml_excerpt: rawXmlExcerpt,
+    raw_xml_hash: rawXmlHash,
+    raw_xml_length: xml.length,
+    org_node_excerpt: orgNodeExcerpt,
     field_presence: fieldPresence,
     parsed_summary: summary,
+    missing_fields: missing,
+    parse_failed_fields: parseFailed,
   };
 }
 
