@@ -788,7 +788,71 @@ function parseDeliveryLocations(xml: string, correlationId?: string, logRawSampl
   return { locations, rawSample };
 }
 
-// ==================== REST API SCOPE FETCHING ====================
+// ==================== REST API FETCHING ====================
+
+interface RestOrgDetails {
+  abn: string | null;
+  acn: string | null;
+  webAddress: string | null;
+  organisationType: string | null;
+  initialRegistrationDate: string | null;
+  registrationStartDate: string | null;
+  registrationEndDate: string | null;
+}
+
+/**
+ * Fetch organization details from TGA REST API.
+ * This returns fields not available in SOAP GetDetails: ABN, ACN, Website, RTO Type, Registration dates.
+ */
+async function fetchOrgDetailsFromRest(
+  rtoId: string,
+  correlationId?: string
+): Promise<RestOrgDetails> {
+  const url = `https://training.gov.au/api/organisation/${encodeURIComponent(rtoId)}?api-version=1.0&include=all`;
+  
+  log('info', 'Fetching org details from REST API', { url }, correlationId);
+  
+  try {
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'User-Agent': 'Unicorn/2.0',
+        'Accept': 'application/json',
+      },
+    });
+    
+    if (!response.ok) {
+      log('warn', `REST API org details returned ${response.status}`, { status: response.status, url }, correlationId);
+      return { abn: null, acn: null, webAddress: null, organisationType: null, initialRegistrationDate: null, registrationStartDate: null, registrationEndDate: null };
+    }
+    
+    const data = await response.json();
+    
+    log('info', 'REST API org details received', {
+      abn: data.abn || null,
+      acn: data.acn || null,
+      webAddress: data.webAddress || data.website || null,
+      organisationType: data.organisationType || data.rtoType || data.typeLabel || null,
+      initialRegistrationDate: data.initialRegistrationDate || null,
+      registrationStartDate: data.registrationStartDate || data.startDate || null,
+      registrationEndDate: data.registrationEndDate || data.endDate || null,
+    }, correlationId);
+    
+    return {
+      abn: data.abn || null,
+      acn: data.acn || null,
+      webAddress: data.webAddress || data.website || null,
+      organisationType: data.organisationType || data.rtoType || data.typeLabel || null,
+      initialRegistrationDate: data.initialRegistrationDate || null,
+      registrationStartDate: data.registrationStartDate || data.startDate || null,
+      registrationEndDate: data.registrationEndDate || data.endDate || null,
+    };
+  } catch (err) {
+    const error = err instanceof Error ? err : new Error(String(err));
+    log('error', 'REST API org details error', { error: error.message, url }, correlationId);
+    return { abn: null, acn: null, webAddress: null, organisationType: null, initialRegistrationDate: null, registrationStartDate: null, registrationEndDate: null };
+  }
+}
 
 interface RestScopeItem {
   code: string;
@@ -2054,6 +2118,50 @@ serve(async (req) => {
         // Track what was replaced vs skipped
         const syncStatus: Record<string, { replaced: boolean; count: number; reason?: string }> = {};
 
+        // ==================== FETCH DATA FROM REST API ====================
+        // SOAP GetDetails does NOT include scope data OR some org fields (ABN, ACN, etc.)
+        // We MUST fetch from REST API to get complete data BEFORE storing
+        log('info', 'Fetching data from TGA REST API', { rto: orgData.code }, correlationId);
+        
+        const [restOrgDetails, restQuals, restSkills, restUnits, restCourses] = await Promise.all([
+          fetchOrgDetailsFromRest(orgData.code, correlationId),
+          fetchScopeFromRest(orgData.code, 'qualification', correlationId),
+          fetchScopeFromRest(orgData.code, 'skillSet', correlationId),
+          fetchScopeFromRest(orgData.code, 'unit', correlationId),
+          fetchScopeFromRest(orgData.code, 'accreditedCourse', correlationId),
+        ]);
+        
+        // Merge REST org details into orgData (REST has fields that SOAP doesn't return)
+        if (restOrgDetails.abn) orgData.abn = restOrgDetails.abn;
+        if (restOrgDetails.acn) orgData.acn = restOrgDetails.acn;
+        if (restOrgDetails.webAddress) orgData.webAddress = restOrgDetails.webAddress;
+        if (restOrgDetails.organisationType) orgData.organisationType = restOrgDetails.organisationType;
+        if (restOrgDetails.initialRegistrationDate) orgData.initialRegistrationDate = restOrgDetails.initialRegistrationDate;
+        if (restOrgDetails.registrationStartDate) orgData.registrationStartDate = restOrgDetails.registrationStartDate;
+        if (restOrgDetails.registrationEndDate) orgData.registrationEndDate = restOrgDetails.registrationEndDate;
+        
+        log('info', 'REST org details merged', {
+          abn: orgData.abn,
+          acn: orgData.acn,
+          webAddress: orgData.webAddress,
+          organisationType: orgData.organisationType,
+          initialRegistrationDate: orgData.initialRegistrationDate,
+          registrationStartDate: orgData.registrationStartDate,
+          registrationEndDate: orgData.registrationEndDate,
+        }, correlationId);
+        
+        // Override the empty SOAP scope with REST data
+        orgData.scope.qualifications = convertRestToParsedScope(restQuals);
+        orgData.scope.skillSets = convertRestToParsedScope(restSkills);
+        orgData.scope.units = convertRestToParsedScope(restUnits);
+        orgData.scope.courses = convertRestToParsedScope(restCourses);
+        
+        log('info', 'REST API data fetch complete', {
+          qualifications: orgData.scope.qualifications.length,
+          skillSets: orgData.scope.skillSets.length,
+          units: orgData.scope.units.length,
+          courses: orgData.scope.courses.length,
+        }, correlationId);
 
         // Upsert to tga_rtos cache
         await supabase
@@ -2177,30 +2285,6 @@ serve(async (req) => {
             await supabase.from('tga_rto_delivery_locations').delete().eq('tenant_id', tenantIdNum).eq('rto_code', orgData.code);
             syncStatus.deliveryLocations = { replaced: true, count: 0, reason: 'not_in_response' };
           }
-
-          // ==================== FETCH SCOPE FROM REST API ====================
-          // SOAP GetDetails does NOT include scope data, so we MUST fetch from REST API
-          log('info', 'Fetching scope data from TGA REST API', { rto: orgData.code }, correlationId);
-          
-          const [restQuals, restSkills, restUnits, restCourses] = await Promise.all([
-            fetchScopeFromRest(orgData.code, 'qualification', correlationId),
-            fetchScopeFromRest(orgData.code, 'skillSet', correlationId),
-            fetchScopeFromRest(orgData.code, 'unit', correlationId),
-            fetchScopeFromRest(orgData.code, 'accreditedCourse', correlationId),
-          ]);
-          
-          // Override the empty SOAP scope with REST data
-          orgData.scope.qualifications = convertRestToParsedScope(restQuals);
-          orgData.scope.skillSets = convertRestToParsedScope(restSkills);
-          orgData.scope.units = convertRestToParsedScope(restUnits);
-          orgData.scope.courses = convertRestToParsedScope(restCourses);
-          
-          log('info', 'REST API scope fetch complete', {
-            qualifications: orgData.scope.qualifications.length,
-            skillSets: orgData.scope.skillSets.length,
-            units: orgData.scope.units.length,
-            courses: orgData.scope.courses.length,
-          }, correlationId);
 
           // QUALIFICATIONS - with safety guardrail
           if (orgData.scope.qualifications.length > 0) {
