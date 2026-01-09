@@ -48,7 +48,10 @@ const SOAP_ACTIONS = {
   searchTrainingComponent: `${TGA_V13_NAMESPACE}ITrainingComponentService/Search`,
 };
 
-const FUNCTION_VERSION = '1.3.0';
+const FUNCTION_VERSION = '1.4.0';
+
+const STAGES = ['rto_summary', 'contacts', 'addresses', 'delivery_sites', 'scope_quals', 'scope_units', 'scope_skills', 'scope_courses'] as const;
+type SyncStage = typeof STAGES[number];
 
 const TGA_WS_USERNAME = Deno.env.get('TGA_USERNAME') || Deno.env.get('TGA_WS_USERNAME');
 const TGA_WS_PASSWORD = Deno.env.get('TGA_PASSWORD') || Deno.env.get('TGA_WS_PASSWORD');
@@ -1434,6 +1437,25 @@ serve(async (req) => {
             courses: syncStatus.courses?.count ?? 0,
             syncStatus,
           }, correlationId);
+          
+          // Write audit log
+          await supabase.from('tga_import_audit').insert({
+            tenant_id: tenantIdNum,
+            triggered_by: user.id,
+            rto_code: orgData.code,
+            action: 'sync_now',
+            status: 'completed',
+            rows_affected: Object.values(syncStatus).reduce((sum, s) => sum + (s.count || 0), 0),
+            metadata: { syncStatus, sectionPresence, correlationId },
+          });
+          
+          // Update import state on success
+          await supabase.from('tga_import_state')
+            .update({ 
+              latest_success: fetchedAt,
+              updated_at: fetchedAt,
+            })
+            .eq('id', 1);
         }
 
         // Update link status
@@ -1502,6 +1524,81 @@ serve(async (req) => {
       }
     }
 
+    // ==================== START STAGED SYNC ====================
+    if (action === 'start-staged-sync') {
+      const { tenant_id, rto_code } = requestBody as { tenant_id?: string; rto_code?: string };
+      
+      if (!tenant_id || !rto_code) {
+        return new Response(JSON.stringify({ error: 'tenant_id and rto_code required' }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+      
+      log('info', 'Starting staged sync', { tenant_id, rto_code }, correlationId);
+      
+      // Call the RPC function to create the run and jobs
+      const { data: result, error: rpcError } = await supabase.rpc('tga_start_staged_sync', {
+        p_tenant_id: parseInt(tenant_id),
+        p_rto_code: rto_code,
+        p_triggered_by: user.id,
+      });
+      
+      if (rpcError) {
+        return new Response(JSON.stringify({ 
+          success: false, 
+          error: rpcError.message,
+          correlationId,
+        }), {
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+      
+      return new Response(JSON.stringify({
+        success: true,
+        correlationId,
+        ...result,
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    // ==================== GET SYNC PROGRESS ====================
+    if (action === 'sync-progress') {
+      const run_id = (requestBody.run_id as string) || url.searchParams.get('run_id');
+      
+      if (!run_id) {
+        return new Response(JSON.stringify({ error: 'run_id required' }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+      
+      const { data: progress, error: progressError } = await supabase.rpc('tga_get_sync_progress', {
+        p_run_id: run_id,
+      });
+      
+      if (progressError) {
+        return new Response(JSON.stringify({ 
+          success: false, 
+          error: progressError.message,
+          correlationId,
+        }), {
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+      
+      return new Response(JSON.stringify({
+        success: true,
+        correlationId,
+        ...progress,
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
     // ==================== STATUS ACTION ====================
     if (action === 'status') {
       const credValidation = validateCredentials();
@@ -1529,7 +1626,7 @@ serve(async (req) => {
 
     return new Response(JSON.stringify({ 
       error: `Unknown action: ${action}`,
-      availableActions: ['ping', 'status', 'test', 'health', 'diagnostics', 'debug-org', 'probe', 'sync-client'],
+      availableActions: ['ping', 'status', 'test', 'health', 'diagnostics', 'debug-org', 'probe', 'sync-client', 'start-staged-sync', 'sync-progress'],
       correlationId,
     }), {
       status: 400,

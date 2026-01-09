@@ -446,14 +446,15 @@ export function ClientIntegrationsTab({
                     )}
                     {tgaData.deliveryLocations.length > 0 && (
                       <div>
-                        <h4 className="font-medium mb-2">Delivery Locations ({tgaData.deliveryLocations.length})</h4>
+                        <h4 className="font-medium mb-2">Delivery Sites ({tgaData.deliveryLocations.length})</h4>
                         <Table>
                           <TableHeader>
                             <TableRow>
-                              <TableHead>Location</TableHead>
+                              <TableHead>Site Name</TableHead>
                               <TableHead>Address</TableHead>
                               <TableHead>Suburb</TableHead>
                               <TableHead>State</TableHead>
+                              <TableHead>Postcode</TableHead>
                             </TableRow>
                           </TableHeader>
                           <TableBody>
@@ -463,6 +464,7 @@ export function ClientIntegrationsTab({
                                 <TableCell>{loc.address_line_1 || '-'}</TableCell>
                                 <TableCell>{loc.suburb || '-'}</TableCell>
                                 <TableCell>{loc.state || '-'}</TableCell>
+                                <TableCell>{loc.postcode || '-'}</TableCell>
                               </TableRow>
                             ))}
                           </TableBody>
