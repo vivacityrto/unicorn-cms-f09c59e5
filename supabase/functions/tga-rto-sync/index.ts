@@ -1,5 +1,5 @@
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.75.0";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -10,49 +10,109 @@ const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
 const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
 
-/**
- * Fetch scope items from TGA REST API for a specific component type
- */
-async function fetchScope(rtoId: string, componentType: string): Promise<any[]> {
-  // Different settings per component type
-  const delivery = componentType === 'skillSet' ? 'false' : 'true';
-  const today = new Date().toISOString().split('T')[0];
-  const filter = componentType === 'unit' ? 'unit|accreditedUnit' : componentType;
-  
-  const url = `https://training.gov.au/api/organisation/${rtoId}/scope?api-version=1.0&offset=0&pageSize=1000&delivery=${delivery}&filters=componentType==${filter},DateNullSearch==${today}&sorts=code`;
-  
-  console.log(`[TGA_SYNC] Fetching ${componentType} from: ${url}`);
-  
-  const resp = await fetch(url, {
-    headers: { 'User-Agent': 'Unicorn/2.0', 'Accept': 'application/json' }
-  });
-  
-  if (!resp.ok) {
-    console.warn(`[TGA_SYNC] Failed to fetch ${componentType}: ${resp.status}`);
-    return [];
-  }
-  
-  const data = await resp.json();
-  return data.value || [];
+const PAGE_SIZE = 500;
+
+// Compute SHA256 hash of a string using Web Crypto API
+async function computeSha256(text: string): Promise<string> {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(text);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
 }
 
-/**
- * Fetch organization details from TGA REST API
- */
-async function fetchOrgDetails(rtoId: string): Promise<any> {
-  const url = `https://training.gov.au/api/organisation/${rtoId}?api-version=1.0&include=all`;
+// Log helper with structured output
+function log(level: 'info' | 'warn' | 'error', message: string, data?: Record<string, unknown>) {
+  const timestamp = new Date().toISOString();
+  console.log(`[TGA_REST_SYNC] [${level.toUpperCase()}] [${timestamp}] ${message}`, data ? JSON.stringify(data) : '');
+}
+
+// Fetch all pages of scope items for a component type
+async function fetchAllScope(rtoId: string, componentType: string): Promise<{ items: any[]; urls: string[]; error?: string }> {
+  const items: any[] = [];
+  const urls: string[] = [];
+  let offset = 0;
+  let hasMore = true;
   
-  console.log(`[TGA_SYNC] Fetching org details from: ${url}`);
+  // Component type filter - units need special handling
+  const componentFilter = componentType === 'unit' 
+    ? 'unit|accreditedUnit' 
+    : componentType;
   
-  const resp = await fetch(url, {
-    headers: { 'User-Agent': 'Unicorn/2.0', 'Accept': 'application/json' }
-  });
+  // Delivery filter - skillSets don't have delivery
+  const delivery = componentType === 'skillSet' ? 'false' : 'true';
   
-  if (!resp.ok) {
-    throw new Error(`Failed to fetch org details: ${resp.status}`);
+  while (hasMore) {
+    const url = `https://training.gov.au/api/organisation/${rtoId}/scope?api-version=1.0&offset=${offset}&pageSize=${PAGE_SIZE}&delivery=${delivery}&filters=componentType==${componentFilter}&sorts=code`;
+    urls.push(url);
+    
+    log('info', `Fetching ${componentType} at offset ${offset}`, { url });
+    
+    try {
+      const response = await fetch(url, {
+        headers: {
+          'User-Agent': 'Unicorn/2.0',
+          'Accept': 'application/json'
+        }
+      });
+      
+      if (!response.ok) {
+        log('error', `TGA API error for ${componentType}`, { status: response.status });
+        return { items, urls, error: `HTTP ${response.status}` };
+      }
+      
+      const data = await response.json();
+      const pageItems = data.value || [];
+      
+      log('info', `Got ${pageItems.length} ${componentType}(s) at offset ${offset}`, { total: data.count });
+      
+      items.push(...pageItems);
+      
+      if (pageItems.length < PAGE_SIZE) {
+        hasMore = false;
+      } else {
+        offset += PAGE_SIZE;
+        // Safety limit
+        if (offset > 50000) {
+          log('warn', `Safety limit reached for ${componentType} at offset ${offset}`);
+          hasMore = false;
+        }
+      }
+    } catch (err) {
+      log('error', `Fetch error for ${componentType}`, { error: String(err) });
+      return { items, urls, error: String(err) };
+    }
   }
   
-  return resp.json();
+  return { items, urls };
+}
+
+// Fetch organization details from REST API
+async function fetchOrgDetails(rtoId: string): Promise<{ data: any; url: string; error?: string }> {
+  const url = `https://training.gov.au/api/organisation/${rtoId}?api-version=1.0&include=all`;
+  
+  log('info', 'Fetching org details', { url });
+  
+  try {
+    const response = await fetch(url, {
+      headers: {
+        'User-Agent': 'Unicorn/2.0',
+        'Accept': 'application/json'
+      }
+    });
+    
+    if (!response.ok) {
+      if (response.status === 404) {
+        return { data: null, url, error: `RTO ${rtoId} not found` };
+      }
+      return { data: null, url, error: `HTTP ${response.status}` };
+    }
+    
+    const data = await response.json();
+    return { data, url };
+  } catch (err) {
+    return { data: null, url, error: String(err) };
+  }
 }
 
 serve(async (req) => {
@@ -60,128 +120,246 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  const startTime = Date.now();
+  let jobId: string | null = null;
+
   try {
-    const { tenantId, rtoId } = await req.json();
+    const { tenantId, rtoId, force = false } = await req.json();
     
     if (!tenantId || !rtoId) {
-      throw new Error('Missing tenantId or rtoId');
+      return new Response(
+        JSON.stringify({ success: false, error: 'Missing tenantId or rtoId' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
-    console.log(`🔄 [TGA_SYNC] Starting sync for RTO ${rtoId}, tenant ${tenantId}`);
+    const tenantIdNum = typeof tenantId === 'string' ? parseInt(tenantId, 10) : tenantId;
+    
+    log('info', `Starting REST sync for RTO ${rtoId}`, { tenantId: tenantIdNum, force });
 
-    // Create sync job record
+    // 1. Create job row in tga_rest_sync_jobs
     const { data: job, error: jobError } = await supabaseAdmin
       .from('tga_rest_sync_jobs')
       .insert({
-        tenant_id: tenantId,
+        tenant_id: tenantIdNum,
         rto_id: rtoId,
-        status: 'processing'
+        status: 'processing',
+        payload: { started_at: new Date().toISOString(), force },
       })
-      .select()
+      .select('id')
       .single();
     
     if (jobError) {
-      console.warn('[TGA_SYNC] Failed to create job:', jobError);
+      log('warn', 'Could not create job row', { error: jobError.message });
+    } else {
+      jobId = job.id;
+      log('info', 'Created sync job', { jobId });
     }
 
-    // 1. Fetch organization details
-    const orgData = await fetchOrgDetails(rtoId);
+    // 2. Fetch organization details
+    const orgResult = await fetchOrgDetails(rtoId);
     
-    // Extract current legal name
+    if (orgResult.error || !orgResult.data) {
+      throw new Error(orgResult.error || 'Failed to fetch org details');
+    }
+    
+    const orgData = orgResult.data;
+    const orgRawText = JSON.stringify(orgData);
+    const rawSha256 = await computeSha256(orgRawText);
+    
+    // Extract parsed org info
     const currentLegalName = orgData.legalNames?.find((ln: any) => !ln.endDate);
+    const currentTradingNames = orgData.tradingNames?.filter((tn: any) => !tn.endDate) || [];
+    const legalName = currentLegalName?.name || null;
+    const tradingName = currentTradingNames[0]?.name || null;
+    const abn = currentLegalName?.abns?.[0]?.abn || currentLegalName?.abn || null;
+    const acn = currentLegalName?.acn || orgData.acn || null;
     
-    console.log(`[TGA_SYNC] Got org data: ${currentLegalName?.name || 'Unknown'}`);
+    log('info', 'Fetched org details', { legalName, tradingName, abn, sha256: rawSha256.substring(0, 16) });
 
-    // 2. Store snapshot
-    const { error: snapError } = await supabaseAdmin
+    // 3. Insert snapshot row
+    let snapshotId: string | null = null;
+    const { data: snapshot, error: snapError } = await supabaseAdmin
       .from('tga_rto_snapshots')
       .insert({
-        tenant_id: tenantId,
+        tenant_id: tenantIdNum,
         rto_id: rtoId,
-        source_url: `https://training.gov.au/api/organisation/${rtoId}`,
-        payload: orgData
-      });
+        source_url: orgResult.url,
+        raw_sha256: rawSha256,
+        payload: orgData,
+      })
+      .select('id')
+      .single();
     
-    if (snapError) console.warn('[TGA_SYNC] Snapshot error:', snapError);
+    if (snapError) {
+      log('warn', 'Could not create snapshot', { error: snapError.message });
+    } else {
+      snapshotId = snapshot.id;
+      log('info', 'Created snapshot', { snapshotId });
+    }
 
-    // 3. CRITICAL: Fetch ALL scope types separately using the /scope endpoint
+    // 4. Fetch and persist all scope types
     const scopeTypes = [
       { apiType: 'qualification', dbType: 'qualification' },
       { apiType: 'unit', dbType: 'unit' },
       { apiType: 'skillSet', dbType: 'skillset' },
       { apiType: 'accreditedCourse', dbType: 'accreditedCourse' }
     ];
-
+    
     const scopeCounts: Record<string, number> = {};
-
+    const scopeUrls: Record<string, string[]> = {};
+    const scopeErrors: Record<string, string> = {};
+    
     for (const { apiType, dbType } of scopeTypes) {
-      console.log(`📦 [TGA_SYNC] Fetching ${apiType}...`);
-      const items = await fetchScope(rtoId, apiType);
-      scopeCounts[dbType] = items.length;
+      log('info', `Fetching ${apiType}...`);
       
-      if (items.length > 0) {
-        const { data: persistResult, error } = await supabaseAdmin.rpc('persist_tga_scope_items', {
-          p_tenant_id: tenantId,
+      const result = await fetchAllScope(rtoId, apiType);
+      scopeUrls[apiType] = result.urls;
+      
+      if (result.error) {
+        scopeErrors[apiType] = result.error;
+        scopeCounts[apiType] = 0;
+        continue;
+      }
+      
+      if (result.items.length > 0) {
+        // Persist via RPC function
+        const { data: persistResult, error: persistError } = await supabaseAdmin.rpc('persist_tga_scope_items', {
+          p_tenant_id: tenantIdNum,
           p_scope_type: dbType,
-          p_scope_items: items
+          p_scope_items: result.items
         });
         
-        if (error) {
-          console.warn(`[TGA_SYNC] Failed to persist ${apiType}:`, error);
+        if (persistError) {
+          log('error', `Failed to persist ${apiType}`, { error: persistError.message });
+          scopeErrors[apiType] = persistError.message;
+          scopeCounts[apiType] = 0;
         } else {
-          console.log(`✅ [TGA_SYNC] Persisted ${items.length} ${apiType}(s)`);
+          const persisted = (persistResult as any)?.items_persisted || result.items.length;
+          log('info', `Persisted ${persisted} ${apiType}(s)`, { dbType });
+          scopeCounts[apiType] = persisted;
         }
       } else {
-        console.log(`⚠️ [TGA_SYNC] No ${apiType} items returned by TGA`);
+        log('info', `No ${apiType}s found`, {});
+        scopeCounts[apiType] = 0;
       }
     }
 
-    // 4. Update tenant TGA status
-    const { error: tenantError } = await supabaseAdmin
+    // 5. Update tenants row with TGA status
+    const now = new Date().toISOString();
+    const { error: tenantUpdateError } = await supabaseAdmin
       .from('tenants')
       .update({
         rto_id: rtoId,
-        tga_connected_at: new Date().toISOString(),
-        tga_last_synced_at: new Date().toISOString(),
+        tga_connected_at: force ? now : undefined, // Only update if force or first time
+        tga_last_synced_at: now,
         tga_status: 'connected',
-        tga_legal_name: currentLegalName?.name || null,
-        tga_snapshot: orgData
+        tga_legal_name: legalName,
+        tga_snapshot: orgData,
       })
-      .eq('id', tenantId);
-
-    if (tenantError) {
-      console.warn('[TGA_SYNC] Failed to update tenant:', tenantError);
+      .eq('id', tenantIdNum);
+    
+    if (tenantUpdateError) {
+      log('warn', 'Could not update tenant TGA status', { error: tenantUpdateError.message });
     }
 
-    // 5. Update sync job status
-    if (job) {
+    // Also update tenant_profile for merge fields
+    await supabaseAdmin
+      .from('tenant_profile')
+      .upsert({
+        tenant_id: tenantIdNum,
+        rto_number: rtoId,
+        legal_name: legalName,
+        trading_name: tradingName,
+        abn: abn,
+        acn: acn,
+        website: orgData.webAddress || null,
+        org_type: orgData.organisationType?.label || orgData.organisationType || null,
+        updated_at: now,
+      }, { onConflict: 'tenant_id' });
+
+    // 6. Mark job done
+    const totalItems = Object.values(scopeCounts).reduce((a, b) => a + b, 0);
+    const hasErrors = Object.keys(scopeErrors).length > 0;
+    
+    if (jobId) {
       await supabaseAdmin
         .from('tga_rest_sync_jobs')
         .update({
-          status: 'done',
-          scope_counts: scopeCounts,
-          updated_at: new Date().toISOString()
+          status: hasErrors ? 'done_with_errors' : 'done',
+          last_error: hasErrors ? JSON.stringify(scopeErrors) : null,
+          payload: {
+            completed_at: now,
+            duration_ms: Date.now() - startTime,
+            scope_counts: scopeCounts,
+            scope_urls: scopeUrls,
+            scope_errors: scopeErrors,
+            snapshot_id: snapshotId,
+          },
+          updated_at: now,
         })
-        .eq('id', job.id);
+        .eq('id', jobId);
     }
 
-    console.log(`✅ [TGA_SYNC] Sync complete for RTO ${rtoId}`);
+    // Also update tga_links if exists
+    await supabaseAdmin
+      .from('tga_links')
+      .update({
+        last_sync_at: now,
+        last_sync_status: hasErrors ? 'partial' : 'success',
+        last_sync_error: hasErrors ? Object.values(scopeErrors).join('; ') : null,
+        updated_at: now,
+      })
+      .eq('tenant_id', tenantIdNum)
+      .eq('rto_number', rtoId);
+
+    log('info', 'Sync complete', { 
+      tenantId: tenantIdNum, 
+      rtoId, 
+      totalItems, 
+      scopeCounts,
+      duration_ms: Date.now() - startTime,
+    });
 
     return new Response(
       JSON.stringify({
         success: true,
+        tenant_id: tenantIdNum,
         rto_id: rtoId,
-        legal_name: currentLegalName?.name || null,
-        scope_counts: scopeCounts,
-        total_scope_items: Object.values(scopeCounts).reduce((a, b) => a + b, 0)
+        legal_name: legalName,
+        snapshot_id: snapshotId,
+        job_id: jobId,
+        counts: scopeCounts,
+        total_items: totalItems,
+        urls_used: scopeUrls,
+        errors: hasErrors ? scopeErrors : undefined,
+        duration_ms: Date.now() - startTime,
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
-  } catch (error: unknown) {
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    console.error('[TGA_SYNC] Error:', errorMessage);
+  } catch (error) {
+    const errorMsg = error instanceof Error ? error.message : String(error);
+    log('error', 'Sync failed', { error: errorMsg, duration_ms: Date.now() - startTime });
+    
+    // Update job to error status
+    if (jobId) {
+      await supabaseAdmin
+        .from('tga_rest_sync_jobs')
+        .update({
+          status: 'error',
+          last_error: errorMsg,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', jobId);
+    }
+    
     return new Response(
-      JSON.stringify({ success: false, error: errorMessage }),
+      JSON.stringify({ 
+        success: false, 
+        error: errorMsg,
+        job_id: jobId,
+        duration_ms: Date.now() - startTime,
+      }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
