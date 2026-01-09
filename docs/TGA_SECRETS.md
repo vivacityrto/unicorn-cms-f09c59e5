@@ -22,11 +22,13 @@ Configure these in Supabase Edge Function Secrets:
 
 ## TGA Web Services Endpoints (Production)
 
+Per TGA Web Services Specification v13r1 Section 3.9.2, SOAP 1.1 requires policy suffix.
+
 | Service | Endpoint |
 |---------|----------|
-| Organisation | `https://ws.training.gov.au/Deewr.Tga.WebServices/OrganisationService.svc` |
-| Training Component | `https://ws.training.gov.au/Deewr.Tga.Webservices/TrainingComponentService.svc` |
-| Classification | `https://ws.training.gov.au/Deewr.Tga.Webservices/ClassificationService.svc` |
+| Organisation | `https://ws.training.gov.au/Deewr.Tga.Webservices/OrganisationServiceV13.svc/Organisation` |
+| Training Component | `https://ws.training.gov.au/Deewr.Tga.Webservices/TrainingComponentServiceV13.svc/Training` |
+| Classification | `https://ws.training.gov.au/Deewr.Tga.Webservices/ClassificationServiceV13.svc/Classification` |
 
 ## Sync Scope
 

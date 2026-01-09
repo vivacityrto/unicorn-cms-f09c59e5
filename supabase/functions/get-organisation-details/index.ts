@@ -1,9 +1,9 @@
 import { corsHeaders } from '../_shared/cors.ts';
 
-// TGA SOAP Endpoints - V13 is NOT in URL path, only in SOAP namespace
+// TGA SOAP Endpoints - V13 with policy suffix for SOAP 1.1 (per TGA spec section 3.9.2)
 const TGA_WS_BASE = Deno.env.get('TGA_WS_BASE') || 'https://ws.training.gov.au';
 const TGA_ENDPOINT = Deno.env.get('TGA_ORG_ENDPOINT') || 
-  `${TGA_WS_BASE}/Deewr.Tga.WebServices/OrganisationService.svc`;
+  `${TGA_WS_BASE}/Deewr.Tga.Webservices/OrganisationServiceV13.svc/Organisation`;
 
 // Production credentials
 const TGA_USERNAME = Deno.env.get('TGA_WS_USERNAME') || '';
@@ -43,17 +43,8 @@ function parseSoapFault(xml: string): { faultcode: string | null; faultstring: s
   };
 }
 
-// List of SOAPAction patterns to try (ordered by likelihood)
-const SOAP_ACTION_PATTERNS = [
-  // Pattern 1: Interface style with I prefix (most common for WCF)
-  (op: string) => `"${TGA_V13_NAMESPACE}IOrganisationService/${op}"`,
-  // Pattern 2: Without quotes
-  (op: string) => `${TGA_V13_NAMESPACE}IOrganisationService/${op}`,
-  // Pattern 3: Service style without I prefix
-  (op: string) => `"${TGA_V13_NAMESPACE}OrganisationService/${op}"`,
-  // Pattern 4: Legacy namespace (fallback)
-  (op: string) => `"http://www.tga.deewr.gov.au/IOrganisationServiceV13/${op}"`,
-];
+// SOAPAction for GetDetails operation (per TGA spec - now using GetDetails instead of GetOrganisation)
+const SOAP_ACTION = `"${TGA_V13_NAMESPACE}IOrganisationService/GetDetails"`;
 
 Deno.serve(async (req) => {
   const correlationId = generateCorrelationId();
@@ -136,114 +127,93 @@ Deno.serve(async (req) => {
     </wsse:Security>
   </soap:Header>
   <soap:Body>
-    <tns:GetOrganisation>
-      <tns:code>${escapeXml(sanitizedCode)}</tns:code>
-    </tns:GetOrganisation>
+    <tns:GetDetails>
+      <tns:request>
+        <tns:Code>${escapeXml(sanitizedCode)}</tns:Code>
+      </tns:request>
+    </tns:GetDetails>
   </soap:Body>
 </soap:Envelope>`;
 
     let lastError: Error | null = null;
     let responseText = '';
     let response: Response | null = null;
-    let lastFault: { faultcode: string | null; faultstring: string | null } | null = null;
-    let successAction: string | null = null;
     
-    // Try each SOAPAction pattern
-    for (let actionIdx = 0; actionIdx < SOAP_ACTION_PATTERNS.length; actionIdx++) {
-      const soapAction = SOAP_ACTION_PATTERNS[actionIdx]('GetOrganisation');
-      
-      console.log(`[TGA] [${correlationId}] Trying SOAP action pattern ${actionIdx + 1}: ${soapAction}`);
-      
-      // Retry loop for each action pattern
-      for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
-        if (attempt > 0) {
-          const delay = RETRY_DELAYS[attempt - 1] || 1000;
-          console.log(`[TGA] [${correlationId}] Retry ${attempt}/${MAX_RETRIES} after ${delay}ms`);
-          await new Promise(resolve => setTimeout(resolve, delay));
-        }
-        
-        try {
-          const controller = new AbortController();
-          const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
-          
-          response = await fetch(TGA_ENDPOINT, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'text/xml; charset=utf-8',
-              'Accept': 'text/xml',
-              'SOAPAction': soapAction,
-              'User-Agent': 'Unicorn2.0/1.0'
-            },
-            body: soapEnvelope,
-            signal: controller.signal
-          });
-          
-          clearTimeout(timeoutId);
-          responseText = await response.text();
-          
-          if (response.ok) {
-            successAction = soapAction;
-            console.log(`[TGA] [${correlationId}] Success with action: ${soapAction}, received ${responseText.length} bytes`);
-            break; // Success, exit retry loop
-          }
-          
-          const fault = parseSoapFault(responseText);
-          lastFault = fault;
-          
-          // Log safely (first 500 chars)
-          console.error(`[TGA] [${correlationId}] SOAP Error ${response.status}:`, responseText.substring(0, 500));
-          
-          // If ActionNotSupported/ContractFilter, try next action pattern
-          if (fault.faultcode?.includes('ActionNotSupported') || 
-              fault.faultstring?.includes('ContractFilter')) {
-            console.log(`[TGA] [${correlationId}] Action mismatch, trying next pattern...`);
-            response = null; // Reset to try next pattern
-            break; // Break retry loop, try next action pattern
-          }
-          
-          // Auth errors - don't retry
-          if (fault.faultstring?.includes('Unknown user') || 
-              fault.faultstring?.includes('incorrect password') ||
-              responseText.includes('InvalidSecurity')) {
-            break;
-          }
-          
-          // Server errors - retry
-          if (response.status >= 500 && attempt < MAX_RETRIES) {
-            lastError = new Error(`HTTP ${response.status}`);
-            continue;
-          }
-          
-          break; // Non-retryable error, exit loop
-          
-        } catch (error) {
-          console.error(`[TGA] [${correlationId}] Request error:`, error);
-          
-          if (error instanceof Error && error.name === 'AbortError') {
-            lastError = new Error('Request timed out');
-          } else {
-            lastError = error instanceof Error ? error : new Error(String(error));
-          }
-          
-          if (attempt < MAX_RETRIES) {
-            continue;
-          }
-        }
+    console.log(`[TGA] [${correlationId}] Using SOAP action: ${SOAP_ACTION}`);
+    
+    // Retry loop
+    for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+      if (attempt > 0) {
+        const delay = RETRY_DELAYS[attempt - 1] || 1000;
+        console.log(`[TGA] [${correlationId}] Retry ${attempt}/${MAX_RETRIES} after ${delay}ms`);
+        await new Promise(resolve => setTimeout(resolve, delay));
       }
       
-      // If we got a successful response, break out of action pattern loop
-      if (response?.ok) {
-        break;
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+        
+        response = await fetch(TGA_ENDPOINT, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'text/xml; charset=utf-8',
+            'Accept': 'text/xml',
+            'SOAPAction': SOAP_ACTION,
+            'User-Agent': 'Unicorn2.0/1.0'
+          },
+          body: soapEnvelope,
+          signal: controller.signal
+        });
+        
+        clearTimeout(timeoutId);
+        responseText = await response.text();
+        
+        if (response.ok) {
+          console.log(`[TGA] [${correlationId}] Success, received ${responseText.length} bytes`);
+          break; // Success, exit retry loop
+        }
+        
+        const fault = parseSoapFault(responseText);
+        
+        // Log safely (first 500 chars)
+        console.error(`[TGA] [${correlationId}] SOAP Error ${response.status}:`, responseText.substring(0, 500));
+        
+        // Auth errors - don't retry
+        if (fault.faultstring?.includes('Unknown user') || 
+            fault.faultstring?.includes('incorrect password') ||
+            responseText.includes('InvalidSecurity')) {
+          break;
+        }
+        
+        // Server errors - retry
+        if (response.status >= 500 && attempt < MAX_RETRIES) {
+          lastError = new Error(`HTTP ${response.status}`);
+          continue;
+        }
+        
+        break; // Non-retryable error, exit loop
+        
+      } catch (error) {
+        console.error(`[TGA] [${correlationId}] Request error:`, error);
+        
+        if (error instanceof Error && error.name === 'AbortError') {
+          lastError = new Error('Request timed out');
+        } else {
+          lastError = error instanceof Error ? error : new Error(String(error));
+        }
+        
+        if (attempt < MAX_RETRIES) {
+          continue;
+        }
       }
     }
 
     if (!response) {
       return new Response(
         JSON.stringify({ 
-          error: lastError?.message || 'Request failed after all action patterns',
+          error: lastError?.message || 'Request failed',
           organisation: null,
-          correlation_id: correlationId,
-          soap_fault: lastFault
+          correlation_id: correlationId
         }),
         { 
           status: 500, 
@@ -343,7 +313,7 @@ Deno.serve(async (req) => {
         success: true,
         organisation,
         correlation_id: correlationId,
-        action_used: successAction
+        action_used: SOAP_ACTION
       }),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
