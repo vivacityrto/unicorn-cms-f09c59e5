@@ -86,6 +86,13 @@ function escapeXml(unsafe: string): string {
     .replace(/'/g, '&apos;');
 }
 
+// SOAP responses use varying namespace prefixes (a:, b:, s:, etc.).
+// Our parsers are regex-based, so strip prefixes to make tag matching reliable.
+function stripXmlPrefixes(xml: string): string {
+  // Convert <ns:Tag> => <Tag> and </ns:Tag> => </Tag>
+  return xml.replace(/<(\/?)\s*[A-Za-z0-9_]+:([A-Za-z0-9_\-]+)/g, '<$1$2');
+}
+
 // Log helper (redacts sensitive data)
 function log(level: 'info' | 'warn' | 'error', message: string, data?: Record<string, unknown>) {
   const sanitized = data ? { ...data } : {};
@@ -951,19 +958,22 @@ async function fetchOrganisation(code: string): Promise<{ data: ParsedOrganisati
       body
     );
     
+    // Normalize prefixes so our regex parsers can reliably find tags
+    const normalized = stripXmlPrefixes(response);
+
     // Log sample of response for debugging (first 3000 chars)
-    log('info', 'Parsing organisation response', { 
-      code, 
+    log('info', 'Parsing organisation response', {
+      code,
       responseSize: response.length,
       // Sample key parts of the response to understand structure
-      hasContacts: response.includes('Contact'),
-      hasScope: response.includes('Scope') || response.includes('Qualification'),
-      hasDeliveryLocations: response.includes('DeliveryLocation'),
-      hasExplicitScope: response.includes('ExplicitScope'),
+      hasContacts: normalized.includes('Contact'),
+      hasScope: normalized.includes('Scope') || normalized.includes('Qualification') || normalized.includes('RtoDelivered'),
+      hasDeliveryLocations: normalized.includes('DeliveryLocation') || normalized.includes('DeliveryLocations') || normalized.includes('Locations'),
+      hasExplicitScope: normalized.includes('ExplicitScope') || normalized.includes('ShowExplicitScope'),
     });
-    
-    const parsed = parseOrganisation(response, code);
-    
+
+    const parsed = parseOrganisation(normalized, code);
+
     // Log parsing results
     log('info', 'Organisation parsing complete', {
       code,
