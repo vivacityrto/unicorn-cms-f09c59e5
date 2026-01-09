@@ -261,6 +261,7 @@ serve(async (req) => {
     // Registration dates: from registrations[] - pick current/most recent
     let registrationStartDate: string | null = null;
     let registrationEndDate: string | null = null;
+    let initialRegistrationDate: string | null = null;
     if (orgData.registrations && orgData.registrations.length > 0) {
       // Find current registration (no endDate or future endDate)
       const now = new Date();
@@ -271,6 +272,15 @@ serve(async (req) => {
       if (currentReg) {
         registrationStartDate = currentReg.startDate || null;
         registrationEndDate = currentReg.endDate || null;
+      }
+      
+      // Initial registration date = earliest startDate from all registrations
+      const allStartDates = orgData.registrations
+        .map((r: any) => r.startDate)
+        .filter((d: any) => d)
+        .sort();
+      if (allStartDates.length > 0) {
+        initialRegistrationDate = allStartDates[0];
       }
     }
     
@@ -290,7 +300,7 @@ serve(async (req) => {
     
     log('info', 'Parsed org details', { 
       legalName, tradingName, abn, acn, website, 
-      registrationStartDate, registrationEndDate, organisationType,
+      initialRegistrationDate, registrationStartDate, registrationEndDate, organisationType,
       sha256: rawSha256.substring(0, 16) 
     });
 
@@ -409,6 +419,7 @@ serve(async (req) => {
         abn: abn,
         acn: acn,
         web_address: website,
+        initial_registration_date: initialRegistrationDate,
         registration_start_date: registrationStartDate,
         registration_end_date: registrationEndDate,
         organisation_type: organisationType,
