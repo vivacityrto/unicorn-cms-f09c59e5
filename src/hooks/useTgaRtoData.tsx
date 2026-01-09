@@ -250,38 +250,98 @@ export function useTgaRtoData(tenantId: number | null, rtoCode: string | null, c
           }
         }
       } else {
-        // Fallback to legacy table queries for backwards compatibility
+        // Fetch from NEW unified table (tenant_rto_scope) + legacy summary/contacts tables
         const [
           summaryRes,
           contactsRes,
           addressesRes,
           locationsRes,
-          qualsRes,
-          skillsRes,
-          unitsRes,
-          coursesRes,
+          scopeRes,
           jobRes
         ] = await Promise.all([
           supabase.from('tga_rto_summary').select('*').eq('tenant_id', tenantId).eq('rto_code', rtoCode).maybeSingle(),
           supabase.from('tga_rto_contacts').select('*').eq('tenant_id', tenantId).eq('rto_code', rtoCode),
           supabase.from('tga_rto_addresses').select('*').eq('tenant_id', tenantId).eq('rto_code', rtoCode),
           supabase.from('tga_rto_delivery_locations').select('*').eq('tenant_id', tenantId).eq('rto_code', rtoCode),
-          supabase.from('tga_scope_qualifications').select('*').eq('tenant_id', tenantId).eq('rto_code', rtoCode).order('qualification_code'),
-          supabase.from('tga_scope_skillsets').select('*').eq('tenant_id', tenantId).eq('rto_code', rtoCode).order('skillset_code'),
-          supabase.from('tga_scope_units').select('*').eq('tenant_id', tenantId).eq('rto_code', rtoCode).order('unit_code'),
-          supabase.from('tga_scope_courses').select('*').eq('tenant_id', tenantId).eq('rto_code', rtoCode).order('course_code'),
-          supabase.from('tga_rto_import_jobs').select('*').eq('tenant_id', tenantId).eq('rto_code', rtoCode).order('created_at', { ascending: false }).limit(1).maybeSingle()
+          // NEW: Fetch from unified tenant_rto_scope table
+          supabase.from('tenant_rto_scope').select('*').eq('tenant_id', tenantId).order('code'),
+          supabase.from('tga_rest_sync_jobs').select('*').eq('tenant_id', tenantId).eq('rto_id', rtoCode).order('created_at', { ascending: false }).limit(1).maybeSingle()
         ]);
 
         setSummary(summaryRes.data as TGASummary | null);
         setContacts((contactsRes.data || []) as TGAContact[]);
         setAddresses((addressesRes.data || []) as TGAAddress[]);
         setDeliveryLocations((locationsRes.data || []) as TGADeliveryLocation[]);
-        setQualifications((qualsRes.data || []) as TGAQualification[]);
-        setSkillsets((skillsRes.data || []) as TGASkillset[]);
-        setUnits((unitsRes.data || []) as TGAUnit[]);
-        setCourses((coursesRes.data || []) as TGACourse[]);
-        setLatestJob(jobRes.data as TGAImportJob | null);
+        
+        // Map unified scope data to legacy format
+        const scopeItems = scopeRes.data || [];
+        
+        const quals = scopeItems
+          .filter((item: any) => item.scope_type === 'qualification')
+          .map((item: any) => ({
+            id: item.id,
+            qualification_code: item.code,
+            qualification_title: item.title,
+            training_package_code: item.tga_data?.trainingPackageCode || null,
+            status: item.status,
+            is_current: item.status === 'current',
+          }));
+        setQualifications(quals);
+
+        const unitItems = scopeItems
+          .filter((item: any) => item.scope_type === 'unit')
+          .map((item: any) => ({
+            id: item.id,
+            unit_code: item.code,
+            unit_title: item.title,
+            training_package_code: item.tga_data?.trainingPackageCode || null,
+            status: item.status,
+            is_current: item.status === 'current',
+          }));
+        setUnits(unitItems);
+
+        const skillItems = scopeItems
+          .filter((item: any) => item.scope_type === 'skillset')
+          .map((item: any) => ({
+            id: item.id,
+            skillset_code: item.code,
+            skillset_title: item.title,
+            training_package_code: item.tga_data?.trainingPackageCode || null,
+            status: item.status,
+            is_current: item.status === 'current',
+          }));
+        setSkillsets(skillItems);
+
+        const courseItems = scopeItems
+          .filter((item: any) => item.scope_type === 'accreditedCourse')
+          .map((item: any) => ({
+            id: item.id,
+            course_code: item.code,
+            course_title: item.title,
+            status: item.status,
+            is_current: item.status === 'current',
+          }));
+        setCourses(courseItems);
+        
+        // Map job to legacy format
+        if (jobRes.data) {
+          const job = jobRes.data as any;
+          const payload = job.payload || {};
+          setLatestJob({
+            id: job.id,
+            status: job.status,
+            job_type: 'rest_sync',
+            started_at: payload.started_at || job.created_at,
+            completed_at: payload.completed_at || job.updated_at,
+            qualifications_count: payload.scope_counts?.qualification || 0,
+            skillsets_count: payload.scope_counts?.skillSet || 0,
+            units_count: payload.scope_counts?.unit || 0,
+            courses_count: payload.scope_counts?.accreditedCourse || 0,
+            error_message: job.last_error,
+          });
+        } else {
+          setLatestJob(null);
+        }
       }
     } catch (error: unknown) {
       console.error('Error fetching TGA data:', error);
@@ -336,12 +396,11 @@ export function useTgaRtoData(tenantId: number | null, rtoCode: string | null, c
     try {
       setSyncing(true);
 
-      // Call the edge function directly with tenant_id - no clients_legacy required
-      const { data: liveData, error: fnError } = await supabase.functions.invoke('tga-sync', {
+      // Call the REST-based sync function (writes to tenant_rto_scope)
+      const { data: liveData, error: fnError } = await supabase.functions.invoke('tga-rto-sync', {
         body: {
-          action: 'sync-client',
-          rto_number: effectiveRtoCode,
-          tenant_id: tenantId.toString(),
+          tenantId: tenantId,
+          rtoId: effectiveRtoCode,
         },
       });
 
@@ -355,30 +414,27 @@ export function useTgaRtoData(tenantId: number | null, rtoCode: string | null, c
       }
 
       if (liveData?.success) {
-        const synced = liveData.synced || {};
-        const counts = [
-          synced.contacts && `${synced.contacts} contacts`,
-          synced.addresses && `${synced.addresses} addresses`,
-          synced.deliveryLocations && `${synced.deliveryLocations} delivery sites`,
-          synced.qualifications && `${synced.qualifications} quals`,
-          synced.skillSets && `${synced.skillSets} skill sets`,
-          synced.units && `${synced.units} units`,
-          synced.courses && `${synced.courses} courses`,
+        const counts = liveData.counts || {};
+        const countParts = [
+          counts.qualification && `${counts.qualification} quals`,
+          counts.skillSet && `${counts.skillSet} skill sets`,
+          counts.unit && `${counts.unit} units`,
+          counts.accreditedCourse && `${counts.accreditedCourse} courses`,
         ].filter(Boolean).join(', ');
         
         toast({
           title: 'TGA Sync Complete',
-          description: counts || `Synced data for RTO ${effectiveRtoCode}`,
+          description: countParts || `Synced data for RTO ${effectiveRtoCode}`,
         });
         await fetchData();
-        return { success: true, correlationId: liveData.correlationId };
+        return { success: true, correlationId: liveData.job_id };
       } else {
         toast({
           title: 'Sync Failed',
           description: liveData?.error || 'Failed to sync from TGA',
           variant: 'destructive'
         });
-        return { success: false, error: liveData?.error, correlationId: liveData?.correlationId };
+        return { success: false, error: liveData?.error };
       }
     } catch (error: unknown) {
       console.error('Sync error:', error);
