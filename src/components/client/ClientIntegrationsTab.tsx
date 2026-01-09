@@ -97,20 +97,20 @@ function SummaryField({ label, value, fieldKey, fieldPresence, parseFailed, isLi
         // This is a PARSING BUG - tag exists but we failed to extract
         statusMessage = (
           <span className="inline-flex items-center gap-1">
-            <Badge variant="destructive" className="text-[10px]">PARSING BUG</Badge>
+            <span className="bg-destructive text-destructive-foreground text-[10px] px-1.5 py-0.5 rounded font-medium">PARSING BUG</span>
             <span className="text-destructive italic text-xs">See Debug Panel</span>
           </span>
         );
       } else if (isPresent === false) {
         statusMessage = <span className="text-muted-foreground italic">Not provided by TGA</span>;
       } else if (isPresent === undefined) {
-        statusMessage = <span className="text-muted-foreground italic">No debug payload, run Sync Now</span>;
+        statusMessage = <span className="text-muted-foreground italic">—</span>;
       } else if (isPresent === true) {
-        // Tag is present but value is null - this is also a parsing issue or empty tag
+        // Tag is present but value is null - empty tag from TGA
         statusMessage = (
           <span className="inline-flex items-center gap-1">
-            <Badge variant="outline" className="text-[10px]">Empty tag</Badge>
-            <span className="text-muted-foreground italic text-xs">TGA returned empty value</span>
+            <span className="border text-[10px] px-1.5 py-0.5 rounded text-muted-foreground">Empty</span>
+            <span className="text-muted-foreground italic text-xs">TGA returned empty</span>
           </span>
         );
       } else {
@@ -118,27 +118,28 @@ function SummaryField({ label, value, fieldKey, fieldPresence, parseFailed, isLi
       }
     }
   } else if (!displayValue) {
-    statusMessage = <span className="text-muted-foreground italic">No debug payload, run Sync Now</span>;
+    statusMessage = <span className="text-muted-foreground italic">—</span>;
   }
 
+  // Use div instead of p to avoid DOM nesting issues with Badge/span
   return (
     <div className="space-y-1">
-      <p className="text-sm text-muted-foreground">{label}</p>
+      <div className="text-sm text-muted-foreground">{label}</div>
       {displayValue ? (
         isLink ? (
           <a 
             href={displayValue.startsWith('http') ? displayValue : `https://${displayValue}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-primary hover:underline font-medium"
+            className="text-primary hover:underline font-medium block"
           >
             {displayValue}
           </a>
         ) : (
-          <p className="font-medium">{displayValue}</p>
+          <div className="font-medium">{displayValue}</div>
         )
       ) : (
-        <p className="font-medium">{statusMessage}</p>
+        <div className="font-medium">{statusMessage}</div>
       )}
     </div>
   );
@@ -224,10 +225,12 @@ function SummaryTab({ summary, debugPayload }: SummaryTabProps) {
         parseFailed={parseFailed}
       />
       <div className="space-y-1">
-        <p className="text-sm text-muted-foreground">Status</p>
-        <Badge variant={summary.status === 'Registered' || summary.status === 'Current' ? 'default' : 'secondary'}>
-          {summary.status || 'Unknown'}
-        </Badge>
+        <div className="text-sm text-muted-foreground">Status</div>
+        <div>
+          <Badge variant={summary.status === 'Registered' || summary.status === 'Current' ? 'default' : 'secondary'}>
+            {summary.status || 'Unknown'}
+          </Badge>
+        </div>
       </div>
       <SummaryField 
         label="Website" 
@@ -1027,9 +1030,18 @@ export function ClientIntegrationsTab({
                       </div>
                     )}
 
+                    {(debugInfo.debugPayload.payload?.emptyFields?.length > 0 || debugInfo.debugPayload.payload?.empty_fields?.length > 0) && (
+                      <div className="col-span-2">
+                        <p className="text-muted-foreground">Empty Fields (tag exists but no value)</p>
+                        <p className="text-xs text-amber-600 mt-1">
+                          {(debugInfo.debugPayload.payload.emptyFields || debugInfo.debugPayload.payload.empty_fields).join(', ')}
+                        </p>
+                      </div>
+                    )}
+
                     {(debugInfo.debugPayload.payload?.parseFailedFields?.length > 0 || debugInfo.debugPayload.payload?.parse_failed_fields?.length > 0) && (
                       <div className="col-span-2">
-                        <p className="text-muted-foreground text-destructive">Parse Failed Fields (tag exists but no value)</p>
+                        <p className="text-muted-foreground text-destructive">Parse Failed Fields (extraction error)</p>
                         <p className="text-xs text-destructive mt-1">
                           {(debugInfo.debugPayload.payload.parseFailedFields || debugInfo.debugPayload.payload.parse_failed_fields).join(', ')}
                         </p>

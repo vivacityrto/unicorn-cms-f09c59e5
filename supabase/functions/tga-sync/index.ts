@@ -48,7 +48,7 @@ const SOAP_ACTIONS = {
   searchTrainingComponent: `${TGA_V13_NAMESPACE}ITrainingComponentService/Search`,
 };
 
-const FUNCTION_VERSION = '1.8.0';
+const FUNCTION_VERSION = '1.9.0';
 
 // TGA State Code mapping
 const TGA_STATE_CODES: Record<string, string> = {
@@ -152,32 +152,94 @@ function buildWsSecurityHeader(): string {
     </wsse:Security>`;
 }
 
-// ==================== REGEX-BASED XML PARSING ====================
+// ==================== NAMESPACE-SAFE XML PARSING ====================
 
-// Extract single value from XML (namespace-agnostic, decodes entities)
-function extractValue(xml: string, tagName: string): string | null {
-  // Patterns to handle namespaced and non-namespaced tags
-  const patterns = [
-    // Namespaced: <ns:TagName>value</ns:TagName>
-    new RegExp(`<[A-Za-z0-9_]+:${tagName}[^>]*>([^<]*)</[A-Za-z0-9_]+:${tagName}>`, 'i'),
-    // Non-namespaced: <TagName>value</TagName>
-    new RegExp(`<${tagName}[^>]*>([^<]*)</${tagName}>`, 'i'),
-  ];
-  for (const pattern of patterns) {
-    const match = xml.match(pattern);
-    if (match) {
-      const raw = match[1].trim();
-      return raw ? decodeXmlEntities(raw) : null;
-    }
+/**
+ * Find text content by local name, ignoring namespace prefixes.
+ * Iterates through all tag occurrences to find content.
+ * Returns:
+ *   - string value if tag exists with non-empty content
+ *   - empty string "" if tag exists but is empty
+ *   - null if tag does not exist
+ */
+function findTextByLocalName(xml: string, localName: string): string | null {
+  // Multiple patterns to catch various namespace scenarios
+  // Pattern 1: <ns:LocalName>content</ns:LocalName> (namespaced)
+  // Pattern 2: <LocalName>content</LocalName> (non-namespaced)
+  // Pattern 3: <ns:LocalName/> or <LocalName/> (self-closing)
+  
+  const escapedName = localName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  
+  // First check if the tag exists at all (any namespace prefix)
+  const existsPattern = new RegExp(`<(?:[A-Za-z0-9_-]+:)?${escapedName}(?:\\s|>|/)`, 'i');
+  if (!existsPattern.test(xml)) {
+    return null; // Tag does not exist
   }
-  return null;
+  
+  // Try to extract content - handle both namespaced and non-namespaced
+  const patterns = [
+    // Namespaced with content: <ns:Tag>content</ns:Tag>
+    new RegExp(`<([A-Za-z0-9_-]+):${escapedName}[^>]*>([\\s\\S]*?)</\\1:${escapedName}>`, 'i'),
+    // Non-namespaced with content: <Tag>content</Tag>
+    new RegExp(`<${escapedName}[^>]*>([\\s\\S]*?)</${escapedName}>`, 'i'),
+    // Self-closing namespaced: <ns:Tag/> or <ns:Tag attr="val"/>
+    new RegExp(`<[A-Za-z0-9_-]+:${escapedName}[^>]*/>`, 'i'),
+    // Self-closing non-namespaced: <Tag/> or <Tag attr="val"/>
+    new RegExp(`<${escapedName}[^>]*/>`, 'i'),
+  ];
+  
+  // Try namespaced pattern first
+  const nsMatch = xml.match(patterns[0]);
+  if (nsMatch) {
+    const content = nsMatch[2].trim();
+    return content || ''; // Return empty string if tag exists but empty
+  }
+  
+  // Try non-namespaced pattern
+  const plainMatch = xml.match(patterns[1]);
+  if (plainMatch) {
+    const content = plainMatch[1].trim();
+    return content || ''; // Return empty string if tag exists but empty
+  }
+  
+  // Check for self-closing tags
+  if (patterns[2].test(xml) || patterns[3].test(xml)) {
+    return ''; // Self-closing tag = exists but empty
+  }
+  
+  return ''; // Tag exists (we checked above) but couldn't extract - treat as empty
 }
 
-// Check if a tag exists in the XML (any namespace)
+/**
+ * Extract single value from XML (namespace-agnostic, decodes entities).
+ * Returns null if tag doesn't exist OR if tag exists but is empty.
+ * Use tagExistsWithState() to distinguish between missing and empty.
+ */
+function extractValue(xml: string, tagName: string): string | null {
+  const rawValue = findTextByLocalName(xml, tagName);
+  if (rawValue === null || rawValue === '') {
+    return null;
+  }
+  return decodeXmlEntities(rawValue);
+}
+
+/**
+ * Check if a tag exists in the XML (any namespace) and its state.
+ * Returns: { exists: boolean, isEmpty: boolean }
+ */
+function tagExistsWithState(xml: string, tagName: string): { exists: boolean; isEmpty: boolean } {
+  const value = findTextByLocalName(xml, tagName);
+  if (value === null) {
+    return { exists: false, isEmpty: false };
+  }
+  return { exists: true, isEmpty: value === '' };
+}
+
+/**
+ * Check if a tag exists in the XML (any namespace).
+ */
 function tagExists(xml: string, tagName: string): boolean {
-  // Match <TagName or <ns:TagName
-  const pattern = new RegExp(`<(?:[A-Za-z0-9_]+:)?${tagName}[\\s>]`, 'i');
-  return pattern.test(xml);
+  return findTextByLocalName(xml, tagName) !== null;
 }
 
 // Extract a section of XML by tag name (gets content between tags)
@@ -883,39 +945,50 @@ function parseSummary(xml: string, canonicalRtoCode: string, correlationId?: str
 
   const scoped = orgNode || normalized;
 
-  // Helper to check tag presence using the new tagExists function
-  const checkTag = (tag: string) => tagExists(scoped, tag);
-  
-  // Track which tag each field was extracted from
+  // Track which tag each field was extracted from and its state
   const extractedFrom: Record<string, string | null> = {};
+  const tagStates: Record<string, { exists: boolean; isEmpty: boolean }> = {};
   
-  // Extract with tracking
-  const extractWithSource = (tags: string[]): { value: string | null; source: string | null } => {
+  // Extract with tracking - uses improved namespace-safe extraction
+  const extractWithSource = (fieldName: string, tags: string[]): { value: string | null; source: string | null } => {
     for (const tag of tags) {
-      if (checkTag(tag)) {
+      const state = tagExistsWithState(scoped, tag);
+      if (state.exists) {
+        // Track the first existing tag we find for this field
+        if (!tagStates[fieldName]) {
+          tagStates[fieldName] = state;
+        }
         const val = extractValue(scoped, tag);
-        if (val) return { value: val, source: tag };
+        if (val) {
+          return { value: val, source: tag };
+        }
+        // Tag exists but is empty - continue checking other tags
       }
     }
-    // Check if any tag exists but has no value (empty tag)
+    // Check if any tag exists (even if empty)
     for (const tag of tags) {
-      if (checkTag(tag)) {
+      const state = tagExistsWithState(scoped, tag);
+      if (state.exists) {
+        if (!tagStates[fieldName]) {
+          tagStates[fieldName] = state;
+        }
         return { value: null, source: `${tag}:empty` };
       }
     }
+    tagStates[fieldName] = { exists: false, isEmpty: false };
     return { value: null, source: null };
   };
 
-  const legalNameResult = extractWithSource(['LegalName', 'OrganisationLegalName', 'OrganisationName', 'Name']);
-  const tradingNameResult = extractWithSource(['TradingName', 'TradingAs', 'BusinessName']);
-  const abnResult = extractWithSource(['ABN', 'Abn', 'AustralianBusinessNumber', 'BusinessNumber']);
-  const acnResult = extractWithSource(['ACN', 'Acn', 'AustralianCompanyNumber', 'CompanyNumber']);
-  const webAddressResult = extractWithSource(['WebAddress', 'Website', 'WebSiteAddress', 'HomePage', 'Url', 'URL']);
-  const organisationTypeResult = extractWithSource(['OrganisationType', 'OrganisationTypeDescription', 'OrganisationTypeCode', 'OrgType']);
-  const statusResult = extractWithSource(['Status', 'RegistrationStatus', 'CurrentStatus']);
-  const initialRegDateResult = extractWithSource(['InitialRegistrationDate', 'FirstRegistered']);
-  const regStartDateResult = extractWithSource(['RegistrationStartDate', 'CurrentRegistrationStart']);
-  const regEndDateResult = extractWithSource(['RegistrationEndDate', 'RegistrationExpiryDate']);
+  const legalNameResult = extractWithSource('LegalName', ['LegalName', 'OrganisationLegalName', 'OrganisationName', 'Name']);
+  const tradingNameResult = extractWithSource('TradingName', ['TradingName', 'TradingAs', 'BusinessName']);
+  const abnResult = extractWithSource('ABN', ['ABN', 'Abn', 'AustralianBusinessNumber', 'BusinessNumber']);
+  const acnResult = extractWithSource('ACN', ['ACN', 'Acn', 'AustralianCompanyNumber', 'CompanyNumber']);
+  const webAddressResult = extractWithSource('WebAddress', ['WebAddress', 'Website', 'WebSiteAddress', 'HomePage', 'Url', 'URL']);
+  const organisationTypeResult = extractWithSource('OrganisationType', ['OrganisationType', 'OrganisationTypeDescription', 'OrganisationTypeCode', 'OrgType', 'Type']);
+  const statusResult = extractWithSource('Status', ['Status', 'RegistrationStatus', 'CurrentStatus']);
+  const initialRegDateResult = extractWithSource('InitialRegistrationDate', ['InitialRegistrationDate', 'FirstRegistered']);
+  const regStartDateResult = extractWithSource('RegistrationStartDate', ['RegistrationStartDate', 'CurrentRegistrationStart']);
+  const regEndDateResult = extractWithSource('RegistrationEndDate', ['RegistrationEndDate', 'RegistrationExpiryDate']);
 
   extractedFrom.LegalName = legalNameResult.source;
   extractedFrom.TradingName = tradingNameResult.source;
@@ -939,19 +1012,11 @@ function parseSummary(xml: string, canonicalRtoCode: string, correlationId?: str
   const registrationStartDate = regStartDateResult.value;
   const registrationEndDate = regEndDateResult.value;
 
-  // Field presence: true if any relevant tag exists in XML
-  const fieldPresence: Record<string, boolean> = {
-    LegalName: checkTag('LegalName') || checkTag('OrganisationLegalName') || checkTag('OrganisationName') || checkTag('Name'),
-    TradingName: checkTag('TradingName') || checkTag('TradingAs') || checkTag('BusinessName'),
-    ABN: checkTag('ABN') || checkTag('Abn') || checkTag('AustralianBusinessNumber') || checkTag('BusinessNumber'),
-    ACN: checkTag('ACN') || checkTag('Acn') || checkTag('AustralianCompanyNumber') || checkTag('CompanyNumber'),
-    WebAddress: checkTag('WebAddress') || checkTag('Website') || checkTag('WebSiteAddress') || checkTag('HomePage') || checkTag('Url') || checkTag('URL'),
-    OrganisationType: checkTag('OrganisationType') || checkTag('OrganisationTypeDescription') || checkTag('OrganisationTypeCode') || checkTag('OrgType'),
-    Status: checkTag('Status') || checkTag('RegistrationStatus') || checkTag('CurrentStatus'),
-    InitialRegistrationDate: checkTag('InitialRegistrationDate') || checkTag('FirstRegistered'),
-    RegistrationStartDate: checkTag('RegistrationStartDate') || checkTag('CurrentRegistrationStart'),
-    RegistrationEndDate: checkTag('RegistrationEndDate') || checkTag('RegistrationExpiryDate'),
-  };
+  // Field presence: true if any relevant tag exists in XML (derived from tagStates)
+  const fieldPresence: Record<string, boolean> = {};
+  for (const key of Object.keys(tagStates)) {
+    fieldPresence[key] = tagStates[key].exists;
+  }
 
   if (!legalName) {
     log('error', 'No legal name found in organisation response (scoped)', { canonicalRtoCode, fieldPresence, extractedFrom }, correlationId);
@@ -1007,31 +1072,38 @@ function buildSummaryDebugPayload(xml: string, canonicalRtoCode: string, correla
   const rawXmlHash = simpleHash(xml);
   const { summary, fieldPresence, extractedFrom, orgNodeExcerpt } = parseSummary(xml, canonicalRtoCode, correlationId);
 
-  // Track which fields were present in XML but could not be parsed
-  const parseFailed: string[] = [];
-  const missing: string[] = [];
+  // Categorize fields: missing (not in XML), empty (tag exists but no content), parseFailed (tag with content but extraction failed)
+  const emptyFields: string[] = [];
+  const missingFields: string[] = [];
+  const parseFailedFields: string[] = [];
   
+  const fieldMapping: Record<string, string> = {
+    'LegalName': 'legalName',
+    'TradingName': 'tradingName',
+    'ABN': 'abn',
+    'ACN': 'acn',
+    'WebAddress': 'webAddress',
+    'OrganisationType': 'organisationType',
+    'Status': 'status',
+    'InitialRegistrationDate': 'initialRegistrationDate',
+    'RegistrationStartDate': 'registrationStartDate',
+    'RegistrationEndDate': 'registrationEndDate',
+  };
+
   for (const [field, present] of Object.entries(fieldPresence)) {
-    if (present) {
-      // Field tag exists in XML - check if we got a value
-      const summaryValue = summary ? (summary as Record<string, unknown>)[
-        field === 'LegalName' ? 'legalName' :
-        field === 'TradingName' ? 'tradingName' :
-        field === 'ABN' ? 'abn' :
-        field === 'ACN' ? 'acn' :
-        field === 'WebAddress' ? 'webAddress' :
-        field === 'OrganisationType' ? 'organisationType' :
-        field === 'Status' ? 'status' :
-        field === 'InitialRegistrationDate' ? 'initialRegistrationDate' :
-        field === 'RegistrationStartDate' ? 'registrationStartDate' :
-        field === 'RegistrationEndDate' ? 'registrationEndDate' : field
-      ] : null;
-      
-      if (!summaryValue && summaryValue !== false) {
-        parseFailed.push(field);
-      }
-    } else {
-      missing.push(field);
+    const camelField = fieldMapping[field] || field;
+    const summaryValue = summary ? (summary as Record<string, unknown>)[camelField] : null;
+    const source = extractedFrom[field];
+    
+    if (!present) {
+      // Tag does not exist in XML at all
+      missingFields.push(field);
+    } else if (source && source.endsWith(':empty')) {
+      // Tag exists but is empty - this is expected, not a parse failure
+      emptyFields.push(field);
+    } else if (!summaryValue && summaryValue !== false) {
+      // Tag exists but we couldn't extract a value - this is a parse failure
+      parseFailedFields.push(field);
     }
   }
 
@@ -1044,8 +1116,9 @@ function buildSummaryDebugPayload(xml: string, canonicalRtoCode: string, correla
     fieldPresence,
     extractedFrom,
     extractedSummary: summary,
-    missingFields: missing,
-    parseFailedFields: parseFailed,
+    missingFields,
+    emptyFields,
+    parseFailedFields,
   };
 }
 
