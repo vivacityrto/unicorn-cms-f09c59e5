@@ -66,8 +66,9 @@ async function fetchScopeSingleType(rtoId: string, componentType: string): Promi
   let offset = 0;
   let hasMore = true;
   
-  // Build filter - ONLY fetch explicit scope items (isImplicit==false)
-  const filter = `componentType==${componentType};isImplicit==false`;
+  // Build filter - fetch CURRENT, EXPLICIT scope items only
+  // Note: isImplicit==false in URL causes TGA 500 errors, so we filter locally instead
+  const filter = `componentType==${componentType};status==current`;
   
   while (hasMore) {
     // MINIMAL URL: no delivery param, no sorts (these may cause TGA 500s)
@@ -90,9 +91,11 @@ async function fetchScopeSingleType(rtoId: string, componentType: string): Promi
       
       log('info', `Got ${pageItems.length} ${componentType}(s) at offset ${offset}`, { total: data.count });
       
-      // Double-check isImplicit filter locally (safety net)
-      const explicitItems = pageItems.filter((item: any) => item.isImplicit !== true);
-      items.push(...explicitItems);
+      // Filter locally: only explicit (isImplicit !== true) and current (status === 'current')
+      const currentExplicitItems = pageItems.filter((item: any) => 
+        item.isImplicit !== true && item.status === 'current'
+      );
+      items.push(...currentExplicitItems);
       
       if (pageItems.length < PAGE_SIZE) {
         hasMore = false;
