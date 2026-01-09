@@ -52,7 +52,10 @@ export interface TGASummary {
   trading_name: string | null;
   organisation_type: string | null;
   abn: string | null;
+  acn: string | null;
   status: string | null;
+  web_address: string | null;
+  initial_registration_date: string | null;
   registration_start_date: string | null;
   registration_end_date: string | null;
   fetched_at: string;
@@ -184,7 +187,10 @@ export function useTgaRtoData(tenantId: number | null, rtoCode: string | null, c
               trading_name: typedData.rto_data.trading_name,
               organisation_type: null,
               abn: typedData.rto_data.abn,
+              acn: null,
               status: typedData.rto_data.status,
+              web_address: typedData.rto_data.website,
+              initial_registration_date: null,
               registration_start_date: typedData.rto_data.registration_start,
               registration_end_date: typedData.rto_data.registration_end,
               fetched_at: typedData.last_sync_at || new Date().toISOString(),
