@@ -27,23 +27,19 @@ function log(level: 'info' | 'warn' | 'error', message: string, data?: Record<st
   console.log(`[TGA_REST_SYNC] [${level.toUpperCase()}] [${timestamp}] ${message}`, data ? JSON.stringify(data) : '');
 }
 
-// Fetch all pages of scope items for a component type
-async function fetchAllScope(rtoId: string, componentType: string): Promise<{ items: any[]; urls: string[]; error?: string }> {
+// Fetch a single scope type (no pipe characters - simple filter)
+async function fetchScopeSingleType(rtoId: string, componentType: string): Promise<{ items: any[]; urls: string[]; error?: string }> {
   const items: any[] = [];
   const urls: string[] = [];
   let offset = 0;
   let hasMore = true;
   
-  // Component type filter - units need special handling
-  const componentFilter = componentType === 'unit' 
-    ? 'unit|accreditedUnit' 
-    : componentType;
-  
   // Delivery filter - skillSets don't have delivery
   const delivery = componentType === 'skillSet' ? 'false' : 'true';
   
-  // Build properly encoded filter - ONLY fetch explicit scope items (isImplicit==false)
-  const filter = `componentType==${componentFilter};isImplicit==false`;
+  // Build filter - ONLY fetch explicit scope items (isImplicit==false)
+  // Use simple componentType (no pipes!)
+  const filter = `componentType==${componentType};isImplicit==false`;
   
   while (hasMore) {
     const url = `https://training.gov.au/api/organisation/${encodeURIComponent(rtoId)}/scope?api-version=1.0&offset=${offset}&pageSize=${PAGE_SIZE}&delivery=${delivery}&filters=${encodeURIComponent(filter)}&sorts=code`;
@@ -60,7 +56,8 @@ async function fetchAllScope(rtoId: string, componentType: string): Promise<{ it
       });
       
       if (!response.ok) {
-        log('error', `TGA API error for ${componentType}`, { status: response.status });
+        const responseText = await response.text();
+        log('error', `TGA API error for ${componentType}`, { status: response.status, body: responseText.substring(0, 500) });
         return { items, urls, error: `HTTP ${response.status}` };
       }
       
@@ -88,6 +85,40 @@ async function fetchAllScope(rtoId: string, componentType: string): Promise<{ it
   }
   
   return { items, urls };
+}
+
+// Fetch all pages of scope items for a component type
+// For 'unit', fetches BOTH 'unit' and 'accreditedUnit' separately and merges
+async function fetchAllScope(rtoId: string, componentType: string): Promise<{ items: any[]; urls: string[]; error?: string }> {
+  // Units need two separate API calls (pipe character causes 500 errors)
+  if (componentType === 'unit') {
+    log('info', 'Fetching units with two separate API calls (unit + accreditedUnit)');
+    
+    const [unitResult, accreditedUnitResult] = await Promise.all([
+      fetchScopeSingleType(rtoId, 'unit'),
+      fetchScopeSingleType(rtoId, 'accreditedUnit'),
+    ]);
+    
+    // Merge results
+    const allItems = [...unitResult.items, ...accreditedUnitResult.items];
+    const allUrls = [...unitResult.urls, ...accreditedUnitResult.urls];
+    
+    // Report any errors
+    const errors: string[] = [];
+    if (unitResult.error) errors.push(`unit: ${unitResult.error}`);
+    if (accreditedUnitResult.error) errors.push(`accreditedUnit: ${accreditedUnitResult.error}`);
+    
+    log('info', `Merged unit results: ${unitResult.items.length} units + ${accreditedUnitResult.items.length} accreditedUnits = ${allItems.length} total`);
+    
+    return { 
+      items: allItems, 
+      urls: allUrls, 
+      error: errors.length > 0 ? errors.join('; ') : undefined 
+    };
+  }
+  
+  // All other types: single API call
+  return fetchScopeSingleType(rtoId, componentType);
 }
 
 // Fetch organization details from REST API
@@ -359,7 +390,7 @@ serve(async (req) => {
         source_payload: orgData,
         fetched_at: now,
         updated_at: now,
-      }, { onConflict: 'rto_code' });
+      }, { onConflict: 'tenant_id,rto_code' });
     
     if (summaryError) {
       log('warn', 'Could not upsert tga_rto_summary', { error: summaryError.message });
