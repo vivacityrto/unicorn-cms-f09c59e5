@@ -259,130 +259,142 @@ function parseContacts(xml: string, correlationId?: string): ParsedContact[] {
   const today = new Date().toISOString().split('T')[0];
   const normalized = stripXmlPrefixes(xml);
   
-  log('info', 'Parsing contacts with regex', {}, correlationId);
+  log('info', 'Parsing contacts with enhanced regex', {}, correlationId);
   
-  // Look for specific contact type containers first
-  const contactMappings = [
-    { tags: ['ContactChiefExecutive', 'ChiefExecutive'], type: 'ChiefExecutive' },
-    { tags: ['ContactPublicEnquiries', 'PublicEnquiries'], type: 'PublicEnquiries' },
-    { tags: ['ContactRegistrationEnquiries', 'RegistrationEnquiries'], type: 'RegistrationEnquiries' },
-  ];
+  // Look for Contacts container first
+  const contactsSection = extractSection(normalized, 'Contacts') || normalized;
+  
+  // Extract ALL Contact elements
+  const contactElements = extractAllTags(contactsSection, 'Contact');
+  log('info', `Found ${contactElements.length} Contact elements`, {}, correlationId);
+  
+  // Debug: log first contact's structure
+  if (contactElements.length > 0) {
+    const sample = contactElements[0].substring(0, 2000);
+    log('info', 'First Contact XML sample', { sample }, correlationId);
+  }
   
   const seenTypes = new Set<string>();
+  const allParsedContacts: ParsedContact[] = [];
   
-  for (const { tags, type } of contactMappings) {
-    if (seenTypes.has(type)) continue;
+  for (const contactXml of contactElements) {
+    // Check if contact is current (no end date or end date in future)
+    const endDate = extractValue(contactXml, 'EndDate') || extractValue(contactXml, 'EffectiveTo');
+    if (endDate && endDate < today) continue;
     
-    for (const tag of tags) {
-      const section = extractFullTag(normalized, tag);
-      if (section) {
-        const endDate = extractValue(section, 'EndDate') || extractValue(section, 'EffectiveTo');
-        const isCurrent = !endDate || endDate >= today;
-        
-        if (isCurrent) {
-          const name = extractValue(section, 'Name') || 
-                      extractValue(section, 'FullName') ||
-                      [extractValue(section, 'FirstName'), extractValue(section, 'LastName')].filter(Boolean).join(' ') || null;
-          
-          if (name) {
-            seenTypes.add(type);
-            contacts.push({
-              contactType: type,
-              name,
-              position: extractValue(section, 'Position') || extractValue(section, 'JobTitle') || type,
-              phone: extractValue(section, 'Phone') || extractValue(section, 'PhoneNumber') || extractValue(section, 'BusinessPhone'),
-              mobile: extractValue(section, 'Mobile') || extractValue(section, 'MobileNumber'),
-              fax: extractValue(section, 'Fax') || extractValue(section, 'FaxNumber'),
-              email: extractValue(section, 'Email') || extractValue(section, 'EmailAddress'),
-              address: extractValue(section, 'Address') || extractValue(section, 'StreetAddress'),
-              organisationName: extractValue(section, 'OrganisationName') || extractValue(section, 'Organisation'),
-            });
-            log('info', `Added ${type} contact from container`, { name }, correlationId);
-            break;
-          }
-        }
+    // Try multiple approaches to get contact type
+    let rawType = '';
+    
+    // Approach 1: Look for Type/ContactType with nested Code/Description
+    const typeContainer = extractFullTag(contactXml, 'Type') || extractFullTag(contactXml, 'ContactType');
+    if (typeContainer) {
+      rawType = extractValue(typeContainer, 'Code') || 
+                extractValue(typeContainer, 'Description') || 
+                extractValue(typeContainer, 'Name') || '';
+    }
+    
+    // Approach 2: Look for direct ContactTypeCode or TypeCode
+    if (!rawType) {
+      rawType = extractValue(contactXml, 'ContactTypeCode') ||
+                extractValue(contactXml, 'TypeCode') ||
+                extractValue(contactXml, 'ContactTypeName') ||
+                extractValue(contactXml, 'TypeName') || '';
+    }
+    
+    // Approach 3: Look for type attribute or simple text in Type element
+    if (!rawType) {
+      // Try to get any text content that might indicate type
+      const typeMatch = contactXml.match(/<(?:\w+:)?Type[^>]*>([^<]+)</i) ||
+                        contactXml.match(/<(?:\w+:)?ContactType[^>]*>([^<]+)</i);
+      if (typeMatch) rawType = typeMatch[1].trim();
+    }
+    
+    // Approach 4: Look for role/position-based identification
+    if (!rawType) {
+      const position = extractValue(contactXml, 'Position') || extractValue(contactXml, 'JobTitle') || '';
+      if (position) rawType = position;
+    }
+    
+    // Normalize the type
+    const rawTypeLower = rawType.toLowerCase();
+    let normalizedType = '';
+    
+    if (rawTypeLower.includes('chief') || rawTypeLower.includes('ceo') || 
+        rawTypeLower.includes('principal') || rawTypeLower.includes('executive') ||
+        rawTypeLower === 'ce' || rawTypeLower === 'cex' || rawTypeLower === 'c') {
+      normalizedType = 'ChiefExecutive';
+    } else if (rawTypeLower.includes('public') || rawTypeLower === 'pe' || 
+               rawTypeLower === 'pub' || rawTypeLower === 'p' || rawTypeLower.includes('enquir')) {
+      normalizedType = 'PublicEnquiries';
+    } else if (rawTypeLower.includes('registration') || rawTypeLower === 're' || 
+               rawTypeLower === 'reg' || rawTypeLower === 'r') {
+      normalizedType = 'RegistrationEnquiries';
+    } else if (rawTypeLower.includes('admin') || rawTypeLower.includes('manager') ||
+               rawTypeLower.includes('director') || rawTypeLower.includes('officer')) {
+      normalizedType = 'Administrative';
+    } else if (rawType) {
+      // Use the raw type as-is if we found something but couldn't categorize it
+      normalizedType = rawType;
+    }
+    
+    // Extract contact details
+    const name = extractValue(contactXml, 'Name') || 
+                extractValue(contactXml, 'FullName') ||
+                extractValue(contactXml, 'ContactName') ||
+                [extractValue(contactXml, 'FirstName'), extractValue(contactXml, 'LastName')].filter(Boolean).join(' ') || 
+                null;
+    
+    const contact: ParsedContact = {
+      contactType: normalizedType || 'Unknown',
+      name,
+      position: extractValue(contactXml, 'Position') || extractValue(contactXml, 'JobTitle') || extractValue(contactXml, 'Title'),
+      phone: extractValue(contactXml, 'Phone') || extractValue(contactXml, 'PhoneNumber') || extractValue(contactXml, 'BusinessPhone') || extractValue(contactXml, 'Telephone'),
+      mobile: extractValue(contactXml, 'Mobile') || extractValue(contactXml, 'MobileNumber') || extractValue(contactXml, 'MobilePhone'),
+      fax: extractValue(contactXml, 'Fax') || extractValue(contactXml, 'FaxNumber'),
+      email: extractValue(contactXml, 'Email') || extractValue(contactXml, 'EmailAddress'),
+      address: extractValue(contactXml, 'Address') || extractValue(contactXml, 'StreetAddress'),
+      organisationName: extractValue(contactXml, 'OrganisationName') || extractValue(contactXml, 'Organisation'),
+    };
+    
+    allParsedContacts.push(contact);
+    
+    // Log each contact found
+    log('info', 'Parsed contact', { 
+      type: normalizedType || 'Unknown', 
+      rawType, 
+      name, 
+      hasPhone: !!contact.phone, 
+      hasEmail: !!contact.email 
+    }, correlationId);
+  }
+  
+  // Priority order: CE, PE, RE, then others
+  const priorityTypes = ['ChiefExecutive', 'PublicEnquiries', 'RegistrationEnquiries'];
+  
+  // Add priority contacts first (one of each type)
+  for (const priorityType of priorityTypes) {
+    if (!seenTypes.has(priorityType)) {
+      const found = allParsedContacts.find(c => c.contactType === priorityType);
+      if (found) {
+        seenTypes.add(priorityType);
+        contacts.push(found);
       }
     }
   }
   
-  // Also look for generic Contact elements if we haven't found all 3
-  if (seenTypes.size < 3) {
-    const contactElements = extractAllTags(normalized, 'Contact');
-    log('info', `Found ${contactElements.length} generic Contact elements`, {}, correlationId);
-    
-    // Debug: log the first contact's raw XML structure (truncated)
-    if (contactElements.length > 0) {
-      const sampleContact = contactElements[0].substring(0, 1500);
-      log('info', 'Sample contact XML structure', { xml: sampleContact }, correlationId);
-    }
-    
-    // Debug: log the first few contact types we find
-    const debugTypes: string[] = [];
-    for (let i = 0; i < Math.min(5, contactElements.length); i++) {
-      const contactXml = contactElements[i];
-      // Try multiple ways to extract contact type - including looking for Type child elements
-      const typeSection = extractSection(contactXml, 'ContactType');
-      const typeFullTag = extractFullTag(contactXml, 'ContactType');
-      const typeCode = typeSection ? extractValue(typeSection, 'Code') : null;
-      const typeDesc = typeSection ? extractValue(typeSection, 'Description') : null;
-      const typeFromType = extractSection(contactXml, 'Type');
-      const typeCodeFromType = typeFromType ? extractValue(typeFromType, 'Code') : null;
-      const typeDescFromType = typeFromType ? extractValue(typeFromType, 'Description') : null;
-      const directType = extractValue(contactXml, 'ContactType') || extractValue(contactXml, 'Type');
-      debugTypes.push(`code=${typeCode || typeCodeFromType || 'null'}, desc=${typeDesc || typeDescFromType || 'null'}, direct=${directType || 'null'}, hasTypeSection=${!!typeSection}, hasFullTag=${!!typeFullTag}`);
-    }
-    log('info', 'Sample contact types found', { samples: debugTypes }, correlationId);
-    
-    for (const contactXml of contactElements) {
-      if (seenTypes.size >= 3) break;
-      
-      const endDate = extractValue(contactXml, 'EndDate') || extractValue(contactXml, 'EffectiveTo');
-      const isCurrent = !endDate || endDate >= today;
-      if (!isCurrent) continue;
-      
-      // Extract contact type - try Code inside ContactType first, then Description, then direct value
-      const typeSection = extractSection(contactXml, 'ContactType');
-      const typeCode = typeSection ? extractValue(typeSection, 'Code') : null;
-      const typeDesc = typeSection ? (extractValue(typeSection, 'Description') || extractValue(typeSection, 'Name')) : null;
-      const directType = extractValue(contactXml, 'ContactType') || extractValue(contactXml, 'Type');
-      const rawType = typeCode || typeDesc || directType || '';
-      const rawTypeLower = rawType.toLowerCase();
-      
-      let normalizedType = '';
-      
-      // Match on various patterns for the 3 main contact types
-      if (rawTypeLower.includes('chief') || rawTypeLower.includes('ceo') || 
-          rawTypeLower.includes('principal') || rawTypeLower.includes('executive') ||
-          rawTypeLower === 'ce' || rawTypeLower === 'cex') {
-        normalizedType = 'ChiefExecutive';
-      } else if (rawTypeLower.includes('public') || rawTypeLower === 'pe' || rawTypeLower === 'pub') {
-        normalizedType = 'PublicEnquiries';
-      } else if (rawTypeLower.includes('registration') || rawTypeLower === 're' || rawTypeLower === 'reg') {
-        normalizedType = 'RegistrationEnquiries';
-      }
-      
-      if (normalizedType && !seenTypes.has(normalizedType)) {
-        seenTypes.add(normalizedType);
-        const name = extractValue(contactXml, 'Name') || extractValue(contactXml, 'FullName') ||
-                    [extractValue(contactXml, 'FirstName'), extractValue(contactXml, 'LastName')].filter(Boolean).join(' ') || null;
-        
-        contacts.push({
-          contactType: normalizedType,
-          name,
-          position: extractValue(contactXml, 'Position') || extractValue(contactXml, 'JobTitle'),
-          phone: extractValue(contactXml, 'Phone') || extractValue(contactXml, 'PhoneNumber'),
-          mobile: extractValue(contactXml, 'Mobile') || extractValue(contactXml, 'MobileNumber'),
-          fax: extractValue(contactXml, 'Fax') || extractValue(contactXml, 'FaxNumber'),
-          email: extractValue(contactXml, 'Email') || extractValue(contactXml, 'EmailAddress'),
-          address: extractValue(contactXml, 'Address'),
-          organisationName: extractValue(contactXml, 'OrganisationName'),
-        });
-        log('info', `Added ${normalizedType} contact from generic Contact`, { name, rawType }, correlationId);
+  // Also add any other contacts (admin, unknown, etc.) up to a reasonable limit
+  for (const contact of allParsedContacts) {
+    if (!priorityTypes.includes(contact.contactType) && contacts.length < 10) {
+      const key = `${contact.contactType}-${contact.name || contact.email}`;
+      if (!seenTypes.has(key)) {
+        seenTypes.add(key);
+        contacts.push(contact);
       }
     }
   }
   
-  log('info', `Contact parsing complete: ${contacts.length} contacts`, { types: contacts.map(c => c.contactType) }, correlationId);
+  log('info', `Contact parsing complete: ${contacts.length} contacts from ${allParsedContacts.length} parsed`, 
+      { types: contacts.map(c => c.contactType) }, correlationId);
   return contacts;
 }
 
@@ -1177,6 +1189,27 @@ serve(async (req) => {
 
       try {
         const orgResult = await fetchOrganisation(rto_number, correlationId);
+        
+        // Store debug payload for visibility
+        const tenantIdForDebug = tenant_id ? parseInt(tenant_id) : null;
+        await supabase.from('tga_debug_payloads').insert({
+          tenant_id: tenantIdForDebug,
+          rto_code: rto_number,
+          endpoint: 'GetDetails',
+          http_status: orgResult.data ? 200 : 404,
+          record_count: orgResult.data ? 
+            (orgResult.data.contacts.length + orgResult.data.addresses.length + orgResult.data.deliveryLocations.length) : 0,
+          payload: {
+            hasData: !!orgResult.data,
+            error: orgResult.error,
+            contactCount: orgResult.data?.contacts?.length ?? 0,
+            addressCount: orgResult.data?.addresses?.length ?? 0,
+            deliveryLocationCount: orgResult.data?.deliveryLocations?.length ?? 0,
+            qualificationCount: orgResult.data?.scope?.qualifications?.length ?? 0,
+            sectionPresence: orgResult.sectionPresence,
+            rawXmlSample: orgResult.raw?.substring(0, 5000), // First 5KB for debugging
+          },
+        });
         
         if (!orgResult.data) {
           if (client_id) {
