@@ -145,6 +145,12 @@ function SummaryField({ label, value, fieldKey, fieldPresence, parseFailed, isLi
   );
 }
 
+interface TradingNameHistory {
+  name: string;
+  startDate: string | null;
+  endDate: string | null;
+}
+
 interface SummaryTabProps {
   summary: {
     legal_name?: string | null;
@@ -165,6 +171,8 @@ interface SummaryTabProps {
     fieldPresence?: Record<string, boolean>;
     parse_failed_fields?: string[];
     parseFailedFields?: string[];
+    tradingNamesArray?: TradingNameHistory[];
+    tradingNamesCount?: number;
   };
 }
 
@@ -172,6 +180,8 @@ function SummaryTab({ summary, debugPayload }: SummaryTabProps) {
   // Support both old and new payload format
   const fieldPresence = debugPayload?.fieldPresence ?? debugPayload?.field_presence;
   const parseFailed = debugPayload?.parseFailedFields ?? debugPayload?.parse_failed_fields;
+  const tradingNamesArray = debugPayload?.tradingNamesArray;
+  const [showTradingHistory, setShowTradingHistory] = useState(false);
 
   if (!summary) {
     return (
@@ -195,14 +205,44 @@ function SummaryTab({ summary, debugPayload }: SummaryTabProps) {
         parseFailed={parseFailed}
         decode
       />
-      <SummaryField 
-        label="Trading Name" 
-        value={summary.trading_name} 
-        fieldKey="TradingName" 
-        fieldPresence={fieldPresence}
-        parseFailed={parseFailed}
-        decode
-      />
+      <div className="space-y-1">
+        <div className="text-sm text-muted-foreground">Trading Name</div>
+        {summary.trading_name ? (
+          <div>
+            <div className="font-medium">{decodeHtmlEntities(summary.trading_name)}</div>
+            {tradingNamesArray && tradingNamesArray.length > 1 && (
+              <button 
+                onClick={() => setShowTradingHistory(!showTradingHistory)}
+                className="text-xs text-primary hover:underline mt-1"
+              >
+                {showTradingHistory ? 'Hide' : 'Show'} history ({tradingNamesArray.length} names)
+              </button>
+            )}
+            {showTradingHistory && tradingNamesArray && (
+              <div className="mt-2 space-y-1 text-xs border-l-2 border-muted pl-2">
+                {tradingNamesArray.map((tn, i) => (
+                  <div key={i} className="text-muted-foreground">
+                    <span className="font-medium text-foreground">{tn.name}</span>
+                    {tn.startDate && <span className="ml-1">from {tn.startDate}</span>}
+                    {tn.endDate && <span className="ml-1">to {tn.endDate}</span>}
+                    {!tn.endDate && <Badge variant="outline" className="ml-1 text-[9px]">Current</Badge>}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        ) : (
+          <div className="font-medium">
+            {fieldPresence?.TradingName === false ? (
+              <span className="text-muted-foreground italic">Not provided by TGA</span>
+            ) : fieldPresence?.TradingName === true ? (
+              <span className="text-muted-foreground italic">TGA returned empty</span>
+            ) : (
+              <span className="text-muted-foreground italic">—</span>
+            )}
+          </div>
+        )}
+      </div>
       <SummaryField 
         label="Organisation Type" 
         value={summary.organisation_type} 
@@ -991,6 +1031,13 @@ export function ClientIntegrationsTab({
                       <div>
                         <p className="text-muted-foreground">Raw XML Length</p>
                         <p className="font-mono text-xs">{(debugInfo.debugPayload.payload.rawXmlLength || debugInfo.debugPayload.payload.raw_xml_length).toLocaleString()} chars</p>
+                      </div>
+                    )}
+
+                    {debugInfo.debugPayload.payload?.tradingNamesCount !== undefined && (
+                      <div>
+                        <p className="text-muted-foreground">Trading Names Count</p>
+                        <p className="font-mono text-xs">{debugInfo.debugPayload.payload.tradingNamesCount}</p>
                       </div>
                     )}
 
