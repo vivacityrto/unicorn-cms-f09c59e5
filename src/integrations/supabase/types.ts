@@ -10110,6 +10110,8 @@ export type Database = {
           id: string
           payload: Json | null
           record_count: number | null
+          rto_code: string | null
+          tenant_id: number | null
         }
         Insert: {
           endpoint: string
@@ -10118,6 +10120,8 @@ export type Database = {
           id?: string
           payload?: Json | null
           record_count?: number | null
+          rto_code?: string | null
+          tenant_id?: number | null
         }
         Update: {
           endpoint?: string
@@ -10126,8 +10130,18 @@ export type Database = {
           id?: string
           payload?: Json | null
           record_count?: number | null
+          rto_code?: string | null
+          tenant_id?: number | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "tga_debug_payloads_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       tga_import_audit: {
         Row: {
