@@ -484,114 +484,190 @@ function extractItems(xml: string, containerPattern: RegExp, itemPattern: RegExp
   return items;
 }
 
-// Parse contacts from XML
+// Parse contacts from XML - extract the 3 CURRENT contact types (CEO, Registration, Public Enquiries)
+// TGA returns time-variant records - we need to filter to only current ones (EndDate is null or >= today)
 function parseContacts(xml: string): ParsedContact[] {
   const contacts: ParsedContact[] = [];
+  const today = new Date().toISOString().split('T')[0];
   
-  // Look for Contacts container
-  const contactsMatch = xml.match(/<(?:a:)?Contacts[^>]*>([\s\S]*?)<\/(?:a:)?Contacts>/i);
-  if (!contactsMatch) return contacts;
+  log('info', 'Starting contact parsing');
   
-  // Extract individual contact items - they may be keyed by contact type
-  const contactTypes = [
-    'ChiefExecutive', 'CEO', 'PrincipalExecutive',
-    'RegistrationEnquiries', 'PublicEnquiries',
-    'FinanceContact', 'TrainingContact'
+  // Helper to check if a contact record is current
+  const isCurrentRecord = (recordXml: string): boolean => {
+    const endDate = extractValue(recordXml, 'EndDate') || extractValue(recordXml, 'EffectiveTo');
+    if (!endDate) return true; // No end date = current
+    return endDate >= today;
+  };
+  
+  // Helper to extract the MOST RECENT current record from a container of time-variant records
+  const extractCurrentFromContainer = (containerXml: string, contactType: string): ParsedContact | null => {
+    // Check if the container itself has the contact data directly
+    const name = extractValue(containerXml, 'Name') || extractValue(containerXml, 'FullName') || 
+                 (extractValue(containerXml, 'FirstName') ? 
+                   `${extractValue(containerXml, 'FirstName') || ''} ${extractValue(containerXml, 'LastName') || ''}`.trim() : null);
+    
+    if (name && isCurrentRecord(containerXml)) {
+      return {
+        contactType,
+        name,
+        position: extractValue(containerXml, 'Position') || extractValue(containerXml, 'JobTitle') || contactType,
+        phone: extractValue(containerXml, 'Phone') || extractValue(containerXml, 'PhoneNumber') || 
+               extractValue(containerXml, 'BusinessPhone'),
+        mobile: extractValue(containerXml, 'Mobile') || extractValue(containerXml, 'MobileNumber') ||
+                extractValue(containerXml, 'MobilePhone'),
+        fax: extractValue(containerXml, 'Fax') || extractValue(containerXml, 'FaxNumber'),
+        email: extractValue(containerXml, 'Email') || extractValue(containerXml, 'EmailAddress'),
+        address: extractValue(containerXml, 'Address') || extractValue(containerXml, 'StreetAddress'),
+        organisationName: extractValue(containerXml, 'OrganisationName') || extractValue(containerXml, 'Organisation'),
+      };
+    }
+    
+    return null;
+  };
+  
+  // TGA uses specific element names for the 3 contact types per the documentation
+  const contactMappings = [
+    { patterns: ['ContactChiefExecutive', 'ChiefExecutive', 'CEO', 'PrincipalExecutive'], type: 'ChiefExecutive' },
+    { patterns: ['ContactPublicEnquiries', 'PublicEnquiries', 'PublicContact'], type: 'PublicEnquiries' },
+    { patterns: ['ContactRegistrationEnquiries', 'RegistrationEnquiries', 'RegistrationContact'], type: 'RegistrationEnquiries' },
   ];
   
-  for (const contactType of contactTypes) {
-    const contactMatch = contactsMatch[1].match(new RegExp(`<(?:a:)?${contactType}[^>]*>([\\s\\S]*?)<\\/(?:a:)?${contactType}>`, 'i'));
-    if (contactMatch) {
-      contacts.push({
-        contactType,
-        name: extractValue(contactMatch[1], 'Name') || extractValue(contactMatch[1], 'FullName'),
-        position: extractValue(contactMatch[1], 'Position') || extractValue(contactMatch[1], 'JobTitle'),
-        phone: extractValue(contactMatch[1], 'Phone') || extractValue(contactMatch[1], 'PhoneNumber'),
-        mobile: extractValue(contactMatch[1], 'Mobile') || extractValue(contactMatch[1], 'MobileNumber'),
-        fax: extractValue(contactMatch[1], 'Fax') || extractValue(contactMatch[1], 'FaxNumber'),
-        email: extractValue(contactMatch[1], 'Email') || extractValue(contactMatch[1], 'EmailAddress'),
-        address: extractValue(contactMatch[1], 'Address'),
-        organisationName: extractValue(contactMatch[1], 'OrganisationName'),
-      });
+  for (const { patterns, type } of contactMappings) {
+    for (const pattern of patterns) {
+      const containerPattern = new RegExp(`<(?:a:)?${pattern}[^>]*>([\\s\\S]*?)<\\/(?:a:)?${pattern}>`, 'i');
+      const match = xml.match(containerPattern);
+      
+      if (match) {
+        log('info', `Found contact element: ${pattern} for type ${type}`);
+        const contact = extractCurrentFromContainer(match[1], type);
+        if (contact) {
+          contacts.push(contact);
+          log('info', `Added ${type} contact`, { name: contact.name, email: contact.email });
+        }
+        break; // Found this type, move to next
+      }
     }
   }
   
-  // Also look for Contact array items
-  const contactItemPattern = /<(?:a:)?Contact[^>]*>([\s\S]*?)<\/(?:a:)?Contact>/gi;
-  let match;
-  while ((match = contactItemPattern.exec(contactsMatch[1])) !== null) {
-    const contactXml = match[1];
-    contacts.push({
-      contactType: extractValue(contactXml, 'ContactType') || extractValue(contactXml, 'Type') || 'Unknown',
-      name: extractValue(contactXml, 'Name') || extractValue(contactXml, 'FullName'),
-      position: extractValue(contactXml, 'Position') || extractValue(contactXml, 'JobTitle'),
-      phone: extractValue(contactXml, 'Phone') || extractValue(contactXml, 'PhoneNumber'),
-      mobile: extractValue(contactXml, 'Mobile') || extractValue(contactXml, 'MobileNumber'),
-      fax: extractValue(contactXml, 'Fax') || extractValue(contactXml, 'FaxNumber'),
-      email: extractValue(contactXml, 'Email') || extractValue(contactXml, 'EmailAddress'),
-      address: extractValue(contactXml, 'Address'),
-      organisationName: extractValue(contactXml, 'OrganisationName'),
-    });
+  // If we didn't find all 3, try Contacts array fallback
+  if (contacts.length < 3) {
+    const contactsMatch = xml.match(/<(?:a:)?Contacts[^>]*>([\s\S]*?)<\/(?:a:)?Contacts>/i);
+    if (contactsMatch) {
+      const contactItemPattern = /<(?:a:)?Contact[^>]*>([\s\S]*?)<\/(?:a:)?Contact>/gi;
+      let match;
+      const seenTypes = new Set(contacts.map(c => c.contactType));
+      
+      while ((match = contactItemPattern.exec(contactsMatch[1])) !== null) {
+        const contactXml = match[1];
+        
+        // Only process if current
+        if (!isCurrentRecord(contactXml)) continue;
+        
+        const rawType = extractValue(contactXml, 'ContactType') || extractValue(contactXml, 'Type') || '';
+        const normalizedType = rawType.includes('Chief') || rawType.includes('CEO') || rawType.includes('Principal') ? 'ChiefExecutive' :
+                              rawType.includes('Public') ? 'PublicEnquiries' :
+                              rawType.includes('Registration') ? 'RegistrationEnquiries' : null;
+        
+        if (normalizedType && !seenTypes.has(normalizedType)) {
+          seenTypes.add(normalizedType);
+          contacts.push({
+            contactType: normalizedType,
+            name: extractValue(contactXml, 'Name') || extractValue(contactXml, 'FullName'),
+            position: extractValue(contactXml, 'Position') || extractValue(contactXml, 'JobTitle'),
+            phone: extractValue(contactXml, 'Phone') || extractValue(contactXml, 'PhoneNumber'),
+            mobile: extractValue(contactXml, 'Mobile') || extractValue(contactXml, 'MobileNumber'),
+            fax: extractValue(contactXml, 'Fax') || extractValue(contactXml, 'FaxNumber'),
+            email: extractValue(contactXml, 'Email') || extractValue(contactXml, 'EmailAddress'),
+            address: extractValue(contactXml, 'Address'),
+            organisationName: extractValue(contactXml, 'OrganisationName'),
+          });
+        }
+      }
+    }
   }
   
+  log('info', 'Contact parsing complete', { totalContacts: contacts.length, types: contacts.map(c => c.contactType) });
   return contacts;
 }
 
-// Parse addresses from XML
+// Parse addresses from XML - Head Office Physical + Postal + any other addresses
 function parseAddresses(xml: string): ParsedAddress[] {
   const addresses: ParsedAddress[] = [];
   
-  // Look for address containers - TGA uses specific address types
-  const addressTypes = [
-    { tag: 'HeadOfficePhysicalAddress', type: 'HeadOfficePhysical' },
-    { tag: 'HeadOfficePostalAddress', type: 'HeadOfficePostal' },
-    { tag: 'PhysicalAddress', type: 'Physical' },
-    { tag: 'PostalAddress', type: 'Postal' },
-    { tag: 'BusinessAddress', type: 'Business' },
+  log('info', 'Starting address parsing');
+  
+  // Look for specific address types in TGA response - these are the main ones
+  const addressMappings = [
+    // Head Office addresses - different possible element names
+    { tags: ['HeadOfficeLocation', 'HeadOfficePhysicalAddress', 'PhysicalAddress'], type: 'HeadOffice' },
+    { tags: ['HeadOfficePostalAddress', 'PostalAddress'], type: 'Postal' },
+    { tags: ['BusinessAddress'], type: 'Business' },
   ];
   
-  for (const { tag, type } of addressTypes) {
-    const addrMatch = xml.match(new RegExp(`<(?:a:)?${tag}[^>]*>([\\s\\S]*?)<\\/(?:a:)?${tag}>`, 'i'));
-    if (addrMatch) {
-      addresses.push({
-        addressType: type,
-        addressLine1: extractValue(addrMatch[1], 'Line1') || extractValue(addrMatch[1], 'AddressLine1') || extractValue(addrMatch[1], 'Street'),
-        addressLine2: extractValue(addrMatch[1], 'Line2') || extractValue(addrMatch[1], 'AddressLine2'),
-        suburb: extractValue(addrMatch[1], 'Suburb') || extractValue(addrMatch[1], 'City'),
-        state: extractValue(addrMatch[1], 'State') || extractValue(addrMatch[1], 'StateTerritory'),
-        postcode: extractValue(addrMatch[1], 'Postcode') || extractValue(addrMatch[1], 'PostCode'),
-        country: extractValue(addrMatch[1], 'Country'),
-        phone: extractValue(addrMatch[1], 'Phone'),
-        fax: extractValue(addrMatch[1], 'Fax'),
-        email: extractValue(addrMatch[1], 'Email'),
-        website: extractValue(addrMatch[1], 'Website'),
-      });
+  for (const { tags, type } of addressMappings) {
+    for (const tag of tags) {
+      const pattern = new RegExp(`<(?:a:)?${tag}[^>]*>([\\s\\S]*?)<\\/(?:a:)?${tag}>`, 'i');
+      const match = xml.match(pattern);
+      
+      if (match) {
+        log('info', `Found address element: ${tag} as type ${type}`);
+        const addrXml = match[1];
+        
+        addresses.push({
+          addressType: type,
+          addressLine1: extractValue(addrXml, 'Line1') || extractValue(addrXml, 'AddressLine1') || 
+                       extractValue(addrXml, 'Street') || extractValue(addrXml, 'StreetAddress'),
+          addressLine2: extractValue(addrXml, 'Line2') || extractValue(addrXml, 'AddressLine2'),
+          suburb: extractValue(addrXml, 'Suburb') || extractValue(addrXml, 'City') || extractValue(addrXml, 'Locality'),
+          state: extractValue(addrXml, 'State') || extractValue(addrXml, 'StateTerritory') || extractValue(addrXml, 'StateCode'),
+          postcode: extractValue(addrXml, 'Postcode') || extractValue(addrXml, 'PostCode'),
+          country: extractValue(addrXml, 'Country'),
+          phone: extractValue(addrXml, 'Phone') || extractValue(addrXml, 'PhoneNumber'),
+          fax: extractValue(addrXml, 'Fax') || extractValue(addrXml, 'FaxNumber'),
+          email: extractValue(addrXml, 'Email') || extractValue(addrXml, 'EmailAddress'),
+          website: extractValue(addrXml, 'Website') || extractValue(addrXml, 'WebAddress'),
+        });
+        break; // Found this type, move to next
+      }
     }
   }
   
-  // Also look for Addresses container with Address items
-  const addressesMatch = xml.match(/<(?:a:)?Addresses[^>]*>([\s\S]*?)<\/(?:a:)?Addresses>/i);
-  if (addressesMatch) {
-    const addressItemPattern = /<(?:a:)?Address[^>]*>([\s\S]*?)<\/(?:a:)?Address>/gi;
-    let match;
-    while ((match = addressItemPattern.exec(addressesMatch[1])) !== null) {
-      const addrXml = match[1];
-      addresses.push({
-        addressType: extractValue(addrXml, 'AddressType') || extractValue(addrXml, 'Type') || 'Unknown',
-        addressLine1: extractValue(addrXml, 'Line1') || extractValue(addrXml, 'AddressLine1'),
-        addressLine2: extractValue(addrXml, 'Line2') || extractValue(addrXml, 'AddressLine2'),
-        suburb: extractValue(addrXml, 'Suburb'),
-        state: extractValue(addrXml, 'State'),
-        postcode: extractValue(addrXml, 'Postcode'),
-        country: extractValue(addrXml, 'Country'),
-        phone: extractValue(addrXml, 'Phone'),
-        fax: extractValue(addrXml, 'Fax'),
-        email: extractValue(addrXml, 'Email'),
-        website: extractValue(addrXml, 'Website'),
-      });
+  // Also look for an Addresses container with Address items
+  const addressesContainerPatterns = [
+    /<(?:a:)?Addresses[^>]*>([\s\S]*?)<\/(?:a:)?Addresses>/i,
+    /<(?:a:)?AddressList[^>]*>([\s\S]*?)<\/(?:a:)?AddressList>/i,
+  ];
+  
+  for (const containerPattern of addressesContainerPatterns) {
+    const containerMatch = xml.match(containerPattern);
+    if (containerMatch) {
+      const addressItemPattern = /<(?:a:)?Address[^>]*>([\s\S]*?)<\/(?:a:)?Address>/gi;
+      let match;
+      while ((match = addressItemPattern.exec(containerMatch[1])) !== null) {
+        const addrXml = match[1];
+        const addrType = extractValue(addrXml, 'AddressType') || extractValue(addrXml, 'Type') || 'Unknown';
+        
+        // Skip if we already have this type
+        if (addresses.some(a => a.addressType === addrType)) continue;
+        
+        addresses.push({
+          addressType: addrType,
+          addressLine1: extractValue(addrXml, 'Line1') || extractValue(addrXml, 'AddressLine1'),
+          addressLine2: extractValue(addrXml, 'Line2') || extractValue(addrXml, 'AddressLine2'),
+          suburb: extractValue(addrXml, 'Suburb') || extractValue(addrXml, 'Locality'),
+          state: extractValue(addrXml, 'State') || extractValue(addrXml, 'StateCode'),
+          postcode: extractValue(addrXml, 'Postcode') || extractValue(addrXml, 'PostCode'),
+          country: extractValue(addrXml, 'Country'),
+          phone: extractValue(addrXml, 'Phone'),
+          fax: extractValue(addrXml, 'Fax'),
+          email: extractValue(addrXml, 'Email'),
+          website: extractValue(addrXml, 'Website'),
+        });
+      }
     }
   }
   
+  log('info', 'Address parsing complete', { totalAddresses: addresses.length, types: addresses.map(a => a.addressType) });
   return addresses;
 }
 
@@ -599,28 +675,54 @@ function parseAddresses(xml: string): ParsedAddress[] {
 function parseDeliveryLocations(xml: string): ParsedDeliveryLocation[] {
   const locations: ParsedDeliveryLocation[] = [];
   
-  const locationsMatch = xml.match(/<(?:a:)?DeliveryLocations[^>]*>([\s\S]*?)<\/(?:a:)?DeliveryLocations>/i);
-  if (!locationsMatch) return locations;
+  log('info', 'Starting delivery locations parsing');
   
-  const locationPattern = /<(?:a:)?DeliveryLocation[^>]*>([\s\S]*?)<\/(?:a:)?DeliveryLocation>/gi;
-  let match;
-  while ((match = locationPattern.exec(locationsMatch[1])) !== null) {
-    const locXml = match[1];
-    locations.push({
-      locationName: extractValue(locXml, 'Name') || extractValue(locXml, 'LocationName'),
-      addressLine1: extractValue(locXml, 'Line1') || extractValue(locXml, 'AddressLine1'),
-      addressLine2: extractValue(locXml, 'Line2') || extractValue(locXml, 'AddressLine2'),
-      suburb: extractValue(locXml, 'Suburb'),
-      state: extractValue(locXml, 'State'),
-      postcode: extractValue(locXml, 'Postcode'),
-      country: extractValue(locXml, 'Country'),
-    });
+  // Look for various container names TGA might use
+  const containerPatterns = [
+    /<(?:a:)?DeliveryLocations[^>]*>([\s\S]*?)<\/(?:a:)?DeliveryLocations>/i,
+    /<(?:a:)?Locations[^>]*>([\s\S]*?)<\/(?:a:)?Locations>/i,
+    /<(?:a:)?SiteLocations[^>]*>([\s\S]*?)<\/(?:a:)?SiteLocations>/i,
+  ];
+  
+  for (const pattern of containerPatterns) {
+    const match = xml.match(pattern);
+    if (match) {
+      log('info', 'Found delivery locations container');
+      
+      const locationPatterns = [
+        /<(?:a:)?DeliveryLocation[^>]*>([\s\S]*?)<\/(?:a:)?DeliveryLocation>/gi,
+        /<(?:a:)?Location[^>]*>([\s\S]*?)<\/(?:a:)?Location>/gi,
+        /<(?:a:)?Site[^>]*>([\s\S]*?)<\/(?:a:)?Site>/gi,
+      ];
+      
+      for (const locPattern of locationPatterns) {
+        let locMatch;
+        while ((locMatch = locPattern.exec(match[1])) !== null) {
+          const locXml = locMatch[1];
+          
+          locations.push({
+            locationName: extractValue(locXml, 'Name') || extractValue(locXml, 'LocationName') || 
+                         extractValue(locXml, 'SiteName') || extractValue(locXml, 'Description'),
+            addressLine1: extractValue(locXml, 'Line1') || extractValue(locXml, 'AddressLine1') ||
+                         extractValue(locXml, 'Street') || extractValue(locXml, 'StreetAddress'),
+            addressLine2: extractValue(locXml, 'Line2') || extractValue(locXml, 'AddressLine2'),
+            suburb: extractValue(locXml, 'Suburb') || extractValue(locXml, 'Locality') || extractValue(locXml, 'City'),
+            state: extractValue(locXml, 'State') || extractValue(locXml, 'StateCode'),
+            postcode: extractValue(locXml, 'Postcode') || extractValue(locXml, 'PostCode'),
+            country: extractValue(locXml, 'Country'),
+          });
+        }
+      }
+      break; // Found a container, don't check other patterns
+    }
   }
   
+  log('info', 'Delivery locations parsing complete', { totalLocations: locations.length });
   return locations;
 }
 
 // Parse scope items (qualifications, skill sets, units, courses)
+// TGA returns scope via ShowRtoDeliveredQualifications, ShowRtoDeliveredUnits, etc.
 function parseScope(xml: string): ParsedScope {
   const scope: ParsedScope = {
     qualifications: [],
@@ -629,111 +731,112 @@ function parseScope(xml: string): ParsedScope {
     courses: [],
   };
   
+  log('info', 'Starting scope parsing');
+  
   // Helper to parse a single scope item
   const parseScopeItem = (itemXml: string, isExplicitDefault: boolean): ParsedScopeItem | null => {
-    const code = extractValue(itemXml, 'Code') || extractValue(itemXml, 'NrtCode') || extractValue(itemXml, 'TrainingComponentCode');
+    const code = extractValue(itemXml, 'Code') || extractValue(itemXml, 'NrtCode') || 
+                 extractValue(itemXml, 'TrainingComponentCode') || extractValue(itemXml, 'NationalCode');
     if (!code) return null;
     
-    const isExplicitVal = extractValue(itemXml, 'IsExplicit');
+    const isExplicitVal = extractValue(itemXml, 'IsExplicit') || extractValue(itemXml, 'Explicit');
     const isExplicit = isExplicitVal ? isExplicitVal.toLowerCase() === 'true' : isExplicitDefault;
     
     return {
       code,
-      title: extractValue(itemXml, 'Title') || extractValue(itemXml, 'Name'),
-      status: extractValue(itemXml, 'Status') || extractValue(itemXml, 'ScopeStatus'),
-      usageRecommendation: extractValue(itemXml, 'UsageRecommendation'),
-      extent: extractValue(itemXml, 'Extent') || extractValue(itemXml, 'ScopeExtent'),
-      startDate: extractValue(itemXml, 'StartDate') || extractValue(itemXml, 'ScopeStartDate'),
-      endDate: extractValue(itemXml, 'EndDate') || extractValue(itemXml, 'ScopeEndDate'),
-      deliveryNotification: extractValue(itemXml, 'DeliveryNotification') || extractValue(itemXml, 'DeliveryNotificationRequired'),
-      trainingPackageCode: extractValue(itemXml, 'TrainingPackageCode') || extractValue(itemXml, 'ParentCode'),
-      trainingPackageTitle: extractValue(itemXml, 'TrainingPackageTitle') || extractValue(itemXml, 'ParentTitle'),
+      title: extractValue(itemXml, 'Title') || extractValue(itemXml, 'Name') || extractValue(itemXml, 'Description'),
+      status: extractValue(itemXml, 'Status') || extractValue(itemXml, 'ScopeStatus') || 
+              extractValue(itemXml, 'NrtStatus') || extractValue(itemXml, 'TrainingComponentStatus'),
+      usageRecommendation: extractValue(itemXml, 'UsageRecommendation') || extractValue(itemXml, 'Recommendation'),
+      extent: extractValue(itemXml, 'Extent') || extractValue(itemXml, 'ScopeExtent') || extractValue(itemXml, 'DeliveryScope'),
+      startDate: extractValue(itemXml, 'StartDate') || extractValue(itemXml, 'ScopeStartDate') || 
+                 extractValue(itemXml, 'EffectiveFrom') || extractValue(itemXml, 'ScopeFrom'),
+      endDate: extractValue(itemXml, 'EndDate') || extractValue(itemXml, 'ScopeEndDate') ||
+               extractValue(itemXml, 'EffectiveTo') || extractValue(itemXml, 'ScopeTo'),
+      deliveryNotification: extractValue(itemXml, 'DeliveryNotification') || 
+                           extractValue(itemXml, 'DeliveryNotificationRequired') ||
+                           extractValue(itemXml, 'NotificationRequired'),
+      trainingPackageCode: extractValue(itemXml, 'TrainingPackageCode') || extractValue(itemXml, 'ParentCode') ||
+                          extractValue(itemXml, 'PackageCode'),
+      trainingPackageTitle: extractValue(itemXml, 'TrainingPackageTitle') || extractValue(itemXml, 'ParentTitle') ||
+                           extractValue(itemXml, 'PackageTitle'),
       isExplicit,
       isCurrent: extractValue(itemXml, 'IsCurrent')?.toLowerCase() === 'true' || 
-                 extractValue(itemXml, 'Status')?.toLowerCase() === 'current',
+                 extractValue(itemXml, 'Status')?.toLowerCase() === 'current' ||
+                 extractValue(itemXml, 'Current')?.toLowerCase() === 'true',
     };
   };
   
-  // Parse Qualifications - look in Scope/Qualifications or RegistrationScope/Qualifications
-  const qualsPatterns = [
-    /<(?:a:)?Qualifications[^>]*>([\s\S]*?)<\/(?:a:)?Qualifications>/gi,
-  ];
-  
-  for (const pattern of qualsPatterns) {
-    let containerMatch;
-    while ((containerMatch = pattern.exec(xml)) !== null) {
-      const qualItemPattern = /<(?:a:)?(?:Qualification|TrainingComponent)[^>]*>([\s\S]*?)<\/(?:a:)?(?:Qualification|TrainingComponent)>/gi;
-      let match;
-      while ((match = qualItemPattern.exec(containerMatch[1])) !== null) {
-        const item = parseScopeItem(match[1], true);
-        if (item && !scope.qualifications.some(q => q.code === item.code)) {
-          scope.qualifications.push(item);
+  // Generic function to extract items from a container
+  const extractScopeItems = (containerNames: string[], itemPatterns: RegExp[], isExplicit: boolean): ParsedScopeItem[] => {
+    const items: ParsedScopeItem[] = [];
+    
+    for (const containerName of containerNames) {
+      const containerPattern = new RegExp(`<(?:a:)?${containerName}[^>]*>([\\s\\S]*?)<\\/(?:a:)?${containerName}>`, 'gi');
+      let containerMatch;
+      
+      while ((containerMatch = containerPattern.exec(xml)) !== null) {
+        log('info', `Found scope container: ${containerName}`);
+        
+        for (const itemPattern of itemPatterns) {
+          let match;
+          while ((match = itemPattern.exec(containerMatch[1])) !== null) {
+            const item = parseScopeItem(match[1], isExplicit);
+            if (item && !items.some(i => i.code === item.code)) {
+              items.push(item);
+            }
+          }
         }
       }
     }
-  }
+    
+    return items;
+  };
   
-  // Parse Skill Sets
-  const skillsPatterns = [
-    /<(?:a:)?SkillSets[^>]*>([\s\S]*?)<\/(?:a:)?SkillSets>/gi,
-  ];
+  // Parse Qualifications - TGA uses RtoDeliveredQualifications or Qualifications
+  scope.qualifications = extractScopeItems(
+    ['RtoDeliveredQualifications', 'Qualifications', 'QualificationScope', 'ExplicitScope'],
+    [
+      /<(?:a:)?(?:RtoDeliveredQualification|Qualification|TrainingComponent|ScopeItem)[^>]*>([\s\S]*?)<\/(?:a:)?(?:RtoDeliveredQualification|Qualification|TrainingComponent|ScopeItem)>/gi,
+    ],
+    true
+  );
+  log('info', `Parsed ${scope.qualifications.length} qualifications`);
   
-  for (const pattern of skillsPatterns) {
-    let containerMatch;
-    while ((containerMatch = pattern.exec(xml)) !== null) {
-      const skillItemPattern = /<(?:a:)?(?:SkillSet|TrainingComponent)[^>]*>([\s\S]*?)<\/(?:a:)?(?:SkillSet|TrainingComponent)>/gi;
-      let match;
-      while ((match = skillItemPattern.exec(containerMatch[1])) !== null) {
-        const item = parseScopeItem(match[1], true);
-        if (item && !scope.skillSets.some(s => s.code === item.code)) {
-          scope.skillSets.push(item);
-        }
-      }
-    }
-  }
+  // Parse Skill Sets - TGA uses RtoDeliveredSkillSets or SkillSets
+  scope.skillSets = extractScopeItems(
+    ['RtoDeliveredSkillSets', 'SkillSets', 'SkillSetScope'],
+    [
+      /<(?:a:)?(?:RtoDeliveredSkillSet|SkillSet|TrainingComponent|ScopeItem)[^>]*>([\s\S]*?)<\/(?:a:)?(?:RtoDeliveredSkillSet|SkillSet|TrainingComponent|ScopeItem)>/gi,
+    ],
+    true
+  );
+  log('info', `Parsed ${scope.skillSets.length} skill sets`);
   
-  // Parse Units - ONLY explicit units per user requirement
-  const unitsPatterns = [
-    /<(?:a:)?Units[^>]*>([\s\S]*?)<\/(?:a:)?Units>/gi,
-    /<(?:a:)?ExplicitUnits[^>]*>([\s\S]*?)<\/(?:a:)?ExplicitUnits>/gi,
-  ];
+  // Parse Units - TGA uses RtoDeliveredUnits or Units
+  // ONLY explicit units per user requirement
+  const allUnits = extractScopeItems(
+    ['RtoDeliveredUnits', 'Units', 'ExplicitUnits', 'UnitScope'],
+    [
+      /<(?:a:)?(?:RtoDeliveredUnit|Unit|UnitOfCompetency|TrainingComponent|ScopeItem)[^>]*>([\s\S]*?)<\/(?:a:)?(?:RtoDeliveredUnit|Unit|UnitOfCompetency|TrainingComponent|ScopeItem)>/gi,
+    ],
+    false // Default to false, check IsExplicit field
+  );
+  // Filter to explicit only
+  scope.units = allUnits.filter(u => u.isExplicit);
+  log('info', `Parsed ${allUnits.length} units total, ${scope.units.length} explicit units`);
   
-  for (const pattern of unitsPatterns) {
-    let containerMatch;
-    while ((containerMatch = pattern.exec(xml)) !== null) {
-      const unitItemPattern = /<(?:a:)?(?:Unit|UnitOfCompetency|TrainingComponent)[^>]*>([\s\S]*?)<\/(?:a:)?(?:Unit|UnitOfCompetency|TrainingComponent)>/gi;
-      let match;
-      while ((match = unitItemPattern.exec(containerMatch[1])) !== null) {
-        const item = parseScopeItem(match[1], false); // Default false, check IsExplicit
-        // Only include explicit units
-        if (item && item.isExplicit && !scope.units.some(u => u.code === item.code)) {
-          scope.units.push(item);
-        }
-      }
-    }
-  }
+  // Parse Accredited Courses - TGA uses RtoDeliveredAccreditedCourses or AccreditedCourses
+  scope.courses = extractScopeItems(
+    ['RtoDeliveredAccreditedCourses', 'AccreditedCourses', 'Courses', 'CourseScope'],
+    [
+      /<(?:a:)?(?:RtoDeliveredAccreditedCourse|AccreditedCourse|Course|TrainingComponent|ScopeItem)[^>]*>([\s\S]*?)<\/(?:a:)?(?:RtoDeliveredAccreditedCourse|AccreditedCourse|Course|TrainingComponent|ScopeItem)>/gi,
+    ],
+    true
+  );
+  log('info', `Parsed ${scope.courses.length} accredited courses`);
   
-  // Parse Accredited Courses
-  const coursesPatterns = [
-    /<(?:a:)?AccreditedCourses[^>]*>([\s\S]*?)<\/(?:a:)?AccreditedCourses>/gi,
-    /<(?:a:)?Courses[^>]*>([\s\S]*?)<\/(?:a:)?Courses>/gi,
-  ];
-  
-  for (const pattern of coursesPatterns) {
-    let containerMatch;
-    while ((containerMatch = pattern.exec(xml)) !== null) {
-      const courseItemPattern = /<(?:a:)?(?:Course|AccreditedCourse|TrainingComponent)[^>]*>([\s\S]*?)<\/(?:a:)?(?:Course|AccreditedCourse|TrainingComponent)>/gi;
-      let match;
-      while ((match = courseItemPattern.exec(containerMatch[1])) !== null) {
-        const item = parseScopeItem(match[1], true);
-        if (item && !scope.courses.some(c => c.code === item.code)) {
-          scope.courses.push(item);
-        }
-      }
-    }
-  }
-  
-  log('info', 'Parsed scope items', {
+  log('info', 'Scope parsing complete', {
     qualifications: scope.qualifications.length,
     skillSets: scope.skillSets.length,
     units: scope.units.length,
@@ -786,22 +889,64 @@ async function fetchTrainingComponent(code: string): Promise<{ data: ParsedTrain
   }
 }
 
-// Fetch organisation by code
+// Fetch organisation by code with full details including contacts, addresses, and scope
 async function fetchOrganisation(code: string): Promise<{ data: ParsedOrganisation | null; raw: string; error: string | null }> {
   try {
     // Use TGA V13 GetDetails operation with OrganisationDetailsRequest (per spec section 6.5)
+    // CRITICAL: Include InformationRequested to specify which sub-entities to return
+    // Without this, TGA may not return contacts, addresses, scope etc.
     const body = buildOrgSoapRequest('GetDetails', `
       <tns:request>
         <tns:Code>${escapeXml(code)}</tns:Code>
+        <tns:InformationRequested>
+          <tns:ShowContacts>true</tns:ShowContacts>
+          <tns:ShowLocations>true</tns:ShowLocations>
+          <tns:ShowRegistrationManagers>true</tns:ShowRegistrationManagers>
+          <tns:ShowRtoClassifications>true</tns:ShowRtoClassifications>
+          <tns:ShowTradingNames>true</tns:ShowTradingNames>
+          <tns:ShowRtoDeliveredQualifications>true</tns:ShowRtoDeliveredQualifications>
+          <tns:ShowRtoDeliveredUnits>true</tns:ShowRtoDeliveredUnits>
+          <tns:ShowRtoDeliveredSkillSets>true</tns:ShowRtoDeliveredSkillSets>
+          <tns:ShowRtoDeliveredAccreditedCourses>true</tns:ShowRtoDeliveredAccreditedCourses>
+          <tns:ShowExplicitScope>true</tns:ShowExplicitScope>
+        </tns:InformationRequested>
       </tns:request>
     `);
+    
+    log('info', 'Fetching organisation with full details', { code, requestSize: body.length });
+    
     const response = await makeSoapRequest(
       TGA_ENDPOINTS.organisation, 
       SOAP_ACTIONS.getOrganisationDetails, 
       body
     );
     
+    // Log sample of response for debugging (first 3000 chars)
+    log('info', 'Parsing organisation response', { 
+      code, 
+      responseSize: response.length,
+      // Sample key parts of the response to understand structure
+      hasContacts: response.includes('Contact'),
+      hasScope: response.includes('Scope') || response.includes('Qualification'),
+      hasDeliveryLocations: response.includes('DeliveryLocation'),
+      hasExplicitScope: response.includes('ExplicitScope'),
+    });
+    
     const parsed = parseOrganisation(response);
+    
+    // Log parsing results
+    log('info', 'Organisation parsing complete', {
+      code,
+      hasData: !!parsed,
+      contactsFound: parsed?.contacts.length ?? 0,
+      addressesFound: parsed?.addresses.length ?? 0,
+      deliveryLocationsFound: parsed?.deliveryLocations.length ?? 0,
+      qualificationsFound: parsed?.scope.qualifications.length ?? 0,
+      skillSetsFound: parsed?.scope.skillSets.length ?? 0,
+      unitsFound: parsed?.scope.units.length ?? 0,
+      coursesFound: parsed?.scope.courses.length ?? 0,
+    });
+    
     return { data: parsed, raw: response, error: parsed ? null : 'Could not parse response' };
   } catch (error: unknown) {
     console.error(`[TGA] Error fetching org ${code}:`, error);
