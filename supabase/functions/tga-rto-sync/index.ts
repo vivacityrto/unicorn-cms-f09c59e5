@@ -42,8 +42,11 @@ async function fetchAllScope(rtoId: string, componentType: string): Promise<{ it
   // Delivery filter - skillSets don't have delivery
   const delivery = componentType === 'skillSet' ? 'false' : 'true';
   
+  // Build properly encoded filter
+  const filter = `componentType==${componentFilter}`;
+  
   while (hasMore) {
-    const url = `https://training.gov.au/api/organisation/${rtoId}/scope?api-version=1.0&offset=${offset}&pageSize=${PAGE_SIZE}&delivery=${delivery}&filters=componentType==${componentFilter}&sorts=code`;
+    const url = `https://training.gov.au/api/organisation/${encodeURIComponent(rtoId)}/scope?api-version=1.0&offset=${offset}&pageSize=${PAGE_SIZE}&delivery=${delivery}&filters=${encodeURIComponent(filter)}&sorts=code`;
     urls.push(url);
     
     log('info', `Fetching ${componentType} at offset ${offset}`, { url });
