@@ -846,14 +846,44 @@ function parseScope(xml: string): ParsedScope {
   return scope;
 }
 
-function parseOrganisation(xml: string): ParsedOrganisation | null {
-  const code = extractValue(xml, 'Code') || extractValue(xml, 'OrganisationCode');
-  const legalName = extractValue(xml, 'LegalName') || extractValue(xml, 'Name');
+// Parse organisation with CANONICAL RTO code from request (not from XML, which may have wrong Code element)
+function parseOrganisation(xml: string, canonicalRtoCode: string): ParsedOrganisation | null {
+  // Try to extract code from specific organisation context, not just any <Code>
+  // Look for OrganisationCode or the Code within GetDetailsResult/Organisation
+  const orgResultMatch = xml.match(/<(?:a:)?GetDetailsResult[^>]*>([\s\S]*?)<\/(?:a:)?GetDetailsResult>/i) ||
+                        xml.match(/<(?:a:)?OrganisationDetailsResponse[^>]*>([\s\S]*?)<\/(?:a:)?OrganisationDetailsResponse>/i) ||
+                        xml.match(/<(?:a:)?Organisation[^>]*>([\s\S]*?)<\/(?:a:)?Organisation>/i);
   
-  if (!code || !legalName) return null;
+  let derivedCode = canonicalRtoCode;
+  let legalName = '';
+  
+  if (orgResultMatch) {
+    const orgXml = orgResultMatch[1];
+    // Extract code from org context specifically
+    derivedCode = extractValue(orgXml, 'OrganisationCode') || 
+                  extractValue(orgXml, 'NationalProviderId') ||
+                  extractValue(orgXml, 'RtoCode') ||
+                  extractValue(orgXml, 'Code') || 
+                  canonicalRtoCode;
+    legalName = extractValue(orgXml, 'LegalName') || extractValue(orgXml, 'Name') || '';
+  } else {
+    // Fallback - try top level
+    legalName = extractValue(xml, 'LegalName') || extractValue(xml, 'Name') || '';
+  }
+  
+  // CRITICAL: Log if derived code differs from canonical - helps debug
+  if (derivedCode !== canonicalRtoCode) {
+    log('warn', `Derived RTO code "${derivedCode}" differs from canonical "${canonicalRtoCode}". Using canonical for storage.`);
+  }
+  
+  if (!legalName) {
+    log('warn', 'Could not extract legal name from organisation response');
+    return null;
+  }
 
+  // ALWAYS use canonical code for storage consistency
   return {
-    code,
+    code: canonicalRtoCode,
     legalName,
     tradingName: extractValue(xml, 'TradingName'),
     organisationType: extractValue(xml, 'OrganisationType') || extractValue(xml, 'Type'),
@@ -932,7 +962,7 @@ async function fetchOrganisation(code: string): Promise<{ data: ParsedOrganisati
       hasExplicitScope: response.includes('ExplicitScope'),
     });
     
-    const parsed = parseOrganisation(response);
+    const parsed = parseOrganisation(response, code);
     
     // Log parsing results
     log('info', 'Organisation parsing complete', {
@@ -1191,6 +1221,69 @@ serve(async (req) => {
         .eq('id', 1);
 
       return new Response(JSON.stringify(result), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    // Debug action - returns sanitized XML excerpts for analysis
+    if (action === 'debug-org') {
+      if (!isSuperAdmin) {
+        return new Response(JSON.stringify({ error: 'SuperAdmin access required' }), {
+          status: 403,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      const rto_number = (requestBody.rto_number as string) || url.searchParams.get('code') || '91020';
+      log('info', 'Debug org fetch', { rto_number });
+      
+      const result = await fetchOrganisation(rto_number);
+      
+      // Extract key XML sections for analysis
+      const extractSection = (xml: string, patterns: string[]): string => {
+        for (const pattern of patterns) {
+          const regex = new RegExp(`<(?:a:)?${pattern}[^>]*>[\\s\\S]{0,5000}`, 'i');
+          const match = xml.match(regex);
+          if (match) return match[0].substring(0, 2000) + '...';
+        }
+        return 'NOT FOUND';
+      };
+      
+      // Sanitize - redact sensitive info
+      let sanitizedXml = result.raw
+        .replace(/<(?:a:)?Email[^>]*>[^<]+<\/(?:a:)?Email>/gi, '<Email>[REDACTED]</Email>')
+        .replace(/<(?:a:)?Phone[^>]*>[^<]+<\/(?:a:)?Phone>/gi, '<Phone>[REDACTED]</Phone>')
+        .replace(/<(?:a:)?Mobile[^>]*>[^<]+<\/(?:a:)?Mobile>/gi, '<Mobile>[REDACTED]</Mobile>')
+        .replace(/<(?:a:)?Fax[^>]*>[^<]+<\/(?:a:)?Fax>/gi, '<Fax>[REDACTED]</Fax>');
+
+      return new Response(JSON.stringify({
+        requested_rto_number: rto_number,
+        parsed_org_code: result.data?.code,
+        parsed_legal_name: result.data?.legalName,
+        code_matches: result.data?.code === rto_number,
+        parsing_summary: {
+          contacts: result.data?.contacts.length ?? 0,
+          contacts_types: result.data?.contacts.map(c => c.contactType) ?? [],
+          addresses: result.data?.addresses.length ?? 0,
+          address_types: result.data?.addresses.map(a => a.addressType) ?? [],
+          delivery_locations: result.data?.deliveryLocations.length ?? 0,
+          qualifications: result.data?.scope.qualifications.length ?? 0,
+          skill_sets: result.data?.scope.skillSets.length ?? 0,
+          units: result.data?.scope.units.length ?? 0,
+          courses: result.data?.scope.courses.length ?? 0,
+        },
+        xml_sections: {
+          organisation_root: extractSection(result.raw, ['GetDetailsResult', 'OrganisationDetailsResponse', 'Organisation']),
+          contacts: extractSection(result.raw, ['ContactChiefExecutive', 'ChiefExecutive', 'Contacts']),
+          addresses: extractSection(result.raw, ['HeadOfficeLocation', 'HeadOfficePhysicalAddress', 'Addresses']),
+          delivery_locations: extractSection(result.raw, ['DeliveryLocations', 'Locations', 'SiteLocations']),
+          scope_quals: extractSection(result.raw, ['RtoDeliveredQualifications', 'Qualifications']),
+          scope_units: extractSection(result.raw, ['RtoDeliveredUnits', 'Units']),
+        },
+        raw_xml_length: result.raw.length,
+        raw_xml_excerpt: sanitizedXml.substring(0, 8000),
+        error: result.error,
+      }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
