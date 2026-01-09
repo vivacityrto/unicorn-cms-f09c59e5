@@ -302,12 +302,6 @@ export function useTgaRtoData(tenantId: number | null, rtoCode: string | null, c
       // If we have a client and rto code, call the live sync edge function directly
       // This bypasses the RPC which relies on pre-imported dataset
       if (clientData?.id && rtoCode) {
-        console.log('Calling tga-sync edge function for live SOAP sync...', { 
-          client_id: clientData.id, 
-          rto_number: rtoCode, 
-          tenant_id: tenantId 
-        });
-
         // Use supabase.functions.invoke with action in body (not header) to avoid CORS issues
         const { data: liveData, error: fnError } = await supabase.functions.invoke('tga-sync', {
           body: {
@@ -319,7 +313,6 @@ export function useTgaRtoData(tenantId: number | null, rtoCode: string | null, c
         });
 
         if (fnError) {
-          console.error('Edge function error:', fnError);
           toast({
             title: 'Sync Failed',
             description: fnError.message || 'Edge function error',
@@ -327,8 +320,6 @@ export function useTgaRtoData(tenantId: number | null, rtoCode: string | null, c
           });
           return { success: false, error: fnError.message };
         }
-
-        console.log('Live sync response:', liveData);
 
         if (liveData?.success) {
           toast({

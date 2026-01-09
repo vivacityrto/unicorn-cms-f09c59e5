@@ -9,36 +9,38 @@ const corsHeaders = {
 };
 
 // TGA Production SOAP Endpoints - WCF basicHttpBinding (SOAP 1.1)
-// Per TGA Web Services Specification v13r1
-// IMPORTANT: All services use V13 suffix and 'Webservices' (lowercase 's')
+// Per TGA Web Services Specification v13r1 Section 3.9.2
+// IMPORTANT: 
+// - All services use V13 suffix and 'Webservices' (lowercase 's')
+// - SOAP 1.1 requires policy suffix (e.g., /Organisation, /Training, /Classification)
 const TGA_ENV = Deno.env.get('TGA_ENV') || 'prod';
 const isProduction = TGA_ENV === 'prod' || TGA_ENV === 'production';
 
-// Hardcoded V13 endpoints - DO NOT use string building that could drop V13
+// Hardcoded V13 endpoints WITH policy suffix for SOAP 1.1 (per TGA spec section 3.9.2)
 const TGA_PROD_ENDPOINTS = {
-  organisation: 'https://ws.training.gov.au/Deewr.Tga.Webservices/OrganisationServiceV13.svc',
-  training: 'https://ws.training.gov.au/Deewr.Tga.Webservices/TrainingComponentServiceV13.svc',
-  classification: 'https://ws.training.gov.au/Deewr.Tga.Webservices/ClassificationServiceV13.svc',
+  organisation: 'https://ws.training.gov.au/Deewr.Tga.Webservices/OrganisationServiceV13.svc/Organisation',
+  training: 'https://ws.training.gov.au/Deewr.Tga.Webservices/TrainingComponentServiceV13.svc/Training',
+  classification: 'https://ws.training.gov.au/Deewr.Tga.Webservices/ClassificationServiceV13.svc/Classification',
 };
 
 const TGA_SANDBOX_ENDPOINTS = {
-  organisation: 'https://ws.sandbox.training.gov.au/Deewr.Tga.Webservices/OrganisationServiceV13.svc',
-  training: 'https://ws.sandbox.training.gov.au/Deewr.Tga.Webservices/TrainingComponentServiceV13.svc',
-  classification: 'https://ws.sandbox.training.gov.au/Deewr.Tga.Webservices/ClassificationServiceV13.svc',
+  organisation: 'https://ws.sandbox.training.gov.au/Deewr.Tga.Webservices/OrganisationServiceV13.svc/Organisation',
+  training: 'https://ws.sandbox.training.gov.au/Deewr.Tga.Webservices/TrainingComponentServiceV13.svc/Training',
+  classification: 'https://ws.sandbox.training.gov.au/Deewr.Tga.Webservices/ClassificationServiceV13.svc/Classification',
 };
 
 const TGA_ENDPOINTS = isProduction ? TGA_PROD_ENDPOINTS : TGA_SANDBOX_ENDPOINTS;
 
-// V13 Guard - validate all endpoints contain V13.svc
+// V13 Guard - validate all endpoints contain V13.svc/ with policy suffix
 function validateEndpoints() {
   for (const [name, url] of Object.entries(TGA_ENDPOINTS)) {
-    if (!url.includes('V13.svc')) {
-      const error = `FATAL: ${name} endpoint missing V13: ${url}`;
+    if (!url.includes('V13.svc/')) {
+      const error = `FATAL: ${name} endpoint missing V13.svc/ policy suffix: ${url}`;
       console.error(`[TGA-SYNC] ${error}`);
       throw new Error(error);
     }
   }
-  console.log(`[TGA-SYNC] Endpoint validation passed - all URLs contain V13.svc`);
+  console.log(`[TGA-SYNC] Endpoint validation passed - all URLs contain V13.svc/ with policy suffix`);
   console.log(`[TGA-SYNC] Environment: ${TGA_ENV} (isProduction: ${isProduction})`);
   console.log(`[TGA-SYNC] Org endpoint: ${TGA_ENDPOINTS.organisation}`);
 }
@@ -49,17 +51,17 @@ validateEndpoints();
 // TGA V13 namespace - per WSDL
 const TGA_V13_NAMESPACE = 'http://training.gov.au/services/13/';
 
-// SOAP action patterns to try (ordered by likelihood)
+// SOAP action patterns (per TGA Web Services Specification v13r1)
 const SOAP_ACTIONS = {
-  // Organisation service - use V13 namespace with I prefix
-  getOrganisationDetails: `${TGA_V13_NAMESPACE}IOrganisationService/GetOrganisation`,
-  searchOrganisation: `${TGA_V13_NAMESPACE}IOrganisationService/SearchOrganisation`,
+  // Organisation service - GetDetails returns OrganisationDetailsResponse
+  getOrganisationDetails: `${TGA_V13_NAMESPACE}IOrganisationService/GetDetails`,
+  searchOrganisation: `${TGA_V13_NAMESPACE}IOrganisationService/Search`,
   // Training component service
   getTrainingComponentDetails: `${TGA_V13_NAMESPACE}ITrainingComponentService/GetDetails`,
   searchTrainingComponent: `${TGA_V13_NAMESPACE}ITrainingComponentService/Search`,
 };
 
-const FUNCTION_VERSION = '1.0.9';
+const FUNCTION_VERSION = '1.1.0';
 
 // Credentials loaded from Supabase secrets (try new names first, fall back to old)
 const TGA_WS_USERNAME = Deno.env.get('TGA_USERNAME') || Deno.env.get('TGA_WS_USERNAME');
@@ -209,9 +211,9 @@ async function makeSoapRequest(endpoint: string, soapAction: string, body: strin
     throw new Error(`Invalid endpoint - must not use ?wsdl: ${endpoint}`);
   }
   
-  // Guard: must contain V13.svc
-  if (!endpoint.includes('V13.svc')) {
-    throw new Error(`Invalid endpoint - must contain V13.svc: ${endpoint}`);
+  // Guard: must contain V13.svc/ with policy suffix
+  if (!endpoint.includes('V13.svc/')) {
+    throw new Error(`Invalid endpoint - must contain V13.svc/ with policy suffix: ${endpoint}`);
   }
   
   // Build request details for logging
@@ -277,7 +279,7 @@ async function makeSoapRequest(endpoint: string, soapAction: string, body: strin
           endpoint,
           soapAction,
           soapVersion: '1.1',
-          hint: 'URL should NOT include V13 in path. V13 is only in SOAP namespace.',
+          hint: 'Endpoint returned 404. Verify V13.svc/PolicySuffix URL is accessible and TGA service is online.',
           responsePreview: responseText.substring(0, 300),
           duration,
         });
@@ -458,8 +460,12 @@ async function fetchTrainingComponent(code: string): Promise<{ data: ParsedTrain
 // Fetch organisation by code
 async function fetchOrganisation(code: string): Promise<{ data: ParsedOrganisation | null; raw: string; error: string | null }> {
   try {
-    // Use TGA V13 namespace format for GetOrganisation operation
-    const body = buildOrgSoapRequest('GetOrganisation', `<tns:code>${escapeXml(code)}</tns:code>`);
+    // Use TGA V13 GetDetails operation with OrganisationDetailsRequest (per spec section 6.5)
+    const body = buildOrgSoapRequest('GetDetails', `
+      <tns:request>
+        <tns:Code>${escapeXml(code)}</tns:Code>
+      </tns:request>
+    `);
     const response = await makeSoapRequest(
       TGA_ENDPOINTS.organisation, 
       SOAP_ACTIONS.getOrganisationDetails, 
