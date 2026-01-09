@@ -78,6 +78,7 @@ export function ClientIntegrationsTab({
     debugPayload?: { record_count: number; fetched_at: string } | null;
   } | null>(null);
   const [showDebug, setShowDebug] = useState(false);
+  const [syncCounter, setSyncCounter] = useState(0); // Track sync completions to refresh debug panel
   const { isSuperAdmin } = useAuth();
 
   const hasRtoNumber = !!profile?.rto_number;
@@ -108,7 +109,7 @@ export function ClientIntegrationsTab({
     fetchTenantStatus();
   }, [profile?.tenant_id]);
 
-  // Fetch debug info for SuperAdmins
+  // Fetch debug info for SuperAdmins - refresh when syncCounter changes
   useEffect(() => {
     if (!isSuperAdmin || !profile?.tenant_id || !showDebug) return;
     
@@ -135,7 +136,7 @@ export function ClientIntegrationsTab({
     };
     
     fetchDebugInfo();
-  }, [isSuperAdmin, profile?.tenant_id, showDebug]);
+  }, [isSuperAdmin, profile?.tenant_id, showDebug, syncCounter]);
 
   // Fetch TGA data when linked - use the new dataset-based approach
   // Note: We pass tenant_id as a string identifier since that's what we have
@@ -173,7 +174,11 @@ export function ClientIntegrationsTab({
   };
 
   const handleSyncNow = async () => {
-    await tgaData.triggerSync();
+    const result = await tgaData.triggerSync();
+    if (result.success) {
+      // Trigger debug panel refresh
+      setSyncCounter(c => c + 1);
+    }
   };
 
   // Show merged tenant warning
