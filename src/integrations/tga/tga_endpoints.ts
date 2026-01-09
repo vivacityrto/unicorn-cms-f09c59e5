@@ -5,12 +5,11 @@
  * Per TGA Web Services Specification v13r1.
  * 
  * IMPORTANT:
- * - OrganisationService uses 'WebServices' (capital S)
- * - TrainingComponentService and ClassificationService use 'Webservices' (lowercase s)
- * - V13 is NOT in the URL path - it's only in the SOAP namespace
+ * - All services use 'Webservices' (lowercase 's')
+ * - All services use V13 suffix (e.g., OrganisationServiceV13.svc)
  */
 
-export type TGAEnvironment = 'prod' | 'sandbox';
+export type TGAEnvironment = 'prod' | 'production' | 'sandbox';
 
 export interface TGAEndpoints {
   organisation: string;
@@ -18,24 +17,28 @@ export interface TGAEndpoints {
   classification: string;
 }
 
+// Hardcoded V13 endpoints - DO NOT use string building that could drop V13
+const TGA_PROD_ENDPOINTS: TGAEndpoints = {
+  organisation: 'https://ws.training.gov.au/Deewr.Tga.Webservices/OrganisationServiceV13.svc',
+  training: 'https://ws.training.gov.au/Deewr.Tga.Webservices/TrainingComponentServiceV13.svc',
+  classification: 'https://ws.training.gov.au/Deewr.Tga.Webservices/ClassificationServiceV13.svc',
+};
+
+const TGA_SANDBOX_ENDPOINTS: TGAEndpoints = {
+  organisation: 'https://ws.sandbox.training.gov.au/Deewr.Tga.Webservices/OrganisationServiceV13.svc',
+  training: 'https://ws.sandbox.training.gov.au/Deewr.Tga.Webservices/TrainingComponentServiceV13.svc',
+  classification: 'https://ws.sandbox.training.gov.au/Deewr.Tga.Webservices/ClassificationServiceV13.svc',
+};
+
 /**
  * Get TGA SOAP service endpoints for the specified environment.
  * 
- * @param env - 'prod' for production, 'sandbox' for testing
- * @returns Object with organisation, training, and classification URLs
+ * @param env - 'prod' or 'production' for production, 'sandbox' for testing
+ * @returns Object with organisation, training, and classification URLs (all with V13.svc)
  */
 export function getTgaEndpoints(env: TGAEnvironment = 'prod'): TGAEndpoints {
-  const baseHost = env === 'sandbox' 
-    ? 'ws.sandbox.training.gov.au' 
-    : 'ws.training.gov.au';
-
-  return {
-    // OrganisationService uses WebServices (capital S)
-    organisation: `https://${baseHost}/Deewr.Tga.WebServices/OrganisationService.svc`,
-    // TrainingComponentService and ClassificationService use Webservices (lowercase s)
-    training: `https://${baseHost}/Deewr.Tga.Webservices/TrainingComponentService.svc`,
-    classification: `https://${baseHost}/Deewr.Tga.Webservices/ClassificationService.svc`,
-  };
+  const isProduction = env === 'prod' || env === 'production';
+  return isProduction ? TGA_PROD_ENDPOINTS : TGA_SANDBOX_ENDPOINTS;
 }
 
 /**

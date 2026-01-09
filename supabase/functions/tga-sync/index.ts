@@ -10,23 +10,41 @@ const corsHeaders = {
 
 // TGA Production SOAP Endpoints - WCF basicHttpBinding (SOAP 1.1)
 // Per TGA Web Services Specification v13r1
-// IMPORTANT: V13 is NOT in the URL path - it's only in the SOAP namespace
-// - OrganisationService uses 'WebServices' (capital S)
-// - TrainingComponentService uses 'Webservices' (lowercase s)
-// - ClassificationService uses 'Webservices' (lowercase s)
+// IMPORTANT: All services use V13 suffix and 'Webservices' (lowercase 's')
 const TGA_ENV = Deno.env.get('TGA_ENV') || 'prod';
-const TGA_BASE_HOST = TGA_ENV === 'sandbox' 
-  ? 'ws.sandbox.training.gov.au' 
-  : 'ws.training.gov.au';
+const isProduction = TGA_ENV === 'prod' || TGA_ENV === 'production';
 
-// Endpoints do NOT include V13 in the service name - V13 is only in SOAP namespace
-const TGA_ENDPOINTS = {
-  // OrganisationService uses WebServices (capital S)
-  organisation: `https://${TGA_BASE_HOST}/Deewr.Tga.WebServices/OrganisationService.svc`,
-  // TrainingComponentService uses Webservices (lowercase s)
-  training: `https://${TGA_BASE_HOST}/Deewr.Tga.Webservices/TrainingComponentService.svc`,
-  classification: `https://${TGA_BASE_HOST}/Deewr.Tga.Webservices/ClassificationService.svc`,
+// Hardcoded V13 endpoints - DO NOT use string building that could drop V13
+const TGA_PROD_ENDPOINTS = {
+  organisation: 'https://ws.training.gov.au/Deewr.Tga.Webservices/OrganisationServiceV13.svc',
+  training: 'https://ws.training.gov.au/Deewr.Tga.Webservices/TrainingComponentServiceV13.svc',
+  classification: 'https://ws.training.gov.au/Deewr.Tga.Webservices/ClassificationServiceV13.svc',
 };
+
+const TGA_SANDBOX_ENDPOINTS = {
+  organisation: 'https://ws.sandbox.training.gov.au/Deewr.Tga.Webservices/OrganisationServiceV13.svc',
+  training: 'https://ws.sandbox.training.gov.au/Deewr.Tga.Webservices/TrainingComponentServiceV13.svc',
+  classification: 'https://ws.sandbox.training.gov.au/Deewr.Tga.Webservices/ClassificationServiceV13.svc',
+};
+
+const TGA_ENDPOINTS = isProduction ? TGA_PROD_ENDPOINTS : TGA_SANDBOX_ENDPOINTS;
+
+// V13 Guard - validate all endpoints contain V13.svc
+function validateEndpoints() {
+  for (const [name, url] of Object.entries(TGA_ENDPOINTS)) {
+    if (!url.includes('V13.svc')) {
+      const error = `FATAL: ${name} endpoint missing V13: ${url}`;
+      console.error(`[TGA-SYNC] ${error}`);
+      throw new Error(error);
+    }
+  }
+  console.log(`[TGA-SYNC] Endpoint validation passed - all URLs contain V13.svc`);
+  console.log(`[TGA-SYNC] Environment: ${TGA_ENV} (isProduction: ${isProduction})`);
+  console.log(`[TGA-SYNC] Org endpoint: ${TGA_ENDPOINTS.organisation}`);
+}
+
+// Run validation at module load
+validateEndpoints();
 
 // TGA V13 namespace - per WSDL
 const TGA_V13_NAMESPACE = 'http://training.gov.au/services/13/';
@@ -41,7 +59,7 @@ const SOAP_ACTIONS = {
   searchTrainingComponent: `${TGA_V13_NAMESPACE}ITrainingComponentService/Search`,
 };
 
-const FUNCTION_VERSION = '1.0.8';
+const FUNCTION_VERSION = '1.0.9';
 
 // Credentials loaded from Supabase secrets (try new names first, fall back to old)
 const TGA_WS_USERNAME = Deno.env.get('TGA_USERNAME') || Deno.env.get('TGA_WS_USERNAME');
@@ -185,6 +203,16 @@ function buildTCSoapRequest(action: string, body: string): string {
 // Make SOAP request with enhanced error handling and detailed logging
 async function makeSoapRequest(endpoint: string, soapAction: string, body: string): Promise<string> {
   const startTime = Date.now();
+  
+  // Guard: must not use ?wsdl URL
+  if (endpoint.includes('?wsdl')) {
+    throw new Error(`Invalid endpoint - must not use ?wsdl: ${endpoint}`);
+  }
+  
+  // Guard: must contain V13.svc
+  if (!endpoint.includes('V13.svc')) {
+    throw new Error(`Invalid endpoint - must contain V13.svc: ${endpoint}`);
+  }
   
   // Build request details for logging
   const requestDetails = {
@@ -622,8 +650,8 @@ serve(async (req) => {
         version: FUNCTION_VERSION,
         timestamp: new Date().toISOString(),
         environment: TGA_ENV,
+        isProduction,
         config: {
-          baseHost: TGA_BASE_HOST,
           endpoints: TGA_ENDPOINTS,
           credentialsConfigured: !!(TGA_WS_USERNAME && TGA_WS_PASSWORD),
           usernameFormat: TGA_WS_USERNAME?.includes('@') ? 'email' : 'unknown',
