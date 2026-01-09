@@ -295,117 +295,91 @@ export function useTgaRtoData(tenantId: number | null, rtoCode: string | null, c
       return { success: false, error: 'Missing tenant ID' };
     }
 
+    // Check tenant status first
+    const { data: tenantData } = await supabase
+      .from('tenants')
+      .select('id, status, metadata')
+      .eq('id', tenantId)
+      .single();
+
+    if (!tenantData) {
+      return { success: false, error: `Tenant ${tenantId} not found` };
+    }
+
+    if (tenantData.status === 'inactive') {
+      const metadata = tenantData.metadata as Record<string, unknown> | null;
+      if (metadata?.merged_into) {
+        return { 
+          success: false, 
+          error: `This tenant was merged into tenant ${metadata.merged_into}. Please use that tenant instead.` 
+        };
+      }
+      return { success: false, error: 'This tenant is inactive' };
+    }
+
+    // Get rto_number from tenant_profile if not passed
+    let effectiveRtoCode = rtoCode;
+    if (!effectiveRtoCode) {
+      const { data: profile } = await supabase
+        .from('tenant_profile')
+        .select('rto_number')
+        .eq('tenant_id', tenantId)
+        .single();
+      
+      effectiveRtoCode = profile?.rto_number || null;
+    }
+
+    if (!effectiveRtoCode) {
+      return { success: false, error: `Tenant ${tenantId} has no RTO number configured. Set it in tenant profile first.` };
+    }
+
     try {
       setSyncing(true);
 
-      // Get client_id for this tenant first (use limit 1 to avoid 406 on duplicates)
-      const { data: clientData } = await supabase
-        .from('clients_legacy')
-        .select('id')
-        .eq('tenant_id', tenantId)
-        .order('created_at', { ascending: true })
-        .limit(1)
-        .maybeSingle();
-
-      // If we have a client and rto code, call the live sync edge function directly
-      if (clientData?.id && rtoCode) {
-        const { data: liveData, error: fnError } = await supabase.functions.invoke('tga-sync', {
-          body: {
-            action: 'sync-client',
-            client_id: clientData.id,
-            rto_number: rtoCode,
-            tenant_id: tenantId.toString(),
-          },
-        });
-
-        if (fnError) {
-          toast({
-            title: 'Sync Failed',
-            description: fnError.message || 'Edge function error',
-            variant: 'destructive'
-          });
-          return { success: false, error: fnError.message };
-        }
-
-        if (liveData?.success) {
-          const synced = liveData.synced || {};
-          const counts = [
-            synced.contacts && `${synced.contacts} contacts`,
-            synced.addresses && `${synced.addresses} addresses`,
-            synced.deliveryLocations && `${synced.deliveryLocations} delivery sites`,
-            synced.qualifications && `${synced.qualifications} quals`,
-            synced.skillSets && `${synced.skillSets} skill sets`,
-            synced.units && `${synced.units} units`,
-            synced.courses && `${synced.courses} courses`,
-          ].filter(Boolean).join(', ');
-          
-          toast({
-            title: 'TGA Sync Complete',
-            description: counts || `Synced data for RTO ${rtoCode}`,
-          });
-          await fetchData();
-          return { success: true };
-        } else {
-          toast({
-            title: 'Sync Failed',
-            description: liveData?.error || 'Failed to sync from TGA',
-            variant: 'destructive'
-          });
-          return { success: false, error: liveData?.error };
-        }
-      }
-
-      // Fallback: try the RPC function for local dataset sync
-      const { data, error } = await supabase.rpc('tga_sync_tenant', {
-        p_tenant_id: tenantId,
-        p_rto_number: rtoCode
+      // Call the edge function directly with tenant_id - no clients_legacy required
+      const { data: liveData, error: fnError } = await supabase.functions.invoke('tga-sync', {
+        body: {
+          action: 'sync-client',
+          rto_number: effectiveRtoCode,
+          tenant_id: tenantId.toString(),
+        },
       });
 
-      if (error) {
-        console.error('RPC error:', error);
+      if (fnError) {
         toast({
           title: 'Sync Failed',
-          description: error.message,
+          description: fnError.message || 'Edge function error',
           variant: 'destructive'
         });
-        return { success: false, error: error.message };
+        return { success: false, error: fnError.message };
       }
 
-      const result = data as unknown as { 
-        success: boolean; 
-        error?: string;
-        rto_number?: string;
-        rto_data?: TGARtoData;
-        scope_counts?: {
-          total: number;
-          qualifications: number;
-          units: number;
-          skill_sets: number;
-        };
-      };
-
-      if (!result.success) {
+      if (liveData?.success) {
+        const synced = liveData.synced || {};
+        const counts = [
+          synced.contacts && `${synced.contacts} contacts`,
+          synced.addresses && `${synced.addresses} addresses`,
+          synced.deliveryLocations && `${synced.deliveryLocations} delivery sites`,
+          synced.qualifications && `${synced.qualifications} quals`,
+          synced.skillSets && `${synced.skillSets} skill sets`,
+          synced.units && `${synced.units} units`,
+          synced.courses && `${synced.courses} courses`,
+        ].filter(Boolean).join(', ');
+        
+        toast({
+          title: 'TGA Sync Complete',
+          description: counts || `Synced data for RTO ${effectiveRtoCode}`,
+        });
+        await fetchData();
+        return { success: true, correlationId: liveData.correlationId };
+      } else {
         toast({
           title: 'Sync Failed',
-          description: result.error || 'Failed to sync TGA data',
+          description: liveData?.error || 'Failed to sync from TGA',
           variant: 'destructive'
         });
-        return { success: false, error: result.error };
+        return { success: false, error: liveData?.error, correlationId: liveData?.correlationId };
       }
-
-      // Success!
-      const counts = result.scope_counts;
-      const summaryText = counts
-        ? `Synced: ${counts.qualifications} quals, ${counts.units} units, ${counts.skill_sets} skill sets`
-        : 'Data has been synced from TGA dataset';
-
-      toast({
-        title: 'TGA Sync Complete',
-        description: summaryText
-      });
-
-      await fetchData();
-      return { success: true };
     } catch (error: unknown) {
       console.error('Sync error:', error);
       const errorMsg = error instanceof Error ? error.message : 'Unknown error';
