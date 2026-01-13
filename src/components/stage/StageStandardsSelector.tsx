@@ -73,7 +73,7 @@ export function StageStandardsSelector({
       onUpdate(newStandards);
       toast({
         title: 'Standards Updated',
-        description: 'Stage standards mapping has been saved.'
+        description: 'Phase standards mapping has been saved.'
       });
       setOpen(false);
     } else {
@@ -106,10 +106,10 @@ export function StageStandardsSelector({
     <div className="space-y-2">
       <Label className="flex items-center gap-2">
         <FileCheck className="h-4 w-4" />
-        Standards covered by this stage
+        Standards covered by this phase
       </Label>
       <p className="text-xs text-muted-foreground">
-        Select the regulatory standards this stage helps address.
+        Select the regulatory standards this phase helps address.
       </p>
 
       {/* Selected badges */}

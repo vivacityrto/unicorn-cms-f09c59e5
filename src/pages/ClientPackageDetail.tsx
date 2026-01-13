@@ -183,7 +183,7 @@ export default function ClientPackageDetail() {
             <div className="flex items-center gap-6">
               <div className="text-center">
                 <p className="text-2xl font-bold">{stages.length}</p>
-                <p className="text-xs text-muted-foreground">Stages</p>
+                <p className="text-xs text-muted-foreground">Phases</p>
               </div>
               <div className="text-center">
                 <p className="text-2xl font-bold">{openTeamTasks}</p>
@@ -204,7 +204,7 @@ export default function ClientPackageDetail() {
           <div className="mt-6 space-y-2">
             <div className="flex items-center justify-between text-sm">
               <span className="text-muted-foreground">Overall Progress</span>
-              <span className="font-medium">{completedStages}/{stages.length} stages complete</span>
+              <span className="font-medium">{completedStages}/{stages.length} phases complete</span>
             </div>
             <Progress value={progressPercent} className="h-2" />
           </div>
@@ -231,7 +231,7 @@ export default function ClientPackageDetail() {
               className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none bg-transparent px-1 pb-3"
             >
               <ListTodo className="h-4 w-4 mr-2" />
-              Stages ({stages.length})
+              Phases ({stages.length})
             </TabsTrigger>
             <TabsTrigger
               value="team-tasks"

@@ -173,10 +173,10 @@ export function StagePreviewDialog({ open, onOpenChange, stage }: StagePreviewDi
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Layers className="h-5 w-5" />
-            Stage Preview
+            Phase Preview
           </DialogTitle>
           <DialogDescription>
-            Read-only view of stage configuration
+            Read-only view of phase configuration
           </DialogDescription>
         </DialogHeader>
 
