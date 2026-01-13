@@ -3717,12 +3717,15 @@ export type Database = {
           created_at: string
           created_by: string | null
           dashboard_visible: boolean | null
+          deprecated_at: string | null
           description: string | null
+          effective_date: string | null
           frameworks: string[] | null
           id: number
           is_archived: boolean
           is_certified: boolean
           is_reusable: boolean | null
+          registry_code: string | null
           requires_stage_keys: string[] | null
           short_name: string | null
           stage_key: string
@@ -3740,12 +3743,15 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           dashboard_visible?: boolean | null
+          deprecated_at?: string | null
           description?: string | null
+          effective_date?: string | null
           frameworks?: string[] | null
           id?: never
           is_archived?: boolean
           is_certified?: boolean
           is_reusable?: boolean | null
+          registry_code?: string | null
           requires_stage_keys?: string[] | null
           short_name?: string | null
           stage_key: string
@@ -3763,12 +3769,15 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           dashboard_visible?: boolean | null
+          deprecated_at?: string | null
           description?: string | null
+          effective_date?: string | null
           frameworks?: string[] | null
           id?: never
           is_archived?: boolean
           is_certified?: boolean
           is_reusable?: boolean | null
+          registry_code?: string | null
           requires_stage_keys?: string[] | null
           short_name?: string | null
           stage_key?: string
