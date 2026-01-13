@@ -121,7 +121,7 @@ export default function AdminStageAnalytics() {
           <div className="flex items-center gap-3">
             <BarChart3 className="h-7 w-7" />
             <div>
-              <h1 className="text-2xl font-bold">Stage Analytics</h1>
+              <h1 className="text-2xl font-bold">Phase Analytics</h1>
               <p className="text-sm text-muted-foreground">
                 Usage insights, risk signals, and cleanup opportunities
               </p>
@@ -145,7 +145,7 @@ export default function AdminStageAnalytics() {
                   <p className="text-2xl font-bold">
                     {kpisLoading ? <Skeleton className="h-8 w-12" /> : kpis.totalStages}
                   </p>
-                  <p className="text-xs text-muted-foreground">Total Stages</p>
+                  <p className="text-xs text-muted-foreground">Total Phases</p>
                 </div>
               </div>
             </CardContent>

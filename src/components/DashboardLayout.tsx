@@ -110,15 +110,15 @@ const superAdminMenuItems = {
     path: "/admin/manage-packages"
   }, {
     icon: Blocks,
-    label: "Manage Stages",
+    label: "Manage Phases",
     path: "/admin/stages"
   }, {
     icon: Sparkles,
-    label: "Stage Builder",
+    label: "Phase Builder",
     path: "/admin/stage-builder"
   }, {
     icon: BarChart3,
-    label: "Stage Analytics",
+    label: "Phase Analytics",
     path: "/admin/stage-analytics"
   }, {
     icon: Mail,

@@ -89,11 +89,11 @@ export function AddExistingStageDialog({
   };
 
   const handleStageClick = (stage: ExistingStage) => {
-    // Check if stage is already added to this tenant
+    // Check if phase is already added to this tenant
     if (currentStageIds.includes(stage.id)) {
       toast({
-        title: 'Stage Already Added',
-        description: 'This stage is already assigned to this client',
+        title: 'Phase Already Added',
+        description: 'This phase is already assigned to this client',
         variant: 'destructive',
       });
       return;
@@ -117,7 +117,7 @@ export function AddExistingStageDialog({
       if (error) throw error;
 
       toast({
-        title: 'Stage Added',
+        title: 'Phase Added',
         description: `"${confirmStage.title}" has been added to this client`,
       });
 
@@ -128,7 +128,7 @@ export function AddExistingStageDialog({
     } catch (error: any) {
       toast({
         title: 'Error',
-        description: error.message || 'Failed to add stage',
+        description: error.message || 'Failed to add phase',
         variant: 'destructive',
       });
     }
@@ -156,17 +156,17 @@ export function AddExistingStageDialog({
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Layers className="h-5 w-5" />
-              Add Existing Stage
+              Add Existing Phase
             </DialogTitle>
             <p className="text-sm text-muted-foreground mt-2">
-              Search and select a stage to add to this client
+              Search and select a phase to add to this client
             </p>
           </DialogHeader>
 
           <div className="relative mb-4">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="Search stage by name..."
+              placeholder="Search phase by name..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-10 text-[15px]"
@@ -176,11 +176,11 @@ export function AddExistingStageDialog({
           <div className="flex-1 overflow-y-auto rounded-lg border border-border/50">
             {loading ? (
               <div className="p-8 text-center text-sm text-muted-foreground">
-                Loading stages...
+                Loading phases...
               </div>
             ) : availableStages.length === 0 ? (
               <div className="p-8 text-center text-sm text-muted-foreground">
-                {stages.length === 0 ? "No stages found. Create a new stage first." : "No available stages found (all stages may already be assigned)"}
+                {stages.length === 0 ? "No phases found. Create a new phase first." : "No available phases found (all phases may already be assigned)"}
               </div>
             ) : (
               <div className="divide-y divide-border/50">
@@ -222,10 +222,10 @@ export function AddExistingStageDialog({
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
                 <AlertCircle className="h-5 w-5 text-primary" />
-                Confirm Add Stage
+                Confirm Add Phase
               </DialogTitle>
               <DialogDescription className="text-sm text-muted-foreground mt-2">
-                Are you sure you want to add this stage to this client?
+                Are you sure you want to add this phase to this client?
               </DialogDescription>
             </DialogHeader>
             {confirmStage && (
@@ -255,7 +255,7 @@ export function AddExistingStageDialog({
                 Cancel
               </Button>
               <Button onClick={handleAddStage}>
-                Add Stage
+                Add Phase
               </Button>
             </DialogFooter>
           </DialogPrimitive.Content>
