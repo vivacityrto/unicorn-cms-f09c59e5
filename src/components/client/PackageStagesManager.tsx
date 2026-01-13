@@ -199,8 +199,8 @@ export function PackageStagesManager({ tenantId, packageId, packageName }: Packa
   if (stages.length === 0) {
     return (
       <div className="text-center py-6 text-muted-foreground">
-        <p>No stages configured for this package.</p>
-        <p className="text-sm mt-1">Stage tracking will be available once stages are assigned.</p>
+        <p>No phases configured for this package.</p>
+        <p className="text-sm mt-1">Phase tracking will be available once phases are assigned.</p>
       </div>
     );
   }

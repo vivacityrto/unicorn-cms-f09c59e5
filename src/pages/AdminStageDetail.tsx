@@ -160,7 +160,7 @@ export default function AdminStageDetail() {
   const [pendingUpdate, setPendingUpdate] = useState<Partial<Stage> | null>(null);
   const [hasConfirmedEditing, setHasConfirmedEditing] = useState(false);
   const [confirmPhrase, setConfirmPhrase] = useState('');
-  const CONFIRM_PHRASE_REQUIRED = 'EDIT LIVE STAGE';
+  const CONFIRM_PHRASE_REQUIRED = 'EDIT LIVE PHASE';
   
   // Replace stage state
   const [replaceDialogOpen, setReplaceDialogOpen] = useState(false);
@@ -329,7 +329,7 @@ export default function AdminStageDetail() {
     try {
       await updateStage(stage.id, updates);
       setStage(prev => prev ? { ...prev, ...updates } : null);
-      toast({ title: 'Stage Updated' });
+      toast({ title: 'Phase Updated' });
     } catch (error: any) {
       toast({
         title: 'Error',
@@ -857,7 +857,7 @@ export default function AdminStageDetail() {
         <Button variant="ghost" asChild className="gap-2 hover:bg-muted">
           <Link to="/admin/stages">
             <ArrowLeft className="h-4 w-4" />
-            Back to Stages
+            Back to Phases
           </Link>
         </Button>
       </div>
@@ -1504,7 +1504,7 @@ export default function AdminStageDetail() {
                   <div className="flex gap-2">
                     <Button variant="outline" onClick={handleDuplicateStage} disabled={isDuplicating}>
                       <Copy className="h-4 w-4 mr-2" />
-                      {isDuplicating ? 'Duplicating...' : 'Duplicate Stage'}
+                      {isDuplicating ? 'Duplicating...' : 'Duplicate Phase'}
                     </Button>
                     <Button 
                       variant="outline" 
@@ -1527,7 +1527,7 @@ export default function AdminStageDetail() {
                 <div className="flex items-center justify-between">
                   <div>
                     <CardTitle>Audit Log</CardTitle>
-                    <CardDescription>Track changes made to this stage.</CardDescription>
+                    <CardDescription>Track changes made to this phase.</CardDescription>
                   </div>
                   <Button variant="outline" size="sm" onClick={() => refetchAudit()}>
                     <RefreshCw className="h-3 w-3 mr-1" />
@@ -1599,7 +1599,7 @@ export default function AdminStageDetail() {
                     <p className="text-muted-foreground max-w-md">
                       {auditDateFrom || auditDateTo || auditActionFilter !== 'all' 
                         ? 'No events match your filters.' 
-                        : 'No changes have been recorded for this stage yet.'}
+                        : 'No changes have been recorded for this phase yet.'}
                     </p>
                   </div>
                 ) : (

@@ -391,7 +391,7 @@ export function StageDocumentsTab({
           <DialogHeader>
             <DialogTitle>Link Documents</DialogTitle>
             <DialogDescription>
-              Select documents from the library to link to this stage. You can select multiple documents at once.
+              Select documents from the library to link to this phase. You can select multiple documents at once.
             </DialogDescription>
           </DialogHeader>
           

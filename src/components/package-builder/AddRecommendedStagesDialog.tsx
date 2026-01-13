@@ -122,11 +122,11 @@ export function AddRecommendedStagesDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg">
         <DialogHeader>
-          <DialogTitle>Add Recommended Stages</DialogTitle>
+          <DialogTitle>Add Recommended Phases</DialogTitle>
           <DialogDescription>
             {hasRecommendations 
-              ? `Review the recommended stages for ${packageType?.toUpperCase()} packages.`
-              : `No recommended stages defined for "${packageType}" packages.`
+              ? `Review the recommended phases for ${packageType?.toUpperCase()} packages.`
+              : `No recommended phases defined for "${packageType}" packages.`
             }
           </DialogDescription>
         </DialogHeader>
@@ -177,7 +177,7 @@ export function AddRecommendedStagesDialog({
                           ? 'Not available – framework mismatch'
                           : match.stage 
                             ? 'Will be added'
-                            : `Missing recommended stage template (${match.stageKey})`
+                            : `Missing recommended phase template (${match.stageKey})`
                       }
                     </p>
                   </div>
@@ -186,7 +186,7 @@ export function AddRecommendedStagesDialog({
 
               {missingStages.length > 0 && (
                 <p className="text-xs text-muted-foreground pt-2">
-                  Some recommended stages don't exist in the library. Create them with the correct stage_key first.
+                  Some recommended phases don't exist in the library. Create them with the correct stage_key first.
                 </p>
               )}
               
@@ -194,7 +194,7 @@ export function AddRecommendedStagesDialog({
                 <div className="flex items-start gap-2 p-3 rounded-lg bg-amber-500/10 border border-amber-500/20 mt-3">
                   <AlertTriangle className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" />
                   <p className="text-xs text-amber-800">
-                    Some recommended stages are not available for this framework.
+                    Some recommended phases are not available for this framework.
                   </p>
                 </div>
               )}
@@ -213,8 +213,8 @@ export function AddRecommendedStagesDialog({
             {isAdding 
               ? 'Adding...' 
               : stagesToAdd.length === 0 
-                ? 'No Stages to Add'
-                : `Add ${stagesToAdd.length} Stage${stagesToAdd.length !== 1 ? 's' : ''}`
+                ? 'No Phases to Add'
+                : `Add ${stagesToAdd.length} Phase${stagesToAdd.length !== 1 ? 's' : ''}`
             }
           </Button>
         </DialogFooter>

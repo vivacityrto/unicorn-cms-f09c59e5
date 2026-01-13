@@ -155,10 +155,10 @@ export function AllStagesTable() {
       setIsDeleting(true);
       const { error } = await supabase.from('documents_stages').delete().eq('id', stageToDelete.id);
       if (error) throw error;
-      toast({
-        title: "Success",
-        description: "Stage deleted successfully"
-      });
+        toast({
+          title: "Success",
+          description: "Phase deleted successfully"
+        });
       fetchAllStages();
     } catch (error: any) {
       toast({
@@ -196,7 +196,7 @@ export function AllStagesTable() {
         if (error) throw error;
         toast({
           title: "Success",
-          description: "Stage updated successfully"
+          description: "Phase updated successfully"
         });
       } else {
         // Create new stage - generate stage_key from title
@@ -216,7 +216,7 @@ export function AllStagesTable() {
         if (error) throw error;
         toast({
           title: "Success",
-          description: "Stage created successfully"
+          description: "Phase created successfully"
         });
       }
       setEditDialogOpen(false);
@@ -252,9 +252,9 @@ export function AllStagesTable() {
     {filteredStages.length === 0 ? <Card className="border-2 border-dashed">
       <CardContent className="flex flex-col items-center justify-center py-16">
         <Layers className="h-16 w-16 text-muted-foreground/50 mb-4" />
-        <p className="text-lg font-medium text-muted-foreground">No stages found</p>
+        <p className="text-lg font-medium text-muted-foreground">No phases found</p>
         <p className="text-sm text-muted-foreground/70 mt-1">
-          {searchQuery ? "Try adjusting your search" : "Create reusable stages that can be added to any package"}
+          {searchQuery ? "Try adjusting your search" : "Create reusable phases that can be added to any package"}
         </p>
       </CardContent>
     </Card> : <Card>
@@ -262,8 +262,8 @@ export function AllStagesTable() {
         <Table>
           <TableHeader>
             <TableRow className="hover:bg-transparent border-b">
-              <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-border/50">Stage Name</TableHead>
-              <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-border/50">Stage Details</TableHead>
+              <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-border/50">Phase Name</TableHead>
+              <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-border/50">Phase Details</TableHead>
               <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-border/50">Video</TableHead>
               <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-border/50">Created By</TableHead>
               <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-border/50 text-center">Actions</TableHead>
@@ -381,12 +381,12 @@ export function AllStagesTable() {
     <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
       <DialogContent className="max-w-[550px]">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
+        <DialogTitle className="flex items-center gap-2">
             <Layers className="h-5 w-5" />
-            {selectedStage ? 'Edit Stage' : 'Create New Stage'}
+            {selectedStage ? 'Edit Phase' : 'Create New Phase'}
           </DialogTitle>
           <DialogDescription>
-            {selectedStage ? 'Update the stage details' : 'Create a reusable stage that can be added to any package'}
+            {selectedStage ? 'Update the phase details' : 'Create a reusable phase that can be added to any package'}
           </DialogDescription>
         </DialogHeader>
 

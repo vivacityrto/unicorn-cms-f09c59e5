@@ -121,7 +121,7 @@ export function StageSimulationDialog({
     } else {
       toast({
         title: 'Simulation Failed',
-        description: 'Could not run stage simulation',
+        description: 'Could not run phase simulation',
         variant: 'destructive'
       });
     }
@@ -145,7 +145,7 @@ export function StageSimulationDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Play className="h-5 w-5" />
-            Simulate Stage
+            Simulate Phase
           </DialogTitle>
           <DialogDescription>
             {stageName ? `Dry run preview for "${stageName}"` : 'Dry run preview'}
@@ -224,7 +224,7 @@ function ContextSelectionStep({
         <div>
           <p className="font-medium">No packages found</p>
           <p className="text-sm text-muted-foreground">
-            Add this stage to a package to simulate.
+            Add this phase to a package to simulate.
           </p>
         </div>
       </div>
@@ -255,7 +255,7 @@ function ContextSelectionStep({
             </SelectContent>
           </Select>
           <p className="text-xs text-muted-foreground">
-            Stage content is loaded from this package context.
+            Phase content is loaded from this package context.
           </p>
         </div>
 
