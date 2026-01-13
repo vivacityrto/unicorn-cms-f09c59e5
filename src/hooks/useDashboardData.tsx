@@ -207,7 +207,7 @@ export const useDashboardData = () => {
   const activities = [
     { id: "1", type: "document" as const, title: "Document Updated", description: "RTO Policy Manual was updated", timestamp: new Date(Date.now() - 1000 * 60 * 30), user: { name: "Angela Smith" } },
     { id: "2", type: "user" as const, title: "New User Added", description: "John Doe was added to Metro RTO", timestamp: new Date(Date.now() - 1000 * 60 * 60 * 2), user: { name: "Admin User" } },
-    { id: "3", type: "task" as const, title: "Task Completed", description: "Mock Audit stage completed", timestamp: new Date(Date.now() - 1000 * 60 * 60 * 5), user: { name: "Sarah Johnson" } },
+    { id: "3", type: "task" as const, title: "Task Completed", description: "Mock Audit phase completed", timestamp: new Date(Date.now() - 1000 * 60 * 60 * 5), user: { name: "Sarah Johnson" } },
     { id: "4", type: "inspection" as const, title: "Inspection Started", description: "New compliance inspection begun", timestamp: new Date(Date.now() - 1000 * 60 * 60 * 8), user: { name: "Michael Lee" } },
     { id: "5", type: "package" as const, title: "Package Assigned", description: "Kickstart RTO assigned to client", timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24), user: { name: "Angela Smith" } },
   ];

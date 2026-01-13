@@ -1479,7 +1479,7 @@ export default function ManageDocuments() {
             style={{ animationDelay: "100ms" }}
           >
             <div className="flex items-center justify-between mb-2">
-              <span className="text-sm font-medium text-muted-foreground">Stages</span>
+              <span className="text-sm font-medium text-muted-foreground">Phases</span>
               <div className="p-2 bg-green-500/10 rounded-lg group-hover:bg-green-500/20 transition-colors">
                 <ListTree className="h-5 w-5 text-green-500" />
               </div>

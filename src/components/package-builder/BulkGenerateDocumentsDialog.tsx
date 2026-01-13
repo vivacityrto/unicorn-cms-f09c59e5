@@ -242,7 +242,7 @@ export function BulkGenerateDocumentsDialog({
             <div className="p-3 bg-muted/30 rounded-lg">
               <div className="flex items-center gap-2 mb-2">
                 <FileText className="h-4 w-4 text-muted-foreground" />
-                <span className="font-medium">Stage: {stageName}</span>
+                <span className="font-medium">Phase: {stageName}</span>
               </div>
               <p className="text-sm text-muted-foreground">
                 {stageDocuments.length} documents will be generated for each selected tenant

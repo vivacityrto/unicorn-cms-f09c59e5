@@ -467,11 +467,11 @@ export default function AdminStageDetail() {
       try {
         await updateStage(stage.id, pendingUpdate);
         setStage(prev => prev ? { ...prev, ...pendingUpdate } : null);
-        toast({ title: 'Stage Updated' });
+        toast({ title: 'Phase Updated' });
       } catch (error: any) {
         toast({
           title: 'Error',
-          description: error.message || 'Failed to update stage',
+          description: error.message || 'Failed to update phase',
           variant: 'destructive'
         });
       }
@@ -645,7 +645,7 @@ export default function AdminStageDetail() {
 
   const handleReplaceInPackages = async () => {
     if (!stageIdNum || !replacementStageId || selectedPackagesForReplace.length === 0) {
-      toast({ title: 'Error', description: 'Select packages and a replacement stage', variant: 'destructive' });
+      toast({ title: 'Error', description: 'Select packages and a replacement phase', variant: 'destructive' });
       return;
     }
 
@@ -953,7 +953,7 @@ export default function AdminStageDetail() {
             </>
           ) : (
             <div className="text-center py-8">
-              <p className="text-muted-foreground">Stage not found</p>
+              <p className="text-muted-foreground">Phase not found</p>
             </div>
           )}
         </div>
@@ -980,10 +980,10 @@ export default function AdminStageDetail() {
           {isUsedByActiveClients && (
             <Alert className="border-destructive/30 bg-destructive/5">
               <AlertTriangle className="h-4 w-4 text-destructive" />
-              <AlertTitle className="text-destructive">This stage is in use by active clients</AlertTitle>
+              <AlertTitle className="text-destructive">This phase is in use by active clients</AlertTitle>
               <AlertDescription className="flex items-center justify-between gap-2 flex-wrap">
                 <span className="text-destructive/80">
-                  {activeUsage.clients.length} active client{activeUsage.clients.length !== 1 ? 's' : ''} are using this stage. 
+                  {activeUsage.clients.length} active client{activeUsage.clients.length !== 1 ? 's' : ''} are using this phase. 
                   Editing may affect their ongoing work.
                 </span>
                 <Button 
@@ -1012,7 +1012,7 @@ export default function AdminStageDetail() {
                   disabled={isDuplicating}
                 >
                   <Copy className="h-3 w-3 mr-1" />
-                  {isDuplicating ? 'Duplicating...' : 'Duplicate Stage'}
+                  {isDuplicating ? 'Duplicating...' : 'Duplicate Phase'}
                 </Button>
               </AlertDescription>
             </Alert>
@@ -1022,7 +1022,7 @@ export default function AdminStageDetail() {
             <Alert className="border-blue-500/30 bg-blue-500/5">
               <Info className="h-4 w-4 text-blue-600" />
               <AlertDescription className="text-blue-800">
-                This stage is shared across {usageCount} packages. Changes will affect all of them.
+                This phase is shared across {usageCount} packages. Changes will affect all of them.
               </AlertDescription>
             </Alert>
           )}
@@ -1067,13 +1067,13 @@ export default function AdminStageDetail() {
           <TabsContent value="settings">
             <Card>
               <CardHeader>
-                <CardTitle>Stage Settings</CardTitle>
-                <CardDescription>Configure the basic properties of this stage.</CardDescription>
+                <CardTitle>Phase Settings</CardTitle>
+                <CardDescription>Configure the basic properties of this phase.</CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label>Stage Name</Label>
+                    <Label>Phase Name</Label>
                     <Input
                       value={stage.title || ''}
                       onChange={(e) => handleUpdateStage({ title: e.target.value })}
@@ -1081,7 +1081,7 @@ export default function AdminStageDetail() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label>Stage Type</Label>
+                    <Label>Phase Type</Label>
                     <Select 
                       value={stage.stage_type || 'delivery'} 
                       onValueChange={(value) => handleUpdateStage({ stage_type: value })}
@@ -1118,7 +1118,7 @@ export default function AdminStageDetail() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label>Stage Key (read-only)</Label>
+                    <Label>Phase Key (read-only)</Label>
                     <Input value={stage.stage_key || ''} disabled className="font-mono text-sm" />
                   </div>
                 </div>
@@ -1133,14 +1133,14 @@ export default function AdminStageDetail() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Stage Version Label</Label>
+                  <Label>Phase Version Label</Label>
                   <Input
                     value={(stage as any).version_label || ''}
                     onChange={(e) => handleUpdateVersionLabel(e.target.value)}
                     placeholder="e.g., v2025.1, July 2026"
                   />
                   <p className="text-xs text-muted-foreground">
-                    Optional. Used to identify the release of this stage for audit and rollout clarity.
+                    Optional. Used to identify the release of this phase for audit and rollout clarity.
                   </p>
                 </div>
 

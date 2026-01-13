@@ -241,7 +241,7 @@ export default function StageBuilder() {
   // Create stage
   const handleCreate = async () => {
     if (!state.stageName.trim()) {
-      toast({ title: 'Error', description: 'Stage name is required', variant: 'destructive' });
+      toast({ title: 'Error', description: 'Phase name is required', variant: 'destructive' });
       return;
     }
 
@@ -313,7 +313,7 @@ export default function StageBuilder() {
 
       setCreatedStageId(stageId);
       toast({
-        title: 'Stage Created!',
+        title: 'Phase Created!',
         description: `"${state.stageName}" has been created successfully.`,
       });
     } catch (error: any) {
@@ -539,8 +539,8 @@ export default function StageBuilder() {
             {currentStep === 2 && (
               <div className="space-y-6">
                 <div>
-                  <CardTitle className="text-lg mb-1">Stage Content</CardTitle>
-                  <CardDescription>Configure tasks, emails, and documents for this stage</CardDescription>
+                  <CardTitle className="text-lg mb-1">Phase Content</CardTitle>
+                  <CardDescription>Configure tasks, emails, and documents for this phase</CardDescription>
                 </div>
 
                 {/* Team Tasks */}

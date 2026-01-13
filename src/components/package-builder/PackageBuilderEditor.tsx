@@ -801,8 +801,8 @@ export function PackageBuilderEditor() {
             await addStageToPackage(stageId);
           }
           toast({
-            title: 'Stages Added',
-            description: `${stageIds.length} recommended stage${stageIds.length !== 1 ? 's' : ''} added to package.`
+            title: 'Phases Added',
+            description: `${stageIds.length} recommended phase${stageIds.length !== 1 ? 's' : ''} added to package.`
           });
         }}
       />

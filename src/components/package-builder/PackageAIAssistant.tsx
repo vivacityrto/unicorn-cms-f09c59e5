@@ -73,8 +73,8 @@ export function PackageAIAssistant({
         result.push({
           id: `missing-${stageType}`,
           type: 'stage',
-          title: `Add ${STAGE_TYPE_LABELS[stageType]} Stage`,
-          description: `This ${packageData.package_type || 'project'} package typically includes an ${STAGE_TYPE_LABELS[stageType].toLowerCase()} stage.`,
+          title: `Add ${STAGE_TYPE_LABELS[stageType]} Phase`,
+          description: `This ${packageData.package_type || 'project'} package typically includes an ${STAGE_TYPE_LABELS[stageType].toLowerCase()} phase.`,
           reason: `Based on analysis of similar ${packageData.package_type || 'project'} packages.`,
           action: matchingStage ? {
             label: `Add "${matchingStage.title}"`,
@@ -90,9 +90,9 @@ export function PackageAIAssistant({
       result.push({
         id: 'warning-no-onboarding',
         type: 'warning',
-        title: 'No Onboarding Stage',
-        description: 'Packages without an onboarding stage may leave clients confused about how to get started.',
-        reason: 'Onboarding stages help set expectations and collect required information.',
+        title: 'No Onboarding Phase',
+        description: 'Packages without an onboarding phase may leave clients confused about how to get started.',
+        reason: 'Onboarding phases help set expectations and collect required information.',
         severity: 'warning'
       });
     }
@@ -102,8 +102,8 @@ export function PackageAIAssistant({
       result.push({
         id: 'warning-no-offboarding',
         type: 'warning',
-        title: 'No Offboarding Stage',
-        description: 'Consider adding an offboarding stage to properly close out client engagements.',
+        title: 'No Offboarding Phase',
+        description: 'Consider adding an offboarding phase to properly close out client engagements.',
         reason: 'Proper offboarding ensures clean handoffs and final deliverables.',
         severity: 'info'
       });

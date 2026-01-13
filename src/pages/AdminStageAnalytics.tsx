@@ -307,8 +307,8 @@ export default function AdminStageAnalytics() {
             <Card>
               <CardHeader className="flex flex-row items-center justify-between">
                 <div>
-                  <CardTitle className="text-lg">Top Stages by Package Usage</CardTitle>
-                  <CardDescription>Stages sorted by how many packages use them</CardDescription>
+                  <CardTitle className="text-lg">Top Phases by Package Usage</CardTitle>
+                  <CardDescription>Phases sorted by how many packages use them</CardDescription>
                 </div>
                 <Button variant="outline" size="sm" onClick={handleExportTopStages}>
                   <Download className="h-4 w-4 mr-2" />
@@ -326,7 +326,7 @@ export default function AdminStageAnalytics() {
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Stage</TableHead>
+                        <TableHead>Phase</TableHead>
                         <TableHead>Type</TableHead>
                         <TableHead>Certified</TableHead>
                         <TableHead>Frameworks</TableHead>
@@ -387,8 +387,8 @@ export default function AdminStageAnalytics() {
             <Card>
               <CardHeader className="flex flex-row items-center justify-between">
                 <div>
-                  <CardTitle className="text-lg">Certified but Unused Stages</CardTitle>
-                  <CardDescription>Certified stages not currently used in any package</CardDescription>
+                  <CardTitle className="text-lg">Certified but Unused Phases</CardTitle>
+                  <CardDescription>Certified phases not currently used in any package</CardDescription>
                 </div>
                 <Button variant="outline" size="sm" onClick={handleExportCertifiedUnused}>
                   <Download className="h-4 w-4 mr-2" />
@@ -403,13 +403,13 @@ export default function AdminStageAnalytics() {
                 ) : certifiedUnused.length === 0 ? (
                   <div className="text-center py-8">
                     <ShieldCheck className="h-12 w-12 text-emerald-500 mx-auto mb-3" />
-                    <p className="text-muted-foreground">All certified stages are in use!</p>
+                    <p className="text-muted-foreground">All certified phases are in use!</p>
                   </div>
                 ) : (
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Stage</TableHead>
+                        <TableHead>Phase</TableHead>
                         <TableHead>Version Label</TableHead>
                         <TableHead>Certified At</TableHead>
                         <TableHead>Last Updated</TableHead>
@@ -459,10 +459,10 @@ export default function AdminStageAnalytics() {
                 <div>
                   <CardTitle className="text-lg flex items-center gap-2">
                     <AlertTriangle className="h-5 w-5 text-amber-500" />
-                    High-Risk Stages
+                    High-Risk Phases
                   </CardTitle>
                   <CardDescription>
-                    Stages edited in the last {dateRangeDays} days while used by active clients
+                    Phases edited in the last {dateRangeDays} days while used by active clients
                   </CardDescription>
                 </div>
                 <Button variant="outline" size="sm" onClick={handleExportHighRisk}>
@@ -484,7 +484,7 @@ export default function AdminStageAnalytics() {
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Stage</TableHead>
+                        <TableHead>Phase</TableHead>
                         <TableHead className="text-right">Active Clients</TableHead>
                         <TableHead className="text-right">Edits ({dateRangeDays}d)</TableHead>
                         <TableHead>Last Edit</TableHead>
@@ -523,7 +523,7 @@ export default function AdminStageAnalytics() {
                                 </Button>
                               </TooltipTrigger>
                               <TooltipContent>
-                                Open stage to duplicate and swap in packages
+                                Open phase to duplicate and swap in packages
                               </TooltipContent>
                             </Tooltip>
                           </TableCell>
@@ -540,8 +540,8 @@ export default function AdminStageAnalytics() {
           <TabsContent value="activity">
             <Card>
               <CardHeader>
-                <CardTitle className="text-lg">Stage Change Activity</CardTitle>
-                <CardDescription>Last 50 stage-related events in the past {dateRangeDays} days</CardDescription>
+                <CardTitle className="text-lg">Phase Change Activity</CardTitle>
+                <CardDescription>Last 50 phase-related events in the past {dateRangeDays} days</CardDescription>
               </CardHeader>
               <CardContent>
                 {activityLoading ? (

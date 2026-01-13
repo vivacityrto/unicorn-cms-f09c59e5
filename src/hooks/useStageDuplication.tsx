@@ -192,7 +192,7 @@ export function useStageDuplication() {
       console.error('Stage duplication failed:', error);
       toast({
         title: 'Duplication Failed',
-        description: error.message || 'Failed to duplicate stage',
+        description: error.message || 'Failed to duplicate phase',
         variant: 'destructive',
       });
       return null;
@@ -205,7 +205,7 @@ export function useStageDuplication() {
     const result = await duplicateStage(options);
     if (result) {
       toast({
-        title: 'Stage Duplicated',
+        title: 'Phase Duplicated',
         description: `Created copy. This copy is not certified.`,
       });
       navigate(`/admin/stages/${result.newStageId}`);

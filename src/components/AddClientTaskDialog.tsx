@@ -62,7 +62,7 @@ export function AddClientTaskDialog({ open, onOpenChange, onSuccess, packageId, 
     if (!stageId || !packageId) {
       toast({
         title: "Error",
-        description: "Package and stage must be selected for this task",
+        description: "Package and phase must be selected for this task",
         variant: "destructive",
       });
       return;
