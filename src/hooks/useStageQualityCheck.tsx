@@ -64,17 +64,17 @@ export function useStageQualityCheck({
       if (!stage.title || stage.title.trim() === '') {
         checks.push({
           check_key: 'stage_name',
-          label: 'Stage Name',
+          label: 'Phase Name',
           status: 'fail',
-          message: 'Stage must have a name.',
+          message: 'Phase must have a name.',
           category: 'structure'
         });
       } else {
         checks.push({
           check_key: 'stage_name',
-          label: 'Stage Name',
+          label: 'Phase Name',
           status: 'pass',
-          message: 'Stage has a name.',
+          message: 'Phase has a name.',
           category: 'structure'
         });
       }
@@ -82,17 +82,17 @@ export function useStageQualityCheck({
       if (!stageType || stageType === '') {
         checks.push({
           check_key: 'stage_type',
-          label: 'Stage Type',
+          label: 'Phase Type',
           status: 'fail',
-          message: 'Stage must have a type defined.',
+          message: 'Phase must have a type defined.',
           category: 'structure'
         });
       } else {
         checks.push({
           check_key: 'stage_type',
-          label: 'Stage Type',
+          label: 'Phase Type',
           status: 'pass',
-          message: `Stage type is "${stageType}".`,
+          message: `Phase type is "${stageType}".`,
           category: 'structure'
         });
       }
@@ -100,17 +100,17 @@ export function useStageQualityCheck({
       if (stage.is_archived) {
         checks.push({
           check_key: 'stage_archived',
-          label: 'Stage Status',
+          label: 'Phase Status',
           status: 'fail',
-          message: 'Stage is archived and cannot be certified.',
+          message: 'Phase is archived and cannot be certified.',
           category: 'structure'
         });
       } else {
         checks.push({
           check_key: 'stage_archived',
-          label: 'Stage Status',
+          label: 'Phase Status',
           status: 'pass',
-          message: 'Stage is active.',
+          message: 'Phase is active.',
           category: 'structure'
         });
       }
@@ -174,7 +174,7 @@ export function useStageQualityCheck({
             check_key: 'client_tasks_exist',
             label: 'Client Tasks',
             status: 'fail',
-            message: `${stageType === 'onboarding' ? 'Onboarding' : 'Offboarding'} stages require at least one client task.`,
+            message: `${stageType === 'onboarding' ? 'Onboarding' : 'Offboarding'} phases require at least one client task.`,
             category: 'client_tasks'
           });
         } else {
@@ -246,7 +246,7 @@ export function useStageQualityCheck({
             check_key: 'tenant_emails_exist',
             label: 'Tenant Emails',
             status: 'warn',
-            message: `${stageType.charAt(0).toUpperCase() + stageType.slice(1)} stages should have at least one tenant-facing email.`,
+            message: `${stageType.charAt(0).toUpperCase() + stageType.slice(1)} phases should have at least one tenant-facing email.`,
             category: 'emails'
           });
         } else {
@@ -310,7 +310,7 @@ export function useStageQualityCheck({
             check_key: 'tenant_docs_exist',
             label: 'Tenant Documents',
             status: 'fail',
-            message: `${stageType.charAt(0).toUpperCase() + stageType.slice(1)} stages require at least one tenant-visible document.`,
+            message: `${stageType.charAt(0).toUpperCase() + stageType.slice(1)} phases require at least one tenant-visible document.`,
             category: 'documents'
           });
         } else {
@@ -352,7 +352,7 @@ export function useStageQualityCheck({
             check_key: 'certified_integrity',
             label: 'Certified Integrity',
             status: 'fail',
-            message: `Certified stage has ${failedChecks.length} failing check${failedChecks.length !== 1 ? 's' : ''} that must be resolved.`,
+            message: `Certified phase has ${failedChecks.length} failing check${failedChecks.length !== 1 ? 's' : ''} that must be resolved.`,
             category: 'certified'
           });
         } else if (warnChecks.length > 0) {
@@ -360,7 +360,7 @@ export function useStageQualityCheck({
             check_key: 'certified_integrity',
             label: 'Certified Integrity',
             status: 'warn',
-            message: `Certified stage has ${warnChecks.length} warning${warnChecks.length !== 1 ? 's' : ''} that should be reviewed.`,
+            message: `Certified phase has ${warnChecks.length} warning${warnChecks.length !== 1 ? 's' : ''} that should be reviewed.`,
             category: 'certified'
           });
         } else {
@@ -368,7 +368,7 @@ export function useStageQualityCheck({
             check_key: 'certified_integrity',
             label: 'Certified Integrity',
             status: 'pass',
-            message: 'Certified stage passes all quality checks.',
+            message: 'Certified phase passes all quality checks.',
             category: 'certified'
           });
         }
@@ -443,17 +443,17 @@ export async function computeStageQuality(
     if (!stage.title || stage.title.trim() === '') {
       checks.push({
         check_key: 'stage_name',
-        label: 'Stage Name',
+        label: 'Phase Name',
         status: 'fail',
-        message: 'Stage must have a name.',
+        message: 'Phase must have a name.',
         category: 'structure'
       });
     } else {
       checks.push({
         check_key: 'stage_name',
-        label: 'Stage Name',
+        label: 'Phase Name',
         status: 'pass',
-        message: 'Stage has a name.',
+        message: 'Phase has a name.',
         category: 'structure'
       });
     }
@@ -461,17 +461,17 @@ export async function computeStageQuality(
     if (!stageType || stageType === '') {
       checks.push({
         check_key: 'stage_type',
-        label: 'Stage Type',
+        label: 'Phase Type',
         status: 'fail',
-        message: 'Stage must have a type defined.',
+        message: 'Phase must have a type defined.',
         category: 'structure'
       });
     } else {
       checks.push({
         check_key: 'stage_type',
-        label: 'Stage Type',
+        label: 'Phase Type',
         status: 'pass',
-        message: `Stage type is "${stageType}".`,
+        message: `Phase type is "${stageType}".`,
         category: 'structure'
       });
     }
@@ -479,17 +479,17 @@ export async function computeStageQuality(
     if (stage.is_archived) {
       checks.push({
         check_key: 'stage_archived',
-        label: 'Stage Status',
+        label: 'Phase Status',
         status: 'fail',
-        message: 'Stage is archived and cannot be certified.',
+        message: 'Phase is archived and cannot be certified.',
         category: 'structure'
       });
     } else {
       checks.push({
         check_key: 'stage_archived',
-        label: 'Stage Status',
+        label: 'Phase Status',
         status: 'pass',
-        message: 'Stage is active.',
+        message: 'Phase is active.',
         category: 'structure'
       });
     }
@@ -552,7 +552,7 @@ export async function computeStageQuality(
           check_key: 'client_tasks_exist',
           label: 'Client Tasks',
           status: 'fail',
-          message: `${stageType === 'onboarding' ? 'Onboarding' : 'Offboarding'} stages require at least one client task.`,
+          message: `${stageType === 'onboarding' ? 'Onboarding' : 'Offboarding'} phases require at least one client task.`,
           category: 'client_tasks'
         });
       } else {
@@ -613,7 +613,7 @@ export async function computeStageQuality(
           check_key: 'tenant_emails_exist',
           label: 'Tenant Emails',
           status: 'warn',
-          message: `${stageType.charAt(0).toUpperCase() + stageType.slice(1)} stages should have at least one tenant-facing email.`,
+          message: `${stageType.charAt(0).toUpperCase() + stageType.slice(1)} phases should have at least one tenant-facing email.`,
           category: 'emails'
         });
       } else {
@@ -669,7 +669,7 @@ export async function computeStageQuality(
           check_key: 'tenant_docs_exist',
           label: 'Tenant Documents',
           status: 'fail',
-          message: `${stageType.charAt(0).toUpperCase() + stageType.slice(1)} stages require at least one tenant-visible document.`,
+          message: `${stageType.charAt(0).toUpperCase() + stageType.slice(1)} phases require at least one tenant-visible document.`,
           category: 'documents'
         });
       } else {

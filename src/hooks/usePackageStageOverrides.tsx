@@ -471,7 +471,7 @@ export function useSyncStageToPackages() {
     } catch (error: any) {
       toast({
         title: 'Sync Failed',
-        description: error.message || 'Failed to sync stage to packages',
+        description: error.message || 'Failed to sync phase to packages',
         variant: 'destructive'
       });
       throw error;
