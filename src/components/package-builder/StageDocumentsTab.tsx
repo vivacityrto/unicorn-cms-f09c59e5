@@ -353,7 +353,7 @@ export function StageDocumentsTab({
             {stageDocuments.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-12 text-center">
                 <FileText className="h-10 w-10 text-muted-foreground mb-3" />
-                <p className="text-muted-foreground">No documents linked to this stage.</p>
+                <p className="text-muted-foreground">No documents linked to this phase.</p>
                 <p className="text-xs text-muted-foreground mt-1">
                   Click "Link Documents" to add documents from the library.
                 </p>

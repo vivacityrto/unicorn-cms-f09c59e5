@@ -703,14 +703,14 @@ export default function TimeInbox() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label>Stage</Label>
+                    <Label>Phase</Label>
                     <Select 
                       value={formData.stage_id?.toString() || ''} 
                       onValueChange={(v) => setFormData(prev => ({ ...prev, stage_id: parseInt(v) }))}
                       disabled={!formData.package_id}
                     >
                       <SelectTrigger>
-                        <SelectValue placeholder="Select stage" />
+                        <SelectValue placeholder="Select phase" />
                       </SelectTrigger>
                       <SelectContent>
                         {stages.map(s => (

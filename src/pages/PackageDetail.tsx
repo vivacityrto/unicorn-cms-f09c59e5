@@ -973,7 +973,7 @@ const PackageDetail = () => {
               <div className="flex items-center justify-between">
                 <div className="relative flex-1 max-w-md">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input placeholder="Search stages..." value={stageSearchQuery} onChange={e => setStageSearchQuery(e.target.value)} className="pl-10 h-10" />
+                  <Input placeholder="Search phases..." value={stageSearchQuery} onChange={e => setStageSearchQuery(e.target.value)} className="pl-10 h-10" />
                 </div>
                 <div className="flex gap-2">
                   <Button variant="outline" className="gap-2 hover:bg-[hsl(196deg_100%_93.53%)] hover:text-black" style={{
@@ -985,14 +985,14 @@ const PackageDetail = () => {
                   </Button>
                   <Button className="gap-2" onClick={() => setIsStageDialogOpen(true)}>
                     <Plus className="h-4 w-4" />
-                    Add Stage
+                    Add Phase
                   </Button>
                 </div>
               </div>
 
               <p className="text-sm text-muted-foreground flex items-center gap-2">
                 <GripVertical className="h-4 w-4" />
-                Drag to reorder stages
+                Drag to reorder phases
               </p>
 
               <Card className="border shadow-sm bg-white">
@@ -1009,7 +1009,7 @@ const PackageDetail = () => {
                             Order
                           </TableHead>
                           <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-r">
-                            Stage Name
+                            Phase Name
                           </TableHead>
                           <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-r">
                             Short Name
@@ -1031,7 +1031,7 @@ const PackageDetail = () => {
                           {stages.filter(stage => stageSearchQuery === "" || stage.stage_name.toLowerCase().includes(stageSearchQuery.toLowerCase()) || stage.short_name?.toLowerCase().includes(stageSearchQuery.toLowerCase()) || stage.stage_description?.toLowerCase().includes(stageSearchQuery.toLowerCase())).length === 0 ? (
                             <TableRow>
                               <TableCell colSpan={6} className="text-center py-12 text-muted-foreground">
-                                {stageSearchQuery ? "No stages match your search" : "No stages have been added to this package yet."}
+                                {stageSearchQuery ? "No phases match your search" : "No phases have been added to this package yet."}
                               </TableCell>
                             </TableRow>
                           ) : (

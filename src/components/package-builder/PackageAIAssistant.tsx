@@ -130,14 +130,14 @@ export function PackageAIAssistant({
       }
     }
 
-    // 5. Warn if package has no stages
+    // 5. Warn if package has no phases
     if (packageStages.length === 0) {
       result.push({
         id: 'warning-empty',
         type: 'warning',
-        title: 'Package Has No Stages',
-        description: 'Add stages to define the workflow for this package.',
-        reason: 'Packages need at least one stage to be functional.',
+        title: 'Package Has No Phases',
+        description: 'Add phases to define the workflow for this package.',
+        reason: 'Packages need at least one phase to be functional.',
         severity: 'warning'
       });
     }
@@ -155,8 +155,8 @@ export function PackageAIAssistant({
           id: `reused-${ps.id}`,
           type: 'conflict',
           title: `Highly Shared: ${stage.title}`,
-          description: `This stage is used in ${stage.usage_count} packages. Changes will affect all of them.`,
-          reason: 'Consider duplicating this stage if you need package-specific customizations.',
+          description: `This phase is used in ${stage.usage_count} packages. Changes will affect all of them.`,
+          reason: 'Consider duplicating this phase if you need package-specific customizations.',
           severity: 'info'
         });
       }

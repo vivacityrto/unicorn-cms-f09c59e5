@@ -87,7 +87,7 @@ export function StageDependencySelector({
         <PopoverContent className="w-[400px] p-0" align="start">
           <div className="p-2 border-b">
             <Input
-              placeholder="Search stages..."
+              placeholder="Search phases..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="h-9"
@@ -96,7 +96,7 @@ export function StageDependencySelector({
           <ScrollArea className="h-[250px]">
             {filteredStages.length === 0 ? (
               <p className="text-sm text-muted-foreground text-center py-6">
-                No stages found
+                No phases found
               </p>
             ) : (
               <div className="p-1">
