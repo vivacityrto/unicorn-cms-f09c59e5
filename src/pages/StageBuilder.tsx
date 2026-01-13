@@ -337,7 +337,7 @@ export default function StageBuilder() {
             <ShieldX className="h-16 w-16 mx-auto text-destructive/50" />
             <h2 className="text-xl font-semibold">Access Denied</h2>
             <p className="text-muted-foreground">
-              You need Super Admin privileges to access Stage Builder.
+              You need Super Admin privileges to access Phase Builder.
             </p>
           </div>
         </div>
@@ -356,7 +356,7 @@ export default function StageBuilder() {
                 <CheckCircle2 className="h-10 w-10 text-emerald-500" />
               </div>
               <div>
-                <h2 className="text-2xl font-bold mb-2">Stage Created Successfully!</h2>
+                <h2 className="text-2xl font-bold mb-2">Phase Created Successfully!</h2>
                 <p className="text-muted-foreground">
                   "{state.stageName}" has been created with {state.teamTasks.length} team tasks, 
                   {' '}{state.clientTasks.length} client tasks, and {state.emails.length} emails.
@@ -384,7 +384,7 @@ export default function StageBuilder() {
                   Create Another
                 </Button>
                 <Button onClick={() => navigate(`/admin/stages/${createdStageId}`)}>
-                  Open Stage Editor
+                  Open Phase Editor
                 </Button>
               </div>
             </CardContent>
@@ -402,10 +402,10 @@ export default function StageBuilder() {
           <div>
             <h1 className="text-[28px] font-bold flex items-center gap-2">
               <Wand2 className="h-7 w-7" />
-              Stage Builder
+              Phase Builder
             </h1>
             <p className="text-muted-foreground">
-              Create a complete stage with tasks, emails, and documents in minutes
+              Create a complete phase with tasks, emails, and documents in minutes
             </p>
           </div>
           <Badge variant="outline" className="text-xs">
@@ -439,13 +439,13 @@ export default function StageBuilder() {
             {currentStep === 1 && (
               <div className="space-y-6">
                 <div>
-                  <CardTitle className="text-lg mb-1">Stage Basics</CardTitle>
-                  <CardDescription>Define the core properties of your new stage</CardDescription>
+                  <CardTitle className="text-lg mb-1">Phase Basics</CardTitle>
+                  <CardDescription>Define the core properties of your new phase</CardDescription>
                 </div>
 
                 <div className="grid gap-6 md:grid-cols-2">
                   <div className="space-y-2">
-                    <Label>Stage Name *</Label>
+                    <Label>Phase Name *</Label>
                     <Input
                       value={state.stageName}
                       onChange={(e) => setState(prev => ({ ...prev, stageName: e.target.value }))}
@@ -454,7 +454,7 @@ export default function StageBuilder() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label>Stage Type</Label>
+                    <Label>Phase Type</Label>
                     <Select value={state.stageType} onValueChange={(v) => setState(prev => ({ ...prev, stageType: v }))}>
                       <SelectTrigger>
                         <SelectValue />

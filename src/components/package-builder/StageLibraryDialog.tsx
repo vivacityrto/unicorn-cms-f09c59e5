@@ -159,10 +159,10 @@ export function StageLibraryDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Layers className="h-5 w-5" />
-            Stage Library
+            Phase Library
           </DialogTitle>
           <DialogDescription>
-            Select stages from the library or create new ones to add to your package.
+            Select phases from the library or create new ones to add to your package.
           </DialogDescription>
         </DialogHeader>
 
@@ -178,7 +178,7 @@ export function StageLibraryDialog({
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
-                  placeholder="Search stages..."
+                  placeholder="Search phases..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="pl-9"
@@ -186,7 +186,7 @@ export function StageLibraryDialog({
               </div>
               <Select value={typeFilter} onValueChange={setTypeFilter}>
                 <SelectTrigger className="w-[140px]">
-                  <SelectValue placeholder="Stage Type" />
+                  <SelectValue placeholder="Phase Type" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Types</SelectItem>
@@ -200,19 +200,19 @@ export function StageLibraryDialog({
                   <SelectValue placeholder="Certified" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Stages</SelectItem>
+                  <SelectItem value="all">All Phases</SelectItem>
                   <SelectItem value="certified">Certified</SelectItem>
                   <SelectItem value="non-certified">Non-certified</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
-            {/* Stage List */}
+            {/* Phase List */}
             <ScrollArea className="h-[400px] pr-4">
               {filteredStages.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-12 text-center">
                   <Layers className="h-10 w-10 text-muted-foreground mb-3" />
-                  <p className="text-muted-foreground">No stages found matching your search.</p>
+                  <p className="text-muted-foreground">No phases found matching your search.</p>
                 </div>
               ) : (
                 <div className="space-y-2">
@@ -295,7 +295,7 @@ export function StageLibraryDialog({
             <div className="flex items-start gap-2 p-3 rounded-lg bg-amber-500/10 border border-amber-500/20">
               <AlertTriangle className="h-4 w-4 text-amber-600 mt-0.5" />
               <p className="text-sm text-amber-800">
-                <strong>Note:</strong> Stages are reusable. Changes to a stage will affect all packages using it.
+                <strong>Note:</strong> Phases are reusable. Changes to a phase will affect all packages using it.
               </p>
             </div>
           </TabsContent>
@@ -303,7 +303,7 @@ export function StageLibraryDialog({
           <TabsContent value="create" className="mt-4 space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>Stage Name *</Label>
+                <Label>Phase Name *</Label>
                 <Input
                   value={newStage.title}
                   onChange={(e) => setNewStage({ ...newStage, title: e.target.value })}
@@ -321,7 +321,7 @@ export function StageLibraryDialog({
             </div>
 
             <div className="space-y-2">
-              <Label>Stage Type</Label>
+              <Label>Phase Type</Label>
               <Select 
                 value={newStage.stage_type} 
                 onValueChange={(value) => setNewStage({ ...newStage, stage_type: value })}
@@ -366,16 +366,16 @@ export function StageLibraryDialog({
               />
             </div>
 
-            {/* Certified Stage Toggle */}
+            {/* Certified Phase Toggle */}
             <div className="space-y-3 p-4 rounded-lg border bg-muted/30">
               <div className="flex items-center justify-between">
                 <div className="space-y-0.5">
                   <Label htmlFor="certified-toggle" className="flex items-center gap-2">
                     <ShieldCheck className="h-4 w-4 text-emerald-600" />
-                    Certified Stage
+                    Certified Phase
                   </Label>
                   <p className="text-xs text-muted-foreground">
-                    Mark this stage as a certified template for reuse
+                    Mark this phase as a certified template for reuse
                   </p>
                 </div>
                 <Switch

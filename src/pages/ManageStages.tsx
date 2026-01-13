@@ -135,7 +135,7 @@ export default function ManageStages() {
 
       toast({
         title: 'Success',
-        description: 'Stage created successfully',
+        description: 'Phase created successfully',
       });
 
       setIsCreateDialogOpen(false);
@@ -168,7 +168,7 @@ export default function ManageStages() {
 
       toast({
         title: 'Success',
-        description: 'Stage updated successfully',
+        description: 'Phase updated successfully',
       });
 
       setIsEditDialogOpen(false);
@@ -197,7 +197,7 @@ export default function ManageStages() {
 
       toast({
         title: 'Success',
-        description: 'Stage deleted successfully',
+        description: 'Phase deleted successfully',
       });
 
       setIsDeleteDialogOpen(false);
@@ -257,12 +257,12 @@ export default function ManageStages() {
       
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-[28px] font-bold">Manage Stages</h1>
-          <p className="text-muted-foreground">Create and manage document stages</p>
+          <h1 className="text-[28px] font-bold">Manage Phases</h1>
+          <p className="text-muted-foreground">Create and manage document phases</p>
         </div>
         <Button onClick={() => setIsCreateDialogOpen(true)} className="bg-[hsl(188_74%_51%)] hover:bg-[hsl(188_74%_51%)]/90">
           <Plus className="mr-2 h-4 w-4" />
-          New Stage
+          New Phase
         </Button>
       </div>
 
@@ -270,7 +270,7 @@ export default function ManageStages() {
         <div className="relative flex-1 max-w-md">
           <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground/60" />
           <Input
-            placeholder="Search stages..."
+            placeholder="Search phases..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="pl-12 h-12 bg-card border-border/50 focus:border-primary/50 focus:ring-2 focus:ring-primary/20 rounded-lg font-medium placeholder:text-muted-foreground/50"
@@ -302,7 +302,7 @@ export default function ManageStages() {
             ) : filteredStages.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={7} className="text-center py-16 text-muted-foreground">
-                  {searchQuery ? 'No stages match your search' : 'No stages found'}
+                  {searchQuery ? 'No phases match your search' : 'No phases found'}
                 </TableCell>
               </TableRow>
             ) : (
@@ -460,8 +460,8 @@ export default function ManageStages() {
       <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Create Stage</DialogTitle>
-            <DialogDescription>Add a new document stage</DialogDescription>
+            <DialogTitle>Create Phase</DialogTitle>
+            <DialogDescription>Add a new document phase</DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
@@ -470,7 +470,7 @@ export default function ManageStages() {
                   id="create-title"
                   value={formData.title}
                   onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                  placeholder="Enter stage title"
+                  placeholder="Enter phase title"
                 />
             </div>
             <div className="space-y-2">
@@ -517,8 +517,8 @@ export default function ManageStages() {
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Edit Stage</DialogTitle>
-            <DialogDescription>Update stage information</DialogDescription>
+            <DialogTitle>Edit Phase</DialogTitle>
+            <DialogDescription>Update phase information</DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
@@ -527,7 +527,7 @@ export default function ManageStages() {
                   id="edit-title"
                   value={formData.title}
                   onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                  placeholder="Enter stage title"
+                  placeholder="Enter phase title"
                 />
             </div>
             <div className="space-y-2">
@@ -576,7 +576,7 @@ export default function ManageStages() {
           <AlertDialogHeader>
             <AlertDialogTitle>Are you sure?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will permanently delete the stage "{selectedStage?.title}". This action cannot be undone.
+              This will permanently delete the phase "{selectedStage?.title}". This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
