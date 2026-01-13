@@ -916,7 +916,7 @@ export default function AdminStageDetail() {
                     onClick={() => setSimulationOpen(true)}
                   >
                     <Play className="h-3 w-3 mr-1" />
-                    Simulate Stage
+                    Simulate Phase
                   </Button>
                 )}
                 <Button
