@@ -10031,6 +10031,7 @@ export type Database = {
           cricos_id: string | null
           id: number
           id_uuid: string | null
+          legacy_id: number | null
           metadata: Json | null
           name: string
           package_added_at: string | null
@@ -10055,6 +10056,7 @@ export type Database = {
           cricos_id?: string | null
           id?: number
           id_uuid?: string | null
+          legacy_id?: number | null
           metadata?: Json | null
           name: string
           package_added_at?: string | null
@@ -10079,6 +10081,7 @@ export type Database = {
           cricos_id?: string | null
           id?: number
           id_uuid?: string | null
+          legacy_id?: number | null
           metadata?: Json | null
           name?: string
           package_added_at?: string | null
@@ -12224,6 +12227,7 @@ export type Database = {
           last_sign_in_at: string | null
           leave_from: string | null
           leave_until: string | null
+          legacy_id: number | null
           legal_name: string | null
           linkedin: string | null
           linkedin_url: string | null
@@ -12302,6 +12306,7 @@ export type Database = {
           last_sign_in_at?: string | null
           leave_from?: string | null
           leave_until?: string | null
+          legacy_id?: number | null
           legal_name?: string | null
           linkedin?: string | null
           linkedin_url?: string | null
@@ -12380,6 +12385,7 @@ export type Database = {
           last_sign_in_at?: string | null
           leave_from?: string | null
           leave_until?: string | null
+          legacy_id?: number | null
           legal_name?: string | null
           linkedin?: string | null
           linkedin_url?: string | null
