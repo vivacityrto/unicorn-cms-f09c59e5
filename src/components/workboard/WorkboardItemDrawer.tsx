@@ -274,7 +274,7 @@ export function WorkboardItemDrawer({
               <div className="space-y-2">
                 <Label className="flex items-center gap-1">
                   <Layers className="h-3.5 w-3.5" />
-                  Stage
+                  Phase
                 </Label>
                 <Select
                   value={item.stage_id?.toString() || 'none'}

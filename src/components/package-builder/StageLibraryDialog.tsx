@@ -89,7 +89,7 @@ export function StageLibraryDialog({
     if (!newStage.title.trim()) {
       toast({
         title: 'Validation Error',
-        description: 'Stage name is required',
+        description: 'Phase name is required',
         variant: 'destructive'
       });
       return;
@@ -119,7 +119,7 @@ export function StageLibraryDialog({
       });
 
       toast({
-        title: 'Stage Created',
+        title: 'Phase Created',
         description: `"${newStage.title}" has been added to the library.`
       });
 
@@ -141,7 +141,7 @@ export function StageLibraryDialog({
     } catch (error: any) {
       toast({
         title: 'Error',
-        description: error.message || 'Failed to create stage',
+        description: error.message || 'Failed to create phase',
         variant: 'destructive'
       });
     } finally {

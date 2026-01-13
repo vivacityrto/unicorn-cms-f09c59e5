@@ -215,7 +215,7 @@ export function ClientPackagesTab({ tenantId, tenantName, packages, loading, onA
                     <CollapsibleTrigger asChild>
                       <Button variant="outline" size="sm" className="gap-1">
                         <Settings className="h-4 w-4" />
-                        Stages
+                        Phases
                         {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
                       </Button>
                     </CollapsibleTrigger>
@@ -238,7 +238,7 @@ export function ClientPackagesTab({ tenantId, tenantName, packages, loading, onA
                   <div className="pt-4">
                     <h4 className="text-sm font-semibold mb-4 flex items-center gap-2">
                       <Settings className="h-4 w-4" />
-                      Manage Stage States
+                      Manage Phase States
                     </h4>
                     <PackageStagesManager 
                       tenantId={tenantId} 

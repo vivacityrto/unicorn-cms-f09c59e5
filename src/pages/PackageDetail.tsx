@@ -259,13 +259,13 @@ const PackageDetail = () => {
 
         toast({
           title: "Success",
-          description: "Stage order updated successfully",
+          description: "Phase order updated successfully",
         });
       } catch (error: any) {
         console.error("Error updating stage order:", error);
         toast({
           title: "Error",
-          description: "Failed to update stage order",
+          description: "Failed to update phase order",
           variant: "destructive",
         });
         // Revert on error
@@ -496,7 +496,7 @@ const PackageDetail = () => {
       if (error) throw error;
       toast({
         title: "Success",
-        description: "Stage deleted successfully"
+        description: "Phase deleted successfully"
       });
       fetchPackageData();
     } catch (error: any) {
@@ -961,7 +961,7 @@ const PackageDetail = () => {
             <div className="bg-muted/50 px-6 py-4 border-b border-border/50">
               <div className="flex items-center justify-between">
                 <div className="space-y-1">
-                  <h3 className="text-base font-semibold text-foreground">Stages</h3>
+                  <h3 className="text-base font-semibold text-foreground">Phases</h3>
                   {packageInfo.full_text && <p className="text-sm text-muted-foreground flex items-center gap-2">
                       <Layers className="h-4 w-4" />
                       {packageInfo.full_text}

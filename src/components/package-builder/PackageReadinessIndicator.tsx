@@ -195,21 +195,21 @@ export function PackageReadinessSummary({ status, issues }: PackageReadinessSumm
         return {
           icon: <CheckCircle2 className="h-4 w-4" />,
           label: 'Package Ready',
-          description: 'All required stages are configured',
+          description: 'All required phases are configured',
           className: 'border-emerald-500/30 bg-emerald-500/5 text-emerald-700'
         };
       case 'incomplete':
         return {
           icon: <XCircle className="h-4 w-4" />,
           label: 'Package Incomplete',
-          description: 'Missing required stages or documents',
+          description: 'Missing required phases or documents',
           className: 'border-amber-500/30 bg-amber-500/5 text-amber-700'
         };
       case 'risk':
         return {
           icon: <AlertTriangle className="h-4 w-4" />,
           label: 'Package at Risk',
-          description: 'Missing recommended stages or tasks',
+          description: 'Missing recommended phases or tasks',
           className: 'border-red-500/30 bg-red-500/5 text-red-700'
         };
     }
