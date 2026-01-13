@@ -321,7 +321,7 @@ export default function AdminStageAnalytics() {
                     {[1, 2, 3, 4, 5].map(i => <Skeleton key={i} className="h-12 w-full" />)}
                   </div>
                 ) : topStages.length === 0 ? (
-                  <p className="text-center text-muted-foreground py-8">No stages found</p>
+                  <p className="text-center text-muted-foreground py-8">No phases found</p>
                 ) : (
                   <Table>
                     <TableHeader>

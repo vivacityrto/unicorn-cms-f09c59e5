@@ -313,7 +313,7 @@ export function PackageBuilderOverview() {
                 <TableHead>Status</TableHead>
                 <TableHead>Readiness</TableHead>
                 <TableHead className="text-center">Duration</TableHead>
-                <TableHead className="text-center">Stages</TableHead>
+                <TableHead className="text-center">Phases</TableHead>
                 <TableHead className="w-[100px]">Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -438,7 +438,7 @@ export function PackageBuilderOverview() {
             <AlertDialogTitle>Delete Package</AlertDialogTitle>
             <AlertDialogDescription>
               Are you sure you want to delete "{packageToDelete?.name}"? This action cannot be undone 
-              and will remove all associated stages, tasks, and configurations.
+              and will remove all associated phases, tasks, and configurations.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

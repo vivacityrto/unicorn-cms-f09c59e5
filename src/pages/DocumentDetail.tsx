@@ -1489,14 +1489,14 @@ export default function DocumentDetail() {
             </div>
             
             <div className="grid gap-2">
-              <Label htmlFor="edit-stage">Stage</Label>
+              <Label htmlFor="edit-stage">Phase</Label>
               <Combobox
                 options={stages.map(stage => ({ value: stage.id.toString(), label: stage.title }))}
                 value={editFormData.stage}
                 onValueChange={(value) => setEditFormData({ ...editFormData, stage: value })}
-                placeholder="Select stage..."
-                searchPlaceholder="Search stages..."
-                emptyText="No stages found."
+                placeholder="Select phase..."
+                searchPlaceholder="Search phases..."
+                emptyText="No phases found."
                 className="w-full"
               />
             </div>

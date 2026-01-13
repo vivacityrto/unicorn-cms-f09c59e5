@@ -1107,14 +1107,14 @@ export default function ManageDocuments() {
                   
 
                   <div className="grid gap-2">
-                    <Label htmlFor="stage">Stage</Label>
+                    <Label htmlFor="stage">Phase</Label>
                     <Combobox options={stages.map(stage => ({
                     value: stage.id.toString(),
                     label: stage.title
                   }))} value={formData.stage} onValueChange={value => setFormData({
                     ...formData,
                     stage: value
-                  })} placeholder="Select stage..." searchPlaceholder="Search stages..." emptyText="No stages found." className="w-full" showAvatar={false} autoWidth />
+                  })} placeholder="Select phase..." searchPlaceholder="Search phases..." emptyText="No phases found." className="w-full" showAvatar={false} autoWidth />
                   </div>
 
                   <div className="grid gap-2">

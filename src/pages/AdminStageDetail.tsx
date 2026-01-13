@@ -1181,7 +1181,7 @@ export default function AdminStageDetail() {
                     onChange={handleUpdateDependencies}
                   />
                   <p className="text-xs text-muted-foreground">
-                    Select stages that must also exist in a package when this stage is used.
+                    Select phases that must also exist in a package when this phase is used.
                   </p>
                 </div>
 
@@ -1998,11 +1998,11 @@ export default function AdminStageDetail() {
               </p>
             </div>
 
-            {/* Replacement Stage Selection */}
+            {/* Replacement Phase Selection */}
             <div className="space-y-2">
-              <Label>Replacement Stage</Label>
+              <Label>Replacement Phase</Label>
               <Input
-                placeholder="Search stages by name or key..."
+                placeholder="Search phases by name or key..."
                 value={stageSearchQuery}
                 onChange={(e) => setStageSearchQuery(e.target.value)}
                 className="mb-2"
@@ -2010,7 +2010,7 @@ export default function AdminStageDetail() {
               <div className="border rounded-lg divide-y max-h-[200px] overflow-y-auto">
                 {filteredReplacementStages.length === 0 ? (
                   <div className="p-4 text-center text-muted-foreground text-sm">
-                    {stageSearchQuery ? 'No stages match your search' : 'No compatible stages found'}
+                    {stageSearchQuery ? 'No phases match your search' : 'No compatible phases found'}
                   </div>
                 ) : (
                   filteredReplacementStages.map(s => (

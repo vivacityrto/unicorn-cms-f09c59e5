@@ -891,7 +891,7 @@ export default function AdminManagePackages() {
                 <div className="divide-y divide-border/50">
                   {stages.length === 0 ? (
                     <div className="px-4 py-6 text-sm text-muted-foreground text-center">
-                      No stages have been added to this package yet.
+                      No phases have been added to this package yet.
                     </div>
                   ) : (
                     stages.map((stage, index) => (
@@ -1484,13 +1484,13 @@ export default function AdminManagePackages() {
               </div>
 
               <div className="grid gap-2">
-                <Label htmlFor="stage">Stage</Label>
+                <Label htmlFor="stage">Phase</Label>
                 <Select
                   value={documentFormData.stage}
                   onValueChange={value => setDocumentFormData({ ...documentFormData, stage: value })}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="Select stage..." />
+                    <SelectValue placeholder="Select phase..." />
                   </SelectTrigger>
                   <SelectContent>
                     {documentStages.map(stage => (
