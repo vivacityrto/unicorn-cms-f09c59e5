@@ -190,6 +190,9 @@ export function PackageBuilderEditor() {
     })
   );
 
+  // Standards coverage analysis - MUST be called before any early returns (React hooks rule)
+  const standardsCoverage = usePackageStandardsCoverage(packageStages, formData.package_type);
+
   useEffect(() => {
     if (packageData) {
       setFormData({
@@ -406,9 +409,6 @@ export function PackageBuilderEditor() {
     const stageFrameworks = ps.stage?.frameworks as string[] | null;
     return !checkFrameworkCompatibility(stageFrameworks, formData.package_type);
   });
-  
-  // Standards coverage analysis
-  const standardsCoverage = usePackageStandardsCoverage(packageStages, formData.package_type);
 
   // Compute package readiness with framework and standards escalation
   const baseReadiness = computePackageReadiness(packageStages);
