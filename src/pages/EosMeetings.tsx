@@ -73,6 +73,7 @@ function MeetingsContent() {
   const getMeetingTypeColor = (type: MeetingType) => {
     switch (type) {
       case 'L10': return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200';
+      case 'Same_Page': return 'bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200';
       case 'Quarterly': return 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200';
       case 'Annual': return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200';
       default: return 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200';
@@ -183,7 +184,7 @@ function MeetingsContent() {
       )}
 
       {/* Meeting Type Info Cards */}
-      <div className="grid md:grid-cols-3 gap-4">
+      <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card className="border-blue-200 bg-blue-50/50 dark:bg-blue-950/20 dark:border-blue-800">
           <CardContent className="p-4">
             <div className="flex items-center gap-2 mb-2">
@@ -195,6 +196,20 @@ function MeetingsContent() {
             </p>
             <div className="mt-2 text-xs text-muted-foreground/70">
               Default: Segue • Scorecard • Rock Review • Risks & Opps • To-Dos • IDS • Conclude
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="border-amber-200 bg-amber-50/50 dark:bg-amber-950/20 dark:border-amber-800">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2 mb-2">
+              <Users className="w-5 h-5 text-amber-600" />
+              <h3 className="font-semibold text-sm">Same Page Meeting</h3>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Visionary and Integrator alignment meeting to ensure shared vision and synchronized execution.
+            </p>
+            <div className="mt-2 text-xs text-muted-foreground/70">
+              Outputs: Decisions recorded • Action items assigned • Alignment confirmed
             </div>
           </CardContent>
         </Card>
@@ -233,6 +248,7 @@ function MeetingsContent() {
         <TabsList>
           <TabsTrigger value="all">All Meetings</TabsTrigger>
           <TabsTrigger value="L10">Level 10</TabsTrigger>
+          <TabsTrigger value="Same_Page">Same Page</TabsTrigger>
           <TabsTrigger value="Quarterly">Quarterly</TabsTrigger>
           <TabsTrigger value="Annual">Annual</TabsTrigger>
         </TabsList>
