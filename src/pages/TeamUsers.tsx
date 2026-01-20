@@ -116,9 +116,21 @@ export default function TeamUsers() {
       }));
 
       // Filter out invites for emails that already exist as users
+      // Also deduplicate by email - keep only the most recent invite per email
       const existingEmails = new Set(teamUsers.map(u => u.email.toLowerCase()));
-      const pendingUsers: TeamUser[] = (pendingInvites || [])
-        .filter(invite => !existingEmails.has(invite.email.toLowerCase()))
+      
+      const emailToInvite = new Map<string, typeof pendingInvites[0]>();
+      (pendingInvites || []).forEach(invite => {
+        const email = invite.email.toLowerCase();
+        if (existingEmails.has(email)) return; // Skip if user already exists
+        
+        const existing = emailToInvite.get(email);
+        if (!existing || new Date(invite.created_at) > new Date(existing.created_at)) {
+          emailToInvite.set(email, invite);
+        }
+      });
+      
+      const pendingUsers: TeamUser[] = Array.from(emailToInvite.values())
         .map((invite: any) => ({
           user_uuid: `invite-${invite.id}`,
           first_name: invite.first_name || '',

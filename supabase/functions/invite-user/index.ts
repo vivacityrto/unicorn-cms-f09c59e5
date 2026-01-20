@@ -220,6 +220,37 @@ serve(async (req) => {
       // They should accept the invitation to be added to this tenant
     }
 
+    // 6b. Check for existing pending invitation for this email/tenant
+    const { data: existingInvite } = await supabase
+      .from('user_invitations')
+      .select('id, created_at, expires_at')
+      .eq('email', payload.email.toLowerCase())
+      .eq('tenant_id', payload.tenant_id)
+      .eq('status', 'pending')
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (existingInvite) {
+      const isExpired = new Date(existingInvite.expires_at) < new Date();
+      
+      if (!isExpired) {
+        return jsonResponse(409, {
+          ok: false,
+          code: "INVITE_EXISTS",
+          detail: `An active invitation already exists for ${payload.email}`,
+        });
+      }
+      
+      // If expired, delete old invite before creating new one
+      await supabase
+        .from('user_invitations')
+        .delete()
+        .eq('id', existingInvite.id);
+      
+      console.log(`Deleted expired invitation for ${payload.email}`);
+    }
+
     // 7. Generate invitation token
     const inviteToken = crypto.randomUUID();
     const encoder = new TextEncoder();
