@@ -139,7 +139,7 @@ const superAdminMenuItems = {
     path: "/eos/scorecard"
   }, {
     icon: Flag,
-    label: "V/TO",
+    label: "Mission Control",
     path: "/eos/vto"
   }, {
     icon: TrendingUp,
