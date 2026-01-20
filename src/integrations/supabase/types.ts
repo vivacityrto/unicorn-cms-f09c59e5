@@ -139,6 +139,20 @@ export type Database = {
             referencedRelation: "eos_meetings"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "ai_suggestions_meeting_id_fkey"
+            columns: ["meeting_id"]
+            isOneToOne: false
+            referencedRelation: "eos_past_meetings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_suggestions_meeting_id_fkey"
+            columns: ["meeting_id"]
+            isOneToOne: false
+            referencedRelation: "eos_upcoming_meetings"
+            referencedColumns: ["id"]
+          },
         ]
       }
       app_settings: {
@@ -375,6 +389,20 @@ export type Database = {
             columns: ["meeting_id"]
             isOneToOne: false
             referencedRelation: "eos_meetings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "audit_eos_events_meeting_id_fkey"
+            columns: ["meeting_id"]
+            isOneToOne: false
+            referencedRelation: "eos_past_meetings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "audit_eos_events_meeting_id_fkey"
+            columns: ["meeting_id"]
+            isOneToOne: false
+            referencedRelation: "eos_upcoming_meetings"
             referencedColumns: ["id"]
           },
         ]
@@ -4664,6 +4692,20 @@ export type Database = {
             referencedRelation: "eos_meetings"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "eos_chart_drafts_meeting_id_fkey"
+            columns: ["meeting_id"]
+            isOneToOne: true
+            referencedRelation: "eos_past_meetings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "eos_chart_drafts_meeting_id_fkey"
+            columns: ["meeting_id"]
+            isOneToOne: true
+            referencedRelation: "eos_upcoming_meetings"
+            referencedColumns: ["id"]
+          },
         ]
       }
       eos_flight_plans: {
@@ -4771,6 +4813,20 @@ export type Database = {
             columns: ["meeting_id"]
             isOneToOne: false
             referencedRelation: "eos_meetings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "eos_headlines_meeting_id_fkey"
+            columns: ["meeting_id"]
+            isOneToOne: false
+            referencedRelation: "eos_past_meetings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "eos_headlines_meeting_id_fkey"
+            columns: ["meeting_id"]
+            isOneToOne: false
+            referencedRelation: "eos_upcoming_meetings"
             referencedColumns: ["id"]
           },
         ]
@@ -4884,6 +4940,20 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "eos_issues_meeting_id_fkey"
+            columns: ["meeting_id"]
+            isOneToOne: false
+            referencedRelation: "eos_past_meetings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "eos_issues_meeting_id_fkey"
+            columns: ["meeting_id"]
+            isOneToOne: false
+            referencedRelation: "eos_upcoming_meetings"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "eos_issues_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
@@ -4961,6 +5031,20 @@ export type Database = {
             referencedRelation: "eos_meetings"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "eos_meeting_minutes_versions_meeting_id_fkey"
+            columns: ["meeting_id"]
+            isOneToOne: false
+            referencedRelation: "eos_past_meetings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "eos_meeting_minutes_versions_meeting_id_fkey"
+            columns: ["meeting_id"]
+            isOneToOne: false
+            referencedRelation: "eos_upcoming_meetings"
+            referencedColumns: ["id"]
+          },
         ]
       }
       eos_meeting_occurrences: {
@@ -5009,6 +5093,20 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "eos_meeting_occurrences_meeting_id_fkey"
+            columns: ["meeting_id"]
+            isOneToOne: false
+            referencedRelation: "eos_past_meetings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "eos_meeting_occurrences_meeting_id_fkey"
+            columns: ["meeting_id"]
+            isOneToOne: false
+            referencedRelation: "eos_upcoming_meetings"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "eos_meeting_occurrences_recurrence_id_fkey"
             columns: ["recurrence_id"]
             isOneToOne: false
@@ -5053,6 +5151,20 @@ export type Database = {
             referencedRelation: "eos_meetings"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "eos_meeting_outcome_confirmations_meeting_id_fkey"
+            columns: ["meeting_id"]
+            isOneToOne: false
+            referencedRelation: "eos_past_meetings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "eos_meeting_outcome_confirmations_meeting_id_fkey"
+            columns: ["meeting_id"]
+            isOneToOne: false
+            referencedRelation: "eos_upcoming_meetings"
+            referencedColumns: ["id"]
+          },
         ]
       }
       eos_meeting_participants: {
@@ -5088,6 +5200,20 @@ export type Database = {
             referencedRelation: "eos_meetings"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "eos_meeting_participants_meeting_id_fkey"
+            columns: ["meeting_id"]
+            isOneToOne: false
+            referencedRelation: "eos_past_meetings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "eos_meeting_participants_meeting_id_fkey"
+            columns: ["meeting_id"]
+            isOneToOne: false
+            referencedRelation: "eos_upcoming_meetings"
+            referencedColumns: ["id"]
+          },
         ]
       }
       eos_meeting_ratings: {
@@ -5121,6 +5247,20 @@ export type Database = {
             columns: ["meeting_id"]
             isOneToOne: false
             referencedRelation: "eos_meetings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "eos_meeting_ratings_meeting_id_fkey"
+            columns: ["meeting_id"]
+            isOneToOne: false
+            referencedRelation: "eos_past_meetings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "eos_meeting_ratings_meeting_id_fkey"
+            columns: ["meeting_id"]
+            isOneToOne: false
+            referencedRelation: "eos_upcoming_meetings"
             referencedColumns: ["id"]
           },
         ]
@@ -5173,6 +5313,20 @@ export type Database = {
             referencedRelation: "eos_meetings"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "eos_meeting_recurrences_meeting_id_fkey"
+            columns: ["meeting_id"]
+            isOneToOne: false
+            referencedRelation: "eos_past_meetings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "eos_meeting_recurrences_meeting_id_fkey"
+            columns: ["meeting_id"]
+            isOneToOne: false
+            referencedRelation: "eos_upcoming_meetings"
+            referencedColumns: ["id"]
+          },
         ]
       }
       eos_meeting_segments: {
@@ -5215,6 +5369,91 @@ export type Database = {
             columns: ["meeting_id"]
             isOneToOne: false
             referencedRelation: "eos_meetings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "eos_meeting_segments_meeting_id_fkey"
+            columns: ["meeting_id"]
+            isOneToOne: false
+            referencedRelation: "eos_past_meetings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "eos_meeting_segments_meeting_id_fkey"
+            columns: ["meeting_id"]
+            isOneToOne: false
+            referencedRelation: "eos_upcoming_meetings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      eos_meeting_series: {
+        Row: {
+          agenda_template_id: string | null
+          agenda_template_version_id: string | null
+          created_at: string
+          created_by: string | null
+          description: string | null
+          duration_minutes: number
+          id: string
+          is_active: boolean
+          location: string | null
+          meeting_type: Database["public"]["Enums"]["eos_meeting_type"]
+          recurrence_rule: string | null
+          recurrence_type: string
+          start_date: string
+          start_time: string
+          tenant_id: number
+          timezone: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          agenda_template_id?: string | null
+          agenda_template_version_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          duration_minutes?: number
+          id?: string
+          is_active?: boolean
+          location?: string | null
+          meeting_type: Database["public"]["Enums"]["eos_meeting_type"]
+          recurrence_rule?: string | null
+          recurrence_type: string
+          start_date: string
+          start_time?: string
+          tenant_id: number
+          timezone?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          agenda_template_id?: string | null
+          agenda_template_version_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          duration_minutes?: number
+          id?: string
+          is_active?: boolean
+          location?: string | null
+          meeting_type?: Database["public"]["Enums"]["eos_meeting_type"]
+          recurrence_rule?: string | null
+          recurrence_type?: string
+          start_date?: string
+          start_time?: string
+          tenant_id?: number
+          timezone?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "eos_meeting_series_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
             referencedColumns: ["id"]
           },
         ]
@@ -5282,11 +5521,28 @@ export type Database = {
             referencedRelation: "eos_meetings"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "eos_meeting_summaries_meeting_id_fkey"
+            columns: ["meeting_id"]
+            isOneToOne: true
+            referencedRelation: "eos_past_meetings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "eos_meeting_summaries_meeting_id_fkey"
+            columns: ["meeting_id"]
+            isOneToOne: true
+            referencedRelation: "eos_upcoming_meetings"
+            referencedColumns: ["id"]
+          },
         ]
       }
       eos_meetings: {
         Row: {
+          actual_duration_minutes: number | null
+          agenda_snapshot: Json | null
           client_id: string | null
+          closed_at: string | null
           completed_at: string | null
           created_at: string | null
           created_by: string | null
@@ -5307,6 +5563,8 @@ export type Database = {
           rock_reviews: Json | null
           scheduled_date: string
           scorecard_data: Json | null
+          series_id: string | null
+          started_at: string | null
           status: Database["public"]["Enums"]["meeting_status"]
           template_id: string | null
           template_version_id: string | null
@@ -5315,7 +5573,10 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          actual_duration_minutes?: number | null
+          agenda_snapshot?: Json | null
           client_id?: string | null
+          closed_at?: string | null
           completed_at?: string | null
           created_at?: string | null
           created_by?: string | null
@@ -5336,6 +5597,8 @@ export type Database = {
           rock_reviews?: Json | null
           scheduled_date: string
           scorecard_data?: Json | null
+          series_id?: string | null
+          started_at?: string | null
           status?: Database["public"]["Enums"]["meeting_status"]
           template_id?: string | null
           template_version_id?: string | null
@@ -5344,7 +5607,10 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          actual_duration_minutes?: number | null
+          agenda_snapshot?: Json | null
           client_id?: string | null
+          closed_at?: string | null
           completed_at?: string | null
           created_at?: string | null
           created_by?: string | null
@@ -5365,6 +5631,8 @@ export type Database = {
           rock_reviews?: Json | null
           scheduled_date?: string
           scorecard_data?: Json | null
+          series_id?: string | null
+          started_at?: string | null
           status?: Database["public"]["Enums"]["meeting_status"]
           template_id?: string | null
           template_version_id?: string | null
@@ -5392,6 +5660,27 @@ export type Database = {
             columns: ["parent_meeting_id"]
             isOneToOne: false
             referencedRelation: "eos_meetings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "eos_meetings_parent_meeting_id_fkey"
+            columns: ["parent_meeting_id"]
+            isOneToOne: false
+            referencedRelation: "eos_past_meetings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "eos_meetings_parent_meeting_id_fkey"
+            columns: ["parent_meeting_id"]
+            isOneToOne: false
+            referencedRelation: "eos_upcoming_meetings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "eos_meetings_series_id_fkey"
+            columns: ["series_id"]
+            isOneToOne: false
+            referencedRelation: "eos_meeting_series"
             referencedColumns: ["id"]
           },
           {
@@ -5464,6 +5753,20 @@ export type Database = {
             columns: ["meeting_id"]
             isOneToOne: false
             referencedRelation: "eos_meetings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "eos_minutes_audit_log_meeting_id_fkey"
+            columns: ["meeting_id"]
+            isOneToOne: false
+            referencedRelation: "eos_past_meetings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "eos_minutes_audit_log_meeting_id_fkey"
+            columns: ["meeting_id"]
+            isOneToOne: false
+            referencedRelation: "eos_upcoming_meetings"
             referencedColumns: ["id"]
           },
           {
@@ -6155,6 +6458,20 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "eos_todos_meeting_id_fkey"
+            columns: ["meeting_id"]
+            isOneToOne: false
+            referencedRelation: "eos_past_meetings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "eos_todos_meeting_id_fkey"
+            columns: ["meeting_id"]
+            isOneToOne: false
+            referencedRelation: "eos_upcoming_meetings"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "eos_todos_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
@@ -6346,6 +6663,20 @@ export type Database = {
             columns: ["meeting_id"]
             isOneToOne: true
             referencedRelation: "eos_meetings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "eos_vto_drafts_meeting_id_fkey"
+            columns: ["meeting_id"]
+            isOneToOne: true
+            referencedRelation: "eos_past_meetings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "eos_vto_drafts_meeting_id_fkey"
+            columns: ["meeting_id"]
+            isOneToOne: true
+            referencedRelation: "eos_upcoming_meetings"
             referencedColumns: ["id"]
           },
         ]
@@ -13059,6 +13390,226 @@ export type Database = {
         }
         Relationships: []
       }
+      eos_past_meetings: {
+        Row: {
+          actual_duration_minutes: number | null
+          agenda_snapshot: Json | null
+          client_id: string | null
+          closed_at: string | null
+          completed_at: string | null
+          created_at: string | null
+          created_by: string | null
+          current_minutes_version_id: string | null
+          duration_minutes: number | null
+          headlines: Json | null
+          id: string | null
+          is_complete: boolean | null
+          is_multi_client: boolean | null
+          issues_discussed: string[] | null
+          location: string | null
+          meeting_type: Database["public"]["Enums"]["eos_meeting_type"] | null
+          minutes_status: string | null
+          notes: string | null
+          parent_meeting_id: string | null
+          recurrence_end_date: string | null
+          recurrence_rule: string | null
+          recurrence_type: string | null
+          rock_reviews: Json | null
+          scheduled_date: string | null
+          scorecard_data: Json | null
+          series_id: string | null
+          series_title: string | null
+          started_at: string | null
+          status: Database["public"]["Enums"]["meeting_status"] | null
+          template_id: string | null
+          template_version_id: string | null
+          tenant_id: number | null
+          title: string | null
+          updated_at: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "eos_meetings_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients_legacy"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "eos_meetings_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "dashboard_client_snapshot"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "eos_meetings_parent_meeting_id_fkey"
+            columns: ["parent_meeting_id"]
+            isOneToOne: false
+            referencedRelation: "eos_meetings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "eos_meetings_parent_meeting_id_fkey"
+            columns: ["parent_meeting_id"]
+            isOneToOne: false
+            referencedRelation: "eos_past_meetings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "eos_meetings_parent_meeting_id_fkey"
+            columns: ["parent_meeting_id"]
+            isOneToOne: false
+            referencedRelation: "eos_upcoming_meetings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "eos_meetings_series_id_fkey"
+            columns: ["series_id"]
+            isOneToOne: false
+            referencedRelation: "eos_meeting_series"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "eos_meetings_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "eos_agenda_templates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "eos_meetings_template_version_id_fkey"
+            columns: ["template_version_id"]
+            isOneToOne: false
+            referencedRelation: "eos_agenda_template_versions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "eos_meetings_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_current_minutes_version"
+            columns: ["current_minutes_version_id"]
+            isOneToOne: false
+            referencedRelation: "eos_meeting_minutes_versions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      eos_upcoming_meetings: {
+        Row: {
+          actual_duration_minutes: number | null
+          agenda_snapshot: Json | null
+          client_id: string | null
+          closed_at: string | null
+          completed_at: string | null
+          created_at: string | null
+          created_by: string | null
+          current_minutes_version_id: string | null
+          duration_minutes: number | null
+          headlines: Json | null
+          id: string | null
+          is_complete: boolean | null
+          is_multi_client: boolean | null
+          issues_discussed: string[] | null
+          location: string | null
+          meeting_type: Database["public"]["Enums"]["eos_meeting_type"] | null
+          minutes_status: string | null
+          notes: string | null
+          parent_meeting_id: string | null
+          recurrence_end_date: string | null
+          recurrence_rule: string | null
+          recurrence_type: string | null
+          rock_reviews: Json | null
+          scheduled_date: string | null
+          scorecard_data: Json | null
+          series_id: string | null
+          series_is_active: boolean | null
+          started_at: string | null
+          status: Database["public"]["Enums"]["meeting_status"] | null
+          template_id: string | null
+          template_version_id: string | null
+          tenant_id: number | null
+          title: string | null
+          updated_at: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "eos_meetings_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients_legacy"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "eos_meetings_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "dashboard_client_snapshot"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "eos_meetings_parent_meeting_id_fkey"
+            columns: ["parent_meeting_id"]
+            isOneToOne: false
+            referencedRelation: "eos_meetings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "eos_meetings_parent_meeting_id_fkey"
+            columns: ["parent_meeting_id"]
+            isOneToOne: false
+            referencedRelation: "eos_past_meetings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "eos_meetings_parent_meeting_id_fkey"
+            columns: ["parent_meeting_id"]
+            isOneToOne: false
+            referencedRelation: "eos_upcoming_meetings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "eos_meetings_series_id_fkey"
+            columns: ["series_id"]
+            isOneToOne: false
+            referencedRelation: "eos_meeting_series"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "eos_meetings_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "eos_agenda_templates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "eos_meetings_template_version_id_fkey"
+            columns: ["template_version_id"]
+            isOneToOne: false
+            referencedRelation: "eos_agenda_template_versions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "eos_meetings_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_current_minutes_version"
+            columns: ["current_minutes_version_id"]
+            isOneToOne: false
+            referencedRelation: "eos_meeting_minutes_versions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       accept_ai_suggestion: {
@@ -13306,6 +13857,10 @@ export type Database = {
         Args: { p_meeting_id: string }
         Returns: Json
       }
+      complete_meeting_instance: {
+        Args: { p_meeting_id: string }
+        Returns: boolean
+      }
       copy_stage_template_to_package: {
         Args: { p_package_id: number; p_stage_id: number }
         Returns: undefined
@@ -13384,6 +13939,22 @@ export type Database = {
         }
         Returns: string
       }
+      create_meeting_series: {
+        Args: {
+          p_duration_minutes?: number
+          p_location?: string
+          p_meeting_type: Database["public"]["Enums"]["eos_meeting_type"]
+          p_recurrence_type: string
+          p_start_date: string
+          p_start_time?: string
+          p_template_id?: string
+          p_template_version_id?: string
+          p_tenant_id: number
+          p_title: string
+          p_weeks_ahead?: number
+        }
+        Returns: string
+      }
       create_minutes_revision: {
         Args: { p_meeting_id: string; p_reason: string }
         Returns: string
@@ -13450,6 +14021,13 @@ export type Database = {
       generate_meeting_summary: {
         Args: { p_meeting_id: string }
         Returns: string
+      }
+      generate_series_instances: {
+        Args: { p_series_id: string; p_weeks_ahead?: number }
+        Returns: {
+          meeting_id: string
+          scheduled_date: string
+        }[]
       }
       generate_username: {
         Args: { p_email: string; p_user_id: string }
@@ -14268,6 +14846,10 @@ export type Database = {
         }
         Returns: string
       }
+      start_meeting_instance: {
+        Args: { p_meeting_id: string }
+        Returns: boolean
+      }
       start_meeting_with_validation: {
         Args: { p_meeting_id: string }
         Returns: Json
@@ -14330,6 +14912,18 @@ export type Database = {
       unlock_meeting_minutes: {
         Args: { p_meeting_id: string; p_reason: string }
         Returns: undefined
+      }
+      update_meeting_series: {
+        Args: {
+          p_duration_minutes?: number
+          p_location?: string
+          p_series_id: string
+          p_start_time?: string
+          p_template_id?: string
+          p_template_version_id?: string
+          p_title?: string
+        }
+        Returns: boolean
       }
       update_my_csc_profile: {
         Args: {

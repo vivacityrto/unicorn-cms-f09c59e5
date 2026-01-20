@@ -4,16 +4,20 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Plus, Calendar, Clock, Users, Play, FileText, Settings, AlertCircle, RefreshCw, Trash2, Zap, Target, LayoutTemplate } from 'lucide-react';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { Plus, Calendar, Clock, Users, Play, FileText, Settings, AlertCircle, RefreshCw, Trash2, Zap, Target, LayoutTemplate, ChevronDown, History } from 'lucide-react';
 import { useEosMeetings } from '@/hooks/useEos';
+import { useMeetingSeries } from '@/hooks/useMeetingSeries';
 import { useRBAC } from '@/hooks/useRBAC';
-import { format } from 'date-fns';
+import { format, isPast, isToday } from 'date-fns';
 import { MeetingScheduler } from '@/components/eos/MeetingScheduler';
 import { AgendaTemplateLibrary } from '@/components/eos/AgendaTemplateLibrary';
 import { ApplyTemplateDialog } from '@/components/eos/ApplyTemplateDialog';
 import { DeleteMeetingDialog } from '@/components/eos/DeleteMeetingDialog';
+import { PastMeetingSummary } from '@/components/eos/PastMeetingSummary';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import type { MeetingType, EosMeeting } from '@/types/eos';
+import type { MeetingInstance } from '@/hooks/useMeetingSeries';
 
 export default function EosMeetings() {
   return (
@@ -26,6 +30,7 @@ export default function EosMeetings() {
 function MeetingsContent() {
   const navigate = useNavigate();
   const { meetings, isLoading, error, refetch, deleteMeeting } = useEosMeetings();
+  const { upcomingMeetings, pastMeetings, isLoadingUpcoming, isLoadingPast } = useMeetingSeries();
   const { canScheduleMeetings } = useRBAC();
   const [schedulerOpen, setSchedulerOpen] = useState(false);
   const [templateLibraryOpen, setTemplateLibraryOpen] = useState(false);
@@ -34,6 +39,8 @@ function MeetingsContent() {
   const [meetingToDelete, setMeetingToDelete] = useState<{ id: string; title: string } | null>(null);
   const [applyTemplateDialogOpen, setApplyTemplateDialogOpen] = useState(false);
   const [meetingForTemplate, setMeetingForTemplate] = useState<EosMeeting | null>(null);
+  const [pastMeetingsOpen, setPastMeetingsOpen] = useState(false);
+  const [selectedPastMeeting, setSelectedPastMeeting] = useState<MeetingInstance | null>(null);
 
   const handleApplyTemplateClick = (meeting: EosMeeting) => {
     setMeetingForTemplate(meeting);
@@ -157,6 +164,23 @@ function MeetingsContent() {
         <ApplyTemplateDialog
           open={applyTemplateDialogOpen}
           onOpenChange={(open) => {
+            setApplyTemplateDialogOpen(open);
+            if (!open) setMeetingForTemplate(null);
+          }}
+          meetingId={meetingForTemplate.id}
+          meetingType={meetingForTemplate.meeting_type}
+          meetingTitle={meetingForTemplate.title}
+          hasExistingSegments={true}
+        />
+      )}
+
+      {selectedPastMeeting && (
+        <PastMeetingSummary
+          open={!!selectedPastMeeting}
+          onOpenChange={(open) => !open && setSelectedPastMeeting(null)}
+          meeting={selectedPastMeeting}
+        />
+      )}
             setApplyTemplateDialogOpen(open);
             if (!open) setMeetingForTemplate(null);
           }}
