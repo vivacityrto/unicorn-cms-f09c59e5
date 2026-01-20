@@ -25,7 +25,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
-import { Users, Search, Shield, UserCheck, UserX, UserPlus, Clock, MoreHorizontal, RefreshCw } from 'lucide-react';
+import { Users, Search, Shield, UserCheck, UserX, UserPlus, Clock, MoreHorizontal, RefreshCw, X } from 'lucide-react';
 import { InviteUserDialog } from '@/components/InviteUserDialog';
 interface TeamUser {
   user_uuid: string;
@@ -62,6 +62,7 @@ export default function TeamUsers() {
   const [statusFilter, setStatusFilter] = useState('all');
   const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
   const [resendingInvite, setResendingInvite] = useState<string | null>(null);
+  const [cancellingInvite, setCancellingInvite] = useState<string | null>(null);
 
   useEffect(() => {
     fetchTeamUsers();
@@ -224,6 +225,40 @@ export default function TeamUsers() {
       });
     } finally {
       setResendingInvite(null);
+    }
+  };
+
+  const handleCancelInvite = async (user: TeamUser) => {
+    if (!user.inviteId) return;
+    
+    setCancellingInvite(user.inviteId);
+    try {
+      const { data, error } = await supabase.functions.invoke('cancel-invite', {
+        body: { invitation_id: user.inviteId },
+      });
+
+      if (error) throw error;
+      
+      if (!data.ok) {
+        throw new Error(data.detail || 'Failed to cancel invitation');
+      }
+
+      toast({
+        title: 'Invitation Cancelled',
+        description: `The invitation for ${user.email} has been revoked`,
+      });
+      
+      // Refresh the list to remove the cancelled invite
+      fetchTeamUsers();
+    } catch (error: any) {
+      console.error('Error cancelling invite:', error);
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to cancel invitation',
+        variant: 'destructive',
+      });
+    } finally {
+      setCancellingInvite(null);
     }
   };
 
@@ -453,13 +488,24 @@ export default function TeamUsers() {
                             <DropdownMenuContent align="end">
                               <DropdownMenuItem
                                 onClick={() => handleResendInvite(user)}
-                                disabled={resendingInvite === user.inviteId}
+                                disabled={resendingInvite === user.inviteId || cancellingInvite === user.inviteId}
                               >
                                 <RefreshCw className={cn(
                                   "h-4 w-4 mr-2",
                                   resendingInvite === user.inviteId && "animate-spin"
                                 )} />
                                 {resendingInvite === user.inviteId ? 'Sending...' : 'Resend Invite'}
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() => handleCancelInvite(user)}
+                                disabled={resendingInvite === user.inviteId || cancellingInvite === user.inviteId}
+                                className="text-destructive focus:text-destructive"
+                              >
+                                <X className={cn(
+                                  "h-4 w-4 mr-2",
+                                  cancellingInvite === user.inviteId && "animate-spin"
+                                )} />
+                                {cancellingInvite === user.inviteId ? 'Cancelling...' : 'Cancel Invite'}
                               </DropdownMenuItem>
                             </DropdownMenuContent>
                           </DropdownMenu>
