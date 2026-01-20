@@ -4528,8 +4528,11 @@ export type Database = {
         Row: {
           created_at: string | null
           created_by: string | null
+          description: string | null
           id: string
+          is_archived: boolean
           is_default: boolean | null
+          is_system: boolean
           meeting_type: Database["public"]["Enums"]["eos_meeting_type"]
           segments: Json
           template_name: string
@@ -4539,8 +4542,11 @@ export type Database = {
         Insert: {
           created_at?: string | null
           created_by?: string | null
+          description?: string | null
           id?: string
+          is_archived?: boolean
           is_default?: boolean | null
+          is_system?: boolean
           meeting_type: Database["public"]["Enums"]["eos_meeting_type"]
           segments?: Json
           template_name: string
@@ -4550,8 +4556,11 @@ export type Database = {
         Update: {
           created_at?: string | null
           created_by?: string | null
+          description?: string | null
           id?: string
+          is_archived?: boolean
           is_default?: boolean | null
+          is_system?: boolean
           meeting_type?: Database["public"]["Enums"]["eos_meeting_type"]
           segments?: Json
           template_name?: string
@@ -13854,6 +13863,10 @@ export type Database = {
       }
       seed_default_meeting_templates: { Args: never; Returns: undefined }
       seed_default_qc_template: { Args: never; Returns: undefined }
+      seed_system_agenda_templates: {
+        Args: { p_tenant_id: number }
+        Returns: undefined
+      }
       set_active_tenant: { Args: { p_tenant_id: string }; Returns: boolean }
       set_issue_status: {
         Args: { p_issue_id: string; p_solution_text?: string; p_status: string }

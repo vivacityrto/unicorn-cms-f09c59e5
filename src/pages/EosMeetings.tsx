@@ -4,12 +4,12 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Plus, Calendar, Clock, Users, Play, FileText, Settings, AlertCircle, RefreshCw, Trash2 } from 'lucide-react';
+import { Plus, Calendar, Clock, Users, Play, FileText, Settings, AlertCircle, RefreshCw, Trash2, Zap, Target } from 'lucide-react';
 import { useEosMeetings } from '@/hooks/useEos';
 import { useRBAC } from '@/hooks/useRBAC';
 import { format } from 'date-fns';
 import { MeetingScheduler } from '@/components/eos/MeetingScheduler';
-import { AgendaTemplateEditor } from '@/components/eos/AgendaTemplateEditor';
+import { AgendaTemplateLibrary } from '@/components/eos/AgendaTemplateLibrary';
 import { DeleteMeetingDialog } from '@/components/eos/DeleteMeetingDialog';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import type { MeetingType } from '@/types/eos';
@@ -27,7 +27,7 @@ function MeetingsContent() {
   const { meetings, isLoading, error, refetch, deleteMeeting } = useEosMeetings();
   const { canScheduleMeetings } = useRBAC();
   const [schedulerOpen, setSchedulerOpen] = useState(false);
-  const [templateEditorOpen, setTemplateEditorOpen] = useState(false);
+  const [templateLibraryOpen, setTemplateLibraryOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<'all' | MeetingType>('all');
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [meetingToDelete, setMeetingToDelete] = useState<{ id: string; title: string } | null>(null);
@@ -109,12 +109,12 @@ function MeetingsContent() {
             EOS Meetings
           </h1>
           <p className="text-muted-foreground mt-2">
-            Level 10, Quarterly, and Annual strategic meetings
+            Structured meetings that drive execution, visibility, and accountability.
           </p>
         </div>
         {canScheduleMeetings() && (
           <div className="flex gap-2">
-            <Button variant="outline" onClick={() => setTemplateEditorOpen(true)}>
+            <Button variant="outline" onClick={() => setTemplateLibraryOpen(true)}>
               <Settings className="w-4 h-4 mr-2" />
               Manage Templates
             </Button>
@@ -132,9 +132,9 @@ function MeetingsContent() {
         onScheduled={() => window.location.reload()}
       />
 
-      <AgendaTemplateEditor
-        open={templateEditorOpen}
-        onOpenChange={setTemplateEditorOpen}
+      <AgendaTemplateLibrary
+        open={templateLibraryOpen}
+        onOpenChange={setTemplateLibraryOpen}
       />
 
       <DeleteMeetingDialog
@@ -145,30 +145,48 @@ function MeetingsContent() {
         isDeleting={deleteMeeting.isPending}
       />
 
-      {/* Info Cards */}
+      {/* Meeting Type Info Cards */}
       <div className="grid md:grid-cols-3 gap-4">
         <Card className="border-blue-200 bg-blue-50/50 dark:bg-blue-950/20 dark:border-blue-800">
           <CardContent className="p-4">
-            <h3 className="font-semibold mb-1 text-sm">Level 10 Meeting</h3>
+            <div className="flex items-center gap-2 mb-2">
+              <Zap className="w-5 h-5 text-blue-600" />
+              <h3 className="font-semibold text-sm">Level 10 Meeting</h3>
+            </div>
             <p className="text-xs text-muted-foreground">
-              90-minute weekly tactical meeting: Segue, Scorecard, Rocks, Headlines, To-Dos, IDS, Conclude.
+              Weekly execution meeting to track scorecard results, review Rocks, surface risks and opportunities, and assign actions.
             </p>
+            <div className="mt-2 text-xs text-muted-foreground/70">
+              Default: Segue • Scorecard • Rock Review • Risks & Opps • To-Dos • IDS • Conclude
+            </div>
           </CardContent>
         </Card>
         <Card className="border-purple-200 bg-purple-50/50 dark:bg-purple-950/20 dark:border-purple-800">
           <CardContent className="p-4">
-            <h3 className="font-semibold mb-1 text-sm">Quarterly Meeting</h3>
+            <div className="flex items-center gap-2 mb-2">
+              <Target className="w-5 h-5 text-purple-600" />
+              <h3 className="font-semibold text-sm">Quarterly Meeting</h3>
+            </div>
             <p className="text-xs text-muted-foreground">
-              Full-day strategic session to review progress, update V/TO, and set next quarter rocks.
+              Strategic review to assess the last quarter and set the Superhero Flight Plan for the next.
             </p>
+            <div className="mt-2 text-xs text-muted-foreground/70">
+              Outputs: Confirmed quarterly goal • Approved Rocks • Updated scorecard targets
+            </div>
           </CardContent>
         </Card>
         <Card className="border-green-200 bg-green-50/50 dark:bg-green-950/20 dark:border-green-800">
           <CardContent className="p-4">
-            <h3 className="font-semibold mb-1 text-sm">Annual Meeting</h3>
+            <div className="flex items-center gap-2 mb-2">
+              <Calendar className="w-5 h-5 text-emerald-600" />
+              <h3 className="font-semibold text-sm">Annual Strategic Planning</h3>
+            </div>
             <p className="text-xs text-muted-foreground">
-              Two-day strategic planning for the year ahead, including organizational structure review.
+              Annual planning session to reset direction, priorities, and execution focus.
             </p>
+            <div className="mt-2 text-xs text-muted-foreground/70">
+              Outputs: V/TO updates • 12 Month Mission Objectives • Quarterly planning cadence
+            </div>
           </CardContent>
         </Card>
       </div>
