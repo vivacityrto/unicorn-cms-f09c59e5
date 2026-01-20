@@ -1,7 +1,9 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 
-const SENDGRID_API_KEY = Deno.env.get("SENDGRID_API_KEY");
-const SENDGRID_FROM_EMAIL = Deno.env.get("SENDGRID_FROM_EMAIL");
+const MAILGUN_API_KEY = Deno.env.get("MAILGUN_API_KEY");
+const MAILGUN_DOMAIN = Deno.env.get("MAILGUN_DOMAIN");
+const MAILGUN_FROM_EMAIL = Deno.env.get("MAILGUN_FROM_EMAIL");
+const MAILGUN_FROM_NAME = Deno.env.get("MAILGUN_FROM_NAME") || "Unicorn 2.0";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -24,9 +26,12 @@ const handler = async (req: Request): Promise<Response> => {
   try {
     const { email, inviteUrl, userType }: InvitationRequest = await req.json();
 
-    if (!SENDGRID_API_KEY || !SENDGRID_FROM_EMAIL) {
-      throw new Error("SendGrid configuration is missing");
+    if (!MAILGUN_API_KEY || !MAILGUN_DOMAIN) {
+      console.error("Missing Mailgun configuration");
+      throw new Error("Mailgun configuration is missing");
     }
+
+    const fromEmail = MAILGUN_FROM_EMAIL || `noreply@${MAILGUN_DOMAIN}`;
 
     const subject = userType === 'vivacity' 
       ? "Invitation to Join Unicorn 2.0 - Vivacity Team"
@@ -72,7 +77,7 @@ const handler = async (req: Request): Promise<Response> => {
               </p>
               
               <p style="margin-top: 30px; font-size: 12px; color: #999; border-top: 1px solid #e0e0e0; padding-top: 20px;">
-                This invitation will expire in 7 days. If you didn't expect this invitation, you can safely ignore this email.
+                This invitation will expire in 24 hours. If you didn't expect this invitation, you can safely ignore this email.
               </p>
             </div>
             <div class="footer">
@@ -84,42 +89,39 @@ const handler = async (req: Request): Promise<Response> => {
       </html>
     `;
 
-    const sendgridResponse = await fetch("https://api.sendgrid.com/v3/mail/send", {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${SENDGRID_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        personalizations: [
-          {
-            to: [{ email }],
-            subject,
-          },
-        ],
-        from: {
-          email: SENDGRID_FROM_EMAIL,
-          name: "Unicorn 2.0",
-        },
-        content: [
-          {
-            type: "text/html",
-            value: html,
-          },
-        ],
-      }),
-    });
+    // Send email via Mailgun (EU region)
+    const formData = new FormData();
+    formData.append("from", `${MAILGUN_FROM_NAME} <${fromEmail}>`);
+    formData.append("to", email);
+    formData.append("subject", subject);
+    formData.append("html", html);
 
-    if (!sendgridResponse.ok) {
-      const error = await sendgridResponse.text();
-      console.error("SendGrid error:", error);
-      throw new Error(`Failed to send email: ${error}`);
+    const mailgunResponse = await fetch(
+      `https://api.eu.mailgun.net/v3/${MAILGUN_DOMAIN}/messages`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Basic ${btoa(`api:${MAILGUN_API_KEY}`)}`,
+        },
+        body: formData,
+      }
+    );
+
+    if (!mailgunResponse.ok) {
+      const errorText = await mailgunResponse.text();
+      console.error("Mailgun error:", {
+        status: mailgunResponse.status,
+        statusText: mailgunResponse.statusText,
+        body: errorText,
+      });
+      throw new Error(`Failed to send email: ${errorText}`);
     }
 
-    console.log("Invitation email sent successfully to:", email);
+    const result = await mailgunResponse.json();
+    console.log("Invitation email sent successfully to:", email, result);
 
     return new Response(
-      JSON.stringify({ success: true }),
+      JSON.stringify({ success: true, messageId: result.id }),
       {
         status: 200,
         headers: { "Content-Type": "application/json", ...corsHeaders },
