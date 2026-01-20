@@ -25,7 +25,7 @@ function VtoContent() {
   const [isEditing, setIsEditing] = useState(false);
   const [selectedVersion, setSelectedVersion] = useState<string | null>(null);
 
-  // Fetch active VTO
+  // Fetch active VTO (most recently updated)
   const { data: activeVto, isLoading } = useQuery({
     queryKey: ['eos-vto-active', profile?.tenant_id],
     queryFn: async () => {
@@ -33,8 +33,10 @@ function VtoContent() {
         .from('eos_vto')
         .select('*')
         .eq('tenant_id', profile?.tenant_id!)
-        .single();
-      if (error && error.code !== 'PGRST116') throw error;
+        .order('updated_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (error) throw error;
       return data;
     },
     enabled: !!profile?.tenant_id,
@@ -134,9 +136,9 @@ function VtoContent() {
         </TabsContent>
 
         <TabsContent value="history" className="space-y-4">
-          {vtoVersions && vtoVersions.length > 0 ? (
+          {vtoVersions && vtoVersions.filter(v => v.id !== activeVto?.id).length > 0 ? (
             <div className="grid gap-4">
-              {vtoVersions.map((version) => (
+              {vtoVersions.filter(v => v.id !== activeVto?.id).map((version) => (
                 <Card key={version.id} className="cursor-pointer hover:shadow-md transition-shadow">
                   <CardHeader>
                     <div className="flex items-center justify-between">
