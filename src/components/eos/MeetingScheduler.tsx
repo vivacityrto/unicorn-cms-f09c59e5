@@ -5,11 +5,12 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Checkbox } from '@/components/ui/checkbox';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useEosAgendaTemplates } from '@/hooks/useEosAgendaTemplates';
-import { Calendar, Repeat, FileText } from 'lucide-react';
+import { Calendar, Repeat, FileText, Users } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { MeetingTypeSelector } from './MeetingTypeSelector';
 import { useEosMeetingRecurrences } from '@/hooks/useEosMeetingRecurrences';
@@ -32,6 +33,7 @@ export const MeetingScheduler = ({ open, onOpenChange, onScheduled }: MeetingSch
   const [duration, setDuration] = useState('90');
   const [templateId, setTemplateId] = useState('');
   const [facilitatorId, setFacilitatorId] = useState('');
+  const [participantIds, setParticipantIds] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [frequency, setFrequency] = useState<'one-time' | 'weekly' | 'quarterly' | 'annual'>('one-time');
   const [endRule, setEndRule] = useState<'date' | 'never'>('never');
@@ -52,7 +54,7 @@ export const MeetingScheduler = ({ open, onOpenChange, onScheduled }: MeetingSch
     }
   }, [meetingType, templates]);
 
-  // Fetch users for facilitator selection
+  // Fetch users for facilitator/participant selection
   const { data: users } = useQuery({
     queryKey: ['users', profile?.tenant_id],
     queryFn: async () => {
@@ -66,6 +68,14 @@ export const MeetingScheduler = ({ open, onOpenChange, onScheduled }: MeetingSch
     },
     enabled: !!profile?.tenant_id && open,
   });
+
+  const toggleParticipant = (userId: string) => {
+    setParticipantIds(prev => 
+      prev.includes(userId) 
+        ? prev.filter(id => id !== userId)
+        : [...prev, userId]
+    );
+  };
 
   const handleSchedule = async () => {
     if (!title || !scheduledDate || !facilitatorId || !profile?.tenant_id) {
@@ -92,7 +102,7 @@ export const MeetingScheduler = ({ open, onOpenChange, onScheduled }: MeetingSch
           p_duration_minutes: parseInt(duration),
           p_facilitator_id: facilitatorId,
           p_scribe_id: null,
-          p_participant_ids: [],
+          p_participant_ids: participantIds,
         });
         if (meetingError) throw meetingError;
         meetingId = data;
@@ -137,6 +147,7 @@ export const MeetingScheduler = ({ open, onOpenChange, onScheduled }: MeetingSch
       setDuration('90');
       setTemplateId('');
       setFacilitatorId('');
+      setParticipantIds([]);
       setFrequency('one-time');
       setEndRule('never');
       setEndDate('');
@@ -313,6 +324,44 @@ export const MeetingScheduler = ({ open, onOpenChange, onScheduled }: MeetingSch
                 ))}
               </SelectContent>
             </Select>
+          </div>
+
+          {/* Participants Selection */}
+          <div className="space-y-2">
+            <Label className="flex items-center gap-2">
+              <Users className="h-4 w-4" />
+              Participants
+            </Label>
+            <p className="text-xs text-muted-foreground mb-2">
+              {meetingType === 'Same_Page' 
+                ? 'Add your Integrator or other key participants to this Same Page meeting.'
+                : 'Select team members to include in this meeting.'}
+            </p>
+            <div className="border rounded-md p-3 max-h-[150px] overflow-y-auto space-y-2">
+              {users?.filter(u => u.user_uuid !== facilitatorId).map((user) => (
+                <div key={user.user_uuid} className="flex items-center space-x-2">
+                  <Checkbox
+                    id={`participant-${user.user_uuid}`}
+                    checked={participantIds.includes(user.user_uuid)}
+                    onCheckedChange={() => toggleParticipant(user.user_uuid)}
+                  />
+                  <label
+                    htmlFor={`participant-${user.user_uuid}`}
+                    className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                  >
+                    {user.first_name} {user.last_name}
+                  </label>
+                </div>
+              ))}
+              {users?.filter(u => u.user_uuid !== facilitatorId).length === 0 && (
+                <p className="text-sm text-muted-foreground">No other users available</p>
+              )}
+            </div>
+            {participantIds.length > 0 && (
+              <p className="text-xs text-muted-foreground">
+                {participantIds.length} participant{participantIds.length > 1 ? 's' : ''} selected
+              </p>
+            )}
           </div>
 
           <div className="grid grid-cols-2 gap-4">
