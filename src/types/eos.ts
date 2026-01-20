@@ -168,8 +168,11 @@ export interface EosAgendaTemplate {
   tenant_id: number;
   meeting_type: MeetingType;
   template_name: string;
+  description?: string;
   segments: EosAgendaSegment[];
   is_default: boolean;
+  is_system: boolean;
+  is_archived: boolean;
   created_by?: string;
   created_at: string;
   updated_at: string;

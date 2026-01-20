@@ -8,7 +8,8 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
-import { Calendar, Repeat } from 'lucide-react';
+import { useEosAgendaTemplates } from '@/hooks/useEosAgendaTemplates';
+import { Calendar, Repeat, FileText } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { MeetingTypeSelector } from './MeetingTypeSelector';
 import { useEosMeetingRecurrences } from '@/hooks/useEosMeetingRecurrences';
@@ -23,6 +24,8 @@ interface MeetingSchedulerProps {
 export const MeetingScheduler = ({ open, onOpenChange, onScheduled }: MeetingSchedulerProps) => {
   const { profile } = useAuth();
   const { generateRecurrence } = useEosMeetingRecurrences();
+  const { templates, getTemplatesForType, getDefaultTemplate } = useEosAgendaTemplates();
+  
   const [meetingType, setMeetingType] = useState<MeetingType>('L10');
   const [title, setTitle] = useState('');
   const [scheduledDate, setScheduledDate] = useState('');
@@ -34,32 +37,20 @@ export const MeetingScheduler = ({ open, onOpenChange, onScheduled }: MeetingSch
   const [endRule, setEndRule] = useState<'date' | 'never'>('never');
   const [endDate, setEndDate] = useState('');
 
-  // Fetch default template for selected meeting type
-  const { data: defaultTemplate, isLoading: isLoadingTemplate } = useQuery({
-    queryKey: ['eos-agenda-templates', profile?.tenant_id, meetingType],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('eos_agenda_templates')
-        .select('*')
-        .eq('tenant_id', profile?.tenant_id!)
-        .eq('meeting_type', meetingType)
-        .eq('is_default', true)
-        .maybeSingle();
-      if (error) throw error;
-      return data;
-    },
-    enabled: !!profile?.tenant_id && open && !!meetingType,
-  });
+  // Get templates for current meeting type
+  const availableTemplates = getTemplatesForType(meetingType);
 
-  // Auto-select the default template when it loads
+  // Auto-select the default template when meeting type changes
   useEffect(() => {
+    const defaultTemplate = getDefaultTemplate(meetingType);
     if (defaultTemplate) {
       setTemplateId(defaultTemplate.id);
-    } else if (!isLoadingTemplate) {
-      // Clear template ID if no default template found
+    } else if (availableTemplates.length > 0) {
+      setTemplateId(availableTemplates[0].id);
+    } else {
       setTemplateId('');
     }
-  }, [defaultTemplate, isLoadingTemplate]);
+  }, [meetingType, templates]);
 
   // Fetch users for facilitator selection
   const { data: users } = useQuery({
@@ -79,12 +70,6 @@ export const MeetingScheduler = ({ open, onOpenChange, onScheduled }: MeetingSch
   const handleSchedule = async () => {
     if (!title || !scheduledDate || !facilitatorId || !profile?.tenant_id) {
       toast({ title: 'Please fill in all required fields', variant: 'destructive' });
-      return;
-    }
-
-    // If still loading template, wait
-    if (isLoadingTemplate) {
-      toast({ title: 'Template loading', description: 'Please wait for the template to load', variant: 'destructive' });
       return;
     }
 
@@ -212,6 +197,42 @@ export const MeetingScheduler = ({ open, onOpenChange, onScheduled }: MeetingSch
                 }
               }}
             />
+          </div>
+
+          {/* Agenda Template Selection */}
+          <div className="space-y-2">
+            <Label className="flex items-center gap-2">
+              <FileText className="h-4 w-4" />
+              Agenda Template
+            </Label>
+            <Select value={templateId} onValueChange={setTemplateId}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select agenda template" />
+              </SelectTrigger>
+              <SelectContent>
+                {availableTemplates.map((template) => (
+                  <SelectItem key={template.id} value={template.id}>
+                    <div className="flex items-center gap-2">
+                      {template.template_name}
+                      {template.is_default && (
+                        <span className="text-xs text-muted-foreground">(Default)</span>
+                      )}
+                      {template.is_system && (
+                        <span className="text-xs text-muted-foreground">(System)</span>
+                      )}
+                    </div>
+                  </SelectItem>
+                ))}
+                {availableTemplates.length === 0 && (
+                  <SelectItem value="none" disabled>No templates available</SelectItem>
+                )}
+              </SelectContent>
+            </Select>
+            {availableTemplates.length === 0 && (
+              <p className="text-xs text-muted-foreground">
+                No agenda templates found for this meeting type. A meeting will be created without an agenda.
+              </p>
+            )}
           </div>
           
           <div className="space-y-2">
