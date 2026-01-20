@@ -55,57 +55,62 @@ export function MonthlyFocusSection({
     monthName: string,
     monthData: MonthFocus,
     setMonthData: React.Dispatch<React.SetStateAction<MonthFocus>>
-  ) => (
-    <Card>
-      <CardHeader className="pb-2">
-        <div className="flex items-center gap-2">
-          <Calendar className="h-4 w-4 text-primary" />
-          <CardTitle className="text-base">MONTH: {monthName}</CardTitle>
-        </div>
-      </CardHeader>
-      <CardContent className="space-y-3">
-        {monthData.items.map((item, index) => (
-          <div key={index} className="flex items-center gap-2">
-            <Checkbox disabled />
-            <Input
-              placeholder="Focus item..."
-              value={item}
-              onChange={(e) => {
-                const updated = [...monthData.items];
-                updated[index] = e.target.value;
-                updateMonthItems(setMonthData, updated);
-              }}
-              disabled={!canEdit}
-              className="flex-1"
-            />
-            {canEdit && monthData.items.length > 1 && (
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => {
-                  const updated = monthData.items.filter((_, i) => i !== index);
+  ) => {
+    // Ensure items is always an array
+    const items = monthData?.items ?? [''];
+    
+    return (
+      <Card>
+        <CardHeader className="pb-2">
+          <div className="flex items-center gap-2">
+            <Calendar className="h-4 w-4 text-primary" />
+            <CardTitle className="text-base">MONTH: {monthName}</CardTitle>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {items.map((item, index) => (
+            <div key={index} className="flex items-center gap-2">
+              <Checkbox disabled />
+              <Input
+                placeholder="Focus item..."
+                value={item}
+                onChange={(e) => {
+                  const updated = [...items];
+                  updated[index] = e.target.value;
                   updateMonthItems(setMonthData, updated);
                 }}
-              >
-                <X className="h-4 w-4" />
-              </Button>
-            )}
-          </div>
-        ))}
-        {canEdit && (
-          <Button
-            variant="ghost"
-            size="sm"
-            className="w-full"
-            onClick={() => updateMonthItems(setMonthData, [...monthData.items, ''])}
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            Add Focus Item
-          </Button>
-        )}
-      </CardContent>
-    </Card>
-  );
+                disabled={!canEdit}
+                className="flex-1"
+              />
+              {canEdit && items.length > 1 && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => {
+                    const updated = items.filter((_, i) => i !== index);
+                    updateMonthItems(setMonthData, updated);
+                  }}
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              )}
+            </div>
+          ))}
+          {canEdit && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="w-full"
+              onClick={() => updateMonthItems(setMonthData, [...items, ''])}
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Add Focus Item
+            </Button>
+          )}
+        </CardContent>
+      </Card>
+    );
+  };
 
   return (
     <Card>
