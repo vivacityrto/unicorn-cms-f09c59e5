@@ -214,7 +214,7 @@ serve(async (req: Request): Promise<Response> => {
     formData.append("html", emailHtml);
 
     const mailgunResponse = await fetch(
-      `https://api.mailgun.net/v3/${MAILGUN_DOMAIN}/messages`,
+      `https://api.eu.mailgun.net/v3/${MAILGUN_DOMAIN}/messages`,
       {
         method: "POST",
         headers: {
