@@ -4,15 +4,16 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Plus, Calendar, Clock, Users, Play, FileText, Settings, AlertCircle, RefreshCw, Trash2, Zap, Target } from 'lucide-react';
+import { Plus, Calendar, Clock, Users, Play, FileText, Settings, AlertCircle, RefreshCw, Trash2, Zap, Target, LayoutTemplate } from 'lucide-react';
 import { useEosMeetings } from '@/hooks/useEos';
 import { useRBAC } from '@/hooks/useRBAC';
 import { format } from 'date-fns';
 import { MeetingScheduler } from '@/components/eos/MeetingScheduler';
 import { AgendaTemplateLibrary } from '@/components/eos/AgendaTemplateLibrary';
+import { ApplyTemplateDialog } from '@/components/eos/ApplyTemplateDialog';
 import { DeleteMeetingDialog } from '@/components/eos/DeleteMeetingDialog';
 import { DashboardLayout } from '@/components/DashboardLayout';
-import type { MeetingType } from '@/types/eos';
+import type { MeetingType, EosMeeting } from '@/types/eos';
 
 export default function EosMeetings() {
   return (
@@ -31,6 +32,13 @@ function MeetingsContent() {
   const [activeTab, setActiveTab] = useState<'all' | MeetingType>('all');
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [meetingToDelete, setMeetingToDelete] = useState<{ id: string; title: string } | null>(null);
+  const [applyTemplateDialogOpen, setApplyTemplateDialogOpen] = useState(false);
+  const [meetingForTemplate, setMeetingForTemplate] = useState<EosMeeting | null>(null);
+
+  const handleApplyTemplateClick = (meeting: EosMeeting) => {
+    setMeetingForTemplate(meeting);
+    setApplyTemplateDialogOpen(true);
+  };
 
   const handleDeleteClick = (id: string, title: string) => {
     setMeetingToDelete({ id, title });
@@ -145,6 +153,20 @@ function MeetingsContent() {
         isDeleting={deleteMeeting.isPending}
       />
 
+      {meetingForTemplate && (
+        <ApplyTemplateDialog
+          open={applyTemplateDialogOpen}
+          onOpenChange={(open) => {
+            setApplyTemplateDialogOpen(open);
+            if (!open) setMeetingForTemplate(null);
+          }}
+          meetingId={meetingForTemplate.id}
+          meetingType={meetingForTemplate.meeting_type}
+          meetingTitle={meetingForTemplate.title}
+          hasExistingSegments={true}
+        />
+      )}
+
       {/* Meeting Type Info Cards */}
       <div className="grid md:grid-cols-3 gap-4">
         <Card className="border-blue-200 bg-blue-50/50 dark:bg-blue-950/20 dark:border-blue-800">
@@ -257,6 +279,17 @@ function MeetingsContent() {
                     >
                       <Play className="w-4 h-4 mr-2" />
                       Start Meeting
+                    </Button>
+                  )}
+                  {canScheduleMeetings() && !meeting.is_complete && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleApplyTemplateClick(meeting)}
+                      title="Apply Agenda Template"
+                    >
+                      <LayoutTemplate className="w-4 h-4 mr-2" />
+                      Apply Template
                     </Button>
                   )}
                   {canScheduleMeetings() && (
