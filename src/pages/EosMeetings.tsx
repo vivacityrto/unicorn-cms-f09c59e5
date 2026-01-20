@@ -181,15 +181,6 @@ function MeetingsContent() {
           meeting={selectedPastMeeting}
         />
       )}
-            setApplyTemplateDialogOpen(open);
-            if (!open) setMeetingForTemplate(null);
-          }}
-          meetingId={meetingForTemplate.id}
-          meetingType={meetingForTemplate.meeting_type}
-          meetingTitle={meetingForTemplate.title}
-          hasExistingSegments={true}
-        />
-      )}
 
       {/* Meeting Type Info Cards */}
       <div className="grid md:grid-cols-3 gap-4">
