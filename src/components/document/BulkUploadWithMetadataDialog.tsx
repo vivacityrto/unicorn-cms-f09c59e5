@@ -302,12 +302,12 @@ export function BulkUploadWithMetadataDialog({
             {/* Category Selection */}
             <div className="space-y-2">
               <Label>Category (optional)</Label>
-              <Select value={category} onValueChange={setCategory}>
+              <Select value={category || "__none__"} onValueChange={(v) => setCategory(v === "__none__" ? "" : v)}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select a category" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">No Category</SelectItem>
+                  <SelectItem value="__none__">No Category</SelectItem>
                   {DOCUMENT_CATEGORIES.map(cat => (
                     <SelectItem key={cat} value={cat}>{cat}</SelectItem>
                   ))}
@@ -318,12 +318,12 @@ export function BulkUploadWithMetadataDialog({
             {/* Standard Set */}
             <div className="space-y-2">
               <Label>Standard Set (optional)</Label>
-              <Select value={standardSet} onValueChange={setStandardSet}>
+              <Select value={standardSet || "__none__"} onValueChange={(v) => setStandardSet(v === "__none__" ? "" : v)}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select standard set" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">No Standard Set</SelectItem>
+                  <SelectItem value="__none__">No Standard Set</SelectItem>
                   {STANDARD_SETS.map(std => (
                     <SelectItem key={std} value={std}>{std}</SelectItem>
                   ))}

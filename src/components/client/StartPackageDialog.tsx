@@ -138,12 +138,12 @@ export function StartPackageDialog({
                 <User className="h-4 w-4" />
                 Assign CSC (optional)
               </Label>
-              <Select value={selectedCscId} onValueChange={setSelectedCscId}>
+              <Select value={selectedCscId || "__none__"} onValueChange={(v) => setSelectedCscId(v === "__none__" ? "" : v)}>
                 <SelectTrigger id="csc">
                   <SelectValue placeholder="Select a team member..." />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">No assignment</SelectItem>
+                  <SelectItem value="__none__">No assignment</SelectItem>
                   {cscUsers.map((user) => (
                     <SelectItem key={user.user_uuid} value={user.user_uuid}>
                       {user.first_name} {user.last_name}

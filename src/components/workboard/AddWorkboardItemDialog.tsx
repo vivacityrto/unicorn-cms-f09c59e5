@@ -172,12 +172,12 @@ export function AddWorkboardItemDialog({
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label>Assignee</Label>
-              <Select value={assigneeId} onValueChange={setAssigneeId}>
+              <Select value={assigneeId || "__none__"} onValueChange={(v) => setAssigneeId(v === "__none__" ? "" : v)}>
                 <SelectTrigger>
                   <SelectValue placeholder="Unassigned" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">
+                  <SelectItem value="__none__">
                     <div className="flex items-center gap-2 text-muted-foreground">
                       <UserMinus className="h-4 w-4" />
                       Unassigned
@@ -227,12 +227,12 @@ export function AddWorkboardItemDialog({
                 <Package className="h-3.5 w-3.5" />
                 Package
               </Label>
-              <Select value={packageId} onValueChange={setPackageId}>
+              <Select value={packageId || "__none__"} onValueChange={(v) => setPackageId(v === "__none__" ? "" : v)}>
                 <SelectTrigger>
                   <SelectValue placeholder="None" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">None</SelectItem>
+                  <SelectItem value="__none__">None</SelectItem>
                   {packages.map(pkg => (
                     <SelectItem key={pkg.id} value={pkg.id.toString()}>
                       {pkg.name}
@@ -247,12 +247,12 @@ export function AddWorkboardItemDialog({
                 <Layers className="h-3.5 w-3.5" />
                 Stage
               </Label>
-              <Select value={stageId} onValueChange={setStageId}>
+              <Select value={stageId || "__none__"} onValueChange={(v) => setStageId(v === "__none__" ? "" : v)}>
                 <SelectTrigger>
                   <SelectValue placeholder="None" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">None</SelectItem>
+                  <SelectItem value="__none__">None</SelectItem>
                   {stages.map(stage => (
                     <SelectItem key={stage.id} value={stage.id.toString()}>
                       {stage.name}

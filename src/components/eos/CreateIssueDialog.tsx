@@ -132,12 +132,12 @@ export function CreateIssueDialog({
 
             <div className="space-y-2">
               <Label>Client (Optional)</Label>
-              <Select value={clientId} onValueChange={setClientId}>
+              <Select value={clientId || "__none__"} onValueChange={(v) => setClientId(v === "__none__" ? "" : v)}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select client" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">None</SelectItem>
+                  <SelectItem value="__none__">None</SelectItem>
                   {clients?.map((client) => (
                     <SelectItem key={client.id} value={client.id}>
                       {client.companyname || client.contactname}

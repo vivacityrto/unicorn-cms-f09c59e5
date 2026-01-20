@@ -264,12 +264,12 @@ function ContextSelectionStep({
             <Building2 className="h-4 w-4" />
             Tenant (optional)
           </Label>
-          <Select value={selectedTenantId} onValueChange={onTenantChange}>
+          <Select value={selectedTenantId || "__none__"} onValueChange={(v) => onTenantChange(v === "__none__" ? "" : v)}>
             <SelectTrigger>
               <SelectValue placeholder="Use sample data" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">Use sample data</SelectItem>
+              <SelectItem value="__none__">Use sample data</SelectItem>
               {tenants.map(t => (
                 <SelectItem key={t.id} value={t.id.toString()}>
                   {t.name}
