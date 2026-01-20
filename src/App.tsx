@@ -52,6 +52,7 @@ import EosCalendar from "./pages/EosCalendar";
 import EosQC from "./pages/EosQC";
 import EosQCSession from "./pages/EosQCSession";
 import EosFlightPlan from "./pages/EosFlightPlan";
+import EosRisksOpportunities from "./pages/EosRisksOpportunities";
 import ResetPassword from "./pages/ResetPassword";
 import Audits from "./pages/Audits";
 import AuditWorkspace from "./pages/AuditWorkspace";
@@ -433,11 +434,17 @@ const App = () => (
               } 
             />
             <Route 
-              path="/eos/issues" 
+              path="/eos/risks-opportunities" 
               element={
                 <ProtectedRoute>
-                  <EosIssues />
+                  <EosRisksOpportunities />
                 </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/eos/issues" 
+              element={
+                <Navigate to="/eos/risks-opportunities" replace />
               } 
             />
             <Route 

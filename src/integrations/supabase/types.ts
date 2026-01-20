@@ -14039,7 +14039,15 @@ export type Database = {
         | "TAS"
         | "ACT"
         | "NT"
-      eos_issue_status: "Open" | "Discussing" | "Solved" | "Archived"
+      eos_issue_status:
+        | "Open"
+        | "Discussing"
+        | "Solved"
+        | "Archived"
+        | "In Review"
+        | "Actioning"
+        | "Escalated"
+        | "Closed"
       eos_meeting_role: "Leader" | "Member" | "Observer"
       eos_meeting_type: "L10" | "Quarterly" | "Annual" | "Focus_Day" | "Custom"
       eos_participant_role: "Leader" | "Member" | "Observer"
@@ -14238,7 +14246,16 @@ export const Constants = {
   public: {
     Enums: {
       australian_state: ["NSW", "VIC", "QLD", "WA", "SA", "TAS", "ACT", "NT"],
-      eos_issue_status: ["Open", "Discussing", "Solved", "Archived"],
+      eos_issue_status: [
+        "Open",
+        "Discussing",
+        "Solved",
+        "Archived",
+        "In Review",
+        "Actioning",
+        "Escalated",
+        "Closed",
+      ],
       eos_meeting_role: ["Leader", "Member", "Observer"],
       eos_meeting_type: ["L10", "Quarterly", "Annual", "Focus_Day", "Custom"],
       eos_participant_role: ["Leader", "Member", "Observer"],

@@ -1,0 +1,522 @@
+import { useState } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
+import { Plus, AlertTriangle, Lightbulb, TrendingUp, Shield, User, Calendar, Link as LinkIcon, Filter, X } from 'lucide-react';
+import { useRisksOpportunities } from '@/hooks/useRisksOpportunities';
+import { useEosRocks } from '@/hooks/useEos';
+import { format } from 'date-fns';
+import { DashboardLayout } from '@/components/DashboardLayout';
+import { CATEGORIES, IMPACTS, STATUSES, type RiskOpportunityType, type RiskOpportunityCategory, type RiskOpportunityImpact, type RiskOpportunityStatus } from '@/types/risksOpportunities';
+
+export default function EosRisksOpportunities() {
+  return (
+    <DashboardLayout>
+      <RisksOpportunitiesContent />
+    </DashboardLayout>
+  );
+}
+
+function RisksOpportunitiesContent() {
+  const { items, isLoading, createItem, updateItem } = useRisksOpportunities();
+  const { rocks } = useEosRocks();
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [filterType, setFilterType] = useState<'all' | RiskOpportunityType>('all');
+  const [filterCategory, setFilterCategory] = useState<'all' | RiskOpportunityCategory>('all');
+  const [filterStatus, setFilterStatus] = useState<'all' | RiskOpportunityStatus>('all');
+  
+  // Form state
+  const [formData, setFormData] = useState({
+    item_type: 'risk' as RiskOpportunityType,
+    title: '',
+    description: '',
+    category: '' as RiskOpportunityCategory | '',
+    impact: '' as RiskOpportunityImpact | '',
+    quarter_number: undefined as number | undefined,
+    quarter_year: undefined as number | undefined,
+    linked_rock_id: '' as string,
+    assigned_to: '',
+  });
+
+  const resetForm = () => {
+    setFormData({
+      item_type: 'risk',
+      title: '',
+      description: '',
+      category: '',
+      impact: '',
+      quarter_number: undefined,
+      quarter_year: undefined,
+      linked_rock_id: '',
+      assigned_to: '',
+    });
+  };
+
+  const handleCreate = async () => {
+    if (!formData.title || !formData.item_type) return;
+    
+    await createItem.mutateAsync({
+      item_type: formData.item_type,
+      title: formData.title,
+      description: formData.description,
+      category: formData.category || undefined,
+      impact: formData.impact || undefined,
+      quarter_number: formData.quarter_number,
+      quarter_year: formData.quarter_year,
+      linked_rock_id: formData.linked_rock_id || undefined,
+      assigned_to: formData.assigned_to || undefined,
+    });
+    
+    resetForm();
+    setIsCreateOpen(false);
+  };
+
+  const handleStatusChange = async (id: string, newStatus: RiskOpportunityStatus, outcomeNote?: string) => {
+    const updates: any = { status: newStatus };
+    if (newStatus === 'Closed' && outcomeNote) {
+      updates.outcome_note = outcomeNote;
+    }
+    await updateItem.mutateAsync({ id, ...updates });
+  };
+
+  const filteredItems = items?.filter(item => {
+    if (filterType !== 'all' && item.item_type !== filterType) return false;
+    if (filterCategory !== 'all' && item.category !== filterCategory) return false;
+    if (filterStatus !== 'all' && item.status !== filterStatus) return false;
+    return true;
+  });
+
+  const stats = {
+    risks: items?.filter(i => i.item_type === 'risk').length || 0,
+    opportunities: items?.filter(i => i.item_type === 'opportunity').length || 0,
+    critical: items?.filter(i => i.impact === 'Critical').length || 0,
+    escalated: items?.filter(i => i.status === 'Escalated').length || 0,
+  };
+
+  const getItemStyles = (type: string, impact?: string) => {
+    if (type === 'risk') {
+      return {
+        border: impact === 'Critical' ? 'border-l-4 border-l-destructive' : 'border-l-4 border-l-amber-500',
+        icon: AlertTriangle,
+        iconColor: impact === 'Critical' ? 'text-destructive' : 'text-amber-500',
+        bg: impact === 'Critical' ? 'bg-destructive/5' : 'bg-amber-50',
+      };
+    }
+    return {
+      border: 'border-l-4 border-l-emerald-500',
+      icon: Lightbulb,
+      iconColor: 'text-emerald-600',
+      bg: 'bg-emerald-50',
+    };
+  };
+
+  const getImpactBadge = (impact?: string) => {
+    const variants: Record<string, 'destructive' | 'default' | 'secondary' | 'outline'> = {
+      Critical: 'destructive',
+      High: 'default',
+      Medium: 'secondary',
+      Low: 'outline',
+    };
+    return impact ? <Badge variant={variants[impact] || 'outline'}>{impact}</Badge> : null;
+  };
+
+  const getStatusBadge = (status: string) => {
+    const colors: Record<string, string> = {
+      Open: 'bg-blue-100 text-blue-800',
+      'In Review': 'bg-purple-100 text-purple-800',
+      Actioning: 'bg-yellow-100 text-yellow-800',
+      Escalated: 'bg-red-100 text-red-800',
+      Closed: 'bg-gray-100 text-gray-800',
+    };
+    return <Badge className={colors[status] || 'bg-gray-100'}>{status}</Badge>;
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+          <p className="mt-4 text-muted-foreground">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex justify-between items-start">
+        <div>
+          <h1 className="text-3xl font-bold flex items-center gap-3">
+            <Shield className="w-8 h-8 text-primary" />
+            Risks and Opportunities
+          </h1>
+          <p className="text-muted-foreground mt-2">
+            What Could Hurt or Help the Mission
+          </p>
+          <p className="text-sm text-muted-foreground/70 mt-1">
+            This page captures anything that could materially impact delivery, revenue, compliance, or growth.
+          </p>
+        </div>
+        <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
+          <DialogTrigger asChild>
+            <Button>
+              <Plus className="w-4 h-4 mr-2" />
+              Add Item
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="max-w-lg">
+            <DialogHeader>
+              <DialogTitle>Add Risk or Opportunity</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label>Type *</Label>
+                <Select value={formData.item_type} onValueChange={(v) => setFormData({ ...formData, item_type: v as RiskOpportunityType })}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="risk">
+                      <div className="flex items-center gap-2">
+                        <AlertTriangle className="w-4 h-4 text-amber-500" />
+                        Risk
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="opportunity">
+                      <div className="flex items-center gap-2">
+                        <Lightbulb className="w-4 h-4 text-emerald-500" />
+                        Opportunity
+                      </div>
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Title *</Label>
+                <Input 
+                  placeholder="Short, specific statement..."
+                  value={formData.title}
+                  onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label>Detail</Label>
+                <Textarea 
+                  placeholder="What is happening. Why it matters. Impact if ignored."
+                  value={formData.description}
+                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                  rows={3}
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Category</Label>
+                  <Select value={formData.category} onValueChange={(v) => setFormData({ ...formData, category: v as RiskOpportunityCategory })}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {CATEGORIES.map(cat => (
+                        <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Impact</Label>
+                  <Select value={formData.impact} onValueChange={(v) => setFormData({ ...formData, impact: v as RiskOpportunityImpact })}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {IMPACTS.map(imp => (
+                        <SelectItem key={imp} value={imp}>{imp}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Quarter</Label>
+                  <Select 
+                    value={formData.quarter_number?.toString() || ''} 
+                    onValueChange={(v) => setFormData({ ...formData, quarter_number: v ? parseInt(v) : undefined })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="1">Q1</SelectItem>
+                      <SelectItem value="2">Q2</SelectItem>
+                      <SelectItem value="3">Q3</SelectItem>
+                      <SelectItem value="4">Q4</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Year</Label>
+                  <Select 
+                    value={formData.quarter_year?.toString() || ''} 
+                    onValueChange={(v) => setFormData({ ...formData, quarter_year: v ? parseInt(v) : undefined })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {[2024, 2025, 2026, 2027].map(year => (
+                        <SelectItem key={year} value={year.toString()}>{year}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Linked Rock</Label>
+                <Select value={formData.linked_rock_id} onValueChange={(v) => setFormData({ ...formData, linked_rock_id: v })}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="None" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">None</SelectItem>
+                    {rocks?.map(rock => (
+                      <SelectItem key={rock.id} value={rock.id}>{rock.title}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => { resetForm(); setIsCreateOpen(false); }}>Cancel</Button>
+              <Button onClick={handleCreate} disabled={!formData.title || createItem.isPending}>
+                {createItem.isPending ? 'Creating...' : 'Create'}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </div>
+
+      {/* Stats Cards */}
+      <div className="grid gap-4 md:grid-cols-4">
+        <Card className="cursor-pointer hover:shadow-md" onClick={() => setFilterType('risk')}>
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Risks</p>
+                <p className="text-2xl font-bold text-amber-600">{stats.risks}</p>
+              </div>
+              <AlertTriangle className="w-8 h-8 text-amber-500" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="cursor-pointer hover:shadow-md" onClick={() => setFilterType('opportunity')}>
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Opportunities</p>
+                <p className="text-2xl font-bold text-emerald-600">{stats.opportunities}</p>
+              </div>
+              <Lightbulb className="w-8 h-8 text-emerald-500" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="cursor-pointer hover:shadow-md border-destructive/20" onClick={() => setFilterStatus('Escalated')}>
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Escalated</p>
+                <p className="text-2xl font-bold text-destructive">{stats.escalated}</p>
+              </div>
+              <TrendingUp className="w-8 h-8 text-destructive" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="cursor-pointer hover:shadow-md" onClick={() => { setFilterType('all'); setFilterStatus('all'); setFilterCategory('all'); }}>
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Critical Impact</p>
+                <p className="text-2xl font-bold">{stats.critical}</p>
+              </div>
+              <Shield className="w-8 h-8 text-muted-foreground" />
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Filters */}
+      <Card>
+        <CardContent className="p-4">
+          <div className="flex flex-wrap gap-4 items-center">
+            <div className="flex items-center gap-2">
+              <Filter className="w-4 h-4 text-muted-foreground" />
+              <span className="text-sm font-medium">Filters:</span>
+            </div>
+            
+            <Select value={filterType} onValueChange={(v) => setFilterType(v as any)}>
+              <SelectTrigger className="w-[140px]">
+                <SelectValue placeholder="Type" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Types</SelectItem>
+                <SelectItem value="risk">Risks</SelectItem>
+                <SelectItem value="opportunity">Opportunities</SelectItem>
+              </SelectContent>
+            </Select>
+
+            <Select value={filterCategory} onValueChange={(v) => setFilterCategory(v as any)}>
+              <SelectTrigger className="w-[140px]">
+                <SelectValue placeholder="Category" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Categories</SelectItem>
+                {CATEGORIES.map(cat => (
+                  <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            <Select value={filterStatus} onValueChange={(v) => setFilterStatus(v as any)}>
+              <SelectTrigger className="w-[140px]">
+                <SelectValue placeholder="Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Statuses</SelectItem>
+                {STATUSES.map(status => (
+                  <SelectItem key={status} value={status}>{status}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            {(filterType !== 'all' || filterCategory !== 'all' || filterStatus !== 'all') && (
+              <Button 
+                variant="ghost" 
+                size="sm"
+                onClick={() => { setFilterType('all'); setFilterCategory('all'); setFilterStatus('all'); }}
+              >
+                <X className="w-4 h-4 mr-1" />
+                Clear
+              </Button>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Items List */}
+      <div className="space-y-4">
+        {filteredItems && filteredItems.length > 0 ? (
+          filteredItems.map((item) => {
+            const styles = getItemStyles(item.item_type, item.impact);
+            const Icon = styles.icon;
+            const linkedRock = rocks?.find(r => r.id === item.linked_rock_id);
+            
+            return (
+              <Card key={item.id} className={`${styles.border} hover:shadow-lg transition-shadow`}>
+                <CardHeader>
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex-1 flex items-start gap-3">
+                      <div className={`${styles.bg} p-2 rounded-lg`}>
+                        <Icon className={`w-5 h-5 ${styles.iconColor}`} />
+                      </div>
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          <Badge variant="outline" className="text-xs">
+                            {item.item_type === 'risk' ? 'Risk' : 'Opportunity'}
+                          </Badge>
+                          {item.category && (
+                            <Badge variant="secondary" className="text-xs">{item.category}</Badge>
+                          )}
+                        </div>
+                        <CardTitle className="text-lg">{item.title}</CardTitle>
+                        {item.description && (
+                          <p className="text-sm text-muted-foreground mt-2">{item.description}</p>
+                        )}
+                        
+                        <div className="flex items-center flex-wrap gap-4 mt-3 text-sm text-muted-foreground">
+                          {item.quarter_number && item.quarter_year && (
+                            <span className="flex items-center gap-1">
+                              <Calendar className="w-4 h-4" />
+                              Q{item.quarter_number} {item.quarter_year}
+                            </span>
+                          )}
+                          {linkedRock && (
+                            <span className="flex items-center gap-1">
+                              <LinkIcon className="w-4 h-4" />
+                              {linkedRock.title}
+                            </span>
+                          )}
+                          {item.assigned_to && (
+                            <span className="flex items-center gap-1">
+                              <User className="w-4 h-4" />
+                              Owner assigned
+                            </span>
+                          )}
+                          <span>Created {format(new Date(item.created_at), 'MMM d, yyyy')}</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex flex-col gap-2 items-end">
+                      {getStatusBadge(item.status)}
+                      {getImpactBadge(item.impact)}
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex gap-2 flex-wrap">
+                    <Select 
+                      value={item.status} 
+                      onValueChange={(v) => handleStatusChange(item.id, v as RiskOpportunityStatus)}
+                    >
+                      <SelectTrigger className="w-[140px]">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {STATUSES.map(status => (
+                          <SelectItem key={status} value={status}>{status}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Button variant="outline" size="sm">Edit</Button>
+                    {item.status === 'Escalated' && (
+                      <Badge variant="destructive" className="animate-pulse">Requires Leadership</Badge>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })
+        ) : (
+          <Card>
+            <CardContent className="p-12 text-center">
+              <Shield className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+              <h3 className="text-lg font-semibold mb-2">No items yet</h3>
+              <p className="text-muted-foreground mb-4">
+                Start by identifying risks that could hurt or opportunities that could help the mission
+              </p>
+              <Button onClick={() => setIsCreateOpen(true)}>
+                <Plus className="w-4 h-4 mr-2" />
+                Add First Item
+              </Button>
+            </CardContent>
+          </Card>
+        )}
+      </div>
+    </div>
+  );
+}
