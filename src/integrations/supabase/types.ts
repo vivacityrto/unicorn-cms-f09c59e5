@@ -4524,10 +4524,52 @@ export type Database = {
           },
         ]
       }
+      eos_agenda_template_versions: {
+        Row: {
+          change_summary: string | null
+          created_at: string
+          created_by: string | null
+          id: string
+          is_published: boolean
+          segments_snapshot: Json
+          template_id: string
+          version_number: number
+        }
+        Insert: {
+          change_summary?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_published?: boolean
+          segments_snapshot?: Json
+          template_id: string
+          version_number?: number
+        }
+        Update: {
+          change_summary?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_published?: boolean
+          segments_snapshot?: Json
+          template_id?: string
+          version_number?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "eos_agenda_template_versions_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "eos_agenda_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       eos_agenda_templates: {
         Row: {
           created_at: string | null
           created_by: string | null
+          current_version_id: string | null
           description: string | null
           id: string
           is_archived: boolean
@@ -4542,6 +4584,7 @@ export type Database = {
         Insert: {
           created_at?: string | null
           created_by?: string | null
+          current_version_id?: string | null
           description?: string | null
           id?: string
           is_archived?: boolean
@@ -4556,6 +4599,7 @@ export type Database = {
         Update: {
           created_at?: string | null
           created_by?: string | null
+          current_version_id?: string | null
           description?: string | null
           id?: string
           is_archived?: boolean
@@ -4568,6 +4612,13 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "eos_agenda_templates_current_version_id_fkey"
+            columns: ["current_version_id"]
+            isOneToOne: false
+            referencedRelation: "eos_agenda_template_versions"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "eos_agenda_templates_tenant_id_fkey"
             columns: ["tenant_id"]
@@ -5137,6 +5188,8 @@ export type Database = {
           rock_reviews: Json | null
           scheduled_date: string
           scorecard_data: Json | null
+          template_id: string | null
+          template_version_id: string | null
           tenant_id: number
           title: string
           updated_at: string | null
@@ -5161,6 +5214,8 @@ export type Database = {
           rock_reviews?: Json | null
           scheduled_date: string
           scorecard_data?: Json | null
+          template_id?: string | null
+          template_version_id?: string | null
           tenant_id: number
           title: string
           updated_at?: string | null
@@ -5185,6 +5240,8 @@ export type Database = {
           rock_reviews?: Json | null
           scheduled_date?: string
           scorecard_data?: Json | null
+          template_id?: string | null
+          template_version_id?: string | null
           tenant_id?: number
           title?: string
           updated_at?: string | null
@@ -5209,6 +5266,20 @@ export type Database = {
             columns: ["parent_meeting_id"]
             isOneToOne: false
             referencedRelation: "eos_meetings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "eos_meetings_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "eos_agenda_templates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "eos_meetings_template_version_id_fkey"
+            columns: ["template_version_id"]
+            isOneToOne: false
+            referencedRelation: "eos_agenda_template_versions"
             referencedColumns: ["id"]
           },
           {
@@ -5770,6 +5841,57 @@ export type Database = {
             columns: ["scorecard_id"]
             isOneToOne: false
             referencedRelation: "eos_scorecard"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      eos_template_audit_log: {
+        Row: {
+          action: string
+          change_summary: string | null
+          created_at: string
+          details: Json | null
+          id: string
+          template_id: string | null
+          tenant_id: number
+          user_id: string | null
+          version_id: string | null
+        }
+        Insert: {
+          action: string
+          change_summary?: string | null
+          created_at?: string
+          details?: Json | null
+          id?: string
+          template_id?: string | null
+          tenant_id: number
+          user_id?: string | null
+          version_id?: string | null
+        }
+        Update: {
+          action?: string
+          change_summary?: string | null
+          created_at?: string
+          details?: Json | null
+          id?: string
+          template_id?: string | null
+          tenant_id?: number
+          user_id?: string | null
+          version_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "eos_template_audit_log_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "eos_agenda_templates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "eos_template_audit_log_version_id_fkey"
+            columns: ["version_id"]
+            isOneToOne: false
+            referencedRelation: "eos_agenda_template_versions"
             referencedColumns: ["id"]
           },
         ]
@@ -13063,6 +13185,15 @@ export type Database = {
         }
         Returns: string
       }
+      create_template_version: {
+        Args: {
+          p_change_summary: string
+          p_publish?: boolean
+          p_segments: Json
+          p_template_id: string
+        }
+        Returns: string
+      }
       create_tenant: {
         Args: { p_admin_email?: string; p_name: string; p_slug: string }
         Returns: string
@@ -13423,6 +13554,7 @@ export type Database = {
         Args: { p_action_type: string; p_tenant_id: number }
         Returns: undefined
       }
+      init_template_versions: { Args: never; Returns: undefined }
       invite_user: {
         Args: { p_email: string; p_role?: string; p_tenant_id: string }
         Returns: string
@@ -13574,6 +13706,10 @@ export type Database = {
       request_stage_review: {
         Args: { p_reviewer_user_id: string; p_stage_release_id: string }
         Returns: Json
+      }
+      restore_template_version: {
+        Args: { p_restore_reason?: string; p_version_id: string }
+        Returns: string
       }
       retry_failed_generation: {
         Args: { p_generated_document_id: string }

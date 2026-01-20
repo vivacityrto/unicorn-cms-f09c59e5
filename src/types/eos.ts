@@ -173,9 +173,33 @@ export interface EosAgendaTemplate {
   is_default: boolean;
   is_system: boolean;
   is_archived: boolean;
+  current_version_id?: string;
   created_by?: string;
   created_at: string;
   updated_at: string;
+}
+
+export interface EosAgendaTemplateVersion {
+  id: string;
+  template_id: string;
+  version_number: number;
+  segments_snapshot: EosAgendaSegment[];
+  change_summary?: string;
+  is_published: boolean;
+  created_by?: string;
+  created_at: string;
+}
+
+export interface EosTemplateAuditLog {
+  id: string;
+  action: 'template_created' | 'template_version_created' | 'template_version_published' | 'template_version_restored' | 'template_archived' | 'template_set_default';
+  user_id?: string;
+  template_id?: string;
+  version_id?: string;
+  tenant_id: number;
+  change_summary?: string;
+  details?: Record<string, any>;
+  created_at: string;
 }
 
 // Using existing database schema for Meetings
@@ -198,6 +222,8 @@ export interface EosMeeting {
   recurrence_rule?: string;
   recurrence_end_date?: string;
   parent_meeting_id?: string;
+  template_id?: string;
+  template_version_id?: string;
   is_multi_client?: boolean;
   created_at: string;
   updated_at: string;
