@@ -10,6 +10,12 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Input } from '@/components/ui/input';
@@ -19,9 +25,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
-import { Users, Search, Shield, UserCheck, UserX, UserPlus, Clock } from 'lucide-react';
+import { Users, Search, Shield, UserCheck, UserX, UserPlus, Clock, MoreHorizontal, RefreshCw } from 'lucide-react';
 import { InviteUserDialog } from '@/components/InviteUserDialog';
-
 interface TeamUser {
   user_uuid: string;
   first_name: string;
@@ -35,6 +40,8 @@ interface TeamUser {
   last_sign_in_at: string | null;
   created_at: string;
   isPending?: boolean;
+  inviteId?: string;
+  inviteTenantId?: number;
 }
 
 const SUPERADMIN_LEVELS = [
@@ -54,6 +61,7 @@ export default function TeamUsers() {
   const [levelFilter, setLevelFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
   const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
+  const [resendingInvite, setResendingInvite] = useState<string | null>(null);
 
   useEffect(() => {
     fetchTeamUsers();
@@ -93,7 +101,7 @@ export default function TeamUsers() {
       // Also fetch pending invitations for Vivacity team (tenant_id = 319)
       const { data: pendingInvites, error: invitesError } = await supabase
         .from('user_invitations')
-        .select('id, email, first_name, last_name, unicorn_role, created_at, status')
+        .select('id, email, first_name, last_name, unicorn_role, created_at, status, tenant_id')
         .eq('tenant_id', 319)
         .eq('status', 'pending')
         .is('accepted_at', null);
@@ -144,6 +152,8 @@ export default function TeamUsers() {
           last_sign_in_at: null,
           created_at: invite.created_at,
           isPending: true,
+          inviteId: invite.id,
+          inviteTenantId: invite.tenant_id,
         }));
 
       setUsers([...teamUsers, ...pendingUsers]);
@@ -184,6 +194,37 @@ export default function TeamUsers() {
     }
 
     setFilteredUsers(filtered);
+  };
+
+  const handleResendInvite = async (user: TeamUser) => {
+    if (!user.inviteId) return;
+    
+    setResendingInvite(user.inviteId);
+    try {
+      const { data, error } = await supabase.functions.invoke('resend-invite', {
+        body: { invitation_id: user.inviteId },
+      });
+
+      if (error) throw error;
+      
+      if (!data.ok) {
+        throw new Error(data.detail || 'Failed to resend invitation');
+      }
+
+      toast({
+        title: 'Invitation Resent',
+        description: `A new invitation has been sent to ${user.email}`,
+      });
+    } catch (error: any) {
+      console.error('Error resending invite:', error);
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to resend invitation',
+        variant: 'destructive',
+      });
+    } finally {
+      setResendingInvite(null);
+    }
   };
 
   const getInitials = (firstName: string, lastName: string) => {
@@ -346,12 +387,13 @@ export default function TeamUsers() {
                   <TableHead>Level</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Last Login</TableHead>
+                  <TableHead className="w-[50px]"></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filteredUsers.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
                       No team users found
                     </TableCell>
                   </TableRow>
@@ -360,12 +402,14 @@ export default function TeamUsers() {
                     <TableRow
                       key={user.user_uuid}
                       className={cn(
-                        "cursor-pointer hover:bg-muted/50",
+                        "hover:bg-muted/50",
                         user.isPending && "opacity-75"
                       )}
-                      onClick={() => !user.isPending && navigate(`/user-profile/${user.user_uuid}`)}
                     >
-                      <TableCell>
+                      <TableCell 
+                        className={cn(!user.isPending && "cursor-pointer")}
+                        onClick={() => !user.isPending && navigate(`/user-profile/${user.user_uuid}`)}
+                      >
                         <div className="flex items-center gap-3">
                           <Avatar className="h-9 w-9">
                             <AvatarImage src={user.avatar_url || undefined} />
@@ -397,6 +441,29 @@ export default function TeamUsers() {
                       </TableCell>
                       <TableCell className="text-muted-foreground">
                         {user.isPending ? 'Invited' : formatDate(user.last_sign_in_at)}
+                      </TableCell>
+                      <TableCell>
+                        {user.isPending && user.inviteId && (
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon" className="h-8 w-8">
+                                <MoreHorizontal className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem
+                                onClick={() => handleResendInvite(user)}
+                                disabled={resendingInvite === user.inviteId}
+                              >
+                                <RefreshCw className={cn(
+                                  "h-4 w-4 mr-2",
+                                  resendingInvite === user.inviteId && "animate-spin"
+                                )} />
+                                {resendingInvite === user.inviteId ? 'Sending...' : 'Resend Invite'}
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        )}
                       </TableCell>
                     </TableRow>
                   ))
