@@ -14135,10 +14135,9 @@ export type Database = {
       }
       seed_default_meeting_templates: { Args: never; Returns: undefined }
       seed_default_qc_template: { Args: never; Returns: undefined }
-      seed_system_agenda_templates: {
-        Args: { p_tenant_id: number }
-        Returns: undefined
-      }
+      seed_system_agenda_templates:
+        | { Args: never; Returns: undefined }
+        | { Args: { p_tenant_id: number }; Returns: undefined }
       set_active_tenant: { Args: { p_tenant_id: string }; Returns: boolean }
       set_issue_status: {
         Args: { p_issue_id: string; p_solution_text?: string; p_status: string }
@@ -14152,6 +14151,10 @@ export type Database = {
           p_tenant_id: number
         }
         Returns: string
+      }
+      start_meeting_with_validation: {
+        Args: { p_meeting_id: string }
+        Returns: Json
       }
       sync_stage_template_to_packages: {
         Args: { p_stage_id: number }
@@ -14313,6 +14316,14 @@ export type Database = {
         Args: { p_document_id: number }
         Returns: Json
       }
+      validate_meeting_agenda: {
+        Args: { p_meeting_id: string }
+        Returns: {
+          error_message: string
+          is_valid: boolean
+          missing_segments: string[]
+        }[]
+      }
       validate_release_readiness: {
         Args: { p_document_ids: number[]; p_tenant_id?: number }
         Returns: Json
@@ -14338,7 +14349,13 @@ export type Database = {
         | "Escalated"
         | "Closed"
       eos_meeting_role: "Leader" | "Member" | "Observer"
-      eos_meeting_type: "L10" | "Quarterly" | "Annual" | "Focus_Day" | "Custom"
+      eos_meeting_type:
+        | "L10"
+        | "Quarterly"
+        | "Annual"
+        | "Focus_Day"
+        | "Custom"
+        | "Same_Page"
       eos_participant_role: "Leader" | "Member" | "Observer"
       eos_rock_status:
         | "Not_Started"
@@ -14546,7 +14563,14 @@ export const Constants = {
         "Closed",
       ],
       eos_meeting_role: ["Leader", "Member", "Observer"],
-      eos_meeting_type: ["L10", "Quarterly", "Annual", "Focus_Day", "Custom"],
+      eos_meeting_type: [
+        "L10",
+        "Quarterly",
+        "Annual",
+        "Focus_Day",
+        "Custom",
+        "Same_Page",
+      ],
       eos_participant_role: ["Leader", "Member", "Observer"],
       eos_rock_status: [
         "Not_Started",

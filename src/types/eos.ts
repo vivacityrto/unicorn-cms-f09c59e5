@@ -1,7 +1,7 @@
 // EOS Type Definitions
 export type EosRole = 'admin' | 'facilitator' | 'scribe' | 'participant' | 'client_viewer';
 export type MeetingStatus = 'scheduled' | 'in_progress' | 'completed' | 'cancelled';
-export type MeetingType = 'L10' | 'Quarterly' | 'Annual' | 'Focus_Day' | 'Custom';
+export type MeetingType = 'L10' | 'Quarterly' | 'Annual' | 'Same_Page' | 'Focus_Day' | 'Custom';
 export type RockType = 'company' | 'team' | 'individual';
 export type RockStatus = 'on_track' | 'off_track' | 'complete';
 export type IssueStatus = 'open' | 'discussing' | 'solved' | 'archived';

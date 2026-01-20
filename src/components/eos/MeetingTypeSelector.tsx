@@ -17,6 +17,13 @@ export const MeetingTypeSelector = ({ selectedType, onSelect }: MeetingTypeSelec
       duration: 90,
     },
     {
+      value: 'Same_Page' as MeetingType,
+      label: 'Same Page',
+      description: 'Visionary & Integrator alignment (120 minutes)',
+      icon: CalendarDays,
+      duration: 120,
+    },
+    {
       value: 'Quarterly' as MeetingType,
       label: 'Quarterly',
       description: 'Full-day strategic planning',
