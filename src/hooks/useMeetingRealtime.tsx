@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 
@@ -19,6 +19,10 @@ export const useMeetingRealtime = ({
 }: UseRealtimeOptions) => {
   const [channel, setChannel] = useState<RealtimeChannel | null>(null);
   const [onlineUsers, setOnlineUsers] = useState<any[]>([]);
+  
+  // Use refs for callbacks to avoid re-subscribing on every render
+  const callbacksRef = useRef({ onSegmentChange, onHeadlineChange, onTodoChange, onPresenceChange });
+  callbacksRef.current = { onSegmentChange, onHeadlineChange, onTodoChange, onPresenceChange };
 
   useEffect(() => {
     if (!meetingId) return;
@@ -42,8 +46,7 @@ export const useMeetingRealtime = ({
           filter: `meeting_id=eq.${meetingId}`,
         },
         (payload) => {
-          console.log('Segment changed:', payload);
-          onSegmentChange?.(payload);
+          callbacksRef.current.onSegmentChange?.(payload);
         }
       )
       .on(
@@ -55,8 +58,7 @@ export const useMeetingRealtime = ({
           filter: `meeting_id=eq.${meetingId}`,
         },
         (payload) => {
-          console.log('Headline changed:', payload);
-          onHeadlineChange?.(payload);
+          callbacksRef.current.onHeadlineChange?.(payload);
         }
       )
       .on(
@@ -68,15 +70,14 @@ export const useMeetingRealtime = ({
           filter: `meeting_id=eq.${meetingId}`,
         },
         (payload) => {
-          console.log('Todo changed:', payload);
-          onTodoChange?.(payload);
+          callbacksRef.current.onTodoChange?.(payload);
         }
       )
       .on('presence', { event: 'sync' }, () => {
         const state = meetingChannel.presenceState();
         const users = Object.values(state).flat();
         setOnlineUsers(users);
-        onPresenceChange?.(users);
+        callbacksRef.current.onPresenceChange?.(users);
       })
       .on('presence', { event: 'join' }, ({ newPresences }) => {
         console.log('User joined:', newPresences);
@@ -86,7 +87,6 @@ export const useMeetingRealtime = ({
       })
       .subscribe(async (status) => {
         if (status === 'SUBSCRIBED') {
-          // Track current user presence
           await meetingChannel.track({
             online_at: new Date().toISOString(),
           });
@@ -98,7 +98,7 @@ export const useMeetingRealtime = ({
     return () => {
       meetingChannel.unsubscribe();
     };
-  }, [meetingId, onSegmentChange, onHeadlineChange, onTodoChange, onPresenceChange]);
+  }, [meetingId]); // Only re-subscribe when meetingId changes
 
   const updatePresence = async (data: any) => {
     if (channel) {
