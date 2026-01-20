@@ -52,23 +52,31 @@ export function VtoEditor({ vto, onCancel }: VtoEditorProps) {
 
   const publishVto = useMutation({
     mutationFn: async () => {
+      const upsertData: Record<string, unknown> = {
+        tenant_id: profile?.tenant_id!,
+        ten_year_target: tenYearTarget,
+        core_values: coreValues.filter(v => v.trim()),
+        target_market: targetMarket,
+        three_year_revenue_target: threeYearRevenue,
+        three_year_profit_target: threeYearProfit,
+        three_year_measurables: threeYearMeasurables,
+        one_year_revenue_target: oneYearRevenue,
+        one_year_profit_target: oneYearProfit,
+        one_year_goals: oneYearGoals,
+        proven_process: uniques.filter(u => u.trim()),
+        updated_by: profile?.user_uuid,
+      };
+      
+      // Include id for updates to existing VTO, otherwise create new
+      if (vto?.id) {
+        upsertData.id = vto.id;
+      } else {
+        upsertData.created_by = profile?.user_uuid;
+      }
+      
       const { data, error } = await supabase
         .from('eos_vto')
-        .upsert({
-          tenant_id: profile?.tenant_id!,
-          ten_year_target: tenYearTarget,
-          core_values: coreValues.filter(v => v.trim()),
-          target_market: targetMarket,
-          three_year_revenue_target: threeYearRevenue,
-          three_year_profit_target: threeYearProfit,
-          three_year_measurables: threeYearMeasurables,
-          one_year_revenue_target: oneYearRevenue,
-          one_year_profit_target: oneYearProfit,
-          one_year_goals: oneYearGoals,
-          proven_process: uniques.filter(u => u.trim()),
-          created_by: profile?.user_uuid,
-          updated_by: profile?.user_uuid,
-        })
+        .upsert(upsertData)
         .select()
         .single();
       if (error) throw error;
