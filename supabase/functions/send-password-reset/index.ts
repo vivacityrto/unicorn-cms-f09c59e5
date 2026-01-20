@@ -21,6 +21,8 @@ serve(async (req: Request): Promise<Response> => {
     const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const MAILGUN_API_KEY = Deno.env.get("MAILGUN_API_KEY");
     const MAILGUN_DOMAIN = Deno.env.get("MAILGUN_DOMAIN");
+    const MAILGUN_FROM_EMAIL = Deno.env.get("MAILGUN_FROM_EMAIL");
+    const MAILGUN_FROM_NAME = Deno.env.get("MAILGUN_FROM_NAME");
 
     if (!MAILGUN_API_KEY || !MAILGUN_DOMAIN) {
       console.error("Missing Mailgun configuration");
@@ -207,8 +209,11 @@ serve(async (req: Request): Promise<Response> => {
 </html>`;
 
     // Send email via Mailgun
+    const fromEmail = MAILGUN_FROM_EMAIL || `noreply@${MAILGUN_DOMAIN}`;
+    const fromName = MAILGUN_FROM_NAME || "Vivacity";
+
     const formData = new FormData();
-    formData.append("from", `Vivacity <noreply@${MAILGUN_DOMAIN}>`);
+    formData.append("from", `${fromName} <${fromEmail}>`);
     formData.append("to", targetUser.email);
     formData.append("subject", "Reset your Vivacity password");
     formData.append("html", emailHtml);
@@ -226,9 +231,18 @@ serve(async (req: Request): Promise<Response> => {
 
     if (!mailgunResponse.ok) {
       const errorText = await mailgunResponse.text();
-      console.error("Mailgun error:", errorText);
+      console.error("Mailgun error:", {
+        status: mailgunResponse.status,
+        statusText: mailgunResponse.statusText,
+        body: errorText,
+      });
       return new Response(
-        JSON.stringify({ ok: false, code: "EMAIL_SEND_FAILED", detail: errorText }),
+        JSON.stringify({
+          ok: false,
+          code: "EMAIL_SEND_FAILED",
+          detail: errorText,
+          mailgun_status: mailgunResponse.status,
+        }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
