@@ -11,6 +11,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Loader2, Eye, Send, Save, Info } from "lucide-react";
 import { EmailTemplate, useEmailSending } from "@/hooks/useEmailTemplates";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { sanitizeEmailHtml } from "@/lib/sanitize";
 
 interface EmailTemplateEditorDialogProps {
   open: boolean;
@@ -236,7 +237,7 @@ export default function EmailTemplateEditorDialog({
                   </div>
                   <div
                     className="prose prose-sm max-w-none"
-                    dangerouslySetInnerHTML={{ __html: previewHtml || formData.html_body }}
+                    dangerouslySetInnerHTML={{ __html: sanitizeEmailHtml(previewHtml || formData.html_body) }}
                   />
                 </CardContent>
               </Card>
