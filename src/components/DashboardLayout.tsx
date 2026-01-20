@@ -147,7 +147,7 @@ const superAdminMenuItems = {
     path: "/eos/rocks"
   }, {
     icon: Rocket,
-    label: "Superhero Flight Plan",
+    label: "Flight Plan",
     path: "/eos/flight-plan"
   }, {
     icon: AlertTriangle,
