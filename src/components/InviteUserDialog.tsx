@@ -131,28 +131,7 @@ export function InviteUserDialog({ open, onOpenChange, onSuccess }: InviteUserDi
         throw new Error(errorMsg || 'Failed to send invitation');
       }
 
-      // Show success with invite URL for manual sharing
-      const description = inviteUrl 
-        ? `An invitation link has been created. Click to copy: ${inviteUrl}`
-        : `An invitation has been sent to ${email}`;
-
-      toast({
-        title: 'Invitation sent',
-        description,
-        action: inviteUrl ? (
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => {
-              navigator.clipboard.writeText(inviteUrl);
-              toast({ title: 'Link copied!', description: 'Invitation link copied to clipboard' });
-            }}
-          >
-            Copy Link
-          </Button>
-        ) : undefined,
-      });
-
+      // Silent success - email is sent via MailGun, no need for UI notification
       handleClose();
       onSuccess?.();
     } catch (error: any) {
