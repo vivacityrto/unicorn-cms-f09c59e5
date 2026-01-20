@@ -4606,6 +4606,80 @@ export type Database = {
           },
         ]
       }
+      eos_flight_plans: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          due_date: string
+          id: string
+          measurables: Json | null
+          month_1_focus: Json | null
+          month_2_focus: Json | null
+          month_3_focus: Json | null
+          profit_target: number | null
+          quarter_number: number
+          quarter_year: number
+          quarterly_objective: string | null
+          revenue_target: number | null
+          stop_doing: Json | null
+          success_indicators: Json | null
+          tenant_id: number
+          updated_at: string
+          updated_by: string | null
+          win_condition: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          due_date: string
+          id?: string
+          measurables?: Json | null
+          month_1_focus?: Json | null
+          month_2_focus?: Json | null
+          month_3_focus?: Json | null
+          profit_target?: number | null
+          quarter_number: number
+          quarter_year: number
+          quarterly_objective?: string | null
+          revenue_target?: number | null
+          stop_doing?: Json | null
+          success_indicators?: Json | null
+          tenant_id: number
+          updated_at?: string
+          updated_by?: string | null
+          win_condition?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          due_date?: string
+          id?: string
+          measurables?: Json | null
+          month_1_focus?: Json | null
+          month_2_focus?: Json | null
+          month_3_focus?: Json | null
+          profit_target?: number | null
+          quarter_number?: number
+          quarter_year?: number
+          quarterly_objective?: string | null
+          revenue_target?: number | null
+          stop_doing?: Json | null
+          success_indicators?: Json | null
+          tenant_id?: number
+          updated_at?: string
+          updated_by?: string | null
+          win_condition?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "eos_flight_plans_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       eos_headlines: {
         Row: {
           created_at: string | null
@@ -4650,9 +4724,14 @@ export type Database = {
           created_by: string | null
           description: string | null
           id: string
+          impact: string | null
+          item_type: string | null
           linked_rock_id: string | null
           meeting_id: string | null
+          outcome_note: string | null
           priority: number | null
+          quarter_number: number | null
+          quarter_year: number | null
           raised_by: string | null
           resolved_at: string | null
           resolved_by: string | null
@@ -4671,9 +4750,14 @@ export type Database = {
           created_by?: string | null
           description?: string | null
           id?: string
+          impact?: string | null
+          item_type?: string | null
           linked_rock_id?: string | null
           meeting_id?: string | null
+          outcome_note?: string | null
           priority?: number | null
+          quarter_number?: number | null
+          quarter_year?: number | null
           raised_by?: string | null
           resolved_at?: string | null
           resolved_by?: string | null
@@ -4692,9 +4776,14 @@ export type Database = {
           created_by?: string | null
           description?: string | null
           id?: string
+          impact?: string | null
+          item_type?: string | null
           linked_rock_id?: string | null
           meeting_id?: string | null
+          outcome_note?: string | null
           priority?: number | null
+          quarter_number?: number | null
+          quarter_year?: number | null
           raised_by?: string | null
           resolved_at?: string | null
           resolved_by?: string | null
@@ -5436,7 +5525,11 @@ export type Database = {
           description: string | null
           due_date: string
           id: string
+          issue: string | null
           level: string | null
+          linked_risk_ids: string[] | null
+          milestones: Json | null
+          outcome: string | null
           owner_id: string | null
           priority: number | null
           quarter_end: string | null
@@ -5444,6 +5537,7 @@ export type Database = {
           quarter_start: string | null
           quarter_year: number
           status: Database["public"]["Enums"]["eos_rock_status"] | null
+          status_note: string | null
           tenant_id: number
           title: string
           updated_at: string | null
@@ -5457,7 +5551,11 @@ export type Database = {
           description?: string | null
           due_date: string
           id?: string
+          issue?: string | null
           level?: string | null
+          linked_risk_ids?: string[] | null
+          milestones?: Json | null
+          outcome?: string | null
           owner_id?: string | null
           priority?: number | null
           quarter_end?: string | null
@@ -5465,6 +5563,7 @@ export type Database = {
           quarter_start?: string | null
           quarter_year: number
           status?: Database["public"]["Enums"]["eos_rock_status"] | null
+          status_note?: string | null
           tenant_id: number
           title: string
           updated_at?: string | null
@@ -5478,7 +5577,11 @@ export type Database = {
           description?: string | null
           due_date?: string
           id?: string
+          issue?: string | null
           level?: string | null
+          linked_risk_ids?: string[] | null
+          milestones?: Json | null
+          outcome?: string | null
           owner_id?: string | null
           priority?: number | null
           quarter_end?: string | null
@@ -5486,6 +5589,7 @@ export type Database = {
           quarter_start?: string | null
           quarter_year?: number
           status?: Database["public"]["Enums"]["eos_rock_status"] | null
+          status_note?: string | null
           tenant_id?: number
           title?: string
           updated_at?: string | null
@@ -5799,17 +5903,23 @@ export type Database = {
           core_values: Json | null
           created_at: string | null
           created_by: string | null
+          guarantee: string | null
           id: string
           one_year_goals: Json | null
+          one_year_measurables: Json | null
           one_year_profit_target: number | null
           one_year_revenue_target: number | null
+          one_year_target_date: string | null
           proven_process: Json | null
+          status: string
           target_market: string | null
           ten_year_target: string | null
-          tenant_id: number
+          tenant_id: number | null
+          three_uniques: Json | null
           three_year_measurables: Json | null
           three_year_profit_target: number | null
           three_year_revenue_target: number | null
+          three_year_target_date: string | null
           updated_at: string | null
           updated_by: string | null
         }
@@ -5818,17 +5928,23 @@ export type Database = {
           core_values?: Json | null
           created_at?: string | null
           created_by?: string | null
+          guarantee?: string | null
           id?: string
           one_year_goals?: Json | null
+          one_year_measurables?: Json | null
           one_year_profit_target?: number | null
           one_year_revenue_target?: number | null
+          one_year_target_date?: string | null
           proven_process?: Json | null
+          status?: string
           target_market?: string | null
           ten_year_target?: string | null
-          tenant_id: number
+          tenant_id?: number | null
+          three_uniques?: Json | null
           three_year_measurables?: Json | null
           three_year_profit_target?: number | null
           three_year_revenue_target?: number | null
+          three_year_target_date?: string | null
           updated_at?: string | null
           updated_by?: string | null
         }
@@ -5837,17 +5953,23 @@ export type Database = {
           core_values?: Json | null
           created_at?: string | null
           created_by?: string | null
+          guarantee?: string | null
           id?: string
           one_year_goals?: Json | null
+          one_year_measurables?: Json | null
           one_year_profit_target?: number | null
           one_year_revenue_target?: number | null
+          one_year_target_date?: string | null
           proven_process?: Json | null
+          status?: string
           target_market?: string | null
           ten_year_target?: string | null
-          tenant_id?: number
+          tenant_id?: number | null
+          three_uniques?: Json | null
           three_year_measurables?: Json | null
           three_year_profit_target?: number | null
           three_year_revenue_target?: number | null
+          three_year_target_date?: string | null
           updated_at?: string | null
           updated_by?: string | null
         }
@@ -6840,6 +6962,84 @@ export type Database = {
           sender_id?: string
         }
         Relationships: []
+      }
+      notes: {
+        Row: {
+          assignees: string[] | null
+          completed_date: string | null
+          created_at: string
+          created_by: string
+          duration: number | null
+          file_names: string[] | null
+          id: string
+          note_details: string
+          note_type: string | null
+          parent_id: number | null
+          parent_type: string | null
+          parent_uuid: string | null
+          priority: string | null
+          started_date: string | null
+          tenant_id: number
+          title: string | null
+          updated_at: string
+          uploaded_files: string[] | null
+        }
+        Insert: {
+          assignees?: string[] | null
+          completed_date?: string | null
+          created_at?: string
+          created_by: string
+          duration?: number | null
+          file_names?: string[] | null
+          id?: string
+          note_details: string
+          note_type?: string | null
+          parent_id?: number | null
+          parent_type?: string | null
+          parent_uuid?: string | null
+          priority?: string | null
+          started_date?: string | null
+          tenant_id: number
+          title?: string | null
+          updated_at?: string
+          uploaded_files?: string[] | null
+        }
+        Update: {
+          assignees?: string[] | null
+          completed_date?: string | null
+          created_at?: string
+          created_by?: string
+          duration?: number | null
+          file_names?: string[] | null
+          id?: string
+          note_details?: string
+          note_type?: string | null
+          parent_id?: number | null
+          parent_type?: string | null
+          parent_uuid?: string | null
+          priority?: string | null
+          started_date?: string | null
+          tenant_id?: number
+          title?: string | null
+          updated_at?: string
+          uploaded_files?: string[] | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notes_package_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "packages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notes_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       notification_queue: {
         Row: {
@@ -9390,12 +9590,14 @@ export type Database = {
           id: string
           inactive: boolean | null
           latitude: number | null
+          legacy_userid: number | null
           longitude: number | null
           notes: string | null
           postcode: string | null
           state: string | null
           suburb: string | null
           tenant_id: number | null
+          tenant_uuid: string | null
           updated_at: string
           updated_by: string | null
         }
@@ -9413,12 +9615,14 @@ export type Database = {
           id?: string
           inactive?: boolean | null
           latitude?: number | null
+          legacy_userid?: number | null
           longitude?: number | null
           notes?: string | null
           postcode?: string | null
           state?: string | null
           suburb?: string | null
           tenant_id?: number | null
+          tenant_uuid?: string | null
           updated_at?: string
           updated_by?: string | null
         }
@@ -9436,12 +9640,14 @@ export type Database = {
           id?: string
           inactive?: boolean | null
           latitude?: number | null
+          legacy_userid?: number | null
           longitude?: number | null
           notes?: string | null
           postcode?: string | null
           state?: string | null
           suburb?: string | null
           tenant_id?: number | null
+          tenant_uuid?: string | null
           updated_at?: string
           updated_by?: string | null
         }
@@ -10036,11 +10242,16 @@ export type Database = {
       }
       tenants: {
         Row: {
+          abn: string | null
+          accounting_system: string | null
+          acn: string | null
           created_at: string
           cricos_id: string | null
           id: number
           id_uuid: string | null
           legacy_id: number | null
+          legal_name: string | null
+          lms: string | null
           metadata: Json | null
           name: string
           package_added_at: string | null
@@ -10048,9 +10259,11 @@ export type Database = {
           package_ids: number[] | null
           risk_level: string | null
           rto_id: string | null
+          rto_name: string | null
           slug: string
+          sms: string | null
           stage_ids: number[] | null
-          state: Database["public"]["Enums"]["australian_state"] | null
+          state: string | null
           status: string
           tga_connected_at: string | null
           tga_last_synced_at: string | null
@@ -10059,13 +10272,19 @@ export type Database = {
           tga_status: string | null
           tga_sync_status: string | null
           updated_at: string
+          website: string | null
         }
         Insert: {
+          abn?: string | null
+          accounting_system?: string | null
+          acn?: string | null
           created_at?: string
           cricos_id?: string | null
           id?: number
           id_uuid?: string | null
           legacy_id?: number | null
+          legal_name?: string | null
+          lms?: string | null
           metadata?: Json | null
           name: string
           package_added_at?: string | null
@@ -10073,9 +10292,11 @@ export type Database = {
           package_ids?: number[] | null
           risk_level?: string | null
           rto_id?: string | null
+          rto_name?: string | null
           slug: string
+          sms?: string | null
           stage_ids?: number[] | null
-          state?: Database["public"]["Enums"]["australian_state"] | null
+          state?: string | null
           status?: string
           tga_connected_at?: string | null
           tga_last_synced_at?: string | null
@@ -10084,13 +10305,19 @@ export type Database = {
           tga_status?: string | null
           tga_sync_status?: string | null
           updated_at?: string
+          website?: string | null
         }
         Update: {
+          abn?: string | null
+          accounting_system?: string | null
+          acn?: string | null
           created_at?: string
           cricos_id?: string | null
           id?: number
           id_uuid?: string | null
           legacy_id?: number | null
+          legal_name?: string | null
+          lms?: string | null
           metadata?: Json | null
           name?: string
           package_added_at?: string | null
@@ -10098,9 +10325,11 @@ export type Database = {
           package_ids?: number[] | null
           risk_level?: string | null
           rto_id?: string | null
+          rto_name?: string | null
           slug?: string
+          sms?: string | null
           stage_ids?: number[] | null
-          state?: Database["public"]["Enums"]["australian_state"] | null
+          state?: string | null
           status?: string
           tga_connected_at?: string | null
           tga_last_synced_at?: string | null
@@ -10109,6 +10338,7 @@ export type Database = {
           tga_status?: string | null
           tga_sync_status?: string | null
           updated_at?: string
+          website?: string | null
         }
         Relationships: [
           {
@@ -11974,6 +12204,8 @@ export type Database = {
       }
       user_invitations: {
         Row: {
+          accepted_at: string | null
+          accepted_by_user_id: string | null
           created_at: string | null
           email: string
           expires_at: string
@@ -11981,6 +12213,10 @@ export type Database = {
           id: string
           invited_by: string | null
           last_name: string | null
+          last_sent_at: string | null
+          mailgun_message_id: string | null
+          revoked_at: string | null
+          revoked_reason: string | null
           status: string
           tenant_id: number
           token_hash: string | null
@@ -11988,6 +12224,8 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          accepted_at?: string | null
+          accepted_by_user_id?: string | null
           created_at?: string | null
           email: string
           expires_at?: string
@@ -11995,6 +12233,10 @@ export type Database = {
           id?: string
           invited_by?: string | null
           last_name?: string | null
+          last_sent_at?: string | null
+          mailgun_message_id?: string | null
+          revoked_at?: string | null
+          revoked_reason?: string | null
           status?: string
           tenant_id: number
           token_hash?: string | null
@@ -12002,6 +12244,8 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          accepted_at?: string | null
+          accepted_by_user_id?: string | null
           created_at?: string | null
           email?: string
           expires_at?: string
@@ -12009,6 +12253,10 @@ export type Database = {
           id?: string
           invited_by?: string | null
           last_name?: string | null
+          last_sent_at?: string | null
+          mailgun_message_id?: string | null
+          revoked_at?: string | null
+          revoked_reason?: string | null
           status?: string
           tenant_id?: number
           token_hash?: string | null
@@ -13795,7 +14043,12 @@ export type Database = {
       eos_meeting_role: "Leader" | "Member" | "Observer"
       eos_meeting_type: "L10" | "Quarterly" | "Annual" | "Focus_Day" | "Custom"
       eos_participant_role: "Leader" | "Member" | "Observer"
-      eos_rock_status: "Not_Started" | "On_Track" | "Off_Track" | "Complete"
+      eos_rock_status:
+        | "Not_Started"
+        | "On_Track"
+        | "At_Risk"
+        | "Off_Track"
+        | "Complete"
       eos_role:
         | "admin"
         | "facilitator"
@@ -13989,7 +14242,13 @@ export const Constants = {
       eos_meeting_role: ["Leader", "Member", "Observer"],
       eos_meeting_type: ["L10", "Quarterly", "Annual", "Focus_Day", "Custom"],
       eos_participant_role: ["Leader", "Member", "Observer"],
-      eos_rock_status: ["Not_Started", "On_Track", "Off_Track", "Complete"],
+      eos_rock_status: [
+        "Not_Started",
+        "On_Track",
+        "At_Risk",
+        "Off_Track",
+        "Complete",
+      ],
       eos_role: [
         "admin",
         "facilitator",
