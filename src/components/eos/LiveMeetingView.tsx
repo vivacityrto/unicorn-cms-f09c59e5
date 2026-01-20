@@ -29,6 +29,7 @@ import { IDSDialog } from '@/components/eos/IDSDialog';
 import { TodoInlineForm } from '@/components/eos/TodoInlineForm';
 import { CreateIssueDialog } from '@/components/eos/CreateIssueDialog';
 import { MeetingCloseValidationDialog } from '@/components/eos/MeetingCloseValidationDialog';
+import { AttendancePanel } from '@/components/eos/AttendancePanel';
 import type { EosMeetingSegment, MeetingType } from '@/types/eos';
 
 export const LiveMeetingView = () => {
@@ -613,7 +614,14 @@ export const LiveMeetingView = () => {
       <div className="flex-1 flex overflow-hidden">
         {/* Left: Agenda Sidebar */}
         <div className="w-72 border-r bg-muted/20 overflow-y-auto flex-shrink-0">
-          <div className="p-4">
+          <div className="p-4 space-y-4">
+            {/* Attendance Panel */}
+            <AttendancePanel 
+              meetingId={meetingId!} 
+              meetingType={meeting?.meeting_type || 'L10'}
+              isLive={meetingStarted}
+              canEdit={isFacilitator}
+            />
             <div className="flex items-center justify-between mb-4">
               <h2 className="font-semibold">Agenda</h2>
               <Badge variant="outline" className="text-xs">
