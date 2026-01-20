@@ -22,6 +22,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { cn } from "@/lib/utils";
 import { useNavigate } from "react-router-dom";
 import { Separator } from "@/components/ui/separator";
+import { textToSafeHtml } from "@/lib/sanitize";
 interface Task {
   id: string;
   tenant_id: number;
@@ -1160,8 +1161,8 @@ export default function TasksManagement() {
                         Description
                       </label>
                       <div className="p-3 bg-[rgb(135_174_237_/_5%)] rounded-lg border">
-                        <div className="text-sm leading-[26px] whitespace-pre-wrap" dangerouslySetInnerHTML={{
-                    __html: selectedTask.description.replace(/\n\n/g, '</p><p class="mt-3">').replace(/\n/g, '<br/>').replace(/^/, '<p>').replace(/$/, '</p>')
+                      <div className="text-sm leading-[26px] whitespace-pre-wrap" dangerouslySetInnerHTML={{
+                    __html: textToSafeHtml(selectedTask.description)
                   }} />
                       </div>
                     </div>
