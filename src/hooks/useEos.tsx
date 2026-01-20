@@ -351,6 +351,24 @@ export const useEosMeetings = () => {
     },
   });
 
+  const deleteMeeting = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from('eos_meetings')
+        .delete()
+        .eq('id', id);
+      
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['eos-meetings'] });
+      toast({ title: 'Meeting deleted successfully' });
+    },
+    onError: (error: Error) => {
+      toast({ title: 'Error deleting meeting', description: error.message, variant: 'destructive' });
+    },
+  });
+
   return {
     meetings,
     isLoading,
@@ -358,6 +376,7 @@ export const useEosMeetings = () => {
     refetch,
     createMeeting,
     updateMeeting,
+    deleteMeeting,
   };
 };
 

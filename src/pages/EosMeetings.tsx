@@ -4,12 +4,13 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Plus, Calendar, Clock, Users, Play, FileText, Settings, AlertCircle, RefreshCw } from 'lucide-react';
+import { Plus, Calendar, Clock, Users, Play, FileText, Settings, AlertCircle, RefreshCw, Trash2 } from 'lucide-react';
 import { useEosMeetings } from '@/hooks/useEos';
 import { useRBAC } from '@/hooks/useRBAC';
 import { format } from 'date-fns';
 import { MeetingScheduler } from '@/components/eos/MeetingScheduler';
 import { AgendaTemplateEditor } from '@/components/eos/AgendaTemplateEditor';
+import { DeleteMeetingDialog } from '@/components/eos/DeleteMeetingDialog';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import type { MeetingType } from '@/types/eos';
 
@@ -23,11 +24,29 @@ export default function EosMeetings() {
 
 function MeetingsContent() {
   const navigate = useNavigate();
-  const { meetings, isLoading, error, refetch } = useEosMeetings();
+  const { meetings, isLoading, error, refetch, deleteMeeting } = useEosMeetings();
   const { canScheduleMeetings } = useRBAC();
   const [schedulerOpen, setSchedulerOpen] = useState(false);
   const [templateEditorOpen, setTemplateEditorOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<'all' | MeetingType>('all');
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [meetingToDelete, setMeetingToDelete] = useState<{ id: string; title: string } | null>(null);
+
+  const handleDeleteClick = (id: string, title: string) => {
+    setMeetingToDelete({ id, title });
+    setDeleteDialogOpen(true);
+  };
+
+  const handleDeleteConfirm = () => {
+    if (meetingToDelete) {
+      deleteMeeting.mutate(meetingToDelete.id, {
+        onSuccess: () => {
+          setDeleteDialogOpen(false);
+          setMeetingToDelete(null);
+        },
+      });
+    }
+  };
 
   const getCompletionBadge = (isComplete?: boolean) => {
     if (isComplete) {
@@ -116,6 +135,14 @@ function MeetingsContent() {
       <AgendaTemplateEditor
         open={templateEditorOpen}
         onOpenChange={setTemplateEditorOpen}
+      />
+
+      <DeleteMeetingDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        meetingTitle={meetingToDelete?.title || ''}
+        onConfirm={handleDeleteConfirm}
+        isDeleting={deleteMeeting.isPending}
       />
 
       {/* Info Cards */}
@@ -212,6 +239,16 @@ function MeetingsContent() {
                     >
                       <Play className="w-4 h-4 mr-2" />
                       Start Meeting
+                    </Button>
+                  )}
+                  {canScheduleMeetings() && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleDeleteClick(meeting.id, meeting.title)}
+                      className="text-muted-foreground hover:text-destructive"
+                    >
+                      <Trash2 className="w-4 h-4" />
                     </Button>
                   )}
                 </div>
