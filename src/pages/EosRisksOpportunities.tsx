@@ -286,12 +286,15 @@ function RisksOpportunitiesContent() {
 
               <div className="space-y-2">
                 <Label>Linked Rock</Label>
-                <Select value={formData.linked_rock_id} onValueChange={(v) => setFormData({ ...formData, linked_rock_id: v })}>
+                <Select 
+                  value={formData.linked_rock_id || 'none'} 
+                  onValueChange={(v) => setFormData({ ...formData, linked_rock_id: v === 'none' ? '' : v })}
+                >
                   <SelectTrigger>
                     <SelectValue placeholder="None" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">None</SelectItem>
+                    <SelectItem value="none">None</SelectItem>
                     {rocks?.map(rock => (
                       <SelectItem key={rock.id} value={rock.id}>{rock.title}</SelectItem>
                     ))}
