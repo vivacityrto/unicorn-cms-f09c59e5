@@ -12854,6 +12854,10 @@ export type Database = {
         }
         Returns: Json
       }
+      apply_template_to_meeting: {
+        Args: { p_meeting_id: string; p_template_id: string }
+        Returns: undefined
+      }
       approve_document_ai_suggestions: {
         Args: {
           p_apply_category?: boolean
