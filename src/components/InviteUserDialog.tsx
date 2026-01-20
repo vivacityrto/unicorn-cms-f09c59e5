@@ -119,7 +119,12 @@ export function InviteUserDialog({ open, onOpenChange, onSuccess }: InviteUserDi
         errorMsg = inviteError.message || 'Failed to send invitation';
         inviteStatus = 'failed';
       } else if (inviteData?.ok === false) {
-        errorMsg = inviteData?.detail || inviteData?.message || inviteData?.code || 'Unknown error';
+        // Handle specific error codes with friendly messages
+        if (inviteData?.code === 'INVITE_EXISTS') {
+          errorMsg = `A pending invitation already exists for ${email}. Please wait for them to accept or check the Team Users list.`;
+        } else {
+          errorMsg = inviteData?.detail || inviteData?.message || inviteData?.code || 'Unknown error';
+        }
         inviteStatus = 'failed';
       } else {
         inviteStatus = 'sent';
