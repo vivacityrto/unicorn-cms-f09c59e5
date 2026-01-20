@@ -51,6 +51,7 @@ import IntegrationSettings from "./pages/IntegrationSettings";
 import EosCalendar from "./pages/EosCalendar";
 import EosQC from "./pages/EosQC";
 import EosQCSession from "./pages/EosQCSession";
+import EosFlightPlan from "./pages/EosFlightPlan";
 import ResetPassword from "./pages/ResetPassword";
 import Audits from "./pages/Audits";
 import AuditWorkspace from "./pages/AuditWorkspace";
@@ -420,6 +421,14 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <EosRocks />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/eos/flight-plan" 
+              element={
+                <ProtectedRoute>
+                  <EosFlightPlan />
                 </ProtectedRoute>
               } 
             />
