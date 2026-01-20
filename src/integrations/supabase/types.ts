@@ -5017,6 +5017,44 @@ export type Database = {
           },
         ]
       }
+      eos_meeting_outcome_confirmations: {
+        Row: {
+          confirmed_at: string
+          confirmed_by: string
+          id: string
+          justification: string
+          meeting_id: string
+          outcome_type: string
+          tenant_id: number
+        }
+        Insert: {
+          confirmed_at?: string
+          confirmed_by: string
+          id?: string
+          justification: string
+          meeting_id: string
+          outcome_type: string
+          tenant_id: number
+        }
+        Update: {
+          confirmed_at?: string
+          confirmed_by?: string
+          id?: string
+          justification?: string
+          meeting_id?: string
+          outcome_type?: string
+          tenant_id?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "eos_meeting_outcome_confirmations_meeting_id_fkey"
+            columns: ["meeting_id"]
+            isOneToOne: false
+            referencedRelation: "eos_meetings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       eos_meeting_participants: {
         Row: {
           attended: boolean | null
@@ -5045,6 +5083,41 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "eos_meeting_participants_meeting_id_fkey"
+            columns: ["meeting_id"]
+            isOneToOne: false
+            referencedRelation: "eos_meetings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      eos_meeting_ratings: {
+        Row: {
+          created_at: string
+          id: string
+          meeting_id: string
+          rating: number
+          tenant_id: number
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          meeting_id: string
+          rating: number
+          tenant_id: number
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          meeting_id?: string
+          rating?: number
+          tenant_id?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "eos_meeting_ratings_meeting_id_fkey"
             columns: ["meeting_id"]
             isOneToOne: false
             referencedRelation: "eos_meetings"
@@ -5234,6 +5307,7 @@ export type Database = {
           rock_reviews: Json | null
           scheduled_date: string
           scorecard_data: Json | null
+          status: Database["public"]["Enums"]["meeting_status"]
           template_id: string | null
           template_version_id: string | null
           tenant_id: number
@@ -5262,6 +5336,7 @@ export type Database = {
           rock_reviews?: Json | null
           scheduled_date: string
           scorecard_data?: Json | null
+          status?: Database["public"]["Enums"]["meeting_status"]
           template_id?: string | null
           template_version_id?: string | null
           tenant_id: number
@@ -5290,6 +5365,7 @@ export type Database = {
           rock_reviews?: Json | null
           scheduled_date?: string
           scorecard_data?: Json | null
+          status?: Database["public"]["Enums"]["meeting_status"]
           template_id?: string | null
           template_version_id?: string | null
           tenant_id?: number
@@ -13226,6 +13302,10 @@ export type Database = {
         Returns: Json
       }
       client_tga_link_verify: { Args: { p_tenant_id: number }; Returns: Json }
+      close_meeting_with_validation: {
+        Args: { p_meeting_id: string }
+        Returns: Json
+      }
       copy_stage_template_to_package: {
         Args: { p_package_id: number; p_stage_id: number }
         Returns: undefined
@@ -14139,6 +14219,18 @@ export type Database = {
         }
         Returns: string
       }
+      save_meeting_rating: {
+        Args: { p_meeting_id: string; p_rating: number }
+        Returns: Json
+      }
+      save_outcome_confirmation: {
+        Args: {
+          p_justification: string
+          p_meeting_id: string
+          p_outcome_type: string
+        }
+        Returns: Json
+      }
       search_resources: {
         Args: { p_category?: string; p_search_term: string; p_tags?: string[] }
         Returns: {
@@ -14348,6 +14440,7 @@ export type Database = {
           missing_segments: string[]
         }[]
       }
+      validate_meeting_close: { Args: { p_meeting_id: string }; Returns: Json }
       validate_release_readiness: {
         Args: { p_document_ids: number[]; p_tenant_id?: number }
         Returns: Json
@@ -14403,7 +14496,14 @@ export type Database = {
         | "Conclude"
       eos_todo_status: "Open" | "Complete" | "Cancelled"
       feature_flag: "eos_qc"
-      meeting_status: "scheduled" | "in_progress" | "completed" | "cancelled"
+      meeting_status:
+        | "scheduled"
+        | "in_progress"
+        | "completed"
+        | "cancelled"
+        | "ready_to_close"
+        | "closed"
+        | "locked"
       meeting_type: "level_10" | "quarterly" | "annual"
       rock_type: "company" | "team" | "individual"
       sch_booking_status: "pending" | "confirmed" | "rescheduled" | "cancelled"
@@ -14621,7 +14721,15 @@ export const Constants = {
       ],
       eos_todo_status: ["Open", "Complete", "Cancelled"],
       feature_flag: ["eos_qc"],
-      meeting_status: ["scheduled", "in_progress", "completed", "cancelled"],
+      meeting_status: [
+        "scheduled",
+        "in_progress",
+        "completed",
+        "cancelled",
+        "ready_to_close",
+        "closed",
+        "locked",
+      ],
       meeting_type: ["level_10", "quarterly", "annual"],
       rock_type: ["company", "team", "individual"],
       sch_booking_status: ["pending", "confirmed", "rescheduled", "cancelled"],

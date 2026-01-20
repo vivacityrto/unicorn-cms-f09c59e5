@@ -8,6 +8,7 @@ import { useEosMeetingSegments } from '@/hooks/useEosMeetingSegments';
 import { useEosHeadlines } from '@/hooks/useEosHeadlines';
 import { useMeetingIssues } from '@/hooks/useMeetingIssues';
 import { useMeetingTodos } from '@/hooks/useMeetingTodos';
+import { useMeetingOutcomes } from '@/hooks/useMeetingOutcomes';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -16,7 +17,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { 
   Play, SkipForward, CheckCircle, Clock, Users, X, Target, 
   TrendingUp, AlertCircle, ListTodo, MessageSquare, Sparkles,
-  ArrowRight, Timer, PlayCircle
+  ArrowRight, Timer, PlayCircle, Star
 } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { useEosRocks, useEosScorecardMetrics } from '@/hooks/useEos';
@@ -27,7 +28,8 @@ import { IssuesQueue } from '@/components/eos/IssuesQueue';
 import { IDSDialog } from '@/components/eos/IDSDialog';
 import { TodoInlineForm } from '@/components/eos/TodoInlineForm';
 import { CreateIssueDialog } from '@/components/eos/CreateIssueDialog';
-import type { EosMeetingSegment } from '@/types/eos';
+import { MeetingCloseValidationDialog } from '@/components/eos/MeetingCloseValidationDialog';
+import type { EosMeetingSegment, MeetingType } from '@/types/eos';
 
 export const LiveMeetingView = () => {
   const { meetingId } = useParams<{ meetingId: string }>();
@@ -39,6 +41,7 @@ export const LiveMeetingView = () => {
   const [selectedIssue, setSelectedIssue] = useState<any>(null);
   const [idsDialogOpen, setIdsDialogOpen] = useState(false);
   const [createIssueOpen, setCreateIssueOpen] = useState(false);
+  const [closeDialogOpen, setCloseDialogOpen] = useState(false);
   const [segmentNotes, setSegmentNotes] = useState<Record<string, string>>({});
 
   // Use custom hooks
@@ -46,6 +49,7 @@ export const LiveMeetingView = () => {
   const { headlines, createHeadline, deleteHeadline } = useEosHeadlines(meetingId);
   const { issues } = useMeetingIssues(meetingId);
   const { todos, createTodo, updateTodo } = useMeetingTodos(meetingId);
+  const { saveRating, getUserRating } = useMeetingOutcomes(meetingId);
   const { rocks } = useEosRocks();
   const { metrics } = useEosScorecardMetrics();
 
@@ -594,10 +598,9 @@ export const LiveMeetingView = () => {
             
             {meetingStarted && isFacilitator && (
               <Button
-                onClick={() => handleEndMeeting.mutate()}
+                onClick={() => setCloseDialogOpen(true)}
                 size="sm"
                 variant={allSegmentsComplete ? 'default' : 'outline'}
-                disabled={handleEndMeeting.isPending}
               >
                 <CheckCircle className="h-4 w-4 mr-2" />
                 End Meeting
@@ -726,20 +729,19 @@ export const LiveMeetingView = () => {
 
             {/* All segments complete */}
             {allSegmentsComplete && (
-              <Card className="p-8 text-center bg-green-500/5 border-green-500/20">
-                <CheckCircle className="h-16 w-16 mx-auto mb-4 text-green-500" />
+              <Card className="p-8 text-center bg-primary/5 border-primary/20">
+                <CheckCircle className="h-16 w-16 mx-auto mb-4 text-primary" />
                 <h2 className="text-xl font-bold mb-2">All Segments Complete!</h2>
                 <p className="text-muted-foreground mb-6">
-                  Great meeting! Click "End Meeting" to generate the summary.
+                  Great meeting! Click "End Meeting" to complete the meeting close checklist.
                 </p>
                 {isFacilitator && (
                   <Button 
                     size="lg"
-                    onClick={() => handleEndMeeting.mutate()}
-                    disabled={handleEndMeeting.isPending}
+                    onClick={() => setCloseDialogOpen(true)}
                   >
                     <CheckCircle className="h-5 w-5 mr-2" />
-                    End Meeting & Generate Summary
+                    End Meeting & Complete Checklist
                   </Button>
                 )}
               </Card>
@@ -776,6 +778,15 @@ export const LiveMeetingView = () => {
         open={createIssueOpen}
         onOpenChange={setCreateIssueOpen}
         meetingId={meetingId}
+      />
+
+      <MeetingCloseValidationDialog
+        open={closeDialogOpen}
+        onOpenChange={setCloseDialogOpen}
+        meetingId={meetingId!}
+        meetingType={(meeting?.meeting_type as MeetingType) || 'L10'}
+        todosCount={todos?.length || 0}
+        issuesDiscussed={meeting?.issues_discussed?.length || 0}
       />
     </div>
   );
