@@ -161,6 +161,7 @@ export interface EosTodo {
 export interface EosAgendaSegment {
   name: string;
   duration_minutes: number;
+  description?: string;
 }
 
 export interface EosAgendaTemplate {

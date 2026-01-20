@@ -47,12 +47,12 @@ const DEFAULT_SEGMENTS: Record<MeetingType, EosAgendaSegment[]> = {
     { name: 'Day 2: Conclude', duration_minutes: 30 },
   ],
   Same_Page: [
-    { name: 'Check-In', duration_minutes: 10 },
-    { name: 'Review V/TO', duration_minutes: 20 },
-    { name: 'Clarify Roles and Ownership', duration_minutes: 20 },
-    { name: 'Discuss Key Issues', duration_minutes: 40 },
-    { name: 'Align on Priorities', duration_minutes: 20 },
-    { name: 'Decisions and Next Steps', duration_minutes: 10 },
+    { name: 'Check-In', duration_minutes: 10, description: 'Personal and professional updates between Visionary and Integrator.' },
+    { name: 'Review V/TO', duration_minutes: 20, description: 'Confirm alignment on vision, values, targets, and 3-Year Picture.' },
+    { name: 'Clarify Roles and Ownership', duration_minutes: 20, description: 'Review Visionary vs Integrator responsibilities. Address any friction or overlap.' },
+    { name: 'Discuss Key Issues', duration_minutes: 40, description: 'Open discussion on strategic concerns, people issues, and priorities. Use IDS method.' },
+    { name: 'Align on Priorities', duration_minutes: 20, description: 'Agree on top priorities for the upcoming period. Confirm shared understanding.' },
+    { name: 'Decisions and Next Steps', duration_minutes: 10, description: 'Capture all decisions made. Assign specific action items with owners and due dates.' },
   ],
   Focus_Day: [
     { name: 'Focus Topic', duration_minutes: 180 },
@@ -173,6 +173,7 @@ export const AgendaTemplateEditor = ({ open, onOpenChange, template }: AgendaTem
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="L10">Level 10 Meeting</SelectItem>
+                  <SelectItem value="Same_Page">Same Page Meeting</SelectItem>
                   <SelectItem value="Quarterly">Quarterly Meeting</SelectItem>
                   <SelectItem value="Annual">Annual Strategic Planning</SelectItem>
                   <SelectItem value="Focus_Day">Focus Day</SelectItem>
