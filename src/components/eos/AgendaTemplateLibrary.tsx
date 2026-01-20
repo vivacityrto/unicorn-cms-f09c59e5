@@ -23,6 +23,7 @@ const MEETING_TYPE_CONFIG: Record<MeetingType, { label: string; icon: typeof Cal
   L10: { label: 'Level 10', icon: Zap, color: 'text-blue-600' },
   Quarterly: { label: 'Quarterly', icon: Target, color: 'text-purple-600' },
   Annual: { label: 'Annual', icon: Calendar, color: 'text-emerald-600' },
+  Same_Page: { label: 'Same Page', icon: Calendar, color: 'text-amber-600' },
   Focus_Day: { label: 'Focus Day', icon: Calendar, color: 'text-orange-600' },
   Custom: { label: 'Custom', icon: Calendar, color: 'text-gray-600' },
 };
