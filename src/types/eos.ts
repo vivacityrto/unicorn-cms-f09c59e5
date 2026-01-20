@@ -202,6 +202,8 @@ export interface EosTemplateAuditLog {
   created_at: string;
 }
 
+export type MinutesStatus = 'Draft' | 'Final' | 'Locked';
+
 // Using existing database schema for Meetings
 export interface EosMeeting {
   id: string;
@@ -224,10 +226,73 @@ export interface EosMeeting {
   parent_meeting_id?: string;
   template_id?: string;
   template_version_id?: string;
+  current_minutes_version_id?: string;
+  minutes_status?: MinutesStatus;
   is_multi_client?: boolean;
   created_at: string;
   updated_at: string;
   created_by?: string;
+}
+
+export interface MinutesSnapshot {
+  segments: {
+    id: string;
+    name: string;
+    notes?: string;
+    duration_minutes: number;
+  }[];
+  attendance: {
+    user_id: string;
+    name: string;
+    attended: boolean;
+  }[];
+  decisions: {
+    id: string;
+    text: string;
+    made_at: string;
+  }[];
+  linked_items: {
+    rocks?: { id: string; title: string; status: string }[];
+    issues?: { id: string; title: string; status: string }[];
+    todos?: { id: string; title: string; owner?: string; due_date?: string }[];
+  };
+  action_items: {
+    id: string;
+    title: string;
+    owner_id?: string;
+    owner_name?: string;
+    due_date?: string;
+    status: string;
+  }[];
+  attachments?: {
+    id: string;
+    name: string;
+    url: string;
+  }[];
+}
+
+export interface EosMeetingMinutesVersion {
+  id: string;
+  meeting_id: string;
+  version_number: number;
+  created_by?: string;
+  created_at: string;
+  change_summary?: string;
+  minutes_snapshot: MinutesSnapshot;
+  is_final: boolean;
+  is_locked: boolean;
+}
+
+export interface EosMinutesAuditLog {
+  id: string;
+  action: 'minutes_version_created' | 'minutes_finalised' | 'minutes_revision_created' | 'minutes_locked' | 'minutes_unlocked' | 'minutes_version_restored';
+  user_id?: string;
+  meeting_id: string;
+  minutes_version_id?: string;
+  tenant_id: number;
+  change_summary?: string;
+  details?: Record<string, any>;
+  created_at: string;
 }
 
 export interface UserProfile {

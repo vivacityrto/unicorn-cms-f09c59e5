@@ -4919,6 +4919,50 @@ export type Database = {
         }
         Relationships: []
       }
+      eos_meeting_minutes_versions: {
+        Row: {
+          change_summary: string | null
+          created_at: string
+          created_by: string | null
+          id: string
+          is_final: boolean
+          is_locked: boolean
+          meeting_id: string
+          minutes_snapshot: Json
+          version_number: number
+        }
+        Insert: {
+          change_summary?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_final?: boolean
+          is_locked?: boolean
+          meeting_id: string
+          minutes_snapshot?: Json
+          version_number?: number
+        }
+        Update: {
+          change_summary?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_final?: boolean
+          is_locked?: boolean
+          meeting_id?: string
+          minutes_snapshot?: Json
+          version_number?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "eos_meeting_minutes_versions_meeting_id_fkey"
+            columns: ["meeting_id"]
+            isOneToOne: false
+            referencedRelation: "eos_meetings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       eos_meeting_occurrences: {
         Row: {
           created_at: string
@@ -5173,6 +5217,7 @@ export type Database = {
           completed_at: string | null
           created_at: string | null
           created_by: string | null
+          current_minutes_version_id: string | null
           duration_minutes: number | null
           headlines: Json | null
           id: string
@@ -5181,6 +5226,7 @@ export type Database = {
           issues_discussed: string[] | null
           location: string | null
           meeting_type: Database["public"]["Enums"]["eos_meeting_type"]
+          minutes_status: string
           notes: string | null
           parent_meeting_id: string | null
           recurrence_end_date: string | null
@@ -5199,6 +5245,7 @@ export type Database = {
           completed_at?: string | null
           created_at?: string | null
           created_by?: string | null
+          current_minutes_version_id?: string | null
           duration_minutes?: number | null
           headlines?: Json | null
           id?: string
@@ -5207,6 +5254,7 @@ export type Database = {
           issues_discussed?: string[] | null
           location?: string | null
           meeting_type: Database["public"]["Enums"]["eos_meeting_type"]
+          minutes_status?: string
           notes?: string | null
           parent_meeting_id?: string | null
           recurrence_end_date?: string | null
@@ -5225,6 +5273,7 @@ export type Database = {
           completed_at?: string | null
           created_at?: string | null
           created_by?: string | null
+          current_minutes_version_id?: string | null
           duration_minutes?: number | null
           headlines?: Json | null
           id?: string
@@ -5233,6 +5282,7 @@ export type Database = {
           issues_discussed?: string[] | null
           location?: string | null
           meeting_type?: Database["public"]["Enums"]["eos_meeting_type"]
+          minutes_status?: string
           notes?: string | null
           parent_meeting_id?: string | null
           recurrence_end_date?: string | null
@@ -5287,6 +5337,64 @@ export type Database = {
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_current_minutes_version"
+            columns: ["current_minutes_version_id"]
+            isOneToOne: false
+            referencedRelation: "eos_meeting_minutes_versions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      eos_minutes_audit_log: {
+        Row: {
+          action: string
+          change_summary: string | null
+          created_at: string
+          details: Json | null
+          id: string
+          meeting_id: string
+          minutes_version_id: string | null
+          tenant_id: number
+          user_id: string | null
+        }
+        Insert: {
+          action: string
+          change_summary?: string | null
+          created_at?: string
+          details?: Json | null
+          id?: string
+          meeting_id: string
+          minutes_version_id?: string | null
+          tenant_id: number
+          user_id?: string | null
+        }
+        Update: {
+          action?: string
+          change_summary?: string | null
+          created_at?: string
+          details?: Json | null
+          id?: string
+          meeting_id?: string
+          minutes_version_id?: string | null
+          tenant_id?: number
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "eos_minutes_audit_log_meeting_id_fkey"
+            columns: ["meeting_id"]
+            isOneToOne: false
+            referencedRelation: "eos_meetings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "eos_minutes_audit_log_minutes_version_id_fkey"
+            columns: ["minutes_version_id"]
+            isOneToOne: false
+            referencedRelation: "eos_meeting_minutes_versions"
             referencedColumns: ["id"]
           },
         ]
@@ -13172,6 +13280,10 @@ export type Database = {
         }
         Returns: string
       }
+      create_minutes_revision: {
+        Args: { p_meeting_id: string; p_reason: string }
+        Returns: string
+      }
       create_recurring_meetings: {
         Args: { p_base_meeting_id: string; p_weeks_ahead?: number }
         Returns: string[]
@@ -13206,6 +13318,10 @@ export type Database = {
       current_user_email: { Args: never; Returns: string }
       current_user_tenant_ids: { Args: never; Returns: string[] }
       drop_rock_to_issue: { Args: { p_rock_id: string }; Returns: string }
+      finalise_meeting_minutes: {
+        Args: { p_meeting_id: string; p_summary: string }
+        Returns: string
+      }
       fn_auth_user_id_by_email: { Args: { p_email: string }; Returns: string }
       fn_match_client_for_event: {
         Args: {
@@ -13602,6 +13718,10 @@ export type Database = {
           todos: Json
         }[]
       }
+      lock_meeting_minutes: {
+        Args: { p_meeting_id: string; p_reason?: string }
+        Returns: undefined
+      }
       normalize_company_key: { Args: { txt: string }; Returns: string }
       persist_tga_scope_items: {
         Args: { p_scope_items: Json; p_scope_type: string; p_tenant_id: number }
@@ -13706,6 +13826,10 @@ export type Database = {
       request_stage_review: {
         Args: { p_reviewer_user_id: string; p_stage_release_id: string }
         Returns: Json
+      }
+      restore_minutes_version: {
+        Args: { p_reason: string; p_version_id: string }
+        Returns: string
       }
       restore_template_version: {
         Args: { p_restore_reason?: string; p_version_id: string }
@@ -13983,6 +14107,14 @@ export type Database = {
         Args: { p_draft_id: string; p_fields: Json }
         Returns: Json
       }
+      save_meeting_minutes: {
+        Args: {
+          p_change_summary?: string
+          p_meeting_id: string
+          p_minutes_snapshot: Json
+        }
+        Returns: string
+      }
       search_resources: {
         Args: { p_category?: string; p_search_term: string; p_tags?: string[] }
         Returns: {
@@ -14075,6 +14207,10 @@ export type Database = {
           p_user_id?: string
         }
         Returns: Json
+      }
+      unlock_meeting_minutes: {
+        Args: { p_meeting_id: string; p_reason: string }
+        Returns: undefined
       }
       update_my_csc_profile: {
         Args: {
