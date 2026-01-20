@@ -6,8 +6,7 @@ import { useRBAC } from '@/hooks/useRBAC';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Badge } from '@/components/ui/badge';
-import { Eye, Edit, History } from 'lucide-react';
+import { Eye, Edit, History, Target } from 'lucide-react';
 import { VtoEditor } from '@/components/eos/VtoEditor';
 import { VtoViewer } from '@/components/eos/VtoViewer';
 import { DashboardLayout } from '@/components/DashboardLayout';
@@ -61,7 +60,7 @@ function VtoContent() {
       <div className="flex items-center justify-center h-96">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Loading V/TO...</p>
+          <p className="text-muted-foreground">Loading Mission Control...</p>
         </div>
       </div>
     );
@@ -72,16 +71,23 @@ function VtoContent() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Vision/Traction Organizer</h1>
-          <p className="text-muted-foreground mt-2">
-            Define your company's vision and track your path to traction
+          <h1 className="text-3xl font-bold flex items-center gap-3">
+            <Target className="h-8 w-8 text-primary" />
+            Superhero Mission Control
+          </h1>
+          <p className="text-lg text-muted-foreground mt-1">
+            12 Month Strategic Plan
+          </p>
+          <p className="text-sm text-muted-foreground mt-3 max-w-2xl">
+            This page defines Vivacity's mission, direction, and execution priorities. 
+            It aligns strategy, revenue targets, and delivery focus across the next 12 months.
           </p>
         </div>
         <div className="flex gap-2">
           {activeVto && !isEditing && canEditVTO() && (
             <Button onClick={() => setIsEditing(true)} variant="default">
               <Edit className="h-4 w-4 mr-2" />
-              Edit V/TO
+              Edit Plan
             </Button>
           )}
           {isEditing && (
@@ -95,7 +101,7 @@ function VtoContent() {
 
       <Tabs defaultValue="current" className="w-full">
         <TabsList>
-          <TabsTrigger value="current">Current V/TO</TabsTrigger>
+          <TabsTrigger value="current">Current Plan</TabsTrigger>
           <TabsTrigger value="history">
             <History className="h-4 w-4 mr-2" />
             Version History
@@ -106,15 +112,16 @@ function VtoContent() {
           {!activeVto && !isEditing ? (
             <Card>
               <CardContent className="flex flex-col items-center justify-center py-12">
-                <h3 className="text-lg font-semibold mb-2">No V/TO Created Yet</h3>
+                <Target className="h-12 w-12 text-muted-foreground mb-4" />
+                <h3 className="text-lg font-semibold mb-2">No Mission Control Created Yet</h3>
                 <p className="text-muted-foreground mb-4 text-center max-w-md">
                   {canEditVTO() 
-                    ? "Create your first Vision/Traction Organizer to define your company's vision and track progress"
-                    : "No Vision/Traction Organizer has been created yet. Contact your administrator to set one up."}
+                    ? "Create your strategic plan to define Vivacity's mission, direction, and execution priorities."
+                    : "No strategic plan has been created yet. Contact your administrator to set one up."}
                 </p>
                 {canEditVTO() && (
                   <Button onClick={() => setIsEditing(true)}>
-                    Create Your First V/TO
+                    Create Mission Control
                   </Button>
                 )}
               </CardContent>
@@ -134,7 +141,7 @@ function VtoContent() {
                   <CardHeader>
                     <div className="flex items-center justify-between">
                       <div>
-                        <CardTitle className="text-lg">V/TO</CardTitle>
+                        <CardTitle className="text-lg">Mission Control</CardTitle>
                         <CardDescription>
                           Last updated {new Date(version.updated_at || version.created_at).toLocaleDateString()}
                         </CardDescription>
