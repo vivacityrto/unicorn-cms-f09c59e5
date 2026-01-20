@@ -18,7 +18,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useToast } from '@/hooks/use-toast';
-import { Users, Search, Shield, UserCheck, UserX, UserPlus } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { Users, Search, Shield, UserCheck, UserX, UserPlus, Clock } from 'lucide-react';
 import { InviteUserDialog } from '@/components/InviteUserDialog';
 
 interface TeamUser {
@@ -33,6 +34,7 @@ interface TeamUser {
   archived: boolean;
   last_sign_in_at: string | null;
   created_at: string;
+  isPending?: boolean;
 }
 
 const SUPERADMIN_LEVELS = [
@@ -88,6 +90,16 @@ export default function TeamUsers() {
 
       if (error) throw error;
 
+      // Also fetch pending invitations for Vivacity team (tenant_id = 319)
+      const { data: pendingInvites, error: invitesError } = await supabase
+        .from('user_invitations')
+        .select('id, email, first_name, last_name, unicorn_role, created_at, status')
+        .eq('tenant_id', 319)
+        .eq('status', 'pending')
+        .is('accepted_at', null);
+
+      if (invitesError) throw invitesError;
+
       const teamUsers: TeamUser[] = (data || []).map((user: any) => ({
         user_uuid: user.user_uuid,
         first_name: user.first_name || '',
@@ -100,9 +112,29 @@ export default function TeamUsers() {
         archived: user.archived || false,
         last_sign_in_at: user.last_sign_in_at,
         created_at: user.created_at,
+        isPending: false,
       }));
 
-      setUsers(teamUsers);
+      // Filter out invites for emails that already exist as users
+      const existingEmails = new Set(teamUsers.map(u => u.email.toLowerCase()));
+      const pendingUsers: TeamUser[] = (pendingInvites || [])
+        .filter(invite => !existingEmails.has(invite.email.toLowerCase()))
+        .map((invite: any) => ({
+          user_uuid: `invite-${invite.id}`,
+          first_name: invite.first_name || '',
+          last_name: invite.last_name || '',
+          email: invite.email,
+          avatar_url: null,
+          unicorn_role: invite.unicorn_role || 'User',
+          superadmin_level: null,
+          disabled: false,
+          archived: false,
+          last_sign_in_at: null,
+          created_at: invite.created_at,
+          isPending: true,
+        }));
+
+      setUsers([...teamUsers, ...pendingUsers]);
     } catch (error: any) {
       toast({
         title: 'Error',
@@ -132,9 +164,11 @@ export default function TeamUsers() {
 
     // Status filter
     if (statusFilter === 'active') {
-      filtered = filtered.filter(user => !user.disabled && !user.archived);
+      filtered = filtered.filter(user => !user.disabled && !user.archived && !user.isPending);
     } else if (statusFilter === 'inactive') {
       filtered = filtered.filter(user => user.disabled || user.archived);
+    } else if (statusFilter === 'pending') {
+      filtered = filtered.filter(user => user.isPending);
     }
 
     setFilteredUsers(filtered);
@@ -156,7 +190,7 @@ export default function TeamUsers() {
   const getLevelBadge = (level: string | null) => {
     switch (level) {
       case 'Administrator':
-        return <Badge className="bg-purple-600 hover:bg-purple-700">Administrator</Badge>;
+        return <Badge className="bg-primary hover:bg-primary/90">Administrator</Badge>;
       case 'Team Leader':
         return <Badge className="bg-blue-600 hover:bg-blue-700">Team Leader</Badge>;
       case 'General':
@@ -168,8 +202,9 @@ export default function TeamUsers() {
 
   const stats = {
     total: users.length,
-    active: users.filter(u => !u.disabled && !u.archived).length,
+    active: users.filter(u => !u.disabled && !u.archived && !u.isPending).length,
     inactive: users.filter(u => u.disabled || u.archived).length,
+    pending: users.filter(u => u.isPending).length,
   };
 
   if (loading) {
@@ -209,7 +244,7 @@ export default function TeamUsers() {
         </div>
 
         {/* Stats Cards */}
-        <div className="grid gap-4 md:grid-cols-3">
+        <div className="grid gap-4 md:grid-cols-4">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Total Team</CardTitle>
@@ -230,11 +265,20 @@ export default function TeamUsers() {
           </Card>
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Inactive</CardTitle>
-              <UserX className="h-4 w-4 text-red-600" />
+              <CardTitle className="text-sm font-medium">Pending</CardTitle>
+              <Clock className="h-4 w-4 text-amber-600" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-red-600">{stats.inactive}</div>
+              <div className="text-2xl font-bold text-amber-600">{stats.pending}</div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Inactive</CardTitle>
+              <UserX className="h-4 w-4 text-destructive" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-destructive">{stats.inactive}</div>
             </CardContent>
           </Card>
         </div>
@@ -271,6 +315,7 @@ export default function TeamUsers() {
                 <SelectContent>
                   <SelectItem value="all">All Status</SelectItem>
                   <SelectItem value="active">Active</SelectItem>
+                  <SelectItem value="pending">Pending</SelectItem>
                   <SelectItem value="inactive">Inactive</SelectItem>
                 </SelectContent>
               </Select>
@@ -302,14 +347,17 @@ export default function TeamUsers() {
                   filteredUsers.map((user) => (
                     <TableRow
                       key={user.user_uuid}
-                      className="cursor-pointer hover:bg-muted/50"
-                      onClick={() => navigate(`/user-profile/${user.user_uuid}`)}
+                      className={cn(
+                        "cursor-pointer hover:bg-muted/50",
+                        user.isPending && "opacity-75"
+                      )}
+                      onClick={() => !user.isPending && navigate(`/user-profile/${user.user_uuid}`)}
                     >
                       <TableCell>
                         <div className="flex items-center gap-3">
                           <Avatar className="h-9 w-9">
                             <AvatarImage src={user.avatar_url || undefined} />
-                            <AvatarFallback className="bg-purple-100 text-purple-700 text-sm">
+                            <AvatarFallback className="bg-primary/10 text-primary text-sm">
                               {getInitials(user.first_name, user.last_name)}
                             </AvatarFallback>
                           </Avatar>
@@ -324,12 +372,19 @@ export default function TeamUsers() {
                       <TableCell className="text-muted-foreground">{user.email}</TableCell>
                       <TableCell>{getLevelBadge(user.superadmin_level)}</TableCell>
                       <TableCell>
-                        <Badge variant={user.disabled || user.archived ? 'destructive' : 'default'}>
-                          {user.disabled || user.archived ? 'Inactive' : 'Active'}
-                        </Badge>
+                        {user.isPending ? (
+                          <Badge variant="outline" className="border-amber-500 text-amber-600">
+                            <Clock className="h-3 w-3 mr-1" />
+                            Pending
+                          </Badge>
+                        ) : (
+                          <Badge variant={user.disabled || user.archived ? 'destructive' : 'default'}>
+                            {user.disabled || user.archived ? 'Inactive' : 'Active'}
+                          </Badge>
+                        )}
                       </TableCell>
                       <TableCell className="text-muted-foreground">
-                        {formatDate(user.last_sign_in_at)}
+                        {user.isPending ? 'Invited' : formatDate(user.last_sign_in_at)}
                       </TableCell>
                     </TableRow>
                   ))
