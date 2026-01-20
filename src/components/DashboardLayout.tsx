@@ -150,9 +150,9 @@ const superAdminMenuItems = {
     label: "Flight Plan",
     path: "/eos/flight-plan"
   }, {
-    icon: AlertTriangle,
-    label: "Issues",
-    path: "/eos/issues"
+    icon: Shield,
+    label: "Risks & Opportunities",
+    path: "/eos/risks-opportunities"
   }, {
     icon: ListTodo,
     label: "To-Dos",
