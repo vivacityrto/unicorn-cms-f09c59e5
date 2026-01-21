@@ -86,6 +86,9 @@ import MyWork from "./pages/MyWork";
 import CalendarTimeCapture from "./pages/CalendarTimeCapture";
 import OutlookCallback from "./pages/OutlookCallback";
 import TimeInbox from "./pages/TimeInbox";
+import ProcessesWrapper from "./pages/ProcessesWrapper";
+import ProcessDetail from "./pages/ProcessDetail";
+import ProcessForm from "./pages/ProcessForm";
 const queryClient = new QueryClient();
 
 const App = () => (

@@ -8810,6 +8810,251 @@ export type Database = {
         }
         Relationships: []
       }
+      process_audit_log: {
+        Row: {
+          action: string
+          actor_user_id: string | null
+          after_data: Json | null
+          before_data: Json | null
+          created_at: string
+          details: Json | null
+          id: string
+          process_id: string
+          reason: string | null
+        }
+        Insert: {
+          action: string
+          actor_user_id?: string | null
+          after_data?: Json | null
+          before_data?: Json | null
+          created_at?: string
+          details?: Json | null
+          id?: string
+          process_id: string
+          reason?: string | null
+        }
+        Update: {
+          action?: string
+          actor_user_id?: string | null
+          after_data?: Json | null
+          before_data?: Json | null
+          created_at?: string
+          details?: Json | null
+          id?: string
+          process_id?: string
+          reason?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "process_audit_log_process_id_fkey"
+            columns: ["process_id"]
+            isOneToOne: false
+            referencedRelation: "processes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      process_versions: {
+        Row: {
+          applies_to: string
+          applies_to_package_id: number | null
+          approved_at: string | null
+          approved_by: string | null
+          category: string
+          content: Json | null
+          created_at: string
+          created_by: string
+          edit_reason: string | null
+          evidence_records: string | null
+          id: string
+          instructions: string | null
+          owner_user_id: string | null
+          process_id: string
+          purpose: string | null
+          related_standards: string | null
+          review_date: string | null
+          reviewer_user_id: string | null
+          scope: string | null
+          short_description: string | null
+          snapshot_data: Json | null
+          status: string
+          tags: string[] | null
+          title: string
+          version: number
+        }
+        Insert: {
+          applies_to: string
+          applies_to_package_id?: number | null
+          approved_at?: string | null
+          approved_by?: string | null
+          category: string
+          content?: Json | null
+          created_at?: string
+          created_by: string
+          edit_reason?: string | null
+          evidence_records?: string | null
+          id?: string
+          instructions?: string | null
+          owner_user_id?: string | null
+          process_id: string
+          purpose?: string | null
+          related_standards?: string | null
+          review_date?: string | null
+          reviewer_user_id?: string | null
+          scope?: string | null
+          short_description?: string | null
+          snapshot_data?: Json | null
+          status: string
+          tags?: string[] | null
+          title: string
+          version: number
+        }
+        Update: {
+          applies_to?: string
+          applies_to_package_id?: number | null
+          approved_at?: string | null
+          approved_by?: string | null
+          category?: string
+          content?: Json | null
+          created_at?: string
+          created_by?: string
+          edit_reason?: string | null
+          evidence_records?: string | null
+          id?: string
+          instructions?: string | null
+          owner_user_id?: string | null
+          process_id?: string
+          purpose?: string | null
+          related_standards?: string | null
+          review_date?: string | null
+          reviewer_user_id?: string | null
+          scope?: string | null
+          short_description?: string | null
+          snapshot_data?: Json | null
+          status?: string
+          tags?: string[] | null
+          title?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "process_versions_applies_to_package_id_fkey"
+            columns: ["applies_to_package_id"]
+            isOneToOne: false
+            referencedRelation: "packages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "process_versions_process_id_fkey"
+            columns: ["process_id"]
+            isOneToOne: false
+            referencedRelation: "processes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      processes: {
+        Row: {
+          applies_to: string
+          applies_to_package_id: number | null
+          approved_at: string | null
+          approved_by: string | null
+          category: string
+          content: Json | null
+          created_at: string
+          created_by: string
+          edit_reason: string | null
+          evidence_records: string | null
+          id: string
+          instructions: string | null
+          owner_user_id: string | null
+          purpose: string | null
+          related_standards: string | null
+          review_date: string | null
+          reviewer_user_id: string | null
+          scope: string | null
+          short_description: string | null
+          status: string
+          tags: string[] | null
+          tenant_id: number | null
+          title: string
+          updated_at: string
+          updated_by: string | null
+          version: number
+        }
+        Insert: {
+          applies_to?: string
+          applies_to_package_id?: number | null
+          approved_at?: string | null
+          approved_by?: string | null
+          category: string
+          content?: Json | null
+          created_at?: string
+          created_by: string
+          edit_reason?: string | null
+          evidence_records?: string | null
+          id?: string
+          instructions?: string | null
+          owner_user_id?: string | null
+          purpose?: string | null
+          related_standards?: string | null
+          review_date?: string | null
+          reviewer_user_id?: string | null
+          scope?: string | null
+          short_description?: string | null
+          status?: string
+          tags?: string[] | null
+          tenant_id?: number | null
+          title: string
+          updated_at?: string
+          updated_by?: string | null
+          version?: number
+        }
+        Update: {
+          applies_to?: string
+          applies_to_package_id?: number | null
+          approved_at?: string | null
+          approved_by?: string | null
+          category?: string
+          content?: Json | null
+          created_at?: string
+          created_by?: string
+          edit_reason?: string | null
+          evidence_records?: string | null
+          id?: string
+          instructions?: string | null
+          owner_user_id?: string | null
+          purpose?: string | null
+          related_standards?: string | null
+          review_date?: string | null
+          reviewer_user_id?: string | null
+          scope?: string | null
+          short_description?: string | null
+          status?: string
+          tags?: string[] | null
+          tenant_id?: number | null
+          title?: string
+          updated_at?: string
+          updated_by?: string | null
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "processes_applies_to_package_id_fkey"
+            columns: ["applies_to_package_id"]
+            isOneToOne: false
+            referencedRelation: "packages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "processes_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           active_tenant_id: string | null
