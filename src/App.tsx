@@ -530,7 +530,40 @@ const App = () => (
                 </ProtectedRoute>
               } 
             />
+            {/* Process Management Routes */}
             <Route 
+              path="/processes" 
+              element={
+                <ProtectedRoute>
+                  <ProcessesWrapper />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/processes/new" 
+              element={
+                <ProtectedRoute>
+                  <ProcessForm />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/processes/:id" 
+              element={
+                <ProtectedRoute>
+                  <ProcessDetail />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/processes/:id/edit" 
+              element={
+                <ProtectedRoute>
+                  <ProcessForm />
+                </ProtectedRoute>
+              } 
+            />
+            <Route
               path="/settings/notifications" 
               element={
                 <ProtectedRoute>
