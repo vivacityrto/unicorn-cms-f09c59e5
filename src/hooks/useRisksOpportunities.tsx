@@ -2,7 +2,22 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from '@/hooks/use-toast';
-import type { RiskOpportunity } from '@/types/risksOpportunities';
+import type { RiskOpportunity, RiskOpportunityStatus, RiskOpportunityCategory, RiskOpportunityImpact } from '@/types/risksOpportunities';
+
+// Helper to capitalize first letter of each word for display
+const capitalize = (str: string | undefined | null): string => {
+  if (!str) return '';
+  // Handle "in review" -> "In Review" and single words
+  return str.split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
+};
+
+// Transform database row to properly-cased TypeScript type
+const normalizeItem = (row: Record<string, unknown>): RiskOpportunity => ({
+  ...row,
+  category: row.category ? capitalize(row.category as string) as RiskOpportunityCategory : undefined,
+  impact: row.impact ? capitalize(row.impact as string) as RiskOpportunityImpact : undefined,
+  status: capitalize(row.status as string) as RiskOpportunityStatus,
+} as RiskOpportunity);
 
 export const useRisksOpportunities = () => {
   const { profile } = useAuth();
@@ -18,7 +33,7 @@ export const useRisksOpportunities = () => {
         .order('created_at', { ascending: false });
       
       if (error) throw error;
-      return data as RiskOpportunity[];
+      return (data || []).map(normalizeItem);
     },
     enabled: !!profile?.tenant_id,
   });
@@ -32,9 +47,9 @@ export const useRisksOpportunities = () => {
           item_type: item.item_type,
           title: item.title,
           description: item.description,
-          category: item.category,
-          impact: item.impact,
-          status: item.status || 'Open',
+          category: item.category?.toLowerCase(),
+          impact: item.impact?.toLowerCase(),
+          status: item.status?.toLowerCase() || 'open',
           quarter_number: item.quarter_number,
           quarter_year: item.quarter_year,
           linked_rock_id: item.linked_rock_id,
@@ -58,12 +73,25 @@ export const useRisksOpportunities = () => {
 
   const updateItem = useMutation({
     mutationFn: async ({ id, ...updates }: Partial<RiskOpportunity> & { id: string }) => {
+      // Convert enum values to lowercase for database constraints
+      const dbUpdates: Record<string, unknown> = {
+        updated_at: new Date().toISOString(),
+      };
+      
+      if (updates.category !== undefined) dbUpdates.category = updates.category?.toLowerCase();
+      if (updates.impact !== undefined) dbUpdates.impact = updates.impact?.toLowerCase();
+      if (updates.status !== undefined) dbUpdates.status = updates.status?.toLowerCase();
+      if (updates.title !== undefined) dbUpdates.title = updates.title;
+      if (updates.description !== undefined) dbUpdates.description = updates.description;
+      if (updates.quarter_number !== undefined) dbUpdates.quarter_number = updates.quarter_number;
+      if (updates.quarter_year !== undefined) dbUpdates.quarter_year = updates.quarter_year;
+      if (updates.linked_rock_id !== undefined) dbUpdates.linked_rock_id = updates.linked_rock_id;
+      if (updates.assigned_to !== undefined) dbUpdates.assigned_to = updates.assigned_to;
+      if (updates.outcome_note !== undefined) dbUpdates.outcome_note = updates.outcome_note;
+      
       const { data, error } = await supabase
         .from('eos_issues')
-        .update({
-          ...updates,
-          updated_at: new Date().toISOString(),
-        } as any)
+        .update(dbUpdates as any)
         .eq('id', id)
         .select()
         .single();
