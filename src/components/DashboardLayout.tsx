@@ -128,15 +128,15 @@ const superAdminMenuItems = {
     icon: ShieldCheck,
     label: "User Audit",
     path: "/admin/user-audit"
-  }, {
-    icon: FileText,
-    label: "Processes",
-    path: "/processes"
   }],
   eos: [{
     icon: Target,
     label: "EOS Overview",
     path: "/eos"
+  }, {
+    icon: FileText,
+    label: "Processes",
+    path: "/processes"
   }, {
     icon: BarChart3,
     label: "Scorecard",
