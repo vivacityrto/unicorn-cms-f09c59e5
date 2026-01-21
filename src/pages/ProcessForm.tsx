@@ -41,6 +41,42 @@ interface User {
   email: string;
 }
 
+interface ProcessFormData {
+  title: string;
+  short_description: string;
+  category: ProcessCategory;
+  tags: string[];
+  owner_user_id: string;
+  applies_to: ProcessAppliesTo;
+  applies_to_package_id: number | null;
+  status: ProcessStatus;
+  purpose: string;
+  scope: string;
+  instructions: string;
+  evidence_records: string;
+  related_standards: string;
+  review_date: Date | null;
+  reviewer_user_id: string;
+}
+
+const initialFormData: ProcessFormData = {
+  title: '',
+  short_description: '',
+  category: 'operations',
+  tags: [],
+  owner_user_id: '',
+  applies_to: 'vivacity_internal',
+  applies_to_package_id: null,
+  status: 'draft',
+  purpose: '',
+  scope: '',
+  instructions: '',
+  evidence_records: '',
+  related_standards: '',
+  review_date: null,
+  reviewer_user_id: '',
+};
+
 export default function ProcessForm() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -50,39 +86,7 @@ export default function ProcessForm() {
 
   const isEditing = !!id && id !== 'new';
 
-  const [formData, setFormData] = useState<{
-    title: string;
-    short_description: string;
-    category: ProcessCategory;
-    tags: string[];
-    owner_user_id: string;
-    applies_to: ProcessAppliesTo;
-    applies_to_package_id: number | null;
-    status: ProcessStatus;
-    purpose: string;
-    scope: string;
-    instructions: string;
-    evidence_records: string;
-    related_standards: string;
-    review_date: Date | null;
-    reviewer_user_id: string;
-  }>({
-    title: '',
-    short_description: '',
-    category: 'operations',
-    tags: [],
-    owner_user_id: '',
-    applies_to: 'vivacity_internal',
-    applies_to_package_id: null,
-    status: 'draft',
-    purpose: '',
-    scope: '',
-    instructions: '',
-    evidence_records: '',
-    related_standards: '',
-    review_date: null as Date | null,
-    reviewer_user_id: '',
-  });
+  const [formData, setFormData] = useState<ProcessFormData>(initialFormData);
 
   const [tagInput, setTagInput] = useState('');
   const [users, setUsers] = useState<User[]>([]);
@@ -105,12 +109,13 @@ export default function ProcessForm() {
     };
 
     const fetchPackages = async () => {
-      const { data } = await supabase
+      // @ts-expect-error - Supabase type chain too deep
+      const result = await supabase
         .from('packages')
         .select('id, name')
         .eq('is_archived', false)
         .order('name');
-      if (data) setPackages(data);
+      if (result.data) setPackages(result.data as { id: number; name: string }[]);
     };
 
     fetchUsers();
@@ -235,7 +240,7 @@ export default function ProcessForm() {
                 {isEditing ? 'Edit Process' : 'Create New Process'}
               </h1>
               {isEditingApproved && (
-                <p className="text-sm text-amber-600 flex items-center gap-1 mt-1">
+                <p className="text-sm text-warning flex items-center gap-1 mt-1">
                   <AlertTriangle className="h-4 w-4" />
                   Editing an approved process will create a new version
                 </p>
