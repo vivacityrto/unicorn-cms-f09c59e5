@@ -95,7 +95,7 @@ function RocksContent() {
             Focus on 3-7 most important priorities each quarter
           </p>
         </div>
-        <Button>
+        <Button onClick={() => { setEditingRock(null); setIsFormOpen(true); }}>
           <Plus className="w-4 h-4 mr-2" />
           Add Rock
         </Button>
