@@ -8819,8 +8819,10 @@ export type Database = {
           created_at: string
           details: Json | null
           id: string
+          occurred_at: string
           process_id: string
           reason: string | null
+          tenant_id: number | null
         }
         Insert: {
           action: string
@@ -8830,8 +8832,10 @@ export type Database = {
           created_at?: string
           details?: Json | null
           id?: string
+          occurred_at?: string
           process_id: string
           reason?: string | null
+          tenant_id?: number | null
         }
         Update: {
           action?: string
@@ -8841,8 +8845,10 @@ export type Database = {
           created_at?: string
           details?: Json | null
           id?: string
+          occurred_at?: string
           process_id?: string
           reason?: string | null
+          tenant_id?: number | null
         }
         Relationships: [
           {
@@ -8853,6 +8859,69 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      process_tag_links: {
+        Row: {
+          created_at: string
+          created_by: string
+          process_id: string
+          tag_id: string
+          tenant_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          process_id: string
+          tag_id: string
+          tenant_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          process_id?: string
+          tag_id?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "process_tag_links_process_id_fkey"
+            columns: ["process_id"]
+            isOneToOne: false
+            referencedRelation: "processes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "process_tag_links_tag_id_fkey"
+            columns: ["tag_id"]
+            isOneToOne: false
+            referencedRelation: "process_tags"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      process_tags: {
+        Row: {
+          created_at: string
+          created_by: string
+          id: string
+          name: string
+          tenant_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          id?: string
+          name: string
+          tenant_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          id?: string
+          name?: string
+          tenant_id?: string
+        }
+        Relationships: []
       }
       process_versions: {
         Row: {
@@ -14519,6 +14588,8 @@ export type Database = {
       }
       current_tenant: { Args: never; Returns: string }
       current_user_email: { Args: never; Returns: string }
+      current_user_role: { Args: never; Returns: string }
+      current_user_tenant: { Args: never; Returns: number }
       current_user_tenant_ids: { Args: never; Returns: string[] }
       drop_rock_to_issue: { Args: { p_rock_id: string }; Returns: string }
       finalise_meeting_minutes: {
