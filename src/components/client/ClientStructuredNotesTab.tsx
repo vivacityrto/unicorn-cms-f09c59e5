@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNotes, Note } from '@/hooks/useNotes';
 import { useClientActionItems } from '@/hooks/useClientManagementData';
+import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -12,15 +13,21 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { 
   Plus, StickyNote, Pin, MoreHorizontal, Edit, Trash2, 
   ArrowRight, Tag, Clock, MessageSquare, AlertTriangle, 
-  CheckCircle, Users, FileText, Loader2, Filter
+  CheckCircle, Users, FileText, Loader2, Filter, Package
 } from 'lucide-react';
 import { formatDistanceToNow, format } from 'date-fns';
+
+interface PackageInfo {
+  id: number;
+  name: string;
+  full_text: string;
+}
 
 interface ClientStructuredNotesTabProps {
   tenantId: number;
@@ -54,6 +61,7 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
   const [isConvertDialogOpen, setIsConvertDialogOpen] = useState(false);
   const [selectedNote, setSelectedNote] = useState<Note | null>(null);
   const [saving, setSaving] = useState(false);
+  const [selectedPackageInfo, setSelectedPackageInfo] = useState<PackageInfo | null>(null);
   
   // Form state
   const [noteType, setNoteType] = useState('general');
@@ -68,6 +76,26 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
   const [actionTitle, setActionTitle] = useState('');
   const [actionDescription, setActionDescription] = useState('');
 
+  // Fetch package info when a package note is selected
+  useEffect(() => {
+    const fetchPackageInfo = async () => {
+      if (selectedNote?.parent_type === 'package_instance' && selectedNote?.package_id) {
+        const { data } = await supabase
+          .from('packages')
+          .select('id, name, full_text')
+          .eq('id', selectedNote.package_id)
+          .single();
+        
+        if (data) {
+          setSelectedPackageInfo(data);
+        }
+      } else {
+        setSelectedPackageInfo(null);
+      }
+    };
+    
+    fetchPackageInfo();
+  }, [selectedNote]);
   const resetForm = () => {
     setNoteType('general');
     setTitle('');
@@ -378,12 +406,13 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
               {selectedNote ? 'Edit Note' : 'Add Note'}
             </DialogTitle>
             {/* Show package info if editing a package note */}
-            {selectedNote?.parent_type === 'package_instance' && (
-              <div className="text-sm text-muted-foreground mt-1">
-                <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-900/50 dark:text-blue-300">
-                  Package Note
-                </Badge>
-              </div>
+            {selectedNote?.parent_type === 'package_instance' && selectedPackageInfo && (
+              <DialogDescription className="flex items-center gap-2 mt-1">
+                <Package className="h-4 w-4 text-blue-600" />
+                <span className="font-medium text-blue-700 dark:text-blue-400">
+                  {selectedPackageInfo.name} – {selectedPackageInfo.full_text}
+                </span>
+              </DialogDescription>
             )}
           </DialogHeader>
           
