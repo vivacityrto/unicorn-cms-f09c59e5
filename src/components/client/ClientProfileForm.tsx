@@ -114,7 +114,7 @@ export function ClientProfileForm({ profile, onSave, loading, tgaLinked }: Clien
         <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {/* Row 1: RTO Number, CRICOS Code, Organisation Type */}
           <div className="space-y-2">
-            <Label htmlFor="rto_number">RTO Number</Label>
+            <Label htmlFor="rto_number" className="flex items-center h-5">RTO Number</Label>
             <Input
               id="rto_number"
               value={formData.rto_number || ''}
@@ -125,7 +125,7 @@ export function ClientProfileForm({ profile, onSave, loading, tgaLinked }: Clien
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="cricos_number">CRICOS Provider Code</Label>
+            <Label htmlFor="cricos_number" className="flex items-center h-5">CRICOS Provider Code</Label>
             <Input
               id="cricos_number"
               value={formData.cricos_number || ''}
@@ -136,7 +136,7 @@ export function ClientProfileForm({ profile, onSave, loading, tgaLinked }: Clien
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="org_type" className="flex items-center">
+            <Label htmlFor="org_type" className="flex items-center h-5">
               Organisation Type
               {isTgaField('org_type') && <TgaBadge />}
             </Label>
