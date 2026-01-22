@@ -86,7 +86,29 @@ export function ClientProfileForm({ profile, onSave, loading, tgaLinked }: Clien
   }, [profile]);
 
   const handleChange = (field: keyof ClientProfile, value: string | null) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+    setFormData(prev => {
+      const updated = { ...prev, [field]: value };
+      
+      // Auto-set org_type based on RTO Number and CRICOS Code
+      // Only if org_type is not already set by user
+      if ((field === 'rto_number' || field === 'cricos_number') && !prev.org_type) {
+        const rtoNumber = field === 'rto_number' ? value : prev.rto_number;
+        const cricosNumber = field === 'cricos_number' ? value : prev.cricos_number;
+        
+        const hasRto = rtoNumber && rtoNumber.trim() !== '';
+        const hasCricos = cricosNumber && cricosNumber.trim() !== '';
+        
+        if (hasRto && hasCricos) {
+          updated.org_type = 'rto_cricos';
+        } else if (hasRto) {
+          updated.org_type = 'rto';
+        } else if (hasCricos) {
+          updated.org_type = 'cricos';
+        }
+      }
+      
+      return updated;
+    });
     setHasChanges(true);
   };
 
