@@ -517,20 +517,23 @@ export function useClientPackages(tenantId: number | null) {
     try {
       setLoading(true);
 
-      // Fetch entitlements
-      const { data: entitlements, error } = await supabase
-        .from('membership_entitlements')
+      // Fetch active package instances directly
+      // Cast to any to handle columns not yet in generated types
+      const { data: instances, error } = await supabase
+        .from('package_instances')
         .select(`
           id,
           tenant_id,
           package_id,
-          membership_state,
-          hours_included_monthly,
-          hours_used_current_month,
-          membership_started_at,
+          start_date,
+          is_complete,
+          hours_included,
+          hours_used,
+          hours_added,
           packages(id, name, slug)
         `)
-        .eq('tenant_id', tenantId);
+        .eq('tenant_id', tenantId)
+        .eq('is_complete', false) as { data: any[] | null; error: any };
 
       if (error) throw error;
 
@@ -541,26 +544,29 @@ export function useClientPackages(tenantId: number | null) {
         .eq('tenant_id', tenantId);
 
       // Build package data with stage info
-      const packageData: ClientPackage[] = (entitlements || []).map(ent => {
-        const pkgStages = (stageStates || []).filter(s => s.package_id === ent.package_id);
+      const packageData: ClientPackage[] = (instances || []).map(inst => {
+        const pkgStages = (stageStates || []).filter(s => s.package_id === inst.package_id);
         const totalStages = pkgStages.length;
         const completedStages = pkgStages.filter(s => s.status === 'completed').length;
         const hasBlocked = pkgStages.some(s => s.status === 'blocked');
         const activeStage = pkgStages.find(s => s.status === 'active' || s.status === 'in_progress');
 
+        // Total hours = included + any added hours
+        const totalHours = (inst.hours_included || 0) + (inst.hours_added || 0);
+
         return {
-          id: ent.id,
-          package_id: ent.package_id,
-          package_name: (ent.packages as any)?.name || 'Unknown',
-          package_slug: (ent.packages as any)?.slug || null,
-          membership_state: ent.membership_state,
-          hours_included: ent.hours_included_monthly,
-          hours_used: ent.hours_used_current_month,
+          id: inst.id,
+          package_id: inst.package_id,
+          package_name: (inst.packages as any)?.name || 'Unknown',
+          package_slug: (inst.packages as any)?.slug || null,
+          membership_state: inst.is_complete ? 'exiting' : 'active',
+          hours_included: totalHours,
+          hours_used: inst.hours_used || 0,
           current_stage_name: activeStage ? (activeStage.documents_stages as any)?.title || null : null,
           completed_stages: completedStages,
           total_stages: totalStages,
           has_blocked_stages: hasBlocked,
-          membership_started_at: ent.membership_started_at
+          membership_started_at: inst.start_date
         };
       });
 
