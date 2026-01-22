@@ -250,8 +250,8 @@ export function ClientAddressSection({ tenantId, loading: parentLoading }: Clien
       <CardContent className="space-y-6">
         {/* Add/Edit Form */}
         <div className="border rounded-lg p-4 space-y-4">
-          {/* Row 1: Type, Address Line 1, Address Line 2 */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {/* Row 1: Type (narrow), Address Line 1 & 2 (wider) */}
+          <div className="grid grid-cols-1 md:grid-cols-[140px_1fr_1fr] gap-4">
             <div className="space-y-2">
               <Label htmlFor="address_type" className="flex items-center h-5">
                 Type <span className="text-destructive ml-1">*</span>
@@ -296,8 +296,8 @@ export function ClientAddressSection({ tenantId, loading: parentLoading }: Clien
             </div>
           </div>
 
-          {/* Row 2: Suburb, State, Postcode, Add Button */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+          {/* Row 2: Suburb (wider), State (narrow), Postcode (narrow), Add Button */}
+          <div className="grid grid-cols-1 md:grid-cols-[1fr_100px_100px_auto] gap-4 items-end">
             <div className="space-y-2">
               <Label htmlFor="suburb" className="flex items-center h-5">
                 Suburb <span className="text-destructive ml-1">*</span>
@@ -319,7 +319,7 @@ export function ClientAddressSection({ tenantId, loading: parentLoading }: Clien
                 onValueChange={(value) => handleFormChange('state', value)}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Select state" />
+                  <SelectValue placeholder="State" />
                 </SelectTrigger>
                 <SelectContent>
                   {AUSTRALIAN_STATES.map((state) => (
@@ -358,7 +358,7 @@ export function ClientAddressSection({ tenantId, loading: parentLoading }: Clien
               <Button
                 onClick={handleSave}
                 disabled={!isFormValid || saving}
-                className="flex-1 bg-primary hover:bg-primary/90"
+                className="bg-primary hover:bg-primary/90 min-w-[130px]"
               >
                 {saving ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
