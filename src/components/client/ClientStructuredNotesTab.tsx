@@ -82,11 +82,14 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
   useEffect(() => {
     const fetchPackageInfo = async () => {
       if (selectedNote?.parent_type === 'package_instance' && selectedNote?.parent_id) {
-        const { data } = await supabase
+        console.log('Fetching package info for parent_id:', selectedNote.parent_id);
+        const { data, error } = await supabase
           .from('package_instances')
           .select('id, package_id, packages:package_id(id, name, full_text)')
           .eq('id', selectedNote.parent_id)
           .single();
+        
+        console.log('Package instances query result:', { data, error });
         
         if (data?.packages) {
           // packages is the joined data from the packages table
