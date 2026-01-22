@@ -8801,6 +8801,7 @@ export type Database = {
           slug: string | null
           status: string
           total_hours: number | null
+          u1_packageid: number | null
         }
         Insert: {
           created_at?: string | null
@@ -8814,6 +8815,7 @@ export type Database = {
           slug?: string | null
           status?: string
           total_hours?: number | null
+          u1_packageid?: number | null
         }
         Update: {
           created_at?: string | null
@@ -8827,6 +8829,7 @@ export type Database = {
           slug?: string | null
           status?: string
           total_hours?: number | null
+          u1_packageid?: number | null
         }
         Relationships: []
       }
