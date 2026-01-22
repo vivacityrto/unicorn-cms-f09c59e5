@@ -407,12 +407,18 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
               {selectedNote ? 'Edit Note' : 'Add Note'}
             </DialogTitle>
             {/* Show package info if editing a package note */}
-            {selectedNote?.parent_type === 'package_instance' && selectedPackageInfo && (
-              <DialogDescription className="flex items-center gap-2 mt-1">
-                <Package className="h-4 w-4 text-blue-600" />
-                <span className="font-medium text-blue-700 dark:text-blue-400">
-                  {selectedPackageInfo.name} – {selectedPackageInfo.full_text}
-                </span>
+            {selectedNote?.parent_type === 'package_instance' && (
+              <DialogDescription asChild>
+                <div className="flex items-center gap-2 mt-1">
+                  <Package className="h-4 w-4 text-blue-600" />
+                  {selectedPackageInfo ? (
+                    <span className="font-medium text-blue-700 dark:text-blue-400">
+                      {selectedPackageInfo.name} – {selectedPackageInfo.full_text}
+                    </span>
+                  ) : (
+                    <span className="text-muted-foreground">Package Note</span>
+                  )}
+                </div>
               </DialogDescription>
             )}
           </DialogHeader>
@@ -515,25 +521,19 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
             
             {/* Send to client option - only for package notes */}
             {selectedNote?.parent_type === 'package_instance' && (
-              <div className="flex items-center justify-between p-3 rounded-lg border border-blue-200 bg-blue-50 dark:bg-blue-950/30 dark:border-blue-800">
-                <div className="flex items-center gap-2">
-                  <MessageSquare className="h-4 w-4 text-blue-600" />
-                  <span className="text-sm font-medium text-blue-700 dark:text-blue-300">Send to Client</span>
-                </div>
-                <Button 
-                  type="button" 
-                  variant="outline" 
-                  size="sm"
-                  className="border-blue-300 text-blue-700 hover:bg-blue-100 dark:border-blue-700 dark:text-blue-300"
-                  onClick={() => {
-                    // TODO: Implement email sending functionality
-                    console.log('Send note to client:', selectedNote);
-                  }}
-                >
-                  <MessageSquare className="h-4 w-4 mr-1" />
-                  Email Note
-                </Button>
-              </div>
+              <Button 
+                type="button" 
+                variant="outline" 
+                size="sm"
+                className="w-full justify-start"
+                onClick={() => {
+                  // TODO: Implement email sending functionality
+                  console.log('Send note to client:', selectedNote);
+                }}
+              >
+                <MessageSquare className="h-4 w-4 mr-2" />
+                Email Note to Client
+              </Button>
             )}
           </div>
           
