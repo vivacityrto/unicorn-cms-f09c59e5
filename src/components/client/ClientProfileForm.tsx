@@ -129,8 +129,19 @@ export function ClientProfileForm({ profile, onSave, loading, tgaLinked }: Clien
           <CardTitle className="text-lg">Organisation Details</CardTitle>
         </CardHeader>
         <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {/* Legal Name - spans full width */}
-          <div className="space-y-2 md:col-span-3">
+          {/* Row 1: RTO Number, Legal Name, Trading Name */}
+          <div className="space-y-2">
+            <Label htmlFor="rto_number">RTO Number</Label>
+            <Input
+              id="rto_number"
+              value={formData.rto_number || ''}
+              onChange={(e) => handleChange('rto_number', e.target.value)}
+              placeholder="e.g. 12345"
+              disabled={loading}
+            />
+          </div>
+
+          <div className="space-y-2">
             <Label htmlFor="legal_name" className="flex items-center">
               Legal Name
               {isTgaField('legal_name') && <TgaBadge />}
@@ -145,7 +156,6 @@ export function ClientProfileForm({ profile, onSave, loading, tgaLinked }: Clien
             />
           </div>
 
-          {/* Row 2: Trading Name, Org Type, Risk Level */}
           <div className="space-y-2">
             <Label htmlFor="trading_name" className="flex items-center">
               Trading Name
@@ -161,6 +171,7 @@ export function ClientProfileForm({ profile, onSave, loading, tgaLinked }: Clien
             />
           </div>
           
+          {/* Row 2: Org Type, ABN, ACN */}
           <div className="space-y-2">
             <Label htmlFor="org_type" className="flex items-center">
               Organisation Type
@@ -178,26 +189,6 @@ export function ClientProfileForm({ profile, onSave, loading, tgaLinked }: Clien
                 {ORG_TYPES.map((type) => (
                   <SelectItem key={type.value} value={type.value}>
                     {type.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="risk_level">Risk Level</Label>
-            <Select
-              value={formData.risk_level || ''}
-              onValueChange={(value) => handleChange('risk_level', value)}
-              disabled={loading}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select risk..." />
-              </SelectTrigger>
-              <SelectContent>
-                {RISK_LEVELS.map((level) => (
-                  <SelectItem key={level.value} value={level.value}>
-                    {level.label}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -250,18 +241,7 @@ export function ClientProfileForm({ profile, onSave, loading, tgaLinked }: Clien
             />
           </div>
 
-          {/* Row 4: RTO Number, CRICOS Code, State */}
-          <div className="space-y-2">
-            <Label htmlFor="rto_number">RTO Number</Label>
-            <Input
-              id="rto_number"
-              value={formData.rto_number || ''}
-              onChange={(e) => handleChange('rto_number', e.target.value)}
-              placeholder="e.g. 12345"
-              disabled={loading}
-            />
-          </div>
-          
+          {/* Row 4: CRICOS Code, State, Website */}
           <div className="space-y-2">
             <Label htmlFor="cricos_number">CRICOS Provider Code</Label>
             <Input

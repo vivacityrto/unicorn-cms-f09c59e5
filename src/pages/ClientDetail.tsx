@@ -214,6 +214,22 @@ export default function ClientDetail() {
 
             {/* Time Widget + Quick Stats */}
             <div className="flex items-center gap-4">
+              {profile?.risk_level && (
+                <Badge
+                  variant="outline"
+                  className={
+                    profile.risk_level === 'critical'
+                      ? 'bg-red-500/10 text-red-600 border-red-600'
+                      : profile.risk_level === 'high'
+                      ? 'bg-orange-500/10 text-orange-600 border-orange-600'
+                      : profile.risk_level === 'medium'
+                      ? 'bg-yellow-500/10 text-yellow-600 border-yellow-600'
+                      : 'bg-green-500/10 text-green-600 border-green-600'
+                  }
+                >
+                  {profile.risk_level.charAt(0).toUpperCase() + profile.risk_level.slice(1)} Risk
+                </Badge>
+              )}
               <Button 
                 variant="outline" 
                 size="sm"
