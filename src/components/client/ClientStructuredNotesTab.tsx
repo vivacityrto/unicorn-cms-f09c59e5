@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNotes, Note } from '@/hooks/useNotes';
 import { useClientActionItems } from '@/hooks/useClientManagementData';
-import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -79,32 +78,21 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
   // Fetch package info when a package note is selected
   // For package_instance notes, parent_id refers to package_instances.id
   // We need to join through package_instances to get to packages
+  // Use the u1_package field directly from the note (imported from Unicorn 1)
+  // This avoids needing to query package_instances which lacks a proper FK relationship
   useEffect(() => {
-    const fetchPackageInfo = async () => {
-      if (selectedNote?.parent_type === 'package_instance' && selectedNote?.parent_id) {
-        console.log('Fetching package info for parent_id:', selectedNote.parent_id);
-        const { data, error } = await supabase
-          .from('package_instances')
-          .select('id, package_id, packages:package_id(id, name, full_text)')
-          .eq('id', selectedNote.parent_id)
-          .single();
-        
-        console.log('Package instances query result:', { data, error });
-        
-        if (data?.packages) {
-          // packages is the joined data from the packages table
-          const pkg = data.packages as unknown as PackageInfo;
-          setSelectedPackageInfo(pkg);
-        } else {
-          setSelectedPackageInfo(null);
-        }
-      } else {
-        setSelectedPackageInfo(null);
-      }
-    };
-    
-    fetchPackageInfo();
+    if (selectedNote?.parent_type === 'package_instance' && selectedNote?.u1_package) {
+      // Use the package name directly from the note's legacy field
+      setSelectedPackageInfo({
+        id: selectedNote.u1_package_id || 0,
+        name: selectedNote.u1_package,
+        full_text: selectedNote.u1_package // Use same value as fallback
+      });
+    } else {
+      setSelectedPackageInfo(null);
+    }
   }, [selectedNote]);
+
   const resetForm = () => {
     setNoteType('general');
     setTitle('');
