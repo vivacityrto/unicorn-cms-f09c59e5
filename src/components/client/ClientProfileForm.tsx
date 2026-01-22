@@ -1,12 +1,11 @@
 import { useState, useEffect } from 'react';
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { Loader2, Save, ExternalLink } from 'lucide-react';
+import { ExternalLink } from 'lucide-react';
 import { ClientProfile } from '@/hooks/useClientManagement';
 
 interface ClientProfileFormProps {
@@ -14,6 +13,7 @@ interface ClientProfileFormProps {
   onSave: (updates: Partial<ClientProfile>) => Promise<boolean>;
   loading?: boolean;
   tgaLinked?: boolean;
+  onStateChange?: (hasChanges: boolean, saving: boolean, triggerSave: () => void) => void;
 }
 
 const ORG_TYPES = [
@@ -73,10 +73,26 @@ function TgaBadge() {
   );
 }
 
-export function ClientProfileForm({ profile, onSave, loading, tgaLinked }: ClientProfileFormProps) {
+export function ClientProfileForm({ profile, onSave, loading, tgaLinked, onStateChange }: ClientProfileFormProps) {
   const [formData, setFormData] = useState<Partial<ClientProfile>>({});
   const [saving, setSaving] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
+
+  const handleSave = async () => {
+    setSaving(true);
+    const success = await onSave(formData);
+    setSaving(false);
+    if (success) {
+      setHasChanges(false);
+    }
+  };
+
+  // Notify parent of state changes
+  useEffect(() => {
+    if (onStateChange) {
+      onStateChange(hasChanges, saving, handleSave);
+    }
+  }, [hasChanges, saving, onStateChange]);
 
   useEffect(() => {
     if (profile) {
@@ -110,15 +126,6 @@ export function ClientProfileForm({ profile, onSave, loading, tgaLinked }: Clien
       return updated;
     });
     setHasChanges(true);
-  };
-
-  const handleSave = async () => {
-    setSaving(true);
-    const success = await onSave(formData);
-    setSaving(false);
-    if (success) {
-      setHasChanges(false);
-    }
   };
 
   // Check if a field is synced from TGA and should be read-only
@@ -323,26 +330,6 @@ export function ClientProfileForm({ profile, onSave, loading, tgaLinked }: Clien
         </CardContent>
       </Card>
 
-      {/* Save Button */}
-      <div className="flex justify-end">
-        <Button
-          onClick={handleSave}
-          disabled={!hasChanges || saving || loading}
-          className="min-w-[120px]"
-        >
-          {saving ? (
-            <>
-              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              Saving...
-            </>
-          ) : (
-            <>
-              <Save className="h-4 w-4 mr-2" />
-              Save Changes
-            </>
-          )}
-        </Button>
-      </div>
     </div>
   );
 }

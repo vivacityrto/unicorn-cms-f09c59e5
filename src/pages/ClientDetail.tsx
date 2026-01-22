@@ -26,7 +26,9 @@ import {
   StickyNote,
   Activity,
   CheckSquare,
-  Calendar
+  Calendar,
+  Save,
+  Loader2
 } from 'lucide-react';
 import { ClientProfileForm } from '@/components/client/ClientProfileForm';
 import { ClientAddressSection } from '@/components/client/ClientAddressSection';
@@ -53,6 +55,9 @@ export default function ClientDetail() {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('overview');
   const [cscUser, setCscUser] = useState<{ name: string; avatar: string | null } | null>(null);
+  const [profileHasChanges, setProfileHasChanges] = useState(false);
+  const [profileSaving, setProfileSaving] = useState(false);
+  const [triggerProfileSave, setTriggerProfileSave] = useState<(() => void) | null>(null);
 
   const tenantIdNum = tenantId ? parseInt(tenantId) : null;
   
@@ -78,6 +83,13 @@ export default function ClientDetail() {
   const isTeamLeader = authProfile?.unicorn_role === 'Team Leader';
   const canEdit = isSuperAdminUser || isTeamLeader;
   const canVerifyTga = isSuperAdminUser || hasTenantAdmin(tenantIdNum || 0);
+
+  // Handle profile form state changes
+  const handleProfileStateChange = (hasChanges: boolean, saving: boolean, save: () => void) => {
+    setProfileHasChanges(hasChanges);
+    setProfileSaving(saving);
+    setTriggerProfileSave(() => save);
+  };
 
   useEffect(() => {
     if (tenantIdNum) {
@@ -243,67 +255,90 @@ export default function ClientDetail() {
           </div>
         </div>
 
-        {/* Tabs */}
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="px-6">
-          <TabsList className="bg-transparent border-b-0 h-auto p-0 gap-4">
-            <TabsTrigger
-              value="overview"
-              className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none bg-transparent px-1 pb-3"
+        {/* Tabs with Save Button */}
+        <div className="flex items-center justify-between">
+          <Tabs value={activeTab} onValueChange={setActiveTab}>
+            <TabsList className="bg-transparent border-b-0 h-auto p-0 gap-4">
+              <TabsTrigger
+                value="overview"
+                className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none bg-transparent px-1 pb-3"
+              >
+                <Building2 className="h-4 w-4 mr-2" />
+                Overview
+              </TabsTrigger>
+              <TabsTrigger
+                value="packages"
+                className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none bg-transparent px-1 pb-3"
+              >
+                <Package2 className="h-4 w-4 mr-2" />
+                Packages ({packages.length})
+              </TabsTrigger>
+              <TabsTrigger
+                value="documents"
+                className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none bg-transparent px-1 pb-3"
+              >
+                <FileText className="h-4 w-4 mr-2" />
+                Documents
+              </TabsTrigger>
+              <TabsTrigger
+                value="users"
+                className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none bg-transparent px-1 pb-3"
+              >
+                <Users className="h-4 w-4 mr-2" />
+                Users
+              </TabsTrigger>
+              <TabsTrigger
+                value="notes"
+                className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none bg-transparent px-1 pb-3"
+              >
+                <StickyNote className="h-4 w-4 mr-2" />
+                Notes
+              </TabsTrigger>
+              <TabsTrigger
+                value="actions"
+                className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none bg-transparent px-1 pb-3"
+              >
+                <CheckSquare className="h-4 w-4 mr-2" />
+                Actions
+              </TabsTrigger>
+              <TabsTrigger
+                value="timeline"
+                className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none bg-transparent px-1 pb-3"
+              >
+                <Activity className="h-4 w-4 mr-2" />
+                Timeline
+              </TabsTrigger>
+              <TabsTrigger
+                value="integrations"
+                className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none bg-transparent px-1 pb-3"
+              >
+                <Link2 className="h-4 w-4 mr-2" />
+                Integrations
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
+          
+          {/* Save Changes Button */}
+          {activeTab === 'overview' && canEdit && (
+            <Button
+              onClick={() => triggerProfileSave?.()}
+              disabled={!profileHasChanges || profileSaving || profileLoading}
+              className="min-w-[140px]"
             >
-              <Building2 className="h-4 w-4 mr-2" />
-              Overview
-            </TabsTrigger>
-            <TabsTrigger
-              value="packages"
-              className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none bg-transparent px-1 pb-3"
-            >
-              <Package2 className="h-4 w-4 mr-2" />
-              Packages ({packages.length})
-            </TabsTrigger>
-            <TabsTrigger
-              value="documents"
-              className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none bg-transparent px-1 pb-3"
-            >
-              <FileText className="h-4 w-4 mr-2" />
-              Documents
-            </TabsTrigger>
-            <TabsTrigger
-              value="users"
-              className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none bg-transparent px-1 pb-3"
-            >
-              <Users className="h-4 w-4 mr-2" />
-              Users
-            </TabsTrigger>
-            <TabsTrigger
-              value="notes"
-              className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none bg-transparent px-1 pb-3"
-            >
-              <StickyNote className="h-4 w-4 mr-2" />
-              Notes
-            </TabsTrigger>
-            <TabsTrigger
-              value="actions"
-              className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none bg-transparent px-1 pb-3"
-            >
-              <CheckSquare className="h-4 w-4 mr-2" />
-              Actions
-            </TabsTrigger>
-            <TabsTrigger
-              value="timeline"
-              className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none bg-transparent px-1 pb-3"
-            >
-              <Activity className="h-4 w-4 mr-2" />
-              Timeline
-            </TabsTrigger>
-            <TabsTrigger
-              value="integrations"
-              className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none bg-transparent px-1 pb-3"
-            >
-              <Link2 className="h-4 w-4 mr-2" />
-              Integrations
-            </TabsTrigger>
-          </TabsList>
-        </Tabs>
+              {profileSaving ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                <>
+                  <Save className="h-4 w-4 mr-2" />
+                  Save Changes
+                </>
+              )}
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* Tab Content */}
@@ -321,6 +356,7 @@ export default function ClientDetail() {
                   onSave={saveProfile}
                   loading={profileLoading}
                   tgaLinked={registryLink?.link_status === 'verified'}
+                  onStateChange={handleProfileStateChange}
                 />
                 <ClientAddressSection
                   tenantId={tenantIdNum!}
