@@ -49,22 +49,44 @@ export function useMembershipDashboard() {
     }
   }, []);
 
-  // Fetch memberships with tenant details
+  // Fetch memberships with tenant details - uses package_instances as source of truth
   const fetchMemberships = useCallback(async () => {
     setLoading(true);
     try {
-      // Get all tenants with superhero packages
+      // Query package_instances directly - this is the source of truth for active memberships
+      const { data: packageInstances, error: piError } = await supabase
+        .from('package_instances')
+        .select(`
+          id,
+          package_id,
+          start_date,
+          end_date,
+          is_complete,
+          tenant_id
+        `)
+        .eq('is_complete', false)
+        .not('tenant_id', 'is', null)
+        .in('package_id', SUPERHERO_PACKAGE_IDS);
+
+      if (piError) throw piError;
+
+      // Get tenant details for all tenant_ids
+      const tenantIds = [...new Set((packageInstances || []).map(pi => pi.tenant_id).filter(Boolean) as number[])];
+      
+      if (tenantIds.length === 0) {
+        setMemberships([]);
+        setLoading(false);
+        return;
+      }
+
       const { data: tenants, error: tenantsError } = await supabase
         .from('tenants')
-        .select('id, name, status, package_ids')
-        .not('package_ids', 'is', null);
+        .select('id, name, status')
+        .in('id', tenantIds);
 
       if (tenantsError) throw tenantsError;
 
-      // Filter tenants that have at least one superhero package
-      const superheroTenants = (tenants || []).filter(t => 
-        t.package_ids?.some((pid: number) => SUPERHERO_PACKAGE_IDS.includes(pid))
-      );
+      const tenantMap = new Map(tenants?.map(t => [t.id, t]) || []);
 
       // Get packages
       const { data: packages } = await supabase
@@ -74,7 +96,7 @@ export function useMembershipDashboard() {
 
       const packageMap = new Map(packages?.map(p => [p.id, p]) || []);
 
-      // Get existing entitlements
+      // Get existing entitlements (for additional metadata like CSC, health check status)
       const { data: entitlements } = await supabase
         .from('membership_entitlements')
         .select('*');
@@ -110,109 +132,111 @@ export function useMembershipDashboard() {
         progressMap.set(`${r.tenant_id}-${r.package_id}`, r);
       });
 
-      // Build membership list
+      // Build membership list from package_instances
       const membershipList: MembershipWithDetails[] = [];
 
-      for (const tenant of superheroTenants) {
-        for (const packageId of tenant.package_ids || []) {
-          if (!SUPERHERO_PACKAGE_IDS.includes(packageId)) continue;
+      for (const pi of packageInstances || []) {
+        if (!pi.tenant_id) continue;
+        
+        const tenant = tenantMap.get(pi.tenant_id);
+        if (!tenant) continue;
 
-          const pkg = packageMap.get(packageId);
-          if (!pkg) continue;
+        const pkg = packageMap.get(pi.package_id);
+        if (!pkg) continue;
 
-          const tierKey = pkg.name as keyof typeof MEMBERSHIP_TIERS;
-          const tier = MEMBERSHIP_TIERS[tierKey];
-          if (!tier) continue;
+        const tierKey = pkg.name as keyof typeof MEMBERSHIP_TIERS;
+        const tier = MEMBERSHIP_TIERS[tierKey];
+        if (!tier) continue;
 
-          const key = `${tenant.id}-${packageId}`;
-          const entitlement = entitlementMap.get(key);
-          const cscUserId = entitlement?.csc_user_id || cscMap.get(tenant.id);
-          const cscUser = staffUsers.find(u => u.user_uuid === cscUserId);
-          const progress = progressMap.get(key);
+        const key = `${tenant.id}-${pi.package_id}`;
+        const entitlement = entitlementMap.get(key);
+        const cscUserId = entitlement?.csc_user_id || cscMap.get(tenant.id);
+        const cscUser = staffUsers.find(u => u.user_uuid === cscUserId);
+        const progress = progressMap.get(key);
 
-          // Calculate health score with overdue tasks and CSC assignment status
-          const overdueCount = overdueMap.get(key) || 0;
-          const hasCscAssigned = !!cscUserId;
-          const healthScore: MembershipHealthScore = calculateHealthScore(entitlement, tier, overdueCount, hasCscAssigned);
+        // Calculate health score with overdue tasks and CSC assignment status
+        const overdueCount = overdueMap.get(key) || 0;
+        const hasCscAssigned = !!cscUserId;
+        const healthScore: MembershipHealthScore = calculateHealthScore(entitlement, tier, overdueCount, hasCscAssigned);
 
-          // Build next_action based on stage progress
-          const nextAction: NextAction | null = progress?.current_stage_name ? {
-            title: `Continue: ${progress.current_stage_name}`,
-            due_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-            owner_id: cscUserId || null,
-            source: 'system' as const,
-            reason: progress.current_stage_status === 'blocked' ? 'Stage blocked' : 'In progress',
-          } : {
-            title: 'Review status and set next steps',
-            due_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-            owner_id: cscUserId || null,
-            source: 'system',
-            reason: 'No stage data',
-          };
+        // Build next_action based on stage progress
+        const nextAction: NextAction | null = progress?.current_stage_name ? {
+          title: `Continue: ${progress.current_stage_name}`,
+          due_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+          owner_id: cscUserId || null,
+          source: 'system' as const,
+          reason: progress.current_stage_status === 'blocked' ? 'Stage blocked' : 'In progress',
+        } : {
+          title: 'Review status and set next steps',
+          due_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+          owner_id: cscUserId || null,
+          source: 'system',
+          reason: 'No stage data',
+        };
 
-          // Build risk flags from stage progress
-          const riskFlags: RiskFlag[] = [];
-          if (progress?.blocked_count > 0) {
-            riskFlags.push({
-              code: 'STAGE_OVERDUE',
-              severity: 'critical',
-              message: `${progress.blocked_count} stage${progress.blocked_count > 1 ? 's' : ''} blocked`,
-              source: 'stage',
-            });
-          }
-          if (overdueCount > 0) {
-            riskFlags.push({
-              code: 'OVERDUE_TASKS',
-              severity: 'warn',
-              message: `${overdueCount} overdue task${overdueCount > 1 ? 's' : ''}`,
-              source: 'task',
-            });
-          }
-          if (!hasCscAssigned) {
-            riskFlags.push({
-              code: 'MISSING_CSC',
-              severity: 'warn',
-              message: 'No CSC assigned',
-              source: 'system',
-            });
-          }
-
-          membershipList.push({
-            id: entitlement?.id || `temp-${key}`,
-            tenant_id: tenant.id,
-            package_id: packageId,
-            hours_included_monthly: tier.hoursIncluded,
-            hours_used_current_month: entitlement?.hours_used_current_month || 0,
-            month_start_date: entitlement?.month_start_date || new Date().toISOString().split('T')[0],
-            membership_state: entitlement?.membership_state || 'active',
-            setup_complete: entitlement?.setup_complete || false,
-            setup_completed_at: entitlement?.setup_completed_at || null,
-            health_check_status: entitlement?.health_check_status || 'not_scheduled',
-            health_check_scheduled_date: entitlement?.health_check_scheduled_date || null,
-            validation_status: entitlement?.validation_status || 'not_scheduled',
-            validation_scheduled_date: entitlement?.validation_scheduled_date || null,
-            csc_user_id: cscUserId || null,
-            membership_started_at: entitlement?.membership_started_at || new Date().toISOString(),
-            last_activity_at: entitlement?.last_activity_at || null,
-            created_at: entitlement?.created_at || new Date().toISOString(),
-            updated_at: entitlement?.updated_at || new Date().toISOString(),
-            tenant_name: tenant.name,
-            package_name: pkg.name,
-            tier,
-            csc_name: cscUser ? `${cscUser.first_name} ${cscUser.last_name}` : null,
-            csc_avatar: cscUser?.avatar_url || null,
-            health_score: healthScore,
-            overdue_tasks_count: overdueMap.get(key) || 0,
-            pending_tasks_count: 0,
-            next_action: nextAction,
-            risk_flags: riskFlags,
-            // Deterministic stage fields from stage-state table
-            current_stage_name: progress?.current_stage_name || null,
-            current_stage_status: progress?.current_stage_status || null,
-            progress_percent: progress?.percent_complete || 0,
-            phase: null, // Not applicable for memberships
+        // Build risk flags from stage progress
+        const riskFlags: RiskFlag[] = [];
+        if (progress?.blocked_count > 0) {
+          riskFlags.push({
+            code: 'STAGE_OVERDUE',
+            severity: 'critical',
+            message: `${progress.blocked_count} stage${progress.blocked_count > 1 ? 's' : ''} blocked`,
+            source: 'stage',
           });
         }
+        if (overdueCount > 0) {
+          riskFlags.push({
+            code: 'OVERDUE_TASKS',
+            severity: 'warn',
+            message: `${overdueCount} overdue task${overdueCount > 1 ? 's' : ''}`,
+            source: 'task',
+          });
+        }
+        if (!hasCscAssigned) {
+          riskFlags.push({
+            code: 'MISSING_CSC',
+            severity: 'warn',
+            message: 'No CSC assigned',
+            source: 'system',
+          });
+        }
+
+        membershipList.push({
+          id: entitlement?.id || `temp-${key}`,
+          package_instance_id: pi.id,
+          tenant_id: tenant.id,
+          package_id: pi.package_id,
+          hours_included_monthly: tier.hoursIncluded,
+          hours_used_current_month: entitlement?.hours_used_current_month || 0,
+          month_start_date: entitlement?.month_start_date || new Date().toISOString().split('T')[0],
+          membership_state: entitlement?.membership_state || 'active',
+          setup_complete: entitlement?.setup_complete || false,
+          setup_completed_at: entitlement?.setup_completed_at || null,
+          health_check_status: entitlement?.health_check_status || 'not_scheduled',
+          health_check_scheduled_date: entitlement?.health_check_scheduled_date || null,
+          validation_status: entitlement?.validation_status || 'not_scheduled',
+          validation_scheduled_date: entitlement?.validation_scheduled_date || null,
+          csc_user_id: cscUserId || null,
+          membership_started_at: pi.start_date || entitlement?.membership_started_at || new Date().toISOString(),
+          last_activity_at: entitlement?.last_activity_at || null,
+          created_at: entitlement?.created_at || new Date().toISOString(),
+          updated_at: entitlement?.updated_at || new Date().toISOString(),
+          tenant_name: tenant.name,
+          package_name: pkg.name,
+          tier,
+          csc_name: cscUser ? `${cscUser.first_name} ${cscUser.last_name}` : null,
+          csc_avatar: cscUser?.avatar_url || null,
+          health_score: healthScore,
+          overdue_tasks_count: overdueMap.get(key) || 0,
+          pending_tasks_count: 0,
+          next_action: nextAction,
+          risk_flags: riskFlags,
+          // Deterministic stage fields from stage-state table
+          current_stage_name: progress?.current_stage_name || null,
+          current_stage_status: progress?.current_stage_status || null,
+          progress_percent: progress?.percent_complete || 0,
+          phase: null, // Not applicable for memberships
+        });
       }
 
       setMemberships(membershipList);
