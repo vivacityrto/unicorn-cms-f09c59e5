@@ -27,9 +27,9 @@ interface ClientNotesTabProps {
 export function ClientNotesTab({ tenantId, packages }: ClientNotesTabProps) {
   const { toast } = useToast();
   
-  // Use the unified notes hook
+  // Use the unified notes hook - fetch both tenant and package_instance notes
   const { notes, loading, totalDuration, createNote, updateNote, deleteNote, refresh } = useNotes({
-    parentType: 'tenant',
+    parentType: ['tenant', 'package_instance'],
     parentId: tenantId,
     tenantId
   });
