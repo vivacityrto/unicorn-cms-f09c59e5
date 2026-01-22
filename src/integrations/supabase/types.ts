@@ -7835,69 +7835,92 @@ export type Database = {
           completed_date: string | null
           created_at: string
           created_by: string
+          date_imported: string | null
           duration: number | null
           file_names: string[] | null
           id: string
           note_details: string
           note_type: string | null
+          package_id: number | null
           parent_id: number | null
           parent_type: string | null
           parent_uuid: string | null
           priority: string | null
           started_date: string | null
           tenant_id: number
+          tenant_uuid: string | null
           title: string | null
+          u1_id: number | null
+          u1_package: string | null
+          u1_package_id: number | null
+          u1_staffname: string | null
+          u1_userid: number | null
           updated_at: string
           uploaded_files: string[] | null
+          user_id: number | null
+          user_uuid: string | null
         }
         Insert: {
           assignees?: string[] | null
           completed_date?: string | null
           created_at?: string
           created_by: string
+          date_imported?: string | null
           duration?: number | null
           file_names?: string[] | null
           id?: string
           note_details: string
           note_type?: string | null
+          package_id?: number | null
           parent_id?: number | null
           parent_type?: string | null
           parent_uuid?: string | null
           priority?: string | null
           started_date?: string | null
           tenant_id: number
+          tenant_uuid?: string | null
           title?: string | null
+          u1_id?: number | null
+          u1_package?: string | null
+          u1_package_id?: number | null
+          u1_staffname?: string | null
+          u1_userid?: number | null
           updated_at?: string
           uploaded_files?: string[] | null
+          user_id?: number | null
+          user_uuid?: string | null
         }
         Update: {
           assignees?: string[] | null
           completed_date?: string | null
           created_at?: string
           created_by?: string
+          date_imported?: string | null
           duration?: number | null
           file_names?: string[] | null
           id?: string
           note_details?: string
           note_type?: string | null
+          package_id?: number | null
           parent_id?: number | null
           parent_type?: string | null
           parent_uuid?: string | null
           priority?: string | null
           started_date?: string | null
           tenant_id?: number
+          tenant_uuid?: string | null
           title?: string | null
+          u1_id?: number | null
+          u1_package?: string | null
+          u1_package_id?: number | null
+          u1_staffname?: string | null
+          u1_userid?: number | null
           updated_at?: string
           uploaded_files?: string[] | null
+          user_id?: number | null
+          user_uuid?: string | null
         }
         Relationships: [
-          {
-            foreignKeyName: "notes_package_id_fkey"
-            columns: ["parent_id"]
-            isOneToOne: false
-            referencedRelation: "packages"
-            referencedColumns: ["id"]
-          },
           {
             foreignKeyName: "notes_tenant_id_fkey"
             columns: ["tenant_id"]
@@ -11390,6 +11413,7 @@ export type Database = {
           created_at: string
           created_by: string | null
           id: number
+          primary_contact: boolean | null
           role: string
           tenant_id: number
           user_id: string
@@ -11398,6 +11422,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           id?: number
+          primary_contact?: boolean | null
           role?: string
           tenant_id: number
           user_id: string
@@ -11406,6 +11431,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           id?: number
+          primary_contact?: boolean | null
           role?: string
           tenant_id?: number
           user_id?: string
