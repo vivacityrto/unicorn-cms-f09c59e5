@@ -26,9 +26,6 @@ export interface Note {
   created_by: string;
   created_at: string;
   updated_at: string;
-  // Legacy fields from Unicorn 1 import
-  u1_package_id: number | null;
-  u1_package: string | null;
   creator?: {
     first_name: string | null;
     last_name: string | null;
