@@ -161,7 +161,7 @@ export function ClientPackagesTab({ tenantId, tenantName, packages, loading, onA
                       </div>
                       <div className="flex items-center gap-1 text-muted-foreground">
                         <Clock className="h-4 w-4" />
-                        <span>{pkg.hours_used}/{pkg.hours_included} hrs used</span>
+                        <span>{pkg.hours_used.toFixed(2)}/{pkg.hours_included} hrs used</span>
                       </div>
                     </div>
 
