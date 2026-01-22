@@ -517,39 +517,41 @@ export function useClientPackages(tenantId: number | null) {
     try {
       setLoading(true);
 
-      // Fetch active package instances directly
-      // Cast to any to handle columns not yet in generated types
+      // Fetch active package instances (without join due to schema cache issue)
       const { data: instances, error } = await supabase
         .from('package_instances')
-        .select(`
-          id,
-          tenant_id,
-          package_id,
-          start_date,
-          is_complete,
-          hours_included,
-          hours_used,
-          hours_added,
-          packages(id, name, slug)
-        `)
+        .select('id, tenant_id, package_id, start_date, is_complete, hours_included, hours_used, hours_added')
         .eq('tenant_id', tenantId)
         .eq('is_complete', false) as { data: any[] | null; error: any };
 
       if (error) throw error;
 
-      // Fetch stage states
-      const { data: stageStates } = await supabase
-        .from('client_package_stage_state')
-        .select('*, documents_stages(title)')
-        .eq('tenant_id', tenantId);
+      // Get unique package IDs to fetch package details
+      const packageIds = [...new Set((instances || []).map(i => i.package_id))];
+
+      // Fetch package details and stage states in parallel
+      const [packagesResult, stageStatesResult] = await Promise.all([
+        packageIds.length > 0
+          ? supabase.from('packages').select('id, name, slug').in('id', packageIds)
+          : Promise.resolve({ data: [] }),
+        supabase.from('client_package_stage_state').select('*, documents_stages(title)').eq('tenant_id', tenantId)
+      ]);
+
+      const packagesMap = ((packagesResult as any).data || []).reduce((acc: Record<number, any>, pkg: any) => {
+        acc[pkg.id] = pkg;
+        return acc;
+      }, {} as Record<number, any>);
+
+      const stageStates = (stageStatesResult as any).data || [];
 
       // Build package data with stage info
       const packageData: ClientPackage[] = (instances || []).map(inst => {
-        const pkgStages = (stageStates || []).filter(s => s.package_id === inst.package_id);
+        const pkg = packagesMap[inst.package_id];
+        const pkgStages = stageStates.filter((s: any) => s.package_id === inst.package_id);
         const totalStages = pkgStages.length;
-        const completedStages = pkgStages.filter(s => s.status === 'completed').length;
-        const hasBlocked = pkgStages.some(s => s.status === 'blocked');
-        const activeStage = pkgStages.find(s => s.status === 'active' || s.status === 'in_progress');
+        const completedStages = pkgStages.filter((s: any) => s.status === 'completed').length;
+        const hasBlocked = pkgStages.some((s: any) => s.status === 'blocked');
+        const activeStage = pkgStages.find((s: any) => s.status === 'active' || s.status === 'in_progress');
 
         // Total hours = included + any added hours
         const totalHours = (inst.hours_included || 0) + (inst.hours_added || 0);
@@ -557,8 +559,8 @@ export function useClientPackages(tenantId: number | null) {
         return {
           id: inst.id,
           package_id: inst.package_id,
-          package_name: (inst.packages as any)?.name || 'Unknown',
-          package_slug: (inst.packages as any)?.slug || null,
+          package_name: pkg?.name || 'Unknown',
+          package_slug: pkg?.slug || null,
           membership_state: inst.is_complete ? 'exiting' : 'active',
           hours_included: totalHours,
           hours_used: inst.hours_used || 0,
