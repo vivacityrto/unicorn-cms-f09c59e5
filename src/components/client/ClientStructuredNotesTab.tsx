@@ -211,7 +211,7 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
                     <SelectValue placeholder="All Notes" />
                   </div>
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="bg-background">
                   <SelectItem value="all">All Notes</SelectItem>
                   <SelectItem value="tenant">Client Notes</SelectItem>
                   <SelectItem value="package_instance">Package Notes</SelectItem>
@@ -248,11 +248,20 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
                   const typeConfig = getNoteTypeConfig(note.note_type);
                   const TypeIcon = typeConfig.icon;
                   
+                  const isTenantNote = note.parent_type === 'tenant';
+                  const isPackageNote = note.parent_type === 'package_instance';
+                  
                   return (
                     <div 
                       key={note.id} 
-                      className={`p-4 rounded-lg border bg-card hover:bg-muted/30 transition-colors ${
-                        note.is_pinned ? 'border-primary/50 bg-primary/5' : ''
+                      className={`p-4 rounded-lg border transition-colors ${
+                        note.is_pinned 
+                          ? 'border-primary/50 bg-primary/5' 
+                          : isTenantNote 
+                            ? 'bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-800 hover:bg-amber-100 dark:hover:bg-amber-900/40'
+                            : isPackageNote
+                              ? 'bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-800 hover:bg-blue-100 dark:hover:bg-blue-900/40'
+                              : 'bg-card hover:bg-muted/30'
                       }`}
                     >
                       <div className="flex items-start justify-between gap-3">
@@ -270,6 +279,16 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
                               )}
                               <Badge variant="outline" className="text-xs">
                                 {typeConfig.label}
+                              </Badge>
+                              <Badge 
+                                variant="outline" 
+                                className={`text-xs ${
+                                  isTenantNote 
+                                    ? 'bg-amber-100 text-amber-700 border-amber-300 dark:bg-amber-900/50 dark:text-amber-300' 
+                                    : 'bg-blue-100 text-blue-700 border-blue-300 dark:bg-blue-900/50 dark:text-blue-300'
+                                }`}
+                              >
+                                {isTenantNote ? 'Client' : 'Package'}
                               </Badge>
                             </div>
                             <p className="text-sm text-muted-foreground mt-1 line-clamp-3">
