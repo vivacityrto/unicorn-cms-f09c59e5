@@ -18,7 +18,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { 
   Plus, StickyNote, Pin, MoreHorizontal, Edit, Trash2, 
   ArrowRight, Tag, Clock, MessageSquare, AlertTriangle, 
-  CheckCircle, Users, FileText, Loader2
+  CheckCircle, Users, FileText, Loader2, Filter
 } from 'lucide-react';
 import { formatDistanceToNow, format } from 'date-fns';
 
@@ -40,11 +40,14 @@ const NOTE_TYPES = [
 
 export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructuredNotesTabProps) {
   const { notes, loading, createNote, updateNote, deleteNote, refresh } = useNotes({
-    parentType: 'tenant',
+    parentType: ['tenant', 'package_instance'],
     parentId: tenantId,
     tenantId
   });
   const { createItem: createActionItem } = useClientActionItems(tenantId, clientId);
+  
+  // Filter state
+  const [parentTypeFilter, setParentTypeFilter] = useState<string>('all');
   
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -165,6 +168,11 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
     return NOTE_TYPES.find(t => t.value === type) || NOTE_TYPES[0];
   };
 
+  // Filter notes by parent type
+  const filteredNotes = parentTypeFilter === 'all' 
+    ? notes 
+    : notes.filter(note => note.parent_type === parentTypeFilter);
+
   if (loading && notes.length === 0) {
     return (
       <Card>
@@ -193,29 +201,50 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
             <CardTitle className="flex items-center gap-2">
               <StickyNote className="h-5 w-5" />
               Structured Notes
-              <Badge variant="secondary" className="ml-2">{notes.length}</Badge>
+              <Badge variant="secondary" className="ml-2">{filteredNotes.length}</Badge>
             </CardTitle>
-            <Button size="sm" onClick={handleOpenAdd}>
-              <Plus className="h-4 w-4 mr-1" />
-              Add Note
-            </Button>
+            <div className="flex items-center gap-2">
+              <Select value={parentTypeFilter} onValueChange={setParentTypeFilter}>
+                <SelectTrigger className="w-[160px] h-9">
+                  <div className="flex items-center gap-2">
+                    <Filter className="h-4 w-4 text-muted-foreground" />
+                    <SelectValue placeholder="All Notes" />
+                  </div>
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Notes</SelectItem>
+                  <SelectItem value="tenant">Client Notes</SelectItem>
+                  <SelectItem value="package_instance">Package Notes</SelectItem>
+                </SelectContent>
+              </Select>
+              <Button size="sm" onClick={handleOpenAdd}>
+                <Plus className="h-4 w-4 mr-1" />
+                Add Note
+              </Button>
+            </div>
           </div>
         </CardHeader>
         <CardContent>
-          {notes.length === 0 ? (
+          {filteredNotes.length === 0 ? (
             <div className="text-center py-12 text-muted-foreground">
               <StickyNote className="h-10 w-10 mx-auto mb-3 opacity-50" />
-              <p>No notes yet</p>
-              <p className="text-sm mt-1">Create notes to track meetings, decisions, and follow-ups</p>
-              <Button size="sm" className="mt-4" onClick={handleOpenAdd}>
-                <Plus className="h-4 w-4 mr-1" />
-                Create First Note
-              </Button>
+              <p>{notes.length === 0 ? 'No notes yet' : 'No matching notes'}</p>
+              <p className="text-sm mt-1">
+                {notes.length === 0 
+                  ? 'Create notes to track meetings, decisions, and follow-ups'
+                  : 'Try changing the filter to see more notes'}
+              </p>
+              {notes.length === 0 && (
+                <Button size="sm" className="mt-4" onClick={handleOpenAdd}>
+                  <Plus className="h-4 w-4 mr-1" />
+                  Create First Note
+                </Button>
+              )}
             </div>
           ) : (
             <ScrollArea className="h-[500px]">
               <div className="space-y-3">
-                {notes.map(note => {
+                {filteredNotes.map(note => {
                   const typeConfig = getNoteTypeConfig(note.note_type);
                   const TypeIcon = typeConfig.icon;
                   
