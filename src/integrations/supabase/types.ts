@@ -8307,6 +8307,9 @@ export type Database = {
           client_id: number
           clo_id: number
           end_date: string | null
+          hours_added: number | null
+          hours_included: number | null
+          hours_used: number | null
           id: number
           is_complete: boolean
           last_document_update_email: string | null
@@ -8321,6 +8324,9 @@ export type Database = {
           client_id: number
           clo_id: number
           end_date?: string | null
+          hours_added?: number | null
+          hours_included?: number | null
+          hours_used?: number | null
           id?: number
           is_complete: boolean
           last_document_update_email?: string | null
@@ -8335,6 +8341,9 @@ export type Database = {
           client_id?: number
           clo_id?: number
           end_date?: string | null
+          hours_added?: number | null
+          hours_included?: number | null
+          hours_used?: number | null
           id?: number
           is_complete?: boolean
           last_document_update_email?: string | null
