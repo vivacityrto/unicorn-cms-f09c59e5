@@ -376,8 +376,11 @@ export default function TenantDetail() {
         }]);
       }
 
-      // Fetch notes from tenant_notes table - filter by package if selected
-      let notesQuery = supabase.from("tenant_notes").select("id, note_details, created_at, created_by, duration, started_date, completed_date").eq("tenant_id", parseInt(tenantId));
+      // Fetch notes from unified notes table - filter by package if selected
+      let notesQuery = supabase.from("notes").select("id, note_details, created_at, created_by, duration, started_date, completed_date")
+        .eq("tenant_id", parseInt(tenantId))
+        .eq("parent_type", "tenant")
+        .eq("parent_id", parseInt(tenantId));
       if (currentPackageId) {
         notesQuery = notesQuery.eq("package_id", currentPackageId);
       }
@@ -393,7 +396,7 @@ export default function TenantDetail() {
         created_by: n.created_by
       })) || []);
 
-      // Calculate total minutes used from notes started_date to completed_date (same as TenantNotes)
+      // Calculate total minutes used from notes started_date to completed_date
       const totalMinutesUsed = notesData?.reduce((sum, n) => {
         if (n.started_date && n.completed_date) {
           const start = new Date(n.started_date);
@@ -404,7 +407,7 @@ export default function TenantDetail() {
         }
         return sum;
       }, 0) || 0;
-      setHoursUsed(totalMinutesUsed); // Store total minutes (rename misleading but keep for now)
+      setHoursUsed(totalMinutesUsed);
     } catch (error: any) {
       console.error("Error fetching tenant data:", error);
       toast({
@@ -434,8 +437,10 @@ export default function TenantDetail() {
       }
       const {
         error
-      } = await supabase.from("tenant_notes").insert({
+      } = await supabase.from("notes").insert({
         tenant_id: parseInt(tenantId),
+        parent_type: "tenant",
+        parent_id: parseInt(tenantId),
         note_details: newNote.trim(),
         created_by: user.id
       });
