@@ -29,10 +29,12 @@ interface ClientStructuredNotesTabProps {
 
 const NOTE_TYPES = [
   { value: 'general', label: 'General', icon: StickyNote, color: 'bg-slate-100 text-slate-700' },
+  { value: 'follow-up', label: 'Follow-up', icon: ArrowRight, color: 'bg-purple-100 text-purple-700' },
+  { value: 'phone-call', label: 'Phone Call', icon: MessageSquare, color: 'bg-cyan-100 text-cyan-700' },
   { value: 'meeting', label: 'Meeting', icon: Users, color: 'bg-blue-100 text-blue-700' },
-  { value: 'decision', label: 'Decision', icon: CheckCircle, color: 'bg-green-100 text-green-700' },
+  { value: 'action', label: 'Action', icon: CheckCircle, color: 'bg-green-100 text-green-700' },
+  { value: 'tenant', label: 'Tenant', icon: FileText, color: 'bg-amber-100 text-amber-700' },
   { value: 'risk', label: 'Risk', icon: AlertTriangle, color: 'bg-red-100 text-red-700' },
-  { value: 'follow_up', label: 'Follow-up', icon: ArrowRight, color: 'bg-purple-100 text-purple-700' },
   { value: 'escalation', label: 'Escalation', icon: AlertTriangle, color: 'bg-orange-100 text-orange-700' }
 ];
 
