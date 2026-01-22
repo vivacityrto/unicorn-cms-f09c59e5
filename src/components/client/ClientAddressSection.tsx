@@ -23,17 +23,16 @@ interface TenantAddress {
   full_address: string | null;
 }
 
+interface AddressType {
+  code: string;
+  label: string;
+  description: string | null;
+}
+
 interface ClientAddressSectionProps {
   tenantId: number;
   loading?: boolean;
 }
-
-const ADDRESS_TYPES = [
-  { code: 'HO', label: 'Head Office' },
-  { code: 'PO', label: 'Postal' },
-  { code: 'DS', label: 'Delivery Site' },
-  { code: 'OT', label: 'Other' }
-];
 
 const AUSTRALIAN_STATES = [
   { value: 'NSW', label: 'NSW' },
@@ -45,10 +44,6 @@ const AUSTRALIAN_STATES = [
   { value: 'NT', label: 'NT' },
   { value: 'ACT', label: 'ACT' }
 ];
-
-const getAddressTypeLabel = (code: string) => {
-  return ADDRESS_TYPES.find(t => t.code === code)?.label || code;
-};
 
 const getAddressTypeBadgeColor = (code: string): string => {
   switch (code) {
@@ -83,16 +78,38 @@ const emptyForm: AddressFormData = {
 
 export function ClientAddressSection({ tenantId, loading: parentLoading }: ClientAddressSectionProps) {
   const [addresses, setAddresses] = useState<TenantAddress[]>([]);
+  const [addressTypes, setAddressTypes] = useState<AddressType[]>([]);
   const [loading, setLoading] = useState(true);
   const [formData, setFormData] = useState<AddressFormData>(emptyForm);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+
+  const getAddressTypeLabel = (code: string) => {
+    return addressTypes.find(t => t.code === code)?.label || code;
+  };
+
+  useEffect(() => {
+    fetchAddressTypes();
+  }, []);
 
   useEffect(() => {
     if (tenantId) {
       fetchAddresses();
     }
   }, [tenantId]);
+
+  const fetchAddressTypes = async () => {
+    const { data, error } = await supabase
+      .from('dd_address_type')
+      .select('code, label, description')
+      .order('code');
+
+    if (error) {
+      console.error('Error fetching address types:', error);
+    } else {
+      setAddressTypes(data || []);
+    }
+  };
 
   const fetchAddresses = async () => {
     setLoading(true);
@@ -235,7 +252,7 @@ export function ClientAddressSection({ tenantId, loading: parentLoading }: Clien
                   <SelectValue placeholder="Select type" />
                 </SelectTrigger>
                 <SelectContent>
-                  {ADDRESS_TYPES.map((type) => (
+                  {addressTypes.map((type) => (
                     <SelectItem key={type.code} value={type.code}>
                       {type.label}
                     </SelectItem>
