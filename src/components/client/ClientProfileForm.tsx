@@ -24,23 +24,6 @@ const ORG_TYPES = [
   { value: 'other', label: 'Other' }
 ];
 
-const STATES = [
-  { value: 'NSW', label: 'New South Wales' },
-  { value: 'VIC', label: 'Victoria' },
-  { value: 'QLD', label: 'Queensland' },
-  { value: 'WA', label: 'Western Australia' },
-  { value: 'SA', label: 'South Australia' },
-  { value: 'TAS', label: 'Tasmania' },
-  { value: 'NT', label: 'Northern Territory' },
-  { value: 'ACT', label: 'Australian Capital Territory' }
-];
-
-const RISK_LEVELS = [
-  { value: 'low', label: 'Low' },
-  { value: 'medium', label: 'Medium' },
-  { value: 'high', label: 'High' },
-  { value: 'critical', label: 'Critical' }
-];
 
 const LMS_OPTIONS = [
   { value: 'moodle', label: 'Moodle' },
@@ -182,7 +165,7 @@ export function ClientProfileForm({ profile, onSave, loading, tgaLinked }: Clien
               className={isTgaField('trading_name') ? 'bg-muted' : ''}
             />
           </div>
-          {/* Row 2: Org Type, ABN, ACN */}
+          
           <div className="space-y-2">
             <Label htmlFor="org_type" className="flex items-center">
               Organisation Type
