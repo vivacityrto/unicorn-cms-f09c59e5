@@ -319,7 +319,7 @@ export function MembershipGrid({ memberships, onSelectMembership, onCSCChange, s
                                   {membership.tier.hoursIncluded > 0 && (
                                     <div className="w-20 text-right">
                                       <span className={cn('text-xs font-medium', getHoursColor(membership.hours_used_current_month, membership.tier.hoursIncluded))}>
-                                        {membership.hours_used_current_month}/{membership.tier.hoursIncluded}h
+                                        {membership.hours_used_current_month.toFixed(2)}/{membership.tier.hoursIncluded}h
                                       </span>
                                     </div>
                                   )}
