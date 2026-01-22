@@ -8310,10 +8310,12 @@ export type Database = {
           id: number
           is_complete: boolean
           last_document_update_email: string | null
+          manager_id: string | null
           package_id: number
           release_documents_office: boolean
           release_documents_pdf: boolean
           start_date: string
+          tenant_id: number | null
         }
         Insert: {
           client_id: number
@@ -8322,10 +8324,12 @@ export type Database = {
           id?: number
           is_complete: boolean
           last_document_update_email?: string | null
+          manager_id?: string | null
           package_id: number
           release_documents_office?: boolean
           release_documents_pdf?: boolean
           start_date: string
+          tenant_id?: number | null
         }
         Update: {
           client_id?: number
@@ -8334,10 +8338,12 @@ export type Database = {
           id?: number
           is_complete?: boolean
           last_document_update_email?: string | null
+          manager_id?: string | null
           package_id?: number
           release_documents_office?: boolean
           release_documents_pdf?: boolean
           start_date?: string
+          tenant_id?: number | null
         }
         Relationships: []
       }
