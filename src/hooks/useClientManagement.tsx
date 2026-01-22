@@ -49,17 +49,13 @@ export interface ClientProfile {
   acn: string | null;
   org_type: string | null;
   website: string | null;
-  primary_contact_name: string | null;
-  primary_contact_email: string | null;
-  primary_contact_phone: string | null;
-  address_line_1: string | null;
-  address_line_2: string | null;
-  suburb: string | null;
   state: string | null;
-  postcode: string | null;
   rto_number: string | null;
   cricos_number: string | null;
-  notes: string | null;
+  lms: string | null;
+  sms: string | null;
+  accounting_system: string | null;
+  risk_level: string | null;
   updated_at: string | null;
 }
 
@@ -261,12 +257,12 @@ export function useClientProfile(tenantId: number | null) {
     try {
       setLoading(true);
       
-      const [profileResult, linkResult] = await Promise.all([
+      const [tenantResult, linkResult] = await Promise.all([
         supabase
-          .from('tenant_profile')
-          .select('*')
-          .eq('tenant_id', tenantId)
-          .maybeSingle(),
+          .from('tenants')
+          .select('id, legal_name, rto_name, abn, acn, org_type, website, state, rto_id, cricos_id, lms, sms, accounting_system, risk_level, updated_at')
+          .eq('id', tenantId)
+          .single(),
         supabase
           .from('tenant_registry_links')
           .select('*')
@@ -275,11 +271,30 @@ export function useClientProfile(tenantId: number | null) {
           .maybeSingle()
       ]);
 
-      if (profileResult.error && profileResult.error.code !== 'PGRST116') {
-        throw profileResult.error;
+      if (tenantResult.error) {
+        throw tenantResult.error;
       }
 
-      setProfile(profileResult.data);
+      // Map tenant columns to ClientProfile interface
+      const profileData: ClientProfile = {
+        tenant_id: tenantResult.data.id,
+        legal_name: tenantResult.data.legal_name,
+        trading_name: tenantResult.data.rto_name,
+        abn: tenantResult.data.abn,
+        acn: tenantResult.data.acn,
+        org_type: tenantResult.data.org_type,
+        website: tenantResult.data.website,
+        state: tenantResult.data.state,
+        rto_number: tenantResult.data.rto_id,
+        cricos_number: tenantResult.data.cricos_id,
+        lms: tenantResult.data.lms,
+        sms: tenantResult.data.sms,
+        accounting_system: tenantResult.data.accounting_system,
+        risk_level: tenantResult.data.risk_level,
+        updated_at: tenantResult.data.updated_at
+      };
+
+      setProfile(profileData);
       setRegistryLink(linkResult.data);
     } catch (error: any) {
       console.error('Error fetching client profile:', error);
@@ -303,14 +318,27 @@ export function useClientProfile(tenantId: number | null) {
       // Get old values for audit
       const oldProfile = profile;
 
+      // Map interface fields back to tenants column names
+      const tenantUpdates: Record<string, any> = {};
+      if ('legal_name' in updates) tenantUpdates.legal_name = updates.legal_name;
+      if ('trading_name' in updates) tenantUpdates.rto_name = updates.trading_name;
+      if ('abn' in updates) tenantUpdates.abn = updates.abn;
+      if ('acn' in updates) tenantUpdates.acn = updates.acn;
+      if ('org_type' in updates) tenantUpdates.org_type = updates.org_type;
+      if ('website' in updates) tenantUpdates.website = updates.website;
+      if ('state' in updates) tenantUpdates.state = updates.state;
+      if ('rto_number' in updates) tenantUpdates.rto_id = updates.rto_number;
+      if ('cricos_number' in updates) tenantUpdates.cricos_id = updates.cricos_number;
+      if ('lms' in updates) tenantUpdates.lms = updates.lms;
+      if ('sms' in updates) tenantUpdates.sms = updates.sms;
+      if ('accounting_system' in updates) tenantUpdates.accounting_system = updates.accounting_system;
+      if ('risk_level' in updates) tenantUpdates.risk_level = updates.risk_level;
+      tenantUpdates.updated_at = new Date().toISOString();
+
       const { error } = await supabase
-        .from('tenant_profile')
-        .upsert({
-          tenant_id: tenantId,
-          ...updates,
-          updated_by: userId,
-          updated_at: new Date().toISOString()
-        }, { onConflict: 'tenant_id' });
+        .from('tenants')
+        .update(tenantUpdates)
+        .eq('id', tenantId);
 
       if (error) throw error;
 
@@ -319,7 +347,7 @@ export function useClientProfile(tenantId: number | null) {
         tenant_id: tenantId,
         actor_user_id: userId || undefined,
         action: 'client_profile_updated',
-        entity_type: 'tenant_profile',
+        entity_type: 'tenants',
         entity_id: tenantId.toString(),
         details: JSON.parse(JSON.stringify({
           old_values: oldProfile,

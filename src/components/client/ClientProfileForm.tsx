@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -34,6 +33,40 @@ const STATES = [
   { value: 'TAS', label: 'Tasmania' },
   { value: 'NT', label: 'Northern Territory' },
   { value: 'ACT', label: 'Australian Capital Territory' }
+];
+
+const RISK_LEVELS = [
+  { value: 'low', label: 'Low' },
+  { value: 'medium', label: 'Medium' },
+  { value: 'high', label: 'High' },
+  { value: 'critical', label: 'Critical' }
+];
+
+const LMS_OPTIONS = [
+  { value: 'moodle', label: 'Moodle' },
+  { value: 'canvas', label: 'Canvas' },
+  { value: 'blackboard', label: 'Blackboard' },
+  { value: 'axcelerate', label: 'aXcelerate' },
+  { value: 'totara', label: 'Totara' },
+  { value: 'other', label: 'Other' }
+];
+
+const SMS_OPTIONS = [
+  { value: 'axcelerate', label: 'aXcelerate' },
+  { value: 'wisenet', label: 'Wisenet' },
+  { value: 'vettrak', label: 'VETtrak' },
+  { value: 'jobready', label: 'Jobready' },
+  { value: 'rtomanager', label: 'RTO Manager' },
+  { value: 'cloud_assess', label: 'Cloud Assess' },
+  { value: 'other', label: 'Other' }
+];
+
+const ACCOUNTING_OPTIONS = [
+  { value: 'xero', label: 'Xero' },
+  { value: 'myob', label: 'MYOB' },
+  { value: 'quickbooks', label: 'QuickBooks' },
+  { value: 'sage', label: 'Sage' },
+  { value: 'other', label: 'Other' }
 ];
 
 // Fields that are synced from TGA when linked
@@ -95,9 +128,9 @@ export function ClientProfileForm({ profile, onSave, loading, tgaLinked }: Clien
         <CardHeader>
           <CardTitle className="text-lg">Organisation Details</CardTitle>
         </CardHeader>
-        <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* Legal Name - TGA synced field */}
-          <div className="space-y-2 md:col-span-2">
+        <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {/* Legal Name - spans full width */}
+          <div className="space-y-2 md:col-span-3">
             <Label htmlFor="legal_name" className="flex items-center">
               Legal Name
               {isTgaField('legal_name') && <TgaBadge />}
@@ -112,6 +145,7 @@ export function ClientProfileForm({ profile, onSave, loading, tgaLinked }: Clien
             />
           </div>
 
+          {/* Row 2: Trading Name, Org Type, Risk Level */}
           <div className="space-y-2">
             <Label htmlFor="trading_name" className="flex items-center">
               Trading Name
@@ -149,7 +183,28 @@ export function ClientProfileForm({ profile, onSave, loading, tgaLinked }: Clien
               </SelectContent>
             </Select>
           </div>
-          
+
+          <div className="space-y-2">
+            <Label htmlFor="risk_level">Risk Level</Label>
+            <Select
+              value={formData.risk_level || ''}
+              onValueChange={(value) => handleChange('risk_level', value)}
+              disabled={loading}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select risk..." />
+              </SelectTrigger>
+              <SelectContent>
+                {RISK_LEVELS.map((level) => (
+                  <SelectItem key={level.value} value={level.value}>
+                    {level.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Row 3: ABN, ACN, Website */}
           <div className="space-y-2">
             <Label htmlFor="abn" className="flex items-center">
               ABN
@@ -180,7 +235,6 @@ export function ClientProfileForm({ profile, onSave, loading, tgaLinked }: Clien
             />
           </div>
 
-          {/* Website - TGA synced field */}
           <div className="space-y-2">
             <Label htmlFor="website" className="flex items-center">
               Website
@@ -195,7 +249,8 @@ export function ClientProfileForm({ profile, onSave, loading, tgaLinked }: Clien
               className={isTgaField('website') ? 'bg-muted' : ''}
             />
           </div>
-          
+
+          {/* Row 4: RTO Number, CRICOS Code, State */}
           <div className="space-y-2">
             <Label htmlFor="rto_number">RTO Number</Label>
             <Input
@@ -217,84 +272,7 @@ export function ClientProfileForm({ profile, onSave, loading, tgaLinked }: Clien
               disabled={loading}
             />
           </div>
-        </CardContent>
-      </Card>
 
-      {/* Primary Contact */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">Primary Contact</CardTitle>
-        </CardHeader>
-        <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <Label htmlFor="primary_contact_name">Contact Name</Label>
-            <Input
-              id="primary_contact_name"
-              value={formData.primary_contact_name || ''}
-              onChange={(e) => handleChange('primary_contact_name', e.target.value)}
-              disabled={loading}
-            />
-          </div>
-          
-          <div className="space-y-2">
-            <Label htmlFor="primary_contact_email">Email</Label>
-            <Input
-              id="primary_contact_email"
-              type="email"
-              value={formData.primary_contact_email || ''}
-              onChange={(e) => handleChange('primary_contact_email', e.target.value)}
-              disabled={loading}
-            />
-          </div>
-          
-          <div className="space-y-2 md:col-span-2">
-            <Label htmlFor="primary_contact_phone">Phone</Label>
-            <Input
-              id="primary_contact_phone"
-              value={formData.primary_contact_phone || ''}
-              onChange={(e) => handleChange('primary_contact_phone', e.target.value)}
-              disabled={loading}
-            />
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Address */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">Address</CardTitle>
-        </CardHeader>
-        <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="space-y-2 md:col-span-2">
-            <Label htmlFor="address_line_1">Address Line 1</Label>
-            <Input
-              id="address_line_1"
-              value={formData.address_line_1 || ''}
-              onChange={(e) => handleChange('address_line_1', e.target.value)}
-              disabled={loading}
-            />
-          </div>
-          
-          <div className="space-y-2 md:col-span-2">
-            <Label htmlFor="address_line_2">Address Line 2</Label>
-            <Input
-              id="address_line_2"
-              value={formData.address_line_2 || ''}
-              onChange={(e) => handleChange('address_line_2', e.target.value)}
-              disabled={loading}
-            />
-          </div>
-          
-          <div className="space-y-2">
-            <Label htmlFor="suburb">Suburb</Label>
-            <Input
-              id="suburb"
-              value={formData.suburb || ''}
-              onChange={(e) => handleChange('suburb', e.target.value)}
-              disabled={loading}
-            />
-          </div>
-          
           <div className="space-y-2">
             <Label htmlFor="state">State</Label>
             <Select
@@ -314,33 +292,67 @@ export function ClientProfileForm({ profile, onSave, loading, tgaLinked }: Clien
               </SelectContent>
             </Select>
           </div>
-          
-          <div className="space-y-2">
-            <Label htmlFor="postcode">Postcode</Label>
-            <Input
-              id="postcode"
-              value={formData.postcode || ''}
-              onChange={(e) => handleChange('postcode', e.target.value)}
-              maxLength={4}
-              disabled={loading}
-            />
-          </div>
-        </CardContent>
-      </Card>
 
-      {/* Notes */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">Notes</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Textarea
-            value={formData.notes || ''}
-            onChange={(e) => handleChange('notes', e.target.value)}
-            placeholder="Add any additional notes about this client..."
-            rows={4}
-            disabled={loading}
-          />
+          {/* Row 5: SMS, LMS, Accounting System */}
+          <div className="space-y-2">
+            <Label htmlFor="sms">Student Management System</Label>
+            <Select
+              value={formData.sms || ''}
+              onValueChange={(value) => handleChange('sms', value)}
+              disabled={loading}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select SMS..." />
+              </SelectTrigger>
+              <SelectContent>
+                {SMS_OPTIONS.map((opt) => (
+                  <SelectItem key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="lms">Learning Management System</Label>
+            <Select
+              value={formData.lms || ''}
+              onValueChange={(value) => handleChange('lms', value)}
+              disabled={loading}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select LMS..." />
+              </SelectTrigger>
+              <SelectContent>
+                {LMS_OPTIONS.map((opt) => (
+                  <SelectItem key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="accounting_system">Accounting System</Label>
+            <Select
+              value={formData.accounting_system || ''}
+              onValueChange={(value) => handleChange('accounting_system', value)}
+              disabled={loading}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select system..." />
+              </SelectTrigger>
+              <SelectContent>
+                {ACCOUNTING_OPTIONS.map((opt) => (
+                  <SelectItem key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </CardContent>
       </Card>
 
