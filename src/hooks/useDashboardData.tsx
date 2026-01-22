@@ -58,8 +58,9 @@ export const useDashboardData = () => {
     queryKey: ["dashboard-pending-tasks"],
     queryFn: async () => {
       const { count, error } = await supabase
-        .from("documents_notes")
+        .from("notes")
         .select("*", { count: "exact", head: true })
+        .eq("parent_type", "stage")
         .is("completed_date", null);
       if (error) throw error;
       return count || 0;
@@ -75,8 +76,9 @@ export const useDashboardData = () => {
       startOfMonth.setHours(0, 0, 0, 0);
       
       const { count, error } = await supabase
-        .from("documents_notes")
+        .from("notes")
         .select("*", { count: "exact", head: true })
+        .eq("parent_type", "stage")
         .not("completed_date", "is", null)
         .gte("completed_date", startOfMonth.toISOString());
       if (error) throw error;
