@@ -235,6 +235,7 @@ export interface MembershipHealthScore {
 }
 
 export interface MembershipWithDetails extends MembershipEntitlement {
+  package_instance_id?: number;
   tenant_name: string;
   package_name: string;
   tier: MembershipTier;
