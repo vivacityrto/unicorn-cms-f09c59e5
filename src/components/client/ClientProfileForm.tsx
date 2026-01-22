@@ -112,7 +112,7 @@ export function ClientProfileForm({ profile, onSave, loading, tgaLinked }: Clien
           <CardTitle className="text-lg">Organisation Details</CardTitle>
         </CardHeader>
         <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {/* Row 1: RTO Number, CRICOS Code, Legal Name */}
+          {/* Row 1: RTO Number, CRICOS Code, Organisation Type */}
           <div className="space-y-2">
             <Label htmlFor="rto_number">RTO Number</Label>
             <Input
@@ -136,37 +136,6 @@ export function ClientProfileForm({ profile, onSave, loading, tgaLinked }: Clien
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="legal_name" className="flex items-center">
-              Legal Name
-              {isTgaField('legal_name') && <TgaBadge />}
-            </Label>
-            <Input
-              id="legal_name"
-              value={formData.legal_name || ''}
-              onChange={(e) => handleChange('legal_name', e.target.value)}
-              disabled={loading || isTgaField('legal_name')}
-              placeholder={isTgaField('legal_name') && !formData.legal_name ? 'Not provided by TGA' : ''}
-              className={isTgaField('legal_name') ? 'bg-muted' : ''}
-            />
-          </div>
-
-          {/* Row 2: Trading Name, Org Type, ABN */}
-          <div className="space-y-2">
-            <Label htmlFor="trading_name" className="flex items-center">
-              Trading Name
-              {isTgaField('trading_name') && <TgaBadge />}
-            </Label>
-            <Input
-              id="trading_name"
-              value={formData.trading_name || ''}
-              onChange={(e) => handleChange('trading_name', e.target.value)}
-              disabled={loading || isTgaField('trading_name')}
-              placeholder={isTgaField('trading_name') && !formData.trading_name ? 'Not provided by TGA' : ''}
-              className={isTgaField('trading_name') ? 'bg-muted' : ''}
-            />
-          </div>
-          
-          <div className="space-y-2">
             <Label htmlFor="org_type" className="flex items-center">
               Organisation Type
               {isTgaField('org_type') && <TgaBadge />}
@@ -189,7 +158,53 @@ export function ClientProfileForm({ profile, onSave, loading, tgaLinked }: Clien
             </Select>
           </div>
 
-          {/* Row 3: ABN, ACN, Website */}
+          {/* Row 2: Legal Name, Trading Name, RTO Name */}
+          <div className="space-y-2">
+            <Label htmlFor="legal_name" className="flex items-center">
+              Legal Name
+              {isTgaField('legal_name') && <TgaBadge />}
+            </Label>
+            <Input
+              id="legal_name"
+              value={formData.legal_name || ''}
+              onChange={(e) => handleChange('legal_name', e.target.value)}
+              disabled={loading || isTgaField('legal_name')}
+              placeholder={isTgaField('legal_name') && !formData.legal_name ? 'Not provided by TGA' : ''}
+              className={isTgaField('legal_name') ? 'bg-muted' : ''}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="trading_name" className="flex items-center">
+              Trading Name
+              {isTgaField('trading_name') && <TgaBadge />}
+            </Label>
+            <Input
+              id="trading_name"
+              value={formData.trading_name || ''}
+              onChange={(e) => handleChange('trading_name', e.target.value)}
+              disabled={loading || isTgaField('trading_name')}
+              placeholder={isTgaField('trading_name') && !formData.trading_name ? 'Not provided by TGA' : ''}
+              className={isTgaField('trading_name') ? 'bg-muted' : ''}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="website" className="flex items-center">
+              Website
+              {isTgaField('website') && <TgaBadge />}
+            </Label>
+            <Input
+              id="website"
+              value={formData.website || ''}
+              onChange={(e) => handleChange('website', e.target.value)}
+              placeholder={isTgaField('website') && !formData.website ? 'Not provided by TGA' : 'https://...'}
+              disabled={loading || isTgaField('website')}
+              className={isTgaField('website') ? 'bg-muted' : ''}
+            />
+          </div>
+
+          {/* Row 3: ABN, ACN, (empty) */}
           <div className="space-y-2">
             <Label htmlFor="abn" className="flex items-center">
               ABN
@@ -220,20 +235,8 @@ export function ClientProfileForm({ profile, onSave, loading, tgaLinked }: Clien
             />
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="website" className="flex items-center">
-              Website
-              {isTgaField('website') && <TgaBadge />}
-            </Label>
-            <Input
-              id="website"
-              value={formData.website || ''}
-              onChange={(e) => handleChange('website', e.target.value)}
-              placeholder={isTgaField('website') && !formData.website ? 'Not provided by TGA' : 'https://...'}
-              disabled={loading || isTgaField('website')}
-              className={isTgaField('website') ? 'bg-muted' : ''}
-            />
-          </div>
+          {/* Empty space for Row 3 */}
+          <div></div>
 
           {/* Row 4: SMS, LMS, Accounting System */}
           <div className="space-y-2">
