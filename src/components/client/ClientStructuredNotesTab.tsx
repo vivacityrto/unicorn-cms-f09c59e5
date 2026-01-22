@@ -537,28 +537,32 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
             
           </div>
           
-          <DialogFooter className="flex-row justify-end gap-2">
-            {selectedNote?.parent_type === 'package_instance' && (
-              <Button 
-                type="button" 
-                variant="outline" 
-                size="sm"
-                onClick={() => {
-                  // TODO: Implement email sending functionality
-                  console.log('Send note to client:', selectedNote);
-                }}
-              >
-                <MessageSquare className="h-4 w-4 mr-2" />
-                Email note
+          <DialogFooter className="flex-row justify-between gap-2">
+            <div>
+              {selectedNote?.parent_type === 'package_instance' && (
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => {
+                    // TODO: Implement email sending functionality
+                    console.log('Send note to client:', selectedNote);
+                  }}
+                >
+                  <MessageSquare className="h-4 w-4 mr-2" />
+                  Email note
+                </Button>
+              )}
+            </div>
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
+                Cancel
               </Button>
-            )}
-            <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleSave} disabled={!content.trim() || saving}>
-              {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-              {selectedNote ? 'Save Changes' : 'Create Note'}
-            </Button>
+              <Button onClick={handleSave} disabled={!content.trim() || saving}>
+                {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                {selectedNote ? 'Save Changes' : 'Create Note'}
+              </Button>
+            </div>
           </DialogFooter>
         </DialogContent>
       </Dialog>
