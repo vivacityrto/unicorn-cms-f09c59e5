@@ -29,6 +29,7 @@ import {
   Calendar
 } from 'lucide-react';
 import { ClientProfileForm } from '@/components/client/ClientProfileForm';
+import { ClientAddressSection } from '@/components/client/ClientAddressSection';
 import { ClientPackagesTab } from '@/components/client/ClientPackagesTab';
 import { ClientIntegrationsTab } from '@/components/client/ClientIntegrationsTab';
 import { ClientDocumentsTab } from '@/components/client/ClientDocumentsTab';
@@ -314,12 +315,18 @@ export default function ClientDetail() {
             
             {/* Profile Form */}
             {canEdit ? (
-              <ClientProfileForm
-                profile={profile}
-                onSave={saveProfile}
-                loading={profileLoading}
-                tgaLinked={registryLink?.link_status === 'verified'}
-              />
+              <>
+                <ClientProfileForm
+                  profile={profile}
+                  onSave={saveProfile}
+                  loading={profileLoading}
+                  tgaLinked={registryLink?.link_status === 'verified'}
+                />
+                <ClientAddressSection
+                  tenantId={tenantIdNum!}
+                  loading={profileLoading}
+                />
+              </>
             ) : (
               <Card>
                 <CardContent className="p-6">
