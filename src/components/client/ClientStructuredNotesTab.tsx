@@ -416,13 +416,11 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
               <DialogDescription asChild>
                 <div className="flex items-center gap-2 mt-1">
                   <Package className="h-4 w-4 text-blue-600" />
-                  {selectedPackageInfo ? (
-                    <span className="font-medium text-blue-700 dark:text-blue-400">
-                      {selectedPackageInfo.name} – {selectedPackageInfo.full_text}
-                    </span>
-                  ) : (
-                    <span className="text-muted-foreground">Package Note</span>
-                  )}
+                  <span className="font-medium text-blue-700 dark:text-blue-400">
+                    {selectedPackageInfo 
+                      ? `${selectedPackageInfo.name} – ${selectedPackageInfo.full_text}`
+                      : 'Package Note'}
+                  </span>
                 </div>
               </DialogDescription>
             )}
@@ -524,25 +522,23 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
               <Label htmlFor="pinned" className="cursor-pointer">Pin this note</Label>
             </div>
             
-            {/* Send to client option - only for package notes */}
+          </div>
+          
+          <DialogFooter className="flex-row justify-end gap-2">
             {selectedNote?.parent_type === 'package_instance' && (
               <Button 
                 type="button" 
                 variant="outline" 
                 size="sm"
-                className="w-full justify-start"
                 onClick={() => {
                   // TODO: Implement email sending functionality
                   console.log('Send note to client:', selectedNote);
                 }}
               >
                 <MessageSquare className="h-4 w-4 mr-2" />
-                Email Note to Client
+                Email note
               </Button>
             )}
-          </div>
-          
-          <DialogFooter>
             <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
               Cancel
             </Button>
