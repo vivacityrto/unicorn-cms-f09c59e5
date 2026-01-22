@@ -74,7 +74,7 @@ export interface NotesFilterOptions {
 }
 
 interface UseNotesParams {
-  parentType: NoteParentType;
+  parentType: NoteParentType | NoteParentType[];
   parentId: number;
   tenantId: number;
   packageId?: number | null;
@@ -186,9 +186,16 @@ export function useNotes({ parentType, parentId, tenantId, packageId }: UseNotes
       let query = supabase
         .from('notes')
         .select('*')
-        .eq('tenant_id', tenantId)
-        .eq('parent_type', parentType)
-        .eq('parent_id', parentId)
+        .eq('tenant_id', tenantId);
+      
+      // Handle single or multiple parent types
+      if (Array.isArray(parentType)) {
+        query = query.in('parent_type', parentType);
+      } else {
+        query = query.eq('parent_type', parentType).eq('parent_id', parentId);
+      }
+      
+      query = query
         .order('is_pinned', { ascending: false })
         .order('created_at', { ascending: false });
       
@@ -255,11 +262,14 @@ export function useNotes({ parentType, parentId, tenantId, packageId }: UseNotes
       const { data: userData } = await supabase.auth.getUser();
       if (!userData.user) throw new Error('Not authenticated');
 
+      // For multi-parent-type mode, default to 'tenant' for new notes
+      const effectiveParentType = Array.isArray(parentType) ? 'tenant' : parentType;
+      
       const { data, error } = await supabase
         .from('notes')
         .insert({
           tenant_id: tenantId,
-          parent_type: parentType,
+          parent_type: effectiveParentType,
           parent_id: parentId,
           package_id: input.package_id || packageId || null,
           title: input.title || null,
