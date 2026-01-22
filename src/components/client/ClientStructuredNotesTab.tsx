@@ -537,8 +537,8 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
             
           </div>
           
-          <DialogFooter className="flex-row justify-between gap-2">
-            <div>
+          <DialogFooter className="!flex !flex-row !justify-between w-full gap-2 sm:justify-between">
+            <div className="flex-shrink-0">
               {selectedNote?.parent_type === 'package_instance' && (
                 <Button 
                   type="button" 
