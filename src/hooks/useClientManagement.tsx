@@ -260,7 +260,7 @@ export function useClientProfile(tenantId: number | null) {
       const [tenantResult, linkResult] = await Promise.all([
         supabase
           .from('tenants')
-          .select('id, legal_name, rto_name, abn, acn, org_type, website, state, rto_id, cricos_id, lms, sms, accounting_system, risk_level, updated_at')
+          .select('id, legal_name, rto_name, abn, acn, website, state, rto_id, cricos_id, lms, sms, accounting_system, risk_level, updated_at')
           .eq('id', tenantId)
           .single(),
         supabase
@@ -282,7 +282,7 @@ export function useClientProfile(tenantId: number | null) {
         trading_name: tenantResult.data.rto_name,
         abn: tenantResult.data.abn,
         acn: tenantResult.data.acn,
-        org_type: tenantResult.data.org_type,
+        org_type: null, // Column not yet in database
         website: tenantResult.data.website,
         state: tenantResult.data.state,
         rto_number: tenantResult.data.rto_id,
