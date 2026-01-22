@@ -129,7 +129,7 @@ export function ClientProfileForm({ profile, onSave, loading, tgaLinked }: Clien
           <CardTitle className="text-lg">Organisation Details</CardTitle>
         </CardHeader>
         <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {/* Row 1: RTO Number, Legal Name, Trading Name */}
+          {/* Row 1: RTO Number, CRICOS Code, Legal Name */}
           <div className="space-y-2">
             <Label htmlFor="rto_number">RTO Number</Label>
             <Input
@@ -137,6 +137,17 @@ export function ClientProfileForm({ profile, onSave, loading, tgaLinked }: Clien
               value={formData.rto_number || ''}
               onChange={(e) => handleChange('rto_number', e.target.value)}
               placeholder="e.g. 12345"
+              disabled={loading}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="cricos_number">CRICOS Provider Code</Label>
+            <Input
+              id="cricos_number"
+              value={formData.cricos_number || ''}
+              onChange={(e) => handleChange('cricos_number', e.target.value)}
+              placeholder="e.g. 01234A"
               disabled={loading}
             />
           </div>
@@ -156,6 +167,7 @@ export function ClientProfileForm({ profile, onSave, loading, tgaLinked }: Clien
             />
           </div>
 
+          {/* Row 2: Trading Name, Org Type, ABN */}
           <div className="space-y-2">
             <Label htmlFor="trading_name" className="flex items-center">
               Trading Name
@@ -170,7 +182,6 @@ export function ClientProfileForm({ profile, onSave, loading, tgaLinked }: Clien
               className={isTgaField('trading_name') ? 'bg-muted' : ''}
             />
           </div>
-          
           {/* Row 2: Org Type, ABN, ACN */}
           <div className="space-y-2">
             <Label htmlFor="org_type" className="flex items-center">
@@ -241,39 +252,7 @@ export function ClientProfileForm({ profile, onSave, loading, tgaLinked }: Clien
             />
           </div>
 
-          {/* Row 4: CRICOS Code, State, Website */}
-          <div className="space-y-2">
-            <Label htmlFor="cricos_number">CRICOS Provider Code</Label>
-            <Input
-              id="cricos_number"
-              value={formData.cricos_number || ''}
-              onChange={(e) => handleChange('cricos_number', e.target.value)}
-              placeholder="e.g. 01234A"
-              disabled={loading}
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="state">State</Label>
-            <Select
-              value={formData.state || ''}
-              onValueChange={(value) => handleChange('state', value)}
-              disabled={loading}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select state..." />
-              </SelectTrigger>
-              <SelectContent>
-                {STATES.map((state) => (
-                  <SelectItem key={state.value} value={state.value}>
-                    {state.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Row 5: SMS, LMS, Accounting System */}
+          {/* Row 4: SMS, LMS, Accounting System */}
           <div className="space-y-2">
             <Label htmlFor="sms">Student Management System</Label>
             <Select
