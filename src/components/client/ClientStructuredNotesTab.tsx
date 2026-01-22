@@ -77,18 +77,23 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
   const [actionDescription, setActionDescription] = useState('');
 
   // Fetch package info when a package note is selected
+  // For package_instance notes, parent_id refers to package_instances.id
+  // We need to join through package_instances to get to packages
   useEffect(() => {
     const fetchPackageInfo = async () => {
-      // For package_instance notes, parent_id contains the package ID
       if (selectedNote?.parent_type === 'package_instance' && selectedNote?.parent_id) {
         const { data } = await supabase
-          .from('packages')
-          .select('id, name, full_text')
+          .from('package_instances')
+          .select('id, package_id, packages:package_id(id, name, full_text)')
           .eq('id', selectedNote.parent_id)
           .single();
         
-        if (data) {
-          setSelectedPackageInfo(data);
+        if (data?.packages) {
+          // packages is the joined data from the packages table
+          const pkg = data.packages as unknown as PackageInfo;
+          setSelectedPackageInfo(pkg);
+        } else {
+          setSelectedPackageInfo(null);
         }
       } else {
         setSelectedPackageInfo(null);
