@@ -7839,6 +7839,7 @@ export type Database = {
           duration: number | null
           file_names: string[] | null
           id: string
+          is_pinned: boolean
           note_details: string
           note_type: string | null
           package_id: number | null
@@ -7847,6 +7848,7 @@ export type Database = {
           parent_uuid: string | null
           priority: string | null
           started_date: string | null
+          tags: string[]
           tenant_id: number
           tenant_uuid: string | null
           title: string | null
@@ -7869,6 +7871,7 @@ export type Database = {
           duration?: number | null
           file_names?: string[] | null
           id?: string
+          is_pinned?: boolean
           note_details: string
           note_type?: string | null
           package_id?: number | null
@@ -7877,6 +7880,7 @@ export type Database = {
           parent_uuid?: string | null
           priority?: string | null
           started_date?: string | null
+          tags?: string[]
           tenant_id: number
           tenant_uuid?: string | null
           title?: string | null
@@ -7899,6 +7903,7 @@ export type Database = {
           duration?: number | null
           file_names?: string[] | null
           id?: string
+          is_pinned?: boolean
           note_details?: string
           note_type?: string | null
           package_id?: number | null
@@ -7907,6 +7912,7 @@ export type Database = {
           parent_uuid?: string | null
           priority?: string | null
           started_date?: string | null
+          tags?: string[]
           tenant_id?: number
           tenant_uuid?: string | null
           title?: string | null

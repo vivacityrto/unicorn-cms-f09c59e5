@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { useClientNotes, useClientActionItems, ClientNote } from '@/hooks/useClientManagementData';
+import { useNotes, Note } from '@/hooks/useNotes';
+import { useClientActionItems } from '@/hooks/useClientManagementData';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -36,13 +37,17 @@ const NOTE_TYPES = [
 ];
 
 export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructuredNotesTabProps) {
-  const { notes, loading, createNote, updateNote, deleteNote, refresh } = useClientNotes(tenantId, clientId);
+  const { notes, loading, createNote, updateNote, deleteNote, refresh } = useNotes({
+    parentType: 'tenant',
+    parentId: tenantId,
+    tenantId
+  });
   const { createItem: createActionItem } = useClientActionItems(tenantId, clientId);
   
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isConvertDialogOpen, setIsConvertDialogOpen] = useState(false);
-  const [selectedNote, setSelectedNote] = useState<ClientNote | null>(null);
+  const [selectedNote, setSelectedNote] = useState<Note | null>(null);
   const [saving, setSaving] = useState(false);
   
   // Form state
@@ -72,11 +77,11 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
     setIsAddDialogOpen(true);
   };
 
-  const handleOpenEdit = (note: ClientNote) => {
+  const handleOpenEdit = (note: Note) => {
     setSelectedNote(note);
-    setNoteType(note.note_type);
+    setNoteType(note.note_type || 'general');
     setTitle(note.title || '');
-    setContent(note.content);
+    setContent(note.note_details);
     setTags(note.tags || []);
     setIsPinned(note.is_pinned);
     setIsAddDialogOpen(true);
@@ -89,9 +94,9 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
     try {
       if (selectedNote) {
         await updateNote(selectedNote.id, {
-          note_type: noteType as ClientNote['note_type'],
+          note_type: noteType,
           title: title || null,
-          content,
+          note_details: content,
           tags,
           is_pinned: isPinned
         });
@@ -99,7 +104,7 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
         await createNote({
           note_type: noteType,
           title: title || undefined,
-          content,
+          note_details: content,
           tags,
           is_pinned: isPinned
         });
@@ -129,10 +134,10 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
     setTags(tags.filter(t => t !== tag));
   };
 
-  const handleOpenConvert = (note: ClientNote) => {
+  const handleOpenConvert = (note: Note) => {
     setSelectedNote(note);
-    setActionTitle(note.title || `Follow-up: ${note.content.substring(0, 50)}...`);
-    setActionDescription(note.content);
+    setActionTitle(note.title || `Follow-up: ${note.note_details.substring(0, 50)}...`);
+    setActionDescription(note.note_details);
     setIsConvertDialogOpen(true);
   };
 
@@ -237,7 +242,7 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
                               </Badge>
                             </div>
                             <p className="text-sm text-muted-foreground mt-1 line-clamp-3">
-                              {note.content}
+                              {note.note_details}
                             </p>
                             
                             {/* Tags */}
