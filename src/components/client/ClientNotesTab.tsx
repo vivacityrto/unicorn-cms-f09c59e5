@@ -1,48 +1,23 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, StickyNote, Calendar as CalendarComponent, CalendarClock, X, Upload, Flag, FileText, Users, Phone, MoreHorizontal, Play, Square, CheckSquare, Paperclip, Timer, CheckCircle2, Clock, Eye, Search, ArrowUpDown, Loader2 } from "lucide-react";
+import { Plus, StickyNote, Calendar as CalendarComponent, X, Upload, Flag, Play, Square, CheckCircle2, Clock, Search, ArrowUpDown, Loader2, Timer } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectSeparator } from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
-import { ScrollArea } from "@/components/ui/scroll-area";
-
-interface TenantNote {
-  id: string;
-  tenant_id: number;
-  note_details: string;
-  note_type: string | null;
-  priority: string | null;
-  started_date: string | null;
-  completed_date: string | null;
-  uploaded_files: string[] | null;
-  file_names: string[] | null;
-  assignees: string[] | null;
-  duration: number | null;
-  created_by: string;
-  created_at: string;
-  updated_at: string;
-  user?: {
-    first_name: string;
-    last_name: string;
-    email: string;
-    avatar_url: string | null;
-  };
-}
+import { useNotes, Note, filterNotes, formatDuration, formatElapsedTime } from "@/hooks/useNotes";
 
 interface ClientNotesTabProps {
   tenantId: number;
@@ -50,13 +25,19 @@ interface ClientNotesTabProps {
 }
 
 export function ClientNotesTab({ tenantId, packages }: ClientNotesTabProps) {
-  const navigate = useNavigate();
   const { toast } = useToast();
-  const [notes, setNotes] = useState<TenantNote[]>([]);
-  const [loading, setLoading] = useState(true);
+  
+  // Use the unified notes hook
+  const { notes, loading, totalDuration, createNote, updateNote, deleteNote, refresh } = useNotes({
+    parentType: 'tenant',
+    parentId: tenantId,
+    tenantId
+  });
+
+  // Local UI state
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [selectedNote, setSelectedNote] = useState<TenantNote | null>(null);
+  const [selectedNote, setSelectedNote] = useState<Note | null>(null);
   const [noteText, setNoteText] = useState("");
   const [noteType, setNoteType] = useState("");
   const [priority, setPriority] = useState("");
@@ -79,27 +60,13 @@ export function ClientNotesTab({ tenantId, packages }: ClientNotesTabProps) {
   const [timerStartTime, setTimerStartTime] = useState<number | null>(null);
   const [elapsedTime, setElapsedTime] = useState(0);
   const [accumulatedTime, setAccumulatedTime] = useState(0);
-  const [totalDurationUsed, setTotalDurationUsed] = useState(0);
   const [searchQuery, setSearchQuery] = useState("");
   const [sortPriority, setSortPriority] = useState<string>("all");
   const [activePackageId, setActivePackageId] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
 
-  // Filter and sort notes
-  const filteredNotes = notes.filter(note => {
-    if (!searchQuery) return true;
-    const query = searchQuery.toLowerCase();
-    return (
-      note.note_details.toLowerCase().includes(query) ||
-      note.note_type?.toLowerCase().includes(query) ||
-      note.user?.first_name?.toLowerCase().includes(query) ||
-      note.user?.last_name?.toLowerCase().includes(query) ||
-      note.user?.email?.toLowerCase().includes(query)
-    );
-  }).filter(note => {
-    if (sortPriority === "all") return true;
-    return note.priority === sortPriority;
-  }).sort((a, b) => {
+  // Filter and sort notes using the helper function
+  const filteredNotes = filterNotes(notes, { searchQuery, priority: sortPriority }).sort((a, b) => {
     if (sortPriority !== "all") {
       const priorityOrder = { urgent: 0, high: 1, normal: 2, low: 3 };
       const aPriority = priorityOrder[a.priority as keyof typeof priorityOrder] ?? 4;
@@ -157,20 +124,6 @@ export function ClientNotesTab({ tenantId, packages }: ClientNotesTabProps) {
     });
   };
 
-  const formatElapsedTime = (ms: number) => {
-    const totalSeconds = Math.floor(ms / 1000);
-    const days = Math.floor(totalSeconds / 86400);
-    const hours = Math.floor((totalSeconds % 86400) / 3600);
-    const minutes = Math.floor((totalSeconds % 3600) / 60);
-    const seconds = totalSeconds % 60;
-    const parts = [];
-    if (days > 0) parts.push(`${days} day${days > 1 ? 's' : ''}`);
-    if (hours > 0) parts.push(`${hours} hour${hours > 1 ? 's' : ''}`);
-    if (minutes > 0) parts.push(`${minutes} min${minutes > 1 ? 's' : ''}`);
-    if (seconds > 0 || parts.length === 0) parts.push(`${seconds} sec${seconds > 1 ? 's' : ''}`);
-    return parts.join(' ');
-  };
-
   const calculateDuration = () => {
     if (startedDate && completedDate) {
       const convert12To24 = (time: { hour: string; minute: string; period: string }) => {
@@ -188,14 +141,7 @@ export function ClientNotesTab({ tenantId, packages }: ClientNotesTabProps) {
       const diffMs = endDateTime.getTime() - startDateTime.getTime();
       if (diffMs < 0) return "Invalid duration";
       const diffMins = Math.floor(diffMs / 60000);
-      const days = Math.floor(diffMins / 1440);
-      const hours = Math.floor((diffMins % 1440) / 60);
-      const minutes = diffMins % 60;
-      const parts = [];
-      if (days > 0) parts.push(`${days} day${days > 1 ? 's' : ''}`);
-      if (hours > 0) parts.push(`${hours} hour${hours > 1 ? 's' : ''}`);
-      if (minutes > 0) parts.push(`${minutes} min${minutes > 1 ? 's' : ''}`);
-      return parts.length > 0 ? parts.join(' ') : '0 mins';
+      return formatDuration(diffMins);
     }
     if (isTimerRunning) return formatElapsedTime(elapsedTime);
     if (elapsedTime > 0) return formatElapsedTime(elapsedTime);
@@ -204,7 +150,6 @@ export function ClientNotesTab({ tenantId, packages }: ClientNotesTabProps) {
 
   useEffect(() => {
     if (tenantId) {
-      fetchNotes();
       getCurrentUser();
       fetchVivacityTeam();
     }
@@ -231,51 +176,6 @@ export function ClientNotesTab({ tenantId, packages }: ClientNotesTabProps) {
     }
   };
 
-  const fetchNotes = async () => {
-    if (!tenantId) return;
-    setLoading(true);
-    try {
-      const { data, error } = await supabase.from("tenant_notes")
-        .select("*")
-        .eq("tenant_id", tenantId)
-        .order("created_at", { ascending: false });
-      if (error) throw error;
-
-      if (data && data.length > 0) {
-        const totalMinutes = data.reduce((sum, note) => {
-          if (note.started_date && note.completed_date) {
-            const start = new Date(note.started_date);
-            const end = new Date(note.completed_date);
-            const diffMs = end.getTime() - start.getTime();
-            const diffMins = Math.floor(diffMs / 60000);
-            return sum + (diffMins > 0 ? diffMins : 0);
-          }
-          return sum;
-        }, 0);
-        setTotalDurationUsed(totalMinutes);
-
-        const userIds = [...new Set(data.map(n => n.created_by))];
-        const { data: usersData } = await supabase.from("users")
-          .select("user_uuid, first_name, last_name, email, avatar_url")
-          .in("user_uuid", userIds);
-        const usersMap = new Map(usersData?.map(u => [u.user_uuid, u]) || []);
-        const notesWithUsers = data.map(note => ({
-          ...note,
-          user: usersMap.get(note.created_by) || undefined
-        }));
-        setNotes(notesWithUsers);
-      } else {
-        setNotes([]);
-        setTotalDurationUsed(0);
-      }
-    } catch (error: any) {
-      console.error("Error fetching notes:", error);
-      toast({ title: "Error", description: "Failed to load notes", variant: "destructive" });
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (files) setUploadedFiles(prev => [...prev, ...Array.from(files)]);
@@ -289,12 +189,6 @@ export function ClientNotesTab({ tenantId, packages }: ClientNotesTabProps) {
     if (!noteText.trim() || !tenantId || saving) return;
     setSaving(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        toast({ title: "Error", description: "You must be logged in", variant: "destructive" });
-        return;
-      }
-
       const fileUrls: string[] = [];
       const fileNames: string[] = [];
       if (uploadedFiles.length > 0) {
@@ -336,31 +230,22 @@ export function ClientNotesTab({ tenantId, packages }: ClientNotesTabProps) {
 
       const noteData = {
         note_details: noteText.trim(),
-        note_type: noteType || null,
-        priority: priority || null,
-        started_date: startedDateTime,
-        completed_date: completedDateTime,
-        uploaded_files: allFilePaths.length > 0 ? allFilePaths : null,
-        file_names: allFileNames.length > 0 ? allFileNames : null,
-        assignees: assignees.length > 0 ? assignees : null,
+        note_type: noteType || undefined,
+        priority: priority || undefined,
+        started_date: startedDateTime || undefined,
+        completed_date: completedDateTime || undefined,
+        uploaded_files: allFilePaths.length > 0 ? allFilePaths : undefined,
+        file_names: allFileNames.length > 0 ? allFileNames : undefined,
+        assignees: assignees.length > 0 ? assignees : undefined,
         package_id: activePackageId
       };
 
       if (selectedNote) {
-        const { error } = await supabase.from("tenant_notes").update(noteData).eq("id", selectedNote.id);
-        if (error) throw error;
-        toast({ title: "Success", description: "Note updated successfully" });
+        await updateNote(selectedNote.id, noteData);
       } else {
-        const { error } = await supabase.from("tenant_notes").insert({
-          tenant_id: tenantId,
-          ...noteData,
-          created_by: user.id
-        });
-        if (error) throw error;
-        toast({ title: "Success", description: "Note added successfully" });
+        await createNote(noteData);
       }
       resetForm();
-      fetchNotes();
     } catch (error: any) {
       toast({ title: "Error", description: error.message, variant: "destructive" });
     } finally {
@@ -391,18 +276,15 @@ export function ClientNotesTab({ tenantId, packages }: ClientNotesTabProps) {
   const handleDeleteNote = async () => {
     if (!selectedNote) return;
     try {
-      const { error } = await supabase.from("tenant_notes").delete().eq("id", selectedNote.id);
-      if (error) throw error;
-      toast({ title: "Success", description: "Note deleted successfully" });
+      await deleteNote(selectedNote.id);
       setSelectedNote(null);
       setIsDeleteDialogOpen(false);
-      fetchNotes();
     } catch (error: any) {
       toast({ title: "Error", description: error.message, variant: "destructive" });
     }
   };
 
-  const openEditDialog = (note: TenantNote) => {
+  const openEditDialog = (note: Note) => {
     setSelectedNote(note);
     setNoteText(note.note_details);
     setNoteType(note.note_type || "");
@@ -439,7 +321,7 @@ export function ClientNotesTab({ tenantId, packages }: ClientNotesTabProps) {
     setIsAddDialogOpen(true);
   };
 
-  const openDeleteDialog = (note: TenantNote) => {
+  const openDeleteDialog = (note: Note) => {
     setSelectedNote(note);
     setIsDeleteDialogOpen(true);
   };
@@ -470,13 +352,7 @@ export function ClientNotesTab({ tenantId, packages }: ClientNotesTabProps) {
         <div className="flex items-center gap-4">
           <Badge variant="outline" className="bg-orange-50 text-orange-700 border-orange-200 text-[0.8rem] py-1.5 px-3 rounded-full font-medium gap-2">
             <Timer className="h-4 w-4" />
-            <span>Total time used: {(() => {
-              const days = Math.floor(totalDurationUsed / 1440);
-              const hours = Math.floor((totalDurationUsed % 1440) / 60);
-              const mins = totalDurationUsed % 60;
-              if (days > 0) return `${days}d ${hours}h ${mins}m`;
-              return `${hours}h ${mins}m`;
-            })()}</span>
+            <span>Total time used: {formatDuration(totalDuration)}</span>
           </Badge>
         </div>
         <Button onClick={() => setIsAddDialogOpen(true)} className="gap-2">
@@ -546,14 +422,14 @@ export function ClientNotesTab({ tenantId, packages }: ClientNotesTabProps) {
                       <TableCell>
                         <div className="flex items-center gap-3">
                           <Avatar className="h-8 w-8">
-                            {note.user?.avatar_url && <AvatarImage src={note.user.avatar_url} />}
+                            {note.creator?.avatar_url && <AvatarImage src={note.creator.avatar_url} />}
                             <AvatarFallback className="bg-primary/10 text-primary text-xs">
-                              {note.user ? `${note.user.first_name?.[0] || ''}${note.user.last_name?.[0] || ''}`.toUpperCase() : 'U'}
+                              {note.creator ? `${note.creator.first_name?.[0] || ''}${note.creator.last_name?.[0] || ''}`.toUpperCase() : 'U'}
                             </AvatarFallback>
                           </Avatar>
                           <div>
-                            <p className="text-sm font-medium">{note.user ? `${note.user.first_name || ''} ${note.user.last_name || ''}`.trim() || 'Unknown' : 'Unknown User'}</p>
-                            <p className="text-xs text-muted-foreground">{note.user?.email || ''}</p>
+                            <p className="text-sm font-medium">{note.creator ? `${note.creator.first_name || ''} ${note.creator.last_name || ''}`.trim() || 'Unknown' : 'Unknown User'}</p>
+                            <p className="text-xs text-muted-foreground">{note.creator?.email || ''}</p>
                           </div>
                         </div>
                       </TableCell>
@@ -610,13 +486,14 @@ export function ClientNotesTab({ tenantId, packages }: ClientNotesTabProps) {
                 <Select value={noteType} onValueChange={setNoteType}>
                   <SelectTrigger><SelectValue placeholder="Select type" /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="General">General</SelectItem>
-                    <SelectItem value="Meeting">Meeting</SelectItem>
-                    <SelectItem value="Phone-Call">Phone Call</SelectItem>
-                    <SelectItem value="Action">Action</SelectItem>
-                    <SelectItem value="Document">Document</SelectItem>
-                    <SelectItem value="Tasks">Tasks</SelectItem>
-                    <SelectItem value="Others">Others</SelectItem>
+                    <SelectItem value="general">General</SelectItem>
+                    <SelectItem value="meeting">Meeting</SelectItem>
+                    <SelectItem value="phone-call">Phone Call</SelectItem>
+                    <SelectItem value="action">Action</SelectItem>
+                    <SelectItem value="follow-up">Follow-up</SelectItem>
+                    <SelectItem value="tenant">Tenant</SelectItem>
+                    <SelectItem value="risk">Risk</SelectItem>
+                    <SelectItem value="escalation">Escalation</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
