@@ -59,6 +59,7 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
   const [noteType, setNoteType] = useState('general');
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
+  const [priority, setPriority] = useState('normal');
   const [tags, setTags] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState('');
   const [isPinned, setIsPinned] = useState(false);
@@ -71,6 +72,7 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
     setNoteType('general');
     setTitle('');
     setContent('');
+    setPriority('normal');
     setTags([]);
     setTagInput('');
     setIsPinned(false);
@@ -87,6 +89,7 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
     setNoteType(note.note_type || 'general');
     setTitle(note.title || '');
     setContent(note.note_details);
+    setPriority(note.priority || 'normal');
     setTags(note.tags || []);
     setIsPinned(note.is_pinned);
     setIsAddDialogOpen(true);
@@ -102,6 +105,7 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
           note_type: noteType,
           title: title || null,
           note_details: content,
+          priority: priority || null,
           tags,
           is_pinned: isPinned
         });
@@ -110,6 +114,7 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
           note_type: noteType,
           title: title || undefined,
           note_details: content,
+          priority: priority || undefined,
           tags,
           is_pinned: isPinned
         });
@@ -372,9 +377,18 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
             <DialogTitle>
               {selectedNote ? 'Edit Note' : 'Add Note'}
             </DialogTitle>
+            {/* Show package info if editing a package note */}
+            {selectedNote?.parent_type === 'package_instance' && (
+              <div className="text-sm text-muted-foreground mt-1">
+                <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-900/50 dark:text-blue-300">
+                  Package Note
+                </Badge>
+              </div>
+            )}
           </DialogHeader>
           
           <div className="space-y-4">
+            {/* Type and Priority row */}
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Type</Label>
@@ -382,7 +396,7 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="bg-background">
                     {NOTE_TYPES.map(type => (
                       <SelectItem key={type.value} value={type.value}>
                         <span className="flex items-center gap-2">
@@ -396,13 +410,29 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
               </div>
               
               <div className="space-y-2">
-                <Label>Title (optional)</Label>
-                <Input 
-                  value={title}
-                  onChange={e => setTitle(e.target.value)}
-                  placeholder="Note title..."
-                />
+                <Label>Priority</Label>
+                <Select value={priority} onValueChange={setPriority}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Normal" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-background">
+                    <SelectItem value="low">Low</SelectItem>
+                    <SelectItem value="normal">Normal</SelectItem>
+                    <SelectItem value="high">High</SelectItem>
+                    <SelectItem value="urgent">Urgent</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
+            </div>
+            
+            {/* Title field - now full width below Type/Priority */}
+            <div className="space-y-2">
+              <Label>Title (optional)</Label>
+              <Input 
+                value={title}
+                onChange={e => setTitle(e.target.value)}
+                placeholder="Note title..."
+              />
             </div>
             
             <div className="space-y-2">
