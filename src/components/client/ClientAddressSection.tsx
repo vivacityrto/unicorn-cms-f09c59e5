@@ -156,6 +156,18 @@ export function ClientAddressSection({ tenantId, loading: parentLoading }: Clien
       return;
     }
 
+    // Check for duplicate HO or PO addresses (only one allowed per tenant)
+    if (['HO', 'PO'].includes(formData.address_type)) {
+      const existingAddress = addresses.find(
+        addr => addr.address_type === formData.address_type && addr.id !== editingId
+      );
+      if (existingAddress) {
+        const typeLabel = formData.address_type === 'HO' ? 'Head Office' : 'Postal';
+        toast.error(`Only one ${typeLabel} address is allowed per client. Please edit the existing one.`);
+        return;
+      }
+    }
+
     setSaving(true);
 
     const addressData = {
