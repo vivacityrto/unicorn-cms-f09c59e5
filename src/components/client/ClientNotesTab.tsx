@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, StickyNote, Calendar as CalendarComponent, X, Upload, Flag, Play, Square, CheckCircle2, Clock, Search, ArrowUpDown, Loader2, Timer } from "lucide-react";
+import { Plus, StickyNote, Calendar as CalendarComponent, X, Upload, Flag, Play, Square, CheckCircle2, Clock, Search, ArrowUpDown, Loader2, Timer, Filter } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -62,19 +62,22 @@ export function ClientNotesTab({ tenantId, packages }: ClientNotesTabProps) {
   const [accumulatedTime, setAccumulatedTime] = useState(0);
   const [searchQuery, setSearchQuery] = useState("");
   const [sortPriority, setSortPriority] = useState<string>("all");
+  const [parentTypeFilter, setParentTypeFilter] = useState<string>("all");
   const [activePackageId, setActivePackageId] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
 
   // Filter and sort notes using the helper function
-  const filteredNotes = filterNotes(notes, { searchQuery, priority: sortPriority }).sort((a, b) => {
-    if (sortPriority !== "all") {
-      const priorityOrder = { urgent: 0, high: 1, normal: 2, low: 3 };
-      const aPriority = priorityOrder[a.priority as keyof typeof priorityOrder] ?? 4;
-      const bPriority = priorityOrder[b.priority as keyof typeof priorityOrder] ?? 4;
-      return aPriority - bPriority;
-    }
-    return 0;
-  });
+  const filteredNotes = filterNotes(notes, { searchQuery, priority: sortPriority })
+    .filter(note => parentTypeFilter === 'all' || note.parent_type === parentTypeFilter)
+    .sort((a, b) => {
+      if (sortPriority !== "all") {
+        const priorityOrder = { urgent: 0, high: 1, normal: 2, low: 3 };
+        const aPriority = priorityOrder[a.priority as keyof typeof priorityOrder] ?? 4;
+        const bPriority = priorityOrder[b.priority as keyof typeof priorityOrder] ?? 4;
+        return aPriority - bPriority;
+      }
+      return 0;
+    });
 
   // Timer effect for real-time duration tracking
   useEffect(() => {
@@ -367,8 +370,21 @@ export function ClientNotesTab({ tenantId, packages }: ClientNotesTabProps) {
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input placeholder="Search keyword or by name..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="pl-10 h-[48px]" />
         </div>
+        <Select value={parentTypeFilter} onValueChange={setParentTypeFilter}>
+          <SelectTrigger className="w-full md:w-[200px] h-[48px]">
+            <div className="flex items-center gap-2">
+              <Filter className="h-4 w-4 text-muted-foreground" />
+              <SelectValue placeholder="All Notes" />
+            </div>
+          </SelectTrigger>
+          <SelectContent className="bg-background">
+            <SelectItem value="all">All Notes</SelectItem>
+            <SelectItem value="tenant">Client Notes</SelectItem>
+            <SelectItem value="package_instance">Package Notes</SelectItem>
+          </SelectContent>
+        </Select>
         <Select value={sortPriority} onValueChange={setSortPriority}>
-          <SelectTrigger className="w-full md:w-[220px] h-[48px]">
+          <SelectTrigger className="w-full md:w-[180px] h-[48px]">
             <div className="flex items-center gap-2">
               <ArrowUpDown className="h-4 w-4 text-muted-foreground" />
               <SelectValue placeholder="All Priorities" />
