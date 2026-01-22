@@ -173,6 +173,9 @@ export function useNotes({ parentType, parentId, tenantId, packageId }: UseNotes
   const [notes, setNotes] = useState<Note[]>([]);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
+  
+  // Serialize parentType for stable dependency comparison
+  const parentTypeKey = Array.isArray(parentType) ? parentType.join(',') : parentType;
 
   const fetchNotes = useCallback(async () => {
     if (!tenantId || !parentId) {
@@ -251,7 +254,7 @@ export function useNotes({ parentType, parentId, tenantId, packageId }: UseNotes
     } finally {
       setLoading(false);
     }
-  }, [tenantId, parentType, parentId, packageId, toast]);
+  }, [tenantId, parentTypeKey, parentId, packageId, toast]);
 
   useEffect(() => {
     fetchNotes();
