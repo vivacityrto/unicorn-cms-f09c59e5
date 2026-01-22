@@ -79,11 +79,12 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
   // Fetch package info when a package note is selected
   useEffect(() => {
     const fetchPackageInfo = async () => {
-      if (selectedNote?.parent_type === 'package_instance' && selectedNote?.package_id) {
+      // For package_instance notes, parent_id contains the package ID
+      if (selectedNote?.parent_type === 'package_instance' && selectedNote?.parent_id) {
         const { data } = await supabase
           .from('packages')
           .select('id, name, full_text')
-          .eq('id', selectedNote.package_id)
+          .eq('id', selectedNote.parent_id)
           .single();
         
         if (data) {
@@ -511,6 +512,29 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
               />
               <Label htmlFor="pinned" className="cursor-pointer">Pin this note</Label>
             </div>
+            
+            {/* Send to client option - only for package notes */}
+            {selectedNote?.parent_type === 'package_instance' && (
+              <div className="flex items-center justify-between p-3 rounded-lg border border-blue-200 bg-blue-50 dark:bg-blue-950/30 dark:border-blue-800">
+                <div className="flex items-center gap-2">
+                  <MessageSquare className="h-4 w-4 text-blue-600" />
+                  <span className="text-sm font-medium text-blue-700 dark:text-blue-300">Send to Client</span>
+                </div>
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  size="sm"
+                  className="border-blue-300 text-blue-700 hover:bg-blue-100 dark:border-blue-700 dark:text-blue-300"
+                  onClick={() => {
+                    // TODO: Implement email sending functionality
+                    console.log('Send note to client:', selectedNote);
+                  }}
+                >
+                  <MessageSquare className="h-4 w-4 mr-1" />
+                  Email Note
+                </Button>
+              </div>
+            )}
           </div>
           
           <DialogFooter>
