@@ -15662,6 +15662,10 @@ export type Database = {
         }
         Returns: string
       }
+      user_has_tenant_access: {
+        Args: { p_tenant_id: number }
+        Returns: boolean
+      }
       user_in_tenant: { Args: { p_tenant_id: number }; Returns: boolean }
       validate_document_readiness: {
         Args: { p_document_id: number; p_tenant_id?: number }
