@@ -142,10 +142,6 @@ const Login = () => {
     }
   };
 
-  const fillDemoCredentials = () => {
-    setEmail("angela@vivacity.com.au");
-    setPassword("password123");
-  };
 
   const getHeaderTitle = () => {
     if (showForgotPassword) return "Reset Password";
@@ -252,21 +248,6 @@ const Login = () => {
                   </Button>
                 </div>
 
-                {/* Demo Login Info */}
-                <div className="mt-4 bg-muted/50 rounded-lg p-3 text-center ring-1 ring-border/50">
-                  <p className="text-foreground font-medium text-sm mb-1">Demo Login:</p>
-                  <p className="text-xs text-muted-foreground">
-                    Email:{" "}
-                    <button
-                      type="button"
-                      onClick={fillDemoCredentials}
-                      className="text-foreground hover:text-[hsl(188_74%_51%)] underline transition-colors"
-                    >
-                      angela@vivacity.com.au
-                    </button>
-                  </p>
-                  <p className="text-xs text-muted-foreground">Password: password123</p>
-                </div>
               </>
             ) : showForgotPassword ? (
               <div className="space-y-6">
