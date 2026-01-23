@@ -13,9 +13,40 @@ export type Permission =
 
 // Role-based permission mappings
 const ROLE_PERMISSIONS: Record<string, Permission[]> = {
-  // SuperAdmin has all permissions
+  // SuperAdmin has all permissions including administration
   'SuperAdmin': [
     'administration:access',
+    'advanced_features:access',
+    'vto:edit',
+    'eos_meetings:schedule',
+    'eos_meetings:edit',
+    'qc:schedule',
+    'qc:edit',
+    'qc:view_all',
+  ],
+  // Super Admin (alternate spelling used in DB)
+  'Super Admin': [
+    'administration:access',
+    'advanced_features:access',
+    'vto:edit',
+    'eos_meetings:schedule',
+    'eos_meetings:edit',
+    'qc:schedule',
+    'qc:edit',
+    'qc:view_all',
+  ],
+  // Team Leader - Vivacity staff, sees everything EXCEPT administration
+  'Team Leader': [
+    'advanced_features:access',
+    'vto:edit',
+    'eos_meetings:schedule',
+    'eos_meetings:edit',
+    'qc:schedule',
+    'qc:edit',
+    'qc:view_all',
+  ],
+  // Team Member - Vivacity staff, sees everything EXCEPT administration
+  'Team Member': [
     'advanced_features:access',
     'vto:edit',
     'eos_meetings:schedule',
