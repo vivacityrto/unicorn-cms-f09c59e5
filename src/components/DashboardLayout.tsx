@@ -249,6 +249,14 @@ const superAdminMenuItems = {
     path: "/resource-hub/updates"
   }]
 };
+
+// Team Leader/Team Member menu - same as SuperAdmin but WITHOUT admin section
+const vivacityStaffMenuItems = {
+  main: [...baseMenuItemsWithoutDocs],
+  eos: superAdminMenuItems.eos,
+  advanced: superAdminMenuItems.advanced,
+  resourceHub: superAdminMenuItems.resourceHub
+};
 export const DashboardLayout = ({
   children
 }: {
@@ -341,10 +349,15 @@ export const DashboardLayout = ({
     }
     switch (role) {
       case "Super Admin":
+        return {
+          menuItems: superAdminMenuItems,
+          isGrouped: true,
+          effectiveRole: role
+        };
       case "Team Leader":
       case "Team Member":
         return {
-          menuItems: superAdminMenuItems,
+          menuItems: vivacityStaffMenuItems,
           isGrouped: true,
           effectiveRole: role
         };
