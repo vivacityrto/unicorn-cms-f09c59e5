@@ -141,6 +141,32 @@ Deno.serve(async (req: Request) => {
 
     console.log('Generate Excel request:', { document_id, tenant_id, stage_id, package_id, mode });
 
+    // SECURITY: Verify user has access to the target tenant
+    const { data: userProfile } = await supabase
+      .from('users')
+      .select('unicorn_role')
+      .eq('user_uuid', user.id)
+      .single();
+
+    const isSuperAdmin = userProfile?.unicorn_role === 'Super Admin';
+    
+    if (!isSuperAdmin) {
+      // Check if user is a member of this tenant
+      const { data: tenantMember, error: memberError } = await supabase
+        .from('tenant_users')
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('tenant_id', tenant_id)
+        .maybeSingle();
+
+      if (memberError || !tenantMember) {
+        console.error('Access denied: User not authorized for tenant', tenant_id);
+        throw new Error('Access denied: You do not have permission to generate documents for this tenant');
+      }
+    }
+
+    console.log('Authorization verified for user:', user.id, 'isSuperAdmin:', isSuperAdmin);
+
     // 1. Fetch the source document
     const { data: document, error: docError } = await supabase
       .from('documents')
