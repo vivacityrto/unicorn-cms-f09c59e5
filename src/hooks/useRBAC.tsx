@@ -90,19 +90,48 @@ export const ADVANCED_ROUTES = [
 
 /**
  * Hook for Role-Based Access Control
- * Provides permission checking functions based on user's global_role
+ * Provides permission checking functions based on user's role
+ * 
+ * Detection logic:
+ * - is_super_admin: profile.global_role === 'SuperAdmin' OR profile.unicorn_role === 'Super Admin'
+ * - is_vivacity_team: unicorn_role is 'Super Admin', 'Team Leader', or 'Team Member'
+ * 
+ * ACCEPTANCE TESTS:
+ * 1. SuperAdmin sees ADMINISTRATION section
+ * 2. Vivacity Team (Team Leader/Team Member) sees everything EXCEPT ADMINISTRATION
+ * 3. Tenant users (Admin/User) unchanged - see their limited menus
+ * 4. No infinite spinner after login - profile loading handled gracefully
  */
 export const useRBAC = () => {
   const { profile, isSuperAdmin } = useAuth();
+
+  // Computed flags for role detection
+  const is_super_admin = isSuperAdmin() || profile?.unicorn_role === 'Super Admin';
+  
+  // Vivacity Team = internal staff (Super Admin, Team Leader, Team Member)
+  const is_vivacity_team = ['Super Admin', 'Team Leader', 'Team Member'].includes(
+    profile?.unicorn_role || ''
+  );
+
+  // Debug logging (dev only)
+  if (process.env.NODE_ENV === 'development' && profile) {
+    console.debug('[useRBAC] Role detection:', {
+      unicorn_role: profile?.unicorn_role,
+      global_role: profile?.global_role,
+      is_super_admin,
+      is_vivacity_team,
+    });
+  }
 
   /**
    * Check if current user has a specific permission
    */
   const hasPermission = (permission: Permission): boolean => {
     // SuperAdmin always has all permissions
-    if (isSuperAdmin()) return true;
+    if (is_super_admin) return true;
 
-    const userRole = profile?.global_role || 'General User';
+    // Use unicorn_role for permission lookup (handles Team Leader, Team Member)
+    const userRole = profile?.unicorn_role || 'General User';
     const permissions = ROLE_PERMISSIONS[userRole] || ROLE_PERMISSIONS['General User'];
     
     return permissions.includes(permission);
@@ -194,6 +223,7 @@ export const useRBAC = () => {
     canEditQC,
     canViewAllQC,
     canAccessRoute,
-    isSuperAdmin: isSuperAdmin(),
+    isSuperAdmin: is_super_admin,
+    isVivacityTeam: is_vivacity_team,
   };
 };
