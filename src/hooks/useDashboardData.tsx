@@ -131,10 +131,12 @@ export const useDashboardData = () => {
       
       const result = await Promise.all(
         (packages || []).map(async (pkg) => {
+          // Count active package instances instead of tenants.package_ids
           const { count: clientCount } = await supabase
-            .from("tenants")
-            .select("*", { count: "exact", head: true })
-            .contains("package_ids", [pkg.id]);
+            .from("package_instances")
+            .select("tenant_id", { count: "exact", head: true })
+            .eq("package_id", pkg.id)
+            .eq("is_complete", false);
           
           return {
             name: pkg.name?.substring(0, 10) || `Pkg ${pkg.id}`,
@@ -152,21 +154,55 @@ export const useDashboardData = () => {
   const { data: recentClients = [] } = useQuery({
     queryKey: ["dashboard-recent-clients"],
     queryFn: async () => {
-      const { data, error } = await supabase
+      // Fetch recent tenants
+      const { data: tenantsData, error } = await supabase
         .from("tenants")
-        .select("id, name, status, packages(name)")
+        .select("id, name, status, created_at")
         .order("created_at", { ascending: false })
         .limit(8);
       
       if (error) throw error;
       
-      return (data || []).map((t) => ({
-        id: t.id,
-        name: t.name || `Tenant ${t.id}`,
-        status: t.status || "active",
-        package: t.packages?.name,
-        created_at: new Date().toISOString(),
-      }));
+      const tenantIds = (tenantsData || []).map(t => t.id);
+      
+      // Fetch active package instances for these tenants
+      const { data: instancesData } = await supabase
+        .from("package_instances")
+        .select("tenant_id, package_id")
+        .in("tenant_id", tenantIds)
+        .eq("is_complete", false);
+      
+      // Create a map of tenant_id to package_ids
+      const tenantPackageMap: Record<number, number[]> = {};
+      (instancesData || []).forEach((inst: any) => {
+        if (!tenantPackageMap[inst.tenant_id]) {
+          tenantPackageMap[inst.tenant_id] = [];
+        }
+        tenantPackageMap[inst.tenant_id].push(inst.package_id);
+      });
+      
+      // Fetch package names for mapping
+      const allPackageIds = [...new Set((instancesData || []).map((i: any) => i.package_id))];
+      const { data: packagesData } = allPackageIds.length > 0 
+        ? await supabase.from("packages").select("id, name").in("id", allPackageIds)
+        : { data: [] };
+      
+      const packageNameMap: Record<number, string> = {};
+      (packagesData || []).forEach((pkg: any) => {
+        packageNameMap[pkg.id] = pkg.name;
+      });
+      
+      return (tenantsData || []).map((t) => {
+        const pkgIds = tenantPackageMap[t.id] || [];
+        const packageName = pkgIds.length > 0 ? packageNameMap[pkgIds[0]] : undefined;
+        return {
+          id: t.id,
+          name: t.name || `Tenant ${t.id}`,
+          status: t.status || "active",
+          package: packageName,
+          created_at: t.created_at || new Date().toISOString(),
+        };
+      });
     },
   });
 
