@@ -8,19 +8,25 @@ import { getQuarterDueDate } from '@/types/flightPlan';
 const defaultMonthFocus: MonthFocus = { items: [], indicators: [], notes: '' };
 
 export function useFlightPlan(quarter: number, year: number) {
-  const { profile } = useAuth();
+  const { profile, isSuperAdmin } = useAuth();
   const queryClient = useQueryClient();
+  const isSuper = isSuperAdmin();
 
   const { data: flightPlan, isLoading } = useQuery({
-    queryKey: ['flight-plan', profile?.tenant_id, quarter, year],
+    queryKey: ['flight-plan', isSuper ? 'all' : profile?.tenant_id, quarter, year],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from('eos_flight_plans')
         .select('*')
-        .eq('tenant_id', profile?.tenant_id!)
         .eq('quarter_number', quarter)
-        .eq('quarter_year', year)
-        .maybeSingle();
+        .eq('quarter_year', year);
+      
+      // SuperAdmins see all data; others filter by their tenant
+      if (!isSuper && profile?.tenant_id) {
+        query = query.eq('tenant_id', profile.tenant_id);
+      }
+      
+      const { data, error } = await query.maybeSingle();
 
       if (error) throw error;
       
@@ -37,7 +43,7 @@ export function useFlightPlan(quarter: number, year: number) {
         month_3_focus: data.month_3_focus || defaultMonthFocus,
       } as FlightPlan;
     },
-    enabled: !!profile?.tenant_id && !!quarter && !!year,
+    enabled: (isSuper || !!profile?.tenant_id) && !!quarter && !!year,
   });
 
   const upsertFlightPlan = useMutation({
@@ -90,22 +96,29 @@ export function useFlightPlan(quarter: number, year: number) {
 }
 
 export function useQuarterlyRocks(quarter: number, year: number) {
-  const { profile } = useAuth();
+  const { profile, isSuperAdmin } = useAuth();
+  const isSuper = isSuperAdmin();
 
   return useQuery({
-    queryKey: ['quarterly-rocks', profile?.tenant_id, quarter, year],
+    queryKey: ['quarterly-rocks', isSuper ? 'all' : profile?.tenant_id, quarter, year],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from('eos_rocks')
         .select('*')
-        .eq('tenant_id', profile?.tenant_id!)
         .eq('quarter_number', quarter)
         .eq('quarter_year', year)
         .order('priority', { ascending: true });
+      
+      // SuperAdmins see all data; others filter by their tenant
+      if (!isSuper && profile?.tenant_id) {
+        query = query.eq('tenant_id', profile.tenant_id);
+      }
+      
+      const { data, error } = await query;
 
       if (error) throw error;
       return data;
     },
-    enabled: !!profile?.tenant_id && !!quarter && !!year,
+    enabled: (isSuper || !!profile?.tenant_id) && !!quarter && !!year,
   });
 }

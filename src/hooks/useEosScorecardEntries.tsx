@@ -5,24 +5,30 @@ import { toast } from '@/hooks/use-toast';
 import type { EosScorecardEntry } from '@/types/eos';
 
 export const useEosScorecardEntries = (metricId?: string) => {
-  const { profile } = useAuth();
+  const { profile, isSuperAdmin } = useAuth();
   const queryClient = useQueryClient();
+  const isSuper = isSuperAdmin();
 
   const { data: entries, isLoading } = useQuery({
-    queryKey: ['eos-scorecard-entries', metricId],
+    queryKey: ['eos-scorecard-entries', metricId, isSuper ? 'all' : profile?.tenant_id],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from('eos_scorecard_entries')
         .select('*')
         .eq('metric_id', metricId!)
-        .eq('tenant_id', profile?.tenant_id!)
         .order('week_ending', { ascending: false })
         .limit(13);
       
+      // SuperAdmins see all data; others filter by their tenant
+      if (!isSuper && profile?.tenant_id) {
+        query = query.eq('tenant_id', profile.tenant_id);
+      }
+      
+      const { data, error } = await query;
       if (error) throw error;
       return data as EosScorecardEntry[];
     },
-    enabled: !!metricId && !!profile?.tenant_id,
+    enabled: !!metricId && (isSuper || !!profile?.tenant_id),
   });
 
   const createEntry = useMutation({

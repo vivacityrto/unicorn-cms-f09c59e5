@@ -38,60 +38,79 @@ export interface MeetingInstance extends EosMeeting {
 }
 
 export const useMeetingSeries = () => {
-  const { profile } = useAuth();
+  const { profile, isSuperAdmin } = useAuth();
   const queryClient = useQueryClient();
+  const isSuper = isSuperAdmin();
 
   // Fetch all series for tenant
   const { data: series, isLoading: isLoadingSeries } = useQuery({
-    queryKey: ['eos-meeting-series', profile?.tenant_id],
+    queryKey: ['eos-meeting-series', isSuper ? 'all' : profile?.tenant_id],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from('eos_meeting_series')
         .select('*')
-        .eq('tenant_id', profile?.tenant_id!)
         .eq('is_active', true)
         .order('created_at', { ascending: false });
+      
+      // SuperAdmins see all data; others filter by their tenant
+      if (!isSuper && profile?.tenant_id) {
+        query = query.eq('tenant_id', profile.tenant_id);
+      }
+      
+      const { data, error } = await query;
 
       if (error) throw error;
       return data as MeetingSeries[];
     },
-    enabled: !!profile?.tenant_id,
+    enabled: isSuper || !!profile?.tenant_id,
   });
 
   // Fetch upcoming meetings
   const { data: upcomingMeetings, isLoading: isLoadingUpcoming } = useQuery({
-    queryKey: ['eos-upcoming-meetings', profile?.tenant_id],
+    queryKey: ['eos-upcoming-meetings', isSuper ? 'all' : profile?.tenant_id],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from('eos_meetings')
         .select('*')
-        .eq('tenant_id', profile?.tenant_id!)
         .in('status', ['scheduled', 'in_progress'])
         .gte('scheduled_date', new Date().toISOString().split('T')[0])
         .order('scheduled_date', { ascending: true });
+      
+      // SuperAdmins see all data; others filter by their tenant
+      if (!isSuper && profile?.tenant_id) {
+        query = query.eq('tenant_id', profile.tenant_id);
+      }
+      
+      const { data, error } = await query;
 
       if (error) throw error;
       return data as MeetingInstance[];
     },
-    enabled: !!profile?.tenant_id,
+    enabled: isSuper || !!profile?.tenant_id,
   });
 
   // Fetch past meetings
   const { data: pastMeetings, isLoading: isLoadingPast } = useQuery({
-    queryKey: ['eos-past-meetings', profile?.tenant_id],
+    queryKey: ['eos-past-meetings', isSuper ? 'all' : profile?.tenant_id],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from('eos_meetings')
         .select('*')
-        .eq('tenant_id', profile?.tenant_id!)
         .or(`status.in.(closed,completed,cancelled),and(status.eq.scheduled,scheduled_date.lt.${new Date().toISOString()})`)
         .order('scheduled_date', { ascending: false })
         .limit(50);
+      
+      // SuperAdmins see all data; others filter by their tenant
+      if (!isSuper && profile?.tenant_id) {
+        query = query.eq('tenant_id', profile.tenant_id);
+      }
+      
+      const { data, error } = await query;
 
       if (error) throw error;
       return data as MeetingInstance[];
     },
-    enabled: !!profile?.tenant_id,
+    enabled: isSuper || !!profile?.tenant_id,
   });
 
   // Create a new meeting series

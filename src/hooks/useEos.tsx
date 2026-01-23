@@ -20,22 +20,28 @@ import type {
 
 // Hook for EOS Rocks
 export const useEosRocks = () => {
-  const { profile } = useAuth();
+  const { profile, isSuperAdmin } = useAuth();
   const queryClient = useQueryClient();
+  const isSuper = isSuperAdmin();
 
   const { data: rocks, isLoading } = useQuery({
-    queryKey: ['eos-rocks', profile?.tenant_id],
+    queryKey: ['eos-rocks', isSuper ? 'all' : profile?.tenant_id],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from('eos_rocks')
         .select('*')
-        .eq('tenant_id', profile?.tenant_id!)
         .order('created_at', { ascending: false });
       
+      // SuperAdmins see all data; others filter by their tenant
+      if (!isSuper && profile?.tenant_id) {
+        query = query.eq('tenant_id', profile.tenant_id);
+      }
+      
+      const { data, error } = await query;
       if (error) throw error;
       return data as EosRock[];
     },
-    enabled: !!profile?.tenant_id,
+    enabled: isSuper || !!profile?.tenant_id,
   });
 
   const createRock = useMutation({
@@ -109,22 +115,28 @@ export const useEosRocks = () => {
 
 // Hook for EOS Issues
 export const useEosIssues = () => {
-  const { profile } = useAuth();
+  const { profile, isSuperAdmin } = useAuth();
   const queryClient = useQueryClient();
+  const isSuper = isSuperAdmin();
 
   const { data: issues, isLoading } = useQuery({
-    queryKey: ['eos-issues', profile?.tenant_id],
+    queryKey: ['eos-issues', isSuper ? 'all' : profile?.tenant_id],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from('eos_issues')
         .select('*')
-        .eq('tenant_id', profile?.tenant_id!)
         .order('created_at', { ascending: false });
       
+      // SuperAdmins see all data; others filter by their tenant
+      if (!isSuper && profile?.tenant_id) {
+        query = query.eq('tenant_id', profile.tenant_id);
+      }
+      
+      const { data, error } = await query;
       if (error) throw error;
       return data as EosIssue[];
     },
-    enabled: !!profile?.tenant_id,
+    enabled: isSuper || !!profile?.tenant_id,
   });
 
   const createIssue = useMutation({
@@ -198,22 +210,28 @@ export const useEosIssues = () => {
 
 // Hook for EOS To-Dos
 export const useEosTodos = () => {
-  const { profile } = useAuth();
+  const { profile, isSuperAdmin } = useAuth();
   const queryClient = useQueryClient();
+  const isSuper = isSuperAdmin();
 
   const { data: todos, isLoading } = useQuery({
-    queryKey: ['eos-todos', profile?.tenant_id],
+    queryKey: ['eos-todos', isSuper ? 'all' : profile?.tenant_id],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from('eos_todos')
         .select('*')
-        .eq('tenant_id', profile?.tenant_id!)
         .order('created_at', { ascending: false });
       
+      // SuperAdmins see all data; others filter by their tenant
+      if (!isSuper && profile?.tenant_id) {
+        query = query.eq('tenant_id', profile.tenant_id);
+      }
+      
+      const { data, error } = await query;
       if (error) throw error;
       return data as EosTodo[];
     },
-    enabled: !!profile?.tenant_id,
+    enabled: isSuper || !!profile?.tenant_id,
   });
 
   const createTodo = useMutation({
@@ -291,22 +309,28 @@ export const useEosTodos = () => {
 
 // Hook for EOS Meetings
 export const useEosMeetings = () => {
-  const { profile } = useAuth();
+  const { profile, isSuperAdmin } = useAuth();
   const queryClient = useQueryClient();
+  const isSuper = isSuperAdmin();
 
   const { data: meetings, isLoading, error, refetch } = useQuery({
-    queryKey: ['eos-meetings', profile?.tenant_id],
+    queryKey: ['eos-meetings', isSuper ? 'all' : profile?.tenant_id],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from('eos_meetings')
         .select('*')
-        .eq('tenant_id', profile?.tenant_id!)
         .order('scheduled_date', { ascending: false });
       
+      // SuperAdmins see all data; others filter by their tenant
+      if (!isSuper && profile?.tenant_id) {
+        query = query.eq('tenant_id', profile.tenant_id);
+      }
+      
+      const { data, error } = await query;
       if (error) throw error;
       return data as EosMeeting[];
     },
-    enabled: !!profile?.tenant_id,
+    enabled: isSuper || !!profile?.tenant_id,
   });
 
   const createMeeting = useMutation({
@@ -382,23 +406,29 @@ export const useEosMeetings = () => {
 
 // Hook for Scorecard Metrics
 export const useEosScorecardMetrics = () => {
-  const { profile } = useAuth();
+  const { profile, isSuperAdmin } = useAuth();
   const queryClient = useQueryClient();
+  const isSuper = isSuperAdmin();
 
   const { data: metrics, isLoading } = useQuery({
-    queryKey: ['eos-scorecard-metrics', profile?.tenant_id],
+    queryKey: ['eos-scorecard-metrics', isSuper ? 'all' : profile?.tenant_id],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from('eos_scorecard_metrics')
         .select('*')
-        .eq('tenant_id', profile?.tenant_id!)
         .eq('is_active', true)
         .order('display_order', { ascending: true });
       
+      // SuperAdmins see all data; others filter by their tenant
+      if (!isSuper && profile?.tenant_id) {
+        query = query.eq('tenant_id', profile.tenant_id);
+      }
+      
+      const { data, error } = await query;
       if (error) throw error;
       return data as EosScorecardMetric[];
     },
-    enabled: !!profile?.tenant_id,
+    enabled: isSuper || !!profile?.tenant_id,
   });
 
   const createMetric = useMutation({
