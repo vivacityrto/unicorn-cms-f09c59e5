@@ -166,6 +166,42 @@ export default function AcceptInvitation() {
         },
       });
 
+      // Handle "User already registered" case - try to sign them in instead
+      if (signUpError?.message?.includes('already registered') || signUpError?.message?.includes('already exists')) {
+        // User exists in auth, try to sign them in with the password they provided
+        const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+          email: invitationData!.email,
+          password: formData.password,
+        });
+
+        if (signInError) {
+          // Password doesn't match their existing account
+          toast({
+            title: 'Account already exists',
+            description: 'An account with this email already exists. Please log in with your existing password, or use "Forgot Password" to reset it.',
+            variant: 'destructive',
+          });
+          setTimeout(() => navigate('/'), 2000);
+          return;
+        }
+
+        // Sign in successful - update invitation status and redirect
+        if (signInData.user) {
+          const tokenHash = await hashToken(token!);
+          await supabase
+            .from('user_invitations')
+            .update({ status: 'successful' })
+            .eq('token_hash', tokenHash);
+          
+          toast({
+            title: 'Welcome back!',
+            description: 'Your account was already set up. Redirecting to dashboard...',
+          });
+          setTimeout(() => navigate('/dashboard'), 1500);
+          return;
+        }
+      }
+
       if (signUpError) throw signUpError;
 
       // Mark invitation as successful
