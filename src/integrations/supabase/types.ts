@@ -4072,6 +4072,59 @@ export type Database = {
         }
         Relationships: []
       }
+      email_instances: {
+        Row: {
+          bcc: string | null
+          cc: string | null
+          content: string | null
+          email_id: number | null
+          id: number
+          is_sent: boolean
+          sender_id: number | null
+          sent_date: string | null
+          stage_instance_id: number
+          subject: string | null
+          to: string | null
+          user_attachments: string
+        }
+        Insert: {
+          bcc?: string | null
+          cc?: string | null
+          content?: string | null
+          email_id?: number | null
+          id?: number
+          is_sent: boolean
+          sender_id?: number | null
+          sent_date?: string | null
+          stage_instance_id: number
+          subject?: string | null
+          to?: string | null
+          user_attachments?: string
+        }
+        Update: {
+          bcc?: string | null
+          cc?: string | null
+          content?: string | null
+          email_id?: number | null
+          id?: number
+          is_sent?: boolean
+          sender_id?: number | null
+          sent_date?: string | null
+          stage_instance_id?: number
+          subject?: string | null
+          to?: string | null
+          user_attachments?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_email_instances_email_id"
+            columns: ["email_id"]
+            isOneToOne: false
+            referencedRelation: "emails"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       email_logs: {
         Row: {
           body: string | null
@@ -4379,59 +4432,6 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
-      }
-      emailinstances: {
-        Row: {
-          bcc: string | null
-          cc: string | null
-          content: string | null
-          email_id: number | null
-          id: number
-          is_sent: boolean
-          sender_id: number | null
-          sent_date: string | null
-          stage_instance_id: number
-          subject: string | null
-          to: string | null
-          user_attachments: string
-        }
-        Insert: {
-          bcc?: string | null
-          cc?: string | null
-          content?: string | null
-          email_id?: number | null
-          id?: number
-          is_sent: boolean
-          sender_id?: number | null
-          sent_date?: string | null
-          stage_instance_id: number
-          subject?: string | null
-          to?: string | null
-          user_attachments?: string
-        }
-        Update: {
-          bcc?: string | null
-          cc?: string | null
-          content?: string | null
-          email_id?: number | null
-          id?: number
-          is_sent?: boolean
-          sender_id?: number | null
-          sent_date?: string | null
-          stage_instance_id?: number
-          subject?: string | null
-          to?: string | null
-          user_attachments?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "fk_email_instances_email_id"
-            columns: ["email_id"]
-            isOneToOne: false
-            referencedRelation: "emails"
-            referencedColumns: ["id"]
-          },
-        ]
       }
       emails: {
         Row: {
