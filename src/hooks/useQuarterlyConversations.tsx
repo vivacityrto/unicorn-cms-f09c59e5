@@ -5,12 +5,13 @@ import { toast } from '@/hooks/use-toast';
 import type { QuarterlyConversation, QCTemplate, QCAnswer, QCFit, QCFormData, QCLinkCreate } from '@/types/qc';
 
 export const useQuarterlyConversations = () => {
-  const { profile } = useAuth();
+  const { profile, isSuperAdmin } = useAuth();
   const queryClient = useQueryClient();
+  const isSuper = isSuperAdmin();
 
   // Fetch all QCs user has access to
   const { data: conversations, isLoading } = useQuery({
-    queryKey: ['qc-conversations', profile?.tenant_id],
+    queryKey: ['qc-conversations', isSuper ? 'all' : profile?.tenant_id],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('eos_qc')
@@ -20,23 +21,28 @@ export const useQuarterlyConversations = () => {
       if (error) throw error;
       return data as unknown as QuarterlyConversation[];
     },
-    enabled: !!profile?.tenant_id,
+    enabled: isSuper || !!profile?.tenant_id,
   });
 
   // Fetch templates
   const { data: templates } = useQuery({
-    queryKey: ['qc-templates', profile?.tenant_id],
+    queryKey: ['qc-templates', isSuper ? 'all' : profile?.tenant_id],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from('eos_qc_templates')
         .select('*')
-        .eq('tenant_id', profile?.tenant_id!)
         .order('is_default', { ascending: false });
       
+      // SuperAdmins see all templates; others filter by their tenant
+      if (!isSuper && profile?.tenant_id) {
+        query = query.eq('tenant_id', profile.tenant_id);
+      }
+      
+      const { data, error } = await query;
       if (error) throw error;
       return data as unknown as QCTemplate[];
     },
-    enabled: !!profile?.tenant_id,
+    enabled: isSuper || !!profile?.tenant_id,
   });
 
   // Schedule new QC

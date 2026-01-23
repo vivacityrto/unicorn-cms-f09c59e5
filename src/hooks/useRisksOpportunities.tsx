@@ -20,22 +20,28 @@ const normalizeItem = (row: Record<string, unknown>): RiskOpportunity => ({
 } as RiskOpportunity);
 
 export const useRisksOpportunities = () => {
-  const { profile } = useAuth();
+  const { profile, isSuperAdmin } = useAuth();
   const queryClient = useQueryClient();
+  const isSuper = isSuperAdmin();
 
   const { data: items, isLoading } = useQuery({
-    queryKey: ['risks-opportunities', profile?.tenant_id],
+    queryKey: ['risks-opportunities', isSuper ? 'all' : profile?.tenant_id],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from('eos_issues')
         .select('*')
-        .eq('tenant_id', profile?.tenant_id!)
         .order('created_at', { ascending: false });
       
+      // SuperAdmins see all data; others filter by their tenant
+      if (!isSuper && profile?.tenant_id) {
+        query = query.eq('tenant_id', profile.tenant_id);
+      }
+      
+      const { data, error } = await query;
       if (error) throw error;
       return (data || []).map(normalizeItem);
     },
-    enabled: !!profile?.tenant_id,
+    enabled: isSuper || !!profile?.tenant_id,
   });
 
   const createItem = useMutation({
