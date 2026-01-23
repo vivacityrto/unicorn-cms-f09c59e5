@@ -70,34 +70,36 @@ const Login = () => {
 
     setIsLoading(true);
     try {
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/reset-password`,
-      });
+      // Use custom edge function instead of Supabase built-in (SMTP is misconfigured)
+      const response = await fetch(
+        "https://yxkgdalkbrriasiyyrwk.supabase.co/functions/v1/send-self-password-reset",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "apikey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl4a2dkYWxrYnJyaWFzaXl5cndrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDc2MjQwMzEsImV4cCI6MjA2MzIwMDAzMX0.bBFTaO-6Afko1koQqx-PWdzl2mu5qmE0xWNTvneqyqY",
+          },
+          body: JSON.stringify({ email: email.trim().toLowerCase() }),
+        }
+      );
 
-      if (error) throw error;
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.detail || result.code || "Failed to send reset email");
+      }
 
       toast({
         title: "Password reset email sent",
-        description: "Check your email for the password reset link",
+        description: "If an account exists with this email, you'll receive a reset link shortly.",
       });
       setShowForgotPassword(false);
     } catch (error: any) {
       console.error("Password reset error:", error);
       
-      // Provide user-friendly error messages
-      let errorMessage = "Unable to send password reset email. Please try again later.";
-      
-      if (error.message?.includes("Email") || error.message?.includes("email")) {
-        errorMessage = "There was a problem sending the reset email. Please contact support or try using the Magic Link option instead.";
-      } else if (error.message?.includes("User not found")) {
-        errorMessage = "No account found with this email address.";
-      } else if (error.message?.includes("rate limit")) {
-        errorMessage = "Too many requests. Please wait a few minutes and try again.";
-      }
-      
       toast({
         title: "Password Reset Error",
-        description: errorMessage,
+        description: error.message || "Unable to send password reset email. Please try again later.",
         variant: "destructive",
       });
     } finally {
