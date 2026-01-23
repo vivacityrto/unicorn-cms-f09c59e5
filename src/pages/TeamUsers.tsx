@@ -278,13 +278,13 @@ export default function TeamUsers() {
   const getLevelBadge = (level: string | null) => {
     switch (level) {
       case 'Administrator':
-        return <Badge className="bg-primary hover:bg-primary/90">Administrator</Badge>;
+        return <Badge className="bg-purple-600 hover:bg-purple-700 text-white">Administrator</Badge>;
       case 'Team Leader':
-        return <Badge className="bg-blue-600 hover:bg-blue-700">Team Leader</Badge>;
+        return <Badge className="bg-cyan-500 hover:bg-cyan-600 text-white">Team Leader</Badge>;
       case 'General':
-        return <Badge variant="secondary">General</Badge>;
+        return <Badge variant="outline" className="border-muted-foreground/50">General</Badge>;
       default:
-        return <Badge variant="outline">Not Set</Badge>;
+        return <Badge variant="outline" className="border-muted-foreground/30 text-muted-foreground">Not Set</Badge>;
     }
   };
 
