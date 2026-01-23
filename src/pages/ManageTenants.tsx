@@ -137,14 +137,11 @@ export default function ManageTenants() {
     try {
       setLoading(true);
 
-      // Fetch tenants with package data
+      // Fetch tenants (without direct package join - packages are in package_instances)
       const {
         data: tenantsData,
         error: tenantsError
-      } = await supabase.from("tenants").select(`
-          *,
-          packages(name, full_text)
-        `).order("name");
+      } = await supabase.from("tenants").select("*").order("name");
       if (tenantsError) throw tenantsError;
       if (!tenantsData || tenantsData.length === 0) {
         setTenants([]);
@@ -158,6 +155,47 @@ export default function ManageTenants() {
         return;
       }
       const tenantIds = tenantsData.map(t => t.id);
+
+      // Fetch active package instances for each tenant (is_complete = false)
+      const {
+        data: packageInstancesData
+      } = await supabase
+        .from("package_instances")
+        .select("tenant_id, package_id")
+        .eq("is_complete", false)
+        .in("tenant_id", tenantIds);
+
+      // Get unique package IDs to fetch package names
+      const packageIds = [...new Set((packageInstancesData || []).map(pi => pi.package_id).filter(Boolean))];
+      
+      // Fetch package details
+      const {
+        data: packagesData
+      } = await supabase
+        .from("packages")
+        .select("id, name, full_text, slug")
+        .in("id", packageIds);
+
+      // Build package lookup map
+      const packageLookup = (packagesData || []).reduce((acc, pkg) => {
+        acc[pkg.id] = { name: pkg.name, full_text: pkg.full_text, slug: pkg.slug };
+        return acc;
+      }, {} as Record<number, { name: string; full_text: string | null; slug: string | null }>);
+
+      // Build tenant -> packages map (a tenant can have multiple active packages)
+      const tenantPackagesMap = (packageInstancesData || []).reduce((acc, pi) => {
+        if (!acc[pi.tenant_id]) {
+          acc[pi.tenant_id] = [];
+        }
+        if (pi.package_id && packageLookup[pi.package_id]) {
+          acc[pi.tenant_id].push({
+            id: pi.package_id,
+            name: packageLookup[pi.package_id].name,
+            full_text: packageLookup[pi.package_id].full_text
+          });
+        }
+        return acc;
+      }, {} as Record<number, { id: number; name: string; full_text: string | null }[]>);
 
       // Batch fetch all member counts
       const {
@@ -217,16 +255,21 @@ export default function ManageTenants() {
         return acc;
       }, {} as Record<number, string | null>);
 
-      // Merge all data
-      const tenantsWithCounts = tenantsData.map(tenant => ({
-        ...tenant,
-        member_count: memberCountMap[tenant.id] || 0,
-        csc_name: connectedMap[tenant.id] ? userDataMap[connectedMap[tenant.id]]?.name : null,
-        csc_avatar: connectedMap[tenant.id] ? userDataMap[connectedMap[tenant.id]]?.avatar : null,
-        package_name: tenant.packages?.name || null,
-        package_full_text: tenant.packages?.full_text || null,
-        state: stateMap[tenant.id] || null
-      }));
+      // Merge all data - use first active package for display
+      const tenantsWithCounts = tenantsData.map(tenant => {
+        const activePackages = tenantPackagesMap[tenant.id] || [];
+        const firstPackage = activePackages[0];
+        return {
+          ...tenant,
+          member_count: memberCountMap[tenant.id] || 0,
+          csc_name: connectedMap[tenant.id] ? userDataMap[connectedMap[tenant.id]]?.name : null,
+          csc_avatar: connectedMap[tenant.id] ? userDataMap[connectedMap[tenant.id]]?.avatar : null,
+          package_name: firstPackage?.name || null,
+          package_full_text: firstPackage?.full_text || null,
+          package_id: firstPackage?.id || null,
+          state: stateMap[tenant.id] || null
+        };
+      });
       setTenants(tenantsWithCounts);
 
       // Calculate stats
