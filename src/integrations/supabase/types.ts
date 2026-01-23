@@ -10802,6 +10802,45 @@ export type Database = {
           },
         ]
       }
+      team_leader_assignments: {
+        Row: {
+          active: boolean
+          created_at: string
+          id: string
+          leader_user_uuid: string
+          member_user_uuid: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          leader_user_uuid: string
+          member_user_uuid: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          leader_user_uuid?: string
+          member_user_uuid?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "team_leader_assignments_leader_user_uuid_fkey"
+            columns: ["leader_user_uuid"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "team_leader_assignments_member_user_uuid_fkey"
+            columns: ["member_user_uuid"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["user_uuid"]
+          },
+        ]
+      }
       tenant_addresses: {
         Row: {
           address_type: string
@@ -15757,6 +15796,7 @@ export type Database = {
         | "Conclude"
       eos_todo_status: "Open" | "Complete" | "Cancelled"
       feature_flag: "eos_qc"
+      invite_status: "INVITED" | "ACCEPTED" | "REVOKED" | "EXPIRED"
       meeting_attendance_status:
         | "invited"
         | "accepted"
@@ -15811,6 +15851,7 @@ export type Database = {
         | "SUPER_ADMIN_GENERAL"
         | "CLIENT_ADMIN"
         | "CLIENT_USER"
+      tenant_role: "ADMIN" | "GENERAL_USER"
       unicorn_role:
         | "Super Admin"
         | "Admin"
@@ -15824,6 +15865,7 @@ export type Database = {
         | "Client Parent"
         | "Client Child"
         | "Vivacity Team"
+      vivacity_role: "SUPER_ADMIN" | "TEAM_LEADER" | "TEAM_MEMBER"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -15997,6 +16039,7 @@ export const Constants = {
       ],
       eos_todo_status: ["Open", "Complete", "Cancelled"],
       feature_flag: ["eos_qc"],
+      invite_status: ["INVITED", "ACCEPTED", "REVOKED", "EXPIRED"],
       meeting_attendance_status: [
         "invited",
         "accepted",
@@ -16058,6 +16101,7 @@ export const Constants = {
         "CLIENT_ADMIN",
         "CLIENT_USER",
       ],
+      tenant_role: ["ADMIN", "GENERAL_USER"],
       unicorn_role: [
         "Super Admin",
         "Admin",
@@ -16073,6 +16117,7 @@ export const Constants = {
         "Client Child",
         "Vivacity Team",
       ],
+      vivacity_role: ["SUPER_ADMIN", "TEAM_LEADER", "TEAM_MEMBER"],
     },
   },
 } as const
