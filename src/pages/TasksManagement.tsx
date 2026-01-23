@@ -202,10 +202,10 @@ export default function TasksManagement() {
   };
   const fetchDropdownData = async () => {
     try {
-      // Fetch tenants with package_id
+      // Fetch tenants (removed deprecated package_id field)
       const {
         data: tenantsData
-      } = await supabase.from("tenants").select("id, name, package_id").order("name");
+      } = await supabase.from("tenants").select("id, name").order("name");
 
       // Fetch packages
       const {

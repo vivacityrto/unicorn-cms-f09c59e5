@@ -278,33 +278,12 @@ const PackageDetail = () => {
     if (!tenantToRemove || !id) return;
     
     try {
-      // Get current package_ids
-      const { data: tenantData, error: fetchError } = await supabase
-        .from("tenants")
-        .select("package_ids, package_id")
-        .eq("id", tenantToRemove.id)
-        .single();
-      
-      if (fetchError) throw fetchError;
-      
-      const currentPackageIds: number[] = tenantData?.package_ids || [];
-      const packageIdNum = parseInt(id);
-      
-      // Remove this package ID from the array
-      const updatedPackageIds = currentPackageIds.filter(pid => pid !== packageIdNum);
-      
-      // Update package_id to null if it matches, or to the last remaining package
-      const newPackageId = tenantData?.package_id === packageIdNum 
-        ? (updatedPackageIds.length > 0 ? updatedPackageIds[updatedPackageIds.length - 1] : null)
-        : tenantData?.package_id;
-      
+      // Mark the package instance as complete (soft-close) instead of updating tenants.package_ids
       const { error: updateError } = await supabase
-        .from("tenants")
-        .update({ 
-          package_ids: updatedPackageIds,
-          package_id: newPackageId
-        })
-        .eq("id", tenantToRemove.id);
+        .from("package_instances")
+        .update({ is_complete: true })
+        .eq("tenant_id", tenantToRemove.id)
+        .eq("package_id", parseInt(id));
       
       if (updateError) throw updateError;
       
@@ -377,18 +356,26 @@ const PackageDetail = () => {
   };
   const fetchAvailableTenants = async () => {
     try {
-      // Fetch all tenants, then filter out those that already have this package
-      const {
-        data,
-        error
-      } = await supabase.from("tenants").select("id, name, status, created_at, package_id, package_ids").order("name");
-      if (error) throw error;
+      // Fetch all tenants
+      const { data: allTenants, error: tenantsError } = await supabase
+        .from("tenants")
+        .select("id, name, status, created_at")
+        .order("name");
       
-      // Filter out tenants that already have this package in their package_ids array
-      const filtered = (data || []).filter(tenant => {
-        const packageIds = tenant.package_ids || [];
-        return !packageIds.includes(Number(id));
-      });
+      if (tenantsError) throw tenantsError;
+      
+      // Get tenants that already have this package via package_instances
+      const { data: existingInstances, error: instancesError } = await supabase
+        .from("package_instances")
+        .select("tenant_id")
+        .eq("package_id", Number(id))
+        .eq("is_complete", false);
+      
+      if (instancesError) throw instancesError;
+      
+      // Filter out tenants that already have this package
+      const assignedTenantIds = new Set((existingInstances || []).map((i: any) => i.tenant_id));
+      const filtered = (allTenants || []).filter(tenant => !assignedTenantIds.has(tenant.id));
       
       setAvailableTenants(filtered);
     } catch (error: any) {
@@ -405,25 +392,7 @@ const PackageDetail = () => {
       return;
     }
 
-    // Check if tenant already has a package
-    const selectedTenant = availableTenants.find(t => t.id.toString() === selectedTenantId);
-    if (selectedTenant?.package_id) {
-      // Fetch the package name
-      const {
-        data: packageData,
-        error: packageError
-      } = await supabase.from("packages").select("name").eq("id", selectedTenant.package_id).single();
-      if (!packageError && packageData) {
-        setConfirmTenantData({
-          tenantId: selectedTenantId,
-          packageName: packageData.name
-        });
-        setIsConfirmDialogOpen(true);
-        return;
-      }
-    }
-
-    // If no existing package, proceed directly
+    // Proceed directly - package_instances handles multiple packages per tenant
     await proceedWithAddTenant(selectedTenantId);
   };
   const proceedWithAddTenant = async (tenantId: string) => {
@@ -634,11 +603,30 @@ const PackageDetail = () => {
         setStages([]);
       }
 
-      // Fetch tenants for this package (check package_ids array)
-      const {
-        data: tenantsData,
-        error: tenantsError
-      } = await supabase.from("tenants").select("id, name, status, created_at, risk_level").contains("package_ids", [Number(id)]).order("name");
+      // Fetch tenants for this package via package_instances (source of truth)
+      const { data: instances, error: instancesError } = await supabase
+        .from("package_instances")
+        .select("tenant_id")
+        .eq("package_id", Number(id))
+        .eq("is_complete", false);
+      
+      if (instancesError) throw instancesError;
+      
+      const packageTenantIds = (instances || []).map((i: any) => i.tenant_id).filter(Boolean);
+      
+      // Fetch tenant details if any tenants have this package
+      let tenantsData: any[] = [];
+      let tenantsError = null;
+      
+      if (packageTenantIds.length > 0) {
+        const result = await supabase
+          .from("tenants")
+          .select("id, name, status, created_at, risk_level")
+          .in("id", packageTenantIds)
+          .order("name");
+        tenantsData = result.data || [];
+        tenantsError = result.error;
+      }
       if (tenantsError) throw tenantsError;
       console.log("Tenants for package", id, ":", tenantsData);
 

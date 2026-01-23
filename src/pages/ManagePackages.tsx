@@ -156,11 +156,31 @@ export default function ManagePackages() {
       [packageId]: true
     }));
     try {
-      // First fetch tenants - check if package is in package_ids array
-      const {
-        data: tenants,
-        error
-      } = await supabase.from("tenants").select("*").contains("package_ids", [parseInt(packageId)]).order("name");
+      // Fetch active package instances for this package (source of truth)
+      const { data: instances, error: instancesError } = await supabase
+        .from("package_instances")
+        .select("tenant_id")
+        .eq("package_id", parseInt(packageId))
+        .eq("is_complete", false);
+      
+      if (instancesError) throw instancesError;
+      
+      const tenantIds = (instances || []).map((i: any) => i.tenant_id).filter(Boolean);
+      
+      // If no tenants have this package, return empty
+      if (tenantIds.length === 0) {
+        setTenantsByPackage(prev => ({ ...prev, [packageId]: [] }));
+        setTenantsLoading(prev => ({ ...prev, [packageId]: false }));
+        return;
+      }
+      
+      // Fetch tenant details
+      const { data: tenants, error } = await supabase
+        .from("tenants")
+        .select("*")
+        .in("id", tenantIds)
+        .order("name");
+      
       if (error) throw error;
       const tenantsWithCounts = await Promise.all((tenants || []).map(async (tenant: any) => {
         // Get user count
@@ -241,18 +261,26 @@ export default function ManagePackages() {
   const fetchAvailableTenants = async () => {
     if (!activeTab) return;
     try {
-      // Get all tenants, then filter out those that already have this package
-      const {
-        data,
-        error
-      } = await supabase.from("tenants").select("id, name, status, created_at, package_id, package_ids").order("name");
-      if (error) throw error;
+      // Get all tenants
+      const { data: allTenants, error: tenantsError } = await supabase
+        .from("tenants")
+        .select("id, name, status, created_at")
+        .order("name");
       
-      // Filter out tenants that already have this package in their package_ids array
-      const filtered = (data || []).filter(tenant => {
-        const packageIds = tenant.package_ids || [];
-        return !packageIds.includes(parseInt(activeTab));
-      });
+      if (tenantsError) throw tenantsError;
+      
+      // Get tenants that already have this package via package_instances
+      const { data: existingInstances, error: instancesError } = await supabase
+        .from("package_instances")
+        .select("tenant_id")
+        .eq("package_id", parseInt(activeTab))
+        .eq("is_complete", false);
+      
+      if (instancesError) throw instancesError;
+      
+      // Filter out tenants that already have this package
+      const assignedTenantIds = new Set((existingInstances || []).map((i: any) => i.tenant_id));
+      const filtered = (allTenants || []).filter(tenant => !assignedTenantIds.has(tenant.id));
       
       setAvailableTenants(filtered);
     } catch (error: any) {
@@ -268,21 +296,7 @@ export default function ManagePackages() {
       });
       return;
     }
-    const selectedTenant = availableTenants.find(t => t.id.toString() === selectedTenantId);
-    if (selectedTenant?.package_id) {
-      const {
-        data: packageData,
-        error: packageError
-      } = await supabase.from("packages").select("name").eq("id", selectedTenant.package_id).single();
-      if (!packageError && packageData) {
-        setConfirmTenantData({
-          tenantId: selectedTenantId,
-          packageName: packageData.name
-        });
-        setIsConfirmDialogOpen(true);
-        return;
-      }
-    }
+    // Proceed directly - package_instances handles multiple packages per tenant
     await proceedWithAddTenant(selectedTenantId);
   };
   const proceedWithAddTenant = async (tenantId: string) => {

@@ -125,13 +125,17 @@ export default function TenantDetail() {
   const fetchTenantPackages = async () => {
     if (!tenantId) return;
     try {
-      // First get the tenant's package_ids
-      const {
-        data: tenantData,
-        error: tenantError
-      } = await supabase.from("tenants").select("package_ids, package_id").eq("id", parseInt(tenantId)).single();
-      if (tenantError) throw tenantError;
-      const packageIds = tenantData?.package_ids || (tenantData?.package_id ? [tenantData.package_id] : []);
+      // Fetch active package instances for this tenant (source of truth)
+      const { data: instancesData, error: instancesError } = await supabase
+        .from("package_instances")
+        .select("package_id")
+        .eq("tenant_id", parseInt(tenantId))
+        .eq("is_complete", false);
+      
+      if (instancesError) throw instancesError;
+      
+      const packageIds = (instancesData || []).map((i: any) => i.package_id);
+      
       if (packageIds.length > 0) {
         // Fetch package details and stage counts from documents
         const [packagesResult, stageCountsResult] = await Promise.all([
