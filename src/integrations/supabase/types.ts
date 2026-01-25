@@ -8804,6 +8804,7 @@ export type Database = {
         Row: {
           created_at: string | null
           details: string | null
+          document_assurance_period: number | null
           duration_months: number | null
           full_text: string | null
           id: number
@@ -8818,6 +8819,7 @@ export type Database = {
         Insert: {
           created_at?: string | null
           details?: string | null
+          document_assurance_period?: number | null
           duration_months?: number | null
           full_text?: string | null
           id?: never
@@ -8832,6 +8834,7 @@ export type Database = {
         Update: {
           created_at?: string | null
           details?: string | null
+          document_assurance_period?: number | null
           duration_months?: number | null
           full_text?: string | null
           id?: never
