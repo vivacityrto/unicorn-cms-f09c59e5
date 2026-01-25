@@ -8319,6 +8319,7 @@ export type Database = {
           release_documents_pdf: boolean
           start_date: string
           tenant_id: number | null
+          u1_packageid: number | null
         }
         Insert: {
           client_id: number
@@ -8336,6 +8337,7 @@ export type Database = {
           release_documents_pdf?: boolean
           start_date: string
           tenant_id?: number | null
+          u1_packageid?: number | null
         }
         Update: {
           client_id?: number
@@ -8353,6 +8355,7 @@ export type Database = {
           release_documents_pdf?: boolean
           start_date?: string
           tenant_id?: number | null
+          u1_packageid?: number | null
         }
         Relationships: []
       }
@@ -9942,6 +9945,33 @@ export type Database = {
         }
         Relationships: []
       }
+      staff_tasks: {
+        Row: {
+          description: string | null
+          due_date_offset: number | null
+          id: number
+          name: string | null
+          order_number: number
+          stage_id: number | null
+        }
+        Insert: {
+          description?: string | null
+          due_date_offset?: number | null
+          id?: number
+          name?: string | null
+          order_number: number
+          stage_id?: number | null
+        }
+        Update: {
+          description?: string | null
+          due_date_offset?: number | null
+          id?: number
+          name?: string | null
+          order_number?: number
+          stage_id?: number | null
+        }
+        Relationships: []
+      }
       stage_client_tasks: {
         Row: {
           created_at: string | null
@@ -10542,6 +10572,33 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      stages: {
+        Row: {
+          dateimported: string
+          description: string | null
+          id: number
+          name: string
+          shortname: string | null
+          videourl: string | null
+        }
+        Insert: {
+          dateimported?: string
+          description?: string | null
+          id: number
+          name: string
+          shortname?: string | null
+          videourl?: string | null
+        }
+        Update: {
+          dateimported?: string
+          description?: string | null
+          id?: number
+          name?: string
+          shortname?: string | null
+          videourl?: string | null
+        }
+        Relationships: []
       }
       standards_reference: {
         Row: {
