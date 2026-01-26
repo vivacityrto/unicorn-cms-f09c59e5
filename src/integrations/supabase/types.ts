@@ -3227,54 +3227,41 @@ export type Database = {
       document_instances: {
         Row: {
           created_at: string
-          document_id: number | null
-          id: string
+          document_id: number
+          generation_date: string | null
+          id: number
+          is_generated: boolean | null
           notes: string | null
+          stage_instance_id: number | null
           status: string | null
           tenant_id: number | null
           updated_at: string
         }
         Insert: {
           created_at?: string
-          document_id?: number | null
-          id?: string
+          document_id: number
+          generation_date?: string | null
+          id?: number
+          is_generated?: boolean | null
           notes?: string | null
+          stage_instance_id?: number | null
           status?: string | null
           tenant_id?: number | null
           updated_at?: string
         }
         Update: {
           created_at?: string
-          document_id?: number | null
-          id?: string
+          document_id?: number
+          generation_date?: string | null
+          id?: number
+          is_generated?: boolean | null
           notes?: string | null
+          stage_instance_id?: number | null
           status?: string | null
           tenant_id?: number | null
           updated_at?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "document_instances_document_id_fkey"
-            columns: ["document_id"]
-            isOneToOne: false
-            referencedRelation: "document_stage_usage"
-            referencedColumns: ["document_id"]
-          },
-          {
-            foreignKeyName: "document_instances_document_id_fkey"
-            columns: ["document_id"]
-            isOneToOne: false
-            referencedRelation: "documents"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "document_instances_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenants"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       document_source_mappings: {
         Row: {
@@ -10588,7 +10575,7 @@ export type Database = {
         Insert: {
           dateimported?: string
           description?: string | null
-          id: number
+          id?: number
           name: string
           shortname?: string | null
           videourl?: string | null
