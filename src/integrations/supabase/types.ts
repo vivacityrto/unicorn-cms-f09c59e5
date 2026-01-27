@@ -15194,19 +15194,33 @@ export type Database = {
         Args: { p_meeting_id: string; p_reason?: string }
         Returns: undefined
       }
-      log_eos_audit_event: {
-        Args: {
-          p_action: string
-          p_details?: Json
-          p_entity: string
-          p_entity_id: string
-          p_meeting_id: string
-          p_reason?: string
-          p_tenant_id: number
-          p_user_id: string
-        }
-        Returns: string
-      }
+      log_eos_audit_event:
+        | {
+            Args: {
+              p_action: string
+              p_details?: Json
+              p_entity: string
+              p_entity_id: string
+              p_meeting_id: string
+              p_reason?: string
+              p_tenant_id: number
+              p_user_id: string
+            }
+            Returns: string
+          }
+        | {
+            Args: {
+              p_action: string
+              p_details?: Json
+              p_entity: string
+              p_entity_id: string
+              p_meeting_id: string
+              p_reason?: string
+              p_tenant_id: number
+              p_user_id: string
+            }
+            Returns: string
+          }
       mark_all_present: { Args: { p_meeting_id: string }; Returns: Json }
       normalize_company_key: { Args: { txt: string }; Returns: string }
       persist_tga_scope_items: {
