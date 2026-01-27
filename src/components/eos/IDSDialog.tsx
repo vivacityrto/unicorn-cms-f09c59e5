@@ -18,6 +18,7 @@ import { useQueryClient, useMutation, useQuery } from '@tanstack/react-query';
 import { toast } from '@/hooks/use-toast';
 import { ClientBadge } from './ClientBadge';
 import { cn } from '@/lib/utils';
+import { useEosStatusTransitions, isValidStatusTransition, getAllowedStatusTransitions } from '@/hooks/useEosOptions';
 import type { EosIssue } from '@/types/eos';
 
 interface IDSDialogProps {
@@ -42,6 +43,9 @@ export function IDSDialog({ open, onOpenChange, issue, isFacilitator }: IDSDialo
   const [newTodoTitle, setNewTodoTitle] = useState('');
   const [newTodoOwner, setNewTodoOwner] = useState('');
   const [newTodoDueDate, setNewTodoDueDate] = useState<Date>();
+  
+  // Load status transitions for validation
+  const { data: statusTransitions } = useEosStatusTransitions();
 
   // Fetch users for owner selection
   const { data: users } = useQuery({
@@ -59,9 +63,19 @@ export function IDSDialog({ open, onOpenChange, issue, isFacilitator }: IDSDialo
     enabled: !!profile?.tenant_id && open,
   });
 
-  // Set issue status mutation
+  // Set issue status mutation with transition validation
   const setStatus = useMutation({
     mutationFn: async ({ status, solutionText }: { status: string; solutionText?: string }) => {
+      // Validate transition before calling RPC
+      const currentStatus = issue?.status || 'Open';
+      if (!isValidStatusTransition(statusTransitions, currentStatus, status)) {
+        const allowed = getAllowedStatusTransitions(statusTransitions, currentStatus);
+        throw new Error(
+          `Cannot transition from "${currentStatus}" to "${status}". ` +
+          `Allowed: ${allowed.length > 0 ? allowed.join(', ') : 'none'}`
+        );
+      }
+      
       const { error } = await supabase.rpc('set_issue_status', {
         p_issue_id: issue!.id,
         p_status: status,

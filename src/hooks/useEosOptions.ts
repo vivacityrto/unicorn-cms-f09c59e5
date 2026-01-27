@@ -13,6 +13,7 @@ const QUERY_KEYS = {
   impactOptions: ['eos-options', 'impact'],
   typeOptions: ['eos-options', 'type'],
   quarterOptions: ['eos-options', 'quarter'],
+  statusTransitions: ['eos-options', 'status-transitions'],
 } as const;
 
 // Common query config - enum values don't change during runtime
@@ -143,6 +144,75 @@ export function useEosPriorityOptions() {
 }
 
 /**
+ * Fetch allowed status transitions from eos_issue_status_transitions table
+ * Returns a Map where key is fromStatus and value is array of allowed toStatus values
+ */
+export function useEosStatusTransitions() {
+  return useQuery({
+    queryKey: QUERY_KEYS.statusTransitions,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('eos_issue_status_transitions')
+        .select('from_status, to_status');
+      
+      if (error) throw error;
+      
+      // Build a map of from_status -> [to_status, ...]
+      const transitions = new Map<string, string[]>();
+      
+      for (const row of data ?? []) {
+        const fromStatus = row.from_status as string;
+        const toStatus = row.to_status as string;
+        
+        if (!transitions.has(fromStatus)) {
+          transitions.set(fromStatus, []);
+        }
+        transitions.get(fromStatus)!.push(toStatus);
+      }
+      
+      return transitions;
+    },
+    ...STABLE_QUERY_CONFIG,
+  });
+}
+
+/**
+ * Validate if a status transition is allowed
+ * @param transitions - Map from useEosStatusTransitions
+ * @param fromStatus - Current status
+ * @param toStatus - Target status
+ * @returns true if transition is valid, false otherwise
+ */
+export function isValidStatusTransition(
+  transitions: Map<string, string[]> | undefined,
+  fromStatus: string,
+  toStatus: string
+): boolean {
+  // If same status, always valid (no-op)
+  if (fromStatus === toStatus) return true;
+  
+  // If transitions not loaded, allow (let backend validate)
+  if (!transitions) return true;
+  
+  const allowedTargets = transitions.get(fromStatus);
+  return allowedTargets?.includes(toStatus) ?? false;
+}
+
+/**
+ * Get allowed target statuses for a given current status
+ * @param transitions - Map from useEosStatusTransitions
+ * @param fromStatus - Current status
+ * @returns Array of allowed target statuses
+ */
+export function getAllowedStatusTransitions(
+  transitions: Map<string, string[]> | undefined,
+  fromStatus: string
+): string[] {
+  if (!transitions) return [];
+  return transitions.get(fromStatus) ?? [];
+}
+
+/**
  * Combined hook to load all EOS options at once
  */
 export function useAllEosOptions() {
@@ -153,6 +223,7 @@ export function useAllEosOptions() {
   const quarter = useEosQuarterOptions();
   const year = useEosYearOptions();
   const priority = useEosPriorityOptions();
+  const statusTransitions = useEosStatusTransitions();
 
   return {
     status,
@@ -162,9 +233,10 @@ export function useAllEosOptions() {
     quarter,
     year,
     priority,
+    statusTransitions,
     isLoading: status.isLoading || category.isLoading || impact.isLoading || 
-               type.isLoading || quarter.isLoading,
+               type.isLoading || quarter.isLoading || statusTransitions.isLoading,
     isError: status.isError || category.isError || impact.isError || 
-             type.isError || quarter.isError,
+             type.isError || quarter.isError || statusTransitions.isError,
   };
 }

@@ -2,7 +2,11 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from '@/hooks/use-toast';
+import { useEosStatusTransitions, isValidStatusTransition, getAllowedStatusTransitions } from '@/hooks/useEosOptions';
 import type { RiskOpportunity, RiskOpportunityStatus, RiskOpportunityCategory, RiskOpportunityImpact } from '@/types/risksOpportunities';
+
+// Valid status enum values - must match eos_issue_status exactly
+const VALID_STATUSES = ['Open', 'Discussing', 'Solved', 'Archived', 'In Review', 'Actioning', 'Escalated', 'Closed'] as const;
 
 // Helper to capitalize first letter of each word for display
 const capitalize = (str: string | undefined | null): string => {
@@ -26,6 +30,9 @@ export const useRisksOpportunities = () => {
   const { profile, isSuperAdmin } = useAuth();
   const queryClient = useQueryClient();
   const isSuper = isSuperAdmin();
+  
+  // Load status transitions for validation
+  const { data: statusTransitions } = useEosStatusTransitions();
 
   const { data: items, isLoading } = useQuery({
     queryKey: ['risks-opportunities', isSuper ? 'all' : profile?.tenant_id],
@@ -89,14 +96,22 @@ export const useRisksOpportunities = () => {
     },
   });
 
-  // Valid status enum values - must match eos_issue_status exactly
-  const VALID_STATUSES = ['Open', 'Discussing', 'Solved', 'Archived', 'In Review', 'Actioning', 'Escalated', 'Closed'];
-
   const updateItem = useMutation({
-    mutationFn: async ({ id, ...updates }: Partial<RiskOpportunity> & { id: string }) => {
-      // Validate status before sending to Supabase - fail fast in UI
-      if (updates.status !== undefined && !VALID_STATUSES.includes(updates.status)) {
+    mutationFn: async ({ id, currentStatus, ...updates }: Partial<RiskOpportunity> & { id: string; currentStatus?: string }) => {
+      // Validate status value is a valid enum member
+      if (updates.status !== undefined && !VALID_STATUSES.includes(updates.status as typeof VALID_STATUSES[number])) {
         throw new Error(`Invalid status value: "${updates.status}". Must be one of: ${VALID_STATUSES.join(', ')}`);
+      }
+      
+      // Validate status transition if we have current status
+      if (updates.status !== undefined && currentStatus) {
+        if (!isValidStatusTransition(statusTransitions, currentStatus, updates.status)) {
+          const allowed = getAllowedStatusTransitions(statusTransitions, currentStatus);
+          throw new Error(
+            `Invalid status transition: "${currentStatus}" → "${updates.status}". ` +
+            `Allowed transitions from "${currentStatus}": ${allowed.length > 0 ? allowed.join(', ') : 'none'}`
+          );
+        }
       }
 
       const dbUpdates: Record<string, unknown> = {
@@ -151,11 +166,18 @@ export const useRisksOpportunities = () => {
     },
   });
 
+  // Helper to get allowed next statuses for an item
+  const getNextAllowedStatuses = (currentStatus: string): string[] => {
+    return getAllowedStatusTransitions(statusTransitions, currentStatus);
+  };
+
   return {
     items,
     isLoading,
     createItem,
     updateItem,
     deleteItem,
+    getNextAllowedStatuses,
+    statusTransitions,
   };
 };
