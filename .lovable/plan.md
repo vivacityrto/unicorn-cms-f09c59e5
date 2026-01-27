@@ -1,23 +1,75 @@
 
-# Plan: Reset Meeting Segments and Add Facilitator Selection at Meeting Start
+# Plan: Fix Segment Navigation and Issue Creation
 
 ## Summary
 
-This plan addresses two issues:
-1. **Reset the meeting segments** - The segments for the January 27 meeting still have timestamps from a previous test session, causing the UI to show them as already progressed
-2. **Add facilitator selection at meeting start** - Currently, the facilitator is fixed at scheduling time. We need to add the ability to change/confirm the facilitator when starting the meeting
+This plan addresses three issues found during the live meeting:
+
+1. **Rock Review Skipped** - The meeting progressed too quickly through segments because previous timestamps weren't reset properly
+2. **No "Previous Segment" Button** - There's no way to navigate backward through segments
+3. **Issue Creation Error** - The `create_issue` RPC is using an old function signature that passes text priority instead of converting to integer
 
 ---
 
-## Part 1: Reset Meeting Segments (Immediate Fix)
+## Issue Analysis
 
-The segments table still shows progress from a previous session:
-- Segue, Scorecard, Rock Review: marked as completed
-- Headlines: currently in progress
-- To-Do List, IDS, Conclude: pending
+### Issue 1: Rock Review Segment Skipped
 
-**Action Required:**
-Clear all `started_at` and `completed_at` timestamps for meeting ID `64a80954-66e0-40b6-b595-0fa68a1ec4bb`:
+**Root Cause:**
+Looking at the current database state, all segments appear to have progressed correctly:
+- Segue: completed at 00:13:28
+- Scorecard: completed at 00:13:29 (1 second later - too fast!)
+- Rock Review: completed at 00:13:35
+- Headlines: completed at 00:16:32
+- To-Do List: currently active (in progress)
+- IDS and Conclude: pending
+
+The problem is the segments advanced too rapidly in succession (less than 1 second between some). This suggests someone clicked "Next Segment" multiple times or the button was clicked while a previous transition was still processing.
+
+**Immediate Fix Needed:**
+Reset the meeting segments to allow a fresh start.
+
+---
+
+### Issue 2: Add Previous Segment Navigation
+
+**Current State:**
+- The `advance_segment` RPC only moves forward
+- No backend or frontend logic exists for moving backward
+- The UI only shows a "Next Segment" button
+
+**Solution:**
+Create a new RPC function `go_to_previous_segment` and add a "Previous Segment" button to the UI that:
+1. Un-completes the current active segment (clears `started_at`)
+2. Re-activates the previous segment (clears `completed_at`, keeps `started_at`)
+
+---
+
+### Issue 3: Create Issue Error
+
+**Error Message:**
+`column 'priority' is of type integer but expression is of type text`
+
+**Root Cause:**
+There are two versions of the `create_issue` function in the database with different parameter signatures:
+
+| Version | Parameters | Priority Handling |
+|---------|------------|-------------------|
+| Old (being called) | `p_source`, `p_client_id`, `p_linked_rock_id` | Passes text directly |
+| New | `p_owner_id`, `p_rock_id` | Converts text to integer |
+
+The frontend is calling with the **old** parameters (`p_source`, `p_client_id`, `p_linked_rock_id`), which matches the old function that doesn't convert priority text to integer.
+
+**Solution:**
+Update the `create_issue` RPC to accept both old and new parameter styles while always converting priority text to integer.
+
+---
+
+## Implementation Steps
+
+### Step 1: Reset Meeting Segments (Database)
+
+Clear all segment progress for the meeting so it can be restarted:
 
 ```sql
 UPDATE eos_meeting_segments 
@@ -25,88 +77,29 @@ SET started_at = NULL, completed_at = NULL
 WHERE meeting_id = '64a80954-66e0-40b6-b595-0fa68a1ec4bb';
 ```
 
----
+### Step 2: Create go_to_previous_segment RPC
 
-## Part 2: Add Facilitator Selection at Meeting Start
-
-### Current Behaviour
-- Facilitator is selected during meeting scheduling via `MeetingScheduler.tsx`
-- The selected user gets `role = 'Leader'` in `eos_meeting_participants` table
-- In `LiveMeetingView.tsx`, the system checks this role to enable facilitator controls
-- There is no UI to change the facilitator once the meeting is scheduled
-
-### Proposed Solution
-
-Create a **"Start Meeting" dialog** that appears before the first segment begins, allowing the team to:
-1. Confirm or change the facilitator
-2. Review attendance
-3. Start the meeting
-
-### Implementation Steps
-
-**Step 1: Create FacilitatorSelectDialog Component**
-
-New file: `src/components/eos/FacilitatorSelectDialog.tsx`
-
-This dialog will:
-- Show the current facilitator (from `eos_meeting_participants` where `role = 'Leader'`)
-- Display a dropdown of present attendees to select a new facilitator
-- Update the `eos_meeting_participants` table when changed:
-  - Set previous facilitator's role to `'Member'`
-  - Set new facilitator's role to `'Leader'`
-
-**Step 2: Update LiveMeetingView to Use the New Dialog**
-
-Modify `src/components/eos/LiveMeetingView.tsx`:
-
-- Before showing the "Start Meeting" button, check if meeting has not started
-- When user clicks "Start Meeting", open the `FacilitatorSelectDialog`
-- The dialog confirms facilitator selection before calling `startFirstSegment`
-
-**Step 3: Create RPC Function to Change Facilitator**
-
-New database function: `change_meeting_facilitator(p_meeting_id UUID, p_new_facilitator_id UUID)`
-
-This function will:
-- Verify the caller has permission (must be current Leader or SuperAdmin)
-- Update the old Leader to Member role
-- Update the new user to Leader role
-- Log the change to `audit_eos_events`
-
-**Step 4: Create useFacilitatorChange Hook**
-
-New file: `src/hooks/useFacilitatorChange.tsx`
-
-This hook will:
-- Fetch current facilitator from `eos_meeting_participants`
-- Provide mutation to change facilitator via the RPC
-- Invalidate relevant queries on success
-
----
-
-## Technical Details
-
-### Database Changes
+New database function that:
+- Gets the current active segment
+- Finds the most recently completed segment before it
+- Clears timestamps to move backward
 
 ```sql
--- RPC function to change facilitator
-CREATE OR REPLACE FUNCTION public.change_meeting_facilitator(
-  p_meeting_id UUID,
-  p_new_facilitator_id UUID
-)
-RETURNS BOOLEAN
+CREATE OR REPLACE FUNCTION public.go_to_previous_segment(p_meeting_id UUID)
+RETURNS UUID
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = public
 AS $$
 DECLARE
+  v_current_segment RECORD;
+  v_previous_segment RECORD;
   v_meeting RECORD;
-  v_old_leader_id UUID;
 BEGIN
-  -- Get meeting and verify permissions
-  SELECT m.*, emp.role, emp.user_id INTO v_meeting
-  FROM eos_meetings m
-  LEFT JOIN eos_meeting_participants emp 
+  -- Verify facilitator permissions
+  SELECT m.*, emp.role INTO v_meeting
+  FROM public.eos_meetings m
+  LEFT JOIN public.eos_meeting_participants emp 
     ON emp.meeting_id = m.id AND emp.user_id = auth.uid()
   WHERE m.id = p_meeting_id;
 
@@ -114,100 +107,191 @@ BEGIN
     RAISE EXCEPTION 'Meeting not found';
   END IF;
 
-  -- Only current Leader or SuperAdmin can change facilitator
   IF v_meeting.role != 'Leader' AND NOT is_super_admin() THEN
-    RAISE EXCEPTION 'Only current facilitator or admin can change facilitator';
+    RAISE EXCEPTION 'Only facilitator can navigate segments';
   END IF;
 
-  -- Get current leader
-  SELECT user_id INTO v_old_leader_id
-  FROM eos_meeting_participants
-  WHERE meeting_id = p_meeting_id AND role = 'Leader';
+  -- Get current active segment
+  SELECT * INTO v_current_segment
+  FROM public.eos_meeting_segments
+  WHERE meeting_id = p_meeting_id
+    AND started_at IS NOT NULL
+    AND completed_at IS NULL;
 
-  -- Demote old leader to Member
-  UPDATE eos_meeting_participants
-  SET role = 'Member'
-  WHERE meeting_id = p_meeting_id AND role = 'Leader';
+  -- Get previous completed segment
+  SELECT * INTO v_previous_segment
+  FROM public.eos_meeting_segments
+  WHERE meeting_id = p_meeting_id
+    AND completed_at IS NOT NULL
+    AND sequence_order = (
+      SELECT MAX(sequence_order)
+      FROM public.eos_meeting_segments
+      WHERE meeting_id = p_meeting_id
+        AND completed_at IS NOT NULL
+        AND sequence_order < COALESCE(v_current_segment.sequence_order, 999)
+    );
 
-  -- Promote new facilitator to Leader
-  UPDATE eos_meeting_participants
-  SET role = 'Leader'
-  WHERE meeting_id = p_meeting_id AND user_id = p_new_facilitator_id;
-
-  -- If new facilitator wasn't a participant, add them
   IF NOT FOUND THEN
-    INSERT INTO eos_meeting_participants (meeting_id, user_id, role, attended)
-    VALUES (p_meeting_id, p_new_facilitator_id, 'Leader', false);
+    RAISE EXCEPTION 'No previous segment to return to';
   END IF;
+
+  -- Clear current segment (make it pending again)
+  IF v_current_segment.id IS NOT NULL THEN
+    UPDATE public.eos_meeting_segments
+    SET started_at = NULL
+    WHERE id = v_current_segment.id;
+  END IF;
+
+  -- Re-activate previous segment
+  UPDATE public.eos_meeting_segments
+  SET completed_at = NULL
+  WHERE id = v_previous_segment.id;
 
   -- Audit log
-  INSERT INTO audit_eos_events (
-    tenant_id, user_id, meeting_id, entity, action, details
+  INSERT INTO public.audit_eos_events (
+    tenant_id, user_id, meeting_id, entity, entity_id, action, details
   ) VALUES (
-    v_meeting.tenant_id,
-    auth.uid(),
-    p_meeting_id,
-    'meeting',
-    'facilitator_changed',
+    v_meeting.tenant_id, auth.uid(), p_meeting_id, 'segment', 
+    v_previous_segment.id, 'segment_reverted',
     jsonb_build_object(
-      'old_facilitator', v_old_leader_id,
-      'new_facilitator', p_new_facilitator_id
+      'from_segment', v_current_segment.id,
+      'to_segment', v_previous_segment.id
     )
   );
 
-  RETURN true;
+  RETURN v_previous_segment.id;
 END;
 $$;
 ```
 
-### New Component Structure
+### Step 3: Add Previous Segment Mutation to Hook
 
-```text
-+----------------------------------+
-|     FacilitatorSelectDialog      |
-+----------------------------------+
-| "Select Facilitator for Meeting" |
-|                                  |
-| Current: [John Smith ▼]          |
-|                                  |
-| [Team Member Dropdown]           |
-|   - Jane Doe                     |
-|   - Bob Wilson                   |
-|   - Sarah Johnson                |
-|                                  |
-| +------------+ +---------------+ |
-| |   Cancel   | | Start Meeting | |
-| +------------+ +---------------+ |
-+----------------------------------+
+Update `src/hooks/useEosMeetingSegments.tsx` to include a `goToPreviousSegment` mutation:
+
+```typescript
+const goToPreviousSegment = useMutation({
+  mutationFn: async () => {
+    const { data, error } = await supabase.rpc('go_to_previous_segment', {
+      p_meeting_id: meetingId,
+    });
+    if (error) throw error;
+    return data;
+  },
+  onSuccess: () => {
+    queryClient.invalidateQueries({ queryKey: ['eos-meeting-segments', meetingId] });
+    toast({ title: 'Returned to previous segment' });
+  },
+  onError: (error: Error) => {
+    toast({ title: 'Error returning to previous segment', description: error.message, variant: 'destructive' });
+  },
+});
 ```
 
-### Files to Create/Modify
+### Step 4: Add Previous Segment Button to UI
 
-| File | Action |
-|------|--------|
-| `src/components/eos/FacilitatorSelectDialog.tsx` | Create |
-| `src/hooks/useFacilitatorChange.tsx` | Create |
-| `src/components/eos/LiveMeetingView.tsx` | Modify - integrate dialog before start |
-| Database migration | Create - add `change_meeting_facilitator` RPC |
+Update `src/components/eos/LiveMeetingView.tsx` to show a "Previous Segment" button alongside "Next Segment":
+
+```tsx
+{meetingStarted && isFacilitator && completedSegments.length > 0 && (
+  <Button 
+    onClick={() => goToPreviousSegment.mutate()} 
+    size="sm" 
+    variant="outline"
+    disabled={goToPreviousSegment.isPending}
+  >
+    <SkipBack className="h-4 w-4 mr-2" />
+    Previous Segment
+  </Button>
+)}
+```
+
+### Step 5: Fix create_issue RPC
+
+Drop the conflicting old function and recreate with unified signature:
+
+```sql
+-- Drop old versions
+DROP FUNCTION IF EXISTS public.create_issue(bigint, text, text, text, text, uuid, uuid, uuid);
+DROP FUNCTION IF EXISTS public.create_issue(bigint, text, text, text, uuid, uuid, uuid);
+
+-- Create unified version
+CREATE OR REPLACE FUNCTION public.create_issue(
+  p_tenant_id BIGINT,
+  p_source TEXT DEFAULT 'ad_hoc',
+  p_title TEXT,
+  p_description TEXT DEFAULT NULL,
+  p_priority TEXT DEFAULT 'medium',
+  p_client_id UUID DEFAULT NULL,
+  p_linked_rock_id UUID DEFAULT NULL,
+  p_meeting_id UUID DEFAULT NULL
+)
+RETURNS UUID
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_issue_id UUID;
+  v_priority_int INTEGER;
+BEGIN
+  -- Convert text priority to integer
+  v_priority_int := CASE LOWER(p_priority)
+    WHEN 'high' THEN 3
+    WHEN 'medium' THEN 2
+    WHEN 'low' THEN 1
+    ELSE 2
+  END;
+
+  INSERT INTO eos_issues (
+    tenant_id, client_id, title, description, priority, status,
+    raised_by, rock_id, meeting_id, created_by
+  ) VALUES (
+    p_tenant_id, p_client_id, p_title, p_description, v_priority_int, 'open',
+    auth.uid(), p_linked_rock_id, p_meeting_id, auth.uid()
+  )
+  RETURNING id INTO v_issue_id;
+
+  -- Audit log
+  INSERT INTO audit_eos_events (
+    tenant_id, user_id, meeting_id, entity, entity_id, action, reason, details
+  ) VALUES (
+    p_tenant_id, auth.uid(), p_meeting_id, 'issue', v_issue_id, 'created',
+    'Issue created from ' || p_source,
+    jsonb_build_object('source', p_source, 'priority', p_priority)
+  );
+
+  RETURN v_issue_id;
+END;
+$$;
+```
+
+---
+
+## Files to Create/Modify
+
+| File | Action | Purpose |
+|------|--------|---------|
+| Database migration | Create | Reset segments, add `go_to_previous_segment` RPC, fix `create_issue` |
+| `src/hooks/useEosMeetingSegments.tsx` | Modify | Add `goToPreviousSegment` mutation |
+| `src/components/eos/LiveMeetingView.tsx` | Modify | Add "Previous Segment" button and import `SkipBack` icon |
 
 ---
 
 ## User Flow After Implementation
 
-1. User navigates to the live meeting view
-2. Meeting shows "Start Meeting" button (segments not yet started)
-3. Clicking "Start Meeting" opens the Facilitator Select Dialog
-4. User can:
-   - Keep current facilitator and start
-   - Select a different team member as facilitator, then start
-5. Dialog closes, first segment begins
-6. Facilitator controls (Next Segment, End Meeting) are now available to the selected facilitator
+1. Meeting is reset - user can start fresh
+2. User starts meeting via Facilitator dialog
+3. During meeting:
+   - **Next Segment** - advances to next agenda item (existing)
+   - **Previous Segment** - returns to previously completed item (new)
+4. Creating issues works correctly with priority conversion
+5. Audit trail captures all segment navigation
 
 ---
 
 ## Notes
 
-- The facilitator can only be changed **before** the meeting starts (first segment begins)
-- Once the meeting starts, the facilitator is locked for that session
-- Audit trail captures all facilitator changes
-- The `isFacilitator` check in `LiveMeetingView.tsx` will automatically reflect the updated role
+- The "Previous Segment" button only appears when there are completed segments to return to
+- Only the facilitator (Leader role) can use navigation buttons
+- Priority is stored as integer in the database (3=High, 2=Medium, 1=Low) but displayed as text in the UI
+- The meeting reset clears all timestamps, requiring the meeting to be restarted
