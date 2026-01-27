@@ -53,32 +53,48 @@ export interface CloseResult {
 export const useMeetingOutcomes = (meetingId: string | undefined) => {
   const queryClient = useQueryClient();
 
-  // Fetch outcome confirmations
+  // Fetch outcome confirmations with error handling
   const { data: confirmations, isLoading: confirmationsLoading } = useQuery({
     queryKey: ['meeting-outcome-confirmations', meetingId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('eos_meeting_outcome_confirmations')
-        .select('*')
-        .eq('meeting_id', meetingId!);
-      
-      if (error) throw error;
-      return data as OutcomeConfirmation[];
+      try {
+        const { data, error } = await supabase
+          .from('eos_meeting_outcome_confirmations')
+          .select('*')
+          .eq('meeting_id', meetingId!);
+        
+        if (error) {
+          console.error('Error fetching outcome confirmations:', error);
+          return [];
+        }
+        return data as OutcomeConfirmation[];
+      } catch (e) {
+        console.error('Exception fetching outcome confirmations:', e);
+        return [];
+      }
     },
     enabled: !!meetingId,
   });
 
-  // Fetch meeting ratings
+  // Fetch meeting ratings with error handling
   const { data: ratings, isLoading: ratingsLoading } = useQuery({
     queryKey: ['meeting-ratings', meetingId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('eos_meeting_ratings')
-        .select('*')
-        .eq('meeting_id', meetingId!);
-      
-      if (error) throw error;
-      return data as MeetingRating[];
+      try {
+        const { data, error } = await supabase
+          .from('eos_meeting_ratings')
+          .select('*')
+          .eq('meeting_id', meetingId!);
+        
+        if (error) {
+          console.error('Error fetching meeting ratings:', error);
+          return [];
+        }
+        return data as MeetingRating[];
+      } catch (e) {
+        console.error('Exception fetching meeting ratings:', e);
+        return [];
+      }
     },
     enabled: !!meetingId,
   });
