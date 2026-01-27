@@ -6,14 +6,20 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Button } from '@/components/ui/button';
 import { AlertTriangle, Lightbulb } from 'lucide-react';
 import { useEosRocks } from '@/hooks/useEos';
-import { useEosStatusOptions } from '@/hooks/useEosStatusOptions';
 import { 
-  CATEGORIES, 
-  IMPACTS,
-  type RiskOpportunityType, 
-  type RiskOpportunityCategory, 
-  type RiskOpportunityImpact,
-  type RiskOpportunityStatus,
+  useEosStatusOptions, 
+  useEosCategoryOptions, 
+  useEosImpactOptions,
+  useEosTypeOptions,
+  useEosQuarterOptions,
+  useEosYearOptions,
+} from '@/hooks/useEosOptions';
+import { formatQuarterLabel, formatTypeLabel } from '@/lib/eosOptionLabels';
+import type { 
+  RiskOpportunityType, 
+  RiskOpportunityCategory, 
+  RiskOpportunityImpact,
+  RiskOpportunityStatus,
 } from '@/types/risksOpportunities';
 
 export type FormContext = 'ro_page' | 'meeting_ids';
@@ -52,9 +58,6 @@ interface RiskOpportunityFormProps {
   showStatusSelector?: boolean;
 }
 
-const CURRENT_YEAR = new Date().getFullYear();
-const YEARS = [CURRENT_YEAR - 1, CURRENT_YEAR, CURRENT_YEAR + 1, CURRENT_YEAR + 2];
-
 export function RiskOpportunityForm({
   initialValues,
   onSubmit,
@@ -66,7 +69,14 @@ export function RiskOpportunityForm({
   showStatusSelector = false,
 }: RiskOpportunityFormProps) {
   const { rocks } = useEosRocks();
+  
+  // Fetch all options from database
   const { data: statusOptions = [] } = useEosStatusOptions();
+  const { data: categoryOptions = [] } = useEosCategoryOptions();
+  const { data: impactOptions = [] } = useEosImpactOptions();
+  const { data: typeOptions = [] } = useEosTypeOptions();
+  const { data: quarterOptions = [] } = useEosQuarterOptions();
+  const { data: yearOptions = [] } = useEosYearOptions();
   
   const [formData, setFormData] = useState<RiskOpportunityFormData>({
     item_type: initialValues?.item_type || 'risk',
@@ -128,18 +138,18 @@ export function RiskOpportunityForm({
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="risk">
-                <div className="flex items-center gap-2">
-                  <AlertTriangle className="w-4 h-4 text-amber-500" />
-                  Risk
-                </div>
-              </SelectItem>
-              <SelectItem value="opportunity">
-                <div className="flex items-center gap-2">
-                  <Lightbulb className="w-4 h-4 text-emerald-500" />
-                  Opportunity
-                </div>
-              </SelectItem>
+              {typeOptions.map(type => (
+                <SelectItem key={type} value={type}>
+                  <div className="flex items-center gap-2">
+                    {type === 'risk' ? (
+                      <AlertTriangle className="w-4 h-4 text-amber-500" />
+                    ) : (
+                      <Lightbulb className="w-4 h-4 text-emerald-500" />
+                    )}
+                    {formatTypeLabel(type)}
+                  </div>
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>
@@ -185,6 +195,7 @@ export function RiskOpportunityForm({
           </Select>
         </div>
       )}
+
       {/* Category & Impact */}
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
@@ -198,7 +209,7 @@ export function RiskOpportunityForm({
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="__none__">Select...</SelectItem>
-              {CATEGORIES.map(cat => (
+              {categoryOptions.map(cat => (
                 <SelectItem key={cat} value={cat}>{cat}</SelectItem>
               ))}
             </SelectContent>
@@ -216,7 +227,7 @@ export function RiskOpportunityForm({
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="__none__">Select...</SelectItem>
-              {IMPACTS.map(imp => (
+              {impactOptions.map(imp => (
                 <SelectItem key={imp} value={imp}>{imp}</SelectItem>
               ))}
             </SelectContent>
@@ -238,10 +249,9 @@ export function RiskOpportunityForm({
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="__none__">Select...</SelectItem>
-                <SelectItem value="1">Q1</SelectItem>
-                <SelectItem value="2">Q2</SelectItem>
-                <SelectItem value="3">Q3</SelectItem>
-                <SelectItem value="4">Q4</SelectItem>
+                {quarterOptions.map(q => (
+                  <SelectItem key={q} value={q.toString()}>{formatQuarterLabel(q)}</SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
@@ -257,7 +267,7 @@ export function RiskOpportunityForm({
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="__none__">Select...</SelectItem>
-                {YEARS.map(year => (
+                {yearOptions.map(year => (
                   <SelectItem key={year} value={year.toString()}>{year}</SelectItem>
                 ))}
               </SelectContent>

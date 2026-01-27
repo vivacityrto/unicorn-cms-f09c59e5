@@ -7,11 +7,11 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Plus, AlertTriangle, Lightbulb, TrendingUp, Shield, User, Calendar, Link as LinkIcon, Filter, X } from 'lucide-react';
 import { useRisksOpportunities } from '@/hooks/useRisksOpportunities';
 import { useEosRocks } from '@/hooks/useEos';
-import { useEosStatusOptions } from '@/hooks/useEosStatusOptions';
+import { useEosStatusOptions, useEosCategoryOptions } from '@/hooks/useEosOptions';
 import { format } from 'date-fns';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { RiskOpportunityForm, type RiskOpportunityFormData } from '@/components/eos/RiskOpportunityForm';
-import { CATEGORIES, type RiskOpportunityType, type RiskOpportunityCategory, type RiskOpportunityStatus } from '@/types/risksOpportunities';
+import type { RiskOpportunityType, RiskOpportunityCategory, RiskOpportunityStatus } from '@/types/risksOpportunities';
 
 export default function EosRisksOpportunities() {
   return (
@@ -25,6 +25,7 @@ function RisksOpportunitiesContent() {
   const { items, isLoading, createItem, updateItem } = useRisksOpportunities();
   const { rocks } = useEosRocks();
   const { data: statusOptions = [] } = useEosStatusOptions();
+  const { data: categoryOptions = [] } = useEosCategoryOptions();
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<typeof items extends (infer T)[] | undefined ? T | null : null>(null);
@@ -291,7 +292,7 @@ function RisksOpportunitiesContent() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Categories</SelectItem>
-                {CATEGORIES.map(cat => (
+                {categoryOptions.map(cat => (
                   <SelectItem key={cat} value={cat}>{cat}</SelectItem>
                 ))}
               </SelectContent>
