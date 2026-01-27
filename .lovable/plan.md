@@ -1,73 +1,41 @@
 
-# Plan: Fix Level 10 Meeting Supabase Errors
+# Plan: Fix Level 10 Meeting Critical Issue - Status Enum Mismatch
 
 ## Summary
 
-This plan fixes three categories of Supabase errors in the Level 10 meeting:
-
-1. **Issue Creation Error** - RPC uses `rock_id` but column is `linked_rock_id`
-2. **Participants Query Error (400)** - Missing FK constraint from `eos_meeting_participants.user_id` to `public.users`
-3. **Query Errors (500s)** - Attendees/Ratings/Outcome confirmations returning errors
+The audit identified one **critical issue** preventing Issue creation in Level 10 meetings. The `create_issue` RPC uses `'identified'` as the status value, but this is not a valid `eos_issue_status` enum value.
 
 ---
 
 ## Root Cause Analysis
 
-### A) Issue Creation Error
+### The Problem
 
-**Error Message:**
-```
-column "rock_id" of relation "eos_issues" does not exist
-```
-
-**Root Cause:**
-The `create_issue` RPC function (line 118 in the latest migration) attempts to insert into a column named `rock_id`, but the actual `eos_issues` table schema has a column named `linked_rock_id`.
+The `create_issue` RPC function contains this INSERT statement:
 
 ```sql
--- Current RPC (WRONG):
 INSERT INTO eos_issues (
   tenant_id, client_id, title, description, priority, status,
-  raised_by, rock_id, meeting_id, created_by  -- rock_id doesn't exist!
+  raised_by, linked_rock_id, meeting_id, created_by
+) VALUES (
+  p_tenant_id, p_client_id, p_title, p_description, v_priority_int, 'identified',  -- INVALID!
+  auth.uid(), p_linked_rock_id, p_meeting_id, auth.uid()
 )
 ```
 
-**Confirmed Schema:**
-| Column | Type |
-|--------|------|
-| `linked_rock_id` | uuid (nullable) |
-| `priority` | integer |
+### Valid Enum Values
 
----
+The `eos_issue_status` enum contains these values:
+- `Open` (should be used as initial status)
+- `Discussing`
+- `Solved`
+- `Archived`
+- `In Review`
+- `Actioning`
+- `Escalated`
+- `Closed`
 
-### B) Participants Query Error (400)
-
-**Error:**
-GET `eos_meeting_participants?select=*,users(first_name,last_name)` returns 400 Bad Request.
-
-**Root Cause:**
-The `eos_meeting_participants.user_id` column has a foreign key to `auth.users(id)` (the internal auth schema), NOT to `public.users(user_uuid)`. Supabase PostgREST cannot join across schemas using implicit syntax.
-
-```text
-Current FK: eos_meeting_participants.user_id -> auth.users.id
-Required: eos_meeting_participants.user_id -> public.users.user_uuid
-```
-
-Compare to `eos_meeting_attendees` which correctly references `public.users(user_uuid)`:
-```text
-FK: eos_meeting_attendees.user_id -> public.users.user_uuid
-```
-
----
-
-### C) 500 Errors for Attendees/Ratings/Outcome Confirmations
-
-The 500 errors are likely caused by one of:
-1. RLS policy evaluation failures due to recursive lookups
-2. FK join issues similar to participants
-
-**Current RLS Policies (verified working):**
-- All three tables have SELECT policies that check `tenant_id IN (SELECT tenant_id FROM tenant_users WHERE user_id = auth.uid())`
-- Policies appear correct but may have edge cases
+Note: The enum value is **case-sensitive** - it must be `'Open'` not `'open'`.
 
 ---
 
@@ -75,10 +43,9 @@ The 500 errors are likely caused by one of:
 
 ### Step 1: Fix create_issue RPC (Database Migration)
 
-Update the `create_issue` function to use the correct column name `linked_rock_id`:
+Update the RPC to use `'Open'` as the initial status:
 
 ```sql
--- Fix create_issue RPC to use correct column name
 CREATE OR REPLACE FUNCTION public.create_issue(
   p_tenant_id BIGINT,
   p_source TEXT DEFAULT 'ad_hoc',
@@ -98,7 +65,7 @@ DECLARE
   v_issue_id UUID;
   v_priority_int INTEGER;
 BEGIN
-  -- Convert text priority to integer
+  -- Convert text priority to integer (high=3, medium=2, low=1)
   v_priority_int := CASE LOWER(p_priority)
     WHEN 'high' THEN 3
     WHEN 'medium' THEN 2
@@ -106,16 +73,17 @@ BEGIN
     ELSE 2
   END;
 
+  -- Insert issue with 'Open' as initial status (valid eos_issue_status enum value)
   INSERT INTO eos_issues (
     tenant_id, client_id, title, description, priority, status,
     raised_by, linked_rock_id, meeting_id, created_by
   ) VALUES (
-    p_tenant_id, p_client_id, p_title, p_description, v_priority_int, 'open',
+    p_tenant_id, p_client_id, p_title, p_description, v_priority_int, 'Open',
     auth.uid(), p_linked_rock_id, p_meeting_id, auth.uid()
   )
   RETURNING id INTO v_issue_id;
 
-  -- Audit log
+  -- Audit log entry
   INSERT INTO audit_eos_events (
     tenant_id, user_id, meeting_id, entity, entity_id, action, reason, details
   ) VALUES (
@@ -131,101 +99,65 @@ $$;
 
 ---
 
-### Step 2: Fix Participants FK Join (Database Migration)
+### Step 2: Update Priority Display in IssuesQueue Component (Optional Enhancement)
 
-Add a foreign key from `eos_meeting_participants.user_id` to `public.users.user_uuid` to enable PostgREST joins:
+Map integer priority to human-readable labels in `src/components/eos/IssuesQueue.tsx`:
 
-```sql
--- Add FK from eos_meeting_participants.user_id to public.users
-ALTER TABLE public.eos_meeting_participants
-DROP CONSTRAINT IF EXISTS eos_meeting_participants_user_id_users_fkey;
-
-ALTER TABLE public.eos_meeting_participants
-ADD CONSTRAINT eos_meeting_participants_user_id_users_fkey
-FOREIGN KEY (user_id) REFERENCES public.users(user_uuid)
-ON DELETE CASCADE;
-
--- Refresh PostgREST schema cache
-NOTIFY pgrst, 'reload schema';
-```
-
----
-
-### Step 3: Update Participants Query in LiveMeetingView
-
-Update the query to use explicit FK join syntax (matching the pattern in `useMeetingAttendance.tsx`):
-
-**File: `src/components/eos/LiveMeetingView.tsx` (lines 77-84)**
-
+The current `getPriorityColor` function already handles this mapping:
 ```typescript
-// Before:
-.select('*, users(first_name, last_name)')
-
-// After:
-.select(`
-  *,
-  users!eos_meeting_participants_user_id_users_fkey (first_name, last_name)
-`)
+const priorityStr = typeof priority === 'number' 
+  ? (priority >= 3 ? 'high' : priority >= 2 ? 'medium' : 'low')  // Updated thresholds
+  : priority;
 ```
+
+Current thresholds (8, 5) should be adjusted to match database values (3, 2, 1).
 
 ---
 
-### Step 4: Add Error Handling to Queries
-
-Update the queries in `useMeetingOutcomes.tsx` to handle errors gracefully:
-
-**File: `src/hooks/useMeetingOutcomes.tsx`**
-
-Add try-catch and return empty arrays on failure to prevent UI crashes:
-
-```typescript
-// For confirmations query
-queryFn: async () => {
-  try {
-    const { data, error } = await supabase
-      .from('eos_meeting_outcome_confirmations')
-      .select('*')
-      .eq('meeting_id', meetingId!);
-    
-    if (error) {
-      console.error('Error fetching outcome confirmations:', error);
-      return [];
-    }
-    return data as OutcomeConfirmation[];
-  } catch (e) {
-    console.error('Exception fetching outcome confirmations:', e);
-    return [];
-  }
-}
-```
-
----
-
-## Files to Create/Modify
+## Files to Modify
 
 | File | Action | Purpose |
 |------|--------|---------|
-| Database migration | Create | Fix `create_issue` RPC column name + add participants FK |
-| `src/components/eos/LiveMeetingView.tsx` | Modify | Use explicit FK join for participants |
-| `src/hooks/useMeetingOutcomes.tsx` | Modify | Add error handling for graceful failures |
+| Database migration | Create | Fix `create_issue` RPC to use `'Open'` status |
+| `src/components/eos/IssuesQueue.tsx` | Modify (optional) | Fix priority threshold mapping |
+
+---
+
+## Verification Checklist
+
+After implementation, verify:
+
+| Test | Expected Result |
+|------|-----------------|
+| Create Issue from IDS segment | Issue created with status `Open` |
+| Issue appears in Issues Queue | Priority displays correctly as High/Medium/Low |
+| IDS Dialog opens for issue | Issue details load correctly |
+| Set issue status to Solved | Status updates with audit log |
+
+---
+
+## Working Components (No Changes Needed)
+
+These components have been verified as working correctly:
+
+1. **Meeting Segments Navigation** - Previous/Next buttons work
+2. **Participants Query** - FK join syntax is correct
+3. **Attendees Query** - FK join syntax is correct
+4. **Headlines** - Create/delete works
+5. **To-Dos** - Create/update works
+6. **Meeting Ratings** - Save/retrieve works
+7. **Meeting Close Validation** - Requirements validated per meeting type
+8. **Facilitator Selection** - Participants load with names
 
 ---
 
 ## Technical Notes
 
-### Error Root Causes Summary
+### Enum Case Sensitivity
+PostgreSQL enums are case-sensitive. The database uses PascalCase: `Open`, `Discussing`, `Solved`, etc.
 
-| Error | Root Cause | Fix |
-|-------|------------|-----|
-| `rock_id of relation eos_issues does not exist` | RPC uses wrong column name | Change `rock_id` to `linked_rock_id` in RPC |
-| Participants 400 | No FK to public.users | Add FK constraint + use explicit join |
-| 500 on various endpoints | RLS or FK issues | Add FK, update queries, add error handling |
+### Audit Trail Preservation
+The fix maintains all audit logging in `audit_eos_events` table.
 
-### Audit Trail Preserved
-- The `create_issue` RPC maintains the audit log insert to `audit_eos_events`
-- FK changes use `ON DELETE CASCADE` for data integrity
-- No changes to RLS policies required
-
-### Schema Naming Conventions
-- Database columns remain `snake_case` (e.g., `linked_rock_id`)
-- Frontend interfaces remain `camelCase` in TypeScript
+### No Frontend Changes Required
+The frontend already handles the status values correctly since it displays the status from the database.
