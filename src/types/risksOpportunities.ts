@@ -14,8 +14,12 @@ export type RiskOpportunityCategory =
 
 export type RiskOpportunityImpact = 'Low' | 'Medium' | 'High' | 'Critical';
 
+// Status values must match eos_issue_status enum exactly (case-sensitive)
 export type RiskOpportunityStatus = 
   | 'Open'
+  | 'Discussing'
+  | 'Solved'
+  | 'Archived'
   | 'In Review'
   | 'Actioning'
   | 'Escalated'
@@ -56,8 +60,12 @@ export const CATEGORIES: RiskOpportunityCategory[] = [
 
 export const IMPACTS: RiskOpportunityImpact[] = ['Low', 'Medium', 'High', 'Critical'];
 
+// Status values must match eos_issue_status enum exactly (case-sensitive)
 export const STATUSES: RiskOpportunityStatus[] = [
   'Open',
+  'Discussing',
+  'Solved',
+  'Archived',
   'In Review',
   'Actioning',
   'Escalated',

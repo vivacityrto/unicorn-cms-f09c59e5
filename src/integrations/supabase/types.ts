@@ -14095,6 +14095,12 @@ export type Database = {
         }
         Relationships: []
       }
+      eos_issue_status_options: {
+        Row: {
+          value: string | null
+        }
+        Relationships: []
+      }
       eos_meeting_attendance_summary: {
         Row: {
           attendance_rate: number | null

@@ -6,10 +6,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Button } from '@/components/ui/button';
 import { AlertTriangle, Lightbulb } from 'lucide-react';
 import { useEosRocks } from '@/hooks/useEos';
+import { useEosStatusOptions } from '@/hooks/useEosStatusOptions';
 import { 
   CATEGORIES, 
   IMPACTS,
-  STATUSES,
   type RiskOpportunityType, 
   type RiskOpportunityCategory, 
   type RiskOpportunityImpact,
@@ -66,6 +66,7 @@ export function RiskOpportunityForm({
   showStatusSelector = false,
 }: RiskOpportunityFormProps) {
   const { rocks } = useEosRocks();
+  const { data: statusOptions = [] } = useEosStatusOptions();
   
   const [formData, setFormData] = useState<RiskOpportunityFormData>({
     item_type: initialValues?.item_type || 'risk',
@@ -177,7 +178,7 @@ export function RiskOpportunityForm({
               <SelectValue placeholder="Select..." />
             </SelectTrigger>
             <SelectContent>
-              {STATUSES.map(status => (
+              {statusOptions.map(status => (
                 <SelectItem key={status} value={status}>{status}</SelectItem>
               ))}
             </SelectContent>
