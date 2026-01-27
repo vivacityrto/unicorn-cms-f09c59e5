@@ -2,17 +2,15 @@ import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
-import { Label } from '@/components/ui/label';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Plus, AlertTriangle, Lightbulb, TrendingUp, Shield, User, Calendar, Link as LinkIcon, Filter, X } from 'lucide-react';
 import { useRisksOpportunities } from '@/hooks/useRisksOpportunities';
 import { useEosRocks } from '@/hooks/useEos';
 import { format } from 'date-fns';
 import { DashboardLayout } from '@/components/DashboardLayout';
-import { CATEGORIES, IMPACTS, STATUSES, type RiskOpportunityType, type RiskOpportunityCategory, type RiskOpportunityImpact, type RiskOpportunityStatus } from '@/types/risksOpportunities';
+import { RiskOpportunityForm, type RiskOpportunityFormData } from '@/components/eos/RiskOpportunityForm';
+import { CATEGORIES, STATUSES, type RiskOpportunityType, type RiskOpportunityCategory, type RiskOpportunityStatus } from '@/types/risksOpportunities';
 
 export default function EosRisksOpportunities() {
   return (
@@ -29,37 +27,8 @@ function RisksOpportunitiesContent() {
   const [filterType, setFilterType] = useState<'all' | RiskOpportunityType>('all');
   const [filterCategory, setFilterCategory] = useState<'all' | RiskOpportunityCategory>('all');
   const [filterStatus, setFilterStatus] = useState<'all' | RiskOpportunityStatus>('all');
-  
-  // Form state
-  const [formData, setFormData] = useState({
-    item_type: 'risk' as RiskOpportunityType,
-    title: '',
-    description: '',
-    category: '' as RiskOpportunityCategory | '',
-    impact: '' as RiskOpportunityImpact | '',
-    quarter_number: undefined as number | undefined,
-    quarter_year: undefined as number | undefined,
-    linked_rock_id: '' as string,
-    assigned_to: '',
-  });
 
-  const resetForm = () => {
-    setFormData({
-      item_type: 'risk',
-      title: '',
-      description: '',
-      category: '',
-      impact: '',
-      quarter_number: undefined,
-      quarter_year: undefined,
-      linked_rock_id: '',
-      assigned_to: '',
-    });
-  };
-
-  const handleCreate = async () => {
-    if (!formData.title || !formData.item_type) return;
-    
+  const handleCreate = async (formData: RiskOpportunityFormData) => {
     await createItem.mutateAsync({
       item_type: formData.item_type,
       title: formData.title,
@@ -69,10 +38,8 @@ function RisksOpportunitiesContent() {
       quarter_number: formData.quarter_number,
       quarter_year: formData.quarter_year,
       linked_rock_id: formData.linked_rock_id || undefined,
-      assigned_to: formData.assigned_to || undefined,
     });
     
-    resetForm();
     setIsCreateOpen(false);
   };
 
@@ -174,140 +141,11 @@ function RisksOpportunitiesContent() {
             <DialogHeader>
               <DialogTitle>Add Risk or Opportunity</DialogTitle>
             </DialogHeader>
-            <div className="space-y-4 py-4">
-              <div className="space-y-2">
-                <Label>Type *</Label>
-                <Select value={formData.item_type} onValueChange={(v) => setFormData({ ...formData, item_type: v as RiskOpportunityType })}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="risk">
-                      <div className="flex items-center gap-2">
-                        <AlertTriangle className="w-4 h-4 text-amber-500" />
-                        Risk
-                      </div>
-                    </SelectItem>
-                    <SelectItem value="opportunity">
-                      <div className="flex items-center gap-2">
-                        <Lightbulb className="w-4 h-4 text-emerald-500" />
-                        Opportunity
-                      </div>
-                    </SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label>Title *</Label>
-                <Input 
-                  placeholder="Short, specific statement..."
-                  value={formData.title}
-                  onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label>Detail</Label>
-                <Textarea 
-                  placeholder="What is happening. Why it matters. Impact if ignored."
-                  value={formData.description}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  rows={3}
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Category</Label>
-                  <Select value={formData.category} onValueChange={(v) => setFormData({ ...formData, category: v as RiskOpportunityCategory })}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {CATEGORIES.map(cat => (
-                        <SelectItem key={cat} value={cat}>{cat}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Impact</Label>
-                  <Select value={formData.impact} onValueChange={(v) => setFormData({ ...formData, impact: v as RiskOpportunityImpact })}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {IMPACTS.map(imp => (
-                        <SelectItem key={imp} value={imp}>{imp}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Quarter</Label>
-                  <Select 
-                    value={formData.quarter_number?.toString() || ''} 
-                    onValueChange={(v) => setFormData({ ...formData, quarter_number: v ? parseInt(v) : undefined })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="1">Q1</SelectItem>
-                      <SelectItem value="2">Q2</SelectItem>
-                      <SelectItem value="3">Q3</SelectItem>
-                      <SelectItem value="4">Q4</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Year</Label>
-                  <Select 
-                    value={formData.quarter_year?.toString() || ''} 
-                    onValueChange={(v) => setFormData({ ...formData, quarter_year: v ? parseInt(v) : undefined })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {[2024, 2025, 2026, 2027].map(year => (
-                        <SelectItem key={year} value={year.toString()}>{year}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label>Linked Rock</Label>
-                <Select 
-                  value={formData.linked_rock_id || 'none'} 
-                  onValueChange={(v) => setFormData({ ...formData, linked_rock_id: v === 'none' ? '' : v })}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="None" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">None</SelectItem>
-                    {rocks?.map(rock => (
-                      <SelectItem key={rock.id} value={rock.id}>{rock.title}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => { resetForm(); setIsCreateOpen(false); }}>Cancel</Button>
-              <Button onClick={handleCreate} disabled={!formData.title || createItem.isPending}>
-                {createItem.isPending ? 'Creating...' : 'Create'}
-              </Button>
-            </DialogFooter>
+            <RiskOpportunityForm
+              onSubmit={handleCreate}
+              onCancel={() => setIsCreateOpen(false)}
+              isSubmitting={createItem.isPending}
+            />
           </DialogContent>
         </Dialog>
       </div>
