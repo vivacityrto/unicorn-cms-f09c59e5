@@ -19,16 +19,19 @@ function IssuesContent() {
   const { issues, isLoading } = useEosIssues();
   const [filter, setFilter] = useState<'all' | string>('all');
 
+  // Use exact enum values as keys - no transformation
   const getStatusConfig = (status: string) => {
-    const statusLower = status?.toLowerCase() || 'open';
     const configs: Record<string, { icon: any; color: string; bg: string; label: string }> = {
-      open: { icon: Circle, color: 'text-blue-600', bg: 'bg-blue-50', label: 'Open' },
-      discussing: { icon: AlertCircle, color: 'text-yellow-600', bg: 'bg-yellow-50', label: 'Discussing' },
-      solved: { icon: CheckCircle2, color: 'text-green-600', bg: 'bg-green-50', label: 'Solved' },
-      archived: { icon: Archive, color: 'text-gray-600', bg: 'bg-gray-50', label: 'Archived' },
+      'Open': { icon: Circle, color: 'text-blue-600', bg: 'bg-blue-50', label: 'Open' },
+      'Discussing': { icon: AlertCircle, color: 'text-yellow-600', bg: 'bg-yellow-50', label: 'Discussing' },
+      'In Review': { icon: AlertCircle, color: 'text-purple-600', bg: 'bg-purple-50', label: 'In Review' },
+      'Actioning': { icon: AlertCircle, color: 'text-orange-600', bg: 'bg-orange-50', label: 'Actioning' },
+      'Solved': { icon: CheckCircle2, color: 'text-green-600', bg: 'bg-green-50', label: 'Solved' },
+      'Archived': { icon: Archive, color: 'text-gray-600', bg: 'bg-gray-50', label: 'Archived' },
+      'Escalated': { icon: AlertCircle, color: 'text-red-600', bg: 'bg-red-50', label: 'Escalated' },
+      'Closed': { icon: CheckCircle2, color: 'text-gray-600', bg: 'bg-gray-50', label: 'Closed' },
     };
-    const config = configs[statusLower] || configs.open;
-    return config;
+    return configs[status] || configs['Open'];
   };
 
   const getPriorityBadge = (priority: number | string) => {
@@ -45,11 +48,12 @@ function IssuesContent() {
     filter === 'all' ? true : issue.status === filter
   );
 
+  // Use exact enum values for filtering - no transformation
   const stats = {
     total: issues?.length || 0,
-    open: issues?.filter(i => i.status?.toLowerCase() === 'open').length || 0,
-    discussing: issues?.filter(i => i.status?.toLowerCase() === 'discussing').length || 0,
-    solved: issues?.filter(i => i.status?.toLowerCase() === 'solved').length || 0,
+    open: issues?.filter(i => i.status === 'Open').length || 0,
+    discussing: issues?.filter(i => i.status === 'Discussing').length || 0,
+    solved: issues?.filter(i => i.status === 'Solved').length || 0,
   };
 
   if (isLoading) {
