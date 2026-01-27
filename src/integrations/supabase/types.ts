@@ -3377,24 +3377,6 @@ export type Database = {
         }
         Relationships: []
       }
-      ctstatus: {
-        Row: {
-          Code: number
-          Description: string
-          Seq: number
-        }
-        Insert: {
-          Code: number
-          Description: string
-          Seq: number
-        }
-        Update: {
-          Code?: number
-          Description?: string
-          Seq?: number
-        }
-        Relationships: []
-      }
       dd_address_type: {
         Row: {
           code: string
@@ -3413,6 +3395,27 @@ export type Database = {
           description?: string | null
           id?: number
           label?: string
+        }
+        Relationships: []
+      }
+      dd_status: {
+        Row: {
+          code: number
+          description: string
+          seq: number
+          value: string | null
+        }
+        Insert: {
+          code: number
+          description: string
+          seq: number
+          value?: string | null
+        }
+        Update: {
+          code?: number
+          description?: string
+          seq?: number
+          value?: string | null
         }
         Relationships: []
       }
