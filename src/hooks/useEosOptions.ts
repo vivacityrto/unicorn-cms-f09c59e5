@@ -29,12 +29,13 @@ export function useEosStatusOptions() {
   return useQuery({
     queryKey: QUERY_KEYS.statusOptions,
     queryFn: async () => {
-      const { data, error } = await supabase
+      // Type assertion needed - view exists but types.ts not regenerated
+      const { data, error } = await (supabase as any)
         .from('eos_issue_status_options')
         .select('value');
       
       if (error) throw error;
-      return (data ?? []).map(row => row.value as string);
+      return ((data as any[]) ?? []).map(row => row.value as string);
     },
     ...STABLE_QUERY_CONFIG,
   });
@@ -47,12 +48,13 @@ export function useEosCategoryOptions() {
   return useQuery({
     queryKey: QUERY_KEYS.categoryOptions,
     queryFn: async () => {
-      const { data, error } = await supabase
+      // Type assertion needed - view exists but types.ts not regenerated
+      const { data, error } = await (supabase as any)
         .from('eos_issue_category_options')
         .select('value');
       
       if (error) throw error;
-      return (data ?? []).map(row => row.value as string);
+      return ((data as any[]) ?? []).map(row => row.value as string);
     },
     ...STABLE_QUERY_CONFIG,
   });
@@ -65,12 +67,13 @@ export function useEosImpactOptions() {
   return useQuery({
     queryKey: QUERY_KEYS.impactOptions,
     queryFn: async () => {
-      const { data, error } = await supabase
+      // Type assertion needed - view exists but types.ts not regenerated
+      const { data, error } = await (supabase as any)
         .from('eos_issue_impact_options')
         .select('value');
       
       if (error) throw error;
-      return (data ?? []).map(row => row.value as string);
+      return ((data as any[]) ?? []).map(row => row.value as string);
     },
     ...STABLE_QUERY_CONFIG,
   });
@@ -83,12 +86,13 @@ export function useEosTypeOptions() {
   return useQuery({
     queryKey: QUERY_KEYS.typeOptions,
     queryFn: async () => {
-      const { data, error } = await supabase
+      // Type assertion needed - view exists but types.ts not regenerated
+      const { data, error } = await (supabase as any)
         .from('eos_issue_type_options')
         .select('value');
       
       if (error) throw error;
-      return (data ?? []).map(row => row.value as string);
+      return ((data as any[]) ?? []).map(row => row.value as string);
     },
     ...STABLE_QUERY_CONFIG,
   });
@@ -101,12 +105,13 @@ export function useEosQuarterOptions() {
   return useQuery({
     queryKey: QUERY_KEYS.quarterOptions,
     queryFn: async () => {
-      const { data, error } = await supabase
+      // Type assertion needed - view exists but types.ts not regenerated
+      const { data, error } = await (supabase as any)
         .from('eos_quarter_options')
         .select('value');
       
       if (error) throw error;
-      return (data ?? []).map(row => row.value as number);
+      return ((data as any[]) ?? []).map(row => row.value as number);
     },
     ...STABLE_QUERY_CONFIG,
   });
@@ -151,7 +156,8 @@ export function useEosStatusTransitions() {
   return useQuery({
     queryKey: QUERY_KEYS.statusTransitions,
     queryFn: async () => {
-      const { data, error } = await supabase
+      // Type assertion needed - table exists but types.ts not regenerated
+      const { data, error } = await (supabase as any)
         .from('eos_issue_status_transitions')
         .select('from_status, to_status');
       
@@ -160,7 +166,7 @@ export function useEosStatusTransitions() {
       // Build a map of from_status -> [to_status, ...]
       const transitions = new Map<string, string[]>();
       
-      for (const row of data ?? []) {
+      for (const row of (data as any[]) ?? []) {
         const fromStatus = row.from_status as string;
         const toStatus = row.to_status as string;
         

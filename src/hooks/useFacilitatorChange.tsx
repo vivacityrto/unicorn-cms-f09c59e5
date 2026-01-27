@@ -21,8 +21,9 @@ export const useFacilitatorChange = (meetingId: string | undefined) => {
     queryFn: async () => {
       if (!meetingId) return [];
       
-      const { data, error } = await supabase
-        .from('eos_meeting_participants')
+      // Type assertion needed - FK relationship exists but types.ts not regenerated
+      const { data, error } = await (supabase
+        .from('eos_meeting_participants') as any)
         .select('*, users!eos_meeting_participants_user_id_users_fkey(first_name, last_name)')
         .eq('meeting_id', meetingId);
       
@@ -39,7 +40,8 @@ export const useFacilitatorChange = (meetingId: string | undefined) => {
   // Mutation to change facilitator
   const changeFacilitator = useMutation({
     mutationFn: async (newFacilitatorId: string) => {
-      const { data, error } = await supabase.rpc('change_meeting_facilitator', {
+      // Type assertion needed - RPC exists but types.ts not regenerated
+      const { data, error } = await (supabase.rpc as any)('change_meeting_facilitator', {
         p_meeting_id: meetingId!,
         p_new_facilitator_id: newFacilitatorId
       });
