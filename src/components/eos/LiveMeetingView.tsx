@@ -30,6 +30,7 @@ import { TodoInlineForm } from '@/components/eos/TodoInlineForm';
 import { CreateIssueDialog } from '@/components/eos/CreateIssueDialog';
 import { MeetingCloseValidationDialog } from '@/components/eos/MeetingCloseValidationDialog';
 import { AttendancePanel } from '@/components/eos/AttendancePanel';
+import { FacilitatorSelectDialog } from '@/components/eos/FacilitatorSelectDialog';
 import type { EosMeetingSegment, MeetingType } from '@/types/eos';
 
 export const LiveMeetingView = () => {
@@ -43,6 +44,7 @@ export const LiveMeetingView = () => {
   const [idsDialogOpen, setIdsDialogOpen] = useState(false);
   const [createIssueOpen, setCreateIssueOpen] = useState(false);
   const [closeDialogOpen, setCloseDialogOpen] = useState(false);
+  const [facilitatorDialogOpen, setFacilitatorDialogOpen] = useState(false);
   const [segmentNotes, setSegmentNotes] = useState<Record<string, string>>({});
 
   // Use custom hooks
@@ -581,8 +583,7 @@ export const LiveMeetingView = () => {
             
             {!meetingStarted && isFacilitator && (
               <Button 
-                onClick={() => startFirstSegment.mutate()} 
-                disabled={startFirstSegment.isPending}
+                onClick={() => setFacilitatorDialogOpen(true)} 
                 size="sm"
               >
                 <PlayCircle className="h-4 w-4 mr-2" />
@@ -699,8 +700,7 @@ export const LiveMeetingView = () => {
                 {isFacilitator ? (
                   <Button 
                     size="lg"
-                    onClick={() => startFirstSegment.mutate()}
-                    disabled={startFirstSegment.isPending}
+                    onClick={() => setFacilitatorDialogOpen(true)}
                   >
                     <Play className="h-5 w-5 mr-2" />
                     Start Meeting
@@ -795,6 +795,14 @@ export const LiveMeetingView = () => {
         meetingType={(meeting?.meeting_type as MeetingType) || 'L10'}
         todosCount={todos?.length || 0}
         issuesDiscussed={meeting?.issues_discussed?.length || 0}
+      />
+
+      <FacilitatorSelectDialog
+        open={facilitatorDialogOpen}
+        onOpenChange={setFacilitatorDialogOpen}
+        meetingId={meetingId!}
+        onStartMeeting={() => startFirstSegment.mutate()}
+        isStarting={startFirstSegment.isPending}
       />
     </div>
   );
