@@ -15,7 +15,7 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { 
-  Play, SkipForward, CheckCircle, Clock, Users, X, Target, 
+  Play, SkipForward, SkipBack, CheckCircle, Clock, Users, X, Target, 
   TrendingUp, AlertCircle, ListTodo, MessageSquare, Sparkles,
   ArrowRight, Timer, PlayCircle, Star
 } from 'lucide-react';
@@ -48,7 +48,7 @@ export const LiveMeetingView = () => {
   const [segmentNotes, setSegmentNotes] = useState<Record<string, string>>({});
 
   // Use custom hooks
-  const { segments, isLoading: segmentsLoading, advanceSegment } = useEosMeetingSegments(meetingId);
+  const { segments, isLoading: segmentsLoading, advanceSegment, goToPreviousSegment } = useEosMeetingSegments(meetingId);
   const { headlines, createHeadline, deleteHeadline } = useEosHeadlines(meetingId);
   const { issues } = useMeetingIssues(meetingId);
   const { todos, createTodo, updateTodo } = useMeetingTodos(meetingId);
@@ -591,8 +591,25 @@ export const LiveMeetingView = () => {
               </Button>
             )}
             
+            {meetingStarted && isFacilitator && completedSegments.length > 0 && (
+              <Button 
+                onClick={() => goToPreviousSegment.mutate()} 
+                size="sm" 
+                variant="outline"
+                disabled={goToPreviousSegment.isPending}
+              >
+                <SkipBack className="h-4 w-4 mr-2" />
+                Previous
+              </Button>
+            )}
+            
             {meetingStarted && isFacilitator && currentSegment && (
-              <Button onClick={() => advanceSegment.mutate()} size="sm" variant="outline">
+              <Button 
+                onClick={() => advanceSegment.mutate()} 
+                size="sm" 
+                variant="outline"
+                disabled={advanceSegment.isPending}
+              >
                 <SkipForward className="h-4 w-4 mr-2" />
                 Next Segment
               </Button>
