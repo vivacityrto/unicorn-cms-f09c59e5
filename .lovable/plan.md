@@ -1,327 +1,213 @@
 
-# Reset packages and package_instances to Original unicorn1 IDs
+# Plan: Reset Meeting Segments and Add Facilitator Selection at Meeting Start
 
-## Objective
-Update `public.packages` IDs to match original `unicorn1` IDs, update all FK references across 39 dependent tables, then re-import `package_instances` with direct ID mapping.
+## Summary
 
----
-
-## Current State
-
-| Table | ID Type | ID Generation | Records | Issue |
-|-------|---------|---------------|---------|-------|
-| packages | bigint | GENERATED ALWAYS | 32 | Uses auto-generated IDs, requires u1_packageid mapping |
-| package_instances | bigint | BY DEFAULT | 1,003 | package_id references wrong IDs |
+This plan addresses two issues:
+1. **Reset the meeting segments** - The segments for the January 27 meeting still have timestamps from a previous test session, causing the UI to show them as already progressed
+2. **Add facilitator selection at meeting start** - Currently, the facilitator is fixed at scheduling time. We need to add the ability to change/confirm the facilitator when starting the meeting
 
 ---
 
-## Target State
+## Part 1: Reset Meeting Segments (Immediate Fix)
 
-| Table | ID Type | ID Generation | Records |
-|-------|---------|---------------|---------|
-| packages | bigint | BY DEFAULT | 32 (using original IDs: 1, 3, 5...1046) |
-| package_instances | bigint | BY DEFAULT | 1,003 (using original IDs, package_id matches directly) |
+The segments table still shows progress from a previous session:
+- Segue, Scorecard, Rock Review: marked as completed
+- Headlines: currently in progress
+- To-Do List, IDS, Conclude: pending
+
+**Action Required:**
+Clear all `started_at` and `completed_at` timestamps for meeting ID `64a80954-66e0-40b6-b595-0fa68a1ec4bb`:
+
+```sql
+UPDATE eos_meeting_segments 
+SET started_at = NULL, completed_at = NULL
+WHERE meeting_id = '64a80954-66e0-40b6-b595-0fa68a1ec4bb';
+```
 
 ---
 
-## Revised Migration Strategy (FK-Safe)
+## Part 2: Add Facilitator Selection at Meeting Start
 
-### Phase 1: Create ID mapping and update all FK references
+### Current Behaviour
+- Facilitator is selected during meeting scheduling via `MeetingScheduler.tsx`
+- The selected user gets `role = 'Leader'` in `eos_meeting_participants` table
+- In `LiveMeetingView.tsx`, the system checks this role to enable facilitator controls
+- There is no UI to change the facilitator once the meeting is scheduled
 
-```sql
--- Step 1: Create temporary mapping table (old_id -> new_id from unicorn1)
-CREATE TEMP TABLE pkg_id_map AS
-SELECT 
-  p.id AS old_id, 
-  u1.id AS new_id
-FROM public.packages p
-JOIN unicorn1.packages u1 ON LOWER(TRIM(p.name)) = LOWER(TRIM(u1.name));
+### Proposed Solution
 
--- Step 2: Temporarily disable FK constraints by dropping them
--- (We'll recreate them after)
+Create a **"Start Meeting" dialog** that appears before the first segment begins, allowing the team to:
+1. Confirm or change the facilitator
+2. Review attendance
+3. Start the meeting
 
--- Drop all FK constraints referencing packages.id
-ALTER TABLE public.tenants DROP CONSTRAINT IF EXISTS tenants_package_id_fkey;
-ALTER TABLE public.tasks_tenants DROP CONSTRAINT IF EXISTS tasks_tenants_package_id_fkey;
-ALTER TABLE public.documents DROP CONSTRAINT IF EXISTS documents_package_id_fkey;
-ALTER TABLE public.package_staff_tasks DROP CONSTRAINT IF EXISTS fk_package_staff_tasks_package;
-ALTER TABLE public.package_client_tasks DROP CONSTRAINT IF EXISTS fk_package_client_tasks_package;
-ALTER TABLE public.emails DROP CONSTRAINT IF EXISTS emails_package_id_fkey;
-ALTER TABLE public.package_workflow_logs DROP CONSTRAINT IF EXISTS package_workflow_logs_package_id_fkey;
-ALTER TABLE public.tenant_notes DROP CONSTRAINT IF EXISTS tenant_notes_package_id_fkey;
-ALTER TABLE public.tenant_stages DROP CONSTRAINT IF EXISTS tenant_stages_package_id_fkey;
-ALTER TABLE public.documents_notes DROP CONSTRAINT IF EXISTS documents_notes_package_id_fkey;
-ALTER TABLE public.membership_entitlements DROP CONSTRAINT IF EXISTS membership_entitlements_package_id_fkey;
-ALTER TABLE public.membership_activity DROP CONSTRAINT IF EXISTS membership_activity_package_id_fkey;
-ALTER TABLE public.membership_tasks DROP CONSTRAINT IF EXISTS membership_tasks_package_id_fkey;
-ALTER TABLE public.membership_ai_suggestions DROP CONSTRAINT IF EXISTS membership_ai_suggestions_package_id_fkey;
-ALTER TABLE public.membership_notes DROP CONSTRAINT IF EXISTS membership_notes_package_id_fkey;
-ALTER TABLE public.package_stage_map DROP CONSTRAINT IF EXISTS package_stage_map_package_id_fkey;
-ALTER TABLE public.client_package_stage_state DROP CONSTRAINT IF EXISTS client_package_stage_state_package_id_fkey;
-ALTER TABLE public.package_stages DROP CONSTRAINT IF EXISTS package_stages_package_id_fkey;
-ALTER TABLE public.package_stage_emails DROP CONSTRAINT IF EXISTS package_stage_emails_package_id_fkey;
-ALTER TABLE public.package_builder_audit_log DROP CONSTRAINT IF EXISTS package_builder_audit_log_package_id_fkey;
-ALTER TABLE public.package_stage_documents DROP CONSTRAINT IF EXISTS package_stage_documents_package_id_fkey;
-ALTER TABLE public.generated_documents DROP CONSTRAINT IF EXISTS generated_documents_package_id_fkey;
-ALTER TABLE public.client_packages DROP CONSTRAINT IF EXISTS client_packages_package_id_fkey;
-ALTER TABLE public.email_send_log DROP CONSTRAINT IF EXISTS email_send_log_package_id_fkey;
-ALTER TABLE public.tenant_document_releases DROP CONSTRAINT IF EXISTS tenant_document_releases_package_id_fkey;
-ALTER TABLE public.stage_releases DROP CONSTRAINT IF EXISTS stage_releases_package_id_fkey;
-ALTER TABLE public.compliance_pack_exports DROP CONSTRAINT IF EXISTS compliance_pack_exports_package_id_fkey;
-ALTER TABLE public.excel_generated_files DROP CONSTRAINT IF EXISTS excel_generated_files_package_id_fkey;
-ALTER TABLE public.time_entries DROP CONSTRAINT IF EXISTS time_entries_package_id_fkey;
-ALTER TABLE public.active_timers DROP CONSTRAINT IF EXISTS active_timers_package_id_fkey;
-ALTER TABLE public.client_alerts DROP CONSTRAINT IF EXISTS client_alerts_package_id_fkey;
-ALTER TABLE public.calendar_time_drafts DROP CONSTRAINT IF EXISTS calendar_time_drafts_package_id_fkey;
-ALTER TABLE public.calendar_time_drafts DROP CONSTRAINT IF EXISTS calendar_time_drafts_suggested_package_id_fkey;
-ALTER TABLE public.document_activity_log DROP CONSTRAINT IF EXISTS document_activity_log_package_id_fkey;
-ALTER TABLE public.client_action_items DROP CONSTRAINT IF EXISTS fk_client_action_items_package;
-ALTER TABLE public.processes DROP CONSTRAINT IF EXISTS processes_applies_to_package_id_fkey;
-ALTER TABLE public.process_versions DROP CONSTRAINT IF EXISTS process_versions_applies_to_package_id_fkey;
-ALTER TABLE public.package_instances DROP CONSTRAINT IF EXISTS package_instances_package_id_fkey;
-```
+### Implementation Steps
 
-### Phase 2: Update package_id in all referencing tables
+**Step 1: Create FacilitatorSelectDialog Component**
 
-```sql
--- Update all tables that reference packages.id
-UPDATE public.tenants t SET package_id = m.new_id FROM pkg_id_map m WHERE t.package_id = m.old_id;
-UPDATE public.tasks_tenants t SET package_id = m.new_id FROM pkg_id_map m WHERE t.package_id = m.old_id;
-UPDATE public.documents t SET package_id = m.new_id FROM pkg_id_map m WHERE t.package_id = m.old_id;
-UPDATE public.package_staff_tasks t SET package_id = m.new_id FROM pkg_id_map m WHERE t.package_id = m.old_id;
-UPDATE public.package_client_tasks t SET package_id = m.new_id FROM pkg_id_map m WHERE t.package_id = m.old_id;
-UPDATE public.emails t SET package_id = m.new_id FROM pkg_id_map m WHERE t.package_id = m.old_id;
-UPDATE public.package_workflow_logs t SET package_id = m.new_id FROM pkg_id_map m WHERE t.package_id = m.old_id;
-UPDATE public.tenant_notes t SET package_id = m.new_id FROM pkg_id_map m WHERE t.package_id = m.old_id;
-UPDATE public.tenant_stages t SET package_id = m.new_id FROM pkg_id_map m WHERE t.package_id = m.old_id;
-UPDATE public.documents_notes t SET package_id = m.new_id FROM pkg_id_map m WHERE t.package_id = m.old_id;
-UPDATE public.membership_entitlements t SET package_id = m.new_id FROM pkg_id_map m WHERE t.package_id = m.old_id;
-UPDATE public.membership_activity t SET package_id = m.new_id FROM pkg_id_map m WHERE t.package_id = m.old_id;
-UPDATE public.membership_tasks t SET package_id = m.new_id FROM pkg_id_map m WHERE t.package_id = m.old_id;
-UPDATE public.membership_ai_suggestions t SET package_id = m.new_id FROM pkg_id_map m WHERE t.package_id = m.old_id;
-UPDATE public.membership_notes t SET package_id = m.new_id FROM pkg_id_map m WHERE t.package_id = m.old_id;
-UPDATE public.package_stage_map t SET package_id = m.new_id FROM pkg_id_map m WHERE t.package_id = m.old_id;
-UPDATE public.client_package_stage_state t SET package_id = m.new_id FROM pkg_id_map m WHERE t.package_id = m.old_id;
-UPDATE public.package_stages t SET package_id = m.new_id FROM pkg_id_map m WHERE t.package_id = m.old_id;
-UPDATE public.package_stage_emails t SET package_id = m.new_id FROM pkg_id_map m WHERE t.package_id = m.old_id;
-UPDATE public.package_builder_audit_log t SET package_id = m.new_id FROM pkg_id_map m WHERE t.package_id = m.old_id;
-UPDATE public.package_stage_documents t SET package_id = m.new_id FROM pkg_id_map m WHERE t.package_id = m.old_id;
-UPDATE public.generated_documents t SET package_id = m.new_id FROM pkg_id_map m WHERE t.package_id = m.old_id;
-UPDATE public.client_packages t SET package_id = m.new_id FROM pkg_id_map m WHERE t.package_id = m.old_id;
-UPDATE public.email_send_log t SET package_id = m.new_id FROM pkg_id_map m WHERE t.package_id = m.old_id;
-UPDATE public.tenant_document_releases t SET package_id = m.new_id FROM pkg_id_map m WHERE t.package_id = m.old_id;
-UPDATE public.stage_releases t SET package_id = m.new_id FROM pkg_id_map m WHERE t.package_id = m.old_id;
-UPDATE public.compliance_pack_exports t SET package_id = m.new_id FROM pkg_id_map m WHERE t.package_id = m.old_id;
-UPDATE public.excel_generated_files t SET package_id = m.new_id FROM pkg_id_map m WHERE t.package_id = m.old_id;
-UPDATE public.time_entries t SET package_id = m.new_id FROM pkg_id_map m WHERE t.package_id = m.old_id;
-UPDATE public.active_timers t SET package_id = m.new_id FROM pkg_id_map m WHERE t.package_id = m.old_id;
-UPDATE public.client_alerts t SET package_id = m.new_id FROM pkg_id_map m WHERE t.package_id = m.old_id;
-UPDATE public.calendar_time_drafts t SET package_id = m.new_id FROM pkg_id_map m WHERE t.package_id = m.old_id;
-UPDATE public.calendar_time_drafts t SET suggested_package_id = m.new_id FROM pkg_id_map m WHERE t.suggested_package_id = m.old_id;
-UPDATE public.document_activity_log t SET package_id = m.new_id FROM pkg_id_map m WHERE t.package_id = m.old_id;
-UPDATE public.client_action_items t SET package_id = m.new_id FROM pkg_id_map m WHERE t.package_id = m.old_id;
-UPDATE public.processes t SET applies_to_package_id = m.new_id FROM pkg_id_map m WHERE t.applies_to_package_id = m.old_id;
-UPDATE public.process_versions t SET applies_to_package_id = m.new_id FROM pkg_id_map m WHERE t.applies_to_package_id = m.old_id;
-```
+New file: `src/components/eos/FacilitatorSelectDialog.tsx`
 
-### Phase 3: Update packages table IDs
+This dialog will:
+- Show the current facilitator (from `eos_meeting_participants` where `role = 'Leader'`)
+- Display a dropdown of present attendees to select a new facilitator
+- Update the `eos_meeting_participants` table when changed:
+  - Set previous facilitator's role to `'Member'`
+  - Set new facilitator's role to `'Leader'`
+
+**Step 2: Update LiveMeetingView to Use the New Dialog**
+
+Modify `src/components/eos/LiveMeetingView.tsx`:
+
+- Before showing the "Start Meeting" button, check if meeting has not started
+- When user clicks "Start Meeting", open the `FacilitatorSelectDialog`
+- The dialog confirms facilitator selection before calling `startFirstSegment`
+
+**Step 3: Create RPC Function to Change Facilitator**
+
+New database function: `change_meeting_facilitator(p_meeting_id UUID, p_new_facilitator_id UUID)`
+
+This function will:
+- Verify the caller has permission (must be current Leader or SuperAdmin)
+- Update the old Leader to Member role
+- Update the new user to Leader role
+- Log the change to `audit_eos_events`
+
+**Step 4: Create useFacilitatorChange Hook**
+
+New file: `src/hooks/useFacilitatorChange.tsx`
+
+This hook will:
+- Fetch current facilitator from `eos_meeting_participants`
+- Provide mutation to change facilitator via the RPC
+- Invalidate relevant queries on success
+
+---
+
+## Technical Details
+
+### Database Changes
 
 ```sql
--- Update packages.id to use original unicorn1 IDs
-UPDATE public.packages p 
-SET id = m.new_id 
-FROM pkg_id_map m 
-WHERE p.id = m.old_id;
-
--- Change id column from GENERATED ALWAYS to GENERATED BY DEFAULT
-ALTER TABLE public.packages 
-  ALTER COLUMN id DROP IDENTITY IF EXISTS,
-  ALTER COLUMN id ADD GENERATED BY DEFAULT AS IDENTITY;
-
--- Reset sequence to max + 1
-SELECT setval(pg_get_serial_sequence('public.packages', 'id'), 
-  (SELECT MAX(id) FROM public.packages));
-
--- Drop the now-redundant u1_packageid column
-ALTER TABLE public.packages DROP COLUMN IF EXISTS u1_packageid;
-```
-
-### Phase 4: Recreate FK constraints
-
-```sql
--- Recreate all FK constraints
-ALTER TABLE public.tenants ADD CONSTRAINT tenants_package_id_fkey 
-  FOREIGN KEY (package_id) REFERENCES public.packages(id);
-ALTER TABLE public.tasks_tenants ADD CONSTRAINT tasks_tenants_package_id_fkey 
-  FOREIGN KEY (package_id) REFERENCES public.packages(id);
-ALTER TABLE public.documents ADD CONSTRAINT documents_package_id_fkey 
-  FOREIGN KEY (package_id) REFERENCES public.packages(id);
-ALTER TABLE public.package_staff_tasks ADD CONSTRAINT fk_package_staff_tasks_package 
-  FOREIGN KEY (package_id) REFERENCES public.packages(id);
-ALTER TABLE public.package_client_tasks ADD CONSTRAINT fk_package_client_tasks_package 
-  FOREIGN KEY (package_id) REFERENCES public.packages(id);
-ALTER TABLE public.emails ADD CONSTRAINT emails_package_id_fkey 
-  FOREIGN KEY (package_id) REFERENCES public.packages(id);
-ALTER TABLE public.package_workflow_logs ADD CONSTRAINT package_workflow_logs_package_id_fkey 
-  FOREIGN KEY (package_id) REFERENCES public.packages(id);
-ALTER TABLE public.tenant_notes ADD CONSTRAINT tenant_notes_package_id_fkey 
-  FOREIGN KEY (package_id) REFERENCES public.packages(id);
-ALTER TABLE public.tenant_stages ADD CONSTRAINT tenant_stages_package_id_fkey 
-  FOREIGN KEY (package_id) REFERENCES public.packages(id);
-ALTER TABLE public.documents_notes ADD CONSTRAINT documents_notes_package_id_fkey 
-  FOREIGN KEY (package_id) REFERENCES public.packages(id);
-ALTER TABLE public.membership_entitlements ADD CONSTRAINT membership_entitlements_package_id_fkey 
-  FOREIGN KEY (package_id) REFERENCES public.packages(id);
-ALTER TABLE public.membership_activity ADD CONSTRAINT membership_activity_package_id_fkey 
-  FOREIGN KEY (package_id) REFERENCES public.packages(id);
-ALTER TABLE public.membership_tasks ADD CONSTRAINT membership_tasks_package_id_fkey 
-  FOREIGN KEY (package_id) REFERENCES public.packages(id);
-ALTER TABLE public.membership_ai_suggestions ADD CONSTRAINT membership_ai_suggestions_package_id_fkey 
-  FOREIGN KEY (package_id) REFERENCES public.packages(id);
-ALTER TABLE public.membership_notes ADD CONSTRAINT membership_notes_package_id_fkey 
-  FOREIGN KEY (package_id) REFERENCES public.packages(id);
-ALTER TABLE public.package_stage_map ADD CONSTRAINT package_stage_map_package_id_fkey 
-  FOREIGN KEY (package_id) REFERENCES public.packages(id);
-ALTER TABLE public.client_package_stage_state ADD CONSTRAINT client_package_stage_state_package_id_fkey 
-  FOREIGN KEY (package_id) REFERENCES public.packages(id);
-ALTER TABLE public.package_stages ADD CONSTRAINT package_stages_package_id_fkey 
-  FOREIGN KEY (package_id) REFERENCES public.packages(id);
-ALTER TABLE public.package_stage_emails ADD CONSTRAINT package_stage_emails_package_id_fkey 
-  FOREIGN KEY (package_id) REFERENCES public.packages(id);
-ALTER TABLE public.package_builder_audit_log ADD CONSTRAINT package_builder_audit_log_package_id_fkey 
-  FOREIGN KEY (package_id) REFERENCES public.packages(id);
-ALTER TABLE public.package_stage_documents ADD CONSTRAINT package_stage_documents_package_id_fkey 
-  FOREIGN KEY (package_id) REFERENCES public.packages(id);
-ALTER TABLE public.generated_documents ADD CONSTRAINT generated_documents_package_id_fkey 
-  FOREIGN KEY (package_id) REFERENCES public.packages(id);
-ALTER TABLE public.client_packages ADD CONSTRAINT client_packages_package_id_fkey 
-  FOREIGN KEY (package_id) REFERENCES public.packages(id);
-ALTER TABLE public.email_send_log ADD CONSTRAINT email_send_log_package_id_fkey 
-  FOREIGN KEY (package_id) REFERENCES public.packages(id);
-ALTER TABLE public.tenant_document_releases ADD CONSTRAINT tenant_document_releases_package_id_fkey 
-  FOREIGN KEY (package_id) REFERENCES public.packages(id);
-ALTER TABLE public.stage_releases ADD CONSTRAINT stage_releases_package_id_fkey 
-  FOREIGN KEY (package_id) REFERENCES public.packages(id);
-ALTER TABLE public.compliance_pack_exports ADD CONSTRAINT compliance_pack_exports_package_id_fkey 
-  FOREIGN KEY (package_id) REFERENCES public.packages(id);
-ALTER TABLE public.excel_generated_files ADD CONSTRAINT excel_generated_files_package_id_fkey 
-  FOREIGN KEY (package_id) REFERENCES public.packages(id);
-ALTER TABLE public.time_entries ADD CONSTRAINT time_entries_package_id_fkey 
-  FOREIGN KEY (package_id) REFERENCES public.packages(id);
-ALTER TABLE public.active_timers ADD CONSTRAINT active_timers_package_id_fkey 
-  FOREIGN KEY (package_id) REFERENCES public.packages(id);
-ALTER TABLE public.client_alerts ADD CONSTRAINT client_alerts_package_id_fkey 
-  FOREIGN KEY (package_id) REFERENCES public.packages(id);
-ALTER TABLE public.calendar_time_drafts ADD CONSTRAINT calendar_time_drafts_package_id_fkey 
-  FOREIGN KEY (package_id) REFERENCES public.packages(id);
-ALTER TABLE public.calendar_time_drafts ADD CONSTRAINT calendar_time_drafts_suggested_package_id_fkey 
-  FOREIGN KEY (suggested_package_id) REFERENCES public.packages(id);
-ALTER TABLE public.document_activity_log ADD CONSTRAINT document_activity_log_package_id_fkey 
-  FOREIGN KEY (package_id) REFERENCES public.packages(id);
-ALTER TABLE public.client_action_items ADD CONSTRAINT fk_client_action_items_package 
-  FOREIGN KEY (package_id) REFERENCES public.packages(id);
-ALTER TABLE public.processes ADD CONSTRAINT processes_applies_to_package_id_fkey 
-  FOREIGN KEY (applies_to_package_id) REFERENCES public.packages(id);
-ALTER TABLE public.process_versions ADD CONSTRAINT process_versions_applies_to_package_id_fkey 
-  FOREIGN KEY (applies_to_package_id) REFERENCES public.packages(id);
-ALTER TABLE public.package_instances ADD CONSTRAINT package_instances_package_id_fkey 
-  FOREIGN KEY (package_id) REFERENCES public.packages(id);
-```
-
-### Phase 5: Truncate and re-insert package_instances
-
-```sql
--- Clear existing data
-TRUNCATE TABLE public.package_instances;
-
--- Re-insert from unicorn1 with direct package_id mapping
-INSERT INTO public.package_instances (
-  id,
-  is_complete,
-  start_date,
-  end_date,
-  package_id,
-  client_id,
-  last_document_update_email,
-  release_documents_pdf,
-  release_documents_office,
-  clo_id,
-  tenant_id
+-- RPC function to change facilitator
+CREATE OR REPLACE FUNCTION public.change_meeting_facilitator(
+  p_meeting_id UUID,
+  p_new_facilitator_id UUID
 )
-SELECT 
-  u1.id,
-  u1.iscomplete,
-  u1.startdate,
-  u1.enddate,
-  u1.package_id,  -- Direct reference, no mapping needed!
-  u1.client_id,
-  u1.lastdocumentupdateemail,
-  u1.releasedocumentspdf,
-  u1.releasedocumentsoffice,
-  u1.clo_id,
-  t.id  -- Derive tenant_id from tenants.legacy_id
-FROM unicorn1.package_instances u1
-LEFT JOIN public.tenants t ON u1.client_id = t.legacy_id;
+RETURNS BOOLEAN
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_meeting RECORD;
+  v_old_leader_id UUID;
+BEGIN
+  -- Get meeting and verify permissions
+  SELECT m.*, emp.role, emp.user_id INTO v_meeting
+  FROM eos_meetings m
+  LEFT JOIN eos_meeting_participants emp 
+    ON emp.meeting_id = m.id AND emp.user_id = auth.uid()
+  WHERE m.id = p_meeting_id;
 
--- Reset sequence
-SELECT setval(pg_get_serial_sequence('public.package_instances', 'id'), 
-  (SELECT MAX(id) FROM public.package_instances));
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'Meeting not found';
+  END IF;
 
--- Drop redundant column
-ALTER TABLE public.package_instances DROP COLUMN IF EXISTS u1_packageid;
+  -- Only current Leader or SuperAdmin can change facilitator
+  IF v_meeting.role != 'Leader' AND NOT is_super_admin() THEN
+    RAISE EXCEPTION 'Only current facilitator or admin can change facilitator';
+  END IF;
+
+  -- Get current leader
+  SELECT user_id INTO v_old_leader_id
+  FROM eos_meeting_participants
+  WHERE meeting_id = p_meeting_id AND role = 'Leader';
+
+  -- Demote old leader to Member
+  UPDATE eos_meeting_participants
+  SET role = 'Member'
+  WHERE meeting_id = p_meeting_id AND role = 'Leader';
+
+  -- Promote new facilitator to Leader
+  UPDATE eos_meeting_participants
+  SET role = 'Leader'
+  WHERE meeting_id = p_meeting_id AND user_id = p_new_facilitator_id;
+
+  -- If new facilitator wasn't a participant, add them
+  IF NOT FOUND THEN
+    INSERT INTO eos_meeting_participants (meeting_id, user_id, role, attended)
+    VALUES (p_meeting_id, p_new_facilitator_id, 'Leader', false);
+  END IF;
+
+  -- Audit log
+  INSERT INTO audit_eos_events (
+    tenant_id, user_id, meeting_id, entity, action, details
+  ) VALUES (
+    v_meeting.tenant_id,
+    auth.uid(),
+    p_meeting_id,
+    'meeting',
+    'facilitator_changed',
+    jsonb_build_object(
+      'old_facilitator', v_old_leader_id,
+      'new_facilitator', p_new_facilitator_id
+    )
+  );
+
+  RETURN true;
+END;
+$$;
 ```
 
----
+### New Component Structure
 
-## Verification Queries
-
-```sql
--- Verify package count
-SELECT COUNT(*) FROM public.packages;
--- Expected: 32
-
--- Verify package_instances count
-SELECT COUNT(*) FROM public.package_instances;
--- Expected: 1,003
-
--- Verify no orphaned instances
-SELECT COUNT(*) 
-FROM public.package_instances pi
-LEFT JOIN public.packages p ON pi.package_id = p.id
-WHERE p.id IS NULL;
--- Expected: 0
-
--- Verify ID matching with unicorn1
-SELECT 
-  p.id as public_id,
-  u1.id as unicorn1_id,
-  p.name
-FROM public.packages p
-JOIN unicorn1.packages u1 ON LOWER(TRIM(p.name)) = LOWER(TRIM(u1.name))
-WHERE p.id != u1.id;
--- Expected: 0 rows (all IDs should match)
+```text
++----------------------------------+
+|     FacilitatorSelectDialog      |
++----------------------------------+
+| "Select Facilitator for Meeting" |
+|                                  |
+| Current: [John Smith ▼]          |
+|                                  |
+| [Team Member Dropdown]           |
+|   - Jane Doe                     |
+|   - Bob Wilson                   |
+|   - Sarah Johnson                |
+|                                  |
+| +------------+ +---------------+ |
+| |   Cancel   | | Start Meeting | |
+| +------------+ +---------------+ |
++----------------------------------+
 ```
 
----
+### Files to Create/Modify
 
-## Impact Summary
-
-| Metric | Value |
-|--------|-------|
-| Tables affected | 40 (packages + 39 referencing tables) |
-| FK constraints dropped | 39 |
-| FK constraints recreated | 39 |
-| packages rows updated | 32 |
-| package_instances rows | TRUNCATE + INSERT 1,003 |
-| Columns removed | u1_packageid (from both tables) |
-| Risk level | Medium (FK manipulation required) |
+| File | Action |
+|------|--------|
+| `src/components/eos/FacilitatorSelectDialog.tsx` | Create |
+| `src/hooks/useFacilitatorChange.tsx` | Create |
+| `src/components/eos/LiveMeetingView.tsx` | Modify - integrate dialog before start |
+| Database migration | Create - add `change_meeting_facilitator` RPC |
 
 ---
 
-## Benefits
+## User Flow After Implementation
 
-1. **Direct ID matching** - No more mapping confusion
-2. **Simpler debugging** - unicorn1 ID = public ID
-3. **Consistent pattern** - Same approach for stages, documents, etc.
-4. **Cleaner schema** - No redundant u1_packageid columns
-5. **FK integrity preserved** - All relationships maintained
+1. User navigates to the live meeting view
+2. Meeting shows "Start Meeting" button (segments not yet started)
+3. Clicking "Start Meeting" opens the Facilitator Select Dialog
+4. User can:
+   - Keep current facilitator and start
+   - Select a different team member as facilitator, then start
+5. Dialog closes, first segment begins
+6. Facilitator controls (Next Segment, End Meeting) are now available to the selected facilitator
+
+---
+
+## Notes
+
+- The facilitator can only be changed **before** the meeting starts (first segment begins)
+- Once the meeting starts, the facilitator is locked for that session
+- Audit trail captures all facilitator changes
+- The `isFacilitator` check in `LiveMeetingView.tsx` will automatically reflect the updated role
