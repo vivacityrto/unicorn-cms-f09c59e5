@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -13,6 +13,8 @@ import {
   useEosTypeOptions,
   useEosQuarterOptions,
   useEosYearOptions,
+  useEosStatusTransitions,
+  getAllowedStatusTransitions,
 } from '@/hooks/useEosOptions';
 import { formatQuarterLabel, formatTypeLabel } from '@/lib/eosOptionLabels';
 import type { 
@@ -56,6 +58,8 @@ interface RiskOpportunityFormProps {
   context?: FormContext;
   /** Show status selector (for edit mode) */
   showStatusSelector?: boolean;
+  /** Current status of the item (for transition validation) */
+  currentStatus?: RiskOpportunityStatus;
 }
 
 export function RiskOpportunityForm({
@@ -67,6 +71,7 @@ export function RiskOpportunityForm({
   submitLabel = 'Create',
   context = 'ro_page',
   showStatusSelector = false,
+  currentStatus,
 }: RiskOpportunityFormProps) {
   const { rocks } = useEosRocks();
   
@@ -77,6 +82,7 @@ export function RiskOpportunityForm({
   const { data: typeOptions = [] } = useEosTypeOptions();
   const { data: quarterOptions = [] } = useEosQuarterOptions();
   const { data: yearOptions = [] } = useEosYearOptions();
+  const { data: statusTransitions } = useEosStatusTransitions();
   
   const [formData, setFormData] = useState<RiskOpportunityFormData>({
     item_type: initialValues?.item_type || 'risk',
@@ -92,6 +98,22 @@ export function RiskOpportunityForm({
     meeting_segment_id: initialValues?.meeting_segment_id,
     source: initialValues?.source || (context === 'meeting_ids' ? 'meeting_ids' : 'ro_page'),
   });
+
+  // Calculate allowed status options based on current status
+  const allowedStatusOptions = useMemo(() => {
+    // If no current status, show all options (for new items)
+    if (!currentStatus) {
+      return statusOptions;
+    }
+    
+    // Get allowed transitions from current status
+    const allowedTargets = getAllowedStatusTransitions(statusTransitions, currentStatus);
+    
+    // Include current status (no-op transition) and all allowed targets
+    const allowed = new Set([currentStatus, ...allowedTargets]);
+    
+    return statusOptions.filter(status => allowed.has(status));
+  }, [statusOptions, statusTransitions, currentStatus]);
 
   // Update form when initial values change
   useEffect(() => {
@@ -176,7 +198,7 @@ export function RiskOpportunityForm({
         />
       </div>
 
-      {/* Status (only shown in edit mode) */}
+      {/* Status (only shown in edit mode) - filtered by allowed transitions */}
       {showStatusSelector && (
         <div className="space-y-2">
           <Label>Status</Label>
@@ -188,11 +210,16 @@ export function RiskOpportunityForm({
               <SelectValue placeholder="Select..." />
             </SelectTrigger>
             <SelectContent>
-              {statusOptions.map(status => (
+              {allowedStatusOptions.map(status => (
                 <SelectItem key={status} value={status}>{status}</SelectItem>
               ))}
             </SelectContent>
           </Select>
+          {currentStatus && allowedStatusOptions.length <= 1 && (
+            <p className="text-xs text-muted-foreground">
+              No status transitions available from "{currentStatus}"
+            </p>
+          )}
         </div>
       )}
 
