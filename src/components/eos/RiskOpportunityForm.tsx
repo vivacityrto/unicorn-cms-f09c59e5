@@ -8,10 +8,12 @@ import { AlertTriangle, Lightbulb } from 'lucide-react';
 import { useEosRocks } from '@/hooks/useEos';
 import { 
   CATEGORIES, 
-  IMPACTS, 
+  IMPACTS,
+  STATUSES,
   type RiskOpportunityType, 
   type RiskOpportunityCategory, 
-  type RiskOpportunityImpact 
+  type RiskOpportunityImpact,
+  type RiskOpportunityStatus,
 } from '@/types/risksOpportunities';
 
 export type FormContext = 'ro_page' | 'meeting_ids';
@@ -20,11 +22,12 @@ export interface RiskOpportunityFormData {
   item_type: RiskOpportunityType;
   title: string;
   description: string;
-  category: RiskOpportunityCategory | '';
-  impact: RiskOpportunityImpact | '';
+  category: RiskOpportunityCategory | '' | null;
+  impact: RiskOpportunityImpact | '' | null;
+  status?: RiskOpportunityStatus;
   quarter_number?: number;
   quarter_year?: number;
-  linked_rock_id: string;
+  linked_rock_id: string | null;
   meeting_id?: string;
   meeting_segment_id?: string;
   source?: string;
@@ -45,6 +48,8 @@ interface RiskOpportunityFormProps {
   submitLabel?: string;
   /** Context determines which fields are shown and behavior */
   context?: FormContext;
+  /** Show status selector (for edit mode) */
+  showStatusSelector?: boolean;
 }
 
 const CURRENT_YEAR = new Date().getFullYear();
@@ -58,6 +63,7 @@ export function RiskOpportunityForm({
   hideTypeSelector = false,
   submitLabel = 'Create',
   context = 'ro_page',
+  showStatusSelector = false,
 }: RiskOpportunityFormProps) {
   const { rocks } = useEosRocks();
   
@@ -67,6 +73,7 @@ export function RiskOpportunityForm({
     description: initialValues?.description || '',
     category: initialValues?.category || '',
     impact: initialValues?.impact || '',
+    status: initialValues?.status,
     quarter_number: initialValues?.quarter_number,
     quarter_year: initialValues?.quarter_year,
     linked_rock_id: initialValues?.linked_rock_id || '',
@@ -85,6 +92,7 @@ export function RiskOpportunityForm({
         description: initialValues.description ?? prev.description,
         category: initialValues.category ?? prev.category,
         impact: initialValues.impact ?? prev.impact,
+        status: initialValues.status ?? prev.status,
         quarter_number: initialValues.quarter_number ?? prev.quarter_number,
         quarter_year: initialValues.quarter_year ?? prev.quarter_year,
         linked_rock_id: initialValues.linked_rock_id ?? prev.linked_rock_id,
@@ -157,6 +165,25 @@ export function RiskOpportunityForm({
         />
       </div>
 
+      {/* Status (only shown in edit mode) */}
+      {showStatusSelector && (
+        <div className="space-y-2">
+          <Label>Status</Label>
+          <Select 
+            value={formData.status || '__none__'} 
+            onValueChange={(v) => setFormData({ ...formData, status: v === '__none__' ? undefined : v as RiskOpportunityStatus })}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Select..." />
+            </SelectTrigger>
+            <SelectContent>
+              {STATUSES.map(status => (
+                <SelectItem key={status} value={status}>{status}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
       {/* Category & Impact */}
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
