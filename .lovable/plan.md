@@ -1,96 +1,162 @@
 
 
-# Notes Package ID Alignment Migration
+# Migration Script: Phases 0, 1, 2 (Tenants Sync)
 
-## Summary
+## Overview
 
-After syncing `public.packages` with `unicorn1.packages` (preserving original IDs), we need to update the `notes.package_id` column to reference the correct package IDs based on the package name stored in `u1_package`.
+This first batch covers backup creation, FK constraint removal, and tenants ID synchronization. After running, you will validate before proceeding to packages sync.
 
-## Current State
+---
 
-| Metric | Value |
-|--------|-------|
-| Total notes with package references | 9,556 |
-| Current `package_id` values | All NULL |
-| `u1_package` (name) populated | Yes - 15 unique packages |
-| `u1_package_id` (stored) | Row numbers, NOT actual IDs |
+## What This Script Does
 
-### The Problem
+| Phase | Action | Impact |
+|-------|--------|--------|
+| 0 | Create backup tables | 6 tables backed up |
+| 1 | Drop all FK constraints | 136 constraints removed |
+| 2 | Sync tenants IDs | 20 child tables updated, `id` becomes legacy ID |
 
-The `u1_package_id` column contains **row sequence numbers** rather than actual package IDs:
+---
 
-| Package Name | Stored u1_package_id | Correct U1 Package ID |
-|--------------|----------------------|----------------------|
-| KS-RTO | 1 | 1 |
-| M-RR | 3 | 5 |
-| KS-CRI | 7 | 10 |
-| M-GC | 13 | 1016 |
-| M-DR | 39 | 1027 |
+## Technical Section: Complete SQL Script
 
-## Solution
+```text
+-- ============================================
+-- PHASES 0, 1, 2: BACKUP, DROP FKs, SYNC TENANTS
+-- ============================================
 
-Use name-based matching via `u1_package` column to derive the correct package ID.
+-- ============================================
+-- PHASE 0: CREATE BACKUP TABLES
+-- ============================================
+CREATE TABLE IF NOT EXISTS backup_tenants AS SELECT * FROM public.tenants;
+CREATE TABLE IF NOT EXISTS backup_packages AS SELECT * FROM public.packages;
+CREATE TABLE IF NOT EXISTS backup_package_instances AS SELECT * FROM public.package_instances;
+CREATE TABLE IF NOT EXISTS backup_notes AS SELECT * FROM public.notes;
+CREATE TABLE IF NOT EXISTS backup_tenant_addresses AS SELECT * FROM public.tenant_addresses;
+CREATE TABLE IF NOT EXISTS backup_users AS SELECT * FROM public.users;
 
-## Execution Order
+-- ============================================
+-- PHASE 1: DROP ALL FK CONSTRAINTS
+-- ============================================
+DO $$
+DECLARE
+  r RECORD;
+  drop_count INTEGER := 0;
+BEGIN
+  -- Drop FK constraints referencing tenants
+  FOR r IN 
+    SELECT conname, conrelid::regclass AS table_name
+    FROM pg_constraint 
+    WHERE contype = 'f' AND confrelid = 'public.tenants'::regclass
+  LOOP
+    EXECUTE format('ALTER TABLE %s DROP CONSTRAINT %I', r.table_name, r.conname);
+    drop_count := drop_count + 1;
+  END LOOP;
+  
+  -- Drop FK constraints referencing packages
+  FOR r IN 
+    SELECT conname, conrelid::regclass AS table_name
+    FROM pg_constraint 
+    WHERE contype = 'f' AND confrelid = 'public.packages'::regclass
+  LOOP
+    EXECUTE format('ALTER TABLE %s DROP CONSTRAINT %I', r.table_name, r.conname);
+    drop_count := drop_count + 1;
+  END LOOP;
+  
+  RAISE NOTICE 'Dropped % FK constraints', drop_count;
+END $$;
 
-**IMPORTANT**: This migration must run AFTER the packages sync migration.
+-- ============================================
+-- PHASE 2: SYNC TENANTS
+-- ============================================
 
-### Step 1: Packages Sync (Run First)
-```sql
-TRUNCATE TABLE public.package_instances CASCADE;
-TRUNCATE TABLE public.packages CASCADE;
+-- Step 2a: Delete tenants with NULL legacy_id (6 records)
+DELETE FROM public.tenants WHERE legacy_id IS NULL;
 
-INSERT INTO public.packages (id, name, ...)
-SELECT id, name, ... FROM unicorn1.packages;
+-- Step 2b: Drop primary key
+ALTER TABLE public.tenants DROP CONSTRAINT tenants_pkey;
 
--- Reset sequence
-SELECT setval('public.packages_id_seq', 
-  (SELECT COALESCE(MAX(id), 0) + 1 FROM public.packages), false);
+-- Step 2c: Rename id to import_id
+ALTER TABLE public.tenants RENAME COLUMN id TO import_id;
 
-INSERT INTO public.package_instances (id, ..., tenant_id)
-SELECT pi.id, ..., t.id 
-FROM unicorn1.package_instances pi
-LEFT JOIN public.tenants t ON t.legacy_id = pi.client_id;
+-- Step 2d: Update all 20 child tables with data
+UPDATE public.tenant_rto_scope c SET tenant_id = t.legacy_id FROM public.tenants t WHERE c.tenant_id = t.import_id;
+UPDATE public.eos_agenda_templates c SET tenant_id = t.legacy_id FROM public.tenants t WHERE c.tenant_id = t.import_id;
+UPDATE public.tenant_addresses c SET tenant_id = t.legacy_id FROM public.tenants t WHERE c.tenant_id = t.import_id;
+UPDATE public.users c SET tenant_id = t.legacy_id FROM public.tenants t WHERE c.tenant_id = t.import_id;
+UPDATE public.tenant_profile c SET tenant_id = t.legacy_id FROM public.tenants t WHERE c.tenant_id = t.import_id;
+UPDATE public.eos_clients c SET tenant_id = t.legacy_id FROM public.tenants t WHERE c.tenant_id = t.import_id;
+UPDATE public.eos_meetings c SET tenant_id = t.legacy_id FROM public.tenants t WHERE c.tenant_id = t.import_id;
+UPDATE public.eos_agendas c SET tenant_id = t.legacy_id FROM public.tenants t WHERE c.tenant_id = t.import_id;
+UPDATE public.tenant_compliance_settings c SET tenant_id = t.legacy_id FROM public.tenants t WHERE c.tenant_id = t.import_id;
+UPDATE public.eos_rocks c SET tenant_id = t.legacy_id FROM public.tenants t WHERE c.tenant_id = t.import_id;
+UPDATE public.eos_issues c SET tenant_id = t.legacy_id FROM public.tenants t WHERE c.tenant_id = t.import_id;
+UPDATE public.eos_todos c SET tenant_id = t.legacy_id FROM public.tenants t WHERE c.tenant_id = t.import_id;
+UPDATE public.documents c SET tenant_id = t.legacy_id FROM public.tenants t WHERE c.tenant_id = t.import_id;
+UPDATE public.eos_headlines c SET tenant_id = t.legacy_id FROM public.tenants t WHERE c.tenant_id = t.import_id;
+UPDATE public.eos_meeting_items c SET tenant_id = t.legacy_id FROM public.tenants t WHERE c.tenant_id = t.import_id;
+UPDATE public.membership_entitlements c SET tenant_id = t.legacy_id FROM public.tenants t WHERE c.tenant_id = t.import_id;
+UPDATE public.eos_vision c SET tenant_id = t.legacy_id FROM public.tenants t WHERE c.tenant_id = t.import_id;
+UPDATE public.client_package_stage_state c SET tenant_id = t.legacy_id FROM public.tenants t WHERE c.tenant_id = t.import_id;
+UPDATE public.package_workflow_logs c SET tenant_id = t.legacy_id FROM public.tenants t WHERE c.tenant_id = t.import_id;
+UPDATE public.tenant_stages c SET tenant_id = t.legacy_id FROM public.tenants t WHERE c.tenant_id = t.import_id;
+UPDATE public.notes c SET tenant_id = t.legacy_id FROM public.tenants t WHERE c.tenant_id = t.import_id;
 
--- Reset sequence
-SELECT setval('public.package_instances_id_seq', 
-  (SELECT COALESCE(MAX(id), 0) + 1 FROM public.package_instances), false);
+-- Step 2e: Rename legacy_id to id
+ALTER TABLE public.tenants RENAME COLUMN legacy_id TO id;
+
+-- Step 2f: Restore primary key
+ALTER TABLE public.tenants ADD PRIMARY KEY (id);
+
+-- Step 2g: Reset sequence
+SELECT setval('tenants_id_new_seq', (SELECT COALESCE(MAX(id), 0) + 1 FROM public.tenants), false);
+
+-- ============================================
+-- PHASE 2 VALIDATION
+-- ============================================
+DO $$
+DECLARE
+  tenant_count INTEGER;
+  tenant_min_id BIGINT;
+  tenant_max_id BIGINT;
+  fk_remaining INTEGER;
+BEGIN
+  SELECT COUNT(*), MIN(id), MAX(id) INTO tenant_count, tenant_min_id, tenant_max_id FROM public.tenants;
+  SELECT COUNT(*) INTO fk_remaining FROM pg_constraint WHERE contype = 'f' AND (confrelid = 'public.tenants'::regclass OR confrelid = 'public.packages'::regclass);
+  
+  RAISE NOTICE '=== PHASES 0-2 COMPLETE ===';
+  RAISE NOTICE 'Tenants: % records (id range: % to %)', tenant_count, tenant_min_id, tenant_max_id;
+  RAISE NOTICE 'FK constraints remaining: % (should be 0)', fk_remaining;
+  RAISE NOTICE '';
+  RAISE NOTICE 'Remaining phases:';
+  RAISE NOTICE '  Phase 3: Sync packages (rename id -> import_id, update 14 child tables)';
+  RAISE NOTICE '  Phase 4: Sync package_instances (rename columns)';
+  RAISE NOTICE '  Phase 5: Align notes.package_id by name matching';
+  RAISE NOTICE '  Phase 6: Restore FK constraints (separate script)';
+END $$;
 ```
 
-### Step 2: Notes Package ID Update (Run Second)
-```sql
--- Update package_id by joining on package name
-UPDATE public.notes n
-SET package_id = p.id
-FROM public.packages p
-WHERE LOWER(TRIM(n.u1_package)) = LOWER(TRIM(p.name))
-  AND n.u1_package IS NOT NULL;
+---
 
--- Verification
-SELECT 
-  COUNT(*) FILTER (WHERE package_id IS NOT NULL) as notes_with_package_id,
-  COUNT(*) FILTER (WHERE u1_package IS NOT NULL AND package_id IS NULL) as orphaned_notes
-FROM public.notes;
-```
+## Expected Results After This Script
 
-## Expected Results
+| Metric | Expected Value |
+|--------|----------------|
+| Tenants count | 399 (after deleting 6 with NULL legacy_id) |
+| Tenants ID range | 5 to 7537 (legacy IDs) |
+| FK constraints remaining | 0 |
+| Backup tables created | 6 |
 
-| Validation | Expected |
-|------------|----------|
-| Notes updated with package_id | 9,556 |
-| Orphaned notes (name not matched) | 0 |
-| Package IDs correctly aligned | Yes |
+---
 
-## Technical Notes
+## Remaining Phases After Validation
 
-- Uses case-insensitive, trimmed name matching for safety
-- Only updates notes where `u1_package` is populated
-- Does not touch notes with other `parent_type` values
-- Preserves all other note data unchanged
+| Phase | Description | Tables Affected |
+|-------|-------------|-----------------|
+| 3 | Sync packages | 14 child tables + packages |
+| 4 | Sync package_instances | Column renames only |
+| 5 | Align notes.package_id | Name-based matching |
+| 6 | Restore FK constraints | 136+ constraints (separate script) |
 
-## Risk Mitigation
-
-- Name-based matching verified for all 15 unique package names
-- All names exist in `unicorn1.packages`
-- No data loss - only populates previously NULL column
+After running this script, let me know the results and I will prepare Phase 3-5 for you.
 
