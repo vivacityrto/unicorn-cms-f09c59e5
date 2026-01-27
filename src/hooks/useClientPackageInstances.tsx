@@ -141,62 +141,50 @@ export function useClientPackageInstances() {
 
   const fetchClientPackages = useCallback(async (tenantId?: number): Promise<ClientPackageInstance[]> => {
     try {
+      // Use package_instances as source of truth
       let query = supabase
-        .from('client_packages')
-        .select(`
-          *,
-          package:packages(id, name, slug),
-          tenant:tenants(id, name)
-        `)
+        .from('package_instances')
+        .select('*')
+        .eq('is_complete', false)
         .order('created_at', { ascending: false });
 
       if (tenantId) {
         query = query.eq('tenant_id', tenantId);
       }
 
-      const { data, error } = await query;
+      const { data: instances, error } = await query;
       if (error) throw error;
 
-      // Get counts for each package
-      const packagesWithCounts = await Promise.all((data || []).map(async (pkg) => {
-        const [stagesRes, teamTasksRes, clientTasksRes, emailsRes] = await Promise.all([
-          supabase
-            .from('client_package_stages')
-            .select('id', { count: 'exact', head: true })
-            .eq('client_package_id', pkg.id),
-          supabase
-            .from('client_team_tasks')
-            .select('id', { count: 'exact', head: true })
-            .in('client_package_stage_id', 
-              (await supabase.from('client_package_stages').select('id').eq('client_package_id', pkg.id)).data?.map(s => s.id) || []
-            )
-            .eq('status', 'open'),
-          supabase
-            .from('client_tasks')
-            .select('id', { count: 'exact', head: true })
-            .in('client_package_stage_id',
-              (await supabase.from('client_package_stages').select('id').eq('client_package_id', pkg.id)).data?.map(s => s.id) || []
-            )
-            .eq('status', 'open'),
-          supabase
-            .from('client_email_queue')
-            .select('id', { count: 'exact', head: true })
-            .in('client_package_stage_id',
-              (await supabase.from('client_package_stages').select('id').eq('client_package_id', pkg.id)).data?.map(s => s.id) || []
-            )
-            .eq('status', 'queued')
-        ]);
+      if (!instances || instances.length === 0) return [];
 
-        return {
-          ...pkg,
-          stages_count: stagesRes.count || 0,
-          team_tasks_open: teamTasksRes.count || 0,
-          client_tasks_open: clientTasksRes.count || 0,
-          emails_queued: emailsRes.count || 0
-        };
+      // Fetch packages and tenants in parallel
+      const packageIds = [...new Set(instances.map(i => i.package_id))];
+      const tenantIds = [...new Set(instances.map(i => i.tenant_id))];
+
+      const [packagesRes, tenantsRes] = await Promise.all([
+        supabase.from('packages').select('id, name, slug').in('id', packageIds),
+        supabase.from('tenants').select('id, name').in('id', tenantIds)
+      ]);
+
+      const packageMap = new Map((packagesRes.data || []).map(p => [p.id, p]));
+      const tenantMap = new Map((tenantsRes.data || []).map(t => [t.id, t]));
+
+      // Map to ClientPackageInstance format
+      const mapped: ClientPackageInstance[] = instances.map(inst => ({
+        id: inst.id.toString(),
+        tenant_id: inst.tenant_id,
+        package_id: inst.package_id,
+        status: inst.is_complete ? 'closed' : 'active',
+        start_date: inst.start_date || '',
+        end_date: inst.end_date,
+        assigned_csc_user_id: inst.manager_id,
+        created_at: inst.start_date || '',
+        created_by: null,
+        package: packageMap.get(inst.package_id) || { id: inst.package_id, name: 'Unknown', slug: null },
+        tenant: tenantMap.get(inst.tenant_id) || { id: inst.tenant_id, name: 'Unknown' }
       }));
 
-      return packagesWithCounts as ClientPackageInstance[];
+      return mapped;
     } catch (error: any) {
       console.error('Error fetching client packages:', error);
       return [];
@@ -205,18 +193,35 @@ export function useClientPackageInstances() {
 
   const fetchPackageDetail = useCallback(async (clientPackageId: string): Promise<ClientPackageInstance | null> => {
     try {
-      const { data, error } = await supabase
-        .from('client_packages')
-        .select(`
-          *,
-          package:packages(id, name, slug),
-          tenant:tenants(id, name)
-        `)
-        .eq('id', clientPackageId)
+      // Fetch from package_instances
+      const { data: inst, error } = await supabase
+        .from('package_instances')
+        .select('*')
+        .eq('id', parseInt(clientPackageId))
         .single();
 
       if (error) throw error;
-      return data as ClientPackageInstance;
+      if (!inst) return null;
+
+      // Fetch package and tenant details in parallel
+      const [packageRes, tenantRes] = await Promise.all([
+        supabase.from('packages').select('id, name, slug').eq('id', inst.package_id).single(),
+        supabase.from('tenants').select('id, name').eq('id', inst.tenant_id).single()
+      ]);
+
+      return {
+        id: inst.id.toString(),
+        tenant_id: inst.tenant_id,
+        package_id: inst.package_id,
+        status: inst.is_complete ? 'closed' : 'active',
+        start_date: inst.start_date || '',
+        end_date: inst.end_date,
+        assigned_csc_user_id: inst.manager_id,
+        created_at: inst.start_date || '',
+        created_by: null,
+        package: packageRes.data || { id: inst.package_id, name: 'Unknown', slug: null },
+        tenant: tenantRes.data || { id: inst.tenant_id, name: 'Unknown' }
+      };
     } catch (error: any) {
       console.error('Error fetching package detail:', error);
       return null;

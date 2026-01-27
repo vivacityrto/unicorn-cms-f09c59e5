@@ -168,17 +168,26 @@ export default function TenantNotes() {
 
   const fetchTenantInfo = async () => {
     const pkgId = urlPackageId ? parseInt(urlPackageId) : null;
+    // Fetch tenant name
+    const { data: tenantData } = await supabase.from("tenants").select("name").eq("id", parsedTenantId).single();
+    if (tenantData) setTenantName(tenantData.name);
+    
     if (pkgId) {
-      const { data: tenantData } = await supabase.from("tenants").select("name").eq("id", parsedTenantId).single();
       const { data: pkgData } = await supabase.from("packages").select("name").eq("id", pkgId).single();
-      if (tenantData) setTenantName(tenantData.name);
       if (pkgData) setPackageAbbr(pkgData.name);
     } else {
-      const { data } = await supabase.from("tenants").select("name, packages(name)").eq("id", parsedTenantId).single();
-      if (data) {
-        setTenantName(data.name);
-        const pkg = data.packages as { name: string } | null;
-        setPackageAbbr(pkg?.name || "");
+      // Fetch active package via package_instances (source of truth)
+      const { data: instanceData } = await supabase
+        .from('package_instances')
+        .select('package_id')
+        .eq('tenant_id', parsedTenantId)
+        .eq('is_complete', false)
+        .limit(1)
+        .maybeSingle();
+      
+      if (instanceData?.package_id) {
+        const { data: pkgData } = await supabase.from("packages").select("name").eq("id", instanceData.package_id).single();
+        if (pkgData) setPackageAbbr(pkgData.name);
       }
     }
   };

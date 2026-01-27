@@ -235,16 +235,22 @@ export default function CalendarTimeCapture() {
   };
 
   const fetchPackagesForClient = async (clientId: number) => {
-    const { data } = await supabase
-      .from('client_packages')
-      .select('id, package:packages(id, name)')
+    // Use package_instances as source of truth
+    const { data: instances } = await supabase
+      .from('package_instances')
+      .select('package_id')
       .eq('tenant_id', clientId)
-      .eq('status', 'active');
-    if (data) {
-      setPackages(data.map(p => ({ 
-        id: (p.package as { id: number; name: string }).id, 
-        name: (p.package as { id: number; name: string }).name 
-      })));
+      .eq('is_complete', false);
+    
+    if (instances && instances.length > 0) {
+      const packageIds = [...new Set(instances.map(i => i.package_id))];
+      const { data: packages } = await supabase
+        .from('packages')
+        .select('id, name')
+        .in('id', packageIds);
+      setPackages((packages || []).map(p => ({ id: p.id, name: p.name })));
+    } else {
+      setPackages([]);
     }
   };
 

@@ -214,11 +214,7 @@ export default function TenantDetail() {
           status,
           package_id,
           package_ids,
-          package_added_at,
-          packages (
-            id,
-            name
-          )
+          package_added_at
         `).eq("id", parseInt(tenantId)).single();
       if (tenantError) throw tenantError;
       if (!tenantData) {
@@ -229,6 +225,25 @@ export default function TenantDetail() {
         });
         navigate('/manage-tenants');
         return;
+      }
+      
+      // Fetch package details via package_instances (source of truth)
+      let activePackage: { id: number; name: string } | null = null;
+      const { data: instanceData } = await supabase
+        .from('package_instances')
+        .select('package_id')
+        .eq('tenant_id', parseInt(tenantId))
+        .eq('is_complete', false)
+        .limit(1)
+        .maybeSingle();
+      
+      if (instanceData?.package_id) {
+        const { data: pkgData } = await supabase
+          .from('packages')
+          .select('id, name')
+          .eq('id', instanceData.package_id)
+          .single();
+        activePackage = pkgData;
       }
       setTenantStatus(tenantData.status || "active");
       const {
@@ -367,11 +382,11 @@ export default function TenantDetail() {
           }
         }
       }
-      if (tenantData.packages) {
-        const packageDate = new Date(tenantData.package_added_at);
+      if (activePackage) {
+        const packageDate = new Date(tenantData.package_added_at || new Date());
         setPackages([{
-          id: tenantData.package_id,
-          name: tenantData.packages.name,
+          id: activePackage.id,
+          name: activePackage.name,
           date: packageDate.toLocaleDateString('en-AU', {
             day: '2-digit',
             month: '2-digit',

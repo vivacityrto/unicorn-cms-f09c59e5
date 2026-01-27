@@ -63,7 +63,7 @@ export function AddTenantDialog({ open, onOpenChange, onSuccess, preSelectedPack
         return;
       }
 
-      const { error } = await supabase.from('tenants').insert({
+      const { error } = await supabase.from('tenants').insert([{
         name: tenantName,
         slug: tenantSlug,
         status: 'active',
@@ -76,7 +76,7 @@ export function AddTenantDialog({ open, onOpenChange, onSuccess, preSelectedPack
           notes: notes,
           source: 'manual'
         }
-      });
+      }] as any);
 
       if (error) throw error;
 

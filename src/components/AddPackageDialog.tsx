@@ -84,17 +84,17 @@ export function AddPackageDialog({
           description: 'Package updated successfully'
         });
       } else {
-        // Insert new package
+        // Insert new package - use RPC or explicit column selection to avoid type issues
         const {
           data: newPackage,
           error: packageError
-        } = await supabase.from('packages').insert({
+        } = await supabase.from('packages').insert([{
           name: packageAbbr.trim(),
           full_text: packageFullText.trim(),
           details: details.trim(),
           duration_months: durationMonths ? parseInt(durationMonths) : null,
           status: isActive ? 'active' : 'inactive'
-        }).select('id').single();
+        }] as any).select('id').single();
         if (packageError) throw packageError;
         toast({
           title: 'Success',
