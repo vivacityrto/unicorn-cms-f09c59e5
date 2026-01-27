@@ -9943,6 +9943,57 @@ export type Database = {
         }
         Relationships: []
       }
+      staff_task_instances: {
+        Row: {
+          assigned_date: string | null
+          assignee_id: string | null
+          completion_date: string | null
+          created_at: string | null
+          due_date: string | null
+          id: number
+          notes: string | null
+          staff_task_id: number
+          stage_instance_id: number
+          status: string
+          status_id: number
+          u1_assignee_id: number | null
+          u1_id: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          assigned_date?: string | null
+          assignee_id?: string | null
+          completion_date?: string | null
+          created_at?: string | null
+          due_date?: string | null
+          id: number
+          notes?: string | null
+          staff_task_id: number
+          stage_instance_id: number
+          status?: string
+          status_id?: number
+          u1_assignee_id?: number | null
+          u1_id?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          assigned_date?: string | null
+          assignee_id?: string | null
+          completion_date?: string | null
+          created_at?: string | null
+          due_date?: string | null
+          id?: number
+          notes?: string | null
+          staff_task_id?: number
+          stage_instance_id?: number
+          status?: string
+          status_id?: number
+          u1_assignee_id?: number | null
+          u1_id?: number | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       staff_tasks: {
         Row: {
           description: string | null
