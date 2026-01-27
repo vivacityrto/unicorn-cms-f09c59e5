@@ -5349,6 +5349,13 @@ export type Database = {
             referencedRelation: "eos_upcoming_meetings"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "eos_meeting_participants_user_id_users_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["user_uuid"]
+          },
         ]
       }
       eos_meeting_ratings: {

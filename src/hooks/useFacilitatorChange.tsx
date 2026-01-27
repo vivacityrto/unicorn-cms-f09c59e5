@@ -15,38 +15,20 @@ interface Participant {
 export const useFacilitatorChange = (meetingId: string | undefined) => {
   const queryClient = useQueryClient();
 
-  // Fetch participants for this meeting
+  // Fetch participants for this meeting with explicit FK join
   const { data: participants, isLoading: participantsLoading } = useQuery({
     queryKey: ['eos-meeting-participants', meetingId],
     queryFn: async () => {
       if (!meetingId) return [];
       
-      // Fetch participants without join to avoid FK issues
-      const { data: participantsData, error: participantsError } = await supabase
+      const { data, error } = await supabase
         .from('eos_meeting_participants')
-        .select('*')
+        .select('*, users!eos_meeting_participants_user_id_users_fkey(first_name, last_name)')
         .eq('meeting_id', meetingId);
       
-      if (participantsError) throw participantsError;
+      if (error) throw error;
       
-      // Fetch user details separately
-      const userIds = participantsData?.map(p => p.user_id).filter(Boolean) || [];
-      if (userIds.length === 0) return [];
-      
-      const { data: usersData, error: usersError } = await supabase
-        .from('users')
-        .select('user_uuid, first_name, last_name')
-        .in('user_uuid', userIds);
-      
-      if (usersError) throw usersError;
-      
-      // Merge data
-      const usersMap = new Map(usersData?.map(u => [u.user_uuid, u]) || []);
-      
-      return participantsData?.map(p => ({
-        ...p,
-        users: usersMap.get(p.user_id) || null
-      })) as Participant[];
+      return data as Participant[];
     },
     enabled: !!meetingId,
   });

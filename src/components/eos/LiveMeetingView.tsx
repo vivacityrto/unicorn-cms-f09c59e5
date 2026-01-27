@@ -71,13 +71,13 @@ export const LiveMeetingView = () => {
     enabled: !!meetingId,
   });
 
-  // Fetch participants
+  // Fetch participants with explicit FK join
   const { data: participants } = useQuery({
     queryKey: ['eos-meeting-participants', meetingId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('eos_meeting_participants')
-        .select('*, users(first_name, last_name)')
+        .select('*, users!eos_meeting_participants_user_id_users_fkey(first_name, last_name)')
         .eq('meeting_id', meetingId!);
       if (error) throw error;
       return data;
