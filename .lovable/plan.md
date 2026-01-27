@@ -1,40 +1,16 @@
 
 
-# Plan: Update dd_status Values and Run Staff Tasks Migration
+# Plan: Complete Staff Tasks Data Migration
 
-## Part 1: Update dd_status Value Column
+## Overview
 
-Update the `value` column in `public.dd_status` to be a normalized version of the description:
-- Lowercase
-- Spaces replaced with underscores
-- Forward slashes removed
-
-### SQL Update
-```sql
-UPDATE public.dd_status
-SET value = LOWER(REPLACE(REPLACE(description, ' ', '_'), '/', ''));
-```
-
-### Result Preview
-| code | description | value |
-|------|-------------|-------|
-| 0 | Not Started | not_started |
-| 1 | In Progress | in_progress |
-| 2 | Completed | completed |
-| 3 | N/A | na |
-| 100 | Active | active |
-| 101 | Disabled | disabled |
-| 102 | On Hold | on_hold |
-| 103 | Overrun | overrun |
+Run the following SQL scripts in Supabase Cloud View > Run SQL to complete the staff tasks migration.
 
 ---
 
-## Part 2: Staff Tasks Migration (Full)
+## Step 1: Populate public.staff_tasks (460 records)
 
-### Step 1: Populate public.staff_tasks (460 templates)
 ```sql
-TRUNCATE TABLE public.staff_tasks;
-
 INSERT INTO public.staff_tasks (id, order_number, name, description, stage_id, due_date_offset)
 OVERRIDING SYSTEM VALUE
 SELECT id, ordernumber, name, description, stage_id, duedateoffset
@@ -47,36 +23,10 @@ SELECT setval(
 );
 ```
 
-### Step 2: Create public.staff_task_instances
-```sql
-CREATE TABLE public.staff_task_instances (
-  id bigint PRIMARY KEY,
-  staff_task_id bigint NOT NULL,
-  stage_instance_id bigint NOT NULL,
-  status_id integer NOT NULL DEFAULT 0,
-  status text NOT NULL DEFAULT 'Not Started',
-  completion_date timestamp with time zone,
-  due_date timestamp with time zone,
-  assigned_date timestamp with time zone,
-  notes text,
-  assignee_id uuid,
-  u1_assignee_id integer,
-  u1_id integer,
-  created_at timestamp with time zone DEFAULT now(),
-  updated_at timestamp with time zone DEFAULT now()
-);
+---
 
-CREATE INDEX idx_staff_task_instances_stage_instance_id 
-  ON public.staff_task_instances(stage_instance_id);
-CREATE INDEX idx_staff_task_instances_staff_task_id 
-  ON public.staff_task_instances(staff_task_id);
-CREATE INDEX idx_staff_task_instances_assignee_id 
-  ON public.staff_task_instances(assignee_id);
+## Step 2: Populate public.staff_task_instances (69,208 records)
 
-ALTER TABLE public.staff_task_instances ENABLE ROW LEVEL SECURITY;
-```
-
-### Step 3: Populate with Triple Join (69,208 records)
 ```sql
 INSERT INTO public.staff_task_instances (
   id, staff_task_id, stage_instance_id, 
@@ -108,29 +58,33 @@ SELECT setval(
 );
 ```
 
-### Step 4: Add RLS Policies
-```sql
-CREATE POLICY "Users can view staff task instances"
-  ON public.staff_task_instances
-  FOR SELECT TO authenticated
-  USING (true);
+---
 
-CREATE POLICY "Users can update staff task instances"
-  ON public.staff_task_instances
-  FOR UPDATE TO authenticated
-  USING (true)
-  WITH CHECK (true);
+## Verification Queries
+
+After running the above, verify the counts:
+
+```sql
+-- Should return 460
+SELECT COUNT(*) FROM public.staff_tasks;
+
+-- Should return 69,208
+SELECT COUNT(*) FROM public.staff_task_instances;
+
+-- Check status mapping worked
+SELECT status_id, status, COUNT(*) 
+FROM public.staff_task_instances 
+GROUP BY status_id, status 
+ORDER BY status_id;
 ```
 
 ---
 
 ## Execution Summary
 
-| Step | Action | Records |
-|------|--------|---------|
-| 1 | Update dd_status values | 8 |
-| 2 | Populate staff_tasks | 460 |
-| 3 | Create staff_task_instances table | - |
-| 4 | Populate staff_task_instances | 69,208 |
-| 5 | Add RLS policies | 2 |
+| Step | Action | Expected Records |
+|------|--------|------------------|
+| 1 | Populate staff_tasks | 460 |
+| 2 | Populate staff_task_instances | 69,208 |
+| 3 | Verify counts | - |
 
