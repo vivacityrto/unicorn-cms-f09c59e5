@@ -7,21 +7,31 @@
 
 /**
  * Format an enum value into a human-readable label.
- * Handles snake_case, PascalCase, and Title Case values.
+ * 
+ * IMPORTANT: For status enums, pass the value through unchanged.
+ * The eos_issue_status enum values are already human-readable:
+ * "Open", "Discussing", "In Review", "Actioning", "Solved", "Archived", "Escalated", "Closed"
+ * 
+ * This function only handles legacy snake_case values for non-enum text fields.
  * 
  * @example
- * formatEnumLabel('in_review') // 'In Review'
- * formatEnumLabel('needs_attention') // 'Needs Attention'
- * formatEnumLabel('Open') // 'Open'
- * formatEnumLabel('At_Risk') // 'At Risk'
+ * formatEnumLabel('Open') // 'Open' (unchanged)
+ * formatEnumLabel('In Review') // 'In Review' (unchanged)
+ * formatEnumLabel('some_legacy_value') // 'Some Legacy Value'
  */
 export function formatEnumLabel(value: string): string {
   if (!value) return '';
   
-  // Replace underscores with spaces
-  let result = value.replace(/_/g, ' ');
+  // If value contains spaces, it's already formatted - return as-is
+  if (value.includes(' ')) return value;
   
-  // Title case each word
+  // If value is already Title Case (starts with uppercase, no underscores), return as-is
+  if (!value.includes('_') && value[0] === value[0].toUpperCase()) {
+    return value;
+  }
+  
+  // Only transform snake_case values (legacy support)
+  let result = value.replace(/_/g, ' ');
   result = result
     .split(' ')
     .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
