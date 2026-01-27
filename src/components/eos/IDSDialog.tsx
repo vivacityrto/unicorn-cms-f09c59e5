@@ -133,6 +133,7 @@ export function IDSDialog({ open, onOpenChange, issue, isFacilitator }: IDSDialo
       return;
     }
 
+    // Use exact enum value (case-sensitive)
     await setStatus.mutateAsync({ status: 'Solved', solutionText: solution });
     
     if (todos.length > 0) {
@@ -184,9 +185,9 @@ export function IDSDialog({ open, onOpenChange, issue, isFacilitator }: IDSDialo
               </div>
             )}
 
-            {isFacilitator && issue.status === 'open' && (
+            {isFacilitator && issue.status === 'Open' && (
               <Button
-                onClick={() => setStatus.mutate({ status: 'discussing' })}
+                onClick={() => setStatus.mutate({ status: 'Discussing' })}
                 className="w-full"
               >
                 Start Discussing
@@ -205,7 +206,7 @@ export function IDSDialog({ open, onOpenChange, issue, isFacilitator }: IDSDialo
               />
             </div>
 
-            {isFacilitator && issue.status === 'discussing' && (
+            {isFacilitator && issue.status === 'Discussing' && (
               <Button
                 onClick={() => setActiveTab('solve')}
                 className="w-full"

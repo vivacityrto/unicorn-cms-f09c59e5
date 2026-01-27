@@ -16,17 +16,25 @@ interface IssuesQueueProps {
 export function IssuesQueue({ issues, onSelectIssue, onCreateIssue, isFacilitator }: IssuesQueueProps) {
   const [filter, setFilter] = useState<'all' | string>('all');
 
+  // Priority is stored as integer: 3=High, 2=Medium, 1=Low
+  // Also supports legacy string values: 'high', 'medium', 'low'
   const getPriorityColor = (priority?: number | string) => {
-    const priorityStr = typeof priority === 'number' 
-      ? (priority >= 3 ? 'high' : priority >= 2 ? 'medium' : 'low')
+    if (priority === undefined) return 'bg-muted text-muted-foreground border-border';
+    // Handle both number and string priority values
+    const priorityNum = typeof priority === 'string' 
+      ? (priority === 'high' ? 3 : priority === 'medium' ? 2 : 1)
       : priority;
-    
-    switch (priorityStr) {
-      case 'high': return 'bg-red-100 text-red-800 border-red-200';
-      case 'medium': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-      case 'low': return 'bg-blue-100 text-blue-800 border-blue-200';
-      default: return 'bg-gray-100 text-gray-800 border-gray-200';
-    }
+    if (priorityNum >= 3) return 'bg-red-100 text-red-800 border-red-200';
+    if (priorityNum >= 2) return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+    return 'bg-blue-100 text-blue-800 border-blue-200';
+  };
+
+  const getPriorityLabel = (priority?: number | string) => {
+    if (priority === undefined) return '';
+    if (typeof priority === 'string') return priority.charAt(0).toUpperCase() + priority.slice(1);
+    if (priority >= 3) return 'High';
+    if (priority >= 2) return 'Medium';
+    return 'Low';
   };
 
   const filteredIssues = issues?.filter(issue => 
@@ -86,9 +94,9 @@ export function IssuesQueue({ issues, onSelectIssue, onCreateIssue, isFacilitato
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 flex-wrap mb-1">
                   <p className="font-medium text-sm">{issue.title}</p>
-                  {issue.priority && (
+                  {issue.priority !== undefined && (
                     <Badge className={`text-xs ${getPriorityColor(issue.priority)}`}>
-                      {issue.priority}
+                      {getPriorityLabel(issue.priority)}
                     </Badge>
                   )}
                   <ClientBadge clientId={issue.client_id} />

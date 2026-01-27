@@ -1,7 +1,9 @@
 // Risks & Opportunities Type Definitions
+// These types are derived from database enums and views - do NOT hardcode values here
 
 export type RiskOpportunityType = 'risk' | 'opportunity';
 
+// Category values come from eos_issue_category_options view
 export type RiskOpportunityCategory = 
   | 'Delivery'
   | 'Compliance'
@@ -12,9 +14,11 @@ export type RiskOpportunityCategory =
   | 'Strategic'
   | 'Growth';
 
+// Impact values come from eos_issue_impact_options view
 export type RiskOpportunityImpact = 'Low' | 'Medium' | 'High' | 'Critical';
 
-// Status values must match eos_issue_status enum exactly (case-sensitive)
+// Status values come from eos_issue_status enum via eos_issue_status_options view
+// These MUST match the database enum exactly (case-sensitive)
 export type RiskOpportunityStatus = 
   | 'Open'
   | 'Discussing'
@@ -47,6 +51,9 @@ export interface RiskOpportunity {
   updated_at: string;
 }
 
+// NOTE: Do NOT use these hardcoded constants - use useEosOptions hooks instead
+// These are kept only for TypeScript type definitions
+// @deprecated Use useEosCategoryOptions() hook instead
 export const CATEGORIES: RiskOpportunityCategory[] = [
   'Delivery',
   'Compliance',
@@ -58,9 +65,10 @@ export const CATEGORIES: RiskOpportunityCategory[] = [
   'Growth',
 ];
 
+// @deprecated Use useEosImpactOptions() hook instead
 export const IMPACTS: RiskOpportunityImpact[] = ['Low', 'Medium', 'High', 'Critical'];
 
-// Status values must match eos_issue_status enum exactly (case-sensitive)
+// @deprecated Use useEosStatusOptions() hook instead
 export const STATUSES: RiskOpportunityStatus[] = [
   'Open',
   'Discussing',

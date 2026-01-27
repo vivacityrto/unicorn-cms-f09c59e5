@@ -14095,7 +14095,25 @@ export type Database = {
         }
         Relationships: []
       }
+      eos_issue_category_options: {
+        Row: {
+          value: string | null
+        }
+        Relationships: []
+      }
+      eos_issue_impact_options: {
+        Row: {
+          value: string | null
+        }
+        Relationships: []
+      }
       eos_issue_status_options: {
+        Row: {
+          value: string | null
+        }
+        Relationships: []
+      }
+      eos_issue_type_options: {
         Row: {
           value: string | null
         }
@@ -14234,6 +14252,12 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      eos_quarter_options: {
+        Row: {
+          value: number | null
+        }
+        Relationships: []
       }
       eos_upcoming_meetings: {
         Row: {
