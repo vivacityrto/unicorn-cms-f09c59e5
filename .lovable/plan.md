@@ -1,94 +1,96 @@
 
-# Plan: Fix Edit Button on Risks and Opportunities Page
 
-## Problem
-The Edit button on the Risks and Opportunities page is non-functional. It renders as a static button with no click handler, preventing users from editing existing Risk or Opportunity items.
+# Notes Package ID Alignment Migration
 
-## Root Cause
-In `src/pages/EosRisksOpportunities.tsx` at line 336:
-```tsx
-<Button variant="outline" size="sm">Edit</Button>
-```
-This button has no `onClick` property and no supporting state or dialog logic to enable editing.
+## Summary
+
+After syncing `public.packages` with `unicorn1.packages` (preserving original IDs), we need to update the `notes.package_id` column to reference the correct package IDs based on the package name stored in `u1_package`.
+
+## Current State
+
+| Metric | Value |
+|--------|-------|
+| Total notes with package references | 9,556 |
+| Current `package_id` values | All NULL |
+| `u1_package` (name) populated | Yes - 15 unique packages |
+| `u1_package_id` (stored) | Row numbers, NOT actual IDs |
+
+### The Problem
+
+The `u1_package_id` column contains **row sequence numbers** rather than actual package IDs:
+
+| Package Name | Stored u1_package_id | Correct U1 Package ID |
+|--------------|----------------------|----------------------|
+| KS-RTO | 1 | 1 |
+| M-RR | 3 | 5 |
+| KS-CRI | 7 | 10 |
+| M-GC | 13 | 1016 |
+| M-DR | 39 | 1027 |
 
 ## Solution
-Add edit functionality by:
-1. Creating state to track which item is being edited
-2. Adding a Dialog for the edit form
-3. Connecting the Edit button to open the dialog with the selected item
-4. Adding a handler to call the existing `updateItem` mutation
 
----
+Use name-based matching via `u1_package` column to derive the correct package ID.
 
-## Implementation Details
+## Execution Order
 
-### Step 1: Add State Variables
-Add two new state variables to manage the edit dialog:
-- `isEditOpen`: boolean to control dialog visibility
-- `editingItem`: the item currently being edited (or null)
+**IMPORTANT**: This migration must run AFTER the packages sync migration.
 
-### Step 2: Add Edit Handler
-Create a `handleEdit` function that:
-- Receives the item to edit
-- Sets the `editingItem` state
-- Opens the edit dialog
+### Step 1: Packages Sync (Run First)
+```sql
+TRUNCATE TABLE public.package_instances CASCADE;
+TRUNCATE TABLE public.packages CASCADE;
 
-### Step 3: Add Update Handler
-Create a `handleUpdate` function that:
-- Takes form data and calls `updateItem.mutateAsync`
-- Includes the item ID from `editingItem`
-- Closes the dialog on success
+INSERT INTO public.packages (id, name, ...)
+SELECT id, name, ... FROM unicorn1.packages;
 
-### Step 4: Add Edit Dialog
-Add a second Dialog component (similar to create dialog) that:
-- Uses the same `RiskOpportunityForm` component
-- Passes `initialValues` from `editingItem`
-- Sets `submitLabel` to "Save Changes"
-- Calls `handleUpdate` on submit
+-- Reset sequence
+SELECT setval('public.packages_id_seq', 
+  (SELECT COALESCE(MAX(id), 0) + 1 FROM public.packages), false);
 
-### Step 5: Connect Edit Button
-Update the Edit button to call `handleEdit(item)` on click.
+INSERT INTO public.package_instances (id, ..., tenant_id)
+SELECT pi.id, ..., t.id 
+FROM unicorn1.package_instances pi
+LEFT JOIN public.tenants t ON t.legacy_id = pi.client_id;
 
----
-
-## File Changes
-
-| File | Change |
-|------|--------|
-| `src/pages/EosRisksOpportunities.tsx` | Add edit state, handlers, dialog, and button onClick |
-
----
-
-## Code Changes Summary
-
-```text
-+-----------------------------------------------+
-|  EosRisksOpportunities.tsx                    |
-+-----------------------------------------------+
-|  + const [isEditOpen, setIsEditOpen]          |
-|  + const [editingItem, setEditingItem]        |
-|                                               |
-|  + handleEdit(item) => opens dialog           |
-|  + handleUpdate(formData) => calls updateItem |
-|                                               |
-|  + <Dialog> for Edit with RiskOpportunityForm |
-|                                               |
-|  ~ Edit button: onClick={() => handleEdit()}  |
-+-----------------------------------------------+
+-- Reset sequence
+SELECT setval('public.package_instances_id_seq', 
+  (SELECT COALESCE(MAX(id), 0) + 1 FROM public.package_instances), false);
 ```
 
----
+### Step 2: Notes Package ID Update (Run Second)
+```sql
+-- Update package_id by joining on package name
+UPDATE public.notes n
+SET package_id = p.id
+FROM public.packages p
+WHERE LOWER(TRIM(n.u1_package)) = LOWER(TRIM(p.name))
+  AND n.u1_package IS NOT NULL;
 
-## Expected Behavior After Fix
-1. Click "Edit" button on any Risk or Opportunity item
-2. Edit dialog opens with current item data pre-filled
-3. Modify fields and click "Save Changes"
-4. Item updates in database and UI refreshes
-5. Success toast confirms the update
+-- Verification
+SELECT 
+  COUNT(*) FILTER (WHERE package_id IS NOT NULL) as notes_with_package_id,
+  COUNT(*) FILTER (WHERE u1_package IS NOT NULL AND package_id IS NULL) as orphaned_notes
+FROM public.notes;
+```
 
----
+## Expected Results
 
-## No Changes Required
-- `RiskOpportunityForm` already supports `initialValues` and custom `submitLabel`
-- `useRisksOpportunities` hook already provides `updateItem` mutation
-- Type definitions are complete in `src/types/risksOpportunities.ts`
+| Validation | Expected |
+|------------|----------|
+| Notes updated with package_id | 9,556 |
+| Orphaned notes (name not matched) | 0 |
+| Package IDs correctly aligned | Yes |
+
+## Technical Notes
+
+- Uses case-insensitive, trimmed name matching for safety
+- Only updates notes where `u1_package` is populated
+- Does not touch notes with other `parent_type` values
+- Preserves all other note data unchanged
+
+## Risk Mitigation
+
+- Name-based matching verified for all 15 unique package names
+- All names exist in `unicorn1.packages`
+- No data loss - only populates previously NULL column
+
