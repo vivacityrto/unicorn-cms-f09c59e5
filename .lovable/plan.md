@@ -1,31 +1,22 @@
 
 
-# Plan: Complete Staff Tasks Data Migration
+# Plan: Fix Staff Task Instances Status Column
 
 ## Overview
 
-Run the following SQL scripts in Supabase Cloud View > Run SQL to complete the staff tasks migration.
+Truncate and reinsert `public.staff_task_instances` using the `value` column from `dd_status` instead of `description`.
 
 ---
 
-## Step 1: Populate public.staff_tasks (460 records)
+## Step 1: Truncate staff_task_instances
 
 ```sql
-INSERT INTO public.staff_tasks (id, order_number, name, description, stage_id, due_date_offset)
-OVERRIDING SYSTEM VALUE
-SELECT id, ordernumber, name, description, stage_id, duedateoffset
-FROM unicorn1.staff_tasks;
-
-SELECT setval(
-  pg_get_serial_sequence('public.staff_tasks', 'id'),
-  (SELECT COALESCE(MAX(id), 0) + 1 FROM public.staff_tasks),
-  false
-);
+TRUNCATE TABLE public.staff_task_instances;
 ```
 
 ---
 
-## Step 2: Populate public.staff_task_instances (69,208 records)
+## Step 2: Reinsert with correct status value (69,208 records)
 
 ```sql
 INSERT INTO public.staff_task_instances (
@@ -39,7 +30,7 @@ SELECT
   sti.stafftask_id,
   sti.stageinstance_id,
   sti.status,
-  ds.description,
+  ds.value,
   sti.completiondate,
   sti.duedate,
   sti.assigneddate,
@@ -50,41 +41,28 @@ SELECT
 FROM unicorn1.staff_task_instances sti
 LEFT JOIN public.users u ON sti.assignee_id = u.legacy_id
 LEFT JOIN public.dd_status ds ON sti.status = ds.code;
-
-SELECT setval(
-  pg_get_serial_sequence('public.staff_task_instances', 'id'),
-  (SELECT COALESCE(MAX(id), 0) + 1 FROM public.staff_task_instances),
-  false
-);
 ```
 
 ---
 
-## Verification Queries
-
-After running the above, verify the counts:
+## Verification Query
 
 ```sql
--- Should return 460
-SELECT COUNT(*) FROM public.staff_tasks;
-
--- Should return 69,208
-SELECT COUNT(*) FROM public.staff_task_instances;
-
--- Check status mapping worked
 SELECT status_id, status, COUNT(*) 
 FROM public.staff_task_instances 
 GROUP BY status_id, status 
 ORDER BY status_id;
 ```
 
+Expected output should show lowercase values like `not_started`, `in_progress`, `completed`, `na`.
+
 ---
 
 ## Execution Summary
 
-| Step | Action | Expected Records |
-|------|--------|------------------|
-| 1 | Populate staff_tasks | 460 |
-| 2 | Populate staff_task_instances | 69,208 |
-| 3 | Verify counts | - |
+| Step | Action |
+|------|--------|
+| 1 | Truncate staff_task_instances |
+| 2 | Reinsert with ds.value instead of ds.description |
+| 3 | Verify status values are lowercase |
 
