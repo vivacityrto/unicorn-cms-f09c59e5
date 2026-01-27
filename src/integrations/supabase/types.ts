@@ -8384,7 +8384,6 @@ export type Database = {
       }
       package_instances: {
         Row: {
-          client_id: number
           clo_id: number
           end_date: string | null
           hours_added: number | null
@@ -8398,11 +8397,11 @@ export type Database = {
           release_documents_office: boolean
           release_documents_pdf: boolean
           start_date: string
-          tenant_id: number | null
+          tenant_id: number
           u1_packageid: number | null
+          u2tid: number | null
         }
         Insert: {
-          client_id: number
           clo_id: number
           end_date?: string | null
           hours_added?: number | null
@@ -8416,11 +8415,11 @@ export type Database = {
           release_documents_office?: boolean
           release_documents_pdf?: boolean
           start_date: string
-          tenant_id?: number | null
+          tenant_id: number
           u1_packageid?: number | null
+          u2tid?: number | null
         }
         Update: {
-          client_id?: number
           clo_id?: number
           end_date?: string | null
           hours_added?: number | null
@@ -8434,8 +8433,9 @@ export type Database = {
           release_documents_office?: boolean
           release_documents_pdf?: boolean
           start_date?: string
-          tenant_id?: number | null
+          tenant_id?: number
           u1_packageid?: number | null
+          u2tid?: number | null
         }
         Relationships: []
       }
