@@ -24,6 +24,8 @@ function RisksOpportunitiesContent() {
   const { items, isLoading, createItem, updateItem } = useRisksOpportunities();
   const { rocks } = useEosRocks();
   const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [isEditOpen, setIsEditOpen] = useState(false);
+  const [editingItem, setEditingItem] = useState<typeof items extends (infer T)[] | undefined ? T | null : null>(null);
   const [filterType, setFilterType] = useState<'all' | RiskOpportunityType>('all');
   const [filterCategory, setFilterCategory] = useState<'all' | RiskOpportunityCategory>('all');
   const [filterStatus, setFilterStatus] = useState<'all' | RiskOpportunityStatus>('all');
@@ -41,6 +43,31 @@ function RisksOpportunitiesContent() {
     });
     
     setIsCreateOpen(false);
+  };
+
+  const handleEdit = (item: NonNullable<typeof items>[number]) => {
+    setEditingItem(item);
+    setIsEditOpen(true);
+  };
+
+  const handleUpdate = async (formData: RiskOpportunityFormData) => {
+    if (!editingItem) return;
+    
+    await updateItem.mutateAsync({
+      id: editingItem.id,
+      item_type: formData.item_type,
+      title: formData.title,
+      description: formData.description,
+      category: formData.category || undefined,
+      impact: formData.impact || undefined,
+      status: formData.status,
+      quarter_number: formData.quarter_number,
+      quarter_year: formData.quarter_year,
+      linked_rock_id: formData.linked_rock_id || undefined,
+    });
+    
+    setIsEditOpen(false);
+    setEditingItem(null);
   };
 
   const handleStatusChange = async (id: string, newStatus: RiskOpportunityStatus, outcomeNote?: string) => {
@@ -146,6 +173,41 @@ function RisksOpportunitiesContent() {
               onCancel={() => setIsCreateOpen(false)}
               isSubmitting={createItem.isPending}
             />
+          </DialogContent>
+        </Dialog>
+
+        {/* Edit Dialog */}
+        <Dialog open={isEditOpen} onOpenChange={(open) => {
+          setIsEditOpen(open);
+          if (!open) setEditingItem(null);
+        }}>
+          <DialogContent className="max-w-lg">
+            <DialogHeader>
+              <DialogTitle>Edit {editingItem?.item_type === 'risk' ? 'Risk' : 'Opportunity'}</DialogTitle>
+            </DialogHeader>
+            {editingItem && (
+              <RiskOpportunityForm
+                onSubmit={handleUpdate}
+                onCancel={() => {
+                  setIsEditOpen(false);
+                  setEditingItem(null);
+                }}
+                isSubmitting={updateItem.isPending}
+                initialValues={{
+                  item_type: editingItem.item_type,
+                  title: editingItem.title,
+                  description: editingItem.description || '',
+                  category: editingItem.category || null,
+                  impact: editingItem.impact || null,
+                  status: editingItem.status,
+                  quarter_number: editingItem.quarter_number,
+                  quarter_year: editingItem.quarter_year,
+                  linked_rock_id: editingItem.linked_rock_id || null,
+                }}
+                submitLabel="Save Changes"
+                showStatusSelector
+              />
+            )}
           </DialogContent>
         </Dialog>
       </div>
@@ -333,7 +395,7 @@ function RisksOpportunitiesContent() {
                         ))}
                       </SelectContent>
                     </Select>
-                    <Button variant="outline" size="sm">Edit</Button>
+                    <Button variant="outline" size="sm" onClick={() => handleEdit(item)}>Edit</Button>
                     {item.status === 'Escalated' && (
                       <Badge variant="destructive" className="animate-pulse">Requires Leadership</Badge>
                     )}

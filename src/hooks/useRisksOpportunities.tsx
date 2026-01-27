@@ -88,14 +88,15 @@ export const useRisksOpportunities = () => {
 
   const updateItem = useMutation({
     mutationFn: async ({ id, ...updates }: Partial<RiskOpportunity> & { id: string }) => {
-      // Convert enum values to lowercase for database constraints
+      // Build update payload - status should NOT be lowercased as the enum is case-sensitive
       const dbUpdates: Record<string, unknown> = {
         updated_at: new Date().toISOString(),
       };
       
       if (updates.category !== undefined) dbUpdates.category = updates.category?.toLowerCase();
       if (updates.impact !== undefined) dbUpdates.impact = updates.impact?.toLowerCase();
-      if (updates.status !== undefined) dbUpdates.status = updates.status?.toLowerCase();
+      // Status enum values are case-sensitive (e.g., "In Review", "Escalated") - don't lowercase
+      if (updates.status !== undefined) dbUpdates.status = updates.status;
       if (updates.title !== undefined) dbUpdates.title = updates.title;
       if (updates.description !== undefined) dbUpdates.description = updates.description;
       if (updates.quarter_number !== undefined) dbUpdates.quarter_number = updates.quarter_number;
