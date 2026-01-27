@@ -803,6 +803,8 @@ export const LiveMeetingView = () => {
         open={createIssueOpen}
         onOpenChange={setCreateIssueOpen}
         meetingId={meetingId}
+        meetingSegmentId={currentSegment?.id}
+        context="meeting_ids"
       />
 
       <MeetingCloseValidationDialog

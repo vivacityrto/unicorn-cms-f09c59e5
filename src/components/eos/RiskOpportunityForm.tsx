@@ -14,6 +14,8 @@ import {
   type RiskOpportunityImpact 
 } from '@/types/risksOpportunities';
 
+export type FormContext = 'ro_page' | 'meeting_ids';
+
 export interface RiskOpportunityFormData {
   item_type: RiskOpportunityType;
   title: string;
@@ -24,6 +26,8 @@ export interface RiskOpportunityFormData {
   quarter_year?: number;
   linked_rock_id: string;
   meeting_id?: string;
+  meeting_segment_id?: string;
+  source?: string;
 }
 
 interface RiskOpportunityFormProps {
@@ -39,6 +43,8 @@ interface RiskOpportunityFormProps {
   hideTypeSelector?: boolean;
   /** Submit button text */
   submitLabel?: string;
+  /** Context determines which fields are shown and behavior */
+  context?: FormContext;
 }
 
 const CURRENT_YEAR = new Date().getFullYear();
@@ -51,6 +57,7 @@ export function RiskOpportunityForm({
   isSubmitting = false,
   hideTypeSelector = false,
   submitLabel = 'Create',
+  context = 'ro_page',
 }: RiskOpportunityFormProps) {
   const { rocks } = useEosRocks();
   
@@ -64,6 +71,8 @@ export function RiskOpportunityForm({
     quarter_year: initialValues?.quarter_year,
     linked_rock_id: initialValues?.linked_rock_id || '',
     meeting_id: initialValues?.meeting_id,
+    meeting_segment_id: initialValues?.meeting_segment_id,
+    source: initialValues?.source || (context === 'meeting_ids' ? 'meeting_ids' : 'ro_page'),
   });
 
   // Update form when initial values change
@@ -80,6 +89,8 @@ export function RiskOpportunityForm({
         quarter_year: initialValues.quarter_year ?? prev.quarter_year,
         linked_rock_id: initialValues.linked_rock_id ?? prev.linked_rock_id,
         meeting_id: initialValues.meeting_id ?? prev.meeting_id,
+        meeting_segment_id: initialValues.meeting_segment_id ?? prev.meeting_segment_id,
+        source: initialValues.source ?? prev.source,
       }));
     }
   }, [initialValues]);
@@ -90,6 +101,9 @@ export function RiskOpportunityForm({
   };
 
   const isValid = formData.title.trim().length > 0;
+  
+  // In meeting context, hide quarter/year fields as they're less relevant for IDS
+  const showQuarterYear = context !== 'meeting_ids';
 
   return (
     <div className="space-y-4">
@@ -107,13 +121,13 @@ export function RiskOpportunityForm({
             <SelectContent>
               <SelectItem value="risk">
                 <div className="flex items-center gap-2">
-                  <AlertTriangle className="w-4 h-4 text-warning" />
+                  <AlertTriangle className="w-4 h-4 text-amber-500" />
                   Risk
                 </div>
               </SelectItem>
               <SelectItem value="opportunity">
                 <div className="flex items-center gap-2">
-                  <Lightbulb className="w-4 h-4 text-success" />
+                  <Lightbulb className="w-4 h-4 text-emerald-500" />
                   Opportunity
                 </div>
               </SelectItem>
@@ -182,45 +196,47 @@ export function RiskOpportunityForm({
         </div>
       </div>
 
-      {/* Quarter & Year */}
-      <div className="grid grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label>Quarter</Label>
-          <Select 
-            value={formData.quarter_number?.toString() || '__none__'} 
-            onValueChange={(v) => setFormData({ ...formData, quarter_number: v === '__none__' ? undefined : parseInt(v) })}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select..." />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="__none__">Select...</SelectItem>
-              <SelectItem value="1">Q1</SelectItem>
-              <SelectItem value="2">Q2</SelectItem>
-              <SelectItem value="3">Q3</SelectItem>
-              <SelectItem value="4">Q4</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
+      {/* Quarter & Year - Hidden in meeting context */}
+      {showQuarterYear && (
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label>Quarter</Label>
+            <Select 
+              value={formData.quarter_number?.toString() || '__none__'} 
+              onValueChange={(v) => setFormData({ ...formData, quarter_number: v === '__none__' ? undefined : parseInt(v) })}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select..." />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__none__">Select...</SelectItem>
+                <SelectItem value="1">Q1</SelectItem>
+                <SelectItem value="2">Q2</SelectItem>
+                <SelectItem value="3">Q3</SelectItem>
+                <SelectItem value="4">Q4</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
 
-        <div className="space-y-2">
-          <Label>Year</Label>
-          <Select 
-            value={formData.quarter_year?.toString() || '__none__'} 
-            onValueChange={(v) => setFormData({ ...formData, quarter_year: v === '__none__' ? undefined : parseInt(v) })}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select..." />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="__none__">Select...</SelectItem>
-              {YEARS.map(year => (
-                <SelectItem key={year} value={year.toString()}>{year}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <div className="space-y-2">
+            <Label>Year</Label>
+            <Select 
+              value={formData.quarter_year?.toString() || '__none__'} 
+              onValueChange={(v) => setFormData({ ...formData, quarter_year: v === '__none__' ? undefined : parseInt(v) })}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select..." />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__none__">Select...</SelectItem>
+                {YEARS.map(year => (
+                  <SelectItem key={year} value={year.toString()}>{year}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Linked Rock */}
       <div className="space-y-2">
