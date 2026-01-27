@@ -11,12 +11,15 @@ const capitalize = (str: string | undefined | null): string => {
   return str.split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
 };
 
-// Transform database row to properly-cased TypeScript type
+// Transform database row to TypeScript type
+// Note: status comes from DB in correct case (e.g., "In Review", "Escalated")
+// Category and impact may be stored lowercase and need capitalization
 const normalizeItem = (row: Record<string, unknown>): RiskOpportunity => ({
   ...row,
   category: row.category ? capitalize(row.category as string) as RiskOpportunityCategory : undefined,
   impact: row.impact ? capitalize(row.impact as string) as RiskOpportunityImpact : undefined,
-  status: capitalize(row.status as string) as RiskOpportunityStatus,
+  // Status enum values are already properly cased in DB - pass through directly
+  status: row.status as RiskOpportunityStatus,
 } as RiskOpportunity);
 
 export const useRisksOpportunities = () => {
