@@ -1,163 +1,94 @@
 
-# Plan: Fix Level 10 Meeting Critical Issue - Status Enum Mismatch
+# Plan: Fix Edit Button on Risks and Opportunities Page
 
-## Summary
+## Problem
+The Edit button on the Risks and Opportunities page is non-functional. It renders as a static button with no click handler, preventing users from editing existing Risk or Opportunity items.
 
-The audit identified one **critical issue** preventing Issue creation in Level 10 meetings. The `create_issue` RPC uses `'identified'` as the status value, but this is not a valid `eos_issue_status` enum value.
-
----
-
-## Root Cause Analysis
-
-### The Problem
-
-The `create_issue` RPC function contains this INSERT statement:
-
-```sql
-INSERT INTO eos_issues (
-  tenant_id, client_id, title, description, priority, status,
-  raised_by, linked_rock_id, meeting_id, created_by
-) VALUES (
-  p_tenant_id, p_client_id, p_title, p_description, v_priority_int, 'identified',  -- INVALID!
-  auth.uid(), p_linked_rock_id, p_meeting_id, auth.uid()
-)
+## Root Cause
+In `src/pages/EosRisksOpportunities.tsx` at line 336:
+```tsx
+<Button variant="outline" size="sm">Edit</Button>
 ```
+This button has no `onClick` property and no supporting state or dialog logic to enable editing.
 
-### Valid Enum Values
-
-The `eos_issue_status` enum contains these values:
-- `Open` (should be used as initial status)
-- `Discussing`
-- `Solved`
-- `Archived`
-- `In Review`
-- `Actioning`
-- `Escalated`
-- `Closed`
-
-Note: The enum value is **case-sensitive** - it must be `'Open'` not `'open'`.
+## Solution
+Add edit functionality by:
+1. Creating state to track which item is being edited
+2. Adding a Dialog for the edit form
+3. Connecting the Edit button to open the dialog with the selected item
+4. Adding a handler to call the existing `updateItem` mutation
 
 ---
 
-## Implementation Plan
+## Implementation Details
 
-### Step 1: Fix create_issue RPC (Database Migration)
+### Step 1: Add State Variables
+Add two new state variables to manage the edit dialog:
+- `isEditOpen`: boolean to control dialog visibility
+- `editingItem`: the item currently being edited (or null)
 
-Update the RPC to use `'Open'` as the initial status:
+### Step 2: Add Edit Handler
+Create a `handleEdit` function that:
+- Receives the item to edit
+- Sets the `editingItem` state
+- Opens the edit dialog
 
-```sql
-CREATE OR REPLACE FUNCTION public.create_issue(
-  p_tenant_id BIGINT,
-  p_source TEXT DEFAULT 'ad_hoc',
-  p_title TEXT DEFAULT '',
-  p_description TEXT DEFAULT NULL,
-  p_priority TEXT DEFAULT 'medium',
-  p_client_id UUID DEFAULT NULL,
-  p_linked_rock_id UUID DEFAULT NULL,
-  p_meeting_id UUID DEFAULT NULL
-)
-RETURNS UUID
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path = public
-AS $$
-DECLARE
-  v_issue_id UUID;
-  v_priority_int INTEGER;
-BEGIN
-  -- Convert text priority to integer (high=3, medium=2, low=1)
-  v_priority_int := CASE LOWER(p_priority)
-    WHEN 'high' THEN 3
-    WHEN 'medium' THEN 2
-    WHEN 'low' THEN 1
-    ELSE 2
-  END;
+### Step 3: Add Update Handler
+Create a `handleUpdate` function that:
+- Takes form data and calls `updateItem.mutateAsync`
+- Includes the item ID from `editingItem`
+- Closes the dialog on success
 
-  -- Insert issue with 'Open' as initial status (valid eos_issue_status enum value)
-  INSERT INTO eos_issues (
-    tenant_id, client_id, title, description, priority, status,
-    raised_by, linked_rock_id, meeting_id, created_by
-  ) VALUES (
-    p_tenant_id, p_client_id, p_title, p_description, v_priority_int, 'Open',
-    auth.uid(), p_linked_rock_id, p_meeting_id, auth.uid()
-  )
-  RETURNING id INTO v_issue_id;
+### Step 4: Add Edit Dialog
+Add a second Dialog component (similar to create dialog) that:
+- Uses the same `RiskOpportunityForm` component
+- Passes `initialValues` from `editingItem`
+- Sets `submitLabel` to "Save Changes"
+- Calls `handleUpdate` on submit
 
-  -- Audit log entry
-  INSERT INTO audit_eos_events (
-    tenant_id, user_id, meeting_id, entity, entity_id, action, reason, details
-  ) VALUES (
-    p_tenant_id, auth.uid(), p_meeting_id, 'issue', v_issue_id, 'created',
-    'Issue created from ' || p_source,
-    jsonb_build_object('source', p_source, 'priority', p_priority)
-  );
+### Step 5: Connect Edit Button
+Update the Edit button to call `handleEdit(item)` on click.
 
-  RETURN v_issue_id;
-END;
-$$;
+---
+
+## File Changes
+
+| File | Change |
+|------|--------|
+| `src/pages/EosRisksOpportunities.tsx` | Add edit state, handlers, dialog, and button onClick |
+
+---
+
+## Code Changes Summary
+
+```text
++-----------------------------------------------+
+|  EosRisksOpportunities.tsx                    |
++-----------------------------------------------+
+|  + const [isEditOpen, setIsEditOpen]          |
+|  + const [editingItem, setEditingItem]        |
+|                                               |
+|  + handleEdit(item) => opens dialog           |
+|  + handleUpdate(formData) => calls updateItem |
+|                                               |
+|  + <Dialog> for Edit with RiskOpportunityForm |
+|                                               |
+|  ~ Edit button: onClick={() => handleEdit()}  |
++-----------------------------------------------+
 ```
 
 ---
 
-### Step 2: Update Priority Display in IssuesQueue Component (Optional Enhancement)
-
-Map integer priority to human-readable labels in `src/components/eos/IssuesQueue.tsx`:
-
-The current `getPriorityColor` function already handles this mapping:
-```typescript
-const priorityStr = typeof priority === 'number' 
-  ? (priority >= 3 ? 'high' : priority >= 2 ? 'medium' : 'low')  // Updated thresholds
-  : priority;
-```
-
-Current thresholds (8, 5) should be adjusted to match database values (3, 2, 1).
+## Expected Behavior After Fix
+1. Click "Edit" button on any Risk or Opportunity item
+2. Edit dialog opens with current item data pre-filled
+3. Modify fields and click "Save Changes"
+4. Item updates in database and UI refreshes
+5. Success toast confirms the update
 
 ---
 
-## Files to Modify
-
-| File | Action | Purpose |
-|------|--------|---------|
-| Database migration | Create | Fix `create_issue` RPC to use `'Open'` status |
-| `src/components/eos/IssuesQueue.tsx` | Modify (optional) | Fix priority threshold mapping |
-
----
-
-## Verification Checklist
-
-After implementation, verify:
-
-| Test | Expected Result |
-|------|-----------------|
-| Create Issue from IDS segment | Issue created with status `Open` |
-| Issue appears in Issues Queue | Priority displays correctly as High/Medium/Low |
-| IDS Dialog opens for issue | Issue details load correctly |
-| Set issue status to Solved | Status updates with audit log |
-
----
-
-## Working Components (No Changes Needed)
-
-These components have been verified as working correctly:
-
-1. **Meeting Segments Navigation** - Previous/Next buttons work
-2. **Participants Query** - FK join syntax is correct
-3. **Attendees Query** - FK join syntax is correct
-4. **Headlines** - Create/delete works
-5. **To-Dos** - Create/update works
-6. **Meeting Ratings** - Save/retrieve works
-7. **Meeting Close Validation** - Requirements validated per meeting type
-8. **Facilitator Selection** - Participants load with names
-
----
-
-## Technical Notes
-
-### Enum Case Sensitivity
-PostgreSQL enums are case-sensitive. The database uses PascalCase: `Open`, `Discussing`, `Solved`, etc.
-
-### Audit Trail Preservation
-The fix maintains all audit logging in `audit_eos_events` table.
-
-### No Frontend Changes Required
-The frontend already handles the status values correctly since it displays the status from the database.
+## No Changes Required
+- `RiskOpportunityForm` already supports `initialValues` and custom `submitLabel`
+- `useRisksOpportunities` hook already provides `updateItem` mutation
+- Type definitions are complete in `src/types/risksOpportunities.ts`
