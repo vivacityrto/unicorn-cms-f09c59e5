@@ -56,49 +56,55 @@ export function usePackageUsage(clientId: number | null) {
   const [alerts, setAlerts] = useState<ClientAlert[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Fetch client packages
+  // Fetch client packages via package_instances (source of truth)
   const fetchPackages = useCallback(async () => {
     if (!clientId) return;
 
-    const { data, error } = await supabase
-      .from('client_packages')
-      .select(`
-        id,
-        package_id,
-        status,
-        start_date,
-        end_date,
-        included_minutes,
-        packages (
-          id,
-          name,
-          total_hours
-        )
-      `)
+    // Fetch active package instances
+    const { data: instances, error } = await supabase
+      .from('package_instances')
+      .select('id, package_id, start_date, end_date, hours_included, hours_used, is_complete')
       .eq('tenant_id', clientId)
-      .in('status', ['active', 'in_progress'])
+      .eq('is_complete', false)
       .order('start_date', { ascending: false });
 
-    if (!error && data) {
-      const mapped = data.map((cp: Record<string, unknown>) => {
-        const pkg = cp.packages as { id: number; name: string; total_hours: number } | null;
-        return {
-          id: cp.id as string,
-          package_id: cp.package_id as number,
-          package_name: pkg?.name || 'Unknown Package',
-          status: cp.status as string,
-          start_date: cp.start_date as string,
-          end_date: cp.end_date as string | null,
-          included_minutes: (cp.included_minutes as number) || (pkg?.total_hours || 0) * 60,
-          total_hours: pkg?.total_hours || 0
-        };
-      });
-      setPackages(mapped);
-      
-      // Auto-select first active package if none selected
-      if (!selectedPackageId && mapped.length > 0) {
-        setSelectedPackageId(mapped[0].id);
-      }
+    if (error) {
+      console.error('Error fetching package instances:', error);
+      return;
+    }
+
+    if (!instances || instances.length === 0) {
+      setPackages([]);
+      return;
+    }
+
+    // Fetch package details
+    const packageIds = [...new Set(instances.map(i => i.package_id))];
+    const { data: packagesData } = await supabase
+      .from('packages')
+      .select('id, name, total_hours')
+      .in('id', packageIds);
+
+    const packageMap = new Map((packagesData || []).map(p => [p.id, p]));
+
+    const mapped = instances.map(inst => {
+      const pkg = packageMap.get(inst.package_id);
+      return {
+        id: inst.id.toString(),
+        package_id: inst.package_id,
+        package_name: pkg?.name || 'Unknown Package',
+        status: inst.is_complete ? 'closed' : 'active',
+        start_date: inst.start_date || '',
+        end_date: inst.end_date,
+        included_minutes: (inst.hours_included || pkg?.total_hours || 0) * 60,
+        total_hours: pkg?.total_hours || 0
+      };
+    });
+    setPackages(mapped);
+    
+    // Auto-select first active package if none selected
+    if (!selectedPackageId && mapped.length > 0) {
+      setSelectedPackageId(mapped[0].id);
     }
   }, [clientId, selectedPackageId]);
 

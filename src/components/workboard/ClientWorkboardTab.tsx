@@ -77,14 +77,15 @@ export function ClientWorkboardTab({ tenantId, clientId }: ClientWorkboardTabPro
       .order('first_name');
     setTeamMembers(users || []);
 
-    // Fetch packages for this client (client_packages uses tenant_id as client_id)
-    const { data: pkgs } = await supabase
-      .from('client_packages')
+    // Fetch packages via package_instances (source of truth)
+    const { data: instances } = await supabase
+      .from('package_instances')
       .select('package_id')
-      .eq('tenant_id', clientId);
+      .eq('tenant_id', clientId)
+      .eq('is_complete', false);
     
-    if (pkgs && pkgs.length > 0) {
-      const packageIds = [...new Set(pkgs.map(cp => cp.package_id))] as number[];
+    if (instances && instances.length > 0) {
+      const packageIds = [...new Set(instances.map(i => i.package_id))] as number[];
       const { data: packageData } = await supabase
         .from('packages')
         .select('id, name')

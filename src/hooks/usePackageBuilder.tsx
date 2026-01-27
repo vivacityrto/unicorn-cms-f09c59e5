@@ -190,7 +190,7 @@ export function usePackageBuilder() {
   const createPackage = async (data: Partial<Package>) => {
     const { data: newPackage, error } = await supabase
       .from('packages')
-      .insert({
+      .insert([{
         name: data.name,
         full_text: data.full_text,
         details: data.details,
@@ -198,7 +198,7 @@ export function usePackageBuilder() {
         duration_months: data.duration_months,
         package_type: data.package_type,
         total_hours: data.total_hours
-      })
+      }] as any)
       .select()
       .single();
 
@@ -231,7 +231,7 @@ export function usePackageBuilder() {
     // Create new package with "(Copy)" suffix
     const { data: newPackage, error: createError } = await supabase
       .from('packages')
-      .insert({
+      .insert([{
         name: `${original.name} (Copy)`,
         full_text: `${original.full_text} (Copy)`,
         details: original.details,
@@ -240,7 +240,7 @@ export function usePackageBuilder() {
         package_type: original.package_type,
         total_hours: original.total_hours,
         progress_mode: original.progress_mode
-      })
+      }] as any)
       .select()
       .single();
 
