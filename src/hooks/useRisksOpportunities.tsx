@@ -89,16 +89,22 @@ export const useRisksOpportunities = () => {
     },
   });
 
+  // Valid status enum values - must match eos_issue_status exactly
+  const VALID_STATUSES = ['Open', 'Discussing', 'Solved', 'Archived', 'In Review', 'Actioning', 'Escalated', 'Closed'];
+
   const updateItem = useMutation({
     mutationFn: async ({ id, ...updates }: Partial<RiskOpportunity> & { id: string }) => {
-      // Build update payload - status should NOT be lowercased as the enum is case-sensitive
+      // Validate status before sending to Supabase - fail fast in UI
+      if (updates.status !== undefined && !VALID_STATUSES.includes(updates.status)) {
+        throw new Error(`Invalid status value: "${updates.status}". Must be one of: ${VALID_STATUSES.join(', ')}`);
+      }
+
       const dbUpdates: Record<string, unknown> = {
         updated_at: new Date().toISOString(),
       };
       
       if (updates.category !== undefined) dbUpdates.category = updates.category?.toLowerCase();
       if (updates.impact !== undefined) dbUpdates.impact = updates.impact?.toLowerCase();
-      // Status enum values are case-sensitive (e.g., "In Review", "Escalated") - don't lowercase
       if (updates.status !== undefined) dbUpdates.status = updates.status;
       if (updates.title !== undefined) dbUpdates.title = updates.title;
       if (updates.description !== undefined) dbUpdates.description = updates.description;
