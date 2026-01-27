@@ -3227,41 +3227,54 @@ export type Database = {
       document_instances: {
         Row: {
           created_at: string
-          document_id: number
-          generation_date: string | null
-          id: number
-          is_generated: boolean | null
+          document_id: number | null
+          id: string
           notes: string | null
-          stage_instance_id: number | null
           status: string | null
           tenant_id: number | null
           updated_at: string
         }
         Insert: {
           created_at?: string
-          document_id: number
-          generation_date?: string | null
-          id?: number
-          is_generated?: boolean | null
+          document_id?: number | null
+          id?: string
           notes?: string | null
-          stage_instance_id?: number | null
           status?: string | null
           tenant_id?: number | null
           updated_at?: string
         }
         Update: {
           created_at?: string
-          document_id?: number
-          generation_date?: string | null
-          id?: number
-          is_generated?: boolean | null
+          document_id?: number | null
+          id?: string
           notes?: string | null
-          stage_instance_id?: number | null
           status?: string | null
           tenant_id?: number | null
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "document_instances_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "document_stage_usage"
+            referencedColumns: ["document_id"]
+          },
+          {
+            foreignKeyName: "document_instances_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "documents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "document_instances_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       document_source_mappings: {
         Row: {
@@ -4846,21 +4859,6 @@ export type Database = {
           },
         ]
       }
-      eos_issue_status_transitions: {
-        Row: {
-          from_status: Database["public"]["Enums"]["eos_issue_status"]
-          to_status: Database["public"]["Enums"]["eos_issue_status"]
-        }
-        Insert: {
-          from_status: Database["public"]["Enums"]["eos_issue_status"]
-          to_status: Database["public"]["Enums"]["eos_issue_status"]
-        }
-        Update: {
-          from_status?: Database["public"]["Enums"]["eos_issue_status"]
-          to_status?: Database["public"]["Enums"]["eos_issue_status"]
-        }
-        Relationships: []
-      }
       eos_issues: {
         Row: {
           assigned_to: string | null
@@ -4874,7 +4872,6 @@ export type Database = {
           item_type: string | null
           linked_rock_id: string | null
           meeting_id: string | null
-          meeting_segment_id: string | null
           outcome_note: string | null
           priority: number | null
           quarter_number: number | null
@@ -4884,7 +4881,6 @@ export type Database = {
           resolved_by: string | null
           solution: string | null
           solved_at: string | null
-          source: string
           status: Database["public"]["Enums"]["eos_issue_status"] | null
           tenant_id: number
           title: string
@@ -4902,7 +4898,6 @@ export type Database = {
           item_type?: string | null
           linked_rock_id?: string | null
           meeting_id?: string | null
-          meeting_segment_id?: string | null
           outcome_note?: string | null
           priority?: number | null
           quarter_number?: number | null
@@ -4912,7 +4907,6 @@ export type Database = {
           resolved_by?: string | null
           solution?: string | null
           solved_at?: string | null
-          source?: string
           status?: Database["public"]["Enums"]["eos_issue_status"] | null
           tenant_id: number
           title: string
@@ -4930,7 +4924,6 @@ export type Database = {
           item_type?: string | null
           linked_rock_id?: string | null
           meeting_id?: string | null
-          meeting_segment_id?: string | null
           outcome_note?: string | null
           priority?: number | null
           quarter_number?: number | null
@@ -4940,7 +4933,6 @@ export type Database = {
           resolved_by?: string | null
           solution?: string | null
           solved_at?: string | null
-          source?: string
           status?: Database["public"]["Enums"]["eos_issue_status"] | null
           tenant_id?: number
           title?: string
@@ -4994,13 +4986,6 @@ export type Database = {
             columns: ["meeting_id"]
             isOneToOne: false
             referencedRelation: "eos_upcoming_meetings"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "eos_issues_meeting_segment_id_fkey"
-            columns: ["meeting_segment_id"]
-            isOneToOne: false
-            referencedRelation: "eos_meeting_segments"
             referencedColumns: ["id"]
           },
           {
@@ -5376,13 +5361,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "eos_upcoming_meetings"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "eos_meeting_participants_user_id_users_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["user_uuid"]
           },
         ]
       }
@@ -10610,7 +10588,7 @@ export type Database = {
         Insert: {
           dateimported?: string
           description?: string | null
-          id?: number
+          id: number
           name: string
           shortname?: string | null
           videourl?: string | null
@@ -14095,30 +14073,6 @@ export type Database = {
         }
         Relationships: []
       }
-      eos_issue_category_options: {
-        Row: {
-          value: string | null
-        }
-        Relationships: []
-      }
-      eos_issue_impact_options: {
-        Row: {
-          value: string | null
-        }
-        Relationships: []
-      }
-      eos_issue_status_options: {
-        Row: {
-          value: string | null
-        }
-        Relationships: []
-      }
-      eos_issue_type_options: {
-        Row: {
-          value: string | null
-        }
-        Relationships: []
-      }
       eos_meeting_attendance_summary: {
         Row: {
           attendance_rate: number | null
@@ -14252,12 +14206,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
-      }
-      eos_quarter_options: {
-        Row: {
-          value: number | null
-        }
-        Relationships: []
       }
       eos_upcoming_meetings: {
         Row: {
@@ -14628,10 +14576,6 @@ export type Database = {
         }
         Returns: string[]
       }
-      change_meeting_facilitator: {
-        Args: { p_meeting_id: string; p_new_facilitator_id: string }
-        Returns: boolean
-      }
       check_rate_limit: {
         Args: { p_action_type: string; p_tenant_id: number }
         Returns: boolean
@@ -14674,26 +14618,21 @@ export type Database = {
               p_linked_rock_id?: string
               p_meeting_id?: string
               p_priority?: string
-              p_source?: string
+              p_source: string
               p_tenant_id: number
-              p_title?: string
+              p_title: string
             }
             Returns: string
           }
         | {
             Args: {
-              p_category?: string
-              p_client_id?: string
               p_description?: string
-              p_impact?: string
-              p_item_type?: string
-              p_linked_rock_id?: string
               p_meeting_id?: string
-              p_meeting_segment_id?: string
+              p_owner_id?: string
               p_priority?: string
-              p_source?: string
+              p_rock_id?: string
               p_tenant_id: number
-              p_title?: string
+              p_title: string
             }
             Returns: string
           }
@@ -15139,10 +15078,6 @@ export type Database = {
           user_uuid: string
         }[]
       }
-      go_to_previous_segment: {
-        Args: { p_meeting_id: string }
-        Returns: string
-      }
       has_any_eos_role: {
         Args: { _tenant_id: number; _user_id: string }
         Returns: boolean
@@ -15198,13 +15133,6 @@ export type Database = {
       is_tenant_member: { Args: { p_tenant_id: number }; Returns: boolean }
       is_tenant_member_uuid: { Args: { p_tenant_id: string }; Returns: boolean }
       is_user_super_admin: { Args: { user_id: string }; Returns: boolean }
-      is_valid_issue_status_transition: {
-        Args: {
-          p_new_status: Database["public"]["Enums"]["eos_issue_status"]
-          p_old_status: Database["public"]["Enums"]["eos_issue_status"]
-        }
-        Returns: boolean
-      }
       is_vivacity: { Args: never; Returns: boolean }
       is_vivacity_super_admin: { Args: never; Returns: boolean }
       is_vivacity_user: { Args: never; Returns: boolean }
@@ -15224,33 +15152,6 @@ export type Database = {
         Args: { p_meeting_id: string; p_reason?: string }
         Returns: undefined
       }
-      log_eos_audit_event:
-        | {
-            Args: {
-              p_action: string
-              p_details?: Json
-              p_entity: string
-              p_entity_id: string
-              p_meeting_id: string
-              p_reason?: string
-              p_tenant_id: number
-              p_user_id: string
-            }
-            Returns: string
-          }
-        | {
-            Args: {
-              p_action: string
-              p_details?: Json
-              p_entity: string
-              p_entity_id: string
-              p_meeting_id: string
-              p_reason?: string
-              p_tenant_id: number
-              p_user_id: string
-            }
-            Returns: string
-          }
       mark_all_present: { Args: { p_meeting_id: string }; Returns: Json }
       normalize_company_key: { Args: { txt: string }; Returns: string }
       persist_tga_scope_items: {
