@@ -1223,6 +1223,54 @@ export type Database = {
         }
         Relationships: []
       }
+      backup_packages_phase3: {
+        Row: {
+          created_at: string | null
+          details: string | null
+          document_assurance_period: number | null
+          duration_months: number | null
+          full_text: string | null
+          id: number | null
+          name: string | null
+          package_type: string | null
+          progress_mode: string | null
+          slug: string | null
+          status: string | null
+          total_hours: number | null
+          u1_packageid: number | null
+        }
+        Insert: {
+          created_at?: string | null
+          details?: string | null
+          document_assurance_period?: number | null
+          duration_months?: number | null
+          full_text?: string | null
+          id?: number | null
+          name?: string | null
+          package_type?: string | null
+          progress_mode?: string | null
+          slug?: string | null
+          status?: string | null
+          total_hours?: number | null
+          u1_packageid?: number | null
+        }
+        Update: {
+          created_at?: string | null
+          details?: string | null
+          document_assurance_period?: number | null
+          duration_months?: number | null
+          full_text?: string | null
+          id?: number | null
+          name?: string | null
+          package_type?: string | null
+          progress_mode?: string | null
+          slug?: string | null
+          status?: string | null
+          total_hours?: number | null
+          u1_packageid?: number | null
+        }
+        Relationships: []
+      }
       backup_tenant_addresses: {
         Row: {
           address_type: string | null
@@ -8790,13 +8838,13 @@ export type Database = {
           duration_months: number | null
           full_text: string | null
           id: number
+          import_id: number
           name: string | null
           package_type: string | null
           progress_mode: string | null
           slug: string | null
           status: string
           total_hours: number | null
-          u1_packageid: number | null
         }
         Insert: {
           created_at?: string | null
@@ -8804,14 +8852,14 @@ export type Database = {
           document_assurance_period?: number | null
           duration_months?: number | null
           full_text?: string | null
-          id?: never
+          id: number
+          import_id?: never
           name?: string | null
           package_type?: string | null
           progress_mode?: string | null
           slug?: string | null
           status?: string
           total_hours?: number | null
-          u1_packageid?: number | null
         }
         Update: {
           created_at?: string | null
@@ -8819,14 +8867,14 @@ export type Database = {
           document_assurance_period?: number | null
           duration_months?: number | null
           full_text?: string | null
-          id?: never
+          id?: number
+          import_id?: never
           name?: string | null
           package_type?: string | null
           progress_mode?: string | null
           slug?: string | null
           status?: string
           total_hours?: number | null
-          u1_packageid?: number | null
         }
         Relationships: []
       }
