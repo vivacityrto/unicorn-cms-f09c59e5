@@ -45,7 +45,7 @@ export const useRisksOpportunities = () => {
   });
 
   const createItem = useMutation({
-    mutationFn: async (item: Partial<RiskOpportunity>) => {
+    mutationFn: async (item: Partial<RiskOpportunity> & { meeting_id?: string }) => {
       const { data, error } = await supabase
         .from('eos_issues')
         .insert({
@@ -55,11 +55,12 @@ export const useRisksOpportunities = () => {
           description: item.description,
           category: item.category?.toLowerCase(),
           impact: item.impact?.toLowerCase(),
-          status: item.status?.toLowerCase() || 'open',
+          // Omit status to use database default 'Open'
           quarter_number: item.quarter_number,
           quarter_year: item.quarter_year,
           linked_rock_id: item.linked_rock_id,
           assigned_to: item.assigned_to,
+          meeting_id: item.meeting_id,
           created_by: profile?.user_uuid,
         } as any)
         .select()
@@ -70,6 +71,8 @@ export const useRisksOpportunities = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['risks-opportunities'] });
+      queryClient.invalidateQueries({ queryKey: ['meeting-issues'] });
+      queryClient.invalidateQueries({ queryKey: ['eos-issues'] });
       toast({ title: 'Item created successfully' });
     },
     onError: (error: Error) => {
