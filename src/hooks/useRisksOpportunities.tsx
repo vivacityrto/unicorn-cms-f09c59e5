@@ -45,7 +45,11 @@ export const useRisksOpportunities = () => {
   });
 
   const createItem = useMutation({
-    mutationFn: async (item: Partial<RiskOpportunity> & { meeting_id?: string }) => {
+    mutationFn: async (item: Partial<RiskOpportunity> & { 
+      meeting_id?: string; 
+      meeting_segment_id?: string;
+      source?: string;
+    }) => {
       const { data, error } = await supabase
         .from('eos_issues')
         .insert({
@@ -61,6 +65,8 @@ export const useRisksOpportunities = () => {
           linked_rock_id: item.linked_rock_id,
           assigned_to: item.assigned_to,
           meeting_id: item.meeting_id,
+          meeting_segment_id: item.meeting_segment_id,
+          source: item.source || 'ad_hoc',
           created_by: profile?.user_uuid,
         } as any)
         .select()

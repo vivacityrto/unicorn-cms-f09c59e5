@@ -4846,6 +4846,21 @@ export type Database = {
           },
         ]
       }
+      eos_issue_status_transitions: {
+        Row: {
+          from_status: Database["public"]["Enums"]["eos_issue_status"]
+          to_status: Database["public"]["Enums"]["eos_issue_status"]
+        }
+        Insert: {
+          from_status: Database["public"]["Enums"]["eos_issue_status"]
+          to_status: Database["public"]["Enums"]["eos_issue_status"]
+        }
+        Update: {
+          from_status?: Database["public"]["Enums"]["eos_issue_status"]
+          to_status?: Database["public"]["Enums"]["eos_issue_status"]
+        }
+        Relationships: []
+      }
       eos_issues: {
         Row: {
           assigned_to: string | null
@@ -4859,6 +4874,7 @@ export type Database = {
           item_type: string | null
           linked_rock_id: string | null
           meeting_id: string | null
+          meeting_segment_id: string | null
           outcome_note: string | null
           priority: number | null
           quarter_number: number | null
@@ -4868,6 +4884,7 @@ export type Database = {
           resolved_by: string | null
           solution: string | null
           solved_at: string | null
+          source: string
           status: Database["public"]["Enums"]["eos_issue_status"] | null
           tenant_id: number
           title: string
@@ -4885,6 +4902,7 @@ export type Database = {
           item_type?: string | null
           linked_rock_id?: string | null
           meeting_id?: string | null
+          meeting_segment_id?: string | null
           outcome_note?: string | null
           priority?: number | null
           quarter_number?: number | null
@@ -4894,6 +4912,7 @@ export type Database = {
           resolved_by?: string | null
           solution?: string | null
           solved_at?: string | null
+          source?: string
           status?: Database["public"]["Enums"]["eos_issue_status"] | null
           tenant_id: number
           title: string
@@ -4911,6 +4930,7 @@ export type Database = {
           item_type?: string | null
           linked_rock_id?: string | null
           meeting_id?: string | null
+          meeting_segment_id?: string | null
           outcome_note?: string | null
           priority?: number | null
           quarter_number?: number | null
@@ -4920,6 +4940,7 @@ export type Database = {
           resolved_by?: string | null
           solution?: string | null
           solved_at?: string | null
+          source?: string
           status?: Database["public"]["Enums"]["eos_issue_status"] | null
           tenant_id?: number
           title?: string
@@ -4973,6 +4994,13 @@ export type Database = {
             columns: ["meeting_id"]
             isOneToOne: false
             referencedRelation: "eos_upcoming_meetings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "eos_issues_meeting_segment_id_fkey"
+            columns: ["meeting_segment_id"]
+            isOneToOne: false
+            referencedRelation: "eos_meeting_segments"
             referencedColumns: ["id"]
           },
           {
@@ -14608,19 +14636,37 @@ export type Database = {
         }
         Returns: number
       }
-      create_issue: {
-        Args: {
-          p_client_id?: string
-          p_description?: string
-          p_linked_rock_id?: string
-          p_meeting_id?: string
-          p_priority?: string
-          p_source?: string
-          p_tenant_id: number
-          p_title?: string
-        }
-        Returns: string
-      }
+      create_issue:
+        | {
+            Args: {
+              p_client_id?: string
+              p_description?: string
+              p_linked_rock_id?: string
+              p_meeting_id?: string
+              p_priority?: string
+              p_source?: string
+              p_tenant_id: number
+              p_title?: string
+            }
+            Returns: string
+          }
+        | {
+            Args: {
+              p_category?: string
+              p_client_id?: string
+              p_description?: string
+              p_impact?: string
+              p_item_type?: string
+              p_linked_rock_id?: string
+              p_meeting_id?: string
+              p_meeting_segment_id?: string
+              p_priority?: string
+              p_source?: string
+              p_tenant_id: number
+              p_title?: string
+            }
+            Returns: string
+          }
       create_meeting_basic:
         | {
             Args: {
@@ -15122,6 +15168,13 @@ export type Database = {
       is_tenant_member: { Args: { p_tenant_id: number }; Returns: boolean }
       is_tenant_member_uuid: { Args: { p_tenant_id: string }; Returns: boolean }
       is_user_super_admin: { Args: { user_id: string }; Returns: boolean }
+      is_valid_issue_status_transition: {
+        Args: {
+          p_new_status: Database["public"]["Enums"]["eos_issue_status"]
+          p_old_status: Database["public"]["Enums"]["eos_issue_status"]
+        }
+        Returns: boolean
+      }
       is_vivacity: { Args: never; Returns: boolean }
       is_vivacity_super_admin: { Args: never; Returns: boolean }
       is_vivacity_user: { Args: never; Returns: boolean }
@@ -15140,6 +15193,19 @@ export type Database = {
       lock_meeting_minutes: {
         Args: { p_meeting_id: string; p_reason?: string }
         Returns: undefined
+      }
+      log_eos_audit_event: {
+        Args: {
+          p_action: string
+          p_details?: Json
+          p_entity: string
+          p_entity_id: string
+          p_meeting_id: string
+          p_reason?: string
+          p_tenant_id: number
+          p_user_id: string
+        }
+        Returns: string
       }
       mark_all_present: { Args: { p_meeting_id: string }; Returns: Json }
       normalize_company_key: { Args: { txt: string }; Returns: string }

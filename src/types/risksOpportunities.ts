@@ -36,6 +36,9 @@ export interface RiskOpportunity {
   assigned_to?: string;
   created_by?: string;
   outcome_note?: string;
+  meeting_id?: string;
+  meeting_segment_id?: string;
+  source?: 'ad_hoc' | 'meeting_ids' | 'ro_page';
   created_at: string;
   updated_at: string;
 }
