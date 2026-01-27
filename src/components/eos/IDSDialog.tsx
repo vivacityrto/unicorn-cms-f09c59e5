@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -63,9 +63,35 @@ export function IDSDialog({ open, onOpenChange, issue, isFacilitator }: IDSDialo
     enabled: !!profile?.tenant_id && open,
   });
 
-  // Set issue status mutation with transition validation
+  // Map status to IDS tab - auto-sync tab with issue status
+  const getTabFromStatus = (status: string): string => {
+    switch (status) {
+      case 'Discussing':
+        return 'discuss';
+      case 'Solved':
+      case 'Closed':
+        return 'solve';
+      default:
+        return 'identify';
+    }
+  };
+
+  // Auto-advance tab when issue status changes or dialog opens
+  useEffect(() => {
+    if (issue && open) {
+      const appropriateTab = getTabFromStatus(issue.status);
+      setActiveTab(appropriateTab);
+      setSolution(issue.solution || '');
+    }
+  }, [issue?.id, issue?.status, open]);
+
+  // Set issue status mutation with auto-tab-advance
   const setStatus = useMutation({
-    mutationFn: async ({ status, solutionText }: { status: string; solutionText?: string }) => {
+    mutationFn: async ({ status, solutionText, autoAdvanceTab = true }: { 
+      status: string; 
+      solutionText?: string;
+      autoAdvanceTab?: boolean;
+    }) => {
       // Validate transition before calling RPC
       const currentStatus = issue?.status || 'Open';
       if (!isValidStatusTransition(statusTransitions, currentStatus, status)) {
@@ -83,10 +109,19 @@ export function IDSDialog({ open, onOpenChange, issue, isFacilitator }: IDSDialo
       });
       
       if (error) throw error;
+      
+      return { status, autoAdvanceTab };
     },
-    onSuccess: () => {
+    onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ['eos-issues'] });
       queryClient.invalidateQueries({ queryKey: ['meeting-issues'] });
+      
+      // Auto-advance tab after successful status change
+      if (result?.autoAdvanceTab) {
+        const newTab = getTabFromStatus(result.status);
+        setActiveTab(newTab);
+      }
+      
       toast({ title: 'Issue status updated' });
     },
     onError: (error: Error) => {
