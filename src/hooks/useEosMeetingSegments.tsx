@@ -39,9 +39,28 @@ export const useEosMeetingSegments = (meetingId: string | undefined) => {
     },
   });
 
+  const goToPreviousSegment = useMutation({
+    mutationFn: async () => {
+      const { data, error } = await supabase.rpc('go_to_previous_segment', {
+        p_meeting_id: meetingId,
+      });
+      
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['eos-meeting-segments', meetingId] });
+      toast({ title: 'Returned to previous segment' });
+    },
+    onError: (error: Error) => {
+      toast({ title: 'Error returning to previous segment', description: error.message, variant: 'destructive' });
+    },
+  });
+
   return {
     segments,
     isLoading,
     advanceSegment,
+    goToPreviousSegment,
   };
 };

@@ -14601,32 +14601,19 @@ export type Database = {
         }
         Returns: number
       }
-      create_issue:
-        | {
-            Args: {
-              p_client_id?: string
-              p_description?: string
-              p_linked_rock_id?: string
-              p_meeting_id?: string
-              p_priority?: string
-              p_source: string
-              p_tenant_id: number
-              p_title: string
-            }
-            Returns: string
-          }
-        | {
-            Args: {
-              p_description?: string
-              p_meeting_id?: string
-              p_owner_id?: string
-              p_priority?: string
-              p_rock_id?: string
-              p_tenant_id: number
-              p_title: string
-            }
-            Returns: string
-          }
+      create_issue: {
+        Args: {
+          p_client_id?: string
+          p_description?: string
+          p_linked_rock_id?: string
+          p_meeting_id?: string
+          p_priority?: string
+          p_source?: string
+          p_tenant_id: number
+          p_title?: string
+        }
+        Returns: string
+      }
       create_meeting_basic:
         | {
             Args: {
@@ -15068,6 +15055,10 @@ export type Database = {
           user_type: string
           user_uuid: string
         }[]
+      }
+      go_to_previous_segment: {
+        Args: { p_meeting_id: string }
+        Returns: string
       }
       has_any_eos_role: {
         Args: { _tenant_id: number; _user_id: string }
