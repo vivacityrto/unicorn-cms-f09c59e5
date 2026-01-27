@@ -18,7 +18,7 @@ export function IssuesQueue({ issues, onSelectIssue, onCreateIssue, isFacilitato
 
   const getPriorityColor = (priority?: number | string) => {
     const priorityStr = typeof priority === 'number' 
-      ? (priority >= 8 ? 'high' : priority >= 5 ? 'medium' : 'low')
+      ? (priority >= 3 ? 'high' : priority >= 2 ? 'medium' : 'low')
       : priority;
     
     switch (priorityStr) {
