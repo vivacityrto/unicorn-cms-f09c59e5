@@ -1,10 +1,9 @@
 
-
-# Migration Script: Phases 0, 1, 2 (Tenants Sync)
+# Migration Script: Phases 0, 1, 2 (Tenants Sync) - REVISED
 
 ## Overview
 
-This first batch covers backup creation, FK constraint removal, and tenants ID synchronization. After running, you will validate before proceeding to packages sync.
+This first batch covers backup creation, FK constraint removal, unique index handling, and tenants ID synchronization.
 
 ---
 
@@ -14,7 +13,9 @@ This first batch covers backup creation, FK constraint removal, and tenants ID s
 |-------|--------|--------|
 | 0 | Create backup tables | 6 tables backed up |
 | 1 | Drop all FK constraints | 136 constraints removed |
+| 1b | Drop unique indexes with tenant_id | 7 indexes removed |
 | 2 | Sync tenants IDs | 20 child tables updated, `id` becomes legacy ID |
+| 2h | Restore unique indexes | 7 indexes recreated |
 
 ---
 
@@ -22,7 +23,7 @@ This first batch covers backup creation, FK constraint removal, and tenants ID s
 
 ```text
 -- ============================================
--- PHASES 0, 1, 2: BACKUP, DROP FKs, SYNC TENANTS
+-- PHASES 0, 1, 2: BACKUP, DROP FKs, DROP UNIQUE INDEXES, SYNC TENANTS
 -- ============================================
 
 -- ============================================
@@ -43,7 +44,6 @@ DECLARE
   r RECORD;
   drop_count INTEGER := 0;
 BEGIN
-  -- Drop FK constraints referencing tenants
   FOR r IN 
     SELECT conname, conrelid::regclass AS table_name
     FROM pg_constraint 
@@ -53,7 +53,6 @@ BEGIN
     drop_count := drop_count + 1;
   END LOOP;
   
-  -- Drop FK constraints referencing packages
   FOR r IN 
     SELECT conname, conrelid::regclass AS table_name
     FROM pg_constraint 
@@ -67,10 +66,23 @@ BEGIN
 END $$;
 
 -- ============================================
+-- PHASE 1b: DROP UNIQUE INDEXES WITH TENANT_ID
+-- ============================================
+DROP INDEX IF EXISTS public.idx_tenant_addresses_unique_ho;
+DROP INDEX IF EXISTS public.idx_tenant_addresses_unique_po;
+DROP INDEX IF EXISTS public.tenant_rto_scope_unique_code;
+DROP INDEX IF EXISTS public.membership_entitlements_tenant_id_package_id_key;
+DROP INDEX IF EXISTS public.client_package_stage_state_tenant_id_package_id_stage_id_key;
+DROP INDEX IF EXISTS public.tenant_stages_tenant_id_stage_id_package_id_key;
+
+-- Drop tenant_profile primary key (it's tenant_id based)
+ALTER TABLE public.tenant_profile DROP CONSTRAINT IF EXISTS tenant_profile_pkey;
+
+-- ============================================
 -- PHASE 2: SYNC TENANTS
 -- ============================================
 
--- Step 2a: Delete tenants with NULL legacy_id (6 records)
+-- Step 2a: Delete tenants with NULL legacy_id
 DELETE FROM public.tenants WHERE legacy_id IS NULL;
 
 -- Step 2b: Drop primary key
@@ -110,6 +122,19 @@ ALTER TABLE public.tenants ADD PRIMARY KEY (id);
 
 -- Step 2g: Reset sequence
 SELECT setval('tenants_id_new_seq', (SELECT COALESCE(MAX(id), 0) + 1 FROM public.tenants), false);
+
+-- ============================================
+-- PHASE 2h: RESTORE UNIQUE INDEXES
+-- ============================================
+CREATE UNIQUE INDEX idx_tenant_addresses_unique_ho ON public.tenant_addresses (tenant_id, address_type) WHERE (address_type = 'HO' AND (inactive IS NULL OR inactive = false));
+CREATE UNIQUE INDEX idx_tenant_addresses_unique_po ON public.tenant_addresses (tenant_id, address_type) WHERE (address_type = 'PO' AND (inactive IS NULL OR inactive = false));
+CREATE UNIQUE INDEX tenant_rto_scope_unique_code ON public.tenant_rto_scope (tenant_id, code, scope_type);
+CREATE UNIQUE INDEX membership_entitlements_tenant_id_package_id_key ON public.membership_entitlements (tenant_id, package_id);
+CREATE UNIQUE INDEX client_package_stage_state_tenant_id_package_id_stage_id_key ON public.client_package_stage_state (tenant_id, package_id, stage_id);
+CREATE UNIQUE INDEX tenant_stages_tenant_id_stage_id_package_id_key ON public.tenant_stages (tenant_id, stage_id, package_id);
+
+-- Restore tenant_profile primary key
+ALTER TABLE public.tenant_profile ADD PRIMARY KEY (tenant_id);
 
 -- ============================================
 -- PHASE 2 VALIDATION
@@ -159,4 +184,3 @@ END $$;
 | 6 | Restore FK constraints | 136+ constraints (separate script) |
 
 After running this script, let me know the results and I will prepare Phase 3-5 for you.
-
