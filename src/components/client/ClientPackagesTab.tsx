@@ -139,10 +139,10 @@ export function ClientPackagesTab({ tenantId, tenantName, packages, loading, onA
                         <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
                           <Package2 className="h-5 w-5 text-primary" />
                         </div>
-                        <div>
+                        <div className="flex items-baseline gap-2">
                           <h3 className="font-semibold text-lg">{pkg.package_name}</h3>
                           {pkg.package_full_text && (
-                            <p className="text-sm text-muted-foreground">{pkg.package_full_text}</p>
+                            <span className="text-sm text-muted-foreground">— {pkg.package_full_text}</span>
                           )}
                         </div>
                       </div>
