@@ -109,7 +109,7 @@ export default function AdminPackageTenantDetail() {
                     <h3 className="text-base font-semibold text-white">{tenantInfo.name}</h3>
                     <div className="flex items-center gap-2 text-sm text-white/70">
                       <Mail className="h-4 w-4" />
-                      {tenantContact?.email || 'No email'}
+                      {tenantContact?.name && tenantContact.name !== 'No contact' ? `${tenantContact.name} ` : ''}{tenantContact?.email || 'No email'}
                     </div>
                   </div>
                 </div>

@@ -862,7 +862,7 @@ const PackageDetail = ({ instanceId: propInstanceId }: PackageDetailProps = {}) 
                 <div className="space-y-1">
                   <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Package Total Hours</p>
                   <p className="text-sm font-medium text-foreground">
-                    {packageInfo.total_hours != null ? `${packageInfo.total_hours.toFixed(2)}h` : '—'}
+                    {packageInfo.total_hours != null ? `${Math.round(packageInfo.total_hours)}h` : '—'}
                   </p>
                 </div>
                 <div className="space-y-1">
@@ -871,7 +871,7 @@ const PackageDetail = ({ instanceId: propInstanceId }: PackageDetailProps = {}) 
                     <Clock className="h-3.5 w-3.5 text-muted-foreground" />
                     {instanceData.hours_included != null ? instanceData.hours_included.toFixed(2) : '0.00'} / 
                     {instanceData.hours_used != null ? instanceData.hours_used.toFixed(2) : '0.00'} / 
-                    {instanceData.hours_added != null ? instanceData.hours_added.toFixed(2) : '0.00'}
+                    {instanceData.hours_added != null ? Math.round(instanceData.hours_added) : '0'}
                   </p>
                 </div>
               </div>
