@@ -6,13 +6,17 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { StageStaffTasks } from './StageStaffTasks';
 import { 
   CheckCircle2, 
   Circle, 
   AlertCircle, 
   Clock, 
-  Ban,
-  Loader2 
+  Loader2,
+  ChevronDown,
+  ChevronRight,
+  ListTodo
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -55,6 +59,19 @@ export function PackageStagesManager({ tenantId, packageId, packageName }: Packa
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState<number | null>(null);
   const [packageInstanceId, setPackageInstanceId] = useState<number | null>(null);
+  const [expandedStages, setExpandedStages] = useState<Set<number>>(new Set());
+
+  const toggleStageExpanded = (stageId: number) => {
+    setExpandedStages(prev => {
+      const next = new Set(prev);
+      if (next.has(stageId)) {
+        next.delete(stageId);
+      } else {
+        next.add(stageId);
+      }
+      return next;
+    });
+  };
 
   useEffect(() => {
     fetchStages();
@@ -204,59 +221,88 @@ export function PackageStagesManager({ tenantId, packageId, packageName }: Packa
       {stages.map((stage) => {
         const statusOption = STATUS_OPTIONS.find(s => s.value === stage.status) || STATUS_OPTIONS[0];
         const StatusIcon = statusOption.icon;
+        const isExpanded = expandedStages.has(stage.id);
 
         return (
-          <div 
-            key={stage.id} 
-            className={cn(
-              "flex items-center justify-between gap-4 p-3 rounded-lg border bg-card",
-              stage.status === 2 && "border-red-200 bg-red-50/50",
-              stage.status === 3 && "border-green-200 bg-green-50/50"
-            )}
+          <Collapsible
+            key={stage.id}
+            open={isExpanded}
+            onOpenChange={() => toggleStageExpanded(stage.id)}
           >
-            <div className="flex items-center gap-3 flex-1 min-w-0">
-              <StatusIcon className={cn("h-5 w-5 shrink-0", statusOption.color)} />
-              <div className="min-w-0">
-                <p className="font-medium truncate">{stage.stage_name}</p>
-                {stage.shortname && (
-                  <p className="text-xs text-muted-foreground">{stage.shortname}</p>
-                )}
-              </div>
-            </div>
-            
-            <div className="flex items-center gap-3 shrink-0">
-              {stage.paid && (
-                <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-200">Paid</Badge>
+            <div 
+              className={cn(
+                "rounded-lg border bg-card overflow-hidden",
+                stage.status === 2 && "border-destructive/50 bg-destructive/5",
+                stage.status === 3 && "border-primary/50 bg-primary/5"
               )}
-              {stage.released_client_tasks && (
-                <Badge variant="outline" className="text-xs">Tasks Released</Badge>
-              )}
-              
-              <Select
-                value={stage.status.toString()}
-                onValueChange={(value) => updateStageStatus(stage.id, parseInt(value))}
-                disabled={updating === stage.id}
-              >
-                <SelectTrigger className="w-[140px]">
-                  {updating === stage.id ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <SelectValue />
+            >
+              <div className="flex items-center justify-between gap-4 p-3">
+                <div className="flex items-center gap-3 flex-1 min-w-0">
+                  <CollapsibleTrigger asChild>
+                    <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0">
+                      {isExpanded ? (
+                        <ChevronDown className="h-4 w-4" />
+                      ) : (
+                        <ChevronRight className="h-4 w-4" />
+                      )}
+                    </Button>
+                  </CollapsibleTrigger>
+                  <StatusIcon className={cn("h-5 w-5 shrink-0", statusOption.color)} />
+                  <div className="min-w-0">
+                    <p className="font-medium truncate">{stage.stage_name}</p>
+                    {stage.shortname && (
+                      <p className="text-xs text-muted-foreground">{stage.shortname}</p>
+                    )}
+                  </div>
+                </div>
+                
+                <div className="flex items-center gap-3 shrink-0">
+                  <Badge variant="outline" className="text-xs gap-1">
+                    <ListTodo className="h-3 w-3" />
+                    Tasks
+                  </Badge>
+                  {stage.paid && (
+                    <Badge variant="outline" className="text-xs bg-accent text-accent-foreground">Paid</Badge>
                   )}
-                </SelectTrigger>
-                <SelectContent>
-                  {STATUS_OPTIONS.map((option) => (
-                    <SelectItem key={option.value} value={option.value.toString()}>
-                      <div className="flex items-center gap-2">
-                        <option.icon className={cn("h-4 w-4", option.color)} />
-                        {option.label}
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                  {stage.released_client_tasks && (
+                    <Badge variant="outline" className="text-xs">Tasks Released</Badge>
+                  )}
+                  
+                  <Select
+                    value={stage.status.toString()}
+                    onValueChange={(value) => updateStageStatus(stage.id, parseInt(value))}
+                    disabled={updating === stage.id}
+                  >
+                    <SelectTrigger className="w-[140px]">
+                      {updating === stage.id ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <SelectValue />
+                      )}
+                    </SelectTrigger>
+                    <SelectContent>
+                      {STATUS_OPTIONS.map((option) => (
+                        <SelectItem key={option.value} value={option.value.toString()}>
+                          <div className="flex items-center gap-2">
+                            <option.icon className={cn("h-4 w-4", option.color)} />
+                            {option.label}
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              
+              <CollapsibleContent>
+                <StageStaffTasks 
+                  stageInstanceId={stage.id}
+                  tenantId={tenantId}
+                  packageId={packageId}
+                />
+              </CollapsibleContent>
             </div>
-          </div>
+          </Collapsible>
         );
       })}
     </div>
