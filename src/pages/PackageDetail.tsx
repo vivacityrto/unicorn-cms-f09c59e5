@@ -16,7 +16,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "@/components/ui/separator";
 import { Combobox } from "@/components/ui/combobox";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { ArrowLeft, Users, CheckCircle2, FileText, Plus, Search, ArrowUpDown, Trash2, Edit, Calendar, Layers, GripVertical, XCircle, Circle, Clock } from "lucide-react";
+import { ArrowLeft, Users, User, CheckCircle2, FileText, Plus, Search, ArrowUpDown, Trash2, Edit, Calendar, Layers, GripVertical, XCircle, Circle, Clock } from "lucide-react";
 import { AddStageDialog } from "@/components/AddStageDialog";
 import { AddStaffTaskDialog } from "@/components/AddStaffTaskDialog";
 import { AddClientTaskDialog } from "@/components/AddClientTaskDialog";
@@ -52,6 +52,17 @@ interface PackageInfo {
   status: string;
   created_at: string;
   duration_months?: number | null;
+  total_hours?: number | null;
+}
+
+interface PackageInstanceData {
+  start_date: string | null;
+  end_date: string | null;
+  manager_id: string | null;
+  manager_name: string | null;
+  hours_included: number | null;
+  hours_used: number | null;
+  hours_added: number | null;
 }
 interface TenantData {
   id: number;
@@ -230,7 +241,15 @@ const PackageDetail = ({ instanceId: propInstanceId }: PackageDetailProps = {}) 
   const [isAddExistingStageDialogOpen, setIsAddExistingStageDialogOpen] = useState(false);
   const [isRemoveTenantDialogOpen, setIsRemoveTenantDialogOpen] = useState(false);
   const [tenantToRemove, setTenantToRemove] = useState<TenantData | null>(null);
-  const [instanceDates, setInstanceDates] = useState<{ start_date: string | null; end_date: string | null }>({ start_date: null, end_date: null });
+  const [instanceData, setInstanceData] = useState<PackageInstanceData>({ 
+    start_date: null, 
+    end_date: null, 
+    manager_id: null,
+    manager_name: null,
+    hours_included: null,
+    hours_used: null,
+    hours_added: null
+  });
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -551,41 +570,62 @@ const PackageDetail = ({ instanceId: propInstanceId }: PackageDetailProps = {}) 
     try {
       setIsLoading(true);
 
-      // Fetch package info with all fields
+      // Fetch package info with all fields including total_hours
       const {
         data: pkgData,
         error: pkgError
-      } = await supabase.from("packages").select("id, name, slug, full_text, details, status, created_at, duration_months").eq("id", Number(id)).single();
+      } = await supabase.from("packages").select("id, name, slug, full_text, details, status, created_at, duration_months, total_hours").eq("id", Number(id)).single();
       if (pkgError) throw pkgError;
       setPackageInfo(pkgData);
 
       // Fetch stages based on tenant's stage_ids if on tenant page
       if (tenantId) {
-        // Fetch package instance dates - use instanceId if available for precision
-        let instanceData = null;
+        // Fetch package instance with all required fields - use instanceId if available for precision
+        let fetchedInstance: any = null;
         if (instanceId) {
           const { data } = await supabase
             .from("package_instances")
-            .select("start_date, end_date")
+            .select("start_date, end_date, manager_id, hours_included, hours_used, hours_added")
             .eq("id", Number(instanceId))
             .single();
-          instanceData = data;
+          fetchedInstance = data;
         } else {
           // Fallback: get most recent active instance
           const { data } = await supabase
             .from("package_instances")
-            .select("start_date, end_date")
+            .select("start_date, end_date, manager_id, hours_included, hours_used, hours_added")
             .eq("package_id", Number(id))
             .eq("tenant_id", Number(tenantId))
             .eq("is_complete", false)
             .order("start_date", { ascending: false })
             .limit(1)
             .single();
-          instanceData = data;
+          fetchedInstance = data;
         }
         
-        if (instanceData) {
-          setInstanceDates({ start_date: instanceData.start_date, end_date: instanceData.end_date });
+        if (fetchedInstance) {
+          // Fetch manager name if manager_id exists
+          let managerName: string | null = null;
+          if (fetchedInstance.manager_id) {
+            const { data: managerData } = await supabase
+              .from("users")
+              .select("first_name, last_name")
+              .eq("user_uuid", fetchedInstance.manager_id)
+              .single();
+            if (managerData) {
+              managerName = `${managerData.first_name || ''} ${managerData.last_name || ''}`.trim() || null;
+            }
+          }
+          
+          setInstanceData({ 
+            start_date: fetchedInstance.start_date, 
+            end_date: fetchedInstance.end_date,
+            manager_id: fetchedInstance.manager_id,
+            manager_name: managerName,
+            hours_included: fetchedInstance.hours_included,
+            hours_used: fetchedInstance.hours_used,
+            hours_added: fetchedInstance.hours_added
+          });
         }
 
         // First get the tenant's stage_ids
@@ -788,11 +828,11 @@ const PackageDetail = ({ instanceId: propInstanceId }: PackageDetailProps = {}) 
                     <div className="flex items-center gap-4 text-sm text-muted-foreground">
                       <div className="flex items-center gap-2">
                         <Calendar className="h-4 w-4" />
-                        <span>Start: {instanceDates.start_date ? new Date(instanceDates.start_date).toLocaleDateString('en-AU') : '—'}</span>
+                        <span>Start: {instanceData.start_date ? new Date(instanceData.start_date).toLocaleDateString('en-AU') : '—'}</span>
                       </div>
                       <div className="flex items-center gap-2">
                         <Calendar className="h-4 w-4" />
-                        <span>End: {instanceDates.end_date ? new Date(instanceDates.end_date).toLocaleDateString('en-AU') : '—'}</span>
+                        <span>End: {instanceData.end_date ? new Date(instanceData.end_date).toLocaleDateString('en-AU') : '—'}</span>
                       </div>
                     </div>
                   </div>
@@ -804,6 +844,39 @@ const PackageDetail = ({ instanceId: propInstanceId }: PackageDetailProps = {}) 
               </div>
             </div>
             <CardContent className="p-6 space-y-4">
+              {/* Package & Instance Info Grid */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pb-4 border-b border-border/50">
+                <div className="space-y-1">
+                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Manager</p>
+                  <p className="text-sm font-medium text-foreground flex items-center gap-1.5">
+                    <User className="h-3.5 w-3.5 text-muted-foreground" />
+                    {instanceData.manager_name || '—'}
+                  </p>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Duration</p>
+                  <p className="text-sm font-medium text-foreground">
+                    {packageInfo.duration_months ? `${packageInfo.duration_months} months` : '—'}
+                  </p>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Package Total Hours</p>
+                  <p className="text-sm font-medium text-foreground">
+                    {packageInfo.total_hours != null ? `${packageInfo.total_hours.toFixed(2)}h` : '—'}
+                  </p>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Hours (Incl / Used / Added)</p>
+                  <p className="text-sm font-medium text-foreground flex items-center gap-1.5">
+                    <Clock className="h-3.5 w-3.5 text-muted-foreground" />
+                    {instanceData.hours_included != null ? instanceData.hours_included.toFixed(2) : '0.00'} / 
+                    {instanceData.hours_used != null ? instanceData.hours_used.toFixed(2) : '0.00'} / 
+                    {instanceData.hours_added != null ? instanceData.hours_added.toFixed(2) : '0.00'}
+                  </p>
+                </div>
+              </div>
+
+              {/* Details Text */}
               <div className="flex items-start gap-2 text-sm text-muted-foreground leading-relaxed">
                 
                 <p className="whitespace-pre-wrap">{packageInfo.details}</p>
