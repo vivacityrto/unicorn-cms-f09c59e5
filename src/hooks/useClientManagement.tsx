@@ -7,6 +7,7 @@ export interface ClientPackage {
   package_id: number;
   package_name: string;
   package_slug: string | null;
+  package_full_text: string | null;
   membership_state: string;
   hours_included: number;
   hours_used: number;
@@ -532,7 +533,7 @@ export function useClientPackages(tenantId: number | null) {
       // Fetch package details and stage states in parallel
       const [packagesResult, stageStatesResult] = await Promise.all([
         packageIds.length > 0
-          ? supabase.from('packages').select('id, name, slug').in('id', packageIds)
+          ? supabase.from('packages').select('id, name, slug, full_text').in('id', packageIds)
           : Promise.resolve({ data: [] }),
         supabase.from('client_package_stage_state').select('*, documents_stages(title)').eq('tenant_id', tenantId)
       ]);
@@ -561,6 +562,7 @@ export function useClientPackages(tenantId: number | null) {
           package_id: inst.package_id,
           package_name: pkg?.name || 'Unknown',
           package_slug: pkg?.slug || null,
+          package_full_text: pkg?.full_text || null,
           membership_state: inst.is_complete ? 'exiting' : 'active',
           hours_included: totalHours,
           hours_used: inst.hours_used || 0,

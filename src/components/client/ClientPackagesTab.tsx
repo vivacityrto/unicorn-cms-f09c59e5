@@ -134,19 +134,26 @@ export function ClientPackagesTab({ tenantId, tenantName, packages, loading, onA
                 <div className="flex items-start justify-between gap-4">
                   {/* Left: Package Info */}
                   <div className="flex-1 space-y-3">
-                    <div className="flex items-center gap-3">
-                      <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                        <Package2 className="h-5 w-5 text-primary" />
-                      </div>
-                      <div>
-                        <h3 className="font-semibold text-lg">{pkg.package_name}</h3>
-                        {pkg.package_slug && (
-                          <span className="text-sm text-muted-foreground">{pkg.package_slug}</span>
-                        )}
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-3">
+                        <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                          <Package2 className="h-5 w-5 text-primary" />
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <h3 className="font-semibold text-lg">{pkg.package_name}</h3>
+                            {pkg.package_slug && (
+                              <span className="text-sm text-muted-foreground">{pkg.package_slug}</span>
+                            )}
+                          </div>
+                          {pkg.package_full_text && (
+                            <p className="text-sm text-muted-foreground">{pkg.package_full_text}</p>
+                          )}
+                        </div>
                       </div>
                       <Badge 
                         variant="outline"
-                        className={`ml-2 ${STATE_COLORS[pkg.membership_state] || ''}`}
+                        className={`${STATE_COLORS[pkg.membership_state] || ''}`}
                       >
                         {STATE_ICONS[pkg.membership_state]}
                         <span className="ml-1 capitalize">{pkg.membership_state}</span>
