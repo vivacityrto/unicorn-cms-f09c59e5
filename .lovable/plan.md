@@ -1,61 +1,120 @@
 
-# Plan: Move Package Description to Right of Name
 
-## Overview
+# Plan: Use Package Instance ID for Date Fetching
 
-Move the `package_full_text` from below the package name to inline beside it, creating a more compact header layout.
+## Problem
 
----
+The current implementation fetches `start_date` and `end_date` by filtering `package_instances` with `package_id`, `tenant_id`, and `is_complete = false`. However, this can return **multiple rows** when a tenant has multiple active instances of the same package (as seen with tenant 6357 having two active Membership instances).
 
-## Current Layout
+## Solution
 
-```
-[Icon] Package Name
-       Package Full Text Description
-```
-
-## Target Layout
-
-```
-[Icon] Package Name — Package Full Text Description
-```
+Update the route and data flow to pass the `package_instances.id` directly, ensuring dates are fetched for the correct specific instance.
 
 ---
 
-## Implementation
+## Technical Implementation
 
-### File: `src/components/client/ClientPackagesTab.tsx`
+### 1. Update Route Structure
 
-**Change:** Replace the stacked `<h3>` and `<p>` with a single inline flex row containing both elements separated by a dash or em-dash.
+**File: `src/App.tsx`**
 
-**Lines 142-147** will change from:
+Change the route from:
+```
+/admin/package/:id/tenant/:tenantId
+```
+To include the instance ID:
+```
+/admin/package/:id/tenant/:tenantId/instance/:instanceId
+```
+
+### 2. Update Navigation from ClientPackagesTab
+
+**File: `src/components/client/ClientPackagesTab.tsx`**
+
+Change the navigation (line 229) to include the package instance ID:
 
 ```tsx
-<div>
-  <h3 className="font-semibold text-lg">{pkg.package_name}</h3>
-  {pkg.package_full_text && (
-    <p className="text-sm text-muted-foreground">{pkg.package_full_text}</p>
-  )}
-</div>
+// From:
+navigate(`/admin/package/${pkg.package_id}/tenant/${tenantId}`);
+
+// To:
+navigate(`/admin/package/${pkg.package_id}/tenant/${tenantId}/instance/${pkg.id}`);
 ```
 
-To:
+### 3. Update AdminPackageTenantDetail to Extract Instance ID
+
+**File: `src/pages/AdminPackageTenantDetail.tsx`**
+
+Update `useParams` to include the new `instanceId` parameter and pass it to `PackageDetail`:
 
 ```tsx
-<div className="flex items-baseline gap-2">
-  <h3 className="font-semibold text-lg">{pkg.package_name}</h3>
-  {pkg.package_full_text && (
-    <span className="text-sm text-muted-foreground">— {pkg.package_full_text}</span>
-  )}
-</div>
+const { id: packageId, tenantId, instanceId } = useParams();
+// ...
+<PackageDetail instanceId={instanceId} />
+```
+
+### 4. Update PackageDetail to Use Instance ID
+
+**File: `src/pages/PackageDetail.tsx`**
+
+- Accept optional `instanceId` prop
+- Update the date fetch query to use `id` directly instead of the composite filter:
+
+```tsx
+// Current (problematic):
+.eq("package_id", Number(id))
+.eq("tenant_id", Number(tenantId))
+.eq("is_complete", false)
+.single();
+
+// Updated (correct):
+.eq("id", Number(instanceId))
+.single();
+```
+
+### 5. Handle Fallback for Direct Navigation
+
+If someone navigates directly without instance ID, fall back to fetching the most recent active instance:
+
+```tsx
+if (instanceId) {
+  // Direct fetch by ID
+  const { data } = await supabase
+    .from("package_instances")
+    .select("start_date, end_date")
+    .eq("id", Number(instanceId))
+    .single();
+} else if (tenantId) {
+  // Fallback: get most recent active instance
+  const { data } = await supabase
+    .from("package_instances")
+    .select("start_date, end_date")
+    .eq("package_id", Number(id))
+    .eq("tenant_id", Number(tenantId))
+    .eq("is_complete", false)
+    .order("start_date", { ascending: false })
+    .limit(1)
+    .single();
+}
 ```
 
 ---
 
-## Visual Result
+## Files to Modify
 
-The package heading will display as:
+| File | Change |
+|------|--------|
+| `src/App.tsx` | Add `/instance/:instanceId` to route |
+| `src/components/client/ClientPackagesTab.tsx` | Include `pkg.id` in navigation URL |
+| `src/pages/AdminPackageTenantDetail.tsx` | Extract `instanceId` from params, pass to child |
+| `src/pages/PackageDetail.tsx` | Accept `instanceId` prop, query by ID |
 
-**KS-RTO** — KickStart for RTOs
+---
 
-With the status badge remaining on the far right as previously positioned.
+## Data Integrity
+
+This change ensures:
+- Each package card links to its specific instance
+- Historical instances (if shown) would link correctly
+- Dates displayed always match the specific instance being viewed
+
