@@ -223,6 +223,7 @@ const PackageDetail = () => {
   const [isAddExistingStageDialogOpen, setIsAddExistingStageDialogOpen] = useState(false);
   const [isRemoveTenantDialogOpen, setIsRemoveTenantDialogOpen] = useState(false);
   const [tenantToRemove, setTenantToRemove] = useState<TenantData | null>(null);
+  const [instanceDates, setInstanceDates] = useState<{ start_date: string | null; end_date: string | null }>({ start_date: null, end_date: null });
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -553,6 +554,19 @@ const PackageDetail = () => {
 
       // Fetch stages based on tenant's stage_ids if on tenant page
       if (tenantId) {
+        // Fetch package instance dates for this tenant
+        const { data: instanceData } = await supabase
+          .from("package_instances")
+          .select("start_date, end_date")
+          .eq("package_id", Number(id))
+          .eq("tenant_id", Number(tenantId))
+          .eq("is_complete", false)
+          .single();
+        
+        if (instanceData) {
+          setInstanceDates({ start_date: instanceData.start_date, end_date: instanceData.end_date });
+        }
+
         // First get the tenant's stage_ids
         const { data: tenantData, error: tenantError } = await supabase
           .from("tenants")
@@ -746,9 +760,15 @@ const PackageDetail = () => {
                   
                   <div className="space-y-1">
                     <h3 className="text-base font-semibold text-foreground">{packageInfo.name}</h3>
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <Calendar className="h-4 w-4" />
-                      Created {new Date(packageInfo.created_at).toLocaleDateString()}
+                    <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                      <div className="flex items-center gap-2">
+                        <Calendar className="h-4 w-4" />
+                        <span>Start: {instanceDates.start_date ? new Date(instanceDates.start_date).toLocaleDateString('en-AU') : '—'}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Calendar className="h-4 w-4" />
+                        <span>End: {instanceDates.end_date ? new Date(instanceDates.end_date).toLocaleDateString('en-AU') : '—'}</span>
+                      </div>
                     </div>
                   </div>
                 </div>
