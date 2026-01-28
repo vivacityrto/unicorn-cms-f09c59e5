@@ -120,25 +120,14 @@ export default function AdminPackageTenantDetail() {
               </div>
             </div>
             <CardContent className="p-6">
-              <div className="flex flex-wrap items-center justify-between gap-6">
-                  {/* Contact Person */}
-                  {tenantContact && <div className="flex items-center gap-3">
-                      <Avatar className="h-10 w-10 border-2 border-background shadow-sm">
-                        <AvatarImage src={tenantContact.avatar_url} />
-                        <AvatarFallback className="bg-muted text-muted-foreground text-sm font-medium">
-                          {getInitials(tenantContact.name)}
-                        </AvatarFallback>
-                      </Avatar>
-                      <p className="text-[15px] text-muted-foreground">Primary Contact: {tenantContact.name}</p>
-                    </div>}
-
+              <div className="flex flex-wrap items-center justify-end gap-6">
                   {/* Created Date */}
                   <div className="flex items-center gap-3">
                     <div className="h-10 w-10 rounded-lg bg-muted/50 flex items-center justify-center">
                       <Calendar className="h-4 w-4 text-muted-foreground" />
                     </div>
                     <p className="text-[15px] text-muted-foreground">
-                      {tenantInfo ? new Date(tenantInfo.created_at).toLocaleDateString() : ''}
+                      Client Since: {tenantInfo ? new Date(tenantInfo.created_at).toLocaleDateString('en-AU') : ''}
                     </p>
                   </div>
               </div>
