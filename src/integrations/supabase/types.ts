@@ -2033,6 +2033,117 @@ export type Database = {
           },
         ]
       }
+      clickup_tasks: {
+        Row: {
+          assigned_comments: Json | null
+          assignees: Json | null
+          attachments: Json | null
+          checklists: Json | null
+          comments: Json | null
+          date_created: string | null
+          date_created_at: string | null
+          date_created_text: string | null
+          due_date: string | null
+          due_date_at: string | null
+          due_date_text: string | null
+          folder_name_path: string | null
+          id: string
+          inserted_at: string | null
+          list_name: string | null
+          parent_id: string | null
+          priority: string | null
+          rolled_up_time: string | null
+          rolled_up_time_text: string | null
+          space_name: string | null
+          start_date: string | null
+          start_date_at: string | null
+          start_date_text: string | null
+          status: string | null
+          tags: Json | null
+          task_content: string | null
+          task_custom_id: string | null
+          task_id: string | null
+          task_name: string | null
+          time_estimated: string | null
+          time_estimated_text: string | null
+          time_spent: string | null
+          time_spent_text: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          assigned_comments?: Json | null
+          assignees?: Json | null
+          attachments?: Json | null
+          checklists?: Json | null
+          comments?: Json | null
+          date_created?: string | null
+          date_created_at?: string | null
+          date_created_text?: string | null
+          due_date?: string | null
+          due_date_at?: string | null
+          due_date_text?: string | null
+          folder_name_path?: string | null
+          id?: string
+          inserted_at?: string | null
+          list_name?: string | null
+          parent_id?: string | null
+          priority?: string | null
+          rolled_up_time?: string | null
+          rolled_up_time_text?: string | null
+          space_name?: string | null
+          start_date?: string | null
+          start_date_at?: string | null
+          start_date_text?: string | null
+          status?: string | null
+          tags?: Json | null
+          task_content?: string | null
+          task_custom_id?: string | null
+          task_id?: string | null
+          task_name?: string | null
+          time_estimated?: string | null
+          time_estimated_text?: string | null
+          time_spent?: string | null
+          time_spent_text?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          assigned_comments?: Json | null
+          assignees?: Json | null
+          attachments?: Json | null
+          checklists?: Json | null
+          comments?: Json | null
+          date_created?: string | null
+          date_created_at?: string | null
+          date_created_text?: string | null
+          due_date?: string | null
+          due_date_at?: string | null
+          due_date_text?: string | null
+          folder_name_path?: string | null
+          id?: string
+          inserted_at?: string | null
+          list_name?: string | null
+          parent_id?: string | null
+          priority?: string | null
+          rolled_up_time?: string | null
+          rolled_up_time_text?: string | null
+          space_name?: string | null
+          start_date?: string | null
+          start_date_at?: string | null
+          start_date_text?: string | null
+          status?: string | null
+          tags?: Json | null
+          task_content?: string | null
+          task_custom_id?: string | null
+          task_id?: string | null
+          task_name?: string | null
+          time_estimated?: string | null
+          time_estimated_text?: string | null
+          time_spent?: string | null
+          time_spent_text?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       client_action_item_comments: {
         Row: {
           action_item_id: string
@@ -10214,7 +10325,8 @@ export type Database = {
           released_client_tasks: boolean
           released_client_tasks_date: string | null
           stage_id: number
-          status: number
+          status: string | null
+          status_id: number
         }
         Insert: {
           completion_date: string
@@ -10224,7 +10336,8 @@ export type Database = {
           released_client_tasks?: boolean
           released_client_tasks_date?: string | null
           stage_id: number
-          status?: number
+          status?: string | null
+          status_id?: number
         }
         Update: {
           completion_date?: string
@@ -10234,7 +10347,8 @@ export type Database = {
           released_client_tasks?: boolean
           released_client_tasks_date?: string | null
           stage_id?: number
-          status?: number
+          status?: string | null
+          status_id?: number
         }
         Relationships: []
       }
@@ -10793,6 +10907,111 @@ export type Database = {
         Update: {
           code?: string
           order_index?: number
+        }
+        Relationships: []
+      }
+      tasks: {
+        Row: {
+          assigned_comments: Json | null
+          assignees: Json | null
+          attachments: Json | null
+          checklists: Json | null
+          comments: Json | null
+          date_created_at: string | null
+          date_created_ms: number | null
+          date_created_text: string | null
+          due_date_at: string | null
+          due_date_ms: number | null
+          due_date_text: string | null
+          folder_name_path: string | null
+          id: string
+          inserted_at: string
+          list_name: string | null
+          parent_id: string | null
+          priority: string | null
+          space_name: string | null
+          start_date_at: string | null
+          start_date_ms: number | null
+          start_date_text: string | null
+          status: string | null
+          tags: Json | null
+          task_content: string | null
+          task_custom_id: string | null
+          task_id: string | null
+          task_name: string | null
+          time_estimated_ms: number | null
+          time_estimated_text: string | null
+          time_spent_ms: number | null
+          time_spent_text: string | null
+          updated_at: string
+        }
+        Insert: {
+          assigned_comments?: Json | null
+          assignees?: Json | null
+          attachments?: Json | null
+          checklists?: Json | null
+          comments?: Json | null
+          date_created_at?: string | null
+          date_created_ms?: number | null
+          date_created_text?: string | null
+          due_date_at?: string | null
+          due_date_ms?: number | null
+          due_date_text?: string | null
+          folder_name_path?: string | null
+          id?: string
+          inserted_at?: string
+          list_name?: string | null
+          parent_id?: string | null
+          priority?: string | null
+          space_name?: string | null
+          start_date_at?: string | null
+          start_date_ms?: number | null
+          start_date_text?: string | null
+          status?: string | null
+          tags?: Json | null
+          task_content?: string | null
+          task_custom_id?: string | null
+          task_id?: string | null
+          task_name?: string | null
+          time_estimated_ms?: number | null
+          time_estimated_text?: string | null
+          time_spent_ms?: number | null
+          time_spent_text?: string | null
+          updated_at?: string
+        }
+        Update: {
+          assigned_comments?: Json | null
+          assignees?: Json | null
+          attachments?: Json | null
+          checklists?: Json | null
+          comments?: Json | null
+          date_created_at?: string | null
+          date_created_ms?: number | null
+          date_created_text?: string | null
+          due_date_at?: string | null
+          due_date_ms?: number | null
+          due_date_text?: string | null
+          folder_name_path?: string | null
+          id?: string
+          inserted_at?: string
+          list_name?: string | null
+          parent_id?: string | null
+          priority?: string | null
+          space_name?: string | null
+          start_date_at?: string | null
+          start_date_ms?: number | null
+          start_date_text?: string | null
+          status?: string | null
+          tags?: Json | null
+          task_content?: string | null
+          task_custom_id?: string | null
+          task_id?: string | null
+          task_name?: string | null
+          time_estimated_ms?: number | null
+          time_estimated_text?: string | null
+          time_spent_ms?: number | null
+          time_spent_text?: string | null
+          updated_at?: string
         }
         Relationships: []
       }
