@@ -989,12 +989,11 @@ const PackageDetail = ({ instanceId: propInstanceId }: PackageDetailProps = {}) 
           <Card className="border-0 shadow-lg overflow-hidden">
             <div className="bg-muted/50 px-6 py-4 border-b border-border/50">
               <div className="flex items-center justify-between">
-                <div className="space-y-1">
+                <div className="flex items-baseline gap-2">
                   <h3 className="text-base font-semibold text-foreground">Phases</h3>
-                  {packageInfo.full_text && <p className="text-sm text-muted-foreground flex items-center gap-2">
-                      <Layers className="h-4 w-4" />
-                      {packageInfo.full_text}
-                    </p>}
+                  {packageInfo.full_text && (
+                    <span className="text-sm text-muted-foreground">— {packageInfo.full_text}</span>
+                  )}
                 </div>
               </div>
             </div>
