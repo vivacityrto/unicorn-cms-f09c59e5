@@ -174,11 +174,18 @@ const SortableRow = ({ stage, index, onSelect, onEdit, onDelete }: SortableRowPr
   );
 };
 
-const PackageDetail = () => {
+interface PackageDetailProps {
+  instanceId?: string;
+}
+
+const PackageDetail = ({ instanceId: propInstanceId }: PackageDetailProps = {}) => {
   const {
     id,
-    tenantId
+    tenantId,
+    instanceId: paramInstanceId
   } = useParams();
+  
+  const instanceId = propInstanceId || paramInstanceId;
   const navigate = useNavigate();
   const {
     toast
@@ -554,14 +561,28 @@ const PackageDetail = () => {
 
       // Fetch stages based on tenant's stage_ids if on tenant page
       if (tenantId) {
-        // Fetch package instance dates for this tenant
-        const { data: instanceData } = await supabase
-          .from("package_instances")
-          .select("start_date, end_date")
-          .eq("package_id", Number(id))
-          .eq("tenant_id", Number(tenantId))
-          .eq("is_complete", false)
-          .single();
+        // Fetch package instance dates - use instanceId if available for precision
+        let instanceData = null;
+        if (instanceId) {
+          const { data } = await supabase
+            .from("package_instances")
+            .select("start_date, end_date")
+            .eq("id", Number(instanceId))
+            .single();
+          instanceData = data;
+        } else {
+          // Fallback: get most recent active instance
+          const { data } = await supabase
+            .from("package_instances")
+            .select("start_date, end_date")
+            .eq("package_id", Number(id))
+            .eq("tenant_id", Number(tenantId))
+            .eq("is_complete", false)
+            .order("start_date", { ascending: false })
+            .limit(1)
+            .single();
+          instanceData = data;
+        }
         
         if (instanceData) {
           setInstanceDates({ start_date: instanceData.start_date, end_date: instanceData.end_date });

@@ -389,6 +389,14 @@ const App = () => (
               } 
             />
             <Route 
+              path="/admin/package/:id/tenant/:tenantId/instance/:instanceId"
+              element={
+                <ProtectedRoute>
+                  <AdminPackageTenantDetailWrapper />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
               path="/admin/package/:id/tenant/:tenantId"
               element={
                 <ProtectedRoute>

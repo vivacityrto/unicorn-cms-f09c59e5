@@ -226,7 +226,7 @@ export function ClientPackagesTab({ tenantId, tenantName, packages, loading, onA
                       size="sm"
                       onClick={(e) => {
                         e.stopPropagation();
-                        navigate(`/admin/package/${pkg.package_id}/tenant/${tenantId}`);
+                        navigate(`/admin/package/${pkg.package_id}/tenant/${tenantId}/instance/${pkg.id}`);
                       }}
                     >
                       <ChevronRight className="h-5 w-5 text-muted-foreground" />

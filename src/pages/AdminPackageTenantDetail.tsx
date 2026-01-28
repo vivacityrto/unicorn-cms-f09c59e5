@@ -23,7 +23,8 @@ interface TenantContact {
 export default function AdminPackageTenantDetail() {
   const {
     id: packageId,
-    tenantId
+    tenantId,
+    instanceId
   } = useParams();
   const navigate = useNavigate();
   const {
@@ -174,6 +175,6 @@ export default function AdminPackageTenantDetail() {
         </div>}
 
       {/* Package Detail Component */}
-      <PackageDetail />
+      <PackageDetail instanceId={instanceId} />
     </div>;
 }
