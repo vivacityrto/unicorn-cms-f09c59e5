@@ -25,7 +25,7 @@ interface StageInstance {
   stage_id: number;
   stage_name: string;
   shortname: string | null;
-  status: number; // Legacy status: 0=not_started, 1=in_progress, 2=blocked, 3=complete
+  status: string | number; // Status can be string value or legacy integer code
   completion_date: string | null;
   paid: boolean;
   released_client_tasks: boolean;

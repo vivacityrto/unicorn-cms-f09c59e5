@@ -8499,6 +8499,7 @@ export type Database = {
       package_instances: {
         Row: {
           clo_id: number
+          duration: number | null
           end_date: string | null
           hours_added: number | null
           hours_included: number | null
@@ -8517,6 +8518,7 @@ export type Database = {
         }
         Insert: {
           clo_id: number
+          duration?: number | null
           end_date?: string | null
           hours_added?: number | null
           hours_included?: number | null
@@ -8535,6 +8537,7 @@ export type Database = {
         }
         Update: {
           clo_id?: number
+          duration?: number | null
           end_date?: string | null
           hours_added?: number | null
           hours_included?: number | null
