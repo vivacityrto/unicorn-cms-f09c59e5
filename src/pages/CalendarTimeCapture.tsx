@@ -257,12 +257,12 @@ export default function CalendarTimeCapture() {
   const fetchStagesForPackage = async (packageId: number) => {
     const { data } = await supabase
       .from('package_stages')
-      .select('stage:documents_stages(id, title)')
+      .select('stage:stages(id, name)')
       .eq('package_id', packageId);
     if (data) {
       setStages(data.map(s => ({ 
-        id: (s.stage as { id: number; title: string }).id, 
-        name: (s.stage as { id: number; title: string }).title 
+        id: (s.stage as { id: number; name: string }).id, 
+        name: (s.stage as { id: number; name: string }).name 
       })));
     }
   };
