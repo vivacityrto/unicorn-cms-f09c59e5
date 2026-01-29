@@ -13636,6 +13636,24 @@ export type Database = {
         }
         Relationships: []
       }
+      training_folders: {
+        Row: {
+          created_at: string
+          folder_name: string
+          id: string
+        }
+        Insert: {
+          created_at?: string
+          folder_name: string
+          id?: string
+        }
+        Update: {
+          created_at?: string
+          folder_name?: string
+          id?: string
+        }
+        Relationships: []
+      }
       training_products: {
         Row: {
           code: string | null
@@ -13659,6 +13677,38 @@ export type Database = {
           name?: string
         }
         Relationships: []
+      }
+      training_videos: {
+        Row: {
+          created_at: string
+          folder_id: string
+          id: string
+          video_name: string
+          vimeo_url: string
+        }
+        Insert: {
+          created_at?: string
+          folder_id: string
+          id?: string
+          video_name: string
+          vimeo_url: string
+        }
+        Update: {
+          created_at?: string
+          folder_id?: string
+          id?: string
+          video_name?: string
+          vimeo_url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "training_videos_folder_id_fkey"
+            columns: ["folder_id"]
+            isOneToOne: false
+            referencedRelation: "training_folders"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       unicorn_import_logs: {
         Row: {
