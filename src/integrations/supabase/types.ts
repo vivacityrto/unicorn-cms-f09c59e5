@@ -10287,7 +10287,7 @@ export type Database = {
           due_date: string | null
           id: number
           notes: string | null
-          staff_task_id: number
+          stafftask_id: number
           stageinstance_id: number
           status: string
           status_id: number
@@ -10303,7 +10303,7 @@ export type Database = {
           due_date?: string | null
           id: number
           notes?: string | null
-          staff_task_id: number
+          stafftask_id: number
           stageinstance_id: number
           status?: string
           status_id?: number
@@ -10319,7 +10319,7 @@ export type Database = {
           due_date?: string | null
           id?: number
           notes?: string | null
-          staff_task_id?: number
+          stafftask_id?: number
           stageinstance_id?: number
           status?: string
           status_id?: number
