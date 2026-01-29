@@ -3969,6 +3969,7 @@ export type Database = {
           created_at: string
           document_id: number | null
           id: string
+          stageinstance_id: number | null
           status: string | null
           tenant_id: number | null
           updated_at: string
@@ -3978,6 +3979,7 @@ export type Database = {
           created_at?: string
           document_id?: number | null
           id?: string
+          stageinstance_id?: number | null
           status?: string | null
           tenant_id?: number | null
           updated_at?: string
@@ -3987,6 +3989,7 @@ export type Database = {
           created_at?: string
           document_id?: number | null
           id?: string
+          stageinstance_id?: number | null
           status?: string | null
           tenant_id?: number | null
           updated_at?: string
