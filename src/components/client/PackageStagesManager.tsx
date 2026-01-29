@@ -261,9 +261,6 @@ export function PackageStagesManager({ tenantId, packageId, packageName }: Packa
                     <ListTodo className="h-3 w-3" />
                     Tasks
                   </Badge>
-                  {stage.paid && (
-                    <Badge variant="outline" className="text-xs bg-accent text-accent-foreground">Paid</Badge>
-                  )}
                   {stage.released_client_tasks && (
                     <Badge variant="outline" className="text-xs">Tasks Released</Badge>
                   )}
