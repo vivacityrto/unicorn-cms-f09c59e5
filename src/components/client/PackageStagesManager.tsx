@@ -104,7 +104,7 @@ export function PackageStagesManager({ tenantId, packageId, packageName }: Packa
       const stageResult = await (supabase
         .from('stage_instances' as any)
         .select('id, stage_id, status, completion_date, paid, released_client_tasks')
-        .eq('package_instance_id', instanceData.id)
+        .eq('packageinstance_id', instanceData.id)
         .order('stage_id')) as { data: Array<{ id: number; stage_id: number; status: string | null; completion_date: string | null; paid: boolean | null; released_client_tasks: boolean | null }> | null; error: any };
       
       const stageData = stageResult.data;
