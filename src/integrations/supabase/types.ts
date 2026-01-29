@@ -2860,50 +2860,47 @@ export type Database = {
       }
       client_tasks: {
         Row: {
-          client_package_stage_id: string
-          completed_at: string | null
-          completed_by: string | null
           created_at: string | null
-          due_date: string | null
-          id: string
+          description: string | null
+          due_date_offset: number | null
+          id: number
           instructions: string | null
+          is_mandatory: boolean | null
           name: string
           sort_order: number
-          status: string
-          template_task_id: string | null
+          stage_id: number
+          u1_id: number | null
         }
         Insert: {
-          client_package_stage_id: string
-          completed_at?: string | null
-          completed_by?: string | null
           created_at?: string | null
-          due_date?: string | null
-          id?: string
+          description?: string | null
+          due_date_offset?: number | null
+          id: number
           instructions?: string | null
+          is_mandatory?: boolean | null
           name: string
-          sort_order: number
-          status?: string
-          template_task_id?: string | null
+          sort_order?: number
+          stage_id: number
+          u1_id?: number | null
         }
         Update: {
-          client_package_stage_id?: string
-          completed_at?: string | null
-          completed_by?: string | null
           created_at?: string | null
-          due_date?: string | null
-          id?: string
+          description?: string | null
+          due_date_offset?: number | null
+          id?: number
           instructions?: string | null
+          is_mandatory?: boolean | null
           name?: string
           sort_order?: number
-          status?: string
-          template_task_id?: string | null
+          stage_id?: number
+          u1_id?: number | null
         }
         Relationships: [
           {
-            foreignKeyName: "client_tasks_client_package_stage_id_fkey"
-            columns: ["client_package_stage_id"]
+            foreignKeyName: "client_tasks_stage_id_fkey"
+            columns: ["stage_id"]
             isOneToOne: false
-            referencedRelation: "client_package_stages"
+            referencedRelation: "stages"
             referencedColumns: ["id"]
           },
         ]
