@@ -1,120 +1,93 @@
 
+# Plan: Sync Package Stages from Unicorn1
 
-# Plan: Use Package Instance ID for Date Fetching
+## Overview
 
-## Problem
+Truncate `public.package_stages` and insert the 171 valid records from `unicorn1.package_stages`.
 
-The current implementation fetches `start_date` and `end_date` by filtering `package_instances` with `package_id`, `tenant_id`, and `is_complete = false`. However, this can return **multiple rows** when a tenant has multiple active instances of the same package (as seen with tenant 6357 having two active Membership instances).
+## Data Summary
 
-## Solution
+| Source | Records |
+|--------|---------|
+| Current `public.package_stages` | 9 (incomplete) |
+| `unicorn1.package_stages` with valid packages | 171 |
 
-Update the route and data flow to pass the `package_instances.id` directly, ensuring dates are fetched for the correct specific instance.
+All 171 unicorn1 records have valid `stage_id` values that exist in `public.stages`.
+
+## Migration Steps
+
+### Step 1: Truncate Existing Data
+
+Clear the 9 incomplete records from `public.package_stages`.
+
+### Step 2: Insert Unicorn1 Data
+
+Map the unicorn1 columns to public columns:
+
+| Unicorn1 | Public | Notes |
+|----------|--------|-------|
+| `package_id` | `package_id` | Direct |
+| `stage_id` | `stage_id` | Direct (references `stages.id`) |
+| `ordernumber` | `sort_order` | Rename |
+| — | `is_required` | Default `true` |
+| — | `update_policy` | Default `'manual'` |
+| — | `use_overrides` | Default `false` |
 
 ---
 
-## Technical Implementation
+## Technical Details
 
-### 1. Update Route Structure
+### SQL Migration
 
-**File: `src/App.tsx`**
+```sql
+-- Step 1: Truncate existing incomplete data
+TRUNCATE public.package_stages RESTART IDENTITY CASCADE;
 
-Change the route from:
-```
-/admin/package/:id/tenant/:tenantId
-```
-To include the instance ID:
-```
-/admin/package/:id/tenant/:tenantId/instance/:instanceId
-```
-
-### 2. Update Navigation from ClientPackagesTab
-
-**File: `src/components/client/ClientPackagesTab.tsx`**
-
-Change the navigation (line 229) to include the package instance ID:
-
-```tsx
-// From:
-navigate(`/admin/package/${pkg.package_id}/tenant/${tenantId}`);
-
-// To:
-navigate(`/admin/package/${pkg.package_id}/tenant/${tenantId}/instance/${pkg.id}`);
-```
-
-### 3. Update AdminPackageTenantDetail to Extract Instance ID
-
-**File: `src/pages/AdminPackageTenantDetail.tsx`**
-
-Update `useParams` to include the new `instanceId` parameter and pass it to `PackageDetail`:
-
-```tsx
-const { id: packageId, tenantId, instanceId } = useParams();
-// ...
-<PackageDetail instanceId={instanceId} />
+-- Step 2: Insert unicorn1 data
+INSERT INTO public.package_stages (
+  package_id, 
+  stage_id, 
+  sort_order, 
+  is_required, 
+  update_policy, 
+  use_overrides,
+  created_at
+)
+SELECT 
+  ups.package_id,
+  ups.stage_id,
+  ups.ordernumber,
+  true,
+  'manual',
+  false,
+  COALESCE(ups.dateimported, NOW())
+FROM unicorn1.package_stages ups
+WHERE EXISTS (SELECT 1 FROM public.packages p WHERE p.id = ups.package_id);
 ```
 
-### 4. Update PackageDetail to Use Instance ID
+### Frontend Updates Required
 
-**File: `src/pages/PackageDetail.tsx`**
+Files that join `package_stages` with `documents_stages` will need updating to use `stages` instead:
 
-- Accept optional `instanceId` prop
-- Update the date fetch query to use `id` directly instead of the composite filter:
+- `src/hooks/useStageDependencies.tsx`
+- `src/hooks/usePackageStageOverrides.tsx`
+- `src/pages/CalendarTimeCapture.tsx`
+- `src/components/package-builder/PackageBuilderOverview.tsx`
+- `src/hooks/usePackageBuilder.tsx`
 
-```tsx
-// Current (problematic):
-.eq("package_id", Number(id))
-.eq("tenant_id", Number(tenantId))
-.eq("is_complete", false)
-.single();
-
-// Updated (correct):
-.eq("id", Number(instanceId))
-.single();
+These will change from:
+```typescript
+.select('stage:documents_stages(id, title)')
 ```
-
-### 5. Handle Fallback for Direct Navigation
-
-If someone navigates directly without instance ID, fall back to fetching the most recent active instance:
-
-```tsx
-if (instanceId) {
-  // Direct fetch by ID
-  const { data } = await supabase
-    .from("package_instances")
-    .select("start_date, end_date")
-    .eq("id", Number(instanceId))
-    .single();
-} else if (tenantId) {
-  // Fallback: get most recent active instance
-  const { data } = await supabase
-    .from("package_instances")
-    .select("start_date, end_date")
-    .eq("package_id", Number(id))
-    .eq("tenant_id", Number(tenantId))
-    .eq("is_complete", false)
-    .order("start_date", { ascending: false })
-    .limit(1)
-    .single();
-}
+To:
+```typescript
+.select('stage:stages(id, name, shortname)')
 ```
 
 ---
 
-## Files to Modify
+## Expected Outcome
 
-| File | Change |
-|------|--------|
-| `src/App.tsx` | Add `/instance/:instanceId` to route |
-| `src/components/client/ClientPackagesTab.tsx` | Include `pkg.id` in navigation URL |
-| `src/pages/AdminPackageTenantDetail.tsx` | Extract `instanceId` from params, pass to child |
-| `src/pages/PackageDetail.tsx` | Accept `instanceId` prop, query by ID |
-
----
-
-## Data Integrity
-
-This change ensures:
-- Each package card links to its specific instance
-- Historical instances (if shown) would link correctly
-- Dates displayed always match the specific instance being viewed
-
+- 171 package stage records synced
+- Consistent with `stages` table (source of truth)
+- Frontend displays stage names correctly
