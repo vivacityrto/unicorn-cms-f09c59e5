@@ -63,7 +63,7 @@ export function PackageBuilderOverview() {
           sort_order,
           is_required,
           dashboard_group,
-          stage:documents_stages(id, title, stage_type, stage_key)
+          stage:stages(id, name, shortname)
         `)
         .in('package_id', packages.map(p => p.id)) as any;
 

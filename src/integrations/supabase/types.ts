@@ -8992,7 +8992,7 @@ export type Database = {
             foreignKeyName: "package_stages_stage_id_fkey"
             columns: ["stage_id"]
             isOneToOne: false
-            referencedRelation: "documents_stages"
+            referencedRelation: "stages"
             referencedColumns: ["id"]
           },
           {
