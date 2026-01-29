@@ -109,8 +109,8 @@ export default function ClientPackageDetail() {
     }
   };
 
-  const handleClientTaskStatusChange = async (taskId: string, status: string) => {
-    const success = await updateClientTaskStatus(taskId, status as any);
+  const handleClientTaskStatusChange = async (taskId: number, status: number) => {
+    const success = await updateClientTaskStatus(taskId, status);
     if (success) {
       loadData();
     }
@@ -143,7 +143,7 @@ export default function ClientPackageDetail() {
   const totalTeamTasks = stages.reduce((sum, s) => sum + (s.team_tasks?.length || 0), 0);
   const openTeamTasks = stages.reduce((sum, s) => sum + (s.team_tasks?.filter(t => t.status === 'open').length || 0), 0);
   const totalClientTasks = stages.reduce((sum, s) => sum + (s.client_tasks?.length || 0), 0);
-  const openClientTasks = stages.reduce((sum, s) => sum + (s.client_tasks?.filter(t => t.status === 'open').length || 0), 0);
+  const openClientTasks = stages.reduce((sum, s) => sum + (s.client_tasks?.filter(t => t.status === 0).length || 0), 0);
   const queuedEmails = stages.reduce((sum, s) => sum + (s.emails?.filter(e => e.status === 'queued').length || 0), 0);
 
   return (
@@ -265,7 +265,7 @@ export default function ClientPackageDetail() {
             {stages.map((stage, index) => {
               const isExpanded = expandedStages.has(stage.id);
               const openTeam = stage.team_tasks?.filter(t => t.status !== 'done').length || 0;
-              const openClient = stage.client_tasks?.filter(t => t.status !== 'done').length || 0;
+              const openClient = stage.client_tasks?.filter(t => t.status !== 2).length || 0;
 
               return (
                 <Collapsible key={stage.id} open={isExpanded} onOpenChange={() => toggleStage(stage.id)}>
@@ -373,7 +373,7 @@ export default function ClientPackageDetail() {
                               {stage.client_tasks.map((task) => (
                                 <div key={task.id} className="flex items-center justify-between bg-background p-3 rounded-lg">
                                   <div className="flex items-center gap-3">
-                                    <Circle className={`h-4 w-4 ${task.status === 'done' ? 'fill-green-500 text-green-500' : 'text-muted-foreground'}`} />
+                                    <Circle className={`h-4 w-4 ${task.status === 2 ? 'fill-green-500 text-green-500' : 'text-muted-foreground'}`} />
                                     <div>
                                       <p className="text-sm font-medium">{task.name}</p>
                                       {task.due_date && (
@@ -384,14 +384,15 @@ export default function ClientPackageDetail() {
                                       )}
                                     </div>
                                   </div>
-                                  <Select value={task.status} onValueChange={(v) => handleClientTaskStatusChange(task.id, v)}>
+                                  <Select value={String(task.status)} onValueChange={(v) => handleClientTaskStatusChange(task.id, parseInt(v))}>
                                     <SelectTrigger className="w-[120px]">
                                       <SelectValue />
                                     </SelectTrigger>
                                     <SelectContent>
-                                      <SelectItem value="open">Open</SelectItem>
-                                      <SelectItem value="submitted">Submitted</SelectItem>
-                                      <SelectItem value="done">Done</SelectItem>
+                                      <SelectItem value="0">Not Started</SelectItem>
+                                      <SelectItem value="1">In Progress</SelectItem>
+                                      <SelectItem value="2">Completed</SelectItem>
+                                      <SelectItem value="3">N/A</SelectItem>
                                     </SelectContent>
                                   </Select>
                                 </div>
@@ -503,14 +504,15 @@ export default function ClientPackageDetail() {
                             </p>
                           </div>
                         </div>
-                        <Select value={task.status} onValueChange={(v) => handleClientTaskStatusChange(task.id, v)}>
+                        <Select value={String(task.status)} onValueChange={(v) => handleClientTaskStatusChange(task.id, parseInt(v))}>
                           <SelectTrigger className="w-[120px]">
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="open">Open</SelectItem>
-                            <SelectItem value="submitted">Submitted</SelectItem>
-                            <SelectItem value="done">Done</SelectItem>
+                            <SelectItem value="0">Not Started</SelectItem>
+                            <SelectItem value="1">In Progress</SelectItem>
+                            <SelectItem value="2">Completed</SelectItem>
+                            <SelectItem value="3">N/A</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>

@@ -101,11 +101,14 @@ export function PackageStagesManager({ tenantId, packageId, packageName }: Packa
       setPackageInstanceId(instanceData.id);
 
       // Fetch stage_instances for this package_instance
-      const { data: stageData, error: stageError } = await supabase
-        .from('stage_instances')
+      const stageResult = await (supabase
+        .from('stage_instances' as any)
         .select('id, stage_id, status, completion_date, paid, released_client_tasks')
         .eq('package_instance_id', instanceData.id)
-        .order('stage_id');
+        .order('stage_id')) as { data: Array<{ id: number; stage_id: number; status: string | null; completion_date: string | null; paid: boolean | null; released_client_tasks: boolean | null }> | null; error: any };
+      
+      const stageData = stageResult.data;
+      const stageError = stageResult.error;
 
       if (stageError) throw stageError;
 
@@ -116,7 +119,7 @@ export function PackageStagesManager({ tenantId, packageId, packageName }: Packa
       }
 
       // Get unique stage IDs and fetch stage metadata from public.stages
-      const stageIds = [...new Set(stageData.map(s => s.stage_id))];
+      const stageIds = [...new Set(stageData.map(s => s.stage_id))] as number[];
       const { data: stagesMetadata, error: metaError } = await supabase
         .from('stages')
         .select('id, name, shortname')

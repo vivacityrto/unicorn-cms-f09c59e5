@@ -2,6 +2,14 @@ import { useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
+// Status options matching dd_status table
+export const CLIENT_TASK_STATUS_OPTIONS = [
+  { value: 0, label: 'Not Started', key: 'not_started' },
+  { value: 1, label: 'In Progress', key: 'in_progress' },
+  { value: 2, label: 'Completed', key: 'completed' },
+  { value: 3, label: 'N/A', key: 'na' },
+] as const;
+
 export interface ClientPackageInstance {
   id: string;
   tenant_id: number;
@@ -63,14 +71,17 @@ export interface ClientTeamTask {
 }
 
 export interface ClientTask {
-  id: string;
-  client_package_stage_id: string;
-  template_task_id: string | null;
+  id: number;
+  client_task_id: number | null;
+  stage_instance_id: number;
   name: string;
+  description: string | null;
   instructions: string | null;
   due_date: string | null;
+  completion_date: string | null;
   sort_order: number;
-  status: 'open' | 'submitted' | 'done';
+  status: number;
+  status_label: string;
   created_at: string;
 }
 
@@ -250,10 +261,9 @@ export function useClientPackageInstances() {
             .eq('client_package_stage_id', stage.id)
             .order('sort_order'),
           supabase
-            .from('client_tasks')
-            .select('*')
-            .eq('client_package_stage_id', stage.id)
-            .order('sort_order'),
+            .from('client_task_instances')
+            .select('id, clienttask_id, stageinstance_id, status, due_date, completion_date, created_at')
+            .eq('stageinstance_id', parseInt(stage.id)),
           supabase
             .from('client_stage_documents')
             .select(`
@@ -268,10 +278,49 @@ export function useClientPackageInstances() {
             .eq('client_package_stage_id', stage.id)
         ]);
 
+        // Get unique client_task_ids for template lookup
+        const clientTaskIds = [...new Set(
+          (clientTasks.data || [])
+            .map(t => t.clienttask_id)
+            .filter(Boolean)
+        )] as number[];
+
+        // Batch fetch template metadata
+        const { data: clientTaskTemplates } = clientTaskIds.length > 0
+          ? await supabase
+              .from('client_tasks')
+              .select('id, name, description, instructions, sort_order')
+              .in('id', clientTaskIds)
+          : { data: [] };
+
+        // Build lookup map and transform
+        const templateMap = new Map(
+          (clientTaskTemplates || []).map(t => [t.id, t])
+        );
+
+        const transformedClientTasks: ClientTask[] = (clientTasks.data || []).map(inst => {
+          const template = inst.clienttask_id ? templateMap.get(inst.clienttask_id) : null;
+          const statusOption = CLIENT_TASK_STATUS_OPTIONS.find(s => s.value === inst.status);
+          return {
+            id: inst.id,
+            client_task_id: inst.clienttask_id,
+            stage_instance_id: inst.stageinstance_id,
+            name: template?.name || `Task ${inst.id}`,
+            description: template?.description || null,
+            instructions: template?.instructions || null,
+            due_date: inst.due_date,
+            completion_date: inst.completion_date,
+            sort_order: template?.sort_order ?? 0,
+            status: inst.status ?? 0,
+            status_label: statusOption?.label || 'Unknown',
+            created_at: inst.created_at,
+          };
+        }).sort((a, b) => a.sort_order - b.sort_order);
+
         return {
           ...stage,
           team_tasks: teamTasks.data || [],
-          client_tasks: clientTasks.data || [],
+          client_tasks: transformedClientTasks,
           documents: documents.data || [],
           emails: emails.data || []
         };
@@ -337,13 +386,22 @@ export function useClientPackageInstances() {
   }, [toast]);
 
   const updateClientTaskStatus = useCallback(async (
-    taskId: string,
-    status: 'open' | 'submitted' | 'done'
+    taskId: number,
+    newStatus: number
   ) => {
     try {
+      const updateData: Record<string, any> = { status: newStatus };
+      
+      // Set completion_date if completing (status 2)
+      if (newStatus === 2) {
+        updateData.completion_date = new Date().toISOString();
+      } else {
+        updateData.completion_date = null;
+      }
+
       const { error } = await supabase
-        .from('client_tasks')
-        .update({ status })
+        .from('client_task_instances')
+        .update(updateData)
         .eq('id', taskId);
 
       if (error) throw error;

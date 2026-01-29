@@ -44,11 +44,16 @@ export function useStaffTaskInstances({ stageInstanceId, tenantId, packageId }: 
     setLoading(true);
     try {
       // Fetch staff_task_instances for this stage_instance
-      const { data: instanceData, error: instanceError } = await supabase
-        .from('staff_task_instances')
+      const taskResult = await (supabase
+        .from('staff_task_instances' as any)
         .select('id, staff_task_id, status, status_id, due_date, completion_date, assignee_id')
         .eq('stage_instance_id', stageInstanceId)
-        .order('id');
+        .order('id')) as { data: Array<{ id: number; staff_task_id: number | null; status: string | null; status_id: number | null; due_date: string | null; completion_date: string | null; assignee_id: string | null }> | null; error: any };
+      
+      const instanceData = taskResult.data;
+      const instanceError = taskResult.error;
+
+      if (instanceError) throw instanceError;
 
       if (instanceError) throw instanceError;
 
