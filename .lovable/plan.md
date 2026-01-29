@@ -1,202 +1,86 @@
 
+# Document Architecture Alignment Plan
 
-## Update Client Task Queries to Use client_task_instances Table
+## Current State Analysis
 
-### Overview
+The document system is correctly structured but has no template data:
 
-Update `useClientPackageInstances` hook to query `client_task_instances` (the instance table) instead of `client_tasks` (the template table), following the same pattern established in `useStaffTaskInstances`. Status mapping will use the `dd_status` table values.
+**Template Level (SuperAdmin Package Builder)**
+- `package_stage_documents` table exists with correct schema
+- UI (`StageDocumentsTab.tsx`) correctly links to this table
+- Hook (`usePackageBuilder.tsx`) correctly reads/writes to this table
+- **Problem: Table is empty (0 records)**
 
-### Database Schema Reference
+**Instance Level (Tenant Tracking)**
+- `document_instances` table now has `stageinstance_id` column (you added this)
+- This will track generated/completed documents per tenant's stage instance
 
-**client_task_instances** (instance table - 22,444 records):
-| Column | Type | Description |
-|--------|------|-------------|
-| id | bigint | Primary key |
-| clienttask_id | integer | FK to client_tasks template |
-| stageinstance_id | bigint | FK to stage_instances |
-| status | integer | Status code (0, 2 found in data) |
-| due_date | timestamptz | Task due date |
-| completion_date | timestamptz | When completed |
+## Architecture Diagram
 
-**client_tasks** (template table - 227 records):
-| Column | Type | Description |
-|--------|------|-------------|
-| id | integer | Primary key |
-| stage_id | integer | FK to stages |
-| name | text | Task name |
-| description | text | Description |
-| instructions | text | Instructions |
-| sort_order | integer | Display order |
+```text
+Template Level (Package Builder)
+================================
+[documents] (72 records - master library)
+     |
+     v
+[package_stage_documents] (0 records - need to populate via UI)
+     |-- package_id (FK to packages)
+     |-- stage_id (FK to stages)  
+     |-- document_id (FK to documents)
+     |-- visibility, delivery_type, sort_order
 
-**dd_status** (status lookup):
-| Code | Value | Description |
-|------|-------|-------------|
-| 0 | not_started | Not Started |
-| 1 | in_progress | In Progress |
-| 2 | completed | Completed |
-| 3 | na | N/A |
-
----
-
-### Technical Changes
-
-#### 1. Update ClientTask Interface (lines 65-75)
-
-**Before:**
-```typescript
-export interface ClientTask {
-  id: string;
-  client_package_stage_id: string;
-  template_task_id: string | null;
-  name: string;
-  instructions: string | null;
-  due_date: string | null;
-  sort_order: number;
-  status: 'open' | 'submitted' | 'done';
-  created_at: string;
-}
+Instance Level (Tenant Tracking)
+================================
+[document_instances] (tenant-specific)
+     |-- stageinstance_id (FK to stage_instances)
+     |-- document_id (FK to documents)
+     |-- tenant_id
+     |-- status, isgenerated, generationdate
 ```
 
-**After:**
-```typescript
-export interface ClientTask {
-  id: number;
-  client_task_id: number | null;
-  stage_instance_id: number;
-  name: string;
-  description: string | null;
-  instructions: string | null;
-  due_date: string | null;
-  completion_date: string | null;
-  sort_order: number;
-  status: number;
-  status_label: string;
-  created_at: string;
-}
-```
+## What Needs to Happen
 
-#### 2. Add Status Constants
+### No Code Changes Required
 
-Add at top of file (matching dd_status and useStaffTaskInstances pattern):
+The existing code is already properly wired:
 
-```typescript
-export const CLIENT_TASK_STATUS_OPTIONS = [
-  { value: 0, label: 'Not Started', key: 'not_started' },
-  { value: 1, label: 'In Progress', key: 'in_progress' },
-  { value: 2, label: 'Completed', key: 'completed' },
-  { value: 3, label: 'N/A', key: 'na' },
-] as const;
-```
+1. **StageDocumentsTab.tsx** - Fetches from `documents` master library, links to `package_stage_documents`
+2. **usePackageBuilder.tsx** - All CRUD operations target `package_stage_documents`
+3. **Audit logging** - Already writes to `package_builder_audit_log`
 
-#### 3. Update fetchPackageStages Function (lines 246-256)
+### Data Population (Manual via UI)
 
-**Before:** Queries non-existent `client_tasks.client_package_stage_id`
+Since `package_stage_documents` is empty, documents simply need to be linked through the Package Builder UI:
 
-**After:** Query `client_task_instances` via `stageinstance_id`, then batch fetch template metadata from `client_tasks`:
+1. Navigate to a package (e.g., `/admin/package-builder/1015`)
+2. Select a stage
+3. Click "Link Documents" button
+4. Select documents from the library
+5. Documents will be inserted into `package_stage_documents`
 
-```typescript
-// Query client_task_instances for this stage_instance
-const { data: clientTaskInstances } = await supabase
-  .from('client_task_instances')
-  .select('id, clienttask_id, stageinstance_id, status, due_date, completion_date, created_at')
-  .eq('stageinstance_id', stage.id);
+### Future Instance Tracking
 
-// Get unique client_task_ids for template lookup
-const clientTaskIds = [...new Set(
-  (clientTaskInstances || [])
-    .map(t => t.clienttask_id)
-    .filter(Boolean)
-)] as number[];
+When a tenant is assigned a package and work begins on a stage, the system will need to:
 
-// Batch fetch template metadata
-const { data: clientTaskTemplates } = clientTaskIds.length > 0
-  ? await supabase
-      .from('client_tasks')
-      .select('id, name, description, instructions, sort_order')
-      .in('id', clientTaskIds)
-  : { data: [] };
+1. Create entries in `document_instances` referencing:
+   - The `stageinstance_id` from the tenant's active stage
+   - The `document_id` from the template
+   - Track generation status, completion, etc.
 
-// Build lookup map and transform
-const templateMap = new Map(
-  (clientTaskTemplates || []).map(t => [t.id, t])
-);
+This instance-level logic would be implemented when building the tenant membership dashboard.
 
-const transformedClientTasks = (clientTaskInstances || []).map(inst => {
-  const template = inst.clienttask_id ? templateMap.get(inst.clienttask_id) : null;
-  const statusOption = CLIENT_TASK_STATUS_OPTIONS.find(s => s.value === inst.status);
-  return {
-    id: inst.id,
-    client_task_id: inst.clienttask_id,
-    stage_instance_id: inst.stageinstance_id,
-    name: template?.name || `Task ${inst.id}`,
-    description: template?.description || null,
-    instructions: template?.instructions || null,
-    due_date: inst.due_date,
-    completion_date: inst.completion_date,
-    sort_order: template?.sort_order ?? 0,
-    status: inst.status,
-    status_label: statusOption?.label || 'Unknown',
-    created_at: inst.created_at,
-  };
-}).sort((a, b) => a.sort_order - b.sort_order);
-```
+## Summary
 
-#### 4. Update updateClientTaskStatus Function (lines 339-359)
+| Component | Status | Action |
+|-----------|--------|--------|
+| `package_stage_documents` table | Exists, empty | Populate via UI |
+| `document_instances` table | Has `stageinstance_id` | Ready for instance tracking |
+| `StageDocumentsTab.tsx` | Correct | None |
+| `usePackageBuilder.tsx` | Correct | None |
+| Master documents library | 72 records | Available for linking |
 
-**Before:** Updates `client_tasks` table with string status
+## Recommendation
 
-**After:** Updates `client_task_instances` table with integer status code:
+The system is ready to use. Simply link documents to stages through the Package Builder UI. The "Link Documents" button will populate `package_stage_documents` correctly.
 
-```typescript
-const updateClientTaskStatus = useCallback(async (
-  taskId: number,
-  newStatus: number
-) => {
-  try {
-    const updateData: Record<string, any> = { status: newStatus };
-    
-    // Set completion_date if completing
-    if (newStatus === 2) {
-      updateData.completion_date = new Date().toISOString();
-    } else {
-      updateData.completion_date = null;
-    }
-
-    const { error } = await supabase
-      .from('client_task_instances')
-      .update(updateData)
-      .eq('id', taskId);
-
-    if (error) throw error;
-    return true;
-  } catch (error: any) {
-    toast({
-      title: 'Error',
-      description: error.message || 'Failed to update task status',
-      variant: 'destructive'
-    });
-    return false;
-  }
-}, [toast]);
-```
-
----
-
-### Summary of Changes
-
-| File | Section | Change |
-|------|---------|--------|
-| `useClientPackageInstances.tsx` | Line 65-75 | Update `ClientTask` interface to match `client_task_instances` schema |
-| `useClientPackageInstances.tsx` | After imports | Add `CLIENT_TASK_STATUS_OPTIONS` constant |
-| `useClientPackageInstances.tsx` | Lines 246-256 | Query `client_task_instances` with template join via batch lookup |
-| `useClientPackageInstances.tsx` | Lines 339-359 | Update `updateClientTaskStatus` to use integer status and target correct table |
-
-### Pattern Alignment
-
-This follows the established pattern from `useStaffTaskInstances`:
-- Query instance table first
-- Batch fetch template metadata
-- Build lookup map for transformation
-- Use integer status codes from `dd_status`
-- Set `completion_date` when status changes to 2 (Completed)
-
+If you want to pre-populate some document links programmatically (e.g., migrate from another source or bulk-assign), let me know and I can help with a data insertion script.
