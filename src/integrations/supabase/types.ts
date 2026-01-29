@@ -2860,46 +2860,46 @@ export type Database = {
       }
       client_task_instances: {
         Row: {
-          client_task_id: number
+          clienttask_id: number
           completion_date: string | null
           created_at: string | null
           due_date: string | null
           id: number
-          stage_instance_id: number
+          stageinstance_id: number
           status: number
           u1_id: number | null
         }
         Insert: {
-          client_task_id: number
+          clienttask_id: number
           completion_date?: string | null
           created_at?: string | null
           due_date?: string | null
           id: number
-          stage_instance_id: number
+          stageinstance_id: number
           status?: number
           u1_id?: number | null
         }
         Update: {
-          client_task_id?: number
+          clienttask_id?: number
           completion_date?: string | null
           created_at?: string | null
           due_date?: string | null
           id?: number
-          stage_instance_id?: number
+          stageinstance_id?: number
           status?: number
           u1_id?: number | null
         }
         Relationships: [
           {
             foreignKeyName: "client_task_instances_client_task_id_fkey"
-            columns: ["client_task_id"]
+            columns: ["clienttask_id"]
             isOneToOne: false
             referencedRelation: "client_tasks"
             referencedColumns: ["id"]
           },
           {
             foreignKeyName: "client_task_instances_stage_instance_id_fkey"
-            columns: ["stage_instance_id"]
+            columns: ["stageinstance_id"]
             isOneToOne: false
             referencedRelation: "stage_instances"
             referencedColumns: ["id"]
@@ -4770,8 +4770,9 @@ export type Database = {
           id: number
           is_sent: boolean
           sender_id: number | null
+          sender_uuid: string | null
           sent_date: string | null
-          stage_instance_id: number
+          stageinstance_id: number
           subject: string | null
           to: string | null
           user_attachments: string
@@ -4784,8 +4785,9 @@ export type Database = {
           id?: number
           is_sent: boolean
           sender_id?: number | null
+          sender_uuid?: string | null
           sent_date?: string | null
-          stage_instance_id: number
+          stageinstance_id: number
           subject?: string | null
           to?: string | null
           user_attachments?: string
@@ -4798,8 +4800,9 @@ export type Database = {
           id?: number
           is_sent?: boolean
           sender_id?: number | null
+          sender_uuid?: string | null
           sent_date?: string | null
-          stage_instance_id?: number
+          stageinstance_id?: number
           subject?: string | null
           to?: string | null
           user_attachments?: string
@@ -5120,6 +5123,7 @@ export type Database = {
           stage_id: number | null
           subject: string | null
           to: string | null
+          u1_id: number | null
         }
         Insert: {
           auth_mode?: boolean
@@ -5139,6 +5143,7 @@ export type Database = {
           stage_id?: number | null
           subject?: string | null
           to?: string | null
+          u1_id?: number | null
         }
         Update: {
           auth_mode?: boolean
@@ -5158,6 +5163,7 @@ export type Database = {
           stage_id?: number | null
           subject?: string | null
           to?: string | null
+          u1_id?: number | null
         }
         Relationships: []
       }
@@ -10282,7 +10288,7 @@ export type Database = {
           id: number
           notes: string | null
           staff_task_id: number
-          stage_instance_id: number
+          stageinstance_id: number
           status: string
           status_id: number
           u1_assignee_id: number | null
@@ -10298,7 +10304,7 @@ export type Database = {
           id: number
           notes?: string | null
           staff_task_id: number
-          stage_instance_id: number
+          stageinstance_id: number
           status?: string
           status_id?: number
           u1_assignee_id?: number | null
@@ -10314,7 +10320,7 @@ export type Database = {
           id?: number
           notes?: string | null
           staff_task_id?: number
-          stage_instance_id?: number
+          stageinstance_id?: number
           status?: string
           status_id?: number
           u1_assignee_id?: number | null
@@ -10538,7 +10544,7 @@ export type Database = {
         Row: {
           completion_date: string
           id: number
-          package_instance_id: number
+          packageinstance_id: number
           paid: boolean
           released_client_tasks: boolean
           released_client_tasks_date: string | null
@@ -10549,7 +10555,7 @@ export type Database = {
         Insert: {
           completion_date: string
           id?: number
-          package_instance_id: number
+          packageinstance_id: number
           paid: boolean
           released_client_tasks?: boolean
           released_client_tasks_date?: string | null
@@ -10560,7 +10566,7 @@ export type Database = {
         Update: {
           completion_date?: string
           id?: number
-          package_instance_id?: number
+          packageinstance_id?: number
           paid?: boolean
           released_client_tasks?: boolean
           released_client_tasks_date?: string | null
