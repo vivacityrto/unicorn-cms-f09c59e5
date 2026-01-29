@@ -1,86 +1,114 @@
 
-# Document Architecture Alignment Plan
 
-## Current State Analysis
+# Streamlined document_instances Migration
 
-The document system is correctly structured but has no template data:
+## Overview
 
-**Template Level (SuperAdmin Package Builder)**
-- `package_stage_documents` table exists with correct schema
-- UI (`StageDocumentsTab.tsx`) correctly links to this table
-- Hook (`usePackageBuilder.tsx`) correctly reads/writes to this table
-- **Problem: Table is empty (0 records)**
+Migrate `unicorn1.document_instances` data to `public.document_instances` with essential columns only, excluding legacy tracing fields.
 
-**Instance Level (Tenant Tracking)**
-- `document_instances` table now has `stageinstance_id` column (you added this)
-- This will track generated/completed documents per tenant's stage instance
+## Schema Changes
 
-## Architecture Diagram
+| Column | Current | Change |
+|--------|---------|--------|
+| `id` | uuid | Change to bigint |
+| `isgenerated` | missing | Add (boolean) |
+| `generationdate` | missing | Add (timestamp) |
+| `tenant_id` | exists | Keep (resolved via joins) |
+| `document` | - | Skip (legacy tracing) |
+| `dateimported` | - | Skip (legacy tracing) |
 
-```text
-Template Level (Package Builder)
-================================
-[documents] (72 records - master library)
-     |
-     v
-[package_stage_documents] (0 records - need to populate via UI)
-     |-- package_id (FK to packages)
-     |-- stage_id (FK to stages)  
-     |-- document_id (FK to documents)
-     |-- visibility, delivery_type, sort_order
+## Implementation
 
-Instance Level (Tenant Tracking)
-================================
-[document_instances] (tenant-specific)
-     |-- stageinstance_id (FK to stage_instances)
-     |-- document_id (FK to documents)
-     |-- tenant_id
-     |-- status, isgenerated, generationdate
+### Step 1: Schema Alterations
+
+```sql
+-- Fix ID column (drop UUID, add bigint)
+ALTER TABLE public.document_instances DROP CONSTRAINT document_instances_pkey;
+ALTER TABLE public.document_instances DROP COLUMN id;
+ALTER TABLE public.document_instances ADD COLUMN id bigint PRIMARY KEY;
+
+-- Add required columns from unicorn1
+ALTER TABLE public.document_instances ADD COLUMN isgenerated boolean DEFAULT false;
+ALTER TABLE public.document_instances ADD COLUMN generationdate timestamp without time zone;
 ```
 
-## What Needs to Happen
+### Step 2: Data Migration
 
-### No Code Changes Required
+```sql
+INSERT INTO public.document_instances (
+  id,
+  document_id,
+  tenant_id,
+  status,
+  isgenerated,
+  generationdate,
+  stageinstance_id,
+  created_at,
+  updated_at
+)
+SELECT 
+  u1.id::bigint,
+  u1.document_id::bigint,
+  pi.tenant_id,
+  CASE WHEN u1.isgenerated THEN 'generated' ELSE 'pending' END,
+  u1.isgenerated,
+  u1.generationdate,
+  u1.stageinstance_id::bigint,
+  COALESCE(u1.dateimported, now()),
+  COALESCE(u1.generationdate, u1.dateimported, now())
+FROM unicorn1.document_instances u1
+JOIN stage_instances si ON si.id = u1.stageinstance_id
+JOIN package_instances pi ON pi.id = si.packageinstance_id;
+```
 
-The existing code is already properly wired:
+### Step 3: Update TypeScript Types
 
-1. **StageDocumentsTab.tsx** - Fetches from `documents` master library, links to `package_stage_documents`
-2. **usePackageBuilder.tsx** - All CRUD operations target `package_stage_documents`
-3. **Audit logging** - Already writes to `package_builder_audit_log`
+Update `src/integrations/supabase/types.ts`:
 
-### Data Population (Manual via UI)
+```typescript
+document_instances: {
+  Row: {
+    id: number                           // Changed from string
+    document_id: number | null
+    tenant_id: number | null
+    status: string | null
+    isgenerated: boolean | null          // Added
+    generationdate: string | null        // Added
+    stageinstance_id: number | null
+    coments: string | null
+    created_at: string
+    updated_at: string
+  }
+  Insert: {
+    id: number                           // Changed from string
+    // ... same pattern for new fields
+  }
+  Update: {
+    id?: number                          // Changed from string
+    // ... same pattern for new fields
+  }
+}
+```
 
-Since `package_stage_documents` is empty, documents simply need to be linked through the Package Builder UI:
+## Final Schema
 
-1. Navigate to a package (e.g., `/admin/package-builder/1015`)
-2. Select a stage
-3. Click "Link Documents" button
-4. Select documents from the library
-5. Documents will be inserted into `package_stage_documents`
+| Column | Type | Source |
+|--------|------|--------|
+| `id` | bigint PK | unicorn1.id |
+| `document_id` | bigint | unicorn1.document_id |
+| `tenant_id` | bigint | Resolved via stage_instances -> package_instances |
+| `status` | text | Derived from isgenerated |
+| `isgenerated` | boolean | unicorn1.isgenerated |
+| `generationdate` | timestamp | unicorn1.generationdate |
+| `stageinstance_id` | bigint | unicorn1.stageinstance_id |
+| `coments` | text | Existing |
+| `created_at` | timestamptz | Mapped from dateimported |
+| `updated_at` | timestamptz | Mapped from generationdate |
 
-### Future Instance Tracking
+## Technical Notes
 
-When a tenant is assigned a package and work begins on a stage, the system will need to:
+- Table currently empty (0 records) - safe to alter
+- Expected records: ~106,146
+- `tenant_id` retained for quick tenant-level queries without joins
+- `created_at`/`updated_at` derived from legacy timestamps for audit trail
 
-1. Create entries in `document_instances` referencing:
-   - The `stageinstance_id` from the tenant's active stage
-   - The `document_id` from the template
-   - Track generation status, completion, etc.
-
-This instance-level logic would be implemented when building the tenant membership dashboard.
-
-## Summary
-
-| Component | Status | Action |
-|-----------|--------|--------|
-| `package_stage_documents` table | Exists, empty | Populate via UI |
-| `document_instances` table | Has `stageinstance_id` | Ready for instance tracking |
-| `StageDocumentsTab.tsx` | Correct | None |
-| `usePackageBuilder.tsx` | Correct | None |
-| Master documents library | 72 records | Available for linking |
-
-## Recommendation
-
-The system is ready to use. Simply link documents to stages through the Package Builder UI. The "Link Documents" button will populate `package_stage_documents` correctly.
-
-If you want to pre-populate some document links programmatically (e.g., migrate from another source or bulk-assign), let me know and I can help with a data insertion script.
