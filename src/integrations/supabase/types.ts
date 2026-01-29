@@ -2908,6 +2908,56 @@ export type Database = {
           },
         ]
       }
+      client_tasks_u2: {
+        Row: {
+          client_package_stage_id: string
+          completed_at: string | null
+          completed_by: string | null
+          created_at: string | null
+          due_date: string | null
+          id: string
+          instructions: string | null
+          name: string
+          sort_order: number
+          status: string
+          template_task_id: string | null
+        }
+        Insert: {
+          client_package_stage_id: string
+          completed_at?: string | null
+          completed_by?: string | null
+          created_at?: string | null
+          due_date?: string | null
+          id?: string
+          instructions?: string | null
+          name: string
+          sort_order: number
+          status?: string
+          template_task_id?: string | null
+        }
+        Update: {
+          client_package_stage_id?: string
+          completed_at?: string | null
+          completed_by?: string | null
+          created_at?: string | null
+          due_date?: string | null
+          id?: string
+          instructions?: string | null
+          name?: string
+          sort_order?: number
+          status?: string
+          template_task_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_tasks_u2_client_package_stage_id_fkey"
+            columns: ["client_package_stage_id"]
+            isOneToOne: false
+            referencedRelation: "client_package_stages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       client_team_tasks: {
         Row: {
           client_package_stage_id: string
