@@ -2858,6 +2858,54 @@ export type Database = {
           },
         ]
       }
+      client_task_instances: {
+        Row: {
+          client_task_id: number
+          completion_date: string | null
+          created_at: string | null
+          due_date: string | null
+          id: number
+          stage_instance_id: number
+          status: number
+          u1_id: number | null
+        }
+        Insert: {
+          client_task_id: number
+          completion_date?: string | null
+          created_at?: string | null
+          due_date?: string | null
+          id: number
+          stage_instance_id: number
+          status?: number
+          u1_id?: number | null
+        }
+        Update: {
+          client_task_id?: number
+          completion_date?: string | null
+          created_at?: string | null
+          due_date?: string | null
+          id?: number
+          stage_instance_id?: number
+          status?: number
+          u1_id?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_task_instances_client_task_id_fkey"
+            columns: ["client_task_id"]
+            isOneToOne: false
+            referencedRelation: "client_tasks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_task_instances_stage_instance_id_fkey"
+            columns: ["stage_instance_id"]
+            isOneToOne: false
+            referencedRelation: "stage_instances"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       client_tasks: {
         Row: {
           created_at: string | null
