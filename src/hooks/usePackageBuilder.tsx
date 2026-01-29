@@ -436,14 +436,60 @@ export function usePackageDetail(packageId: number | null) {
       const stageIds = (psData || []).map((ps: any) => ps.stage_id);
       
       if (stageIds.length > 0) {
-        const { data: stageData, error: stageError } = await supabase
-          .from('documents_stages')
-          .select('*')
-          .in('id', stageIds);
+        // Fetch from both stages table (primary) and documents_stages (fallback)
+        const [stagesResult, docStagesResult] = await Promise.all([
+          supabase.from('stages' as any).select('*').in('id', stageIds) as any,
+          supabase.from('documents_stages').select('*').in('id', stageIds)
+        ]);
 
-        if (stageError) throw stageError;
-
-        const stageMap = new Map((stageData || []).map(s => [s.id, s]));
+        // Build a combined map - stages table takes priority, documents_stages as fallback
+        const stageMap = new Map<number, Stage>();
+        
+        // Add documents_stages first (fallback)
+        (docStagesResult.data || []).forEach((s: any) => {
+          stageMap.set(s.id, {
+            id: s.id,
+            title: s.title,
+            short_name: s.short_name,
+            description: s.description,
+            video_url: s.video_url,
+            stage_type: s.stage_type || 'delivery',
+            is_reusable: s.is_reusable ?? true,
+            ai_hint: s.ai_hint,
+            dashboard_visible: s.dashboard_visible ?? true,
+            created_at: s.created_at,
+            is_certified: s.is_certified,
+            certified_notes: s.certified_notes,
+            stage_key: s.stage_key,
+            version_label: s.version_label,
+            requires_stage_keys: s.requires_stage_keys,
+            frameworks: s.frameworks,
+            covers_standards: s.covers_standards
+          });
+        });
+        
+        // Add stages table entries (primary - overwrites any duplicates)
+        (stagesResult.data || []).forEach((s: any) => {
+          stageMap.set(s.id, {
+            id: s.id,
+            title: s.name, // 'stages' table uses 'name' instead of 'title'
+            short_name: s.shortname,
+            description: s.description,
+            video_url: s.videourl,
+            stage_type: 'delivery', // Default for stages table
+            is_reusable: true,
+            ai_hint: null,
+            dashboard_visible: true,
+            created_at: s.dateimported || new Date().toISOString(),
+            is_certified: false,
+            certified_notes: null,
+            stage_key: `stage-${s.id}`,
+            version_label: null,
+            requires_stage_keys: null,
+            frameworks: null,
+            covers_standards: null
+          });
+        });
         
         const enrichedStages = (psData || []).map((ps: any) => ({
           ...ps,
