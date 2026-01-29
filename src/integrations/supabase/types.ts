@@ -3965,28 +3965,28 @@ export type Database = {
       }
       document_instances: {
         Row: {
+          coments: string | null
           created_at: string
           document_id: number | null
           id: string
-          notes: string | null
           status: string | null
           tenant_id: number | null
           updated_at: string
         }
         Insert: {
+          coments?: string | null
           created_at?: string
           document_id?: number | null
           id?: string
-          notes?: string | null
           status?: string | null
           tenant_id?: number | null
           updated_at?: string
         }
         Update: {
+          coments?: string | null
           created_at?: string
           document_id?: number | null
           id?: string
-          notes?: string | null
           status?: string | null
           tenant_id?: number | null
           updated_at?: string
