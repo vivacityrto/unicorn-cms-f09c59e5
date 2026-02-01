@@ -14626,6 +14626,14 @@ export type Database = {
         Returns: number
       }
       add_favourite: { Args: { p_resource_id: string }; Returns: undefined }
+      add_meeting_attendee: {
+        Args: {
+          p_meeting_id: string
+          p_role?: Database["public"]["Enums"]["meeting_role"]
+          p_user_id: string
+        }
+        Returns: string
+      }
       add_meeting_guest: {
         Args: { p_meeting_id: string; p_notes?: string; p_user_id: string }
         Returns: Json
@@ -15560,6 +15568,10 @@ export type Database = {
         Returns: Json
       }
       remove_favourite: { Args: { p_resource_id: string }; Returns: undefined }
+      remove_meeting_attendee: {
+        Args: { p_meeting_id: string; p_user_id: string }
+        Returns: boolean
+      }
       request_stage_review: {
         Args: { p_reviewer_user_id: string; p_stage_release_id: string }
         Returns: Json
@@ -15884,6 +15896,10 @@ export type Database = {
       }
       seed_default_meeting_templates: { Args: never; Returns: undefined }
       seed_default_qc_template: { Args: never; Returns: undefined }
+      seed_meeting_attendees_from_roles: {
+        Args: { p_meeting_id: string }
+        Returns: number
+      }
       seed_system_agenda_templates:
         | { Args: never; Returns: undefined }
         | { Args: { p_tenant_id: number }; Returns: undefined }

@@ -637,6 +637,7 @@ export const LiveMeetingView = () => {
             <AttendancePanel 
               meetingId={meetingId!} 
               meetingType={meeting?.meeting_type || 'L10'}
+              meetingStatus={meeting?.status || 'scheduled'}
               isLive={meetingStarted}
               canEdit={isFacilitator}
             />
