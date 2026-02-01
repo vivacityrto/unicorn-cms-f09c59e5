@@ -5540,6 +5540,7 @@ export type Database = {
           item_type: string | null
           linked_rock_id: string | null
           meeting_id: string | null
+          meeting_segment_id: string | null
           outcome_note: string | null
           priority: number | null
           quarter_number: number | null
@@ -5549,6 +5550,7 @@ export type Database = {
           resolved_by: string | null
           solution: string | null
           solved_at: string | null
+          source: string | null
           status: Database["public"]["Enums"]["eos_issue_status"] | null
           tenant_id: number
           title: string
@@ -5566,6 +5568,7 @@ export type Database = {
           item_type?: string | null
           linked_rock_id?: string | null
           meeting_id?: string | null
+          meeting_segment_id?: string | null
           outcome_note?: string | null
           priority?: number | null
           quarter_number?: number | null
@@ -5575,6 +5578,7 @@ export type Database = {
           resolved_by?: string | null
           solution?: string | null
           solved_at?: string | null
+          source?: string | null
           status?: Database["public"]["Enums"]["eos_issue_status"] | null
           tenant_id: number
           title: string
@@ -5592,6 +5596,7 @@ export type Database = {
           item_type?: string | null
           linked_rock_id?: string | null
           meeting_id?: string | null
+          meeting_segment_id?: string | null
           outcome_note?: string | null
           priority?: number | null
           quarter_number?: number | null
@@ -5601,6 +5606,7 @@ export type Database = {
           resolved_by?: string | null
           solution?: string | null
           solved_at?: string | null
+          source?: string | null
           status?: Database["public"]["Enums"]["eos_issue_status"] | null
           tenant_id?: number
           title?: string
@@ -5654,6 +5660,13 @@ export type Database = {
             columns: ["meeting_id"]
             isOneToOne: false
             referencedRelation: "eos_upcoming_meetings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "eos_issues_meeting_segment_id_fkey"
+            columns: ["meeting_segment_id"]
+            isOneToOne: false
+            referencedRelation: "eos_meeting_segments"
             referencedColumns: ["id"]
           },
         ]
@@ -14875,6 +14888,20 @@ export type Database = {
               p_meeting_id?: string
               p_priority?: string
               p_source: string
+              p_tenant_id: number
+              p_title: string
+            }
+            Returns: string
+          }
+        | {
+            Args: {
+              p_assigned_to?: string
+              p_description?: string
+              p_linked_rock_id?: string
+              p_meeting_id?: string
+              p_meeting_segment_id?: string
+              p_priority?: string
+              p_source?: string
               p_tenant_id: number
               p_title: string
             }
