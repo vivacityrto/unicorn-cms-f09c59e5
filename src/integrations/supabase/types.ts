@@ -5512,6 +5512,21 @@ export type Database = {
           },
         ]
       }
+      eos_issue_status_transitions: {
+        Row: {
+          from_status: Database["public"]["Enums"]["eos_issue_status"]
+          to_status: Database["public"]["Enums"]["eos_issue_status"]
+        }
+        Insert: {
+          from_status: Database["public"]["Enums"]["eos_issue_status"]
+          to_status: Database["public"]["Enums"]["eos_issue_status"]
+        }
+        Update: {
+          from_status?: Database["public"]["Enums"]["eos_issue_status"]
+          to_status?: Database["public"]["Enums"]["eos_issue_status"]
+        }
+        Relationships: []
+      }
       eos_issues: {
         Row: {
           assigned_to: string | null
@@ -14298,6 +14313,30 @@ export type Database = {
         }
         Relationships: []
       }
+      eos_issue_category_options: {
+        Row: {
+          value: string | null
+        }
+        Relationships: []
+      }
+      eos_issue_impact_options: {
+        Row: {
+          value: string | null
+        }
+        Relationships: []
+      }
+      eos_issue_status_options: {
+        Row: {
+          value: string | null
+        }
+        Relationships: []
+      }
+      eos_issue_type_options: {
+        Row: {
+          value: string | null
+        }
+        Relationships: []
+      }
       eos_meeting_attendance_summary: {
         Row: {
           attendance_rate: number | null
@@ -14424,6 +14463,12 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      eos_quarter_options: {
+        Row: {
+          value: number | null
+        }
+        Relationships: []
       }
       eos_upcoming_meetings: {
         Row: {
