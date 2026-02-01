@@ -1,114 +1,115 @@
 
+# Fix Missing EOS Dropdown Options
 
-# Streamlined document_instances Migration
+## Problem Identified
 
-## Overview
+The "Add Risk or Opportunity" form fields are empty because the database views that power the dropdown options do not exist in the production database:
 
-Migrate `unicorn1.document_instances` data to `public.document_instances` with essential columns only, excluding legacy tracing fields.
+| Missing Database Object | Purpose |
+|------------------------|---------|
+| `eos_issue_type_options` (view) | Type dropdown (Risk/Opportunity) |
+| `eos_issue_category_options` (view) | Category dropdown (Delivery, Compliance, etc.) |
+| `eos_issue_impact_options` (view) | Impact dropdown (Low, Medium, High, Critical) |
+| `eos_issue_status_options` (view) | Status dropdown (Open, Discussing, etc.) |
+| `eos_quarter_options` (view) | Quarter dropdown (Q1-Q4) |
+| `eos_issue_status_transitions` (table) | Controls allowed status changes |
 
-## Schema Changes
+The network requests are returning **404 errors** with the message "relation does not exist" for each of these objects.
 
-| Column | Current | Change |
-|--------|---------|--------|
-| `id` | uuid | Change to bigint |
-| `isgenerated` | missing | Add (boolean) |
-| `generationdate` | missing | Add (timestamp) |
-| `tenant_id` | exists | Keep (resolved via joins) |
-| `document` | - | Skip (legacy tracing) |
-| `dateimported` | - | Skip (legacy tracing) |
+## Root Cause
 
-## Implementation
+The migrations that create these views and tables exist in the codebase but were not applied to the database, or they were inadvertently dropped.
 
-### Step 1: Schema Alterations
+## Solution
 
-```sql
--- Fix ID column (drop UUID, add bigint)
-ALTER TABLE public.document_instances DROP CONSTRAINT document_instances_pkey;
-ALTER TABLE public.document_instances DROP COLUMN id;
-ALTER TABLE public.document_instances ADD COLUMN id bigint PRIMARY KEY;
+Create a migration that recreates all missing EOS option views and the status transitions table.
 
--- Add required columns from unicorn1
-ALTER TABLE public.document_instances ADD COLUMN isgenerated boolean DEFAULT false;
-ALTER TABLE public.document_instances ADD COLUMN generationdate timestamp without time zone;
-```
-
-### Step 2: Data Migration
+### Step 1: Create migration to restore EOS option views
 
 ```sql
-INSERT INTO public.document_instances (
-  id,
-  document_id,
-  tenant_id,
-  status,
-  isgenerated,
-  generationdate,
-  stageinstance_id,
-  created_at,
-  updated_at
-)
-SELECT 
-  u1.id::bigint,
-  u1.document_id::bigint,
-  pi.tenant_id,
-  CASE WHEN u1.isgenerated THEN 'generated' ELSE 'pending' END,
-  u1.isgenerated,
-  u1.generationdate,
-  u1.stageinstance_id::bigint,
-  COALESCE(u1.dateimported, now()),
-  COALESCE(u1.generationdate, u1.dateimported, now())
-FROM unicorn1.document_instances u1
-JOIN stage_instances si ON si.id = u1.stageinstance_id
-JOIN package_instances pi ON pi.id = si.packageinstance_id;
+-- Recreate EOS option views with security invoker
+
+-- Type options (risk/opportunity)
+CREATE VIEW public.eos_issue_type_options 
+WITH (security_invoker = true) AS
+SELECT unnest(ARRAY['risk', 'opportunity']) AS value;
+
+-- Category options
+CREATE VIEW public.eos_issue_category_options 
+WITH (security_invoker = true) AS
+SELECT unnest(ARRAY[
+  'Delivery', 'Compliance', 'Financial', 'Capacity',
+  'Systems', 'Client', 'Strategic', 'Growth'
+]) AS value;
+
+-- Impact options
+CREATE VIEW public.eos_issue_impact_options 
+WITH (security_invoker = true) AS
+SELECT unnest(ARRAY['Low', 'Medium', 'High', 'Critical']) AS value;
+
+-- Status options (from enum)
+CREATE VIEW public.eos_issue_status_options 
+WITH (security_invoker = true) AS
+SELECT unnest(enum_range(NULL::eos_issue_status))::text AS value;
+
+-- Quarter options (1-4)
+CREATE VIEW public.eos_quarter_options 
+WITH (security_invoker = true) AS
+SELECT generate_series(1, 4) AS value;
+
+-- Grant permissions
+GRANT SELECT ON public.eos_issue_type_options TO authenticated, anon;
+GRANT SELECT ON public.eos_issue_category_options TO authenticated, anon;
+GRANT SELECT ON public.eos_issue_impact_options TO authenticated, anon;
+GRANT SELECT ON public.eos_issue_status_options TO authenticated, anon;
+GRANT SELECT ON public.eos_quarter_options TO authenticated, anon;
 ```
 
-### Step 3: Update TypeScript Types
+### Step 2: Create status transitions table
 
-Update `src/integrations/supabase/types.ts`:
+```sql
+CREATE TABLE public.eos_issue_status_transitions (
+  from_status eos_issue_status NOT NULL,
+  to_status eos_issue_status NOT NULL,
+  PRIMARY KEY (from_status, to_status)
+);
 
-```typescript
-document_instances: {
-  Row: {
-    id: number                           // Changed from string
-    document_id: number | null
-    tenant_id: number | null
-    status: string | null
-    isgenerated: boolean | null          // Added
-    generationdate: string | null        // Added
-    stageinstance_id: number | null
-    coments: string | null
-    created_at: string
-    updated_at: string
-  }
-  Insert: {
-    id: number                           // Changed from string
-    // ... same pattern for new fields
-  }
-  Update: {
-    id?: number                          // Changed from string
-    // ... same pattern for new fields
-  }
-}
+-- Enable RLS and grant read access
+ALTER TABLE public.eos_issue_status_transitions ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Anyone can read transitions"
+  ON public.eos_issue_status_transitions FOR SELECT
+  TO authenticated USING (true);
+
+-- Insert allowed transitions
+INSERT INTO public.eos_issue_status_transitions (from_status, to_status) VALUES
+  ('Open', 'Discussing'), ('Open', 'In Review'), ('Open', 'Archived'),
+  ('Discussing', 'Actioning'), ('Discussing', 'Solved'), ('Discussing', 'Open'),
+  ('In Review', 'Actioning'), ('In Review', 'Escalated'), ('In Review', 'Open'),
+  ('Actioning', 'Solved'), ('Actioning', 'Escalated'), ('Actioning', 'Discussing'),
+  ('Escalated', 'Actioning'), ('Escalated', 'Closed'), ('Escalated', 'Archived'),
+  ('Solved', 'Closed'), ('Solved', 'Archived'),
+  ('Closed', 'Archived'), ('Archived', 'Open');
 ```
 
-## Final Schema
+## Expected Result
 
-| Column | Type | Source |
-|--------|------|--------|
-| `id` | bigint PK | unicorn1.id |
-| `document_id` | bigint | unicorn1.document_id |
-| `tenant_id` | bigint | Resolved via stage_instances -> package_instances |
-| `status` | text | Derived from isgenerated |
-| `isgenerated` | boolean | unicorn1.isgenerated |
-| `generationdate` | timestamp | unicorn1.generationdate |
-| `stageinstance_id` | bigint | unicorn1.stageinstance_id |
-| `coments` | text | Existing |
-| `created_at` | timestamptz | Mapped from dateimported |
-| `updated_at` | timestamptz | Mapped from generationdate |
+After the migration runs:
+- The Type dropdown will show "Risk" and "Opportunity"
+- The Category dropdown will show all 8 categories
+- The Impact dropdown will show Low, Medium, High, Critical
+- The Quarter dropdown will show Q1, Q2, Q3, Q4
+- Status transitions will be enforced for edit operations
 
-## Technical Notes
+---
 
-- Table currently empty (0 records) - safe to alter
-- Expected records: ~106,146
-- `tenant_id` retained for quick tenant-level queries without joins
-- `created_at`/`updated_at` derived from legacy timestamps for audit trail
+## Technical Details
 
+### Files to be created
+
+| File | Purpose |
+|------|---------|
+| `supabase/migrations/[timestamp]_restore_eos_option_views.sql` | Database migration to recreate all missing views and tables |
+
+### No frontend changes required
+
+The frontend code in `useEosOptions.ts` is correct and will work once the database objects are restored.
