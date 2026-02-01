@@ -14295,6 +14295,13 @@ export type Database = {
             referencedRelation: "users"
             referencedColumns: ["user_uuid"]
           },
+          {
+            foreignKeyName: "users_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
         ]
       }
     }
