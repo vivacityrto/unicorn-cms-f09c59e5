@@ -28,15 +28,16 @@ import {
 } from '@/components/ui/collapsible';
 import { 
   Users, UserPlus, CheckCircle, Clock, XCircle, 
-  ChevronDown, ChevronUp, AlertTriangle, UserCheck
+  ChevronDown, ChevronUp, AlertTriangle, UserCheck, Trash2, RefreshCw
 } from 'lucide-react';
-import { useMeetingAttendance, AttendanceStatus, MeetingAttendee } from '@/hooks/useMeetingAttendance';
-import { useQuery } from '@tanstack/react-query';
+import { useMeetingAttendance, AttendanceStatus, MeetingAttendee, MeetingRole } from '@/hooks/useMeetingAttendance';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 
 interface AttendancePanelProps {
   meetingId: string;
   meetingType: string;
+  meetingStatus?: string;
   isLive?: boolean;
   canEdit?: boolean;
 }
@@ -62,14 +63,18 @@ const roleLabels: Record<string, string> = {
 
 export const AttendancePanel = ({ 
   meetingId, 
-  meetingType, 
+  meetingType,
+  meetingStatus = 'scheduled',
   isLive = false,
   canEdit = true 
 }: AttendancePanelProps) => {
   const [isExpanded, setIsExpanded] = useState(true);
-  const [addGuestOpen, setAddGuestOpen] = useState(false);
+  const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [selectedUserId, setSelectedUserId] = useState('');
+  const [selectedRole, setSelectedRole] = useState<MeetingRole>('attendee');
   const [guestNotes, setGuestNotes] = useState('');
+
+  const isScheduled = meetingStatus === 'scheduled';
 
   const {
     attendees,
@@ -81,11 +86,14 @@ export const AttendancePanel = ({
     updateAttendance,
     markAllPresent,
     addGuest,
+    addAttendee,
+    removeAttendee,
+    seedFromRoles,
   } = useMeetingAttendance(meetingId);
 
-  // Fetch available users for adding guests
+  // Fetch available users for adding attendees/guests
   const { data: availableUsers } = useQuery({
-    queryKey: ['tenant-users-for-guest'],
+    queryKey: ['tenant-users-for-attendee', meetingId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('users')
@@ -94,20 +102,40 @@ export const AttendancePanel = ({
       if (error) throw error;
       return data;
     },
-    enabled: addGuestOpen,
+    enabled: addDialogOpen,
   });
+
+  // Filter out users already in attendees list
+  const availableToAdd = availableUsers?.filter(
+    user => !attendees?.some(a => a.user_id === user.user_uuid)
+  );
 
   const handleStatusChange = (attendee: MeetingAttendee, newStatus: AttendanceStatus) => {
     updateAttendance.mutate({ userId: attendee.user_id, status: newStatus });
   };
 
-  const handleAddGuest = () => {
+  const handleAddAttendee = () => {
     if (selectedUserId) {
-      addGuest.mutate({ userId: selectedUserId, notes: guestNotes });
-      setAddGuestOpen(false);
+      if (isLive) {
+        // During live meeting, add as guest
+        addGuest.mutate({ userId: selectedUserId, notes: guestNotes });
+      } else {
+        // Before meeting starts, add as regular attendee with role
+        addAttendee.mutate({ userId: selectedUserId, role: selectedRole });
+      }
+      setAddDialogOpen(false);
       setSelectedUserId('');
+      setSelectedRole('attendee');
       setGuestNotes('');
     }
+  };
+
+  const handleRemoveAttendee = (userId: string) => {
+    removeAttendee.mutate({ userId });
+  };
+
+  const handleSeedFromRoles = () => {
+    seedFromRoles.mutate();
   };
 
   const getInitials = (attendee: MeetingAttendee) => {
@@ -171,7 +199,81 @@ export const AttendancePanel = ({
               </div>
             )}
 
-            {/* Quick Actions */}
+            {/* Quick Actions - Before meeting starts */}
+            {isScheduled && canEdit && (
+              <div className="flex flex-wrap gap-2">
+                {attendees?.length === 0 && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={handleSeedFromRoles}
+                    disabled={seedFromRoles.isPending}
+                    className="text-xs"
+                  >
+                    <RefreshCw className="w-3 h-3 mr-1" />
+                    {seedFromRoles.isPending ? 'Loading...' : 'Seed from EOS Roles'}
+                  </Button>
+                )}
+                <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
+                  <DialogTrigger asChild>
+                    <Button size="sm" variant="outline" className="text-xs">
+                      <UserPlus className="w-3 h-3 mr-1" />
+                      Add Attendee
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Add Attendee</DialogTitle>
+                      <DialogDescription>
+                        Add a team member to this meeting.
+                      </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4 py-4">
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium">Select User</label>
+                        <Select value={selectedUserId} onValueChange={setSelectedUserId}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Choose a user..." />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {availableToAdd?.map((user) => (
+                              <SelectItem key={user.user_uuid} value={user.user_uuid}>
+                                {user.first_name} {user.last_name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium">Role</label>
+                        <Select value={selectedRole} onValueChange={(v) => setSelectedRole(v as MeetingRole)}>
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="attendee">Attendee</SelectItem>
+                            <SelectItem value="owner">Owner</SelectItem>
+                            <SelectItem value="visionary">Visionary</SelectItem>
+                            <SelectItem value="integrator">Integrator</SelectItem>
+                            <SelectItem value="core_team">Core Team</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                    <DialogFooter>
+                      <Button variant="outline" onClick={() => setAddDialogOpen(false)}>
+                        Cancel
+                      </Button>
+                      <Button onClick={handleAddAttendee} disabled={!selectedUserId || addAttendee.isPending}>
+                        Add Attendee
+                      </Button>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
+              </div>
+            )}
+
+            {/* Quick Actions - During live meeting */}
             {isLive && canEdit && (
               <div className="flex gap-2">
                 <Button
@@ -184,7 +286,7 @@ export const AttendancePanel = ({
                   <UserCheck className="w-3 h-3 mr-1" />
                   Mark All Present
                 </Button>
-                <Dialog open={addGuestOpen} onOpenChange={setAddGuestOpen}>
+                <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
                   <DialogTrigger asChild>
                     <Button size="sm" variant="outline" className="text-xs">
                       <UserPlus className="w-3 h-3 mr-1" />
@@ -206,7 +308,7 @@ export const AttendancePanel = ({
                             <SelectValue placeholder="Choose a user..." />
                           </SelectTrigger>
                           <SelectContent>
-                            {availableUsers?.map((user) => (
+                            {availableToAdd?.map((user) => (
                               <SelectItem key={user.user_uuid} value={user.user_uuid}>
                                 {user.first_name} {user.last_name}
                               </SelectItem>
@@ -224,10 +326,10 @@ export const AttendancePanel = ({
                       </div>
                     </div>
                     <DialogFooter>
-                      <Button variant="outline" onClick={() => setAddGuestOpen(false)}>
+                      <Button variant="outline" onClick={() => setAddDialogOpen(false)}>
                         Cancel
                       </Button>
-                      <Button onClick={handleAddGuest} disabled={!selectedUserId || addGuest.isPending}>
+                      <Button onClick={handleAddAttendee} disabled={!selectedUserId || addGuest.isPending}>
                         Add Guest
                       </Button>
                     </DialogFooter>
@@ -263,30 +365,44 @@ export const AttendancePanel = ({
                       </div>
                     </div>
                     
-                    {isLive && canEdit ? (
-                      <Select
-                        value={attendee.attendance_status}
-                        onValueChange={(value: AttendanceStatus) => handleStatusChange(attendee, value)}
-                      >
-                        <SelectTrigger className="w-[130px] h-8">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="attended">Present</SelectItem>
-                          <SelectItem value="late">Late</SelectItem>
-                          <SelectItem value="left_early">Left Early</SelectItem>
-                          <SelectItem value="no_show">No Show</SelectItem>
-                          <SelectItem value="invited">Invited</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    ) : (
-                      <Badge className={statusConfig[attendee.attendance_status]?.color || ''}>
-                        {statusConfig[attendee.attendance_status]?.icon}
-                        <span className="ml-1">
-                          {statusConfig[attendee.attendance_status]?.label || attendee.attendance_status}
-                        </span>
-                      </Badge>
-                    )}
+                    <div className="flex items-center gap-2">
+                      {isScheduled && canEdit && (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => handleRemoveAttendee(attendee.user_id)}
+                          disabled={removeAttendee.isPending}
+                          className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      )}
+                      
+                      {isLive && canEdit ? (
+                        <Select
+                          value={attendee.attendance_status}
+                          onValueChange={(value: AttendanceStatus) => handleStatusChange(attendee, value)}
+                        >
+                          <SelectTrigger className="w-[130px] h-8">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="attended">Present</SelectItem>
+                            <SelectItem value="late">Late</SelectItem>
+                            <SelectItem value="left_early">Left Early</SelectItem>
+                            <SelectItem value="no_show">No Show</SelectItem>
+                            <SelectItem value="invited">Invited</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      ) : (
+                        <Badge className={statusConfig[attendee.attendance_status]?.color || ''}>
+                          {statusConfig[attendee.attendance_status]?.icon}
+                          <span className="ml-1">
+                            {statusConfig[attendee.attendance_status]?.label || attendee.attendance_status}
+                          </span>
+                        </Badge>
+                      )}
+                    </div>
                   </div>
                 ))
               )}

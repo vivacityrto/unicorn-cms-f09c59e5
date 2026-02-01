@@ -132,7 +132,7 @@ export const useMeetingAttendance = (meetingId: string | undefined) => {
     },
   });
 
-  // Add guest attendee
+  // Add guest attendee (during live meeting)
   const addGuest = useMutation({
     mutationFn: async ({ userId, notes }: { userId: string; notes?: string }) => {
       const { data, error } = await supabase
@@ -155,6 +155,93 @@ export const useMeetingAttendance = (meetingId: string | undefined) => {
     onError: (error) => {
       toast({
         title: 'Error adding guest',
+        description: error.message,
+        variant: 'destructive',
+      });
+    },
+  });
+
+  // Add attendee (before meeting starts)
+  const addAttendee = useMutation({
+    mutationFn: async ({ userId, role = 'attendee' }: { userId: string; role?: MeetingRole }) => {
+      const { data, error } = await supabase
+        .rpc('add_meeting_attendee', {
+          p_meeting_id: meetingId!,
+          p_user_id: userId,
+          p_role: role as 'owner' | 'attendee' | 'guest' | 'visionary' | 'integrator' | 'core_team',
+        });
+      
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['meeting-attendees', meetingId] });
+      queryClient.invalidateQueries({ queryKey: ['meeting-quorum', meetingId] });
+      toast({
+        title: 'Attendee added',
+        description: 'Attendee has been added to the meeting',
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: 'Error adding attendee',
+        description: error.message,
+        variant: 'destructive',
+      });
+    },
+  });
+
+  // Remove attendee (before meeting starts)
+  const removeAttendee = useMutation({
+    mutationFn: async ({ userId }: { userId: string }) => {
+      const { data, error } = await supabase
+        .rpc('remove_meeting_attendee', {
+          p_meeting_id: meetingId!,
+          p_user_id: userId,
+        });
+      
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['meeting-attendees', meetingId] });
+      queryClient.invalidateQueries({ queryKey: ['meeting-quorum', meetingId] });
+      toast({
+        title: 'Attendee removed',
+        description: 'Attendee has been removed from the meeting',
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: 'Error removing attendee',
+        description: error.message,
+        variant: 'destructive',
+      });
+    },
+  });
+
+  // Seed attendees from EOS roles
+  const seedFromRoles = useMutation({
+    mutationFn: async () => {
+      const { data, error } = await supabase
+        .rpc('seed_meeting_attendees_from_roles', {
+          p_meeting_id: meetingId!,
+        });
+      
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (count) => {
+      queryClient.invalidateQueries({ queryKey: ['meeting-attendees', meetingId] });
+      queryClient.invalidateQueries({ queryKey: ['meeting-quorum', meetingId] });
+      toast({
+        title: 'Attendees seeded',
+        description: `${count} attendee(s) added from EOS roles`,
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: 'Error seeding attendees',
         description: error.message,
         variant: 'destructive',
       });
@@ -216,6 +303,9 @@ export const useMeetingAttendance = (meetingId: string | undefined) => {
     updateAttendance,
     markAllPresent,
     addGuest,
+    addAttendee,
+    removeAttendee,
+    seedFromRoles,
     startMeetingWithQuorum,
   };
 };
