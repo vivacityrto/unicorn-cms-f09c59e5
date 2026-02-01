@@ -1,106 +1,119 @@
 
-# Fix Missing EOS Dropdown Options
+# Fix EOS Issues Table - Missing Columns for Meetings
 
 ## Problem Identified
 
-The "Add Risk or Opportunity" form fields are empty because the database views that power the dropdown options do not exist in the production database:
+The "Add Risk or Opportunity" form fails with error: "Could not find the 'source' column of 'eos_issues' in the schema cache"
 
-| Missing Database Object | Purpose |
-|------------------------|---------|
-| `eos_issue_type_options` (view) | Type dropdown (Risk/Opportunity) |
-| `eos_issue_category_options` (view) | Category dropdown (Delivery, Compliance, etc.) |
-| `eos_issue_impact_options` (view) | Impact dropdown (Low, Medium, High, Critical) |
-| `eos_issue_status_options` (view) | Status dropdown (Open, Discussing, etc.) |
-| `eos_quarter_options` (view) | Quarter dropdown (Q1-Q4) |
-| `eos_issue_status_transitions` (table) | Controls allowed status changes |
+The `eos_issues` table is missing two columns that the frontend code requires for both the Risks & Opportunities page and EOS Meeting IDS functionality:
 
-The network requests are returning **404 errors** with the message "relation does not exist" for each of these objects.
+| Missing Column | Purpose | Used By |
+|---------------|---------|---------|
+| `source` | Tracks where issue was created (ad_hoc, meeting_ids, ro_page) | RiskOpportunityForm, CreateIssueDialog, useRisksOpportunities |
+| `meeting_segment_id` | Links issues to specific meeting segments (IDS phase tracking) | CreateIssueDialog, RiskOpportunityForm |
 
-## Root Cause
+## Additional Issues Found
 
-The migrations that create these views and tables exist in the codebase but were not applied to the database, or they were inadvertently dropped.
+The `create_issue` RPC function also has problems:
+- References non-existent columns (`owner_id`, `rock_id` instead of `assigned_to`, `linked_rock_id`)
+- Uses incorrect status value (`'open'` instead of `'Open'` - case-sensitive enum)
 
 ## Solution
 
-Create a migration that recreates all missing EOS option views and the status transitions table.
-
-### Step 1: Create migration to restore EOS option views
+### Step 1: Add Missing Columns to `eos_issues`
 
 ```sql
--- Recreate EOS option views with security invoker
+-- Add source column with constraint
+ALTER TABLE public.eos_issues
+  ADD COLUMN IF NOT EXISTS source TEXT DEFAULT 'ad_hoc';
 
--- Type options (risk/opportunity)
-CREATE VIEW public.eos_issue_type_options 
-WITH (security_invoker = true) AS
-SELECT unnest(ARRAY['risk', 'opportunity']) AS value;
+ALTER TABLE public.eos_issues
+  ADD CONSTRAINT eos_issues_source_check 
+  CHECK (source IN ('ad_hoc', 'meeting_ids', 'ro_page'));
 
--- Category options
-CREATE VIEW public.eos_issue_category_options 
-WITH (security_invoker = true) AS
-SELECT unnest(ARRAY[
-  'Delivery', 'Compliance', 'Financial', 'Capacity',
-  'Systems', 'Client', 'Strategic', 'Growth'
-]) AS value;
-
--- Impact options
-CREATE VIEW public.eos_issue_impact_options 
-WITH (security_invoker = true) AS
-SELECT unnest(ARRAY['Low', 'Medium', 'High', 'Critical']) AS value;
-
--- Status options (from enum)
-CREATE VIEW public.eos_issue_status_options 
-WITH (security_invoker = true) AS
-SELECT unnest(enum_range(NULL::eos_issue_status))::text AS value;
-
--- Quarter options (1-4)
-CREATE VIEW public.eos_quarter_options 
-WITH (security_invoker = true) AS
-SELECT generate_series(1, 4) AS value;
-
--- Grant permissions
-GRANT SELECT ON public.eos_issue_type_options TO authenticated, anon;
-GRANT SELECT ON public.eos_issue_category_options TO authenticated, anon;
-GRANT SELECT ON public.eos_issue_impact_options TO authenticated, anon;
-GRANT SELECT ON public.eos_issue_status_options TO authenticated, anon;
-GRANT SELECT ON public.eos_quarter_options TO authenticated, anon;
+-- Add meeting_segment_id with foreign key
+ALTER TABLE public.eos_issues
+  ADD COLUMN IF NOT EXISTS meeting_segment_id UUID 
+  REFERENCES public.eos_meeting_segments(id) ON DELETE SET NULL;
 ```
 
-### Step 2: Create status transitions table
+### Step 2: Fix the `create_issue` RPC Function
+
+The existing RPC function references incorrect column names. It needs to be updated to:
+- Use `assigned_to` instead of `owner_id`
+- Use `linked_rock_id` instead of `rock_id`
+- Use proper enum default for `status` (first enum value from database)
+- Include the new `source` and `meeting_segment_id` parameters
 
 ```sql
-CREATE TABLE public.eos_issue_status_transitions (
-  from_status eos_issue_status NOT NULL,
-  to_status eos_issue_status NOT NULL,
-  PRIMARY KEY (from_status, to_status)
-);
+CREATE OR REPLACE FUNCTION public.create_issue(
+  p_tenant_id bigint,
+  p_title text,
+  p_description text DEFAULT NULL,
+  p_priority text DEFAULT 'medium',
+  p_assigned_to uuid DEFAULT NULL,
+  p_meeting_id uuid DEFAULT NULL,
+  p_linked_rock_id uuid DEFAULT NULL,
+  p_meeting_segment_id uuid DEFAULT NULL,
+  p_source text DEFAULT 'ad_hoc'
+)
+RETURNS uuid
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path TO 'public'
+AS $$
+DECLARE
+  v_issue_id UUID;
+  v_priority_int INTEGER;
+BEGIN
+  -- Convert text priority to integer
+  v_priority_int := CASE LOWER(p_priority)
+    WHEN 'high' THEN 3
+    WHEN 'medium' THEN 2
+    WHEN 'low' THEN 1
+    ELSE 2
+  END;
 
--- Enable RLS and grant read access
-ALTER TABLE public.eos_issue_status_transitions ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Anyone can read transitions"
-  ON public.eos_issue_status_transitions FOR SELECT
-  TO authenticated USING (true);
+  INSERT INTO eos_issues (
+    tenant_id,
+    title,
+    description,
+    priority,
+    assigned_to,
+    meeting_id,
+    linked_rock_id,
+    meeting_segment_id,
+    source,
+    created_by
+  ) VALUES (
+    p_tenant_id,
+    p_title,
+    p_description,
+    v_priority_int,
+    COALESCE(p_assigned_to, auth.uid()),
+    p_meeting_id,
+    p_linked_rock_id,
+    p_meeting_segment_id,
+    p_source,
+    auth.uid()
+  )
+  -- Status defaults to 'Open' from column default
+  RETURNING id INTO v_issue_id;
 
--- Insert allowed transitions
-INSERT INTO public.eos_issue_status_transitions (from_status, to_status) VALUES
-  ('Open', 'Discussing'), ('Open', 'In Review'), ('Open', 'Archived'),
-  ('Discussing', 'Actioning'), ('Discussing', 'Solved'), ('Discussing', 'Open'),
-  ('In Review', 'Actioning'), ('In Review', 'Escalated'), ('In Review', 'Open'),
-  ('Actioning', 'Solved'), ('Actioning', 'Escalated'), ('Actioning', 'Discussing'),
-  ('Escalated', 'Actioning'), ('Escalated', 'Closed'), ('Escalated', 'Archived'),
-  ('Solved', 'Closed'), ('Solved', 'Archived'),
-  ('Closed', 'Archived'), ('Archived', 'Open');
+  RETURN v_issue_id;
+END;
+$$;
 ```
 
 ## Expected Result
 
-After the migration runs:
-- The Type dropdown will show "Risk" and "Opportunity"
-- The Category dropdown will show all 8 categories
-- The Impact dropdown will show Low, Medium, High, Critical
-- The Quarter dropdown will show Q1, Q2, Q3, Q4
-- Status transitions will be enforced for edit operations
-
----
+After the migration:
+- The "Add Risk or Opportunity" form will successfully create items
+- Issues created from EOS meetings will track which segment they came from
+- The `source` field will correctly identify where issues originated:
+  - `ad_hoc` - Quick add or unspecified
+  - `meeting_ids` - Created during IDS segment of a meeting
+  - `ro_page` - Created from the Risks & Opportunities page
 
 ## Technical Details
 
@@ -108,8 +121,12 @@ After the migration runs:
 
 | File | Purpose |
 |------|---------|
-| `supabase/migrations/[timestamp]_restore_eos_option_views.sql` | Database migration to recreate all missing views and tables |
+| `supabase/migrations/[timestamp]_add_eos_issues_meeting_fields.sql` | Database migration for new columns and RPC fix |
 
 ### No frontend changes required
 
-The frontend code in `useEosOptions.ts` is correct and will work once the database objects are restored.
+The frontend code already handles these fields correctly - only the database schema needs updating.
+
+### Audit Considerations
+
+The existing audit system captures changes via the `set_issue_status` RPC and stores details in `audit_eos_events` as JSONB. The new columns will automatically be included when issues are created or modified.
