@@ -16197,7 +16197,13 @@ export type Database = {
         | "todos"
         | "ids"
         | "conclude"
-      staff_team_type: "csc" | "csc_admin" | "growth" | "leadership" | "other"
+      staff_team_type:
+        | "none"
+        | "business_growth"
+        | "client_success"
+        | "client_experience"
+        | "software_development"
+        | "leadership"
       stage_state:
         | "not_started"
         | "active"
@@ -16444,7 +16450,14 @@ export const Constants = {
         "ids",
         "conclude",
       ],
-      staff_team_type: ["csc", "csc_admin", "growth", "leadership", "other"],
+      staff_team_type: [
+        "none",
+        "business_growth",
+        "client_success",
+        "client_experience",
+        "software_development",
+        "leadership",
+      ],
       stage_state: [
         "not_started",
         "active",

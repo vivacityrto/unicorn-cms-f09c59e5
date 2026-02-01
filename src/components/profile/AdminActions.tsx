@@ -58,12 +58,11 @@ interface AdminActionsProps {
 
 const STAFF_TEAM_OPTIONS = [
   { value: 'none', label: 'No Team Assigned' },
-  { value: 'csc', label: 'Client Success Champion' },
-  { value: 'csc_admin', label: 'CSC Admin' },
-  { value: 'growth', label: 'Growth' },
-  { value: 'leadership', label: 'Leadership' },
-  { value: 'operations', label: 'Operations' },
-  { value: 'design', label: 'Design' },
+  { value: 'business_growth', label: 'Business Growth Team' },
+  { value: 'client_success', label: 'Client Success Team' },
+  { value: 'client_experience', label: 'Client Experience Team' },
+  { value: 'software_development', label: 'Software Development Team' },
+  { value: 'leadership', label: 'Leadership Team' },
 ] as const;
 
 // The 5 canonical role types
@@ -441,12 +440,12 @@ export function AdminActions({
                 </Select>
               </div>
 
-              {/* Staff Team - only for SuperAdmin roles */}
+              {/* Team - only for SuperAdmin roles */}
               {isSuperAdminRole && (
                 <div className="space-y-2">
                   <Label htmlFor="staff-team" className="flex items-center gap-2">
                     <Users className="h-4 w-4" />
-                    Staff Team
+                    Team
                   </Label>
                   <Select value={selectedStaffTeam} onValueChange={setSelectedStaffTeam}>
                     <SelectTrigger id="staff-team">
