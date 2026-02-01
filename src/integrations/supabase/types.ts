@@ -3968,7 +3968,9 @@ export type Database = {
           coments: string | null
           created_at: string
           document_id: number | null
-          id: string
+          generationdate: string | null
+          id: number
+          isgenerated: boolean | null
           stageinstance_id: number | null
           status: string | null
           tenant_id: number | null
@@ -3978,7 +3980,9 @@ export type Database = {
           coments?: string | null
           created_at?: string
           document_id?: number | null
-          id?: string
+          generationdate?: string | null
+          id: number
+          isgenerated?: boolean | null
           stageinstance_id?: number | null
           status?: string | null
           tenant_id?: number | null
@@ -3988,7 +3992,9 @@ export type Database = {
           coments?: string | null
           created_at?: string
           document_id?: number | null
-          id?: string
+          generationdate?: string | null
+          id?: number
+          isgenerated?: boolean | null
           stageinstance_id?: number | null
           status?: string | null
           tenant_id?: number | null
