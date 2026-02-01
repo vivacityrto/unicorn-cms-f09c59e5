@@ -14979,6 +14979,17 @@ export type Database = {
             }
             Returns: string
           }
+        | {
+            Args: {
+              p_created_by: string
+              p_meeting_type: string
+              p_scheduled_at: string
+              p_template_id: string
+              p_tenant_id: number
+              p_title: string
+            }
+            Returns: string
+          }
       create_meeting_series: {
         Args: {
           p_duration_minutes?: number

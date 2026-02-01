@@ -64,8 +64,11 @@ export const ApplyTemplateDialog = ({
 
   const calculateTotalDuration = (template: EosAgendaTemplate) => {
     if (!template.segments || !Array.isArray(template.segments)) return 0;
-    return template.segments.reduce((sum: number, seg: any) => sum + (seg.duration_minutes || 0), 0);
+    return template.segments.reduce((sum: number, seg: any) => sum + (seg.duration_minutes || seg.duration || 0), 0);
   };
+  
+  const getSegmentName = (seg: any) => seg.segment_name || seg.name || 'Unnamed';
+  const getSegmentDuration = (seg: any) => seg.duration_minutes || seg.duration || 0;
 
   const handleApply = async () => {
     if (!selectedTemplateId) {
@@ -167,7 +170,7 @@ export const ApplyTemplateDialog = ({
                   {Array.isArray(selectedTemplate.segments) && selectedTemplate.segments.map((seg: any, idx: number) => (
                     <Badge key={idx} variant="outline" className="text-xs">
                       <FileText className="w-3 h-3 mr-1" />
-                      {seg.segment_name} ({seg.duration_minutes}m)
+                      {getSegmentName(seg)} ({getSegmentDuration(seg)}m)
                     </Badge>
                   ))}
                 </div>
