@@ -14606,6 +14606,10 @@ export type Database = {
         Args: { p_suggestion_id: string }
         Returns: string
       }
+      accept_invitation_v2: {
+        Args: { p_token_hash: string; p_user_id: string }
+        Returns: Json
+      }
       accept_invite: { Args: { p_token: string }; Returns: Json }
       acknowledge_document: {
         Args: { p_release_id: string }

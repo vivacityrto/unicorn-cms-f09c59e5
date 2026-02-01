@@ -126,6 +126,42 @@ export default function AcceptInvitation() {
     return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
   };
 
+  interface InvitationAcceptResult {
+    ok: boolean;
+    code: string;
+    message?: string;
+    tenant_id?: number;
+    role?: string;
+  }
+
+  const finalizeInvitation = async (userId: string, tokenHash: string): Promise<boolean> => {
+    try {
+      const { data: acceptResult, error: rpcError } = await supabase.rpc('accept_invitation_v2', {
+        p_token_hash: tokenHash,
+        p_user_id: userId,
+      });
+
+      if (rpcError) {
+        console.error('RPC error finalizing invitation:', rpcError);
+        // Non-fatal: user account was created, just membership setup failed
+        return false;
+      }
+
+      const result = acceptResult as unknown as InvitationAcceptResult | null;
+      
+      if (!result?.ok && result?.code !== 'ALREADY_ACCEPTED') {
+        console.error('Failed to finalize invitation:', result);
+        return false;
+      }
+
+      console.log('Invitation finalized successfully:', result);
+      return true;
+    } catch (error) {
+      console.error('Error in finalizeInvitation:', error);
+      return false;
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -149,6 +185,8 @@ export default function AcceptInvitation() {
 
     setIsLoading(true);
     try {
+      const tokenHash = await hashToken(token!);
+      
       // Sign up the user with all metadata for the trigger
       const { data: authData, error: signUpError } = await supabase.auth.signUp({
         email: invitationData!.email,
@@ -185,13 +223,9 @@ export default function AcceptInvitation() {
           return;
         }
 
-        // Sign in successful - update invitation status and redirect
+        // Sign in successful - finalize invitation and redirect
         if (signInData.user) {
-          const tokenHash = await hashToken(token!);
-          await supabase
-            .from('user_invitations')
-            .update({ status: 'successful' })
-            .eq('token_hash', tokenHash);
+          await finalizeInvitation(signInData.user.id, tokenHash);
           
           toast({
             title: 'Welcome back!',
@@ -204,16 +238,12 @@ export default function AcceptInvitation() {
 
       if (signUpError) throw signUpError;
 
-      // Mark invitation as successful
+      // Finalize invitation - create tenant membership
       if (authData.user) {
-        const tokenHash = await hashToken(token!);
-        const { error: updateError } = await supabase
-          .from('user_invitations')
-          .update({ status: 'successful' })
-          .eq('token_hash', tokenHash);
+        const membershipCreated = await finalizeInvitation(authData.user.id, tokenHash);
         
-        if (updateError) {
-          console.error('Failed to update invitation status:', updateError);
+        if (!membershipCreated) {
+          console.warn('Membership creation may have failed - user should check with admin if access issues occur');
         }
       }
 
