@@ -10,7 +10,7 @@ interface UpdateUserRoleRequest {
   unicorn_role?: 'Super Admin' | 'Team Member' | 'Admin' | 'User';
   user_type?: 'Vivacity' | 'Vivacity Team' | 'Client' | 'Client Parent' | 'Client Child' | 'Member';
   tenant_id?: number | null;
-  staff_team?: 'csc' | 'csc_admin' | 'growth' | 'leadership' | 'operations' | 'design' | null;
+  staff_team?: 'none' | 'business_growth' | 'client_success' | 'client_experience' | 'software_development' | 'leadership' | null;
 }
 
 Deno.serve(async (req) => {
