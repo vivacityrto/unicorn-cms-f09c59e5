@@ -87,17 +87,18 @@ export function IDSDialog({ open, onOpenChange, issue, isFacilitator }: IDSDialo
 
   // Set issue status mutation with auto-tab-advance
   const setStatus = useMutation({
-    mutationFn: async ({ status, solutionText, autoAdvanceTab = true }: { 
+    mutationFn: async ({ status, solutionText, autoAdvanceTab = true, fromStatus }: { 
       status: string; 
       solutionText?: string;
       autoAdvanceTab?: boolean;
+      fromStatus?: string;
     }) => {
-      // Validate transition before calling RPC
-      const currentStatus = issue?.status || 'Open';
-      if (!isValidStatusTransition(statusTransitions, currentStatus, status)) {
-        const allowed = getAllowedStatusTransitions(statusTransitions, currentStatus);
+      // Validate transition before calling RPC - use explicit fromStatus if provided
+      const effectiveFrom = fromStatus ?? issue?.status ?? 'Open';
+      if (!isValidStatusTransition(statusTransitions, effectiveFrom, status)) {
+        const allowed = getAllowedStatusTransitions(statusTransitions, effectiveFrom);
         throw new Error(
-          `Cannot transition from "${currentStatus}" to "${status}". ` +
+          `Cannot transition from "${effectiveFrom}" to "${status}". ` +
           `Allowed: ${allowed.length > 0 ? allowed.join(', ') : 'none'}`
         );
       }
@@ -189,15 +190,23 @@ export function IDSDialog({ open, onOpenChange, issue, isFacilitator }: IDSDialo
       if (currentStatus === 'Open') {
         await setStatus.mutateAsync({ 
           status: 'Discussing', 
+          fromStatus: 'Open',
           autoAdvanceTab: false 
         });
+        // Now transition to Solved - use explicit fromStatus since prop hasn't updated yet
+        await setStatus.mutateAsync({ 
+          status: 'Solved', 
+          fromStatus: 'Discussing',
+          solutionText: solution 
+        });
+      } else {
+        // Already in Discussing or another valid state
+        await setStatus.mutateAsync({ 
+          status: 'Solved', 
+          fromStatus: currentStatus,
+          solutionText: solution 
+        });
       }
-      
-      // Now transition to Solved (from Discussing or Actioning)
-      await setStatus.mutateAsync({ 
-        status: 'Solved', 
-        solutionText: solution 
-      });
       
       if (todos.length > 0) {
         await createTodos.mutateAsync();
@@ -253,7 +262,7 @@ export function IDSDialog({ open, onOpenChange, issue, isFacilitator }: IDSDialo
 
             {isFacilitator && issue.status === 'Open' && (
               <Button
-                onClick={() => setStatus.mutate({ status: 'Discussing' })}
+                onClick={() => setStatus.mutate({ status: 'Discussing', fromStatus: issue.status })}
                 className="w-full"
               >
                 Start Discussing
@@ -268,7 +277,7 @@ export function IDSDialog({ open, onOpenChange, issue, isFacilitator }: IDSDialo
                 placeholder="Add discussion notes..."
                 rows={8}
                 className="resize-none"
-                disabled={!isFacilitator && issue.status !== 'discussing'}
+                disabled={!isFacilitator && issue.status !== 'Discussing'}
               />
             </div>
 
