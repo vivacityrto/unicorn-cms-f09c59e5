@@ -182,14 +182,31 @@ export function IDSDialog({ open, onOpenChange, issue, isFacilitator }: IDSDialo
       return;
     }
 
-    // Use exact enum value (case-sensitive)
-    await setStatus.mutateAsync({ status: 'Solved', solutionText: solution });
-    
-    if (todos.length > 0) {
-      await createTodos.mutateAsync();
-    }
+    try {
+      const currentStatus = issue?.status || 'Open';
+      
+      // If status is Open, we need to transition through Discussing first
+      if (currentStatus === 'Open') {
+        await setStatus.mutateAsync({ 
+          status: 'Discussing', 
+          autoAdvanceTab: false 
+        });
+      }
+      
+      // Now transition to Solved (from Discussing or Actioning)
+      await setStatus.mutateAsync({ 
+        status: 'Solved', 
+        solutionText: solution 
+      });
+      
+      if (todos.length > 0) {
+        await createTodos.mutateAsync();
+      }
 
-    onOpenChange(false);
+      onOpenChange(false);
+    } catch (error) {
+      // Error already handled by mutation onError
+    }
   };
 
   if (!issue) return null;
@@ -358,16 +375,21 @@ export function IDSDialog({ open, onOpenChange, issue, isFacilitator }: IDSDialo
         </Tabs>
 
         {isFacilitator && activeTab === 'solve' && (
-          <DialogFooter>
-            <Button variant="outline" onClick={() => onOpenChange(false)}>
-              Cancel
-            </Button>
-            <Button
-              onClick={handleSolve}
-              disabled={!solution.trim() || setStatus.isPending || createTodos.isPending}
-            >
-              Mark as Solved
-            </Button>
+          <DialogFooter className="flex items-center justify-between">
+            <div className="text-sm text-muted-foreground">
+              Current status: <Badge variant="outline">{issue.status}</Badge>
+            </div>
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={() => onOpenChange(false)}>
+                Cancel
+              </Button>
+              <Button
+                onClick={handleSolve}
+                disabled={!solution.trim() || setStatus.isPending || createTodos.isPending}
+              >
+                {setStatus.isPending ? 'Processing...' : 'Mark as Solved'}
+              </Button>
+            </div>
           </DialogFooter>
         )}
       </DialogContent>
