@@ -3,7 +3,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import {
   Select,
@@ -31,8 +30,9 @@ import {
   ChevronDown, ChevronUp, AlertTriangle, UserCheck, Trash2, RefreshCw
 } from 'lucide-react';
 import { useMeetingAttendance, AttendanceStatus, MeetingAttendee, MeetingRole } from '@/hooks/useMeetingAttendance';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import type { OnlineUser } from '@/hooks/useMeetingRealtime';
 
 interface AttendancePanelProps {
   meetingId: string;
@@ -40,6 +40,7 @@ interface AttendancePanelProps {
   meetingStatus?: string;
   isLive?: boolean;
   canEdit?: boolean;
+  onlineUsers?: OnlineUser[];
 }
 
 const statusConfig: Record<AttendanceStatus, { label: string; icon: React.ReactNode; color: string }> = {
@@ -66,7 +67,8 @@ export const AttendancePanel = ({
   meetingType,
   meetingStatus = 'scheduled',
   isLive = false,
-  canEdit = true 
+  canEdit = true,
+  onlineUsers = []
 }: AttendancePanelProps) => {
   const [isExpanded, setIsExpanded] = useState(true);
   const [addDialogOpen, setAddDialogOpen] = useState(false);
@@ -75,6 +77,11 @@ export const AttendancePanel = ({
   const [guestNotes, setGuestNotes] = useState('');
 
   const isScheduled = meetingStatus === 'scheduled';
+
+  // Helper to check if a user is currently online
+  const isUserOnline = (userId: string) => {
+    return onlineUsers.some(u => u.user_id === userId);
+  };
 
   const {
     attendees,
@@ -351,11 +358,16 @@ export const AttendancePanel = ({
                     className="flex items-center justify-between py-2 px-3 rounded-lg bg-muted/50"
                   >
                     <div className="flex items-center gap-3">
-                      <Avatar className="w-8 h-8">
-                        <AvatarFallback className="text-xs bg-primary/10 text-primary">
-                          {getInitials(attendee)}
-                        </AvatarFallback>
-                      </Avatar>
+                      <div className="relative">
+                        <Avatar className="w-8 h-8">
+                          <AvatarFallback className="text-xs bg-primary/10 text-primary">
+                            {getInitials(attendee)}
+                          </AvatarFallback>
+                        </Avatar>
+                        {isUserOnline(attendee.user_id) && (
+                          <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-primary rounded-full border-2 border-background" />
+                        )}
+                      </div>
                       <div>
                         <p className="text-sm font-medium">{getName(attendee)}</p>
                         <p className="text-xs text-muted-foreground">
