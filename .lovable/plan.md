@@ -1,148 +1,146 @@
 
+# Fix Issues Queue to Show All Open Issues in Meeting
 
-# Fix "Apply Agenda Template" Error
+## Problem Summary
 
-## Problem
+When you add an issue from the **Risks & Opportunities page**, it's not visible in the meeting's **Issues Queue**. The queue only displays issues explicitly linked to that specific meeting via `meeting_id`.
 
-When clicking "Apply Template" on an EOS meeting, the error occurs:
+**Evidence from database:**
+| Field | Value |
+|-------|-------|
+| title | "Client Expectation & Consultant Allocation Clarity" |
+| meeting_id | `NULL` |
+| source | `ad_hoc` |
+| status | `Open` |
 
-```
-null value in column "segment_name" of relation "eos_meeting_segments" violates not-null constraint
-```
+The `useMeetingIssues` hook filters by `meeting_id=eq.{meetingId}`, so issues without a meeting link never appear.
 
-## Root Cause
+## Solution Options
 
-There is a key name mismatch between template data and the RPC functions:
+### Option A: Show All Open Tenant Issues in Meeting Queue (Recommended)
+Change the Issues Queue to display:
+1. All issues linked to this specific meeting, AND
+2. All open issues for the tenant that haven't been solved yet (regardless of where they were created)
 
-| What Templates Store | What RPC Expects |
-|---------------------|------------------|
-| `name` | `segment_name` |
-| `duration` | `duration_minutes` |
+This follows the EOS principle: the IDS section should tackle any unresolved issues, not just those raised during this specific meeting.
 
-**Template Data (actual):**
-```json
-[
-  { "name": "Segue", "duration": 5 },
-  { "name": "Scorecard", "duration": 5 }
-]
-```
+### Option B: Allow "Import" of Existing Issues
+Add an "Import Issue" button that lets the facilitator search and pull in existing issues from the R&O list into the current meeting's queue.
 
-**RPC expects:**
-```json
-[
-  { "segment_name": "Segue", "duration_minutes": 5 }
-]
-```
+**Recommendation:** Implement Option A - it's simpler and matches EOS methodology where all open issues should be available for discussion.
 
-The `apply_template_to_meeting` and `create_meeting_from_template` functions both try to access `segment_name` and `duration_minutes`, which returns NULL because those keys do not exist.
+---
 
-## Solution
+## Implementation Plan (Option A)
 
-Update both RPC functions to use `COALESCE` for backward compatibility, handling both old keys (`name`, `duration`) and new keys (`segment_name`, `duration_minutes`).
+### 1. Update useMeetingIssues Hook
 
-### Changes Required
+Modify the hook to fetch:
+- Issues where `meeting_id` equals current meeting, OR
+- Issues where `meeting_id` is NULL AND `status` is 'Open' AND tenant matches
 
-**1. Fix `apply_template_to_meeting` RPC**
-
-Update the INSERT statement to handle both key formats:
-
-```sql
--- Before (broken)
-segment_name = v_segment->>'segment_name'
-duration_minutes = (v_segment->>'duration_minutes')::INT
-
--- After (fixed)
-segment_name = COALESCE(v_segment->>'segment_name', v_segment->>'name')
-duration_minutes = COALESCE((v_segment->>'duration_minutes')::INT, (v_segment->>'duration')::INT)
+```text
+File: src/hooks/useMeetingIssues.tsx
 ```
 
-**2. Fix `create_meeting_from_template` RPC**
-
-Apply the same COALESCE pattern to ensure new meetings created from templates also work.
-
-### Files to Create
-
-| File | Purpose |
-|------|---------|
-| `supabase/migrations/[timestamp]_fix_template_segment_keys.sql` | Update both RPC functions with COALESCE |
-
-### Migration SQL
-
-```sql
--- Fix apply_template_to_meeting to handle both key formats
-CREATE OR REPLACE FUNCTION public.apply_template_to_meeting(
-  p_meeting_id UUID,
-  p_template_id UUID
-)
-RETURNS VOID
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path = public
-AS $$
-DECLARE
-  v_template RECORD;
-  v_segment JSONB;
-  v_sequence INT := 1;
-  v_total_duration INT := 0;
-  v_segment_name TEXT;
-  v_duration INT;
-BEGIN
-  SELECT * INTO v_template
-  FROM public.eos_agenda_templates
-  WHERE id = p_template_id;
-
-  IF NOT FOUND THEN
-    RAISE EXCEPTION 'Template not found';
-  END IF;
-
-  DELETE FROM public.eos_meeting_segments
-  WHERE meeting_id = p_meeting_id;
-
-  FOR v_segment IN SELECT * FROM jsonb_array_elements(v_template.segments)
-  LOOP
-    -- Handle both old (name/duration) and new (segment_name/duration_minutes) keys
-    v_segment_name := COALESCE(v_segment->>'segment_name', v_segment->>'name');
-    v_duration := COALESCE(
-      (v_segment->>'duration_minutes')::INT, 
-      (v_segment->>'duration')::INT
-    );
-    
-    INSERT INTO public.eos_meeting_segments (
-      meeting_id, segment_name, duration_minutes, sequence_order
-    ) VALUES (
-      p_meeting_id, v_segment_name, v_duration, v_sequence
-    );
-    
-    v_total_duration := v_total_duration + v_duration;
-    v_sequence := v_sequence + 1;
-  END LOOP;
-
-  UPDATE public.eos_meetings
-  SET duration_minutes = v_total_duration,
-      template_id = p_template_id,
-      template_version_id = v_template.current_version_id,
-      updated_at = NOW()
-  WHERE id = p_meeting_id;
-END;
-$$;
+**Current Logic:**
+```typescript
+.eq('meeting_id', meetingId!)
 ```
 
-The same pattern will be applied to `create_meeting_from_template`.
+**New Logic:**
+```typescript
+.or(`meeting_id.eq.${meetingId},and(meeting_id.is.null,status.eq.Open)`)
+.eq('tenant_id', tenantId)
+```
 
-### Frontend Fix
+### 2. Update Hook to Accept Tenant ID
 
-The `ApplyTemplateDialog.tsx` also needs updates to display segment previews correctly:
+The hook needs access to the tenant ID to filter properly:
 
-| Current (broken) | Fixed |
-|-----------------|-------|
-| `seg.segment_name` | `seg.segment_name \|\| seg.name` |
-| `seg.duration_minutes` | `seg.duration_minutes \|\| seg.duration` |
+```typescript
+export const useMeetingIssues = (meetingId?: string, tenantId?: number) => {
+  const { data: issues, isLoading, refetch } = useQuery({
+    queryKey: ['meeting-issues', meetingId, tenantId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('eos_issues')
+        .select('*')
+        .eq('tenant_id', tenantId!)
+        .or(`meeting_id.eq.${meetingId},and(meeting_id.is.null,status.eq.Open)`)
+        .order('priority', { ascending: false })
+        .order('created_at', { ascending: true });
+      
+      if (error) throw error;
+      return data as EosIssue[];
+    },
+    enabled: !!meetingId && !!tenantId,
+  });
 
-### Expected Outcome
+  return { issues, isLoading, refetch };
+};
+```
 
-After this fix:
-- Applying templates to existing meetings will work
-- Creating new meetings from templates will work
-- The dialog will correctly display segment names and durations
-- Both old and new template formats are supported
+### 3. Update LiveMeetingView to Pass Tenant ID
 
+Pass the meeting's `tenant_id` to the hook:
+
+```typescript
+const { issues } = useMeetingIssues(meetingId, meeting?.tenant_id);
+```
+
+### 4. Visual Indicator for Issue Source
+
+In the IssuesQueue component, add a visual indicator to distinguish:
+- Issues created in this meeting (show meeting icon or "This Meeting" badge)
+- Issues from the backlog (show "Backlog" badge or different style)
+
+```typescript
+{issue.meeting_id === meetingId ? (
+  <Badge variant="outline" className="text-xs">This Meeting</Badge>
+) : (
+  <Badge variant="secondary" className="text-xs">Backlog</Badge>
+)}
+```
+
+---
+
+## Files to Modify
+
+| File | Change |
+|------|--------|
+| `src/hooks/useMeetingIssues.tsx` | Update query to include tenant-wide open issues |
+| `src/components/eos/LiveMeetingView.tsx` | Pass tenant_id to the hook |
+| `src/components/eos/IssuesQueue.tsx` | Add source badge to distinguish origin |
+
+---
+
+## Expected Outcome
+
+After implementation:
+- Issues Queue will show your "Client Expectation & Consultant Allocation Clarity" issue
+- All open issues from the tenant will be available for IDS discussion
+- Issues created within the meeting will be visually distinguished from backlog issues
+- Solving an issue in the meeting will remove it from future meeting queues
+
+---
+
+## Technical Details
+
+### Query Pattern
+
+The Supabase PostgREST `.or()` filter syntax:
+
+```typescript
+// This retrieves:
+// 1. Issues linked to this meeting (any status)
+// 2. Open issues not linked to any meeting (backlog)
+.or(`meeting_id.eq.${meetingId},and(meeting_id.is.null,status.eq.Open)`)
+```
+
+### Cache Invalidation
+
+The query key includes tenant_id to ensure proper cache separation:
+```typescript
+queryKey: ['meeting-issues', meetingId, tenantId]
+```
