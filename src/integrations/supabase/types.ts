@@ -10586,6 +10586,7 @@ export type Database = {
           released_client_tasks: boolean
           released_client_tasks_date: string | null
           stage_id: number
+          stage_sortorder: number | null
           status: string | null
           status_id: number
         }
@@ -10597,6 +10598,7 @@ export type Database = {
           released_client_tasks?: boolean
           released_client_tasks_date?: string | null
           stage_id: number
+          stage_sortorder?: number | null
           status?: string | null
           status_id?: number
         }
@@ -10608,6 +10610,7 @@ export type Database = {
           released_client_tasks?: boolean
           released_client_tasks_date?: string | null
           stage_id?: number
+          stage_sortorder?: number | null
           status?: string | null
           status_id?: number
         }
