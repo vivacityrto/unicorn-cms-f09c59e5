@@ -106,6 +106,26 @@ export const useMeetingAttendance = (meetingId: string | undefined) => {
     },
   });
 
+  // Silent update attendance (no toast - for auto-attendance)
+  const updateAttendanceSilent = useMutation({
+    mutationFn: async ({ userId, status, notes }: { userId: string; status: AttendanceStatus; notes?: string }) => {
+      const { data, error } = await supabase
+        .rpc('update_meeting_attendance', {
+          p_meeting_id: meetingId!,
+          p_user_id: userId,
+          p_status: status,
+          p_notes: notes || null,
+        });
+      
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['meeting-attendees', meetingId] });
+      queryClient.invalidateQueries({ queryKey: ['meeting-quorum', meetingId] });
+    },
+  });
+
   // Mark all present
   const markAllPresent = useMutation({
     mutationFn: async () => {
@@ -158,6 +178,24 @@ export const useMeetingAttendance = (meetingId: string | undefined) => {
         description: error.message,
         variant: 'destructive',
       });
+    },
+  });
+
+  // Silent add guest (no toast - for auto-attendance)
+  const addGuestSilent = useMutation({
+    mutationFn: async ({ userId, notes }: { userId: string; notes?: string }) => {
+      const { data, error } = await supabase
+        .rpc('add_meeting_guest', {
+          p_meeting_id: meetingId!,
+          p_user_id: userId,
+          p_notes: notes || null,
+        });
+      
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['meeting-attendees', meetingId] });
     },
   });
 
@@ -301,8 +339,10 @@ export const useMeetingAttendance = (meetingId: string | undefined) => {
     invitedCount,
     attendanceRate,
     updateAttendance,
+    updateAttendanceSilent,
     markAllPresent,
     addGuest,
+    addGuestSilent,
     addAttendee,
     removeAttendee,
     seedFromRoles,

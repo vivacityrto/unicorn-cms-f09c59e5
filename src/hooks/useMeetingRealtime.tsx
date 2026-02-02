@@ -2,8 +2,18 @@ import { useEffect, useState, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 
+export interface OnlineUser {
+  user_id: string;
+  name: string;
+  avatar_url?: string;
+  online_at: string;
+}
+
 interface UseRealtimeOptions {
   meetingId: string;
+  userId?: string;
+  userName?: string;
+  avatarUrl?: string;
   onSegmentChange?: (payload: any) => void;
   onHeadlineChange?: (payload: any) => void;
   onTodoChange?: (payload: any) => void;
@@ -12,17 +22,24 @@ interface UseRealtimeOptions {
 
 export const useMeetingRealtime = ({
   meetingId,
+  userId,
+  userName,
+  avatarUrl,
   onSegmentChange,
   onHeadlineChange,
   onTodoChange,
   onPresenceChange,
 }: UseRealtimeOptions) => {
   const [channel, setChannel] = useState<RealtimeChannel | null>(null);
-  const [onlineUsers, setOnlineUsers] = useState<any[]>([]);
+  const [onlineUsers, setOnlineUsers] = useState<OnlineUser[]>([]);
   
   // Use refs for callbacks to avoid re-subscribing on every render
   const callbacksRef = useRef({ onSegmentChange, onHeadlineChange, onTodoChange, onPresenceChange });
   callbacksRef.current = { onSegmentChange, onHeadlineChange, onTodoChange, onPresenceChange };
+
+  // Store user info in ref to avoid re-subscribing when it changes
+  const userInfoRef = useRef({ userId, userName, avatarUrl });
+  userInfoRef.current = { userId, userName, avatarUrl };
 
   useEffect(() => {
     if (!meetingId) return;
@@ -75,9 +92,9 @@ export const useMeetingRealtime = ({
       )
       .on('presence', { event: 'sync' }, () => {
         const state = meetingChannel.presenceState();
-        const users = Object.values(state).flat();
-        setOnlineUsers(users);
-        callbacksRef.current.onPresenceChange?.(users);
+        const rawUsers = Object.values(state).flat() as unknown as OnlineUser[];
+        setOnlineUsers(rawUsers);
+        callbacksRef.current.onPresenceChange?.(rawUsers);
       })
       .on('presence', { event: 'join' }, ({ newPresences }) => {
         console.log('User joined:', newPresences);
@@ -87,7 +104,11 @@ export const useMeetingRealtime = ({
       })
       .subscribe(async (status) => {
         if (status === 'SUBSCRIBED') {
+          const { userId, userName, avatarUrl } = userInfoRef.current;
           await meetingChannel.track({
+            user_id: userId || 'anonymous',
+            name: userName || 'Anonymous',
+            avatar_url: avatarUrl || null,
             online_at: new Date().toISOString(),
           });
         }
@@ -100,9 +121,16 @@ export const useMeetingRealtime = ({
     };
   }, [meetingId]); // Only re-subscribe when meetingId changes
 
-  const updatePresence = async (data: any) => {
+  const updatePresence = async (data: Partial<OnlineUser>) => {
     if (channel) {
-      await channel.track(data);
+      const { userId, userName, avatarUrl } = userInfoRef.current;
+      await channel.track({
+        user_id: userId || 'anonymous',
+        name: userName || 'Anonymous',
+        avatar_url: avatarUrl || null,
+        online_at: new Date().toISOString(),
+        ...data,
+      });
     }
   };
 

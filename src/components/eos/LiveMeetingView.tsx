@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -9,6 +9,7 @@ import { useEosHeadlines } from '@/hooks/useEosHeadlines';
 import { useMeetingIssues } from '@/hooks/useMeetingIssues';
 import { useMeetingTodos } from '@/hooks/useMeetingTodos';
 import { useMeetingOutcomes } from '@/hooks/useMeetingOutcomes';
+import { useMeetingAttendance } from '@/hooks/useMeetingAttendance';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -31,6 +32,7 @@ import { CreateIssueDialog } from '@/components/eos/CreateIssueDialog';
 import { MeetingCloseValidationDialog } from '@/components/eos/MeetingCloseValidationDialog';
 import { AttendancePanel } from '@/components/eos/AttendancePanel';
 import { FacilitatorSelectDialog } from '@/components/eos/FacilitatorSelectDialog';
+import { OnlineUsersIndicator } from '@/components/eos/OnlineUsersIndicator';
 import type { EosMeetingSegment, MeetingType } from '@/types/eos';
 
 export const LiveMeetingView = () => {
@@ -86,9 +88,17 @@ export const LiveMeetingView = () => {
     enabled: !!meetingId,
   });
 
-  // Real-time sync
+  // Get user name for presence tracking
+  const userName = profile 
+    ? `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || 'Unknown'
+    : 'Unknown';
+
+  // Real-time sync with user identity
   const { onlineUsers } = useMeetingRealtime({
     meetingId: meetingId!,
+    userId: profile?.user_uuid,
+    userName,
+    avatarUrl: profile?.avatar_url || undefined,
     onSegmentChange: () => {
       queryClient.invalidateQueries({ queryKey: ['eos-meeting-segments', meetingId] });
     },
@@ -96,6 +106,16 @@ export const LiveMeetingView = () => {
       queryClient.invalidateQueries({ queryKey: ['eos-headlines', meetingId] });
     },
   });
+
+  // Attendance hook for auto-attendance
+  const { 
+    attendees, 
+    addGuestSilent, 
+    updateAttendanceSilent 
+  } = useMeetingAttendance(meetingId);
+
+  // Track if we've already auto-added the user this session
+  const hasAutoAttended = useRef(false);
 
   // Computed segment states
   const currentSegment = useMemo(() => 
@@ -122,6 +142,29 @@ export const LiveMeetingView = () => {
     segments?.length ? segments.every(s => s.completed_at) : false, 
     [segments]
   );
+
+  // Auto-add current user as attendee when they join a live meeting
+  useEffect(() => {
+    if (!profile?.user_uuid || !meetingId || !meetingStarted || hasAutoAttended.current) return;
+    
+    const isAttendee = attendees?.some(a => a.user_id === profile.user_uuid);
+    const isPresent = attendees?.some(
+      a => a.user_id === profile.user_uuid && 
+      (a.attendance_status === 'attended' || a.attendance_status === 'late')
+    );
+    
+    // Auto-add and mark present
+    if (!isAttendee) {
+      hasAutoAttended.current = true;
+      addGuestSilent.mutate({ userId: profile.user_uuid, notes: 'Auto-joined' });
+    } else if (!isPresent) {
+      hasAutoAttended.current = true;
+      updateAttendanceSilent.mutate({ 
+        userId: profile.user_uuid, 
+        status: 'attended' 
+      });
+    }
+  }, [profile?.user_uuid, attendees, meetingStarted, meetingId]);
 
   const isFacilitator = participants?.some(
     p => p.user_id === profile?.user_uuid && p.role === 'Leader'
@@ -600,10 +643,7 @@ export const LiveMeetingView = () => {
             </p>
           </div>
           <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Users className="h-4 w-4" />
-              <span>{onlineUsers.length} online</span>
-            </div>
+            <OnlineUsersIndicator onlineUsers={onlineUsers} attendees={attendees} />
             
             {!meetingStarted && isFacilitator && (
               <Button 
@@ -664,6 +704,7 @@ export const LiveMeetingView = () => {
               meetingStatus={meeting?.status || 'scheduled'}
               isLive={meetingStarted}
               canEdit={isFacilitator}
+              onlineUsers={onlineUsers}
             />
             <div className="flex items-center justify-between mb-4">
               <h2 className="font-semibold">Agenda</h2>
