@@ -11,9 +11,10 @@ interface IssuesQueueProps {
   onSelectIssue: (issue: EosIssue) => void;
   onCreateIssue: () => void;
   isFacilitator: boolean;
+  currentMeetingId?: string;
 }
 
-export function IssuesQueue({ issues, onSelectIssue, onCreateIssue, isFacilitator }: IssuesQueueProps) {
+export function IssuesQueue({ issues, onSelectIssue, onCreateIssue, isFacilitator, currentMeetingId }: IssuesQueueProps) {
   const [filter, setFilter] = useState<'all' | string>('all');
 
   // Priority is stored as integer: 3=High, 2=Medium, 1=Low
@@ -98,6 +99,14 @@ export function IssuesQueue({ issues, onSelectIssue, onCreateIssue, isFacilitato
                     <Badge className={`text-xs ${getPriorityColor(issue.priority)}`}>
                       {getPriorityLabel(issue.priority)}
                     </Badge>
+                  )}
+                  {/* Source indicator */}
+                  {currentMeetingId && (
+                    issue.meeting_id === currentMeetingId ? (
+                      <Badge variant="outline" className="text-xs">This Meeting</Badge>
+                    ) : (
+                      <Badge variant="secondary" className="text-xs bg-amber-50 text-amber-700 border-amber-200">Backlog</Badge>
+                    )
                   )}
                   <ClientBadge clientId={issue.client_id} />
                 </div>
