@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { format } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
@@ -8,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Skeleton } from '@/components/ui/skeleton';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { StageStaffTasks } from './StageStaffTasks';
+import { StageDetailSection } from './StageDetailSection';
 import { 
   CheckCircle2, 
   Circle, 
@@ -16,7 +18,8 @@ import {
   Loader2,
   ChevronDown,
   ChevronRight,
-  ListTodo
+  ListTodo,
+  MessageSquare
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -25,8 +28,10 @@ interface StageInstance {
   stage_id: number;
   stage_name: string;
   shortname: string | null;
-  status: string | number; // Status can be string value or legacy integer code
+  status: string | number;
+  status_date: string | null;
   completion_date: string | null;
+  comment: string | null;
   paid: boolean;
   released_client_tasks: boolean;
 }
@@ -103,7 +108,7 @@ export function PackageStagesManager({ tenantId, packageId, packageName }: Packa
       // Fetch stage_instances for this package_instance
       const stageResult = await (supabase
         .from('stage_instances' as any)
-        .select('id, stage_id, status, completion_date, paid, released_client_tasks')
+        .select('id, stage_id, status, status_date, completion_date, comment, paid, released_client_tasks')
         .eq('packageinstance_id', instanceData.id)
         .order('stage_sortorder')) as { data: Array<{ id: number; stage_id: number; status: string | null; completion_date: string | null; paid: boolean | null; released_client_tasks: boolean | null }> | null; error: any };
       
@@ -131,7 +136,7 @@ export function PackageStagesManager({ tenantId, packageId, packageName }: Packa
       const stageMap = new Map(stagesMetadata?.map(s => [s.id, s]) || []);
 
       // Transform the data
-      const transformed: StageInstance[] = stageData.map((row) => {
+      const transformed: StageInstance[] = stageData.map((row: any) => {
         const meta = stageMap.get(row.stage_id);
         return {
           id: row.id,
@@ -139,7 +144,9 @@ export function PackageStagesManager({ tenantId, packageId, packageName }: Packa
           stage_name: meta?.name || `Stage ${row.stage_id}`,
           shortname: meta?.shortname || null,
           status: row.status ?? 0,
+          status_date: row.status_date || null,
           completion_date: row.completion_date,
+          comment: row.comment || null,
           paid: row.paid ?? false,
           released_client_tasks: row.released_client_tasks ?? false,
         };
@@ -161,9 +168,10 @@ export function PackageStagesManager({ tenantId, packageId, packageName }: Packa
       const oldStage = stages.find(s => s.id === stageInstanceId);
       const oldStatus = oldStage?.status;
 
-      // Build update object
+      // Build update object - always update status_date when status changes
       const updateData: Record<string, any> = {
         status: newStatus,
+        status_date: new Date().toISOString(),
       };
 
       // Set completion_date if completing
@@ -260,12 +268,20 @@ export function PackageStagesManager({ tenantId, packageId, packageName }: Packa
                 </div>
                 
                 <div className="flex items-center gap-3 shrink-0">
+                  {stage.comment && (
+                    <MessageSquare className="h-4 w-4 text-muted-foreground" />
+                  )}
                   <Badge variant="outline" className="text-xs gap-1">
                     <ListTodo className="h-3 w-3" />
                     Tasks
                   </Badge>
                   {stage.released_client_tasks && (
                     <Badge variant="outline" className="text-xs">Tasks Released</Badge>
+                  )}
+                  {stage.status_date && (
+                    <span className="text-xs text-muted-foreground hidden sm:inline">
+                      {format(new Date(stage.status_date), 'd MMM HH:mm')}
+                    </span>
                   )}
                   
                   <Select
@@ -295,6 +311,15 @@ export function PackageStagesManager({ tenantId, packageId, packageName }: Packa
               </div>
               
               <CollapsibleContent>
+                <StageDetailSection
+                  stageInstanceId={stage.id}
+                  tenantId={tenantId}
+                  packageId={packageId}
+                  stageId={stage.stage_id}
+                  completionDate={stage.completion_date}
+                  comment={stage.comment}
+                  onUpdate={fetchStages}
+                />
                 <StageStaffTasks 
                   stageInstanceId={stage.id}
                   tenantId={tenantId}

@@ -10579,7 +10579,8 @@ export type Database = {
       }
       stage_instances: {
         Row: {
-          completion_date: string
+          comment: string | null
+          completion_date: string | null
           id: number
           packageinstance_id: number
           paid: boolean
@@ -10588,22 +10589,26 @@ export type Database = {
           stage_id: number
           stage_sortorder: number | null
           status: string | null
-          status_id: number
+          status_date: string | null
+          status_id: number | null
         }
         Insert: {
-          completion_date: string
+          comment?: string | null
+          completion_date?: string | null
           id?: number
           packageinstance_id: number
-          paid: boolean
+          paid?: boolean
           released_client_tasks?: boolean
           released_client_tasks_date?: string | null
           stage_id: number
           stage_sortorder?: number | null
           status?: string | null
-          status_id?: number
+          status_date?: string | null
+          status_id?: number | null
         }
         Update: {
-          completion_date?: string
+          comment?: string | null
+          completion_date?: string | null
           id?: number
           packageinstance_id?: number
           paid?: boolean
@@ -10612,7 +10617,8 @@ export type Database = {
           stage_id?: number
           stage_sortorder?: number | null
           status?: string | null
-          status_id?: number
+          status_date?: string | null
+          status_id?: number | null
         }
         Relationships: []
       }

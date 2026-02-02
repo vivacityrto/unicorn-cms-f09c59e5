@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { 
   Package2, 
@@ -17,13 +18,19 @@ import {
   PlayCircle,
   PauseCircle,
   Settings,
-  Rocket
+  Rocket,
+  StickyNote,
+  Timer
 } from 'lucide-react';
 import { ClientPackage } from '@/hooks/useClientManagement';
 import { PackageStagesManager } from './PackageStagesManager';
+import { PackageNotesSection } from './PackageNotesSection';
+import { PackageTimeSection } from './PackageTimeSection';
 import { StartPackageDialog } from './StartPackageDialog';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
+import { useNotes } from '@/hooks/useNotes';
+import { supabase } from '@/integrations/supabase/client';
 
 interface ClientPackagesTabProps {
   tenantId: number;
@@ -52,6 +59,33 @@ export function ClientPackagesTab({ tenantId, tenantName, packages, loading, onA
   const { isSuperAdmin } = useAuth();
   const [expandedPackages, setExpandedPackages] = useState<Set<number>>(new Set());
   const [startPackageOpen, setStartPackageOpen] = useState(false);
+  const [packageNoteCounts, setPackageNoteCounts] = useState<Record<string, number>>({});
+
+  // Fetch note counts for all package instances
+  useEffect(() => {
+    const fetchNoteCounts = async () => {
+      if (packages.length === 0) return;
+      
+      // Convert string IDs to numbers for the query
+      const packageInstanceIds = packages.map(p => parseInt(p.id, 10)).filter(id => !isNaN(id));
+      const { data, error } = await supabase
+        .from('notes')
+        .select('parent_id')
+        .eq('parent_type', 'package_instance')
+        .in('parent_id', packageInstanceIds);
+      
+      if (!error && data) {
+        const counts: Record<string, number> = {};
+        data.forEach(note => {
+          const key = note.parent_id.toString();
+          counts[key] = (counts[key] || 0) + 1;
+        });
+        setPackageNoteCounts(counts);
+      }
+    };
+    
+    fetchNoteCounts();
+  }, [packages]);
 
   const togglePackage = (packageId: number) => {
     const newExpanded = new Set(expandedPackages);
@@ -217,7 +251,7 @@ export function ClientPackagesTab({ tenantId, tenantName, packages, loading, onA
                     <CollapsibleTrigger asChild>
                       <Button variant="outline" size="sm" className="gap-1">
                         <Settings className="h-4 w-4" />
-                        Phases
+                        Manage
                         {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
                       </Button>
                     </CollapsibleTrigger>
@@ -236,18 +270,61 @@ export function ClientPackagesTab({ tenantId, tenantName, packages, loading, onA
               </CardContent>
               
               <CollapsibleContent>
-                <div className="px-6 pb-6 pt-0 border-t bg-muted/30">
-                  <div className="pt-4">
-                    <h4 className="text-sm font-semibold mb-4 flex items-center gap-2">
-                      <Settings className="h-4 w-4" />
-                      Manage Phase States
-                    </h4>
-                    <PackageStagesManager 
-                      tenantId={tenantId} 
-                      packageId={pkg.package_id} 
-                      packageName={pkg.package_name}
-                    />
-                  </div>
+                <div className="border-t">
+                  <Tabs defaultValue="phases" className="w-full">
+                    <div className="px-6 pt-4 bg-muted/30">
+                      <TabsList>
+                        <TabsTrigger value="phases" className="gap-1">
+                          <Settings className="h-4 w-4" />
+                          Phases
+                        </TabsTrigger>
+                        <TabsTrigger value="notes" className="gap-1">
+                          <StickyNote className="h-4 w-4" />
+                          Notes
+                          {packageNoteCounts[pkg.id] > 0 && (
+                            <Badge variant="secondary" className="ml-1 h-5 px-1.5 text-xs">
+                              {packageNoteCounts[pkg.id]}
+                            </Badge>
+                          )}
+                        </TabsTrigger>
+                        <TabsTrigger value="time" className="gap-1">
+                          <Timer className="h-4 w-4" />
+                          Time Log
+                        </TabsTrigger>
+                      </TabsList>
+                    </div>
+                    
+                    <TabsContent value="phases" className="mt-0">
+                      <div className="px-6 pb-6 bg-muted/30">
+                        <PackageStagesManager 
+                          tenantId={tenantId} 
+                          packageId={pkg.package_id} 
+                          packageName={pkg.package_name}
+                        />
+                      </div>
+                    </TabsContent>
+                    
+                    <TabsContent value="notes" className="mt-0">
+                      <div className="bg-muted/30">
+                        <PackageNotesSection
+                          tenantId={tenantId}
+                          packageInstanceId={parseInt(pkg.id, 10)}
+                          packageId={pkg.package_id}
+                        />
+                      </div>
+                    </TabsContent>
+                    
+                    <TabsContent value="time" className="mt-0">
+                      <div className="bg-muted/30">
+                        <PackageTimeSection
+                          tenantId={tenantId}
+                          clientId={tenantId}
+                          packageId={pkg.package_id}
+                          packageInstanceId={parseInt(pkg.id, 10)}
+                        />
+                      </div>
+                    </TabsContent>
+                  </Tabs>
                 </div>
               </CollapsibleContent>
             </Card>
