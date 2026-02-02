@@ -15391,6 +15391,10 @@ export type Database = {
           user_uuid: string
         }[]
       }
+      go_to_previous_segment: {
+        Args: { p_meeting_id: string }
+        Returns: string
+      }
       has_any_eos_role: {
         Args: { _tenant_id: number; _user_id: string }
         Returns: boolean
