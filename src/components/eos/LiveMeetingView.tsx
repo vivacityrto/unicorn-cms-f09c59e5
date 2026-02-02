@@ -567,16 +567,6 @@ export const LiveMeetingView = () => {
                   rows={3}
                 />
               </div>
-              <div>
-                <p className="font-medium text-sm mb-2">Rate this meeting (1-10):</p>
-                <div className="flex gap-1">
-                  {[1,2,3,4,5,6,7,8,9,10].map(n => (
-                    <Button key={n} variant="outline" size="sm" className="w-9 h-9">
-                      {n}
-                    </Button>
-                  ))}
-                </div>
-              </div>
             </div>
           </Card>
         );
