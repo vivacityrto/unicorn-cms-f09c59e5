@@ -46,6 +46,7 @@ export const LiveMeetingView = () => {
   const [closeDialogOpen, setCloseDialogOpen] = useState(false);
   const [facilitatorDialogOpen, setFacilitatorDialogOpen] = useState(false);
   const [segmentNotes, setSegmentNotes] = useState<Record<string, string>>({});
+  const [isNavigating, setIsNavigating] = useState(false);
 
   // Fetch meeting details first (needed for tenant_id)
   const { data: meeting, isLoading: meetingLoading } = useQuery({
@@ -189,6 +190,28 @@ export const LiveMeetingView = () => {
   const handleSelectIssue = (issue: any) => {
     setSelectedIssue(issue);
     setIdsDialogOpen(true);
+  };
+
+  // Throttled segment navigation handlers to prevent double-clicks
+  const handleAdvanceSegment = async () => {
+    if (isNavigating) return;
+    setIsNavigating(true);
+    try {
+      await advanceSegment.mutateAsync();
+    } finally {
+      // Keep disabled briefly to prevent double-clicks during re-render
+      setTimeout(() => setIsNavigating(false), 500);
+    }
+  };
+
+  const handlePreviousSegment = async () => {
+    if (isNavigating) return;
+    setIsNavigating(true);
+    try {
+      await goToPreviousSegment.mutateAsync();
+    } finally {
+      setTimeout(() => setIsNavigating(false), 500);
+    }
   };
 
   const handleToggleTodo = async (todo: any) => {
@@ -594,10 +617,10 @@ export const LiveMeetingView = () => {
             
             {meetingStarted && isFacilitator && completedSegments.length > 0 && (
               <Button 
-                onClick={() => goToPreviousSegment.mutate()} 
+                onClick={handlePreviousSegment} 
                 size="sm" 
                 variant="outline"
-                disabled={goToPreviousSegment.isPending}
+                disabled={isNavigating || goToPreviousSegment.isPending}
               >
                 <SkipBack className="h-4 w-4 mr-2" />
                 Previous
@@ -606,10 +629,10 @@ export const LiveMeetingView = () => {
             
             {meetingStarted && isFacilitator && currentSegment && (
               <Button 
-                onClick={() => advanceSegment.mutate()} 
+                onClick={handleAdvanceSegment} 
                 size="sm" 
                 variant="outline"
-                disabled={advanceSegment.isPending}
+                disabled={isNavigating || advanceSegment.isPending}
               >
                 <SkipForward className="h-4 w-4 mr-2" />
                 Next Segment
