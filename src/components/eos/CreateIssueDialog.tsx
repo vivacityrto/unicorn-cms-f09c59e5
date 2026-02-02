@@ -12,6 +12,8 @@ interface CreateIssueDialogProps {
   linkedRockId?: string;
   /** Context determines form behavior: 'ro_page' for Risks & Opportunities page, 'meeting_ids' for IDS in meetings */
   context?: FormContext;
+  /** Meeting type for source tracking (L10, Quarterly, Annual) */
+  meetingType?: string;
 }
 
 export function CreateIssueDialog({
@@ -23,14 +25,27 @@ export function CreateIssueDialog({
   defaultDescription = '',
   linkedRockId,
   context = meetingId ? 'meeting_ids' : 'ro_page',
+  meetingType,
 }: CreateIssueDialogProps) {
   const { createItem } = useRisksOpportunities();
+
+  // Determine source based on meeting type
+  const getSource = () => {
+    if (context !== 'meeting_ids') return 'ro_page';
+    if (!meetingType) return 'meeting_ids';
+    const type = meetingType.toLowerCase();
+    if (type === 'l10' || type === 'level 10') return 'meeting_l10';
+    if (type === 'quarterly') return 'meeting_quarterly';
+    if (type === 'annual') return 'meeting_annual';
+    return 'meeting_ids';
+  };
 
   const handleSubmit = async (formData: RiskOpportunityFormData) => {
     await createItem.mutateAsync({
       item_type: formData.item_type,
       title: formData.title,
       description: formData.description,
+      why_it_matters: formData.why_it_matters,
       category: formData.category || undefined,
       impact: formData.impact || undefined,
       quarter_number: formData.quarter_number,
@@ -38,7 +53,7 @@ export function CreateIssueDialog({
       linked_rock_id: formData.linked_rock_id || undefined,
       meeting_id: meetingId,
       meeting_segment_id: meetingSegmentId,
-      source: context === 'meeting_ids' ? 'meeting_ids' : 'ro_page',
+      source: getSource(),
     });
     
     onOpenChange(false);
@@ -62,7 +77,7 @@ export function CreateIssueDialog({
             linked_rock_id: linkedRockId,
             meeting_id: meetingId,
             meeting_segment_id: meetingSegmentId,
-            source: context === 'meeting_ids' ? 'meeting_ids' : 'ro_page',
+            source: getSource(),
           }}
           onSubmit={handleSubmit}
           onCancel={() => onOpenChange(false)}

@@ -5555,6 +5555,7 @@ export type Database = {
           tenant_id: number
           title: string
           updated_at: string | null
+          why_it_matters: string | null
         }
         Insert: {
           assigned_to?: string | null
@@ -5583,6 +5584,7 @@ export type Database = {
           tenant_id: number
           title: string
           updated_at?: string | null
+          why_it_matters?: string | null
         }
         Update: {
           assigned_to?: string | null
@@ -5611,6 +5613,7 @@ export type Database = {
           tenant_id?: number
           title?: string
           updated_at?: string | null
+          why_it_matters?: string | null
         }
         Relationships: [
           {

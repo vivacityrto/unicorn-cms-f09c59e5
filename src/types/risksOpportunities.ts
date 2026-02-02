@@ -35,6 +35,7 @@ export interface RiskOpportunity {
   item_type: RiskOpportunityType;
   title: string;
   description?: string;
+  why_it_matters?: string;
   category?: RiskOpportunityCategory;
   impact?: RiskOpportunityImpact;
   status: RiskOpportunityStatus;
@@ -46,7 +47,7 @@ export interface RiskOpportunity {
   outcome_note?: string;
   meeting_id?: string;
   meeting_segment_id?: string;
-  source?: 'ad_hoc' | 'meeting_ids' | 'ro_page';
+  source?: 'ad_hoc' | 'meeting_ids' | 'ro_page' | 'meeting_l10' | 'meeting_quarterly' | 'meeting_annual';
   created_at: string;
   updated_at: string;
 }
