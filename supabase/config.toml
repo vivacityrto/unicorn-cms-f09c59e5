@@ -62,3 +62,6 @@ verify_jwt = false
 
 [functions.send-self-password-reset]
 verify_jwt = false
+
+[functions.bulk-user-action]
+verify_jwt = false
