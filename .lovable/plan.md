@@ -1,145 +1,135 @@
 
 
-# Fix: Segment Navigation Skipping Scorecard
+# Fix: Create Missing "go_to_previous_segment" Database Function
 
 ## Problem Analysis
 
-When clicking "Next Segment" from Segue, the UI jumps directly to Rock Review, skipping Scorecard. The database shows Scorecard WAS visited briefly (started at 00:05:35, completed at 00:05:41 - only 6 seconds), suggesting a rapid double-click or race condition caused two segment advances instead of one.
+When clicking "Previous" segment, you see the error:
+> "Could not find the function public.go_to_previous_segment(p_meeting_id) in the schema cache"
 
-## Root Cause
-
-The "Next Segment" button relies solely on `disabled={advanceSegment.isPending}` to prevent duplicate clicks. However, React Query mutations complete very quickly, and there's a brief window between when `isPending` becomes `false` and when the UI fully re-renders with the new segment. During this window, a second click can register.
+The function was defined in migration `20260127002040` but was never deployed to the database. Checking the database confirms only `advance_segment` exists - there is no `go_to_previous_segment` function.
 
 ## Solution
 
-Implement multiple safeguards to prevent accidental segment skipping:
-
-1. **Add mutation throttling** - Prevent re-triggering within a short cooldown period
-2. **Use await for mutation** - Ensure the button stays disabled until the query cache is updated
-3. **Show visual feedback** - Add a brief loading state after advancement
+Create a new database migration that adds the `go_to_previous_segment` RPC function, matching the pattern used by `advance_segment`.
 
 ---
 
 ## Implementation
 
-### 1. Update useEosMeetingSegments Hook
+### Database Migration
 
-Add async/await pattern and return a promise so the caller can wait for full completion:
+Create a new migration with the `go_to_previous_segment` function:
 
-**File:** `src/hooks/useEosMeetingSegments.tsx`
+```sql
+-- Create go_to_previous_segment RPC function
+CREATE OR REPLACE FUNCTION public.go_to_previous_segment(p_meeting_id UUID)
+RETURNS UUID
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_current_segment RECORD;
+  v_previous_segment RECORD;
+  v_meeting RECORD;
+BEGIN
+  -- Verify facilitator permissions
+  SELECT m.*, emp.role INTO v_meeting
+  FROM public.eos_meetings m
+  LEFT JOIN public.eos_meeting_participants emp 
+    ON emp.meeting_id = m.id AND emp.user_id = auth.uid()
+  WHERE m.id = p_meeting_id;
 
-```typescript
-const advanceSegment = useMutation({
-  mutationFn: async () => {
-    const { data, error } = await supabase.rpc('advance_segment', {
-      p_meeting_id: meetingId,
-    });
-    
-    if (error) throw error;
-    return data;
-  },
-  onSuccess: async () => {
-    // Wait for cache invalidation to complete
-    await queryClient.invalidateQueries({ 
-      queryKey: ['eos-meeting-segments', meetingId] 
-    });
-    toast({ title: 'Advanced to next segment' });
-  },
-  onError: (error: Error) => {
-    toast({ title: 'Error advancing segment', description: error.message, variant: 'destructive' });
-  },
-});
-```
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'Meeting not found';
+  END IF;
 
-### 2. Add Click Throttle in LiveMeetingView
+  IF v_meeting.role != 'Leader' AND NOT is_super_admin() THEN
+    RAISE EXCEPTION 'Only facilitator can navigate segments';
+  END IF;
 
-Add local state to track recent navigation and prevent rapid clicks:
+  -- Get current active segment
+  SELECT * INTO v_current_segment
+  FROM public.eos_meeting_segments
+  WHERE meeting_id = p_meeting_id
+    AND started_at IS NOT NULL
+    AND completed_at IS NULL;
 
-**File:** `src/components/eos/LiveMeetingView.tsx`
+  -- Get previous completed segment (most recently completed)
+  SELECT * INTO v_previous_segment
+  FROM public.eos_meeting_segments
+  WHERE meeting_id = p_meeting_id
+    AND completed_at IS NOT NULL
+    AND sequence_order = (
+      SELECT MAX(sequence_order)
+      FROM public.eos_meeting_segments
+      WHERE meeting_id = p_meeting_id
+        AND completed_at IS NOT NULL
+        AND sequence_order < COALESCE(v_current_segment.sequence_order, 999)
+    );
 
-```typescript
-// Add state for navigation cooldown
-const [isNavigating, setIsNavigating] = useState(false);
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'No previous segment to return to';
+  END IF;
 
-// Wrap the advance handler with protection
-const handleAdvanceSegment = async () => {
-  if (isNavigating) return;
-  setIsNavigating(true);
-  
-  try {
-    await advanceSegment.mutateAsync();
-  } finally {
-    // Keep disabled briefly to prevent double-clicks
-    setTimeout(() => setIsNavigating(false), 500);
-  }
-};
+  -- Clear current segment (make it pending again)
+  IF v_current_segment.id IS NOT NULL THEN
+    UPDATE public.eos_meeting_segments
+    SET started_at = NULL
+    WHERE id = v_current_segment.id;
+  END IF;
 
-// Similarly for previous segment
-const handlePreviousSegment = async () => {
-  if (isNavigating) return;
-  setIsNavigating(true);
-  
-  try {
-    await goToPreviousSegment.mutateAsync();
-  } finally {
-    setTimeout(() => setIsNavigating(false), 500);
-  }
-};
-```
+  -- Re-activate previous segment (clear completed_at)
+  UPDATE public.eos_meeting_segments
+  SET completed_at = NULL
+  WHERE id = v_previous_segment.id;
 
-### 3. Update Button Disabled State
+  -- Audit log
+  INSERT INTO public.audit_eos_events (
+    tenant_id, user_id, meeting_id, entity, entity_id, action, details
+  ) VALUES (
+    v_meeting.tenant_id, auth.uid(), p_meeting_id, 'segment', 
+    v_previous_segment.id, 'segment_reverted',
+    jsonb_build_object(
+      'from_segment', v_current_segment.id,
+      'to_segment', v_previous_segment.id
+    )
+  );
 
-Update both navigation buttons to use the combined disabled state:
-
-```typescript
-<Button 
-  onClick={handlePreviousSegment} 
-  size="sm" 
-  variant="outline"
-  disabled={isNavigating || goToPreviousSegment.isPending}
->
-  <SkipBack className="h-4 w-4 mr-2" />
-  Previous
-</Button>
-
-<Button 
-  onClick={handleAdvanceSegment} 
-  size="sm" 
-  variant="outline"
-  disabled={isNavigating || advanceSegment.isPending}
->
-  <SkipForward className="h-4 w-4 mr-2" />
-  Next Segment
-</Button>
+  RETURN v_previous_segment.id;
+END;
+$$;
 ```
 
 ---
 
-## Files to Modify
+## Files to Create
 
-| File | Change |
-|------|--------|
-| `src/hooks/useEosMeetingSegments.tsx` | Add `await` to `invalidateQueries` for proper sequencing |
-| `src/components/eos/LiveMeetingView.tsx` | Add navigation cooldown state and handler wrappers |
+| File | Purpose |
+|------|---------|
+| `supabase/migrations/[timestamp]_add_go_to_previous_segment.sql` | Creates the missing RPC function |
+
+---
+
+## How It Works
+
+The function:
+
+1. **Verifies permissions** - Only the meeting facilitator (Leader role) or SuperAdmin can navigate segments
+2. **Finds current segment** - The one with `started_at` set but no `completed_at`
+3. **Finds previous segment** - The most recently completed segment before the current one
+4. **Clears current segment** - Sets `started_at = NULL` to return it to pending state
+5. **Re-activates previous segment** - Sets `completed_at = NULL` so it becomes the active segment
+6. **Logs the action** - Creates an audit trail entry
 
 ---
 
 ## Expected Outcome
 
-After implementation:
-- Clicking "Next Segment" will have a 500ms cooldown before allowing another navigation
-- The button will remain disabled until the query cache is fully updated
-- Double-clicks or rapid clicks will be ignored
-- Each segment will display fully before the next navigation is possible
-
----
-
-## Technical Details
-
-The solution uses two layers of protection:
-
-1. **React Query's isPending** - Prevents clicks during the actual API call
-2. **Local isNavigating state with timeout** - Extends the disabled period by 500ms after the mutation completes, ensuring the UI has time to re-render with the new segment data
-
-This follows the pattern recommended by the Lovable stack overflow for preventing navigation state issues during route/segment changes.
+After the migration is applied:
+- Clicking "Previous" will return to the prior segment
+- The current segment will reset to pending status
+- Full audit trail of segment navigation is maintained
+- Both Next and Previous navigation will work correctly
 
