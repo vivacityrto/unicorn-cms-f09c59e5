@@ -840,10 +840,6 @@ export const LiveMeetingView = () => {
         {/* Right: Issues Panel */}
         <div className="w-80 border-l bg-card overflow-y-auto flex-shrink-0">
           <div className="p-4">
-            <h3 className="font-semibold mb-4 flex items-center gap-2">
-              <AlertCircle className="h-4 w-4" />
-              Issues Queue ({issues?.length || 0})
-            </h3>
             <IssuesQueue
               issues={issues || []}
               onSelectIssue={handleSelectIssue}
