@@ -1,146 +1,88 @@
 
-# Fix Issues Queue to Show All Open Issues in Meeting
+# Include Vivacity Staff in EOS Meeting Attendees
 
 ## Problem Summary
 
-When you add an issue from the **Risks & Opportunities page**, it's not visible in the meeting's **Issues Queue**. The queue only displays issues explicitly linked to that specific meeting via `meeting_id`.
+The "Seed from EOS Roles" button only pulls users from the `eos_user_roles` table, which contains tenant-specific EOS role assignments. Vivacity internal staff (SuperAdmins and Team Members) are not being added because they don't have entries in this table.
 
-**Evidence from database:**
-| Field | Value |
-|-------|-------|
-| title | "Client Expectation & Consultant Allocation Clarity" |
-| meeting_id | `NULL` |
-| source | `ad_hoc` |
-| status | `Open` |
+Your team has 14 Vivacity staff members who should be included as meeting attendees:
+- 6 Super Admins
+- 8 Team Members
 
-The `useMeetingIssues` hook filters by `meeting_id=eq.{meetingId}`, so issues without a meeting link never appear.
+## Solution
 
-## Solution Options
+Update the `seed_meeting_attendees_from_roles` RPC function to also include all Vivacity internal staff as attendees.
 
-### Option A: Show All Open Tenant Issues in Meeting Queue (Recommended)
-Change the Issues Queue to display:
-1. All issues linked to this specific meeting, AND
-2. All open issues for the tenant that haven't been solved yet (regardless of where they were created)
+## Implementation
 
-This follows the EOS principle: the IDS section should tackle any unresolved issues, not just those raised during this specific meeting.
+### Database Migration
 
-### Option B: Allow "Import" of Existing Issues
-Add an "Import Issue" button that lets the facilitator search and pull in existing issues from the R&O list into the current meeting's queue.
+Create a new migration that updates the `seed_meeting_attendees_from_roles` function to:
 
-**Recommendation:** Implement Option A - it's simpler and matches EOS methodology where all open issues should be available for discussion.
+1. First, seed from `eos_user_roles` (existing behavior for Visionary/Integrator/Core Team)
+2. Additionally, seed all Vivacity staff from the `users` table where:
+   - `user_type = 'Vivacity Team'` OR
+   - `unicorn_role IN ('Super Admin', 'Team Leader', 'Team Member')`
 
----
+### Updated SQL Logic
 
-## Implementation Plan (Option A)
+```sql
+-- STEP 1: Insert from eos_user_roles (existing logic)
+INSERT INTO public.eos_meeting_attendees (...)
+SELECT ...
+FROM public.eos_user_roles ur
+WHERE ur.tenant_id = v_meeting.tenant_id
+  AND NOT EXISTS (...);
 
-### 1. Update useMeetingIssues Hook
-
-Modify the hook to fetch:
-- Issues where `meeting_id` equals current meeting, OR
-- Issues where `meeting_id` is NULL AND `status` is 'Open' AND tenant matches
-
-```text
-File: src/hooks/useMeetingIssues.tsx
+-- STEP 2: Insert Vivacity staff (NEW)
+INSERT INTO public.eos_meeting_attendees (
+  meeting_id, user_id, role_in_meeting, attendance_status, created_at, updated_at
+)
+SELECT
+  p_meeting_id,
+  u.user_uuid,
+  'core_team'::meeting_role,
+  'invited'::meeting_attendance_status,
+  NOW(),
+  NOW()
+FROM public.users u
+WHERE u.user_type = 'Vivacity Team'
+  AND u.disabled IS NOT TRUE
+  AND NOT EXISTS (
+    SELECT 1 FROM public.eos_meeting_attendees a
+    WHERE a.meeting_id = p_meeting_id AND a.user_id = u.user_uuid
+  )
+ON CONFLICT DO NOTHING;
 ```
 
-**Current Logic:**
-```typescript
-.eq('meeting_id', meetingId!)
-```
+### Role Mapping for Vivacity Staff
 
-**New Logic:**
-```typescript
-.or(`meeting_id.eq.${meetingId},and(meeting_id.is.null,status.eq.Open)`)
-.eq('tenant_id', tenantId)
-```
+| User Role | Meeting Role |
+|-----------|--------------|
+| Super Admin | core_team |
+| Team Leader | core_team |
+| Team Member | core_team |
 
-### 2. Update Hook to Accept Tenant ID
+All Vivacity staff will be added as "Core Team" attendees, distinguishing them from tenant-specific roles like Visionary or Integrator.
 
-The hook needs access to the tenant ID to filter properly:
+## Files to Create
 
-```typescript
-export const useMeetingIssues = (meetingId?: string, tenantId?: number) => {
-  const { data: issues, isLoading, refetch } = useQuery({
-    queryKey: ['meeting-issues', meetingId, tenantId],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('eos_issues')
-        .select('*')
-        .eq('tenant_id', tenantId!)
-        .or(`meeting_id.eq.${meetingId},and(meeting_id.is.null,status.eq.Open)`)
-        .order('priority', { ascending: false })
-        .order('created_at', { ascending: true });
-      
-      if (error) throw error;
-      return data as EosIssue[];
-    },
-    enabled: !!meetingId && !!tenantId,
-  });
-
-  return { issues, isLoading, refetch };
-};
-```
-
-### 3. Update LiveMeetingView to Pass Tenant ID
-
-Pass the meeting's `tenant_id` to the hook:
-
-```typescript
-const { issues } = useMeetingIssues(meetingId, meeting?.tenant_id);
-```
-
-### 4. Visual Indicator for Issue Source
-
-In the IssuesQueue component, add a visual indicator to distinguish:
-- Issues created in this meeting (show meeting icon or "This Meeting" badge)
-- Issues from the backlog (show "Backlog" badge or different style)
-
-```typescript
-{issue.meeting_id === meetingId ? (
-  <Badge variant="outline" className="text-xs">This Meeting</Badge>
-) : (
-  <Badge variant="secondary" className="text-xs">Backlog</Badge>
-)}
-```
-
----
-
-## Files to Modify
-
-| File | Change |
-|------|--------|
-| `src/hooks/useMeetingIssues.tsx` | Update query to include tenant-wide open issues |
-| `src/components/eos/LiveMeetingView.tsx` | Pass tenant_id to the hook |
-| `src/components/eos/IssuesQueue.tsx` | Add source badge to distinguish origin |
-
----
+| File | Purpose |
+|------|---------|
+| `supabase/migrations/[timestamp]_seed_vivacity_staff_attendees.sql` | Update RPC to include Vivacity staff |
 
 ## Expected Outcome
 
 After implementation:
-- Issues Queue will show your "Client Expectation & Consultant Allocation Clarity" issue
-- All open issues from the tenant will be available for IDS discussion
-- Issues created within the meeting will be visually distinguished from backlog issues
-- Solving an issue in the meeting will remove it from future meeting queues
+- Clicking "Seed from EOS Roles" will add all 14 Vivacity staff members to the meeting
+- The attendance panel will show all internal team members
+- Quorum calculations will include Vivacity staff presence
+- Manual add/remove functionality remains unchanged
 
----
+## Technical Note
 
-## Technical Details
-
-### Query Pattern
-
-The Supabase PostgREST `.or()` filter syntax:
-
-```typescript
-// This retrieves:
-// 1. Issues linked to this meeting (any status)
-// 2. Open issues not linked to any meeting (backlog)
-.or(`meeting_id.eq.${meetingId},and(meeting_id.is.null,status.eq.Open)`)
-```
-
-### Cache Invalidation
-
-The query key includes tenant_id to ensure proper cache separation:
-```typescript
-queryKey: ['meeting-issues', meetingId, tenantId]
-```
+This approach ensures that:
+- Vivacity staff are available for ALL tenant meetings (global access)
+- Tenant-specific roles from `eos_user_roles` are still respected
+- No duplicate attendees are created (ON CONFLICT handling)
+- Disabled users are excluded from seeding
