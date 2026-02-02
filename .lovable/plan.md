@@ -1,395 +1,269 @@
 
-# Add Bulk User Actions to Tenant Users Admin Page
+
+# Live Meeting Online User Tracking and Auto-Attendance
 
 ## Overview
 
-Add multi-select functionality with bulk actions (activate, deactivate, role change) to the `/admin/tenant-users` page, enabling SuperAdmins to efficiently manage users across all tenants.
+Enhance the EOS live meeting experience to:
+1. Display a visual list of who is currently online in the meeting (with user details, not just a count)
+2. Automatically add users who join the meeting page as attendees and mark them as "present"
 
-## Current State
+Currently, the system only tracks `online_at` timestamp in presence data and shows "X online" count. Users must be manually added and marked present.
 
-The `TenantUsers.tsx` page displays a table of all client users with:
-- Filtering by tenant, role, status, and search
-- Sorting by various columns
-- Click-through to user profile
+---
 
-**Missing**: No multi-select checkboxes or bulk action capabilities.
+## Current State Analysis
+
+### Existing Infrastructure
+
+**Realtime Presence** (`useMeetingRealtime.tsx`):
+- Tracks presence via Supabase Realtime channel `meeting:{meetingId}`
+- Currently only sends `online_at` timestamp when joining
+- Returns `onlineUsers` array (flat list from presence state)
+- Has `updatePresence()` function for updating tracked data
+
+**Attendance System** (`useMeetingAttendance.tsx`):
+- `addGuest()` - Adds user during live meeting
+- `updateAttendance()` - Updates status to attended/late/etc.
+- `addAttendee()` - Adds user before meeting starts
+
+**LiveMeetingView** (line 603-606):
+- Shows simple `{onlineUsers.length} online` text
+- Uses `useMeetingRealtime` hook but doesn't leverage user identity data
+
+**Problem**: 
+- Presence only tracks `online_at`, not user identity
+- No visual indicator of WHO is online
+- No auto-add logic when users join
+
+---
 
 ## Implementation Plan
 
-### 1. Frontend Changes to TenantUsers.tsx
+### 1. Enhance Presence Data with User Identity
 
-Add selection state and bulk action UI following the pattern established in `AdminDocumentAIReview.tsx`:
+Update `useMeetingRealtime.tsx` to include user identity in the presence payload:
 
-**New State**
 ```typescript
-const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-const [bulkAction, setBulkAction] = useState<'activate' | 'deactivate' | 'role' | null>(null);
-const [bulkRole, setBulkRole] = useState<string>('');
-const [processingBulk, setProcessingBulk] = useState(false);
+// When tracking presence, include user details
+await meetingChannel.track({
+  user_id: userId,
+  name: userName,
+  avatar_initials: initials,
+  online_at: new Date().toISOString(),
+});
 ```
 
-**Selection Helpers**
-```typescript
-const toggleSelection = (userId: string) => {
-  setSelectedIds(prev => {
-    const next = new Set(prev);
-    if (next.has(userId)) next.delete(userId);
-    else next.add(userId);
-    return next;
-  });
-};
+Add new props to the hook:
+- `userId` - Current user's UUID
+- `userName` - Display name
+- `avatarInitials` - For avatar display
 
-const toggleSelectAll = () => {
-  if (selectedIds.size === filteredUsers.length) {
-    setSelectedIds(new Set());
-  } else {
-    setSelectedIds(new Set(filteredUsers.map(u => u.user_uuid)));
-  }
-};
+### 2. Create OnlineUsersIndicator Component
+
+New component to show who is currently online:
+
+**Features**:
+- Popover triggered by clicking the "X online" badge
+- Shows list of online users with avatars and names
+- Green dot indicator for online status
+- Optionally highlight if user is already an attendee
+
+```
+┌──────────────────────────────┐
+│  Online Now (3)              │
+├──────────────────────────────┤
+│  [AJ] Andrew Jones    ✓      │
+│  [SK] Sarah Kim       ✓      │
+│  [TB] Tom Brown       ●      │  <- Not yet an attendee
+└──────────────────────────────┘
 ```
 
-**UI Updates**
-- Add checkbox column to table header and rows
-- Add bulk action toolbar that appears when users are selected
-- Add confirmation dialog for destructive actions
+### 3. Auto-Add Online Users as Attendees
 
-### 2. Create New Edge Function: bulk-user-action
+Implement logic in `LiveMeetingView` to automatically:
+1. Detect when a user joins the meeting page
+2. Check if they're already in the attendees list
+3. If not, auto-add them as a guest (during live meeting) or attendee (before start)
+4. Mark them as "attended" (present)
 
-A new edge function to handle bulk operations with proper authorization and audit logging.
+**Logic Flow**:
+```
+User opens meeting page
+    ↓
+useMeetingRealtime tracks presence
+    ↓
+useEffect monitors onlineUsers changes
+    ↓
+For current user (profile.user_uuid):
+  - If not in attendees list → addGuest()
+  - If in attendees but not "attended" → updateAttendance()
+```
 
-**File**: `supabase/functions/bulk-user-action/index.ts`
+### 4. Update AttendancePanel with Online Indicators
 
-**Request Body**
+Enhance the AttendancePanel to show which attendees are currently online:
+- Green dot next to online users
+- Sort online users to top of list (optional)
+- Indicate when user joined (joined_at timestamp)
+
+---
+
+## Technical Implementation
+
+### File Changes
+
+| File | Action | Changes |
+|------|--------|---------|
+| `src/hooks/useMeetingRealtime.tsx` | Modify | Accept user identity props, include in presence tracking |
+| `src/components/eos/OnlineUsersIndicator.tsx` | Create | New popover component showing online users |
+| `src/components/eos/LiveMeetingView.tsx` | Modify | Use enhanced realtime hook, add auto-attendance logic, add OnlineUsersIndicator |
+| `src/components/eos/AttendancePanel.tsx` | Modify | Add online status indicators, accept onlineUsers prop |
+| `src/hooks/useMeetingAttendance.tsx` | Modify | Add silent mutation for auto-attendance (no toast) |
+
+---
+
+### Detailed Changes
+
+#### 1. useMeetingRealtime.tsx
+
+Add user identity to presence:
+
 ```typescript
-{
-  user_uuids: string[];
-  action: 'activate' | 'deactivate' | 'change_role';
-  role?: 'Admin' | 'General User';  // required for change_role
+interface UseRealtimeOptions {
+  meetingId: string;
+  userId?: string;        // NEW
+  userName?: string;      // NEW
+  avatarUrl?: string;     // NEW
+  onSegmentChange?: (payload: any) => void;
+  onHeadlineChange?: (payload: any) => void;
+  onTodoChange?: (payload: any) => void;
+  onPresenceChange?: (payload: any) => void;
+}
+
+// In track() call:
+await meetingChannel.track({
+  user_id: userId,
+  name: userName,
+  avatar_url: avatarUrl,
+  online_at: new Date().toISOString(),
+});
+```
+
+Add typed interface for online user:
+
+```typescript
+export interface OnlineUser {
+  user_id: string;
+  name: string;
+  avatar_url?: string;
+  online_at: string;
 }
 ```
 
-**Logic Flow**
-1. Validate caller is SuperAdmin (global_role = 'SuperAdmin')
-2. Validate all target users exist
-3. Perform bulk update in transaction
-4. Create audit log entries for each user affected
-5. Return success/failure counts
+#### 2. OnlineUsersIndicator Component
 
-### 3. Add Config Entry
-
-Update `supabase/config.toml` to register the new function.
-
----
-
-## Detailed Implementation
-
-### File: src/pages/TenantUsers.tsx
-
-**Add Imports**
 ```typescript
-import { Checkbox } from '@/components/ui/checkbox';
-import { AlertDialog, AlertDialogAction, ... } from '@/components/ui/alert-dialog';
-import { Loader2, UserCheck, UserX, Shield } from 'lucide-react';
+interface OnlineUsersIndicatorProps {
+  onlineUsers: OnlineUser[];
+  attendees?: MeetingAttendee[];
+}
+
+// Popover showing online users with:
+// - Avatar with initials
+// - User name
+// - Checkmark if they're in attendees list
+// - "Present" badge if marked attended
 ```
 
-**Add Selection State** (after line 57)
-```typescript
-const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-const [bulkActionDialogOpen, setBulkActionDialogOpen] = useState(false);
-const [bulkActionType, setBulkActionType] = useState<'activate' | 'deactivate' | null>(null);
-const [processingBulk, setProcessingBulk] = useState(false);
-```
-
-**Add Bulk Action Handler**
-```typescript
-const handleBulkAction = async () => {
-  if (!bulkActionType || selectedIds.size === 0) return;
-  
-  setProcessingBulk(true);
-  try {
-    const { data, error } = await supabase.functions.invoke('bulk-user-action', {
-      body: {
-        user_uuids: Array.from(selectedIds),
-        action: bulkActionType === 'activate' ? 'activate' : 'deactivate',
-      },
-    });
-    
-    if (error) throw error;
-    
-    toast({
-      title: 'Bulk Action Complete',
-      description: `${data.successCount} users updated successfully`,
-    });
-    
-    setSelectedIds(new Set());
-    fetchData();
-  } catch (error: any) {
-    toast({
-      title: 'Error',
-      description: error.message,
-      variant: 'destructive',
-    });
-  } finally {
-    setProcessingBulk(false);
-    setBulkActionDialogOpen(false);
-    setBulkActionType(null);
-  }
-};
-```
-
-**Add Bulk Action Toolbar** (in filters Card, after status filter)
-```typescript
-{selectedIds.size > 0 && (
-  <div className="flex items-center gap-2 ml-auto">
-    <span className="text-sm text-muted-foreground">
-      {selectedIds.size} selected
-    </span>
-    <Button
-      variant="outline"
-      size="sm"
-      onClick={() => {
-        setBulkActionType('activate');
-        setBulkActionDialogOpen(true);
-      }}
-    >
-      <UserCheck className="h-4 w-4 mr-1" />
-      Activate
-    </Button>
-    <Button
-      variant="outline"
-      size="sm"
-      onClick={() => {
-        setBulkActionType('deactivate');
-        setBulkActionDialogOpen(true);
-      }}
-    >
-      <UserX className="h-4 w-4 mr-1" />
-      Deactivate
-    </Button>
-    <Button
-      variant="ghost"
-      size="sm"
-      onClick={() => setSelectedIds(new Set())}
-    >
-      Clear
-    </Button>
-  </div>
-)}
-```
-
-**Add Checkbox Column to Table**
-
-Header:
-```typescript
-<TableHead className="w-[40px]">
-  <Checkbox
-    checked={selectedIds.size === filteredUsers.length && filteredUsers.length > 0}
-    onCheckedChange={toggleSelectAll}
-  />
-</TableHead>
-```
-
-Row:
-```typescript
-<TableCell onClick={(e) => e.stopPropagation()}>
-  <Checkbox
-    checked={selectedIds.has(user.user_uuid)}
-    onCheckedChange={() => toggleSelection(user.user_uuid)}
-  />
-</TableCell>
-```
-
-**Add Confirmation Dialog**
-```typescript
-<AlertDialog open={bulkActionDialogOpen} onOpenChange={setBulkActionDialogOpen}>
-  <AlertDialogContent>
-    <AlertDialogHeader>
-      <AlertDialogTitle>
-        {bulkActionType === 'activate' ? 'Activate' : 'Deactivate'} {selectedIds.size} Users?
-      </AlertDialogTitle>
-      <AlertDialogDescription>
-        This will {bulkActionType === 'activate' ? 'enable' : 'disable'} access for {selectedIds.size} selected users.
-        This action is logged for audit purposes.
-      </AlertDialogDescription>
-    </AlertDialogHeader>
-    <AlertDialogFooter>
-      <AlertDialogCancel disabled={processingBulk}>Cancel</AlertDialogCancel>
-      <AlertDialogAction
-        onClick={handleBulkAction}
-        disabled={processingBulk}
-        className={bulkActionType === 'deactivate' ? 'bg-destructive hover:bg-destructive/90' : ''}
-      >
-        {processingBulk && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-        Confirm
-      </AlertDialogAction>
-    </AlertDialogFooter>
-  </AlertDialogContent>
-</AlertDialog>
-```
-
----
-
-### File: supabase/functions/bulk-user-action/index.ts
+#### 3. LiveMeetingView Auto-Attendance
 
 ```typescript
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { corsHeaders } from "../_shared/cors.ts";
+// Get user name for presence
+const userName = profile 
+  ? `${profile.first_name || ''} ${profile.last_name || ''}`.trim() 
+  : 'Unknown';
 
-type BulkActionBody = {
-  user_uuids: string[];
-  action: 'activate' | 'deactivate' | 'change_role';
-  role?: 'Admin' | 'General User';
-};
-
-Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
-  }
-
-  try {
-    const body = await req.json() as BulkActionBody;
-    const { user_uuids, action, role } = body;
-
-    // Validate input
-    if (!Array.isArray(user_uuids) || user_uuids.length === 0) {
-      return jsonErr(400, "MISSING_USERS", "At least one user UUID is required");
-    }
-
-    if (!['activate', 'deactivate', 'change_role'].includes(action)) {
-      return jsonErr(400, "INVALID_ACTION", "Action must be activate, deactivate, or change_role");
-    }
-
-    if (action === 'change_role' && !role) {
-      return jsonErr(400, "MISSING_ROLE", "Role is required for change_role action");
-    }
-
-    const supabase = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
-    );
-
-    // Authenticate caller
-    const authHeader = req.headers.get("Authorization");
-    if (!authHeader) {
-      return jsonErr(401, "UNAUTHORIZED", "No authorization header");
-    }
-
-    const token = authHeader.replace("Bearer ", "");
-    const { data: { user: currentUser }, error: userError } = await supabase.auth.getUser(token);
-    
-    if (userError || !currentUser) {
-      return jsonErr(401, "UNAUTHORIZED", "Invalid token");
-    }
-
-    // Verify SuperAdmin status
-    const { data: callerProfile } = await supabase
-      .from("users")
-      .select("global_role, unicorn_role, user_type")
-      .eq("user_uuid", currentUser.id)
-      .single();
-
-    const isSuperAdmin = callerProfile?.global_role === 'SuperAdmin' ||
-      (callerProfile?.unicorn_role === 'Super Admin' && 
-       ['Vivacity', 'Vivacity Team'].includes(callerProfile?.user_type || ''));
-
-    if (!isSuperAdmin) {
-      return jsonErr(403, "FORBIDDEN", "Only SuperAdmins can perform bulk actions");
-    }
-
-    // Perform bulk update
-    let updateData: Record<string, any> = { updated_at: new Date().toISOString() };
-    
-    if (action === 'activate') {
-      updateData.disabled = false;
-    } else if (action === 'deactivate') {
-      updateData.disabled = true;
-    } else if (action === 'change_role' && role) {
-      updateData.unicorn_role = role;
-    }
-
-    const { data: updatedUsers, error: updateError } = await supabase
-      .from("users")
-      .update(updateData)
-      .in("user_uuid", user_uuids)
-      .select("user_uuid");
-
-    if (updateError) {
-      return jsonErr(400, "UPDATE_FAILED", updateError.message);
-    }
-
-    // Create audit log entries
-    const auditEntries = user_uuids.map(uuid => ({
-      user_id: currentUser.id,
-      entity: "users",
-      entity_id: uuid,
-      action: `bulk_${action}`,
-      reason: `Bulk ${action} by SuperAdmin`,
-      details: { action, role, affected_users: user_uuids.length },
-    }));
-
-    await supabase.from("audit_eos_events").insert(auditEntries);
-
-    console.log(`Bulk ${action} completed: ${updatedUsers?.length || 0} users updated`);
-
-    return new Response(JSON.stringify({ 
-      ok: true, 
-      successCount: updatedUsers?.length || 0,
-      requestedCount: user_uuids.length,
-    }), {
-      headers: { "content-type": "application/json", ...corsHeaders },
-      status: 200,
-    });
-  } catch (e: any) {
-    console.error("Error in bulk-user-action:", e);
-    return jsonErr(500, "UNHANDLED", e?.message ?? String(e));
-  }
+// Enhanced realtime hook
+const { onlineUsers, updatePresence } = useMeetingRealtime({
+  meetingId: meetingId!,
+  userId: profile?.user_uuid,
+  userName,
+  avatarUrl: profile?.avatar_url,
+  onSegmentChange: () => { /* ... */ },
 });
 
-function jsonErr(status: number, code: string, detail?: string) {
-  return new Response(JSON.stringify({ ok: false, code, detail }), {
-    headers: { "content-type": "application/json", ...corsHeaders },
-    status,
-  });
+// Auto-add current user as attendee when they join
+useEffect(() => {
+  if (!profile?.user_uuid || !meetingId || !attendees) return;
+  
+  const isAttendee = attendees.some(a => a.user_id === profile.user_uuid);
+  const isPresent = attendees.some(
+    a => a.user_id === profile.user_uuid && 
+    (a.attendance_status === 'attended' || a.attendance_status === 'late')
+  );
+  
+  // Auto-add and mark present
+  if (!isAttendee && meetingStarted) {
+    addGuestSilent.mutate({ userId: profile.user_uuid });
+  } else if (isAttendee && !isPresent && meetingStarted) {
+    updateAttendanceSilent.mutate({ 
+      userId: profile.user_uuid, 
+      status: 'attended' 
+    });
+  }
+}, [profile?.user_uuid, attendees, meetingStarted]);
+```
+
+#### 4. AttendancePanel Online Indicators
+
+Add `onlineUsers` prop and show green dots:
+
+```typescript
+interface AttendancePanelProps {
+  meetingId: string;
+  meetingType: string;
+  meetingStatus?: string;
+  isLive?: boolean;
+  canEdit?: boolean;
+  onlineUsers?: OnlineUser[];  // NEW
 }
+
+// In attendee row, add online indicator:
+{isOnline(attendee.user_id) && (
+  <span className="w-2 h-2 rounded-full bg-green-500" title="Online" />
+)}
 ```
-
----
-
-### File: supabase/config.toml
-
-Add function configuration:
-```toml
-[functions.bulk-user-action]
-verify_jwt = false
-```
-
----
-
-## Files to Create/Modify
-
-| File | Action | Purpose |
-|------|--------|---------|
-| `src/pages/TenantUsers.tsx` | Modify | Add checkbox selection, bulk action toolbar, confirmation dialog |
-| `supabase/functions/bulk-user-action/index.ts` | Create | Handle bulk activate/deactivate/role-change operations |
-| `supabase/config.toml` | Modify | Register new edge function |
 
 ---
 
 ## Security Considerations
 
-1. **Authorization**: Only SuperAdmins can perform bulk actions (verified via global_role)
-2. **Audit Trail**: Every bulk action creates audit log entries for each affected user
-3. **No Cascade**: Bulk deactivate only sets `disabled = true`, does not delete users
-4. **Client Isolation**: Bulk actions work across all client tenants (SuperAdmin only)
+1. **Presence data is scoped to meeting channel** - Only users with access to the meeting can see presence
+2. **Auto-add uses existing RLS** - `add_meeting_guest` RPC already validates permissions
+3. **No sensitive data in presence** - Only user_id, name, avatar (already public in UI)
 
 ---
 
 ## Expected Outcome
 
 After implementation:
-- Checkboxes appear in the Tenant Users table for multi-select
-- Selecting users reveals a bulk action toolbar with Activate/Deactivate buttons
-- Clicking an action shows a confirmation dialog
-- On confirmation, the edge function processes all selected users
-- Toast notification shows success/failure count
-- All actions are logged to `audit_eos_events`
+
+1. **Header shows clickable online indicator** - "3 online" badge opens popover with user list
+2. **Online users shown with identity** - Avatars, names, and status visible
+3. **Users auto-added when joining** - Opening the live meeting page adds you as an attendee
+4. **Auto-marked as present** - Your attendance status updates to "attended" automatically
+5. **Attendance panel shows online status** - Green dots indicate who is currently viewing the meeting
+
+---
+
+## Files to Create/Modify Summary
+
+| File | Purpose |
+|------|---------|
+| `src/hooks/useMeetingRealtime.tsx` | Enhanced with user identity in presence |
+| `src/components/eos/OnlineUsersIndicator.tsx` | New popover showing online users |
+| `src/components/eos/LiveMeetingView.tsx` | Auto-attendance logic + UI updates |
+| `src/components/eos/AttendancePanel.tsx` | Online status indicators |
+| `src/hooks/useMeetingAttendance.tsx` | Silent mutations for auto-attendance |
+
