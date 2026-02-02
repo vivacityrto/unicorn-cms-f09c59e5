@@ -1,121 +1,139 @@
 
-# Fix: IDS Issues and To-Dos Not Being Tracked to Meeting
+# Fix: Infinite Recursion in RLS for EOS Meeting Tables
 
 ## Problem Summary
 
-The Meeting Close Checklist shows 0 To-Dos and 0 Issues Discussed, even though you:
-1. Discussed and solved 1 issue
-2. Created 4 To-Dos from that issue
+The meeting rating, attendees, and outcome confirmations features fail with:
 
-## Root Cause Analysis
+**"infinite recursion detected in policy for relation 'tenant_users'"**
 
-### Issue 1: Backlog Issues Not Linked to Meeting
+## Root Cause
 
-When an issue is picked from the backlog (where `meeting_id = NULL`), the IDS workflow does NOT:
-- Update the issue's `meeting_id` to link it to the current meeting
-- Add the issue ID to the meeting's `issues_discussed` array
+Multiple EOS meeting tables have RLS policies that directly query `tenant_users`. The `tenant_users` table has self-referential policies (e.g., `tenant_users_select_own` references `tenant_users tu2`), which creates infinite recursion when these policies are evaluated.
 
-**Database evidence:**
-| Record | meeting_id |
-|--------|------------|
-| Issue `c0f54909...` | NULL |
-| All 4 To-Dos | NULL |
+### Affected Tables and Policies
 
-### Issue 2: To-Dos Inherit NULL meeting_id
+| Table | Policy | Problem |
+|-------|--------|---------|
+| `eos_meeting_attendees` | "Attendees viewable by tenant members" | JOINs `tenant_users` |
+| `eos_meeting_attendees` | "Attendees manageable by meeting owner or admin" | JOINs `tenant_users` |
+| `eos_meeting_outcome_confirmations` | "Users can view outcome confirmations for their tenant" | Subquery on `tenant_users` |
 
-The `create_todos_from_issue` RPC gets the `meeting_id` from the issue:
-```sql
-SELECT tenant_id, meeting_id INTO v_tenant_id, v_meeting_id
-FROM eos_issues WHERE id = p_issue_id;
-```
-Since the issue has `meeting_id = NULL`, all to-dos are created with `meeting_id = NULL`.
+### Why eos_meeting_ratings Still Fails
 
-### Issue 3: Validation Counts Are Zero
-
-The `validate_meeting_close` RPC counts:
-- To-dos: `COUNT(*) FROM eos_todos WHERE meeting_id = p_meeting_id` (returns 0)
-- Issues: `array_length(v_meeting.issues_discussed, 1)` (returns 0 because array is empty)
+Although I previously fixed the `eos_meeting_ratings` policies to use `eos_meetings`, the `eos_meetings` RLS policies then trigger queries on other tables (like attendees), which then trigger the `tenant_users` recursion.
 
 ## Solution
 
-Update the `set_issue_status` RPC to properly track issues when they're solved during a meeting.
+Replace all direct `tenant_users` references with the existing `user_has_tenant_access(p_tenant_id)` SECURITY DEFINER function, which bypasses RLS.
 
-### Change 1: Update set_issue_status RPC
+---
 
-When an issue transitions to "Solved" or "Discussing":
-1. If the issue has `meeting_id = NULL` but is being processed during an active meeting, assign the meeting
-2. Append the issue ID to the meeting's `issues_discussed` array when solved
+## Implementation Details
 
-**New logic to add:**
+### Step 1: Fix eos_meeting_attendees Policies
+
+**Current (broken):**
 ```sql
--- If issue is being solved and was previously unassigned, assign to meeting
-IF p_status IN ('Discussing', 'Solved') AND v_issue.meeting_id IS NULL THEN
-  -- Get the user's active meeting (if any)
-  SELECT id INTO v_active_meeting_id
-  FROM eos_meetings
-  WHERE tenant_id = v_issue.tenant_id
-    AND status = 'In Progress'
-    AND id IN (
-      SELECT meeting_id FROM eos_meeting_attendees 
-      WHERE user_id = auth.uid() AND status = 'Present'
-    )
-  LIMIT 1;
-  
-  IF v_active_meeting_id IS NOT NULL THEN
-    UPDATE eos_issues SET meeting_id = v_active_meeting_id 
-    WHERE id = p_issue_id;
-    
-    -- Update the reference for subsequent logic
-    v_issue.meeting_id := v_active_meeting_id;
-  END IF;
-END IF;
-
--- When solved, add to meeting's issues_discussed array
-IF p_status = 'Solved' AND v_issue.meeting_id IS NOT NULL THEN
-  UPDATE eos_meetings
-  SET issues_discussed = COALESCE(issues_discussed, '{}') || ARRAY[p_issue_id]
-  WHERE id = v_issue.meeting_id
-    AND NOT (p_issue_id = ANY(COALESCE(issues_discussed, '{}')));
-END IF;
-```
-
-### Change 2: Update create_todos_from_issue RPC
-
-Accept an optional `p_meeting_id` parameter to explicitly assign to-dos to the correct meeting:
-
-```sql
-CREATE OR REPLACE FUNCTION public.create_todos_from_issue(
-  p_issue_id uuid,
-  p_todos jsonb,
-  p_meeting_id uuid DEFAULT NULL  -- NEW: Optional explicit meeting ID
+-- Policy: "Attendees viewable by tenant members"
+EXISTS (
+  SELECT 1
+  FROM eos_meetings m
+  JOIN tenant_users tu ON tu.tenant_id = m.tenant_id  -- RECURSION
+  WHERE m.id = eos_meeting_attendees.meeting_id
+    AND tu.user_id = auth.uid()
 )
-...
--- Use explicit meeting_id if provided, otherwise fall back to issue's meeting_id
-v_meeting_id := COALESCE(p_meeting_id, (SELECT meeting_id FROM eos_issues WHERE id = p_issue_id));
 ```
 
-### Change 3: Update Frontend IDSDialog
-
-Pass the meeting_id explicitly when creating to-dos:
-
-```typescript
-// In IDSDialog.tsx - createTodos mutation
-const { error } = await supabase.rpc('create_todos_from_issue', {
-  p_issue_id: issue!.id,
-  p_todos: todos as any,
-  p_meeting_id: issue?.meeting_id || meetingId,  // Pass meeting context
-});
+**Fixed:**
+```sql
+-- Use SECURITY DEFINER function instead
+is_staff() OR is_super_admin() OR (
+  EXISTS (
+    SELECT 1 FROM eos_meetings m
+    WHERE m.id = eos_meeting_attendees.meeting_id
+      AND user_has_tenant_access(m.tenant_id)
+  )
+)
 ```
 
-**Requires adding meetingId prop to IDSDialog:**
-```typescript
-interface IDSDialogProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  issue: EosIssue | null;
-  isFacilitator: boolean;
-  meetingId?: string;  // NEW
-}
+### Step 2: Fix eos_meeting_outcome_confirmations Policies
+
+**Current (broken):**
+```sql
+-- Policy: "Users can view outcome confirmations for their tenant"
+tenant_id IN (
+  SELECT tenant_users.tenant_id 
+  FROM tenant_users 
+  WHERE tenant_users.user_id = auth.uid()  -- RECURSION
+)
+```
+
+**Fixed:**
+```sql
+-- Use SECURITY DEFINER function
+user_has_tenant_access(tenant_id) OR is_super_admin()
+```
+
+### Step 3: Add INSERT Policy for eos_meeting_outcome_confirmations
+
+Currently missing the WITH CHECK clause for INSERT.
+
+**Add:**
+```sql
+WITH CHECK (
+  user_has_tenant_access(tenant_id)
+)
+```
+
+---
+
+## SQL Migration Summary
+
+```sql
+-- 1. Fix eos_meeting_attendees SELECT policy
+DROP POLICY IF EXISTS "Attendees viewable by tenant members" ON eos_meeting_attendees;
+CREATE POLICY "Attendees viewable by tenant members"
+ON eos_meeting_attendees FOR SELECT
+USING (
+  is_staff() OR is_super_admin() OR (
+    EXISTS (
+      SELECT 1 FROM eos_meetings m
+      WHERE m.id = eos_meeting_attendees.meeting_id
+        AND user_has_tenant_access(m.tenant_id)
+    )
+  )
+);
+
+-- 2. Fix eos_meeting_attendees write policies  
+DROP POLICY IF EXISTS "Attendees manageable by meeting owner or admin" ON eos_meeting_attendees;
+CREATE POLICY "Attendees manageable by meeting owner or admin"
+ON eos_meeting_attendees FOR ALL
+USING (
+  is_super_admin() OR (
+    EXISTS (
+      SELECT 1 FROM eos_meetings m
+      WHERE m.id = eos_meeting_attendees.meeting_id
+        AND (m.created_by = auth.uid() OR can_facilitate_eos(auth.uid(), m.tenant_id))
+    )
+  )
+);
+
+-- 3. Fix eos_meeting_outcome_confirmations SELECT policy
+DROP POLICY IF EXISTS "Users can view outcome confirmations for their tenant" ON eos_meeting_outcome_confirmations;
+CREATE POLICY "Users can view outcome confirmations for their tenant"
+ON eos_meeting_outcome_confirmations FOR SELECT
+USING (
+  user_has_tenant_access(tenant_id) OR is_super_admin()
+);
+
+-- 4. Fix eos_meeting_outcome_confirmations INSERT policy
+DROP POLICY IF EXISTS "Users can insert outcome confirmations for their tenant" ON eos_meeting_outcome_confirmations;
+CREATE POLICY "Users can insert outcome confirmations for their tenant"
+ON eos_meeting_outcome_confirmations FOR INSERT
+WITH CHECK (
+  user_has_tenant_access(tenant_id)
+);
 ```
 
 ---
@@ -124,35 +142,28 @@ interface IDSDialogProps {
 
 | File | Action | Purpose |
 |------|--------|---------|
-| New SQL Migration | Create | Update `set_issue_status` RPC to track issues to meetings |
-| New SQL Migration | Create | Update `create_todos_from_issue` to accept `p_meeting_id` |
-| `src/components/eos/IDSDialog.tsx` | Edit | Pass meetingId to RPC call |
-| `src/components/eos/LiveMeetingView.tsx` | Edit | Pass meetingId to IDSDialog |
+| New SQL migration | Create | Replace recursive policies with SECURITY DEFINER function calls |
 
 ---
 
-## Expected Behaviour After Fix
+## Expected Outcome After Fix
 
-1. User picks a backlog issue during a live meeting
-2. User opens IDS dialog and marks as Solved with to-dos
-3. System:
-   - Links the issue to the current meeting
-   - Adds issue ID to meeting's `issues_discussed` array
-   - Creates to-dos with the correct `meeting_id`
-4. Meeting Close Checklist shows:
-   - 1 Issue Discussed
-   - 4 To-Dos
-5. Meeting can be closed without requiring explicit confirmations
+1. User can view meeting attendees without 500 errors
+2. User can rate the meeting
+3. User can submit outcome confirmations
+4. Meeting Close Checklist loads properly
+5. No more "infinite recursion" errors in database logs
 
 ---
 
 ## Testing Checklist
 
 After implementation:
-1. Start a live meeting
-2. Pick a backlog issue (one without meeting_id)
-3. Mark it as Solved with 2 to-dos
-4. Open Meeting Close Checklist
-5. Verify: Issues Discussed = 1, To-Dos = 2
-6. Confirm no explicit confirmations are required
-7. Close the meeting successfully
+1. Open a live meeting
+2. Verify the participant list loads
+3. Click a rating number (1-10)
+4. Confirm rating saves without error
+5. Open Meeting Close Checklist
+6. Verify all sections load
+7. Submit any required confirmations
+8. Close the meeting successfully
