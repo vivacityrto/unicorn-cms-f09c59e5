@@ -17,8 +17,19 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useToast } from '@/hooks/use-toast';
-import { Building2, Search, Users, UserCheck, UserX, ArrowUpDown } from 'lucide-react';
+import { Building2, Search, Users, UserCheck, UserX, ArrowUpDown, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 interface TenantUser {
   user_uuid: string;
@@ -56,6 +67,12 @@ export default function TenantUsers() {
   const [sortField, setSortField] = useState<SortField>('name');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
 
+  // Bulk action state
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkActionDialogOpen, setBulkActionDialogOpen] = useState(false);
+  const [bulkActionType, setBulkActionType] = useState<'activate' | 'deactivate' | null>(null);
+  const [processingBulk, setProcessingBulk] = useState(false);
+
   useEffect(() => {
     fetchData();
   }, []);
@@ -64,12 +81,69 @@ export default function TenantUsers() {
     applyFilters();
   }, [users, searchQuery, tenantFilter, roleFilter, statusFilter, sortField, sortDirection]);
 
+  // Clear selection when filters change
+  useEffect(() => {
+    setSelectedIds(new Set());
+  }, [searchQuery, tenantFilter, roleFilter, statusFilter]);
+
   const toggleSort = (field: SortField) => {
     if (sortField === field) {
       setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc');
     } else {
       setSortField(field);
       setSortDirection('asc');
+    }
+  };
+
+  const toggleSelection = (userId: string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(userId)) next.delete(userId);
+      else next.add(userId);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedIds.size === filteredUsers.length && filteredUsers.length > 0) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(filteredUsers.map(u => u.user_uuid)));
+    }
+  };
+
+  const handleBulkAction = async () => {
+    if (!bulkActionType || selectedIds.size === 0) return;
+    
+    setProcessingBulk(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('bulk-user-action', {
+        body: {
+          user_uuids: Array.from(selectedIds),
+          action: bulkActionType,
+        },
+      });
+      
+      if (error) throw error;
+      if (!data?.ok) throw new Error(data?.detail || 'Bulk action failed');
+      
+      toast({
+        title: 'Bulk Action Complete',
+        description: `${data.successCount} users ${bulkActionType === 'activate' ? 'activated' : 'deactivated'} successfully`,
+      });
+      
+      setSelectedIds(new Set());
+      fetchData();
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: error.message,
+        variant: 'destructive',
+      });
+    } finally {
+      setProcessingBulk(false);
+      setBulkActionDialogOpen(false);
+      setBulkActionType(null);
     }
   };
 
@@ -356,6 +430,44 @@ export default function TenantUsers() {
                 </SelectContent>
               </Select>
             </div>
+
+            {/* Bulk Action Toolbar */}
+            {selectedIds.size > 0 && (
+              <div className="flex items-center gap-2 mt-4 pt-4 border-t">
+                <span className="text-sm text-muted-foreground">
+                  {selectedIds.size} selected
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setBulkActionType('activate');
+                    setBulkActionDialogOpen(true);
+                  }}
+                >
+                  <UserCheck className="h-4 w-4 mr-1" />
+                  Activate
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setBulkActionType('deactivate');
+                    setBulkActionDialogOpen(true);
+                  }}
+                >
+                  <UserX className="h-4 w-4 mr-1" />
+                  Deactivate
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setSelectedIds(new Set())}
+                >
+                  Clear
+                </Button>
+              </div>
+            )}
           </CardContent>
         </Card>
 
@@ -365,6 +477,12 @@ export default function TenantUsers() {
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead className="w-[40px]">
+                    <Checkbox
+                      checked={selectedIds.size === filteredUsers.length && filteredUsers.length > 0}
+                      onCheckedChange={toggleSelectAll}
+                    />
+                  </TableHead>
                   <TableHead>
                     <Button variant="ghost" size="sm" className="h-8 px-2 -ml-2 hover:bg-transparent" onClick={() => toggleSort('name')}>
                       User
@@ -401,7 +519,7 @@ export default function TenantUsers() {
               <TableBody>
                 {filteredUsers.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
                       No tenant users found
                     </TableCell>
                   </TableRow>
@@ -412,6 +530,12 @@ export default function TenantUsers() {
                       className="cursor-pointer hover:bg-muted/50"
                       onClick={() => navigate(`/user-profile/${user.user_uuid}`)}
                     >
+                      <TableCell onClick={(e) => e.stopPropagation()}>
+                        <Checkbox
+                          checked={selectedIds.has(user.user_uuid)}
+                          onCheckedChange={() => toggleSelection(user.user_uuid)}
+                        />
+                      </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-3">
                           <Avatar className="h-9 w-9">
@@ -451,6 +575,32 @@ export default function TenantUsers() {
             </Table>
           </CardContent>
         </Card>
+
+        {/* Bulk Action Confirmation Dialog */}
+        <AlertDialog open={bulkActionDialogOpen} onOpenChange={setBulkActionDialogOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>
+                {bulkActionType === 'activate' ? 'Activate' : 'Deactivate'} {selectedIds.size} Users?
+              </AlertDialogTitle>
+              <AlertDialogDescription>
+                This will {bulkActionType === 'activate' ? 'enable' : 'disable'} access for {selectedIds.size} selected users.
+                This action is logged for audit purposes.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={processingBulk}>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={handleBulkAction}
+                disabled={processingBulk}
+                className={bulkActionType === 'deactivate' ? 'bg-destructive hover:bg-destructive/90' : ''}
+              >
+                {processingBulk && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                Confirm
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </DashboardLayout>
   );
