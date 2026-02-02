@@ -26,6 +26,7 @@ interface IDSDialogProps {
   onOpenChange: (open: boolean) => void;
   issue: EosIssue | null;
   isFacilitator: boolean;
+  meetingId?: string;
 }
 
 interface TodoItem {
@@ -34,7 +35,7 @@ interface TodoItem {
   due_date: string;
 }
 
-export function IDSDialog({ open, onOpenChange, issue, isFacilitator }: IDSDialogProps) {
+export function IDSDialog({ open, onOpenChange, issue, isFacilitator, meetingId }: IDSDialogProps) {
   const { profile } = useAuth();
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState('identify');
@@ -135,9 +136,13 @@ export function IDSDialog({ open, onOpenChange, issue, isFacilitator }: IDSDialo
     mutationFn: async () => {
       if (todos.length === 0) return;
 
+      // Pass meeting_id explicitly to ensure todos are linked to the meeting
+      const effectiveMeetingId = issue?.meeting_id || meetingId || null;
+      
       const { error } = await supabase.rpc('create_todos_from_issue', {
         p_issue_id: issue!.id,
         p_todos: todos as any,
+        p_meeting_id: effectiveMeetingId,
       });
       
       if (error) throw error;
