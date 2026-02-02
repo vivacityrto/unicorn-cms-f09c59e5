@@ -864,6 +864,7 @@ export const LiveMeetingView = () => {
         onOpenChange={setIdsDialogOpen}
         issue={selectedIssue}
         isFacilitator={isFacilitator}
+        meetingId={meetingId}
       />
 
       <CreateIssueDialog

@@ -15044,10 +15044,12 @@ export type Database = {
         Args: { p_admin_email?: string; p_name: string; p_slug: string }
         Returns: string
       }
-      create_todos_from_issue: {
-        Args: { p_issue_id: string; p_todos: Json }
-        Returns: string[]
-      }
+      create_todos_from_issue:
+        | { Args: { p_issue_id: string; p_todos: Json }; Returns: string[] }
+        | {
+            Args: { p_issue_id: string; p_meeting_id?: string; p_todos: Json }
+            Returns: string[]
+          }
       current_tenant: { Args: never; Returns: string }
       current_user_email: { Args: never; Returns: string }
       current_user_role: { Args: never; Returns: string }
