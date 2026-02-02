@@ -1,125 +1,75 @@
 
+Goal
+- Fix the remaining IDS “Cannot transition from ‘Open’ to ‘Solved’” error shown in the screenshot when clicking “Mark as Solved”, even though the dialog now attempts to transition Open → Discussing → Solved.
 
-# Fix IDS Workflow: Auto-Transition Through Discussing to Solved
+What’s actually happening (root cause)
+- IDSDialog’s setStatus mutation validates transitions using issue?.status (props) at mutation execution time:
+  - const currentStatus = issue?.status || 'Open'
+- During handleSolve:
+  1) We call setStatus.mutateAsync({ status: 'Discussing' })
+  2) Immediately after, we call setStatus.mutateAsync({ status: 'Solved' })
+- The issue prop does not update to “Discussing” instantly (it updates after the query invalidation/refetch). So the second mutateAsync still sees issue.status === 'Open' and fails client-side validation for Open → Solved.
+- This matches the toast: Allowed: Discussing, In Review, Archived (meaning “Solved” is not allowed directly from “Open”).
 
-## Problem
+Design decision
+- Keep client-side transition validation (it’s helpful UX), but make it deterministic by validating against an explicit “from status” that the caller provides, rather than reading a potentially stale prop.
+- This matches the existing pattern already used elsewhere in the app (see useRisksOpportunities.updateItem which accepts currentStatus as an argument).
 
-The IDS dialog allows users to navigate to the "Solve" tab and click "Mark as Solved" even when the issue is still "Open". The status transition rules require:
-- Open → Discussing → Solved
+Planned changes (minimal + isolated)
 
-But the current `handleSolve` function only attempts Open → Solved, which fails.
+1) Update IDSDialog setStatus mutation to accept an explicit fromStatus/currentStatus
+- File: src/components/eos/IDSDialog.tsx
+- Change setStatus.mutationFn signature from:
+  - ({ status, solutionText, autoAdvanceTab = true })
+  to:
+  - ({ status, solutionText, autoAdvanceTab = true, fromStatus })
+- Validation will use:
+  - const effectiveFrom = fromStatus ?? issue?.status ?? 'Open'
+- Error message will reference effectiveFrom.
 
-## Solution
+2) Update all calls to setStatus to pass the correct fromStatus
+- File: src/components/eos/IDSDialog.tsx
+- handleSolve:
+  - Determine currentStatus once at the top:
+    - const currentStatus = issue?.status || 'Open'
+  - If currentStatus === 'Open':
+    - await setStatus.mutateAsync({ status: 'Discussing', fromStatus: 'Open', autoAdvanceTab: false })
+    - await setStatus.mutateAsync({ status: 'Solved', fromStatus: 'Discussing', solutionText: solution })
+  - Else:
+    - await setStatus.mutateAsync({ status: 'Solved', fromStatus: currentStatus, solutionText: solution })
+- Identify tab “Start Discussing” button:
+  - Change onClick to:
+    - setStatus.mutate({ status: 'Discussing', fromStatus: issue.status })
+- Any other status updates in this component should pass fromStatus: issue.status (or a known value).
 
-Modify the `handleSolve` function to perform a **sequential status transition** when needed:
-1. If current status is "Open", first transition to "Discussing"
-2. Then transition to "Solved"
+3) (Small correctness fix) Discuss tab disabled condition uses wrong case
+- File: src/components/eos/IDSDialog.tsx
+- Current code:
+  - disabled={!isFacilitator && issue.status !== 'discussing'}
+- Status enums are case-sensitive (“Discussing”), so non-facilitators may be incorrectly blocked or enabled.
+- Update to:
+  - disabled={!isFacilitator && issue.status !== 'Discussing'}
+- This is a safe, isolated fix and aligns with the rest of the component’s case-sensitive status usage.
 
-This respects the defined status workflow while providing a smooth user experience.
+Why this will solve the issue
+- The second transition (Discussing → Solved) will validate against fromStatus: 'Discussing' immediately, without waiting for React Query to refetch and update the issue prop.
+- Backend behavior remains the same; we are only fixing the frontend’s validation reference.
 
----
+Testing checklist (end-to-end)
+1) Open a live meeting and open an issue in status “Open”.
+2) Go directly to the Solve tab, enter a solution, click “Mark as Solved”.
+   - Expected: no toast error; status updates and dialog closes.
+3) Verify the issue is now “Solved” in the queue/list after refetch.
+4) Repeat with an issue already in “Discussing”:
+   - Expected: Discussing → Solved succeeds.
+5) Confirm to-do creation still works after solving (when todos are added).
+6) Non-facilitator view:
+   - Confirm discussion notes field enable/disable behavior is correct in Discuss tab.
 
-## Implementation Details
+Files touched
+- src/components/eos/IDSDialog.tsx
 
-### File: src/components/eos/IDSDialog.tsx
-
-Update the `handleSolve` function to check the current status and perform intermediate transitions if needed:
-
-```typescript
-const handleSolve = async () => {
-  if (!solution.trim()) {
-    toast({ title: 'Please enter a solution', variant: 'destructive' });
-    return;
-  }
-
-  try {
-    const currentStatus = issue?.status || 'Open';
-    
-    // If status is Open, we need to transition through Discussing first
-    if (currentStatus === 'Open') {
-      await setStatus.mutateAsync({ 
-        status: 'Discussing', 
-        autoAdvanceTab: false 
-      });
-    }
-    
-    // Now transition to Solved (from Discussing or Actioning)
-    await setStatus.mutateAsync({ 
-      status: 'Solved', 
-      solutionText: solution 
-    });
-    
-    if (todos.length > 0) {
-      await createTodos.mutateAsync();
-    }
-
-    onOpenChange(false);
-  } catch (error) {
-    // Error already handled by mutation onError
-  }
-};
-```
-
-### Additional Improvement: Show Status Context
-
-Add a status indicator in the dialog footer so users understand the current state:
-
-```typescript
-{isFacilitator && activeTab === 'solve' && (
-  <DialogFooter className="flex items-center justify-between">
-    <div className="text-sm text-muted-foreground">
-      Current status: <Badge variant="outline">{issue.status}</Badge>
-    </div>
-    <div className="flex gap-2">
-      <Button variant="outline" onClick={() => onOpenChange(false)}>
-        Cancel
-      </Button>
-      <Button
-        onClick={handleSolve}
-        disabled={!solution.trim() || setStatus.isPending || createTodos.isPending}
-      >
-        {setStatus.isPending ? 'Processing...' : 'Mark as Solved'}
-      </Button>
-    </div>
-  </DialogFooter>
-)}
-```
-
----
-
-## Files to Modify
-
-| File | Changes |
-|------|---------|
-| `src/components/eos/IDSDialog.tsx` | Update `handleSolve` to auto-transition through "Discussing" when needed |
-
----
-
-## Expected Behavior After Fix
-
-1. User opens issue in "Open" status
-2. User navigates to "Solve" tab
-3. User enters solution and clicks "Mark as Solved"
-4. System automatically:
-   - Transitions Open → Discussing (silently)
-   - Transitions Discussing → Solved (with solution text)
-5. Issue is marked as solved without error
-
----
-
-## Alternative Approach (Simpler)
-
-If sequential transitions feel too complex, an alternative is to **disable the Solve tab** when status is "Open" and require users to click "Start Discussing" first. This enforces the workflow more explicitly:
-
-```typescript
-<TabsTrigger 
-  value="solve" 
-  disabled={issue.status === 'Open'}
-  title={issue.status === 'Open' ? 'Start discussion first' : ''}
->
-  Solve
-</TabsTrigger>
-```
-
-Both approaches are valid - the first is more user-friendly (auto-transition), the second is more explicit about the workflow.
-
+Non-goals (explicitly not changing)
+- No database/RPC changes.
+- No changes to status transition rules.
+- No changes to the IDS tab auto-sync logic beyond fixing validation correctness.
