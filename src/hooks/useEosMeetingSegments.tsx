@@ -30,8 +30,9 @@ export const useEosMeetingSegments = (meetingId: string | undefined) => {
       if (error) throw error;
       return data;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['eos-meeting-segments', meetingId] });
+    onSuccess: async () => {
+      // Wait for cache invalidation to complete before mutation is "done"
+      await queryClient.invalidateQueries({ queryKey: ['eos-meeting-segments', meetingId] });
       toast({ title: 'Advanced to next segment' });
     },
     onError: (error: Error) => {
@@ -49,8 +50,9 @@ export const useEosMeetingSegments = (meetingId: string | undefined) => {
       if (error) throw error;
       return data;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['eos-meeting-segments', meetingId] });
+    onSuccess: async () => {
+      // Wait for cache invalidation to complete before mutation is "done"
+      await queryClient.invalidateQueries({ queryKey: ['eos-meeting-segments', meetingId] });
       toast({ title: 'Returned to previous segment' });
     },
     onError: (error: Error) => {
