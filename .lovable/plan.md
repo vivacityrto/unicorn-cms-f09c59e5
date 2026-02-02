@@ -1,88 +1,145 @@
 
-# Include Vivacity Staff in EOS Meeting Attendees
 
-## Problem Summary
+# Fix: Segment Navigation Skipping Scorecard
 
-The "Seed from EOS Roles" button only pulls users from the `eos_user_roles` table, which contains tenant-specific EOS role assignments. Vivacity internal staff (SuperAdmins and Team Members) are not being added because they don't have entries in this table.
+## Problem Analysis
 
-Your team has 14 Vivacity staff members who should be included as meeting attendees:
-- 6 Super Admins
-- 8 Team Members
+When clicking "Next Segment" from Segue, the UI jumps directly to Rock Review, skipping Scorecard. The database shows Scorecard WAS visited briefly (started at 00:05:35, completed at 00:05:41 - only 6 seconds), suggesting a rapid double-click or race condition caused two segment advances instead of one.
+
+## Root Cause
+
+The "Next Segment" button relies solely on `disabled={advanceSegment.isPending}` to prevent duplicate clicks. However, React Query mutations complete very quickly, and there's a brief window between when `isPending` becomes `false` and when the UI fully re-renders with the new segment. During this window, a second click can register.
 
 ## Solution
 
-Update the `seed_meeting_attendees_from_roles` RPC function to also include all Vivacity internal staff as attendees.
+Implement multiple safeguards to prevent accidental segment skipping:
+
+1. **Add mutation throttling** - Prevent re-triggering within a short cooldown period
+2. **Use await for mutation** - Ensure the button stays disabled until the query cache is updated
+3. **Show visual feedback** - Add a brief loading state after advancement
+
+---
 
 ## Implementation
 
-### Database Migration
+### 1. Update useEosMeetingSegments Hook
 
-Create a new migration that updates the `seed_meeting_attendees_from_roles` function to:
+Add async/await pattern and return a promise so the caller can wait for full completion:
 
-1. First, seed from `eos_user_roles` (existing behavior for Visionary/Integrator/Core Team)
-2. Additionally, seed all Vivacity staff from the `users` table where:
-   - `user_type = 'Vivacity Team'` OR
-   - `unicorn_role IN ('Super Admin', 'Team Leader', 'Team Member')`
+**File:** `src/hooks/useEosMeetingSegments.tsx`
 
-### Updated SQL Logic
-
-```sql
--- STEP 1: Insert from eos_user_roles (existing logic)
-INSERT INTO public.eos_meeting_attendees (...)
-SELECT ...
-FROM public.eos_user_roles ur
-WHERE ur.tenant_id = v_meeting.tenant_id
-  AND NOT EXISTS (...);
-
--- STEP 2: Insert Vivacity staff (NEW)
-INSERT INTO public.eos_meeting_attendees (
-  meeting_id, user_id, role_in_meeting, attendance_status, created_at, updated_at
-)
-SELECT
-  p_meeting_id,
-  u.user_uuid,
-  'core_team'::meeting_role,
-  'invited'::meeting_attendance_status,
-  NOW(),
-  NOW()
-FROM public.users u
-WHERE u.user_type = 'Vivacity Team'
-  AND u.disabled IS NOT TRUE
-  AND NOT EXISTS (
-    SELECT 1 FROM public.eos_meeting_attendees a
-    WHERE a.meeting_id = p_meeting_id AND a.user_id = u.user_uuid
-  )
-ON CONFLICT DO NOTHING;
+```typescript
+const advanceSegment = useMutation({
+  mutationFn: async () => {
+    const { data, error } = await supabase.rpc('advance_segment', {
+      p_meeting_id: meetingId,
+    });
+    
+    if (error) throw error;
+    return data;
+  },
+  onSuccess: async () => {
+    // Wait for cache invalidation to complete
+    await queryClient.invalidateQueries({ 
+      queryKey: ['eos-meeting-segments', meetingId] 
+    });
+    toast({ title: 'Advanced to next segment' });
+  },
+  onError: (error: Error) => {
+    toast({ title: 'Error advancing segment', description: error.message, variant: 'destructive' });
+  },
+});
 ```
 
-### Role Mapping for Vivacity Staff
+### 2. Add Click Throttle in LiveMeetingView
 
-| User Role | Meeting Role |
-|-----------|--------------|
-| Super Admin | core_team |
-| Team Leader | core_team |
-| Team Member | core_team |
+Add local state to track recent navigation and prevent rapid clicks:
 
-All Vivacity staff will be added as "Core Team" attendees, distinguishing them from tenant-specific roles like Visionary or Integrator.
+**File:** `src/components/eos/LiveMeetingView.tsx`
 
-## Files to Create
+```typescript
+// Add state for navigation cooldown
+const [isNavigating, setIsNavigating] = useState(false);
 
-| File | Purpose |
-|------|---------|
-| `supabase/migrations/[timestamp]_seed_vivacity_staff_attendees.sql` | Update RPC to include Vivacity staff |
+// Wrap the advance handler with protection
+const handleAdvanceSegment = async () => {
+  if (isNavigating) return;
+  setIsNavigating(true);
+  
+  try {
+    await advanceSegment.mutateAsync();
+  } finally {
+    // Keep disabled briefly to prevent double-clicks
+    setTimeout(() => setIsNavigating(false), 500);
+  }
+};
+
+// Similarly for previous segment
+const handlePreviousSegment = async () => {
+  if (isNavigating) return;
+  setIsNavigating(true);
+  
+  try {
+    await goToPreviousSegment.mutateAsync();
+  } finally {
+    setTimeout(() => setIsNavigating(false), 500);
+  }
+};
+```
+
+### 3. Update Button Disabled State
+
+Update both navigation buttons to use the combined disabled state:
+
+```typescript
+<Button 
+  onClick={handlePreviousSegment} 
+  size="sm" 
+  variant="outline"
+  disabled={isNavigating || goToPreviousSegment.isPending}
+>
+  <SkipBack className="h-4 w-4 mr-2" />
+  Previous
+</Button>
+
+<Button 
+  onClick={handleAdvanceSegment} 
+  size="sm" 
+  variant="outline"
+  disabled={isNavigating || advanceSegment.isPending}
+>
+  <SkipForward className="h-4 w-4 mr-2" />
+  Next Segment
+</Button>
+```
+
+---
+
+## Files to Modify
+
+| File | Change |
+|------|--------|
+| `src/hooks/useEosMeetingSegments.tsx` | Add `await` to `invalidateQueries` for proper sequencing |
+| `src/components/eos/LiveMeetingView.tsx` | Add navigation cooldown state and handler wrappers |
+
+---
 
 ## Expected Outcome
 
 After implementation:
-- Clicking "Seed from EOS Roles" will add all 14 Vivacity staff members to the meeting
-- The attendance panel will show all internal team members
-- Quorum calculations will include Vivacity staff presence
-- Manual add/remove functionality remains unchanged
+- Clicking "Next Segment" will have a 500ms cooldown before allowing another navigation
+- The button will remain disabled until the query cache is fully updated
+- Double-clicks or rapid clicks will be ignored
+- Each segment will display fully before the next navigation is possible
 
-## Technical Note
+---
 
-This approach ensures that:
-- Vivacity staff are available for ALL tenant meetings (global access)
-- Tenant-specific roles from `eos_user_roles` are still respected
-- No duplicate attendees are created (ON CONFLICT handling)
-- Disabled users are excluded from seeding
+## Technical Details
+
+The solution uses two layers of protection:
+
+1. **React Query's isPending** - Prevents clicks during the actual API call
+2. **Local isNavigating state with timeout** - Extends the disabled period by 500ms after the mutation completes, ensuring the UI has time to re-render with the new segment data
+
+This follows the pattern recommended by the Lovable stack overflow for preventing navigation state issues during route/segment changes.
+
