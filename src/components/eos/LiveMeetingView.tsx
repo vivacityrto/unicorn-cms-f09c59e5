@@ -177,20 +177,27 @@ export const LiveMeetingView = () => {
       const firstSegment = segments.find(s => !s.started_at);
       if (!firstSegment) throw new Error('No pending segments');
       
+      const now = new Date().toISOString();
+      
+      // Start the first segment
       const { error } = await supabase
         .from('eos_meeting_segments')
-        .update({ started_at: new Date().toISOString() })
+        .update({ started_at: now })
         .eq('id', firstSegment.id);
       
       if (error) throw error;
 
-      // Update meeting to in_progress if not complete
-      if (!meeting?.is_complete) {
-        await supabase
-          .from('eos_meetings')
-          .update({ is_complete: false })
-          .eq('id', meetingId);
-      }
+      // Update meeting to in_progress with started_at timestamp
+      const { error: meetingError } = await supabase
+        .from('eos_meetings')
+        .update({ 
+          status: 'in_progress',
+          started_at: now,
+          is_complete: false 
+        })
+        .eq('id', meetingId);
+
+      if (meetingError) throw meetingError;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['eos-meeting-segments', meetingId] });
