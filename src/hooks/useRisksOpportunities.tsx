@@ -59,6 +59,7 @@ export const useRisksOpportunities = () => {
       meeting_id?: string; 
       meeting_segment_id?: string;
       source?: string;
+      why_it_matters?: string;
     }) => {
       const { data, error } = await supabase
         .from('eos_issues')
@@ -67,6 +68,7 @@ export const useRisksOpportunities = () => {
           item_type: item.item_type,
           title: item.title,
           description: item.description,
+          why_it_matters: item.why_it_matters,
           category: item.category?.toLowerCase(),
           impact: item.impact?.toLowerCase(),
           // Omit status to use database default 'Open'
@@ -123,6 +125,7 @@ export const useRisksOpportunities = () => {
       if (updates.status !== undefined) dbUpdates.status = updates.status;
       if (updates.title !== undefined) dbUpdates.title = updates.title;
       if (updates.description !== undefined) dbUpdates.description = updates.description;
+      if (updates.why_it_matters !== undefined) dbUpdates.why_it_matters = updates.why_it_matters;
       if (updates.quarter_number !== undefined) dbUpdates.quarter_number = updates.quarter_number;
       if (updates.quarter_year !== undefined) dbUpdates.quarter_year = updates.quarter_year;
       if (updates.linked_rock_id !== undefined) dbUpdates.linked_rock_id = updates.linked_rock_id;

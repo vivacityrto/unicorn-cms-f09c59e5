@@ -38,11 +38,13 @@ function RisksOpportunitiesContent() {
       item_type: formData.item_type,
       title: formData.title,
       description: formData.description,
+      why_it_matters: formData.why_it_matters,
       category: formData.category || undefined,
       impact: formData.impact || undefined,
       quarter_number: formData.quarter_number,
       quarter_year: formData.quarter_year,
       linked_rock_id: formData.linked_rock_id || undefined,
+      source: 'ro_page',
     });
     
     setIsCreateOpen(false);
@@ -58,9 +60,11 @@ function RisksOpportunitiesContent() {
     
     await updateItem.mutateAsync({
       id: editingItem.id,
+      currentStatus: editingItem.status,
       item_type: formData.item_type,
       title: formData.title,
       description: formData.description,
+      why_it_matters: formData.why_it_matters,
       category: formData.category || undefined,
       impact: formData.impact || undefined,
       status: formData.status,
@@ -71,6 +75,25 @@ function RisksOpportunitiesContent() {
     
     setIsEditOpen(false);
     setEditingItem(null);
+  };
+
+  // Helper to get human-readable source label
+  const getSourceLabel = (source?: string) => {
+    switch (source) {
+      case 'ro_page':
+      case 'ad_hoc':
+        return 'Manual';
+      case 'meeting_ids':
+        return 'Meeting';
+      case 'meeting_l10':
+        return 'Level 10';
+      case 'meeting_quarterly':
+        return 'Quarterly';
+      case 'meeting_annual':
+        return 'Annual';
+      default:
+        return source ? source.replace('_', ' ') : 'Manual';
+    }
   };
 
   const handleStatusChange = async (id: string, newStatus: RiskOpportunityStatus, outcomeNote?: string) => {
@@ -200,6 +223,7 @@ function RisksOpportunitiesContent() {
                   item_type: editingItem.item_type,
                   title: editingItem.title,
                   description: editingItem.description || '',
+                  why_it_matters: editingItem.why_it_matters || '',
                   category: editingItem.category || null,
                   impact: editingItem.impact || null,
                   status: editingItem.status,
@@ -209,6 +233,7 @@ function RisksOpportunitiesContent() {
                 }}
                 submitLabel="Save Changes"
                 showStatusSelector
+                currentStatus={editingItem.status}
               />
             )}
           </DialogContent>
@@ -348,10 +373,21 @@ function RisksOpportunitiesContent() {
                           {item.category && (
                             <Badge variant="secondary" className="text-xs">{item.category}</Badge>
                           )}
+                          {item.source && (
+                            <Badge variant="outline" className="text-xs bg-muted">
+                              Source: {getSourceLabel(item.source)}
+                            </Badge>
+                          )}
                         </div>
                         <CardTitle className="text-lg">{item.title}</CardTitle>
                         {item.description && (
                           <p className="text-sm text-muted-foreground mt-2">{item.description}</p>
+                        )}
+                        {item.why_it_matters && (
+                          <div className="mt-2 p-2 bg-amber-50 border-l-2 border-amber-400 rounded-r">
+                            <p className="text-xs font-medium text-amber-800">Why It Matters</p>
+                            <p className="text-sm text-amber-700">{item.why_it_matters}</p>
+                          </div>
                         )}
                         
                         <div className="flex items-center flex-wrap gap-4 mt-3 text-sm text-muted-foreground">

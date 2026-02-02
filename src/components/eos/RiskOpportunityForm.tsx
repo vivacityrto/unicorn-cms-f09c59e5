@@ -30,6 +30,7 @@ export interface RiskOpportunityFormData {
   item_type: RiskOpportunityType;
   title: string;
   description: string;
+  why_it_matters?: string;
   category: RiskOpportunityCategory | '' | null;
   impact: RiskOpportunityImpact | '' | null;
   status?: RiskOpportunityStatus;
@@ -88,6 +89,7 @@ export function RiskOpportunityForm({
     item_type: initialValues?.item_type || 'risk',
     title: initialValues?.title || '',
     description: initialValues?.description || '',
+    why_it_matters: initialValues?.why_it_matters || '',
     category: initialValues?.category || '',
     impact: initialValues?.impact || '',
     status: initialValues?.status,
@@ -123,6 +125,7 @@ export function RiskOpportunityForm({
         item_type: initialValues.item_type || prev.item_type,
         title: initialValues.title ?? prev.title,
         description: initialValues.description ?? prev.description,
+        why_it_matters: initialValues.why_it_matters ?? prev.why_it_matters,
         category: initialValues.category ?? prev.category,
         impact: initialValues.impact ?? prev.impact,
         status: initialValues.status ?? prev.status,
@@ -191,10 +194,21 @@ export function RiskOpportunityForm({
       <div className="space-y-2">
         <Label>Detail</Label>
         <Textarea 
-          placeholder="What is happening. Why it matters. Impact if ignored."
+          placeholder="What is happening. Any relevant context or background."
           value={formData.description}
           onChange={(e) => setFormData({ ...formData, description: e.target.value })}
           rows={3}
+        />
+      </div>
+
+      {/* Why It Matters */}
+      <div className="space-y-2">
+        <Label>Why It Matters</Label>
+        <Textarea 
+          placeholder="What is the potential impact if this is ignored? Why should we address this?"
+          value={formData.why_it_matters || ''}
+          onChange={(e) => setFormData({ ...formData, why_it_matters: e.target.value })}
+          rows={2}
         />
       </div>
 

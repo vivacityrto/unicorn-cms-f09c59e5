@@ -76,7 +76,32 @@ const baseMenuItemsWithoutDocs = [{
   path: "/manage-packages"
 }];
 const userMenuItems = {
-  main: [...baseMenuItems]
+  main: [...baseMenuItems],
+  eos: [{
+    icon: Target,
+    label: "EOS Overview",
+    path: "/eos"
+  }, {
+    icon: BarChart3,
+    label: "Scorecard",
+    path: "/eos/scorecard"
+  }, {
+    icon: TrendingUp,
+    label: "Rocks",
+    path: "/eos/rocks"
+  }, {
+    icon: Shield,
+    label: "Risks & Opportunities",
+    path: "/eos/risks-opportunities"
+  }, {
+    icon: ListTodo,
+    label: "To-Dos",
+    path: "/eos/todos"
+  }, {
+    icon: Calendar,
+    label: "Meetings",
+    path: "/eos/meetings"
+  }]
 };
 const adminMenuItems = {
   main: [...baseMenuItems],
@@ -84,6 +109,43 @@ const adminMenuItems = {
     icon: Users,
     label: "Manage Team",
     path: "/team-settings"
+  }],
+  eos: [{
+    icon: Target,
+    label: "EOS Overview",
+    path: "/eos"
+  }, {
+    icon: BarChart3,
+    label: "Scorecard",
+    path: "/eos/scorecard"
+  }, {
+    icon: Flag,
+    label: "Mission Control",
+    path: "/eos/vto"
+  }, {
+    icon: TrendingUp,
+    label: "Rocks",
+    path: "/eos/rocks"
+  }, {
+    icon: Rocket,
+    label: "Flight Plan",
+    path: "/eos/flight-plan"
+  }, {
+    icon: Shield,
+    label: "Risks & Opportunities",
+    path: "/eos/risks-opportunities"
+  }, {
+    icon: ListTodo,
+    label: "To-Dos",
+    path: "/eos/todos"
+  }, {
+    icon: Calendar,
+    label: "Meetings",
+    path: "/eos/meetings"
+  }, {
+    icon: Users,
+    label: "Quarterly Conversations",
+    path: "/eos/qc"
   }]
 };
 const superAdminMenuItems = {
