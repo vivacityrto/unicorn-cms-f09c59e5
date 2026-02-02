@@ -47,16 +47,7 @@ export const LiveMeetingView = () => {
   const [facilitatorDialogOpen, setFacilitatorDialogOpen] = useState(false);
   const [segmentNotes, setSegmentNotes] = useState<Record<string, string>>({});
 
-  // Use custom hooks
-  const { segments, isLoading: segmentsLoading, advanceSegment, goToPreviousSegment } = useEosMeetingSegments(meetingId);
-  const { headlines, createHeadline, deleteHeadline } = useEosHeadlines(meetingId);
-  const { issues } = useMeetingIssues(meetingId);
-  const { todos, createTodo, updateTodo } = useMeetingTodos(meetingId);
-  const { saveRating, getUserRating } = useMeetingOutcomes(meetingId);
-  const { rocks } = useEosRocks();
-  const { metrics } = useEosScorecardMetrics();
-
-  // Fetch meeting details
+  // Fetch meeting details first (needed for tenant_id)
   const { data: meeting, isLoading: meetingLoading } = useQuery({
     queryKey: ['eos-meeting', meetingId],
     queryFn: async () => {
@@ -70,6 +61,15 @@ export const LiveMeetingView = () => {
     },
     enabled: !!meetingId,
   });
+
+  // Use custom hooks
+  const { segments, isLoading: segmentsLoading, advanceSegment, goToPreviousSegment } = useEosMeetingSegments(meetingId);
+  const { headlines, createHeadline, deleteHeadline } = useEosHeadlines(meetingId);
+  const { issues } = useMeetingIssues(meetingId, meeting?.tenant_id);
+  const { todos, createTodo, updateTodo } = useMeetingTodos(meetingId);
+  const { saveRating, getUserRating } = useMeetingOutcomes(meetingId);
+  const { rocks } = useEosRocks();
+  const { metrics } = useEosScorecardMetrics();
 
   // Fetch participants with explicit FK join
   const { data: participants } = useQuery({
@@ -460,6 +460,7 @@ export const LiveMeetingView = () => {
               onSelectIssue={handleSelectIssue}
               onCreateIssue={() => setCreateIssueOpen(true)}
               isFacilitator={isFacilitator}
+              currentMeetingId={meetingId}
             />
           </Card>
         );
@@ -787,6 +788,7 @@ export const LiveMeetingView = () => {
               onSelectIssue={handleSelectIssue}
               onCreateIssue={() => setCreateIssueOpen(true)}
               isFacilitator={isFacilitator}
+              currentMeetingId={meetingId}
             />
           </div>
         </div>
