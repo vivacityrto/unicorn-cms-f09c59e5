@@ -67,16 +67,24 @@ export function useTenantCSCAssignment(tenantId: number | null) {
   const { data: availableCSCs = [], isLoading: isLoadingCSCs } = useQuery({
     queryKey: ['vivacity-team-users'],
     queryFn: async () => {
+      // Query users who have 'client_success' in their staff_teams array OR staff_team field
       const { data, error } = await supabase
         .from('users')
-        .select('user_uuid, first_name, last_name, email, job_title, avatar_url')
+        .select('user_uuid, first_name, last_name, email, job_title, avatar_url, staff_teams, staff_team')
         .eq('disabled', false)
         .eq('archived', false)
-        .eq('staff_team', 'client_success')
         .order('first_name', { ascending: true });
       
       if (error) throw error;
-      return (data || []) as CSCUser[];
+      
+      // Filter to users with client_success in either staff_teams array or staff_team field
+      const cscUsers = (data || []).filter(user => {
+        const hasInTeams = user.staff_teams?.includes('client_success');
+        const hasInTeam = user.staff_team === 'client_success';
+        return hasInTeams || hasInTeam;
+      });
+      
+      return cscUsers as CSCUser[];
     },
   });
 

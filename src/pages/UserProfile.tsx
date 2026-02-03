@@ -34,6 +34,7 @@ interface UserData {
   last_sign_in_at: string | null;
   tenant_name?: string | null;
   staff_team?: string | null;
+  staff_teams?: string[] | null;  // New array field for multiple teams
   // CSC fields
   linkedin_url?: string | null;
   booking_url?: string | null;
@@ -117,6 +118,7 @@ export default function UserProfile() {
           updated_at,
           last_sign_in_at,
           staff_team,
+          staff_teams,
           linkedin_url,
           booking_url,
           working_days,
@@ -142,6 +144,7 @@ export default function UserProfile() {
         ...rawData,
         tenant_name: rawData.tenants?.name || null,
         staff_team: rawData.staff_team || null,
+        staff_teams: rawData.staff_teams || null,
         working_days: rawData.working_days as string[] | null,
         working_hours: rawData.working_hours as { start: string; end: string } | null,
         leave_from: rawData.leave_from || null,
