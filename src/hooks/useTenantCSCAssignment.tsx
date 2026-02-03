@@ -63,11 +63,17 @@ export function useTenantCSCAssignment(tenantId: number | null) {
     enabled: !!tenantId,
   });
 
-  // Fetch available CSC users via RPC
+  // Fetch all Vivacity Team users (staff who can be assigned as CSC)
   const { data: availableCSCs = [], isLoading: isLoadingCSCs } = useQuery({
-    queryKey: ['available-csc-users'],
+    queryKey: ['vivacity-team-users'],
     queryFn: async () => {
-      const { data, error } = await supabase.rpc('get_csc_users');
+      const { data, error } = await supabase
+        .from('users')
+        .select('user_uuid, first_name, last_name, email, job_title, avatar_url')
+        .eq('is_team', true)
+        .eq('disabled', false)
+        .order('first_name', { ascending: true });
+      
       if (error) throw error;
       return (data || []) as CSCUser[];
     },
