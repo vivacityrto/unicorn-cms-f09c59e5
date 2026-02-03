@@ -17395,7 +17395,9 @@ export type Database = {
       is_user_super_admin: { Args: { user_id: string }; Returns: boolean }
       is_vivacity: { Args: never; Returns: boolean }
       is_vivacity_super_admin: { Args: never; Returns: boolean }
-      is_vivacity_team: { Args: { p_user_id?: string }; Returns: boolean }
+      is_vivacity_team:
+        | { Args: never; Returns: boolean }
+        | { Args: { p_user_id?: string }; Returns: boolean }
       is_vivacity_user: { Args: never; Returns: boolean }
       list_meeting_summaries_for_client: {
         Args: { p_client_id: string; p_limit?: number; p_offset?: number }
