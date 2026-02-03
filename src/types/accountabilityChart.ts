@@ -61,8 +61,14 @@ export interface AccountabilityFunction {
   function_type?: EosFunctionType | null;
   description?: string | null;
   sort_order: number;
+  parent_function_id?: string | null;
   created_at: string;
   updated_at: string;
+}
+
+// Extended function type with nested children
+export interface FunctionWithChildren extends AccountabilityFunction {
+  children: FunctionWithSeats[];
 }
 
 export interface AccountabilitySeat {
@@ -150,6 +156,7 @@ export interface CreateFunctionInput {
   function_type?: EosFunctionType;
   description?: string;
   sort_order?: number;
+  parent_function_id?: string | null;
 }
 
 export interface CreateSeatInput {

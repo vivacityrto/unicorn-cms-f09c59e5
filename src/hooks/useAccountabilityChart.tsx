@@ -220,17 +220,33 @@ export function useAccountabilityChart() {
     },
   });
 
-  // Add function
+  // Add function (top-level or sub-function)
   const addFunction = useMutation({
     mutationFn: async (input: CreateFunctionInput) => {
       if (!tenantId) throw new Error('Not authenticated');
+
+      // Calculate sort_order: count existing functions at same parent level
+      let sortOrder = input.sort_order;
+      if (sortOrder === undefined) {
+        if (input.parent_function_id) {
+          // Count children of this parent
+          const parentFunc = chart?.functions.find(f => f.id === input.parent_function_id);
+          const siblingCount = chart?.functions.filter(f => f.parent_function_id === input.parent_function_id).length ?? 0;
+          sortOrder = siblingCount;
+        } else {
+          // Count top-level functions
+          const topLevelCount = chart?.functions.filter(f => !f.parent_function_id).length ?? 0;
+          sortOrder = topLevelCount;
+        }
+      }
 
       const { data, error } = await supabase
         .from('accountability_functions')
         .insert({
           ...input,
           tenant_id: tenantId,
-          sort_order: input.sort_order ?? (chart?.functions.length ?? 0),
+          sort_order: sortOrder,
+          parent_function_id: input.parent_function_id ?? null,
         })
         .select()
         .single();
@@ -238,9 +254,9 @@ export function useAccountabilityChart() {
       if (error) throw error;
       return data;
     },
-    onSuccess: () => {
+    onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['accountability-chart'] });
-      toast({ title: 'Function added' });
+      toast({ title: variables.parent_function_id ? 'Sub-function added' : 'Function added' });
     },
     onError: (error: Error) => {
       toast({ title: 'Error adding function', description: error.message, variant: 'destructive' });
@@ -671,6 +687,36 @@ export function useAccountabilityChart() {
     },
   });
 
+  // Move function to different parent (or to top-level)
+  const moveFunction = useMutation({
+    mutationFn: async ({ 
+      functionId, 
+      newParentId, 
+      newIndex 
+    }: { 
+      functionId: string; 
+      newParentId: string | null; 
+      newIndex: number;
+    }) => {
+      const { error } = await supabase
+        .from('accountability_functions')
+        .update({ 
+          parent_function_id: newParentId,
+          sort_order: newIndex 
+        })
+        .eq('id', functionId);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['accountability-chart'] });
+      toast({ title: 'Function moved' });
+    },
+    onError: (error: Error) => {
+      toast({ title: 'Error moving function', description: error.message, variant: 'destructive' });
+    },
+  });
+
   return {
     chart,
     isLoading,
@@ -682,6 +728,7 @@ export function useAccountabilityChart() {
     addFunction,
     updateFunction,
     deleteFunction,
+    moveFunction,
     addSeat,
     updateSeat,
     deleteSeat,

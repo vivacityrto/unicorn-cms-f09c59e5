@@ -108,6 +108,7 @@ export type Database = {
           function_type: Database["public"]["Enums"]["eos_function_type"] | null
           id: string
           name: string
+          parent_function_id: string | null
           sort_order: number
           tenant_id: number
           updated_at: string
@@ -121,6 +122,7 @@ export type Database = {
             | null
           id?: string
           name: string
+          parent_function_id?: string | null
           sort_order?: number
           tenant_id: number
           updated_at?: string
@@ -134,6 +136,7 @@ export type Database = {
             | null
           id?: string
           name?: string
+          parent_function_id?: string | null
           sort_order?: number
           tenant_id?: number
           updated_at?: string
@@ -144,6 +147,13 @@ export type Database = {
             columns: ["chart_id"]
             isOneToOne: false
             referencedRelation: "accountability_charts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "accountability_functions_parent_function_id_fkey"
+            columns: ["parent_function_id"]
+            isOneToOne: false
+            referencedRelation: "accountability_functions"
             referencedColumns: ["id"]
           },
           {

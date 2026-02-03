@@ -50,6 +50,7 @@ export function ChartBuilder() {
     addFunction,
     updateFunction,
     deleteFunction,
+    moveFunction,
     addSeat,
     updateSeat,
     addRole,
@@ -433,9 +434,16 @@ export function ChartBuilder() {
           canEdit={!!canEdit}
           tenantUsers={tenantUsers}
           isAddingFunction={addFunction.isPending}
-          onAddFunction={(name) => addFunction.mutate({ chart_id: chart.id, name })}
+          onAddFunction={(name, parentId) => addFunction.mutate({ 
+            chart_id: chart.id, 
+            name,
+            parent_function_id: parentId ?? null,
+          })}
           onUpdateFunction={(id, name) => updateFunction.mutate({ id, name })}
           onDeleteFunction={(id) => deleteFunction.mutate(id)}
+          onMoveFunction={(functionId, newParentId, newIndex) => 
+            moveFunction.mutate({ functionId, newParentId, newIndex })
+          }
           onAddRole={(seatId, text) => addRole.mutate({ seat_id: seatId, role_text: text })}
           onUpdateRole={(id, text) => updateRole.mutate({ id, role_text: text })}
           onDeleteRole={(id) => deleteRole.mutate(id)}
