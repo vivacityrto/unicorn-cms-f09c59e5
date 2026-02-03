@@ -10,7 +10,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
-import { Building2, Users, Search, CheckCircle2, XCircle, Activity, Link as LinkIcon, AlertCircle, Calendar, Package2, UserPlus } from "lucide-react";
+import { Building2, Users, Search, CheckCircle2, XCircle, Activity, Link as LinkIcon, AlertCircle, Calendar, Package2, UserPlus, Archive } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { AddTenantDialog } from "@/components/AddTenantDialog";
@@ -29,18 +29,29 @@ interface Tenant {
   member_count: number;
   csc_name?: string | null;
   csc_avatar?: string | null;
+  csc_user_id?: string | null;
+  csc_archived?: boolean;
   package_name?: string | null;
   package_full_text?: string | null;
   package_id?: number | null;
   state?: string | null;
+}
+
+interface CSCFilterOption {
+  user_uuid: string;
+  first_name: string;
+  last_name: string;
+  archived: boolean;
 }
 export default function ManageTenants() {
   const [tenants, setTenants] = useState<Tenant[]>([]);
   const [filteredTenants, setFilteredTenants] = useState<Tenant[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [statusFilter, setStatusFilter] = useState<string>("active"); // Default to active
   const [packageFilter, setPackageFilter] = useState<string>("all");
+  const [cscFilter, setCscFilter] = useState<string>("all");
+  const [cscFilterOptions, setCscFilterOptions] = useState<CSCFilterOption[]>([]);
   const [packages, setPackages] = useState<{
     id: number;
     name: string;
@@ -83,6 +94,7 @@ export default function ManageTenants() {
   useEffect(() => {
     fetchTenants();
     fetchPackages();
+    fetchCSCOptions();
     checkConnectedTenant();
   }, []);
   const checkConnectedTenant = async () => {
@@ -137,7 +149,7 @@ export default function ManageTenants() {
   useEffect(() => {
     applyFiltersAndSort();
     setCurrentPage(1);
-  }, [tenants, searchQuery, statusFilter, packageFilter, sortField]);
+  }, [tenants, searchQuery, statusFilter, packageFilter, cscFilter, sortField]);
   const fetchTenants = async () => {
     try {
       setLoading(true);
@@ -224,18 +236,19 @@ export default function ManageTenants() {
         return acc;
       }, {} as Record<number, string>);
 
-      // Batch fetch all CSC user names and avatars
+      // Batch fetch all CSC user names, avatars, and archived status
       const userUuids = Object.values(cscMap).filter(Boolean);
       const {
         data: usersData
-      } = await supabase.from("users").select("user_uuid, first_name, last_name, avatar_url").in("user_uuid", userUuids);
+      } = await supabase.from("users").select("user_uuid, first_name, last_name, avatar_url, archived").in("user_uuid", userUuids);
       const userDataMap = (usersData || []).reduce((acc, user) => {
         acc[user.user_uuid] = {
           name: `${user.first_name} ${user.last_name}`,
-          avatar: user.avatar_url
+          avatar: user.avatar_url,
+          archived: user.archived || false
         };
         return acc;
-      }, {} as Record<string, { name: string; avatar: string | null }>);
+      }, {} as Record<string, { name: string; avatar: string | null; archived: boolean }>);
 
       // Fetch state from first admin user for each tenant with state name
       const {
@@ -266,11 +279,14 @@ export default function ManageTenants() {
       const tenantsWithCounts = tenantsData.map(tenant => {
         const activePackages = tenantPackagesMap[tenant.id] || [];
         const firstPackage = activePackages[0];
+        const cscUserId = cscMap[tenant.id];
         return {
           ...tenant,
           member_count: memberCountMap[tenant.id] || 0,
-          csc_name: cscMap[tenant.id] ? userDataMap[cscMap[tenant.id]]?.name : null,
-          csc_avatar: cscMap[tenant.id] ? userDataMap[cscMap[tenant.id]]?.avatar : null,
+          csc_user_id: cscUserId || null,
+          csc_name: cscUserId ? userDataMap[cscUserId]?.name : null,
+          csc_avatar: cscUserId ? userDataMap[cscUserId]?.avatar : null,
+          csc_archived: cscUserId ? userDataMap[cscUserId]?.archived : false,
           package_name: firstPackage?.name || null,
           package_full_text: firstPackage?.full_text || null,
           package_id: firstPackage?.id || null,
@@ -308,6 +324,36 @@ export default function ManageTenants() {
       setPackages(data || []);
     } catch (error: any) {
       console.error("Error fetching packages:", error);
+    }
+  };
+
+  const fetchCSCOptions = async () => {
+    try {
+      // Fetch CSC users - those with client_success in staff_teams or staff_team
+      const { data, error } = await supabase
+        .from("users")
+        .select("user_uuid, first_name, last_name, staff_teams, staff_team, archived")
+        .eq("disabled", false)
+        .order("archived", { ascending: true })
+        .order("first_name", { ascending: true });
+      
+      if (error) throw error;
+      
+      // Filter to users with client_success
+      const cscUsers = (data || []).filter(user => {
+        const hasInTeams = user.staff_teams?.includes('client_success');
+        const hasInTeam = user.staff_team === 'client_success';
+        return hasInTeams || hasInTeam;
+      });
+      
+      setCscFilterOptions(cscUsers.map(u => ({
+        user_uuid: u.user_uuid,
+        first_name: u.first_name,
+        last_name: u.last_name,
+        archived: u.archived || false
+      })));
+    } catch (error: any) {
+      console.error("Error fetching CSC options:", error);
     }
   };
 
@@ -370,6 +416,11 @@ export default function ManageTenants() {
     // Apply package filter
     if (packageFilter !== "all") {
       filtered = filtered.filter(tenant => tenant.package_id?.toString() === packageFilter);
+    }
+
+    // Apply CSC filter
+    if (cscFilter !== "all") {
+      filtered = filtered.filter(tenant => tenant.csc_user_id === cscFilter);
     }
 
     // Apply sorting
@@ -670,6 +721,33 @@ export default function ManageTenants() {
 
         <Combobox 
           options={[
+            { value: "all", label: "All CSC", icon: Users, iconColor: "text-muted-foreground" },
+            ...cscFilterOptions.filter(u => !u.archived).map(csc => ({
+              value: csc.user_uuid,
+              label: `${csc.first_name} ${csc.last_name}`,
+              icon: Users,
+              iconColor: "text-primary"
+            })),
+            ...cscFilterOptions.filter(u => u.archived).map(csc => ({
+              value: csc.user_uuid,
+              label: `${csc.first_name} ${csc.last_name}`,
+              badge: "Archived",
+              icon: Archive,
+              iconColor: "text-muted-foreground"
+            }))
+          ]} 
+          value={cscFilter} 
+          onValueChange={setCscFilter} 
+          placeholder="Filter by CSC..." 
+          searchPlaceholder="Search CSC..." 
+          emptyText="No CSC users found." 
+          className="w-full md:w-[220px] h-[48px]"
+          showIcons
+          showSeparators
+        />
+
+        <Combobox 
+          options={[
             { value: "all", label: "All Status", icon: Activity, iconColor: "text-muted-foreground" },
             { value: "active", label: "Active", icon: CheckCircle2, iconColor: "text-green-600" },
             { value: "inactive", label: "Inactive", icon: XCircle, iconColor: "text-red-600" }
@@ -779,7 +857,7 @@ export default function ManageTenants() {
                           <Tooltip>
                             <TooltipTrigger asChild>
                               <div className={cn(
-                                "flex justify-center",
+                                "flex flex-col items-center gap-1",
                                 (isSuperAdmin || isTeamLeader) && "cursor-pointer hover:opacity-80"
                               )}>
                                 <Avatar className="h-9 w-9">
@@ -788,10 +866,19 @@ export default function ManageTenants() {
                                     {tenant.csc_name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
                                   </AvatarFallback>
                                 </Avatar>
+                                {tenant.csc_archived && (
+                                  <Badge variant="secondary" className="text-[9px] px-1 py-0 h-3.5">
+                                    <Archive className="h-2 w-2 mr-0.5" />
+                                    Archived
+                                  </Badge>
+                                )}
                               </div>
                             </TooltipTrigger>
                             <TooltipContent>
                               <p>{tenant.csc_name}</p>
+                              {tenant.csc_archived && (
+                                <p className="text-xs text-amber-500">This CSC is archived</p>
+                              )}
                               {(isSuperAdmin || isTeamLeader) && (
                                 <p className="text-xs text-muted-foreground">Click to change</p>
                               )}

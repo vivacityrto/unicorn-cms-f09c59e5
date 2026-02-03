@@ -9,9 +9,10 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Check, Loader2, UserX, Users } from 'lucide-react';
+import { Check, Loader2, UserX, Users, Archive } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Badge } from '@/components/ui/badge';
 
 interface CSCQuickAssignDialogProps {
   open: boolean;
@@ -88,7 +89,8 @@ export function CSCQuickAssignDialog({
             </div>
           ) : (
             <div className="space-y-2 max-h-[300px] overflow-y-auto">
-              {availableCSCs.map((user) => {
+              {/* Active CSC users first */}
+              {availableCSCs.filter(u => !u.archived).map((user) => {
                 const isSelected = currentUser?.user_uuid === user.user_uuid;
                 return (
                   <button
@@ -128,6 +130,63 @@ export function CSCQuickAssignDialog({
                   </button>
                 );
               })}
+              
+              {/* Archived CSC users - separated at bottom */}
+              {availableCSCs.filter(u => u.archived).length > 0 && (
+                <>
+                  <div className="flex items-center gap-2 py-2 px-1">
+                    <div className="h-px flex-1 bg-border" />
+                    <span className="text-xs text-muted-foreground">Archived</span>
+                    <div className="h-px flex-1 bg-border" />
+                  </div>
+                  {availableCSCs.filter(u => u.archived).map((user) => {
+                    const isSelected = currentUser?.user_uuid === user.user_uuid;
+                    return (
+                      <button
+                        key={user.user_uuid}
+                        onClick={() => handleSelect(user)}
+                        disabled={isPending}
+                        className={cn(
+                          "flex items-center gap-3 w-full p-3 rounded-lg text-left transition-colors",
+                          "border hover:bg-muted opacity-70",
+                          isSelected && "border-primary bg-primary/5",
+                          isPending && "opacity-50 cursor-not-allowed"
+                        )}
+                      >
+                        <Avatar className="h-10 w-10">
+                          <AvatarImage src={user.avatar_url || undefined} />
+                          <AvatarFallback>
+                            {`${user.first_name?.[0] || ''}${user.last_name?.[0] || ''}`.toUpperCase()}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <p className="text-sm font-medium truncate">
+                              {`${user.first_name} ${user.last_name}`}
+                            </p>
+                            <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-4">
+                              <Archive className="h-2.5 w-2.5 mr-0.5" />
+                              Archived
+                            </Badge>
+                          </div>
+                          <p className="text-xs text-muted-foreground truncate">
+                            {user.job_title || user.email}
+                          </p>
+                        </div>
+                        {isSelected && (
+                          <div className="flex items-center gap-2 shrink-0">
+                            <span className="text-xs text-primary font-medium">Current</span>
+                            <Check className="h-4 w-4 text-primary" />
+                          </div>
+                        )}
+                        {isPending && isSelected && (
+                          <Loader2 className="h-4 w-4 animate-spin shrink-0" />
+                        )}
+                      </button>
+                    );
+                  })}
+                </>
+              )}
             </div>
           )}
         </div>
