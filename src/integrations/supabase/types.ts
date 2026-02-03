@@ -10812,6 +10812,216 @@ export type Database = {
           },
         ]
       }
+      seat_measurable_entries: {
+        Row: {
+          actual_value: number
+          comparison_type_stored: string
+          entered_at: string
+          entered_by: string
+          id: string
+          notes: string | null
+          seat_measurable_id: string
+          status: string
+          target_value_stored: number
+          tenant_id: number
+          week_start_date: string
+        }
+        Insert: {
+          actual_value: number
+          comparison_type_stored: string
+          entered_at?: string
+          entered_by: string
+          id?: string
+          notes?: string | null
+          seat_measurable_id: string
+          status?: string
+          target_value_stored: number
+          tenant_id: number
+          week_start_date: string
+        }
+        Update: {
+          actual_value?: number
+          comparison_type_stored?: string
+          entered_at?: string
+          entered_by?: string
+          id?: string
+          notes?: string | null
+          seat_measurable_id?: string
+          status?: string
+          target_value_stored?: number
+          tenant_id?: number
+          week_start_date?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "seat_measurable_entries_seat_measurable_id_fkey"
+            columns: ["seat_measurable_id"]
+            isOneToOne: false
+            referencedRelation: "seat_measurables"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "seat_measurable_entries_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      seat_measurables: {
+        Row: {
+          comparison_type: string
+          created_at: string
+          frequency: string
+          id: string
+          is_active: boolean
+          name: string
+          seat_scorecard_id: string
+          sort_order: number
+          target_value: number
+          tenant_id: number
+          unit: string | null
+          updated_at: string
+        }
+        Insert: {
+          comparison_type?: string
+          created_at?: string
+          frequency?: string
+          id?: string
+          is_active?: boolean
+          name: string
+          seat_scorecard_id: string
+          sort_order?: number
+          target_value: number
+          tenant_id: number
+          unit?: string | null
+          updated_at?: string
+        }
+        Update: {
+          comparison_type?: string
+          created_at?: string
+          frequency?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          seat_scorecard_id?: string
+          sort_order?: number
+          target_value?: number
+          tenant_id?: number
+          unit?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "seat_measurables_seat_scorecard_id_fkey"
+            columns: ["seat_scorecard_id"]
+            isOneToOne: false
+            referencedRelation: "seat_scorecards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "seat_measurables_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      seat_scorecard_versions: {
+        Row: {
+          change_summary: string
+          created_at: string
+          created_by: string
+          id: string
+          seat_scorecard_id: string
+          tenant_id: number
+          version_number: number
+        }
+        Insert: {
+          change_summary: string
+          created_at?: string
+          created_by: string
+          id?: string
+          seat_scorecard_id: string
+          tenant_id: number
+          version_number?: number
+        }
+        Update: {
+          change_summary?: string
+          created_at?: string
+          created_by?: string
+          id?: string
+          seat_scorecard_id?: string
+          tenant_id?: number
+          version_number?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "seat_scorecard_versions_seat_scorecard_id_fkey"
+            columns: ["seat_scorecard_id"]
+            isOneToOne: false
+            referencedRelation: "seat_scorecards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "seat_scorecard_versions_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      seat_scorecards: {
+        Row: {
+          created_at: string
+          created_by: string
+          current_version_id: string | null
+          id: string
+          seat_id: string
+          status: string
+          tenant_id: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          current_version_id?: string | null
+          id?: string
+          seat_id: string
+          status?: string
+          tenant_id: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          current_version_id?: string | null
+          id?: string
+          seat_id?: string
+          status?: string
+          tenant_id?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "seat_scorecards_seat_id_fkey"
+            columns: ["seat_id"]
+            isOneToOne: true
+            referencedRelation: "accountability_seats"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "seat_scorecards_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       skillset_cache: {
         Row: {
           data: Json
