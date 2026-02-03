@@ -6,7 +6,12 @@ import type { NextMeetingData } from '@/components/eos/leadership/NextMeetingCar
 const VIVACITY_TENANT_ID = 6372;
 
 /**
- * Fetches the next upcoming EOS meeting with quorum forecast
+ * Fetches the next upcoming EOS meeting with quorum forecast based on Accountability Chart seats.
+ * 
+ * Quorum calculation:
+ * - Integrator must be present (L10 meetings)
+ * - Visionary should be present (nice to have)
+ * - >= 60% of required seats (is_required_for_quorum = true) must have owners present
  */
 export function useNextMeeting() {
   return useQuery({
@@ -43,10 +48,10 @@ export function useNextMeeting() {
 
       const meeting = meetings[0];
 
-      // Fetch attendees for this meeting
+      // Fetch attendees for this meeting with their seat_id
       const { data: attendees, error: attendeesError } = await supabase
         .from('eos_meeting_attendees')
-        .select('user_id, attendance_status, role_in_meeting')
+        .select('user_id, attendance_status, role_in_meeting, seat_id')
         .eq('meeting_id', meeting.id);
 
       if (attendeesError) {
@@ -60,17 +65,18 @@ export function useNextMeeting() {
         a.attendance_status === 'attended'
       ).length;
 
-      // Fetch seats to identify Integrator and Visionary
+      // Fetch seats marked as required for quorum OR with Integrator/Visionary roles
       const { data: seats, error: seatsError } = await supabase
         .from('accountability_seats')
         .select(`
           id,
           seat_name,
           eos_role_type,
+          is_required_for_quorum,
           accountability_seat_assignments!inner(user_id, assignment_type, end_date)
         `)
         .eq('tenant_id', VIVACITY_TENANT_ID)
-        .in('eos_role_type', ['visionary', 'integrator']);
+        .or('eos_role_type.in.(visionary,integrator),is_required_for_quorum.eq.true');
 
       if (seatsError) {
         console.error('Error fetching seats:', seatsError);
@@ -78,20 +84,30 @@ export function useNextMeeting() {
 
       const seatList = seats || [];
       
-      // Find Integrator and Visionary user IDs
+      // Find Integrator and Visionary user IDs (from seat primary owners)
       let integratorUserId: string | null = null;
       let visionaryUserId: string | null = null;
+      const quorumRequiredSeats: { seatId: string; seatName: string; userId: string | null }[] = [];
 
       seatList.forEach((seat: any) => {
         const primaryAssignment = seat.accountability_seat_assignments?.find(
           (a: any) => a.assignment_type === 'Primary' && !a.end_date
         );
-        if (primaryAssignment) {
-          if (seat.eos_role_type === 'integrator') {
-            integratorUserId = primaryAssignment.user_id;
-          } else if (seat.eos_role_type === 'visionary') {
-            visionaryUserId = primaryAssignment.user_id;
-          }
+        const userId = primaryAssignment?.user_id || null;
+        
+        if (seat.eos_role_type === 'integrator') {
+          integratorUserId = userId;
+        } else if (seat.eos_role_type === 'visionary') {
+          visionaryUserId = userId;
+        }
+        
+        // Track all quorum-required seats
+        if (seat.is_required_for_quorum || seat.eos_role_type === 'integrator' || seat.eos_role_type === 'visionary') {
+          quorumRequiredSeats.push({ 
+            seatId: seat.id, 
+            seatName: seat.seat_name,
+            userId 
+          });
         }
       });
 
@@ -108,31 +124,47 @@ export function useNextMeeting() {
 
       // Identify missing required seat roles
       const missingSeatRoles: string[] = [];
-      if (integratorUserId && !integratorPresent) {
-        missingSeatRoles.push('Integrator');
-      }
-      if (visionaryUserId && !visionaryPresent) {
-        missingSeatRoles.push('Visionary');
-      }
+      quorumRequiredSeats.forEach(seat => {
+        if (seat.userId) {
+          const isPresent = attendeeList.some(a => 
+            a.user_id === seat.userId && 
+            ['accepted', 'attended'].includes(a.attendance_status || '')
+          );
+          if (!isPresent) {
+            missingSeatRoles.push(seat.seatName);
+          }
+        } else {
+          missingSeatRoles.push(`${seat.seatName} (unassigned)`);
+        }
+      });
 
-      // Calculate quorum forecast
-      // Quorum: 50%+ of expected + Integrator present for L10
-      const attendanceRate = expectedAttendees > 0 
-        ? confirmedAttendees / expectedAttendees 
-        : 0;
+      // Calculate quorum forecast based on seats
+      // Quorum: 60%+ of required seats present + Integrator present for L10
+      const requiredSeatsCount = quorumRequiredSeats.length;
+      const presentRequiredSeats = quorumRequiredSeats.filter(seat => 
+        seat.userId && attendeeList.some(a => 
+          a.user_id === seat.userId && 
+          ['accepted', 'attended'].includes(a.attendance_status || '')
+        )
+      ).length;
+      
+      const seatAttendanceRate = requiredSeatsCount > 0 
+        ? presentRequiredSeats / requiredSeatsCount 
+        : 1;
       
       let quorumForecast: 'likely' | 'at_risk' | 'unlikely' = 'likely';
       
       if (meeting.meeting_type === 'L10') {
-        if (attendanceRate < 0.5 || !integratorPresent) {
-          quorumForecast = attendanceRate < 0.3 || (!integratorPresent && attendanceRate < 0.5) 
+        // L10 requires Integrator + 60% of required seats
+        if (!integratorPresent || seatAttendanceRate < 0.6) {
+          quorumForecast = (!integratorPresent && seatAttendanceRate < 0.4) 
             ? 'unlikely' 
             : 'at_risk';
         }
       } else {
         // For Quarterly/Annual, more lenient
-        if (attendanceRate < 0.4) {
-          quorumForecast = attendanceRate < 0.25 ? 'unlikely' : 'at_risk';
+        if (seatAttendanceRate < 0.5) {
+          quorumForecast = seatAttendanceRate < 0.3 ? 'unlikely' : 'at_risk';
         }
       }
 
@@ -144,7 +176,7 @@ export function useNextMeeting() {
         expectedAttendees,
         confirmedAttendees,
         quorumForecast,
-        missingSeatRoles,
+        missingSeatRoles: missingSeatRoles.slice(0, 5), // Limit to 5 for display
         integratorPresent,
         visionaryPresent,
       };
