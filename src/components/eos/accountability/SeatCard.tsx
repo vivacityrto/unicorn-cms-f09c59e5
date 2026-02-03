@@ -212,22 +212,30 @@ export function SeatCard({
                       Assign Primary
                     </Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent>
+                  <DropdownMenuContent className="max-h-64 overflow-y-auto">
                     {availableUsers.length === 0 ? (
-                      <DropdownMenuItem disabled>No users available</DropdownMenuItem>
+                      <DropdownMenuItem disabled>
+                        <span className="text-muted-foreground">No Vivacity Team users available</span>
+                      </DropdownMenuItem>
                     ) : (
                       availableUsers.map(user => (
                         <DropdownMenuItem
                           key={user.user_uuid}
                           onClick={() => onAssign(seat.id, user.user_uuid, 'Primary')}
+                          className="flex flex-col items-start py-2"
                         >
-                          <Avatar className="h-5 w-5 mr-2">
-                            <AvatarImage src={user.avatar_url} />
-                            <AvatarFallback className="text-[8px]">
-                              {getInitials(user)}
-                            </AvatarFallback>
-                          </Avatar>
-                          {getUserName(user)}
+                          <div className="flex items-center gap-2 w-full">
+                            <Avatar className="h-6 w-6">
+                              <AvatarImage src={user.avatar_url} />
+                              <AvatarFallback className="text-[8px]">
+                                {getInitials(user)}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div className="flex flex-col min-w-0">
+                              <span className="font-medium text-sm truncate">{getUserName(user)}</span>
+                              <span className="text-xs text-muted-foreground truncate">{user.email}</span>
+                            </div>
+                          </div>
                         </DropdownMenuItem>
                       ))
                     )}
@@ -377,19 +385,25 @@ export function SeatCard({
                     Add Secondary
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent>
+                <DropdownMenuContent className="max-h-64 overflow-y-auto">
                   {availableUsers.map(user => (
                     <DropdownMenuItem
                       key={user.user_uuid}
                       onClick={() => onAssign(seat.id, user.user_uuid, 'Secondary')}
+                      className="flex flex-col items-start py-2"
                     >
-                      <Avatar className="h-5 w-5 mr-2">
-                        <AvatarImage src={user.avatar_url} />
-                        <AvatarFallback className="text-[8px]">
-                          {getInitials(user)}
-                        </AvatarFallback>
-                      </Avatar>
-                      {getUserName(user)}
+                      <div className="flex items-center gap-2 w-full">
+                        <Avatar className="h-6 w-6">
+                          <AvatarImage src={user.avatar_url} />
+                          <AvatarFallback className="text-[8px]">
+                            {getInitials(user)}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="flex flex-col min-w-0">
+                          <span className="font-medium text-sm truncate">{getUserName(user)}</span>
+                          <span className="text-xs text-muted-foreground truncate">{user.email}</span>
+                        </div>
+                      </div>
                     </DropdownMenuItem>
                   ))}
                 </DropdownMenuContent>

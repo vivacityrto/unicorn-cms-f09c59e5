@@ -222,8 +222,8 @@ export function DraggableFunctionColumn({
           ))}
         </SortableContext>
 
-        {/* Empty State */}
-        {func.seats.length === 0 && (
+        {/* Empty State - only show when not adding a seat */}
+        {func.seats.length === 0 && !isAddingSeat && (
           <div className="flex flex-col items-center justify-center py-8 text-center">
             <p className="text-sm text-muted-foreground mb-2">No seats yet</p>
             {canEdit && (
@@ -240,51 +240,52 @@ export function DraggableFunctionColumn({
           </div>
         )}
 
-        {/* Add seat */}
-        {canEdit && func.seats.length > 0 && (
-          isAddingSeat ? (
-            <div className="p-2 border rounded-lg bg-background">
-              <Input
-                placeholder="Seat name..."
-                value={newSeatName}
-                onChange={(e) => setNewSeatName(e.target.value)}
-                className="h-8 mb-2"
-                autoFocus
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') handleAddSeat();
-                  if (e.key === 'Escape') {
-                    setIsAddingSeat(false);
-                    setNewSeatName('');
-                  }
+        {/* Add seat form - shows for both empty and non-empty states */}
+        {canEdit && isAddingSeat && (
+          <div className="p-2 border rounded-lg bg-background">
+            <Input
+              placeholder="Seat name..."
+              value={newSeatName}
+              onChange={(e) => setNewSeatName(e.target.value)}
+              className="h-8 mb-2"
+              autoFocus
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') handleAddSeat();
+                if (e.key === 'Escape') {
+                  setIsAddingSeat(false);
+                  setNewSeatName('');
+                }
+              }}
+            />
+            <div className="flex gap-1">
+              <Button size="sm" className="h-7 flex-1" onClick={handleAddSeat}>
+                Add
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-7"
+                onClick={() => {
+                  setIsAddingSeat(false);
+                  setNewSeatName('');
                 }}
-              />
-              <div className="flex gap-1">
-                <Button size="sm" className="h-7 flex-1" onClick={handleAddSeat}>
-                  Add
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="h-7"
-                  onClick={() => {
-                    setIsAddingSeat(false);
-                    setNewSeatName('');
-                  }}
-                >
-                  Cancel
-                </Button>
-              </div>
+              >
+                Cancel
+              </Button>
             </div>
-          ) : (
-            <Button
-              variant="ghost"
-              className="w-full h-8 border-dashed border text-xs gap-1"
-              onClick={() => setIsAddingSeat(true)}
-            >
-              <Plus className="h-3 w-3" />
-              Add Seat
-            </Button>
-          )
+          </div>
+        )}
+
+        {/* Add seat button - only show when there are existing seats and not adding */}
+        {canEdit && func.seats.length > 0 && !isAddingSeat && (
+          <Button
+            variant="ghost"
+            className="w-full h-8 border-dashed border text-xs gap-1"
+            onClick={() => setIsAddingSeat(true)}
+          >
+            <Plus className="h-3 w-3" />
+            Add Seat
+          </Button>
         )}
       </div>
     </div>
