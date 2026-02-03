@@ -14764,15 +14764,25 @@ export type Database = {
         Args: { p_role_type: string; p_tenant_id?: number; p_user_uuid: string }
         Returns: Json
       }
-      admin_set_tenant_csc_assignment: {
-        Args: {
-          p_csc_user_id: string
-          p_is_primary?: boolean
-          p_role_label?: string
-          p_tenant_id: number
-        }
-        Returns: Json
-      }
+      admin_set_tenant_csc_assignment:
+        | {
+            Args: {
+              p_csc_user_id: string
+              p_is_primary?: boolean
+              p_role_label?: string
+              p_tenant_id: number
+            }
+            Returns: Json
+          }
+        | {
+            Args: {
+              p_csc_user_id: string
+              p_is_primary?: boolean
+              p_role_label?: string
+              p_tenant_id: number
+            }
+            Returns: Json
+          }
       admin_update_csc_profile: {
         Args: {
           p_availability_note?: string
