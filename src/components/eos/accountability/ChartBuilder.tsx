@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -37,10 +37,10 @@ import { SeatDetailPanel } from './SeatDetailPanel';
 import { AccountabilityGaps } from './AccountabilityGaps';
 import { OrgChartView } from './OrgChartView';
 import { STATUS_COLORS, type ChartStatus, type UserBasic, type SeatWithDetails } from '@/types/accountabilityChart';
-import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useFacilitatorMode } from '@/contexts/FacilitatorModeContext';
 import { EmptyState } from '@/components/ui/empty-state';
+import { useVivacityTeamUsers } from '@/hooks/useVivacityTeamUsers';
 
 export function ChartBuilder() {
   const { profile, isSuperAdmin } = useAuth();
@@ -65,11 +65,25 @@ export function ChartBuilder() {
     updateStatus,
   } = useAccountabilityChart();
 
+  // Fetch Vivacity Team users only (EOS is internal-only)
+  const { data: vivacityTeamUsers = [], isLoading: isLoadingUsers } = useVivacityTeamUsers();
+  
+  // Convert to UserBasic format for compatibility
+  const tenantUsers: UserBasic[] = useMemo(() => 
+    vivacityTeamUsers.map(u => ({
+      user_uuid: u.user_uuid,
+      first_name: u.first_name,
+      last_name: u.last_name,
+      email: u.email,
+      avatar_url: u.avatar_url,
+    })), 
+    [vivacityTeamUsers]
+  );
+
   // Edit is allowed if: has permission AND (Facilitator Mode is ON OR chart is Draft)
   // Once activated, editing requires Facilitator Mode
   const canEdit = hasEditPermission && (isFacilitatorMode || chart?.status === 'Draft' || !chart);
 
-  const [tenantUsers, setTenantUsers] = useState<UserBasic[]>([]);
   const [isAddingFunction, setIsAddingFunction] = useState(false);
   const [newFunctionName, setNewFunctionName] = useState('');
   const [showSaveDialog, setShowSaveDialog] = useState(false);
@@ -78,19 +92,6 @@ export function ChartBuilder() {
   const [viewMode, setViewMode] = useState<'org' | 'builder'>('org');
   const [selectedSeat, setSelectedSeat] = useState<SeatWithDetails | null>(null);
   const [showSeatDetail, setShowSeatDetail] = useState(false);
-
-  // Fetch tenant users (Vivacity team members only for internal EOS)
-  useEffect(() => {
-    if (profile?.tenant_id) {
-      supabase
-        .from('users')
-        .select('user_uuid, first_name, last_name, email, avatar_url')
-        .eq('tenant_id', profile.tenant_id)
-        .then(({ data }) => {
-          setTenantUsers((data || []) as UserBasic[]);
-        });
-    }
-  }, [profile?.tenant_id]);
 
   const handleCreateChart = async () => {
     await createChart.mutateAsync();
