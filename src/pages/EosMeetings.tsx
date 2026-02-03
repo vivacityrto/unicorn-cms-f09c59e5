@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip';
 import { Plus, Calendar, Clock, Users, Play, FileText, Settings, AlertCircle, RefreshCw, Trash2, Zap, Target, LayoutTemplate, ChevronDown, History, Lock, CheckCircle, PlayCircle, Loader2 } from 'lucide-react';
 import { useEosMeetings } from '@/hooks/useEos';
 import { useMeetingSeries } from '@/hooks/useMeetingSeries';
@@ -172,18 +173,49 @@ function MeetingsContent() {
             Structured meetings that drive execution, visibility, and accountability.
           </p>
         </div>
-        {canScheduleMeetings() && (
-          <div className="flex gap-2">
-            <Button variant="outline" onClick={() => setTemplateLibraryOpen(true)}>
-              <Settings className="w-4 h-4 mr-2" />
-              Manage Templates
-            </Button>
-            <Button onClick={() => setSchedulerOpen(true)}>
-              <Plus className="w-4 h-4 mr-2" />
-              Schedule Meeting
-            </Button>
-          </div>
-        )}
+        <div className="flex gap-2">
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span>
+                  <Button 
+                    variant="outline" 
+                    onClick={() => setTemplateLibraryOpen(true)}
+                    disabled={!canScheduleMeetings()}
+                  >
+                    <Settings className="w-4 h-4 mr-2" />
+                    Manage Templates
+                  </Button>
+                </span>
+              </TooltipTrigger>
+              {!canScheduleMeetings() && (
+                <TooltipContent>
+                  Managing templates requires Admin access.
+                </TooltipContent>
+              )}
+            </Tooltip>
+          </TooltipProvider>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span>
+                  <Button 
+                    onClick={() => setSchedulerOpen(true)}
+                    disabled={!canScheduleMeetings()}
+                  >
+                    <Plus className="w-4 h-4 mr-2" />
+                    Schedule Meeting
+                  </Button>
+                </span>
+              </TooltipTrigger>
+              {!canScheduleMeetings() && (
+                <TooltipContent>
+                  Scheduling meetings requires Admin access.
+                </TooltipContent>
+              )}
+            </Tooltip>
+          </TooltipProvider>
+        </div>
       </div>
 
       <MeetingScheduler

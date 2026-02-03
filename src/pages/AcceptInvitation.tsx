@@ -16,13 +16,14 @@ export default function AcceptInvitation() {
 
   const [isLoading, setIsLoading] = useState(false);
   const [validating, setValidating] = useState(true);
-  const [invitationData, setInvitationData] = useState<{
+const [invitationData, setInvitationData] = useState<{
     email: string;
     tenantId: number | null;
     userType: 'vivacity' | 'client';
     tenantName: string | null;
     firstName: string | null;
     lastName: string | null;
+    unicornRole: string;
   } | null>(null);
 
   const [formData, setFormData] = useState({
@@ -92,13 +93,14 @@ export default function AcceptInvitation() {
         tenantName = tenantData?.name || null;
       }
       
-      setInvitationData({
+setInvitationData({
         email: data.email,
         tenantId: data.tenant_id,
         userType: isVivacity ? 'vivacity' : 'client',
         tenantName,
         firstName: data.first_name || null,
         lastName: data.last_name || null,
+        unicornRole: data.unicorn_role || (isVivacity ? 'Team Member' : 'User'),
       });
       
       // Pre-populate form fields with invitation data
@@ -197,8 +199,8 @@ export default function AcceptInvitation() {
             last_name: formData.lastName,
             phone: formData.phone || null,
             tenant_id: invitationData!.tenantId,
-            unicorn_role: invitationData!.userType === 'vivacity' ? 'Super Admin' : 'User',
-            user_type: invitationData!.userType === 'vivacity' ? 'Vivacity' : 'Client',
+unicorn_role: invitationData!.unicornRole,
+            user_type: invitationData!.userType === 'vivacity' ? 'Vivacity Team' : 'Client',
           },
           emailRedirectTo: `${window.location.origin}/dashboard`,
         },
