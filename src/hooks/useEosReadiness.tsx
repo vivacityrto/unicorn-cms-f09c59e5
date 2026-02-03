@@ -53,11 +53,22 @@ export function useEosReadiness() {
         meetingsResult,
         qcResult,
       ] = await Promise.all([
-        // Accountability Chart - check for positions with assigned users
+        // Accountability Chart - check for active chart with seats and assignments
         supabase
-          .from('eos_accountability_chart')
-          .select('id, assigned_user_id, position_title')
-          .eq('tenant_id', tenantId),
+          .from('accountability_charts')
+          .select(`
+            id, status,
+            functions:accountability_functions(
+              id,
+              seats:accountability_seats(
+                id,
+                assignments:accountability_seat_assignments(id, assignment_type, end_date)
+              )
+            )
+          `)
+          .eq('tenant_id', tenantId)
+          .eq('status', 'Active')
+          .maybeSingle(),
         // VTO
         supabase
           .from('eos_vto')
@@ -92,7 +103,7 @@ export function useEosReadiness() {
       ]);
 
       // Process results
-      const chartPositions = accountabilityChartResult.data || [];
+      const activeChart = accountabilityChartResult.data;
       const vto = vtoResult.data;
       const flightPlans = flightPlanResult.data || [];
       const rocks = rocksResult.data || [];
@@ -100,8 +111,12 @@ export function useEosReadiness() {
       const qcs = qcResult.data || [];
 
       // Calculate raw data
-      const hasAccountabilityChart = chartPositions.length > 0;
-      const hasSeatsWithOwners = chartPositions.some(pos => pos.assigned_user_id);
+      // Check for active chart with seats that have primary assignments
+      const hasAccountabilityChart = !!activeChart && (activeChart.functions?.length ?? 0) > 0;
+      const allSeats = (activeChart?.functions ?? []).flatMap((f: any) => f.seats ?? []);
+      const hasSeatsWithOwners = allSeats.some((seat: any) => 
+        (seat.assignments ?? []).some((a: any) => a.assignment_type === 'Primary' && !a.end_date)
+      );
 
       const hasVto = !!vto;
       const vtoHasRequiredFields = hasVto && !!(
