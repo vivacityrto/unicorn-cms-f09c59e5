@@ -19,16 +19,18 @@ import {
   Users,
   Edit2,
   Save,
-  X
+  X,
+  BarChart3
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import type { SeatWithDetails, UserBasic, EosSeatRoleType } from '@/types/accountabilityChart';
 import { EOS_SEAT_ROLE_LABELS, EOS_ROLE_COLORS } from '@/types/accountabilityChart';
 import { useSeatHealth } from '@/hooks/useSeatHealth';
 import { SeatHealthSection } from './SeatHealthSection';
 import { RecommendationsPanel } from './RecommendationsPanel';
+import { SeatGWCDashboard } from '@/components/eos/gwc';
 
 interface SeatDetailPanelProps {
   seat: SeatWithDetails | null;
@@ -263,6 +265,22 @@ export function SeatDetailPanel({
 
             {/* Seat Health Section */}
             <SeatHealthSection health={seatHealth} onNavigate={handleNavigate} />
+            
+            {/* GWC Trends Section */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <h4 className="text-sm font-medium flex items-center gap-2">
+                  <BarChart3 className="h-4 w-4" />
+                  GWC Trends
+                </h4>
+                <Link to={`/eos/gwc-trends?seat=${seat.id}`}>
+                  <Button variant="ghost" size="sm" className="text-xs">
+                    View All Trends
+                  </Button>
+                </Link>
+              </div>
+              <SeatGWCDashboard seatId={seat.id} compact />
+            </div>
             
             {/* Rebalancing Recommendations */}
             {seatRecommendations.length > 0 && (

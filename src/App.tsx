@@ -58,6 +58,7 @@ import EosAccountabilityChart from "./pages/EosAccountabilityChart";
 import EosOnboarding from "./pages/EosOnboarding";
 import EosHealth from "./pages/EosHealth";
 import EosPeopleAnalyzer from "./pages/EosPeopleAnalyzer";
+import EosGWCTrends from "./pages/EosGWCTrends";
 import ResetPassword from "./pages/ResetPassword";
 import Audits from "./pages/Audits";
 import AuditWorkspace from "./pages/AuditWorkspace";
@@ -574,6 +575,14 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <EosPeopleAnalyzer />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/eos/gwc-trends" 
+              element={
+                <ProtectedRoute>
+                  <EosGWCTrends />
                 </ProtectedRoute>
               } 
             />

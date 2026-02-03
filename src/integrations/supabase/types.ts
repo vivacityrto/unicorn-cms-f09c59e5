@@ -801,6 +801,58 @@ export type Database = {
           },
         ]
       }
+      audit_gwc_trends: {
+        Row: {
+          created_at: string | null
+          details: Json | null
+          event_type: string
+          id: string
+          seat_id: string | null
+          tenant_id: number
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          details?: Json | null
+          event_type: string
+          id?: string
+          seat_id?: string | null
+          tenant_id: number
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          details?: Json | null
+          event_type?: string
+          id?: string
+          seat_id?: string | null
+          tenant_id?: number
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "audit_gwc_trends_seat_id_fkey"
+            columns: ["seat_id"]
+            isOneToOne: false
+            referencedRelation: "accountability_seats"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "audit_gwc_trends_seat_id_fkey"
+            columns: ["seat_id"]
+            isOneToOne: false
+            referencedRelation: "seat_linked_data"
+            referencedColumns: ["seat_id"]
+          },
+          {
+            foreignKeyName: "audit_gwc_trends_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       audit_inspection: {
         Row: {
           client_id: string | null
@@ -16001,6 +16053,34 @@ export type Database = {
             columns: ["current_minutes_version_id"]
             isOneToOne: false
             referencedRelation: "eos_meeting_minutes_versions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      gwc_seat_trends: {
+        Row: {
+          all_gwc_yes: number | null
+          capacity_no: number | null
+          capacity_total: number | null
+          capacity_yes: number | null
+          gets_it_no: number | null
+          gets_it_total: number | null
+          gets_it_yes: number | null
+          quarter_number: number | null
+          quarter_year: number | null
+          seat_id: string | null
+          tenant_id: number | null
+          total_assessments: number | null
+          wants_it_no: number | null
+          wants_it_total: number | null
+          wants_it_yes: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "eos_qc_fit_seat_id_fkey"
+            columns: ["seat_id"]
+            isOneToOne: false
+            referencedRelation: "eos_accountability_chart"
             referencedColumns: ["id"]
           },
         ]
