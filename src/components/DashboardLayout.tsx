@@ -75,33 +75,48 @@ const baseMenuItemsWithoutDocs = [{
   label: "Packages",
   path: "/manage-packages"
 }];
+// Unified EOS menu - same for all tenant users (visibility is tenant-wide, not role-based)
+const eosMenuItems = [{
+  icon: Target,
+  label: "EOS Overview",
+  path: "/eos"
+}, {
+  icon: BarChart3,
+  label: "Scorecard",
+  path: "/eos/scorecard"
+}, {
+  icon: Flag,
+  label: "Mission Control",
+  path: "/eos/vto"
+}, {
+  icon: TrendingUp,
+  label: "Rocks",
+  path: "/eos/rocks"
+}, {
+  icon: Rocket,
+  label: "Flight Plan",
+  path: "/eos/flight-plan"
+}, {
+  icon: Shield,
+  label: "Risks & Opportunities",
+  path: "/eos/risks-opportunities"
+}, {
+  icon: ListTodo,
+  label: "To-Dos",
+  path: "/eos/todos"
+}, {
+  icon: Calendar,
+  label: "Meetings",
+  path: "/eos/meetings"
+}, {
+  icon: Users,
+  label: "Quarterly Conversations",
+  path: "/eos/qc"
+}];
+
 const userMenuItems = {
   main: [...baseMenuItems],
-  eos: [{
-    icon: Target,
-    label: "EOS Overview",
-    path: "/eos"
-  }, {
-    icon: BarChart3,
-    label: "Scorecard",
-    path: "/eos/scorecard"
-  }, {
-    icon: TrendingUp,
-    label: "Rocks",
-    path: "/eos/rocks"
-  }, {
-    icon: Shield,
-    label: "Risks & Opportunities",
-    path: "/eos/risks-opportunities"
-  }, {
-    icon: ListTodo,
-    label: "To-Dos",
-    path: "/eos/todos"
-  }, {
-    icon: Calendar,
-    label: "Meetings",
-    path: "/eos/meetings"
-  }]
+  eos: eosMenuItems
 };
 const adminMenuItems = {
   main: [...baseMenuItems],
@@ -110,43 +125,7 @@ const adminMenuItems = {
     label: "Manage Team",
     path: "/team-settings"
   }],
-  eos: [{
-    icon: Target,
-    label: "EOS Overview",
-    path: "/eos"
-  }, {
-    icon: BarChart3,
-    label: "Scorecard",
-    path: "/eos/scorecard"
-  }, {
-    icon: Flag,
-    label: "Mission Control",
-    path: "/eos/vto"
-  }, {
-    icon: TrendingUp,
-    label: "Rocks",
-    path: "/eos/rocks"
-  }, {
-    icon: Rocket,
-    label: "Flight Plan",
-    path: "/eos/flight-plan"
-  }, {
-    icon: Shield,
-    label: "Risks & Opportunities",
-    path: "/eos/risks-opportunities"
-  }, {
-    icon: ListTodo,
-    label: "To-Dos",
-    path: "/eos/todos"
-  }, {
-    icon: Calendar,
-    label: "Meetings",
-    path: "/eos/meetings"
-  }, {
-    icon: Users,
-    label: "Quarterly Conversations",
-    path: "/eos/qc"
-  }]
+  eos: eosMenuItems
 };
 const superAdminMenuItems = {
   main: [...baseMenuItemsWithoutDocs],
@@ -191,47 +170,15 @@ const superAdminMenuItems = {
     label: "User Audit",
     path: "/admin/user-audit"
   }],
-  eos: [{
-    icon: Target,
-    label: "EOS Overview",
-    path: "/eos"
-  }, {
-    icon: FileText,
-    label: "Processes",
-    path: "/processes"
-  }, {
-    icon: BarChart3,
-    label: "Scorecard",
-    path: "/eos/scorecard"
-  }, {
-    icon: Flag,
-    label: "Mission Control",
-    path: "/eos/vto"
-  }, {
-    icon: TrendingUp,
-    label: "Rocks",
-    path: "/eos/rocks"
-  }, {
-    icon: Rocket,
-    label: "Flight Plan",
-    path: "/eos/flight-plan"
-  }, {
-    icon: Shield,
-    label: "Risks & Opportunities",
-    path: "/eos/risks-opportunities"
-  }, {
-    icon: ListTodo,
-    label: "To-Dos",
-    path: "/eos/todos"
-  }, {
-    icon: Calendar,
-    label: "Meetings",
-    path: "/eos/meetings"
-  }, {
-    icon: Users,
-    label: "Quarterly Conversations",
-    path: "/eos/qc"
-  }],
+  eos: [
+    ...eosMenuItems.slice(0, 1), // EOS Overview
+    {
+      icon: FileText,
+      label: "Processes",
+      path: "/processes"
+    },
+    ...eosMenuItems.slice(1) // Rest of EOS items
+  ],
   advanced: [{
     icon: FileCode,
     label: "Templates",
