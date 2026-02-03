@@ -25,8 +25,11 @@ import {
 } from 'lucide-react';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { PageHeader } from '@/components/ui/page-header';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useEosHealth } from '@/hooks/useEosHealth';
 import { useFacilitatorMode } from '@/contexts/FacilitatorModeContext';
+import { useEosAlerts } from '@/hooks/useEosAlerts';
+import { AlertsList } from '@/components/eos/alerts';
 import { 
   HEALTH_BAND_COLORS, 
   HEALTH_BAND_LABELS,
@@ -81,6 +84,7 @@ function HealthContent() {
   const { health, isLoading } = useEosHealth();
   const { isFacilitatorMode } = useFacilitatorMode();
   const [expandedDimensions, setExpandedDimensions] = useState<string[]>([]);
+  const [activeTab, setActiveTab] = useState<'health' | 'alerts'>('health');
 
   const toggleDimension = (dimension: string) => {
     setExpandedDimensions(prev => 
@@ -115,12 +119,19 @@ function HealthContent() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="EOS Health Score"
-        description="Real-time health metrics derived from your EOS execution"
+        title="EOS Health & Alerts"
+        description="Real-time health metrics and proactive interventions"
       />
+      {/* Tabs */}
+      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as typeof activeTab)}>
+        <TabsList>
+          <TabsTrigger value="health">Health Score</TabsTrigger>
+          <TabsTrigger value="alerts">Stuck Alerts</TabsTrigger>
+        </TabsList>
 
-      {/* Overall Score Card */}
-      <Card className={cn('border-2', colors.border)}>
+        <TabsContent value="health" className="space-y-6 mt-6">
+          {/* Overall Score Card */}
+          <Card className={cn('border-2', colors.border)}>
         <CardContent className="pt-6">
           <div className="flex flex-col md:flex-row md:items-center gap-6">
             {/* Score Display */}
@@ -234,6 +245,12 @@ function HealthContent() {
           </CardContent>
         </Card>
       )}
+        </TabsContent>
+
+        <TabsContent value="alerts" className="mt-6">
+          <AlertsList />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

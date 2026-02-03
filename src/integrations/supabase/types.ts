@@ -5372,6 +5372,74 @@ export type Database = {
           },
         ]
       }
+      eos_alerts: {
+        Row: {
+          acknowledged_at: string | null
+          acknowledged_by: string | null
+          alert_type: string
+          created_at: string
+          details: Json | null
+          dimension: string
+          dismiss_reason: string | null
+          dismissed_by: string | null
+          id: string
+          last_notified_at: string | null
+          message: string
+          resolved_at: string | null
+          severity: string
+          source_entity_id: string | null
+          source_entity_type: string | null
+          status: string
+          tenant_id: number
+        }
+        Insert: {
+          acknowledged_at?: string | null
+          acknowledged_by?: string | null
+          alert_type: string
+          created_at?: string
+          details?: Json | null
+          dimension: string
+          dismiss_reason?: string | null
+          dismissed_by?: string | null
+          id?: string
+          last_notified_at?: string | null
+          message: string
+          resolved_at?: string | null
+          severity: string
+          source_entity_id?: string | null
+          source_entity_type?: string | null
+          status?: string
+          tenant_id: number
+        }
+        Update: {
+          acknowledged_at?: string | null
+          acknowledged_by?: string | null
+          alert_type?: string
+          created_at?: string
+          details?: Json | null
+          dimension?: string
+          dismiss_reason?: string | null
+          dismissed_by?: string | null
+          id?: string
+          last_notified_at?: string | null
+          message?: string
+          resolved_at?: string | null
+          severity?: string
+          source_entity_id?: string | null
+          source_entity_type?: string | null
+          status?: string
+          tenant_id?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "eos_alerts_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       eos_chart_drafts: {
         Row: {
           created_at: string
