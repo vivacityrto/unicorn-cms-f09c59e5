@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "./hooks/useAuth";
 import { ViewModeProvider } from "./contexts/ViewModeContext";
+import { FacilitatorModeProvider } from "./contexts/FacilitatorModeContext";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import Index from "./pages/Index";
 import Login from "./pages/Login";
@@ -101,6 +102,7 @@ const App = () => (
       <BrowserRouter>
         <AuthProvider>
           <ViewModeProvider>
+          <FacilitatorModeProvider>
           <Routes>
             <Route path="/" element={<Login />} />
             <Route path="/login" element={<Login />} />
@@ -696,6 +698,7 @@ const App = () => (
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
+          </FacilitatorModeProvider>
           </ViewModeProvider>
         </AuthProvider>
       </BrowserRouter>

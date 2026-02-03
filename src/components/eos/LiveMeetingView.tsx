@@ -33,6 +33,8 @@ import { MeetingCloseValidationDialog } from '@/components/eos/MeetingCloseValid
 import { AttendancePanel } from '@/components/eos/AttendancePanel';
 import { FacilitatorSelectDialog } from '@/components/eos/FacilitatorSelectDialog';
 import { OnlineUsersIndicator } from '@/components/eos/OnlineUsersIndicator';
+import { FacilitatorChecklist } from '@/components/eos/facilitator/FacilitatorChecklist';
+import { RockReviewPrompt, IDSPrompt, ScorecardPrompt, MeetingRatingPrompt } from '@/components/eos/facilitator/FacilitatorPrompts';
 import type { EosMeetingSegment, MeetingType } from '@/types/eos';
 
 export const LiveMeetingView = () => {
@@ -837,9 +839,19 @@ export const LiveMeetingView = () => {
           </div>
         </div>
 
-        {/* Right: Issues Panel */}
+        {/* Right: Issues Panel + Facilitator Checklist */}
         <div className="w-80 border-l bg-card overflow-y-auto flex-shrink-0">
-          <div className="p-4">
+          <div className="p-4 space-y-4">
+            {/* Facilitator Checklist - only visible in facilitator mode */}
+            <FacilitatorChecklist
+              meetingType={(meeting?.meeting_type as MeetingType) || 'L10'}
+              segments={segments}
+              currentSegmentId={currentSegment?.id}
+              attendeesCount={attendees?.length || 0}
+              quorumMet={meeting?.quorum_status === 'met' || meeting?.quorum_status === 'overridden'}
+              meetingStartTime={meeting?.started_at}
+            />
+            
             <IssuesQueue
               issues={issues || []}
               onSelectIssue={handleSelectIssue}
