@@ -419,39 +419,62 @@ export function useAccountabilityChart() {
   });
 
   // Add assignment
+  // IMPORTANT: This mutation ONLY updates accountability_seat_assignments.
+  // It must NEVER write to Rocks, Meetings, or other EOS modules.
   const addAssignment = useMutation({
     mutationFn: async (input: CreateAssignmentInput) => {
       if (!tenantId) throw new Error('Not authenticated');
 
-      // If adding primary, remove any existing primary
+      const payload = {
+        seat_id: input.seat_id,
+        user_id: input.user_id,
+        assignment_type: input.assignment_type,
+        tenant_id: tenantId,
+        start_date: input.start_date ?? new Date().toISOString().split('T')[0],
+      };
+
+      console.log('[Accountability] Assigning owner:', payload);
+
+      // If adding primary, end-date any existing primary assignment
       if (input.assignment_type === 'Primary') {
-        await supabase
+        const { error: endDateError } = await supabase
           .from('accountability_seat_assignments')
           .update({ end_date: new Date().toISOString().split('T')[0] })
           .eq('seat_id', input.seat_id)
           .eq('assignment_type', 'Primary')
           .is('end_date', null);
+
+        if (endDateError) {
+          console.error('[Accountability] Failed to end-date previous primary:', endDateError);
+          throw endDateError;
+        }
       }
 
       const { data, error } = await supabase
         .from('accountability_seat_assignments')
-        .insert({
-          ...input,
-          tenant_id: tenantId,
-          start_date: input.start_date ?? new Date().toISOString().split('T')[0],
-        })
+        .insert(payload)
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('[Accountability] Owner assignment insert failed:', { payload, error });
+        throw error;
+      }
+
+      console.log('[Accountability] Owner assigned successfully:', data);
       return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['accountability-chart'] });
-      toast({ title: 'Assignment added' });
+      toast({ title: 'Owner assigned' });
     },
     onError: (error: Error) => {
-      toast({ title: 'Error adding assignment', description: error.message, variant: 'destructive' });
+      console.error('[Accountability] Owner assignment error:', error);
+      toast({ 
+        title: 'Owner assignment failed', 
+        description: error.message, 
+        variant: 'destructive' 
+      });
     },
   });
 
