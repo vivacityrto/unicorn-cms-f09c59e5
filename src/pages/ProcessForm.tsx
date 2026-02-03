@@ -1,9 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { useProcess, useProcesses, ProcessCategory, ProcessStatus, ProcessAppliesTo, getCategoryLabel, CreateProcessInput, UpdateProcessInput } from '@/hooks/useProcesses';
 import { useAuth } from '@/hooks/useAuth';
-import { supabase } from '@/integrations/supabase/client';
+import { useTenantTeamUsers, getUserDisplayName as getTenantUserDisplayName } from '@/hooks/useTenantTeamUsers';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -22,24 +22,32 @@ import {
   X,
   Calendar as CalendarIcon,
   Plus,
-  AlertTriangle
+  AlertTriangle,
+  Info
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 
-const CATEGORIES: ProcessCategory[] = ['operations', 'compliance', 'eos', 'hr', 'client_delivery'];
-const APPLIES_TO_OPTIONS: { value: ProcessAppliesTo; label: string }[] = [
-  { value: 'vivacity_internal', label: 'Vivacity Internal' },
-  { value: 'client_type', label: 'Client Type' },
-  { value: 'package', label: 'Package' },
+const CATEGORIES: ProcessCategory[] = [
+  'eos',
+  'operations', 
+  'compliance', 
+  'client_delivery',
+  'sales_marketing',
+  'finance',
+  'hr_people',
+  'it_systems',
+  'governance',
+  'risk_management',
 ];
 
-interface User {
-  user_uuid: string;
-  first_name: string | null;
-  last_name: string | null;
-  email: string;
-}
+const APPLIES_TO_OPTIONS: { value: ProcessAppliesTo; label: string; description: string }[] = [
+  { value: 'vivacity_internal', label: 'Vivacity Internal', description: 'Internal team process' },
+  { value: 'all_clients', label: 'All Clients', description: 'Applies to all clients (read-only)' },
+  { value: 'specific_client', label: 'Specific Client', description: 'Future: target specific client' },
+];
+
+// User interface is now provided by useTenantTeamUsers hook
 
 interface ProcessFormData {
   title: string;
@@ -83,44 +91,38 @@ export default function ProcessForm() {
   const { profile, user } = useAuth();
   const { data: existingProcess, isLoading: processLoading } = useProcess(id);
   const { createProcess, updateProcess } = useProcesses();
+  
+  // Use tenant team users hook - only shows internal team members, not clients
+  const { data: tenantTeamUsers = [], isLoading: usersLoading } = useTenantTeamUsers();
 
   const isEditing = !!id && id !== 'new';
 
   const [formData, setFormData] = useState<ProcessFormData>(initialFormData);
 
   const [tagInput, setTagInput] = useState('');
-  const [users, setUsers] = useState<User[]>([]);
-  const [packages, setPackages] = useState<{ id: number; name: string }[]>([]);
   const [editReasonDialogOpen, setEditReasonDialogOpen] = useState(false);
   const [editReason, setEditReason] = useState('');
   const [isSaving, setIsSaving] = useState(false);
 
   // Check if editing an approved process
   const isEditingApproved = isEditing && existingProcess?.status === 'approved';
-
-  useEffect(() => {
-    const fetchUsers = async () => {
-      const { data } = await supabase
-        .from('users')
-        .select('user_uuid, first_name, last_name, email')
-        .in('unicorn_role', ['Super Admin', 'Team Leader', 'Admin'])
-        .order('first_name');
-      if (data) setUsers(data as User[]);
-    };
-
-    const fetchPackages = async () => {
-      // @ts-expect-error - Supabase type chain too deep
-      const result = await supabase
-        .from('packages')
-        .select('id, name')
-        .eq('is_archived', false)
-        .order('name');
-      if (result.data) setPackages(result.data as { id: number; name: string }[]);
-    };
-
-    fetchUsers();
-    fetchPackages();
-  }, []);
+  
+  // Filter out current owner from reviewer options (reviewer must be different from owner)
+  const reviewerOptions = useMemo(() => {
+    return tenantTeamUsers.filter(u => u.user_uuid !== formData.owner_user_id);
+  }, [tenantTeamUsers, formData.owner_user_id]);
+  
+  // Validation: if review_date is set, reviewer is required
+  const isReviewerRequired = !!formData.review_date;
+  const hasReviewerError = isReviewerRequired && !formData.reviewer_user_id;
+  
+  // Check if owner/reviewer are valid tenant team users (for existing data integrity flagging)
+  const isOwnerInvalid = formData.owner_user_id && 
+    tenantTeamUsers.length > 0 && 
+    !tenantTeamUsers.some(u => u.user_uuid === formData.owner_user_id);
+  const isReviewerInvalid = formData.reviewer_user_id && 
+    tenantTeamUsers.length > 0 && 
+    !tenantTeamUsers.some(u => u.user_uuid === formData.reviewer_user_id);
 
   useEffect(() => {
     if (existingProcess && isEditing) {
@@ -161,6 +163,16 @@ export default function ProcessForm() {
 
   const handleSave = async () => {
     if (!formData.title.trim()) return;
+    
+    // Validate governance: if review_date set, reviewer required
+    if (formData.review_date && !formData.reviewer_user_id) {
+      return; // Form will show error message
+    }
+    
+    // Validate owner/reviewer are not invalid (client users)
+    if (isOwnerInvalid || isReviewerInvalid) {
+      return; // Form will show error badges
+    }
 
     // If editing approved, require reason
     if (isEditingApproved) {
@@ -181,7 +193,7 @@ export default function ProcessForm() {
         tags: formData.tags,
         owner_user_id: formData.owner_user_id || undefined,
         applies_to: formData.applies_to,
-        applies_to_package_id: formData.applies_to === 'package' ? formData.applies_to_package_id ?? undefined : undefined,
+        // applies_to_package_id removed - no longer using package-based applies_to
         purpose: formData.purpose.trim() || undefined,
         scope: formData.scope.trim() || undefined,
         instructions: formData.instructions.trim() || undefined,
@@ -208,12 +220,7 @@ export default function ProcessForm() {
     }
   };
 
-  const getUserDisplayName = (u: User) => {
-    if (u.first_name || u.last_name) {
-      return `${u.first_name || ''} ${u.last_name || ''}`.trim();
-    }
-    return u.email;
-  };
+  // Use imported helper from hook
 
   if (processLoading && isEditing) {
     return (
@@ -251,7 +258,10 @@ export default function ProcessForm() {
             <Button variant="outline" onClick={() => navigate('/processes')}>
               Cancel
             </Button>
-            <Button onClick={handleSave} disabled={!formData.title.trim() || isSaving}>
+            <Button 
+              onClick={handleSave} 
+              disabled={!formData.title.trim() || isSaving || hasReviewerError || isOwnerInvalid || isReviewerInvalid}
+            >
               <Save className="h-4 w-4 mr-2" />
               {isSaving ? 'Saving...' : 'Save Process'}
             </Button>
@@ -260,6 +270,14 @@ export default function ProcessForm() {
 
         {/* Form */}
         <div className="space-y-6">
+          {/* Process Ownership Info */}
+          <div className="flex items-start gap-2 p-3 rounded-lg bg-muted/50 border text-sm">
+            <Info className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
+            <p className="text-muted-foreground">
+              Processes are owned and governed by your internal team. Clients may view assigned processes but cannot own or review them.
+            </p>
+          </div>
+          
           {/* Core Fields */}
           <Card>
             <CardHeader>
@@ -307,22 +325,30 @@ export default function ProcessForm() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Process Owner</Label>
+                  <Label>
+                    Process Owner
+                    {isOwnerInvalid && (
+                      <Badge variant="destructive" className="ml-2 text-xs">Invalid - reassign required</Badge>
+                    )}
+                  </Label>
                   <Select
                     value={formData.owner_user_id}
                     onValueChange={(value) => setFormData(prev => ({ ...prev, owner_user_id: value }))}
                   >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select owner" />
+                    <SelectTrigger className={cn(isOwnerInvalid && "border-destructive")}>
+                      <SelectValue placeholder="Select accountable team member" />
                     </SelectTrigger>
                     <SelectContent>
-                      {users.map(u => (
+                      {tenantTeamUsers.map(u => (
                         <SelectItem key={u.user_uuid} value={u.user_uuid}>
-                          {getUserDisplayName(u)}
+                          {getTenantUserDisplayName(u)}
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
+                  <p className="text-xs text-muted-foreground">
+                    Processes are owned and governed by your internal team
+                  </p>
                 </div>
               </div>
 
@@ -371,22 +397,13 @@ export default function ProcessForm() {
                   </Select>
                 </div>
 
-                {formData.applies_to === 'package' && (
+                {/* specific_client selection will be implemented in future */}
+                {formData.applies_to === 'specific_client' && (
                   <div className="space-y-2">
-                    <Label>Package</Label>
-                    <Select
-                      value={formData.applies_to_package_id?.toString() || ''}
-                      onValueChange={(value) => setFormData(prev => ({ ...prev, applies_to_package_id: parseInt(value) }))}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select package" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {packages.map(pkg => (
-                          <SelectItem key={pkg.id} value={pkg.id.toString()}>{pkg.name}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <Label>Select Client (Future)</Label>
+                    <p className="text-sm text-muted-foreground">
+                      Client-specific process assignment coming soon
+                    </p>
                   </div>
                 )}
               </div>
@@ -428,22 +445,42 @@ export default function ProcessForm() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Reviewer</Label>
+                  <Label>
+                    Governance Reviewer
+                    {isReviewerRequired && <span className="text-destructive ml-1">*</span>}
+                    {isReviewerInvalid && (
+                      <Badge variant="destructive" className="ml-2 text-xs">Invalid - reassign required</Badge>
+                    )}
+                  </Label>
                   <Select
                     value={formData.reviewer_user_id}
                     onValueChange={(value) => setFormData(prev => ({ ...prev, reviewer_user_id: value }))}
                   >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select reviewer" />
+                    <SelectTrigger className={cn(
+                      hasReviewerError && "border-destructive",
+                      isReviewerInvalid && "border-destructive"
+                    )}>
+                      <SelectValue placeholder="Select governance reviewer" />
                     </SelectTrigger>
                     <SelectContent>
-                      {users.map(u => (
+                      {reviewerOptions.map(u => (
                         <SelectItem key={u.user_uuid} value={u.user_uuid}>
-                          {getUserDisplayName(u)}
+                          {getTenantUserDisplayName(u)}
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
+                  {hasReviewerError && (
+                    <p className="text-xs text-destructive flex items-center gap-1">
+                      <AlertTriangle className="h-3 w-3" />
+                      Reviewer is required when Review Date is set
+                    </p>
+                  )}
+                  {formData.owner_user_id && reviewerOptions.length === 0 && tenantTeamUsers.length > 0 && (
+                    <p className="text-xs text-muted-foreground">
+                      No other team members available (reviewer must be different from owner)
+                    </p>
+                  )}
                 </div>
               </div>
             </CardContent>
