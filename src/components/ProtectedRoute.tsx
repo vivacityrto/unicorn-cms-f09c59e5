@@ -1,6 +1,6 @@
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
-import { useRBAC, ADMIN_ROUTES, ADVANCED_ROUTES } from '@/hooks/useRBAC';
+import { useRBAC, ADMIN_ROUTES, ADVANCED_ROUTES, EOS_ROUTES } from '@/hooks/useRBAC';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -9,7 +9,7 @@ interface ProtectedRouteProps {
 
 export const ProtectedRoute = ({ children, requireSuperAdmin = false }: ProtectedRouteProps) => {
   const { user, loading } = useAuth();
-  const { canAccessRoute, isSuperAdmin } = useRBAC();
+  const { canAccessRoute, isSuperAdmin, canAccessEOS } = useRBAC();
   const location = useLocation();
 
   if (loading) {
@@ -29,13 +29,20 @@ export const ProtectedRoute = ({ children, requireSuperAdmin = false }: Protecte
     return <Navigate to="/dashboard" replace />;
   }
 
-  // Check RBAC route access (admin and advanced routes)
+  // Check RBAC route access (admin, advanced, and EOS routes)
   const currentPath = location.pathname;
   const isAdminRoute = ADMIN_ROUTES.some(route => currentPath.startsWith(route));
   const isAdvancedRoute = ADVANCED_ROUTES.some(route => currentPath.startsWith(route));
+  const isEosRoute = EOS_ROUTES.some(route => currentPath.startsWith(route));
 
   if ((isAdminRoute || isAdvancedRoute) && !canAccessRoute(currentPath)) {
-    // Redirect General Users trying to access admin/advanced routes
+    // Redirect users trying to access admin/advanced routes without permission
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  // Block EOS routes for non-Vivacity users (clients)
+  if (isEosRoute && !canAccessEOS()) {
+    // Clients trying to access EOS get redirected to dashboard
     return <Navigate to="/dashboard" replace />;
   }
 

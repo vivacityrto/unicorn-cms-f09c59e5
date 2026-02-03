@@ -124,9 +124,10 @@ const eosMenuItems = [{
   path: "/processes"
 }];
 
+// Client menus - NO EOS access (EOS is Vivacity-only)
 const userMenuItems = {
   main: [...baseMenuItems],
-  eos: eosMenuItems
+  // NO eos - clients don't see EOS
 };
 const adminMenuItems = {
   main: [...baseMenuItems],
@@ -135,7 +136,7 @@ const adminMenuItems = {
     label: "Manage Team",
     path: "/team-settings"
   }],
-  eos: eosMenuItems
+  // NO eos - clients don't see EOS
 };
 const superAdminMenuItems = {
   main: [...baseMenuItemsWithoutDocs],
