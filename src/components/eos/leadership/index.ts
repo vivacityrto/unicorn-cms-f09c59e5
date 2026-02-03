@@ -13,3 +13,4 @@ export { IDSMasterPanel, type IDSSummary } from './IDSMasterPanel';
 export { ClientImpactPanel, type ClientImpactItem } from './ClientImpactPanel';
 export { SeatRebalancingPanel, type RebalancingRecommendation } from './SeatRebalancingPanel';
 export { LeadershipSuccessionRisks } from './LeadershipSuccessionRisks';
+export { NextMeetingCard, type NextMeetingData } from './NextMeetingCard';
