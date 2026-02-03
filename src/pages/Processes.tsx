@@ -30,7 +30,18 @@ import {
 } from 'lucide-react';
 import { format } from 'date-fns';
 
-const CATEGORIES: ProcessCategory[] = ['operations', 'compliance', 'eos', 'hr', 'client_delivery'];
+const CATEGORIES: ProcessCategory[] = [
+  'eos',
+  'operations', 
+  'compliance', 
+  'client_delivery',
+  'sales_marketing',
+  'finance',
+  'hr_people',
+  'it_systems',
+  'governance',
+  'risk_management',
+];
 const STATUSES: ProcessStatus[] = ['draft', 'under_review', 'approved', 'archived'];
 
 function ProcessGuidancePanel({ onDismiss }: { onDismiss: () => void }) {

@@ -3,9 +3,19 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 import { useToast } from './use-toast';
 
-export type ProcessCategory = 'operations' | 'compliance' | 'eos' | 'hr' | 'client_delivery';
+export type ProcessCategory = 
+  | 'eos' 
+  | 'operations' 
+  | 'compliance' 
+  | 'client_delivery' 
+  | 'sales_marketing' 
+  | 'finance' 
+  | 'hr_people' 
+  | 'it_systems' 
+  | 'governance' 
+  | 'risk_management';
 export type ProcessStatus = 'draft' | 'under_review' | 'approved' | 'archived';
-export type ProcessAppliesTo = 'vivacity_internal' | 'client_type' | 'package';
+export type ProcessAppliesTo = 'vivacity_internal' | 'all_clients' | 'specific_client';
 
 export interface Process {
   id: string;
@@ -110,11 +120,16 @@ export interface UpdateProcessInput extends Partial<CreateProcessInput> {
 }
 
 const CATEGORY_LABELS: Record<ProcessCategory, string> = {
+  eos: 'EOS',
   operations: 'Operations',
   compliance: 'Compliance',
-  eos: 'EOS',
-  hr: 'HR',
   client_delivery: 'Client Delivery',
+  sales_marketing: 'Sales & Marketing',
+  finance: 'Finance',
+  hr_people: 'HR & People',
+  it_systems: 'IT & Systems',
+  governance: 'Governance',
+  risk_management: 'Risk Management',
 };
 
 const STATUS_LABELS: Record<ProcessStatus, string> = {
