@@ -122,6 +122,33 @@ serve(async (req: Request): Promise<Response> => {
 
     console.log(`Generating password reset link for ${targetUser.email}`);
 
+    // Check if the user exists in auth.users before attempting to generate link
+    const { data: authUsers, error: authListError } = await supabaseAdmin.auth.admin.listUsers();
+    
+    if (authListError) {
+      console.error("Failed to list auth users:", authListError);
+      return new Response(
+        JSON.stringify({ ok: false, code: "AUTH_CHECK_FAILED", detail: authListError.message }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const authUserExists = authUsers.users.some(
+      (u) => u.email?.toLowerCase() === targetUser.email.toLowerCase()
+    );
+
+    if (!authUserExists) {
+      console.error(`User ${targetUser.email} exists in public.users but not in auth.users`);
+      return new Response(
+        JSON.stringify({ 
+          ok: false, 
+          code: "AUTH_USER_NOT_FOUND", 
+          detail: "This user has not yet activated their account. Please send them an invitation instead." 
+        }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     // Get the origin for redirect URL
     const origin = req.headers.get("origin") || "https://vivacity.lovable.app";
 
