@@ -31,8 +31,21 @@ function getHealthBand(score: number): HealthBand {
 interface RawSeatData {
   seat_id: string;
   owner_id: string | null;
+  // Rock signals
   active_rocks_count: number;
   off_track_rocks_count: number;
+  critical_rock_off_track: boolean;
+  // Scorecard signals
+  measurables_count: number;
+  off_track_weeks: number;
+  // GWC signals
+  gwc_capacity_no: boolean;
+  gwc_capacity_consecutive_no: number;
+  gwc_declining: boolean;
+  // Rollover signals
+  rocks_rolled_twice: number;
+  rocks_rolled_thrice: number;
+  // Legacy fields (kept for backward compatibility)
   overdue_todos_count: number;
   total_todos_count: number;
   completed_todos_count: number;
@@ -40,17 +53,18 @@ interface RawSeatData {
   old_issues_count: number;
   meetings_attended: number;
   meetings_missed: number;
-  gwc_capacity_no: boolean;
-  gwc_declining: boolean;
 }
 
-// Calculate seat health score from raw data
+// Calculate seat capacity score from raw data (EOS-aligned capacity model)
 function calculateSeatHealth(data: RawSeatData): {
   rocks_score: number;
+  scorecard_score: number;
+  gwc_score: number;
+  rollover_score: number;
+  // Legacy fields
   todos_score: number;
   ids_score: number;
   cadence_score: number;
-  gwc_score: number;
   total_score: number;
   health_band: HealthBand;
   contributing_factors: ContributingFactor[];
@@ -60,12 +74,13 @@ function calculateSeatHealth(data: RawSeatData): {
   // 1. Rocks Score (40%) - higher is worse
   let rocksScore = 0;
   if (data.active_rocks_count > 3) {
-    rocksScore += 30; // Too many rocks
+    const penalty = Math.min((data.active_rocks_count - 3) * 15, 40);
+    rocksScore += penalty;
     factors.push({
       type: 'rocks',
       label: 'High Rock Load',
       description: `${data.active_rocks_count} active Rocks (recommended: 3)`,
-      score: 30,
+      score: penalty,
       severity: data.active_rocks_count > 5 ? 'high' : 'medium',
     });
   }
@@ -80,124 +95,105 @@ function calculateSeatHealth(data: RawSeatData): {
       severity: data.off_track_rocks_count >= 2 ? 'high' : 'medium',
     });
   }
-  rocksScore = Math.min(rocksScore, 100);
-  
-  // 2. To-Do Score (20%)
-  let todosScore = 0;
-  if (data.overdue_todos_count >= 5) {
-    todosScore += 60;
+  if (data.critical_rock_off_track) {
+    rocksScore += 30;
     factors.push({
-      type: 'todos',
-      label: 'Overdue To-Dos',
-      description: `${data.overdue_todos_count} overdue To-Dos`,
-      score: 60,
+      type: 'rocks',
+      label: 'Critical Rock Off Track',
+      description: 'A critical priority Rock is off track',
+      score: 30,
       severity: 'high',
     });
-  } else if (data.overdue_todos_count > 0) {
-    todosScore += data.overdue_todos_count * 10;
-    factors.push({
-      type: 'todos',
-      label: 'Overdue To-Dos',
-      description: `${data.overdue_todos_count} overdue To-Dos`,
-      score: data.overdue_todos_count * 10,
-      severity: 'medium',
-    });
   }
+  rocksScore = Math.min(rocksScore, 100);
   
-  // Completion rate check
-  if (data.total_todos_count > 0) {
-    const completionRate = data.completed_todos_count / data.total_todos_count;
-    if (completionRate < 0.7) {
-      todosScore += 30;
+  // 2. Scorecard Pressure Score (25%)
+  let scorecardScore = 0;
+  if (data.off_track_weeks >= 2) {
+    const offTrackRate = data.measurables_count > 0 ? data.off_track_weeks / 4 : 0;
+    if (offTrackRate >= 0.5) {
+      scorecardScore = 80;
       factors.push({
-        type: 'todos',
-        label: 'Low Completion Rate',
-        description: `${Math.round(completionRate * 100)}% To-Do completion (target: 70%)`,
-        score: 30,
-        severity: completionRate < 0.5 ? 'high' : 'medium',
+        type: 'scorecard',
+        label: 'Scorecard Pressure',
+        description: `50%+ off-track for ${data.off_track_weeks} weeks`,
+        score: 80,
+        severity: 'high',
+      });
+    } else if (offTrackRate >= 0.25) {
+      scorecardScore = 50;
+      factors.push({
+        type: 'scorecard',
+        label: 'Scorecard Strain',
+        description: `Measurables off-track for ${data.off_track_weeks} weeks`,
+        score: 50,
+        severity: 'medium',
       });
     }
   }
-  todosScore = Math.min(todosScore, 100);
+  scorecardScore = Math.min(scorecardScore, 100);
   
-  // 3. IDS Pressure Score (20%)
-  let idsScore = 0;
-  if (data.open_critical_issues_count > 0) {
-    idsScore += 50;
+  // 3. GWC Capacity Score (25%)
+  let gwcScore = 0;
+  if (data.gwc_capacity_consecutive_no >= 2) {
+    gwcScore = 90;
     factors.push({
-      type: 'ids',
-      label: 'Critical Issues Open',
-      description: `${data.open_critical_issues_count} critical issue(s) require attention`,
-      score: 50,
+      type: 'gwc',
+      label: 'Persistent Capacity Issues',
+      description: `Capacity marked "No" for ${data.gwc_capacity_consecutive_no} consecutive quarters`,
+      score: 90,
       severity: 'high',
     });
-  }
-  if (data.old_issues_count > 0) {
-    idsScore += 30;
+  } else if (data.gwc_capacity_no) {
+    gwcScore = 60;
     factors.push({
-      type: 'ids',
-      label: 'Stale Issues',
-      description: `${data.old_issues_count} issue(s) open > 30 days`,
-      score: 30,
+      type: 'gwc',
+      label: 'Capacity Constraint',
+      description: 'Capacity marked "No" in recent QC',
+      score: 60,
       severity: 'medium',
     });
   }
-  idsScore = Math.min(idsScore, 100);
-  
-  // 4. Cadence Score (10%)
-  let cadenceScore = 0;
-  if (data.meetings_missed >= 2) {
-    cadenceScore += 70;
-    factors.push({
-      type: 'cadence',
-      label: 'Missed Meetings',
-      description: `Missed ${data.meetings_missed} Level 10 meetings`,
-      score: 70,
-      severity: data.meetings_missed >= 3 ? 'high' : 'medium',
-    });
-  } else if (data.meetings_missed === 1) {
-    cadenceScore += 30;
-    factors.push({
-      type: 'cadence',
-      label: 'Missed Meeting',
-      description: 'Missed 1 Level 10 meeting',
-      score: 30,
-      severity: 'low',
-    });
-  }
-  cadenceScore = Math.min(cadenceScore, 100);
-  
-  // 5. GWC Score (10%)
-  let gwcScore = 0;
-  if (data.gwc_capacity_no) {
-    gwcScore += 80;
-    factors.push({
-      type: 'gwc',
-      label: 'Capacity Issues',
-      description: 'Capacity marked "No" in recent QC',
-      score: 80,
-      severity: 'high',
-    });
-  }
-  if (data.gwc_declining) {
-    gwcScore += 40;
+  if (data.gwc_declining && gwcScore < 100) {
+    gwcScore += 30;
     factors.push({
       type: 'gwc',
       label: 'Declining Trend',
-      description: 'GWC scores declining over quarters',
-      score: 40,
+      description: 'GWC Capacity scores declining over quarters',
+      score: 30,
       severity: 'medium',
     });
   }
   gwcScore = Math.min(gwcScore, 100);
   
-  // Calculate weighted total
+  // 4. Rollover History Score (10%)
+  let rolloverScore = 0;
+  if (data.rocks_rolled_thrice > 0) {
+    rolloverScore = 100;
+    factors.push({
+      type: 'rollover',
+      label: 'Chronic Rollover',
+      description: `${data.rocks_rolled_thrice} Rock(s) rolled 3+ times`,
+      score: 100,
+      severity: 'high',
+    });
+  } else if (data.rocks_rolled_twice > 0) {
+    rolloverScore = 60;
+    factors.push({
+      type: 'rollover',
+      label: 'Rollover Pattern',
+      description: `${data.rocks_rolled_twice} Rock(s) rolled twice`,
+      score: 60,
+      severity: 'medium',
+    });
+  }
+  
+  // Calculate weighted total using new capacity-focused weights
   const totalScore = Math.round(
     rocksScore * SCORE_WEIGHTS.rocks +
-    todosScore * SCORE_WEIGHTS.todos +
-    idsScore * SCORE_WEIGHTS.ids +
-    cadenceScore * SCORE_WEIGHTS.cadence +
-    gwcScore * SCORE_WEIGHTS.gwc
+    scorecardScore * SCORE_WEIGHTS.scorecard +
+    gwcScore * SCORE_WEIGHTS.gwc +
+    rolloverScore * SCORE_WEIGHTS.rollover
   );
   
   // Sort factors by score descending and take top 3
@@ -207,10 +203,13 @@ function calculateSeatHealth(data: RawSeatData): {
   
   return {
     rocks_score: rocksScore,
-    todos_score: todosScore,
-    ids_score: idsScore,
-    cadence_score: cadenceScore,
+    scorecard_score: scorecardScore,
     gwc_score: gwcScore,
+    rollover_score: rolloverScore,
+    // Legacy fields set to 0
+    todos_score: 0,
+    ids_score: 0,
+    cadence_score: 0,
     total_score: totalScore,
     health_band: getHealthBand(totalScore),
     contributing_factors: topFactors,
@@ -279,13 +278,18 @@ export function useSeatHealth() {
         // For vacant seats, generate recommendation immediately
         if (isVacant) {
           await generateRecommendations(seatId, {
-            rocks_score: 0, todos_score: 0, ids_score: 0, cadence_score: 0, gwc_score: 0,
+            rocks_score: 0, scorecard_score: 0, gwc_score: 0, rollover_score: 0,
+            todos_score: 0, ids_score: 0, cadence_score: 0,
             total_score: 0, health_band: 'healthy', contributing_factors: []
           }, {
-            seat_id: seatId, owner_id: null, active_rocks_count: 0, off_track_rocks_count: 0,
+            seat_id: seatId, owner_id: null, 
+            active_rocks_count: 0, off_track_rocks_count: 0, critical_rock_off_track: false,
+            measurables_count: 0, off_track_weeks: 0,
+            gwc_capacity_no: false, gwc_capacity_consecutive_no: 0, gwc_declining: false,
+            rocks_rolled_twice: 0, rocks_rolled_thrice: 0,
             overdue_todos_count: 0, total_todos_count: 0, completed_todos_count: 0,
             open_critical_issues_count: 0, old_issues_count: 0, meetings_attended: 0,
-            meetings_missed: 0, gwc_capacity_no: false, gwc_declining: false,
+            meetings_missed: 0,
           }, true, 0, false);
           continue;
         }
@@ -301,15 +305,67 @@ export function useSeatHealth() {
         // Get rocks data - status uses underscores: On_Track, Off_Track, etc.
         const { data: rocks } = await supabase
           .from('eos_rocks')
-          .select('id, status')
+          .select('id, status, priority')
           .eq('owner_id', ownerId)
           .eq('quarter_year', quarter_year)
           .eq('quarter_number', quarter_number);
         
         const activeRocks = rocks?.filter(r => r.status === 'On_Track' || r.status === 'Off_Track') || [];
         const offTrackRocks = rocks?.filter(r => r.status === 'Off_Track') || [];
+        const criticalOffTrack = offTrackRocks.some(r => String(r.priority).toLowerCase() === 'critical');
+        // Rollover count would need to be tracked separately - default to 0 for now
+        const rolledTwice = 0;
+        const rolledThrice = 0;
         
-        // Get todos data
+        // Get scorecard data
+        const { data: scorecards } = await supabase
+          .from('seat_scorecards')
+          .select('id')
+          .eq('seat_id', seatId)
+          .eq('status', 'Active')
+          .maybeSingle();
+        
+        let measurablesCount = 0;
+        let offTrackWeeks = 0;
+        
+        if (scorecards?.id) {
+          // Get measurable entries for last 4 weeks
+          const fourWeeksAgo = new Date(Date.now() - 28 * 24 * 60 * 60 * 1000).toISOString();
+          const { data: entries } = await supabase
+            .from('seat_measurable_entries')
+            .select('status, week_start_date')
+            .eq('tenant_id', VIVACITY_TENANT_ID)
+            .gte('week_start_date', fourWeeksAgo.split('T')[0]);
+          
+          measurablesCount = entries?.length || 0;
+          offTrackWeeks = entries?.filter(e => e.status === 'Off Track').length || 0;
+        }
+        
+        // Get GWC data from QC (capacity only - check consecutive No patterns)
+        const { data: fitData } = await supabase
+          .from('eos_qc_fit')
+          .select('capacity, qc_id')
+          .eq('seat_id', seatId)
+          .order('created_at', { ascending: false })
+          .limit(4);
+        
+        const gwcCapacityNo = (fitData?.[0] as any)?.capacity === false;
+        
+        // Count consecutive No for capacity
+        let consecutiveNo = 0;
+        for (const fit of fitData || []) {
+          if ((fit as any).capacity === false) {
+            consecutiveNo++;
+          } else {
+            break;
+          }
+        }
+        
+        // Check for declining trend
+        const gwcDeclining = fitData && fitData.length >= 2 && 
+          (fitData[0] as any)?.capacity === false && (fitData[1] as any)?.capacity === true;
+        
+        // Legacy data fetching (kept for backward compatibility)
         const { data: todos } = await supabase
           .from('eos_todos')
           .select('id, status, due_date')
@@ -319,7 +375,6 @@ export function useSeatHealth() {
         const overdueTodos = todos?.filter(t => t.status !== 'Complete' && t.due_date && t.due_date < now) || [];
         const completedTodos = todos?.filter(t => t.status === 'Complete') || [];
         
-        // Get issues data
         const { data: issues } = await supabase
           .from('eos_issues')
           .select('id, impact, status, created_at')
@@ -330,36 +385,31 @@ export function useSeatHealth() {
         const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
         const oldIssues = issues?.filter(i => i.created_at < thirtyDaysAgo) || [];
         
-        // Get meeting attendance (last 4 weeks) - uses 'attended' boolean, not status
-        const fourWeeksAgo = new Date(Date.now() - 28 * 24 * 60 * 60 * 1000).toISOString();
+        const fourWeeksAgoMeetings = new Date(Date.now() - 28 * 24 * 60 * 60 * 1000).toISOString();
         const { data: attendance } = await supabase
           .from('eos_meeting_participants')
           .select('id, attended, meeting_id')
           .eq('user_id', ownerId)
-          .gte('created_at', fourWeeksAgo);
+          .gte('created_at', fourWeeksAgoMeetings);
         
         const attended = attendance?.filter(a => a.attended === true) || [];
         const missed = attendance?.filter(a => a.attended === false) || [];
         
-        // Get GWC data from QC (capacity only - want_it may not exist)
-        const { data: fitData } = await supabase
-          .from('eos_qc_fit')
-          .select('capacity, qc_id')
-          .eq('seat_id', seatId)
-          .order('created_at', { ascending: false })
-          .limit(2);
-        
-        const gwcCapacityNo = (fitData?.[0] as any)?.capacity === false;
-        // For want_it, we need to check separately as field may not exist
-        const gwcWantItNo = false; // Will be enhanced when want_it column is available
-        const gwcDeclining = fitData && fitData.length >= 2 && 
-          (fitData[0] as any)?.capacity === false && (fitData[1] as any)?.capacity === true;
-        
         const rawData: RawSeatData = {
           seat_id: seatId,
           owner_id: ownerId,
+          // New capacity signals
           active_rocks_count: activeRocks.length,
           off_track_rocks_count: offTrackRocks.length,
+          critical_rock_off_track: criticalOffTrack,
+          measurables_count: measurablesCount,
+          off_track_weeks: offTrackWeeks,
+          gwc_capacity_no: gwcCapacityNo,
+          gwc_capacity_consecutive_no: consecutiveNo,
+          gwc_declining: gwcDeclining,
+          rocks_rolled_twice: rolledTwice,
+          rocks_rolled_thrice: rolledThrice,
+          // Legacy fields
           overdue_todos_count: overdueTodos.length,
           total_todos_count: todos?.length || 0,
           completed_todos_count: completedTodos.length,
@@ -367,8 +417,6 @@ export function useSeatHealth() {
           old_issues_count: oldIssues.length,
           meetings_attended: attended.length,
           meetings_missed: missed.length,
-          gwc_capacity_no: gwcCapacityNo,
-          gwc_declining: gwcDeclining,
         };
         
         const healthData = calculateSeatHealth(rawData);
@@ -419,7 +467,7 @@ export function useSeatHealth() {
             rawData, 
             false, 
             ownerSeatCount || 1,
-            gwcWantItNo
+            false // gwcWantItNo - not tracked in current data model
           );
         }
       }

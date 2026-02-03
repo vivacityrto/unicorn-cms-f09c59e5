@@ -79,13 +79,13 @@ export function SeatDetailPanel({
   const seatHealth = getSeatHealth(seat.id);
   const seatRecommendations = getSeatRecommendations(seat.id);
   
-  // Navigation handler for health section
-  const handleNavigate = (type: 'rocks' | 'todos' | 'issues' | 'meetings') => {
+  // Navigation handler for capacity section
+  const handleNavigate = (type: 'rocks' | 'scorecard' | 'gwc' | 'rollover') => {
     const routes = {
       rocks: '/eos/rocks',
-      todos: '/eos/to-dos',
-      issues: '/eos/risks-opportunities',
-      meetings: '/eos/meetings',
+      scorecard: `/eos/accountability-chart?seat=${seat.id}`,
+      gwc: `/eos/gwc-trends?seat=${seat.id}`,
+      rollover: '/eos/rocks',
     };
     navigate(routes[type]);
     onOpenChange(false);
