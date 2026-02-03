@@ -4,6 +4,7 @@ import { DashboardLayout } from '@/components/DashboardLayout';
 import { useRBAC } from '@/hooks/useRBAC';
 import { useAuth } from '@/hooks/useAuth';
 import { useLeadershipDashboard } from '@/hooks/useLeadershipDashboard';
+import { useSeatSuccession } from '@/hooks/useSeatSuccession';
 import { 
   LeadershipKPICards,
   LeadershipRocksTable,
@@ -19,6 +20,7 @@ import {
   IDSMasterPanel,
   ClientImpactPanel,
   SeatRebalancingPanel,
+  LeadershipSuccessionRisks,
   type DateRangeFilter,
   type MeetingTypeFilter,
   type SeatFilter,
@@ -87,6 +89,9 @@ function LeadershipContent({ isSuper, isTeamLeader, isTeamMember, currentUserId 
     year: dateRange === 'custom' ? selectedYear : currentYear,
     quarter: dateRange === 'custom' ? selectedQuarter : currentQuarter,
   });
+  
+  // Get succession data
+  const { successionRisks, seatsWithActiveCover } = useSeatSuccession();
 
   // Filter seats based on current user for Team Members
   const filteredSeats = useMemo(() => {
@@ -382,6 +387,12 @@ function LeadershipContent({ isSuper, isTeamLeader, isTeamMember, currentUserId 
             <SeatRebalancingPanel 
               recommendations={rebalancingRecommendations}
               seats={data.seats}
+            />
+
+            <LeadershipSuccessionRisks
+              risks={successionRisks}
+              seatsWithActiveCover={seatsWithActiveCover}
+              onSeatClick={handleSeatClick}
             />
 
             <LeadershipAccountabilityGaps gaps={data.accountabilityGaps} />
