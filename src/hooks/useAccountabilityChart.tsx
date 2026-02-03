@@ -98,10 +98,12 @@ export function useAccountabilityChart() {
           .select('*')
           .eq('chart_id', chartData.id)
           .order('version_number', { ascending: false }),
+        // Fetch Vivacity Team users (EOS is internal-only, so user map must use same filter as dropdown)
         supabase
           .from('users')
           .select('user_uuid, first_name, last_name, email, avatar_url')
-          .eq('tenant_id', tenantId),
+          .in('unicorn_role', ['Super Admin', 'Team Leader', 'Team Member'])
+          .eq('archived', false),
         // Fetch linked data from the view
         supabase
           .from('seat_linked_data')
