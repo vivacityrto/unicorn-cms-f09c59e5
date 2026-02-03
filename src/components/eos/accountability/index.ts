@@ -8,3 +8,6 @@ export { OrgChartView } from './OrgChartView';
 export { DraggableFunctionColumn } from './DraggableFunctionColumn';
 export { DraggableSeatCard } from './DraggableSeatCard';
 export { SwimlaneDragDropProvider } from './SwimlaneDragDropProvider';
+export { SeatHealthBadge } from './SeatHealthBadge';
+export { SeatHealthSection } from './SeatHealthSection';
+export { RecommendationsPanel } from './RecommendationsPanel';

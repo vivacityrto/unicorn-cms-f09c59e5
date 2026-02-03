@@ -45,6 +45,8 @@ import {
 import { cn } from '@/lib/utils';
 import type { SeatWithDetails, UserBasic } from '@/types/accountabilityChart';
 import { EOS_SEAT_ROLE_LABELS, EOS_ROLE_COLORS, type EosSeatRoleType } from '@/types/accountabilityChart';
+import type { SeatHealthScore } from '@/types/seatHealth';
+import { SeatHealthBadge } from './SeatHealthBadge';
 
 interface DraggableSeatCardProps {
   seat: SeatWithDetails;
@@ -59,6 +61,7 @@ interface DraggableSeatCardProps {
   onAssign: (seatId: string, userId: string, type: 'Primary' | 'Secondary') => void;
   onUnassign: (assignmentId: string) => void;
   onClick?: () => void;
+  health?: SeatHealthScore;
 }
 
 export function DraggableSeatCard({
@@ -74,6 +77,7 @@ export function DraggableSeatCard({
   onAssign,
   onUnassign,
   onClick,
+  health,
 }: DraggableSeatCardProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
@@ -215,8 +219,11 @@ export function DraggableSeatCard({
             )}
           </div>
 
-          {/* Status Icons */}
-          <div className="flex items-center gap-1">
+          {/* Status Icons and Health Badge */}
+          <div className="flex items-center gap-1.5">
+            {/* Health Badge */}
+            <SeatHealthBadge health={health} size="sm" />
+            
             {isVacant && (
               <TooltipProvider>
                 <Tooltip>
@@ -229,7 +236,7 @@ export function DraggableSeatCard({
                 </Tooltip>
               </TooltipProvider>
             )}
-            {!isVacant && !hasAccountabilityWarning && (
+            {!isVacant && !hasAccountabilityWarning && !health && (
               <CheckCircle2 className="h-4 w-4 text-emerald-500" />
             )}
           </div>

@@ -1,0 +1,167 @@
+// Seat Health Scoring Types
+
+export type HealthBand = 'healthy' | 'at_risk' | 'overloaded';
+export type RecommendationType = 'reduce_rock_load' | 'move_rock' | 'add_backup' | 'split_seat';
+export type RecommendationStatus = 'new' | 'acknowledged' | 'action_taken' | 'dismissed';
+
+export interface ContributingFactor {
+  type: 'rocks' | 'todos' | 'ids' | 'cadence' | 'gwc';
+  label: string;
+  description: string;
+  score: number;
+  severity: 'high' | 'medium' | 'low';
+}
+
+export interface SeatHealthScore {
+  id: string;
+  tenant_id: number;
+  seat_id: string;
+  
+  // Score components (0-100 each, higher = worse)
+  rocks_score: number;
+  todos_score: number;
+  ids_score: number;
+  cadence_score: number;
+  gwc_score: number;
+  
+  // Total weighted score (0-100)
+  total_score: number;
+  
+  // Health band
+  health_band: HealthBand;
+  
+  // Top contributing factors
+  contributing_factors: ContributingFactor[];
+  
+  calculated_at: string;
+  quarter_year: number;
+  quarter_number: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface SuggestedRock {
+  id: string;
+  title: string;
+  status: string;
+}
+
+export interface SuggestedUser {
+  user_uuid: string;
+  first_name: string | null;
+  last_name: string | null;
+  current_seat_count: number;
+}
+
+export interface SuggestedSeat {
+  id: string;
+  seat_name: string;
+  function_name: string;
+  current_load_score: number;
+}
+
+export interface SeatRebalancingRecommendation {
+  id: string;
+  tenant_id: number;
+  seat_id: string;
+  
+  recommendation_type: RecommendationType;
+  title: string;
+  description: string;
+  
+  suggested_rocks: SuggestedRock[];
+  suggested_users: SuggestedUser[];
+  suggested_seats: SuggestedSeat[];
+  
+  status: RecommendationStatus;
+  dismissed_reason?: string;
+  dismissed_by?: string;
+  dismissed_at?: string;
+  acknowledged_at?: string;
+  acknowledged_by?: string;
+  resolved_at?: string;
+  resolved_by?: string;
+  
+  trigger_type: string;
+  trigger_details?: Record<string, unknown>;
+  
+  quarter_year: number;
+  quarter_number: number;
+  created_at: string;
+  updated_at: string;
+}
+
+// Health band colors and labels
+export const HEALTH_BAND_CONFIG: Record<HealthBand, {
+  label: string;
+  color: string;
+  bgColor: string;
+  borderColor: string;
+  icon: 'check' | 'alert-triangle' | 'alert-circle';
+}> = {
+  healthy: {
+    label: 'Healthy',
+    color: 'text-emerald-700 dark:text-emerald-300',
+    bgColor: 'bg-emerald-100 dark:bg-emerald-950/50',
+    borderColor: 'border-emerald-300 dark:border-emerald-800',
+    icon: 'check',
+  },
+  at_risk: {
+    label: 'At Risk',
+    color: 'text-amber-700 dark:text-amber-300',
+    bgColor: 'bg-amber-100 dark:bg-amber-950/50',
+    borderColor: 'border-amber-300 dark:border-amber-800',
+    icon: 'alert-triangle',
+  },
+  overloaded: {
+    label: 'Overloaded',
+    color: 'text-red-700 dark:text-red-300',
+    bgColor: 'bg-red-100 dark:bg-red-950/50',
+    borderColor: 'border-red-300 dark:border-red-800',
+    icon: 'alert-circle',
+  },
+};
+
+export const RECOMMENDATION_TYPE_CONFIG: Record<RecommendationType, {
+  label: string;
+  icon: 'minus-circle' | 'arrow-right' | 'user-plus' | 'scissors';
+  description: string;
+}> = {
+  reduce_rock_load: {
+    label: 'Reduce Rock Load',
+    icon: 'minus-circle',
+    description: 'Recommend lowering active Rocks next quarter',
+  },
+  move_rock: {
+    label: 'Move Rock',
+    icon: 'arrow-right',
+    description: 'Suggest moving specific Rocks to another seat',
+  },
+  add_backup: {
+    label: 'Add Backup',
+    icon: 'user-plus',
+    description: 'Suggest adding a secondary seat owner',
+  },
+  split_seat: {
+    label: 'Split Seat',
+    icon: 'scissors',
+    description: 'Suggest splitting accountabilities into two seats',
+  },
+};
+
+// Score thresholds for health bands
+// 0-39: Healthy, 40-69: At Risk, 70-100: Overloaded
+export const HEALTH_THRESHOLDS = {
+  healthy: { max: 39 },
+  at_risk: { min: 40, max: 69 },
+  overloaded: { min: 70 },
+};
+
+// Weight configuration for score calculation
+export const SCORE_WEIGHTS = {
+  rocks: 0.40,      // 40%
+  todos: 0.20,      // 20%
+  ids: 0.20,        // 20%
+  cadence: 0.10,    // 10%
+  gwc: 0.10,        // 10%
+};
