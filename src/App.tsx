@@ -55,6 +55,7 @@ import EosQCSession from "./pages/EosQCSession";
 import EosFlightPlan from "./pages/EosFlightPlan";
 import EosRisksOpportunities from "./pages/EosRisksOpportunities";
 import EosAccountabilityChart from "./pages/EosAccountabilityChart";
+import EosOnboarding from "./pages/EosOnboarding";
 import ResetPassword from "./pages/ResetPassword";
 import Audits from "./pages/Audits";
 import AuditWorkspace from "./pages/AuditWorkspace";
@@ -429,6 +430,14 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <EosOverview />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/eos/onboarding" 
+              element={
+                <ProtectedRoute>
+                  <EosOnboarding />
                 </ProtectedRoute>
               } 
             />

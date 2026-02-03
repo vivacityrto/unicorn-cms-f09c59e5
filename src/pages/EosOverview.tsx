@@ -7,6 +7,7 @@ import { Link } from 'react-router-dom';
 import { useEosRocks, useEosIssues, useEosTodos, useEosMeetings } from '@/hooks/useEos';
 import { Badge } from '@/components/ui/badge';
 import { DashboardLayout } from '@/components/DashboardLayout';
+import { ReadinessCard } from '@/components/eos/ReadinessCard';
 
 export default function EosOverview() {
   return (
@@ -114,8 +115,11 @@ function OverviewContent() {
         description="Entrepreneurial Operating System - Manage your business with clarity and accountability"
       />
 
-      {/* Quick Stats */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      {/* Readiness Card */}
+      <div className="grid gap-6 lg:grid-cols-3">
+        <div className="lg:col-span-2">
+          {/* Quick Stats */}
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Link to="/eos/rocks">
           <StatCard
             label="Active Rocks"
@@ -150,7 +154,12 @@ function OverviewContent() {
             icon={Calendar}
             onClick={() => {}}
           />
-        </Link>
+          </Link>
+          </div>
+        </div>
+        <div className="lg:col-span-1">
+          <ReadinessCard />
+        </div>
       </div>
 
       {/* EOS Modules */}
