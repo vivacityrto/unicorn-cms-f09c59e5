@@ -1,7 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { Card, CardContent } from '@/components/ui/card';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -19,7 +21,13 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Loader2, Plus, Save, History, CheckCircle, Archive, MoreHorizontal, AlertCircle } from 'lucide-react';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
+import { Loader2, Plus, Save, History, CheckCircle, Archive, MoreHorizontal, AlertCircle, Users, Info, LayoutGrid } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAccountabilityChart } from '@/hooks/useAccountabilityChart';
 import { FunctionColumn } from './FunctionColumn';
@@ -27,13 +35,16 @@ import { SaveVersionDialog, VersionHistoryDialog } from './VersionDialogs';
 import { STATUS_COLORS, type ChartStatus, type UserBasic } from '@/types/accountabilityChart';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { useFacilitatorMode } from '@/contexts/FacilitatorModeContext';
+import { EmptyState } from '@/components/ui/empty-state';
 
 export function ChartBuilder() {
-  const { profile } = useAuth();
+  const { profile, isSuperAdmin } = useAuth();
+  const { isFacilitatorMode, isEligible: isFacilitatorEligible } = useFacilitatorMode();
   const {
     chart,
     isLoading,
-    canEdit,
+    canEdit: hasEditPermission,
     createChart,
     addFunction,
     updateFunction,
@@ -50,6 +61,10 @@ export function ChartBuilder() {
     updateStatus,
   } = useAccountabilityChart();
 
+  // Edit is allowed if: has permission AND (Facilitator Mode is ON OR chart is Draft)
+  // Once activated, editing requires Facilitator Mode
+  const canEdit = hasEditPermission && (isFacilitatorMode || chart?.status === 'Draft' || !chart);
+
   const [tenantUsers, setTenantUsers] = useState<UserBasic[]>([]);
   const [isAddingFunction, setIsAddingFunction] = useState(false);
   const [newFunctionName, setNewFunctionName] = useState('');
@@ -57,7 +72,7 @@ export function ChartBuilder() {
   const [showHistoryDialog, setShowHistoryDialog] = useState(false);
   const [showActivateDialog, setShowActivateDialog] = useState(false);
 
-  // Fetch tenant users
+  // Fetch tenant users (Vivacity team members only for internal EOS)
   useEffect(() => {
     if (profile?.tenant_id) {
       supabase
@@ -112,6 +127,63 @@ export function ChartBuilder() {
   // Calculate chart health warnings
   const seatsWithoutOwner = chart?.functions.flatMap(f => f.seats).filter(s => !s.primaryOwner).length || 0;
   const totalSeats = chart?.functions.flatMap(f => f.seats).length || 0;
+  
+  // Calculate seats with too few/many accountabilities
+  const seatsWithBadAccountabilityCount = useMemo(() => {
+    if (!chart) return { tooFew: 0, tooMany: 0 };
+    const allSeats = chart.functions.flatMap(f => f.seats);
+    const tooFew = allSeats.filter(s => s.roles.length > 0 && s.roles.length < 3).length;
+    const tooMany = allSeats.filter(s => s.roles.length > 7).length;
+    return { tooFew, tooMany };
+  }, [chart]);
+
+  // Calculate overloaded owners (holding > 3 seats)
+  const overloadedOwners = useMemo(() => {
+    if (!chart) return [];
+    const ownerCounts = new Map<string, number>();
+    chart.functions.flatMap(f => f.seats).forEach(seat => {
+      if (seat.primaryOwner?.user_uuid) {
+        const count = ownerCounts.get(seat.primaryOwner.user_uuid) || 0;
+        ownerCounts.set(seat.primaryOwner.user_uuid, count + 1);
+      }
+    });
+    return Array.from(ownerCounts.entries())
+      .filter(([_, count]) => count > 3)
+      .map(([userId, count]) => {
+        const user = tenantUsers.find(u => u.user_uuid === userId);
+        return {
+          userId,
+          name: user ? `${user.first_name || ''} ${user.last_name || ''}`.trim() || user.email : 'Unknown',
+          count,
+        };
+      });
+  }, [chart, tenantUsers]);
+
+  // Validation for activation
+  const canActivate = useMemo(() => {
+    if (!chart) return { valid: false, errors: [] as string[] };
+    const errors: string[] = [];
+    
+    if (chart.functions.length === 0) {
+      errors.push('At least one Function is required');
+    }
+    
+    chart.functions.forEach(func => {
+      if (func.seats.length === 0) {
+        errors.push(`Function "${func.name}" needs at least one Seat`);
+      }
+      func.seats.forEach(seat => {
+        if (!seat.primaryOwner) {
+          errors.push(`Seat "${seat.seat_name}" needs a primary owner`);
+        }
+        if (seat.roles.length < 3) {
+          errors.push(`Seat "${seat.seat_name}" needs at least 3 accountabilities`);
+        }
+      });
+    });
+    
+    return { valid: errors.length === 0, errors };
+  }, [chart]);
 
   if (isLoading) {
     return (
@@ -123,27 +195,22 @@ export function ChartBuilder() {
 
   if (!chart) {
     return (
-      <div className="text-center py-12">
-        <h3 className="text-lg font-semibold mb-2">No Accountability Chart</h3>
-        <p className="text-muted-foreground mb-4">
-          Create your first Accountability Chart to define roles and responsibilities.
-        </p>
-        {canEdit && (
-          <Button onClick={handleCreateChart} disabled={createChart.isPending}>
-            {createChart.isPending ? (
-              <>
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                Creating...
-              </>
-            ) : (
-              <>
-                <Plus className="h-4 w-4 mr-2" />
-                Create Accountability Chart
-              </>
-            )}
-          </Button>
+      <EmptyState
+        icon={LayoutGrid}
+        title="No Accountability Chart"
+        description="Create your Accountability Chart to define Functions, Seats, and Accountabilities. This is not an org chart—it defines how work gets done."
+        action={hasEditPermission ? {
+          label: createChart.isPending ? 'Creating...' : 'Create Accountability Chart',
+          onClick: handleCreateChart,
+          icon: Plus,
+        } : undefined}
+      >
+        {!hasEditPermission && (
+          <p className="text-sm text-muted-foreground mt-4">
+            Contact a Super Admin or Team Leader to create the chart.
+          </p>
         )}
-      </div>
+      </EmptyState>
     );
   }
 
@@ -151,6 +218,66 @@ export function ChartBuilder() {
 
   return (
     <div className="space-y-4">
+      {/* Read-only mode indicator */}
+      {chart.status === 'Active' && !isFacilitatorMode && hasEditPermission && (
+        <Alert>
+          <Info className="h-4 w-4" />
+          <AlertDescription>
+            <strong>Read-only mode.</strong> Enable Facilitator Mode to edit the active chart.
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {/* Facilitator Mode Guidance */}
+      {isFacilitatorMode && (
+        <Alert className="bg-primary/5 border-primary/20">
+          <Users className="h-4 w-4 text-primary" />
+          <AlertDescription className="text-sm">
+            <strong>Facilitator Mode active.</strong> You can add/edit Functions, Seats, and Accountabilities. 
+            Each seat should have 3-7 accountabilities and exactly one primary owner.
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {/* Validation Warnings */}
+      {(seatsWithoutOwner > 0 || seatsWithBadAccountabilityCount.tooFew > 0 || seatsWithBadAccountabilityCount.tooMany > 0 || overloadedOwners.length > 0) && isFacilitatorMode && (
+        <div className="flex flex-wrap gap-2">
+          {seatsWithoutOwner > 0 && (
+            <Badge variant="outline" className="gap-1 text-warning border-warning/50">
+              <AlertCircle className="h-3 w-3" />
+              {seatsWithoutOwner} seat{seatsWithoutOwner > 1 ? 's' : ''} without owner
+            </Badge>
+          )}
+          {seatsWithBadAccountabilityCount.tooFew > 0 && (
+            <Badge variant="outline" className="gap-1 text-warning border-warning/50">
+              <AlertCircle className="h-3 w-3" />
+              {seatsWithBadAccountabilityCount.tooFew} seat{seatsWithBadAccountabilityCount.tooFew > 1 ? 's' : ''} with &lt;3 accountabilities
+            </Badge>
+          )}
+          {seatsWithBadAccountabilityCount.tooMany > 0 && (
+            <Badge variant="outline" className="gap-1 text-warning border-warning/50">
+              <AlertCircle className="h-3 w-3" />
+              {seatsWithBadAccountabilityCount.tooMany} seat{seatsWithBadAccountabilityCount.tooMany > 1 ? 's' : ''} with &gt;7 accountabilities
+            </Badge>
+          )}
+          {overloadedOwners.map(owner => (
+            <TooltipProvider key={owner.userId}>
+              <Tooltip>
+                <TooltipTrigger>
+                  <Badge variant="outline" className="gap-1 text-warning border-warning/50">
+                    <AlertCircle className="h-3 w-3" />
+                    {owner.name} holds {owner.count} seats
+                  </Badge>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>EOS recommends each person holds at most 3 seats</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          ))}
+        </div>
+      )}
+
       {/* Header bar */}
       <div className="flex items-center justify-between gap-4 flex-wrap">
         <div className="flex items-center gap-3">
@@ -162,13 +289,6 @@ export function ChartBuilder() {
             <span className="text-sm text-muted-foreground">
               v{chart.versions[0].version_number}
             </span>
-          )}
-
-          {seatsWithoutOwner > 0 && (
-            <Badge variant="outline" className="gap-1 text-warning border-warning/50">
-              <AlertCircle className="h-3 w-3" />
-              {seatsWithoutOwner} seat{seatsWithoutOwner > 1 ? 's' : ''} without owner
-            </Badge>
           )}
         </div>
 
@@ -323,25 +443,38 @@ export function ChartBuilder() {
       />
 
       <AlertDialog open={showActivateDialog} onOpenChange={setShowActivateDialog}>
-        <AlertDialogContent>
+        <AlertDialogContent className="max-w-lg">
           <AlertDialogHeader>
             <AlertDialogTitle>Activate Accountability Chart?</AlertDialogTitle>
-            <AlertDialogDescription>
-              {seatsWithoutOwner > 0 ? (
-                <>
-                  <span className="text-destructive">
-                    Warning: {seatsWithoutOwner} seat{seatsWithoutOwner > 1 ? 's' : ''} still need a primary owner.
-                  </span>
-                  <br /><br />
-                </>
-              ) : null}
-              Activating will make this chart the official reference for Quarterly Conversations
-              and EOS Health scoring. Only one chart can be active at a time.
+            <AlertDialogDescription asChild>
+              <div className="space-y-3">
+                {!canActivate.valid && (
+                  <div className="bg-destructive/10 border border-destructive/30 rounded-md p-3">
+                    <p className="font-medium text-destructive mb-2">Cannot activate. Fix these issues first:</p>
+                    <ul className="text-sm text-destructive/80 list-disc list-inside space-y-1">
+                      {canActivate.errors.slice(0, 5).map((err, i) => (
+                        <li key={i}>{err}</li>
+                      ))}
+                      {canActivate.errors.length > 5 && (
+                        <li>...and {canActivate.errors.length - 5} more issues</li>
+                      )}
+                    </ul>
+                  </div>
+                )}
+                <p>
+                  Activating will make this chart the official reference for Quarterly Conversations
+                  and EOS Health scoring. Only one chart can be active at a time.
+                </p>
+              </div>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleActivate}>
+            <AlertDialogAction 
+              onClick={handleActivate}
+              disabled={!canActivate.valid}
+              className={!canActivate.valid ? 'opacity-50 cursor-not-allowed' : ''}
+            >
               Activate Chart
             </AlertDialogAction>
           </AlertDialogFooter>

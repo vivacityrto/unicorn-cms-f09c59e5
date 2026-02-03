@@ -34,7 +34,14 @@ import {
   X,
   User,
   BarChart3,
+  AlertCircle,
 } from 'lucide-react';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 import type { SeatWithDetails, UserBasic } from '@/types/accountabilityChart';
 import { SeatScorecardBuilder } from '@/components/eos/scorecard';
@@ -251,10 +258,26 @@ export function SeatCard({
           <Button
             variant="ghost"
             size="sm"
-            className="w-full h-7 rounded-none border-t text-xs gap-1"
+            className={cn(
+              "w-full h-7 rounded-none border-t text-xs gap-1",
+              seat.roles.length < 3 && seat.roles.length > 0 && "text-warning",
+              seat.roles.length > 7 && "text-warning"
+            )}
           >
             {isOpen ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
             {seat.roles.length} accountabilities
+            {(seat.roles.length < 3 || seat.roles.length > 7) && seat.roles.length > 0 && (
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <AlertCircle className="h-3 w-3 text-warning" />
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>{seat.roles.length < 3 ? 'Needs at least 3 accountabilities' : 'Should have at most 7 accountabilities'}</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            )}
           </Button>
         </CollapsibleTrigger>
 
