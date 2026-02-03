@@ -267,8 +267,8 @@ export default function UserProfile() {
             />
           )}
 
-          {/* Admin Actions */}
-          {isAdmin && user.user_uuid !== currentUser.user_uuid && (
+          {/* Admin Actions - SuperAdmins can see on any profile including their own */}
+          {isAdmin && (
             <AdminActions
               user={user}
               currentUserRole={currentUser.unicorn_role}
