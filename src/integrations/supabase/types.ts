@@ -5629,6 +5629,7 @@ export type Database = {
           subject: string | null
           to: string | null
           u1_id: number | null
+          uuid_id: string
         }
         Insert: {
           auth_mode?: boolean
@@ -5649,6 +5650,7 @@ export type Database = {
           subject?: string | null
           to?: string | null
           u1_id?: number | null
+          uuid_id?: string
         }
         Update: {
           auth_mode?: boolean
@@ -5669,6 +5671,7 @@ export type Database = {
           subject?: string | null
           to?: string | null
           u1_id?: number | null
+          uuid_id?: string
         }
         Relationships: []
       }
@@ -11246,9 +11249,11 @@ export type Database = {
           quarter_number: number
           quarter_year: number
           recommendation_type: string
+          resolution_note: string | null
           resolved_at: string | null
           resolved_by: string | null
           seat_id: string
+          severity: string
           status: string
           suggested_rocks: Json | null
           suggested_seats: Json | null
@@ -11271,9 +11276,11 @@ export type Database = {
           quarter_number: number
           quarter_year: number
           recommendation_type: string
+          resolution_note?: string | null
           resolved_at?: string | null
           resolved_by?: string | null
           seat_id: string
+          severity?: string
           status?: string
           suggested_rocks?: Json | null
           suggested_seats?: Json | null
@@ -11296,9 +11303,11 @@ export type Database = {
           quarter_number?: number
           quarter_year?: number
           recommendation_type?: string
+          resolution_note?: string | null
           resolved_at?: string | null
           resolved_by?: string | null
           seat_id?: string
+          severity?: string
           status?: string
           suggested_rocks?: Json | null
           suggested_seats?: Json | null

@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
+import { Separator } from '@/components/ui/separator';
 import {
   Dialog,
   DialogContent,
@@ -18,18 +19,28 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from '@/components/ui/accordion';
+import {
   Lightbulb,
   MinusCircle,
   ArrowRight,
   UserPlus,
   Scissors,
+  Settings,
+  Users,
+  UserX,
   Check,
   X,
   Eye,
+  History,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useSeatHealth } from '@/hooks/useSeatHealth';
-import type { SeatRebalancingRecommendation, RecommendationType, RecommendationStatus } from '@/types/seatHealth';
+import type { SeatRebalancingRecommendation, RecommendationType, RecommendationStatus, RecommendationSeverity } from '@/types/seatHealth';
 import { RECOMMENDATION_TYPE_CONFIG } from '@/types/seatHealth';
 import { useAuth } from '@/hooks/useAuth';
 
@@ -37,18 +48,27 @@ interface RecommendationsPanelProps {
   seatId?: string;
   recommendations?: SeatRebalancingRecommendation[];
   showAll?: boolean;
+  showHistory?: boolean;
+  maxVisible?: number;
 }
 
 export function RecommendationsPanel({ 
   seatId, 
   recommendations: propRecommendations,
-  showAll = false 
+  showAll = false,
+  showHistory = false,
+  maxVisible = 5,
 }: RecommendationsPanelProps) {
   const { recommendations: allRecs, getSeatRecommendations, updateRecommendation } = useSeatHealth();
   const { profile, isSuperAdmin } = useAuth();
   
   // Check if user can dismiss - Super Admin or Team Leader role
   const canDismiss = isSuperAdmin() || profile?.unicorn_role === 'Team Leader';
+  
+  // Check if user can view (hide from Team Member)
+  const canView = isSuperAdmin() || profile?.unicorn_role === 'Team Leader' || profile?.unicorn_role === 'Team Member';
+  
+  if (!canView) return null;
   
   const recommendations = propRecommendations 
     || (seatId ? getSeatRecommendations(seatId) : allRecs)
@@ -57,8 +77,19 @@ export function RecommendationsPanel({
   const activeRecs = showAll 
     ? recommendations 
     : recommendations.filter(r => r.status === 'new' || r.status === 'acknowledged');
+  
+  const historyRecs = recommendations.filter(r => r.status === 'action_taken' || r.status === 'dismissed');
+  
+  // Sort by severity (high first) then by date
+  const sortedRecs = [...activeRecs]
+    .sort((a, b) => {
+      if (a.severity === 'high' && b.severity !== 'high') return -1;
+      if (a.severity !== 'high' && b.severity === 'high') return 1;
+      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+    })
+    .slice(0, maxVisible);
 
-  if (activeRecs.length === 0) {
+  if (sortedRecs.length === 0 && !showHistory) {
     return null;
   }
 
@@ -68,13 +99,24 @@ export function RecommendationsPanel({
         <CardTitle className="text-sm font-medium flex items-center gap-2">
           <Lightbulb className="h-4 w-4 text-amber-500" />
           Rebalancing Suggestions
-          <Badge variant="outline" className="ml-auto text-xs">
-            {activeRecs.filter(r => r.status === 'new').length} new
-          </Badge>
+          <div className="flex items-center gap-1 ml-auto">
+            {sortedRecs.filter(r => r.severity === 'high').length > 0 && (
+              <Badge variant="destructive" className="text-[10px]">
+                {sortedRecs.filter(r => r.severity === 'high').length} high priority
+              </Badge>
+            )}
+            <Badge variant="outline" className="text-xs">
+              {sortedRecs.filter(r => r.status === 'new').length} new
+            </Badge>
+          </div>
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-3">
-        {activeRecs.map((rec) => (
+        <p className="text-xs text-muted-foreground italic">
+          Advisory suggestions only. Leadership decides.
+        </p>
+        
+        {sortedRecs.map((rec) => (
           <RecommendationCard 
             key={rec.id} 
             recommendation={rec}
@@ -84,10 +126,48 @@ export function RecommendationsPanel({
             onDismiss={(reason) => updateRecommendation.mutate({ id: rec.id, status: 'dismissed', dismissed_reason: reason })}
           />
         ))}
+        
+        {activeRecs.length > maxVisible && (
+          <p className="text-xs text-muted-foreground text-center">
+            +{activeRecs.length - maxVisible} more suggestions
+          </p>
+        )}
+        
+        {/* History accordion */}
+        {showHistory && historyRecs.length > 0 && (
+          <>
+            <Separator className="my-3" />
+            <Accordion type="single" collapsible>
+              <AccordionItem value="history" className="border-none">
+                <AccordionTrigger className="py-2 text-xs text-muted-foreground hover:no-underline">
+                  <div className="flex items-center gap-2">
+                    <History className="h-3 w-3" />
+                    Past Suggestions ({historyRecs.length})
+                  </div>
+                </AccordionTrigger>
+                <AccordionContent className="space-y-2 pt-2">
+                  {historyRecs.slice(0, 5).map((rec) => (
+                    <HistoryCard key={rec.id} recommendation={rec} />
+                  ))}
+                </AccordionContent>
+              </AccordionItem>
+            </Accordion>
+          </>
+        )}
       </CardContent>
     </Card>
   );
 }
+
+const ICON_MAP: Record<RecommendationType, React.FC<{ className?: string }>> = {
+  reduce_rock_load: MinusCircle,
+  move_rock: ArrowRight,
+  add_backup: UserPlus,
+  split_seat: Scissors,
+  seat_redesign: Settings,
+  people_review: Users,
+  vacant_seat: UserX,
+};
 
 interface RecommendationCardProps {
   recommendation: SeatRebalancingRecommendation;
@@ -107,17 +187,18 @@ function RecommendationCard({
   const [showDismissDialog, setShowDismissDialog] = useState(false);
   const [dismissReason, setDismissReason] = useState('');
   
-  const config = RECOMMENDATION_TYPE_CONFIG[recommendation.recommendation_type];
-  const Icon = recommendation.recommendation_type === 'reduce_rock_load' ? MinusCircle
-    : recommendation.recommendation_type === 'move_rock' ? ArrowRight
-    : recommendation.recommendation_type === 'add_backup' ? UserPlus
-    : Scissors;
+  const Icon = ICON_MAP[recommendation.recommendation_type] || Lightbulb;
 
   const statusColors: Record<RecommendationStatus, string> = {
     new: 'bg-blue-100 text-blue-700 dark:bg-blue-950/50 dark:text-blue-300',
     acknowledged: 'bg-amber-100 text-amber-700 dark:bg-amber-950/50 dark:text-amber-300',
     action_taken: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300',
     dismissed: 'bg-muted text-muted-foreground',
+  };
+  
+  const severityStyles: Record<RecommendationSeverity, { border: string; bg: string }> = {
+    high: { border: 'border-amber-300 dark:border-amber-700', bg: 'bg-amber-50/50 dark:bg-amber-950/20' },
+    medium: { border: 'border-muted', bg: 'bg-muted/30' },
   };
 
   const handleDismiss = () => {
@@ -128,17 +209,31 @@ function RecommendationCard({
     }
   };
 
+  const severity = recommendation.severity || 'medium';
+
   return (
     <>
-      <div className="p-3 rounded-lg border bg-muted/30 space-y-2">
+      <div className={cn(
+        'p-3 rounded-lg border space-y-2',
+        severityStyles[severity].border,
+        severityStyles[severity].bg
+      )}>
         <div className="flex items-start gap-2">
-          <Icon className="h-4 w-4 text-amber-500 mt-0.5 shrink-0" />
+          <Icon className={cn(
+            'h-4 w-4 mt-0.5 shrink-0',
+            severity === 'high' ? 'text-amber-600' : 'text-muted-foreground'
+          )} />
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 mb-1">
+            <div className="flex items-center gap-2 mb-1 flex-wrap">
               <span className="text-sm font-medium">{recommendation.title}</span>
+              {severity === 'high' && (
+                <Badge variant="outline" className="text-[10px] bg-amber-100 text-amber-700 border-amber-300 dark:bg-amber-950/50 dark:text-amber-300 dark:border-amber-700">
+                  High
+                </Badge>
+              )}
               <Badge className={cn('text-[10px]', statusColors[recommendation.status])}>
                 {recommendation.status === 'new' ? 'New' 
-                  : recommendation.status === 'acknowledged' ? 'Acknowledged'
+                  : recommendation.status === 'acknowledged' ? 'Reviewing'
                   : recommendation.status === 'action_taken' ? 'Resolved'
                   : 'Dismissed'}
               </Badge>
@@ -151,7 +246,7 @@ function RecommendationCard({
 
         {/* Actions */}
         {(recommendation.status === 'new' || recommendation.status === 'acknowledged') && (
-          <div className="flex items-center gap-2 pt-1">
+          <div className="flex items-center gap-2 pt-1 flex-wrap">
             {recommendation.status === 'new' && (
               <TooltipProvider>
                 <Tooltip>
@@ -227,7 +322,7 @@ function RecommendationCard({
       <Dialog open={showDismissDialog} onOpenChange={setShowDismissDialog}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Dismiss Recommendation</DialogTitle>
+            <DialogTitle>Dismiss Suggestion</DialogTitle>
             <DialogDescription>
               Please provide a reason for dismissing this suggestion. This will be logged for audit purposes.
             </DialogDescription>
@@ -249,5 +344,25 @@ function RecommendationCard({
         </DialogContent>
       </Dialog>
     </>
+  );
+}
+
+function HistoryCard({ recommendation }: { recommendation: SeatRebalancingRecommendation }) {
+  const Icon = ICON_MAP[recommendation.recommendation_type] || Lightbulb;
+  const isResolved = recommendation.status === 'action_taken';
+  
+  return (
+    <div className="flex items-start gap-2 p-2 rounded-lg bg-muted/20 text-muted-foreground">
+      <Icon className="h-3 w-3 mt-0.5 shrink-0" />
+      <div className="flex-1 min-w-0">
+        <p className="text-[11px] truncate">{recommendation.title}</p>
+        <p className="text-[10px]">
+          {isResolved ? 'Resolved' : 'Dismissed'} • {new Date(recommendation.created_at).toLocaleDateString()}
+        </p>
+      </div>
+      <Badge variant="outline" className="text-[9px] shrink-0">
+        {isResolved ? '✓' : '✕'}
+      </Badge>
+    </div>
   );
 }
