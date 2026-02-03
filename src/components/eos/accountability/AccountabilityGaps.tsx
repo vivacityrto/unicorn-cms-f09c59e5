@@ -161,30 +161,45 @@ export function AccountabilityGaps({ seats, onSeatClick }: AccountabilityGapsPro
           </div>
         </div>
       </CardHeader>
-      <CardContent className="space-y-2">
-        {gaps.map((gap, i) => (
-          <div
-            key={`${gap.type}-${gap.seat?.id || gap.owner?.user_uuid}-${i}`}
-            className={cn(
-              'flex items-center gap-3 p-3 rounded-lg border cursor-pointer hover:shadow-sm transition-shadow',
-              SEVERITY_COLORS[gap.severity]
-            )}
-            onClick={() => gap.seat && onSeatClick?.(gap.seat)}
-          >
-            <div className="shrink-0">
-              {GAP_ICONS[gap.type]}
+      <CardContent className="space-y-3">
+        {/* Uncovered seats banner */}
+        {highCount > 0 && (
+          <div className="flex items-center gap-2 p-3 rounded-lg bg-destructive/10 border border-destructive/30 text-destructive">
+            <AlertTriangle className="h-5 w-5 shrink-0" />
+            <div>
+              <p className="font-semibold text-sm">Uncovered seats block execution</p>
+              <p className="text-xs opacity-80">
+                Assign owners to all seats before activating the chart or running meetings.
+              </p>
             </div>
-            <div className="flex-1 min-w-0">
-              <p className="font-medium text-sm">{gap.message}</p>
-              {gap.details && (
-                <p className="text-xs opacity-75 truncate">{gap.details}</p>
+          </div>
+        )}
+
+        <div className="space-y-2">
+          {gaps.map((gap, i) => (
+            <div
+              key={`${gap.type}-${gap.seat?.id || gap.owner?.user_uuid}-${i}`}
+              className={cn(
+                'flex items-center gap-3 p-3 rounded-lg border cursor-pointer hover:shadow-sm transition-shadow',
+                SEVERITY_COLORS[gap.severity]
+              )}
+              onClick={() => gap.seat && onSeatClick?.(gap.seat)}
+            >
+              <div className="shrink-0">
+                {GAP_ICONS[gap.type]}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="font-medium text-sm">{gap.message}</p>
+                {gap.details && (
+                  <p className="text-xs opacity-75 truncate">{gap.details}</p>
+                )}
+              </div>
+              {gap.seat && (
+                <ChevronRight className="h-4 w-4 shrink-0 opacity-50" />
               )}
             </div>
-            {gap.seat && (
-              <ChevronRight className="h-4 w-4 shrink-0 opacity-50" />
-            )}
-          </div>
-        ))}
+          ))}
+        </div>
       </CardContent>
     </Card>
   );
