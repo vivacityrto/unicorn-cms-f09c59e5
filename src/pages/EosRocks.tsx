@@ -12,6 +12,7 @@ import { RockFormDialog } from '@/components/eos/RockFormDialog';
 import { RockProgressControl } from '@/components/eos/RockProgressControl';
 import { ClientBadge } from '@/components/eos/ClientBadge';
 import { PermissionTooltip, CustomPermissionTooltip } from '@/components/eos/PermissionTooltip';
+import { RocksInsights } from '@/components/eos/facilitator/RocksInsights';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { Link } from 'react-router-dom';
@@ -125,6 +126,9 @@ function RocksContent() {
           </Button>
         </PermissionTooltip>
       </div>
+
+      {/* Facilitator Insights - only shown in facilitator mode */}
+      <RocksInsights rocks={rocks || []} />
 
       {/* Stats Cards */}
       <div className="grid gap-4 md:grid-cols-4">

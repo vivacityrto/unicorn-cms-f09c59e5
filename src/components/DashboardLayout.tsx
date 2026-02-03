@@ -13,6 +13,8 @@ import { NotificationDropdown } from "@/components/NotificationDropdown";
 import unicornLogo from "@/assets/unicorn-logo-full.png";
 import Footer from "@/components/layout/Footer";
 import { TimeInboxBanner } from "@/components/dashboard/TimeInboxWidget";
+import { FacilitatorModeToggle } from "@/components/eos/FacilitatorModeToggle";
+import { FacilitatorModeBanner } from "@/components/eos/FacilitatorModeBanner";
 const baseMenuItems = [{
   icon: LayoutDashboard,
   label: "Dashboard",
@@ -651,6 +653,9 @@ export const DashboardLayout = ({
           </div>
 
           <div className="flex items-center gap-4">
+            {/* Facilitator Mode Toggle */}
+            <FacilitatorModeToggle />
+
             {/* Notification Bell */}
             <NotificationDropdown />
 
@@ -701,6 +706,9 @@ export const DashboardLayout = ({
               </DropdownMenu>}
           </div>
         </header>
+
+        {/* Facilitator Mode Banner */}
+        <FacilitatorModeBanner />
 
         {/* Time Inbox Banner */}
         <TimeInboxBanner />
