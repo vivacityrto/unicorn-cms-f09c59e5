@@ -6,7 +6,7 @@ export type RecommendationStatus = 'new' | 'acknowledged' | 'action_taken' | 'di
 export type RecommendationSeverity = 'high' | 'medium';
 
 export interface ContributingFactor {
-  type: 'rocks' | 'todos' | 'ids' | 'cadence' | 'gwc';
+  type: 'rocks' | 'scorecard' | 'gwc' | 'rollover' | 'todos' | 'ids' | 'cadence';
   label: string;
   description: string;
   score: number;
@@ -20,10 +20,14 @@ export interface SeatHealthScore {
   
   // Score components (0-100 each, higher = worse)
   rocks_score: number;
+  scorecard_score: number;  // Scorecard pressure
+  gwc_score: number;        // GWC Capacity trend
+  rollover_score: number;   // Rollover history
+  
+  // Legacy fields for backward compatibility
   todos_score: number;
   ids_score: number;
   cadence_score: number;
-  gwc_score: number;
   
   // Total weighted score (0-100)
   total_score: number;
@@ -175,11 +179,27 @@ export const HEALTH_THRESHOLDS = {
   overloaded: { min: 70 },
 };
 
-// Weight configuration for score calculation
+// Weight configuration for capacity score calculation (EOS-aligned)
+// Rock Load (40%), Scorecard Pressure (25%), GWC Capacity Trend (25%), Rollover History (10%)
 export const SCORE_WEIGHTS = {
-  rocks: 0.40,      // 40%
-  todos: 0.20,      // 20%
-  ids: 0.20,        // 20%
-  cadence: 0.10,    // 10%
-  gwc: 0.10,        // 10%
+  rocks: 0.40,          // 40% - Rock load and off-track status
+  scorecard: 0.25,      // 25% - Scorecard pressure (off-track measurables)
+  gwc: 0.25,            // 25% - GWC Capacity trend from QCs
+  rollover: 0.10,       // 10% - Historical rollover pattern
+};
+
+// Legacy weights for backward compatibility
+export const LEGACY_SCORE_WEIGHTS = {
+  rocks: 0.40,
+  todos: 0.20,
+  ids: 0.20,
+  cadence: 0.10,
+  gwc: 0.10,
+};
+
+// Capacity status labels (more intuitive than health bands)
+export const CAPACITY_STATUS_LABELS: Record<HealthBand, string> = {
+  healthy: 'Healthy Capacity',
+  at_risk: 'Capacity at Risk',
+  overloaded: 'Overloaded',
 };

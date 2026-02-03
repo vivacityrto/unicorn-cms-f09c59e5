@@ -4,23 +4,22 @@ import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { Progress } from '@/components/ui/progress';
 import {
-  AlertTriangle,
+  Gauge,
   Target,
-  CheckSquare,
-  AlertCircle,
-  Calendar,
+  BarChart3,
   Users,
+  RefreshCw,
   ArrowRight,
   ExternalLink,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { SeatHealthScore, ContributingFactor } from '@/types/seatHealth';
-import { HEALTH_BAND_CONFIG, SCORE_WEIGHTS } from '@/types/seatHealth';
+import { HEALTH_BAND_CONFIG, SCORE_WEIGHTS, CAPACITY_STATUS_LABELS } from '@/types/seatHealth';
 import { SeatHealthBadge } from './SeatHealthBadge';
 
 interface SeatHealthSectionProps {
   health?: SeatHealthScore;
-  onNavigate?: (type: 'rocks' | 'todos' | 'issues' | 'meetings') => void;
+  onNavigate?: (type: 'rocks' | 'scorecard' | 'gwc' | 'rollover') => void;
 }
 
 export function SeatHealthSection({ health, onNavigate }: SeatHealthSectionProps) {
@@ -29,13 +28,13 @@ export function SeatHealthSection({ health, onNavigate }: SeatHealthSectionProps
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="text-sm font-medium flex items-center gap-2">
-            <AlertTriangle className="h-4 w-4" />
-            Seat Health
+            <Gauge className="h-4 w-4" />
+            Seat Capacity
           </CardTitle>
         </CardHeader>
         <CardContent>
           <p className="text-sm text-muted-foreground">
-            Health score has not been calculated yet. Scores are calculated nightly.
+            Capacity score has not been calculated yet. Scores are calculated nightly.
           </p>
         </CardContent>
       </Card>
@@ -43,42 +42,41 @@ export function SeatHealthSection({ health, onNavigate }: SeatHealthSectionProps
   }
 
   const config = HEALTH_BAND_CONFIG[health.health_band];
+  const statusLabel = CAPACITY_STATUS_LABELS[health.health_band];
 
+  // New capacity-focused breakdown
   const scoreBreakdown = [
     { 
-      label: 'Rocks', 
+      label: 'Rock Load', 
       score: health.rocks_score, 
       weight: SCORE_WEIGHTS.rocks * 100,
       icon: Target,
       type: 'rocks' as const,
+      description: 'Active rocks and off-track status',
     },
     { 
-      label: 'To-Dos', 
-      score: health.todos_score, 
-      weight: SCORE_WEIGHTS.todos * 100,
-      icon: CheckSquare,
-      type: 'todos' as const,
+      label: 'Scorecard Pressure', 
+      score: health.scorecard_score || 0, 
+      weight: SCORE_WEIGHTS.scorecard * 100,
+      icon: BarChart3,
+      type: 'scorecard' as const,
+      description: 'Off-track measurables over 4 weeks',
     },
     { 
-      label: 'IDS', 
-      score: health.ids_score, 
-      weight: SCORE_WEIGHTS.ids * 100,
-      icon: AlertCircle,
-      type: 'issues' as const,
-    },
-    { 
-      label: 'Cadence', 
-      score: health.cadence_score, 
-      weight: SCORE_WEIGHTS.cadence * 100,
-      icon: Calendar,
-      type: 'meetings' as const,
-    },
-    { 
-      label: 'GWC', 
+      label: 'GWC Capacity Trend', 
       score: health.gwc_score, 
       weight: SCORE_WEIGHTS.gwc * 100,
       icon: Users,
-      type: null,
+      type: 'gwc' as const,
+      description: 'Capacity trend from QCs',
+    },
+    { 
+      label: 'Rollover History', 
+      score: health.rollover_score || 0, 
+      weight: SCORE_WEIGHTS.rollover * 100,
+      icon: RefreshCw,
+      type: 'rollover' as const,
+      description: 'Rocks rolled multiple times',
     },
   ];
 
@@ -99,8 +97,8 @@ export function SeatHealthSection({ health, onNavigate }: SeatHealthSectionProps
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <CardTitle className="text-sm font-medium flex items-center gap-2">
-            <AlertTriangle className="h-4 w-4" />
-            Seat Health
+            <Gauge className="h-4 w-4" />
+            Seat Capacity
           </CardTitle>
           <SeatHealthBadge health={health} size="md" showTooltip={false} />
         </div>
@@ -114,7 +112,7 @@ export function SeatHealthSection({ health, onNavigate }: SeatHealthSectionProps
         )}>
           <div className="flex items-center justify-between mb-2">
             <span className={cn('text-sm font-medium', config.color)}>
-              Overall Health Score
+              {statusLabel}
             </span>
             <span className={cn('text-lg font-bold', config.color)}>
               {health.total_score}/100
@@ -132,7 +130,7 @@ export function SeatHealthSection({ health, onNavigate }: SeatHealthSectionProps
         {/* Score Breakdown */}
         <div className="space-y-3">
           <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-            Score Breakdown
+            Capacity Signals
           </h4>
           {scoreBreakdown.map((item) => (
             <div key={item.label} className="flex items-center gap-3">
@@ -197,7 +195,7 @@ function FactorCard({
   onNavigate 
 }: { 
   factor: ContributingFactor;
-  onNavigate?: (type: 'rocks' | 'todos' | 'issues' | 'meetings') => void;
+  onNavigate?: (type: 'rocks' | 'scorecard' | 'gwc' | 'rollover') => void;
 }) {
   const severityConfig = {
     high: { bg: 'bg-red-50 dark:bg-red-950/30', border: 'border-red-200 dark:border-red-900', text: 'text-red-700 dark:text-red-300' },
@@ -208,9 +206,9 @@ function FactorCard({
   const config = severityConfig[factor.severity];
   
   const navigationType = factor.type === 'rocks' ? 'rocks' 
-    : factor.type === 'todos' ? 'todos'
-    : factor.type === 'ids' ? 'issues'
-    : factor.type === 'cadence' ? 'meetings'
+    : factor.type === 'scorecard' ? 'scorecard'
+    : factor.type === 'gwc' ? 'gwc'
+    : factor.type === 'rollover' ? 'rollover'
     : null;
 
   return (
