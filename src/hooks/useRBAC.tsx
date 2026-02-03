@@ -4,6 +4,7 @@ import { useAuth } from './useAuth';
 export type Permission = 
   | 'administration:access'
   | 'advanced_features:access'
+  | 'eos:access'  // NEW: EOS access permission
   | 'vto:edit'
   | 'eos_meetings:schedule'
   | 'eos_meetings:edit'
@@ -21,10 +22,11 @@ export type Permission =
 
 // Role-based permission mappings
 const ROLE_PERMISSIONS: Record<string, Permission[]> = {
-  // SuperAdmin has all permissions including administration
+  // SuperAdmin has all permissions including administration and EOS
   'SuperAdmin': [
     'administration:access',
     'advanced_features:access',
+    'eos:access',
     'vto:edit',
     'eos_meetings:schedule',
     'eos_meetings:edit',
@@ -44,6 +46,7 @@ const ROLE_PERMISSIONS: Record<string, Permission[]> = {
   'Super Admin': [
     'administration:access',
     'advanced_features:access',
+    'eos:access',
     'vto:edit',
     'eos_meetings:schedule',
     'eos_meetings:edit',
@@ -59,9 +62,10 @@ const ROLE_PERMISSIONS: Record<string, Permission[]> = {
     'risks:close_critical',
     'agenda_templates:manage',
   ],
-  // Team Leader - Vivacity staff, sees everything EXCEPT administration
+  // Team Leader - Vivacity staff, sees everything EXCEPT administration, HAS EOS access
   'Team Leader': [
     'advanced_features:access',
+    'eos:access',
     'vto:edit',
     'eos_meetings:schedule',
     'eos_meetings:edit',
@@ -75,9 +79,10 @@ const ROLE_PERMISSIONS: Record<string, Permission[]> = {
     'risks:create',
     'risks:escalate',
   ],
-  // Team Member - Vivacity staff, limited escalation abilities
+  // Team Member - Vivacity staff, limited escalation abilities, HAS EOS access
   'Team Member': [
     'advanced_features:access',
+    'eos:access',
     'vto:edit',
     'qc:edit',
     'qc:view_all',
@@ -86,35 +91,17 @@ const ROLE_PERMISSIONS: Record<string, Permission[]> = {
     'rocks:edit_own',
     'risks:create',
   ],
-  // Admin - Client tenant admin, can manage most EOS features
+  // Admin - Client tenant admin, NO EOS access (clients don't use EOS)
   'Admin': [
-    'vto:edit',
-    'eos_meetings:schedule',
-    'eos_meetings:edit',
-    'qc:schedule',
-    'qc:edit',
-    'qc:view_all',
-    'qc:sign',
-    'rocks:create',
-    'rocks:edit_own',
-    'rocks:edit_others',
-    'risks:create',
-    'risks:escalate',
-    'agenda_templates:manage',
+    // NO eos:access - EOS is Vivacity-only
   ],
-  // User - Client tenant user, limited permissions
+  // User - Client tenant user, NO EOS access
   'User': [
-    'qc:sign',
-    'rocks:create',
-    'rocks:edit_own',
-    'risks:create',
+    // NO eos:access - EOS is Vivacity-only
   ],
-  // General User has limited permissions (read-only for most EOS features)
+  // General User - NO EOS access
   'General User': [
-    'qc:sign',
-    'rocks:create',
-    'rocks:edit_own',
-    'risks:create',
+    // NO eos:access - EOS is Vivacity-only
   ],
 };
 
@@ -143,6 +130,24 @@ export const ADVANCED_ROUTES = [
   '/risks',
   '/health',
   '/tools',
+];
+
+// EOS routes - Vivacity Team only (Super Admin, Team Leader, Team Member)
+export const EOS_ROUTES = [
+  '/eos',
+  '/eos/overview',
+  '/eos/scorecard',
+  '/eos/vto',
+  '/eos/mission-control',
+  '/eos/rocks',
+  '/eos/flight-plan',
+  '/eos/risks-opportunities',
+  '/eos/todos',
+  '/eos/meetings',
+  '/eos/qc',
+  '/eos/quarterly-conversations',
+  '/eos/accountability',
+  '/processes',
 ];
 
 /**
@@ -209,6 +214,14 @@ export const useRBAC = () => {
   };
 
   /**
+   * Check if current user can access EOS features
+   * EOS is Vivacity-only - clients cannot access
+   */
+  const canAccessEOS = (): boolean => {
+    return hasPermission('eos:access');
+  };
+
+  /**
    * Check if current user can edit V/TO
    */
   const canEditVTO = (): boolean => {
@@ -263,6 +276,11 @@ export const useRBAC = () => {
     // Check advanced routes
     if (ADVANCED_ROUTES.some(route => path.startsWith(route))) {
       return canAccessAdvanced();
+    }
+    
+    // Check EOS routes - Vivacity Team only
+    if (EOS_ROUTES.some(route => path.startsWith(route))) {
+      return canAccessEOS();
     }
     
     // All other routes are accessible
@@ -329,6 +347,7 @@ export const useRBAC = () => {
     hasPermission,
     canAccessAdmin,
     canAccessAdvanced,
+    canAccessEOS,
     canEditVTO,
     canScheduleMeetings,
     canEditMeetings,
