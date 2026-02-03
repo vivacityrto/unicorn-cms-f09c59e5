@@ -1,34 +1,84 @@
 
-# Fix CSC Assignment Function Ambiguity
+# Fix CSC Assignment Error and Audit Process
 
-## Problem
+## Problem Identified
 
-There are two versions of the `admin_set_tenant_csc_assignment` function in the database with different parameter types:
+The error **"column 'entity_id' is of type uuid but expression is of type text"** occurs because:
 
-| Version | `p_tenant_id` Type | Created By |
-|---------|-------------------|------------|
-| Original | `BIGINT` | Migration 20260106 |
-| Duplicate | `INTEGER` | Migration 20260203 |
+| Component | Type | Issue |
+|-----------|------|-------|
+| `audit_events.entity_id` | `uuid` | Requires valid UUID format |
+| `p_tenant_id` | `BIGINT` | Integer value (e.g., `6372`) |
+| Cast attempt | `p_tenant_id::text` | Results in text like `'6372'`, not a valid UUID |
 
-When calling the function via `supabase.rpc()`, PostgreSQL cannot determine which version to use because JavaScript numbers can match both `INTEGER` and `BIGINT`.
+Both `admin_set_tenant_csc_assignment` and `admin_remove_tenant_csc_assignment` functions have this bug in their audit logging.
 
 ## Solution
 
-Create a migration that:
-1. Drops the duplicate `INTEGER` version of the function
-2. Recreates the corrected function with `BIGINT` parameter (including the new `staff_teams` logic)
+Use the `client_audit_log` table instead of `audit_events` for CSC assignment auditing. This table is designed for tenant-related operations with:
+- `entity_id` as `text` type (accepts any format)
+- `tenant_id` column for proper tenant isolation
+- `entity_type` column (vs `entity`)
+- `actor_user_id` column (vs `user_id`)
+
+## Database Changes
+
+### Update `admin_set_tenant_csc_assignment` Function
+
+Replace the audit insert to use `client_audit_log`:
+
+```sql
+-- Current (broken):
+INSERT INTO public.audit_events (action, entity, entity_id, user_id, details)
+VALUES ('set_assignment', 'tenant_csc_assignment', p_tenant_id::text, ...)
+
+-- Fixed:
+INSERT INTO public.client_audit_log (
+  tenant_id, actor_user_id, action, entity_type, entity_id, details
+)
+VALUES (
+  p_tenant_id, 
+  v_actor_id, 
+  'csc_assignment_set', 
+  'tenant_csc_assignments', 
+  p_csc_user_id::text,
+  jsonb_build_object(
+    'csc_user_id', p_csc_user_id,
+    'is_primary', p_is_primary,
+    'role_label', p_role_label
+  )
+);
+```
+
+### Update `admin_remove_tenant_csc_assignment` Function
+
+Apply the same pattern:
+
+```sql
+INSERT INTO public.client_audit_log (
+  tenant_id, actor_user_id, action, entity_type, entity_id, details
+)
+VALUES (
+  p_tenant_id,
+  v_actor_id,
+  'csc_assignment_removed',
+  'tenant_csc_assignments',
+  p_csc_user_id::text,
+  jsonb_build_object('csc_user_id', p_csc_user_id)
+);
+```
 
 ## Implementation
 
-### Database Migration
+### Migration File
 
-Create a new migration with the following SQL:
+Create a single migration that updates both functions:
 
 ```sql
--- Drop the duplicate INTEGER version of the function
-DROP FUNCTION IF EXISTS public.admin_set_tenant_csc_assignment(INTEGER, UUID, BOOLEAN, TEXT);
+-- Fix CSC assignment audit logging
+-- The audit_events table requires UUID for entity_id, but tenant_id is BIGINT
+-- Use client_audit_log which is designed for tenant-related operations
 
--- Recreate the function with correct BIGINT type and updated staff_teams logic
 CREATE OR REPLACE FUNCTION public.admin_set_tenant_csc_assignment(
   p_tenant_id BIGINT,
   p_csc_user_id UUID,
@@ -83,29 +133,90 @@ BEGIN
     role_label = EXCLUDED.role_label,
     updated_at = NOW();
   
-  -- Audit log
-  INSERT INTO public.audit_events (action, entity, entity_id, user_id, details)
-  VALUES ('set_assignment', 'tenant_csc_assignment', p_tenant_id::text, v_actor_id, jsonb_build_object(
-    'tenant_id', p_tenant_id,
-    'csc_user_id', p_csc_user_id,
-    'is_primary', p_is_primary,
-    'role_label', p_role_label
-  ));
+  -- Audit log using client_audit_log (proper table for tenant operations)
+  INSERT INTO public.client_audit_log (tenant_id, actor_user_id, action, entity_type, entity_id, details)
+  VALUES (
+    p_tenant_id, 
+    v_actor_id, 
+    'csc_assignment_set', 
+    'tenant_csc_assignments', 
+    p_csc_user_id::text,
+    jsonb_build_object(
+      'csc_user_id', p_csc_user_id,
+      'is_primary', p_is_primary,
+      'role_label', p_role_label
+    )
+  );
+  
+  RETURN jsonb_build_object('success', true);
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.admin_remove_tenant_csc_assignment(
+  p_tenant_id BIGINT,
+  p_csc_user_id UUID
+)
+RETURNS JSONB
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_actor_id UUID := auth.uid();
+  v_is_admin BOOLEAN;
+BEGIN
+  SELECT public.is_super_admin() INTO v_is_admin;
+  
+  IF NOT v_is_admin THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Only SuperAdmin can manage CSC assignments');
+  END IF;
+  
+  DELETE FROM public.tenant_csc_assignments
+  WHERE tenant_id = p_tenant_id AND csc_user_id = p_csc_user_id;
+  
+  -- Audit log using client_audit_log (proper table for tenant operations)
+  INSERT INTO public.client_audit_log (tenant_id, actor_user_id, action, entity_type, entity_id, details)
+  VALUES (
+    p_tenant_id,
+    v_actor_id,
+    'csc_assignment_removed',
+    'tenant_csc_assignments',
+    p_csc_user_id::text,
+    jsonb_build_object('csc_user_id', p_csc_user_id)
+  );
   
   RETURN jsonb_build_object('success', true);
 END;
 $$;
 ```
 
+## CSC Assignment Flow Summary
+
+| Step | Component | Action |
+|------|-----------|--------|
+| 1 | `ManageTenants.tsx` | User clicks "Assign" in CSC column |
+| 2 | `CSCQuickAssignDialog.tsx` | Dialog opens with tenant ID/name |
+| 3 | `useTenantCSCAssignment.tsx` | Fetches available CSC users (staff with `client_success` in `staff_teams`) |
+| 4 | User selects CSC | Calls `assignCSC(user_uuid)` |
+| 5 | Hook | Calls RPC `admin_set_tenant_csc_assignment` |
+| 6 | Database Function | Validates SuperAdmin, validates CSC eligibility |
+| 7 | Database Function | Upserts to `tenant_csc_assignments` |
+| 8 | Database Function | Logs to `client_audit_log` (after fix) |
+| 9 | Hook | Invalidates queries, shows toast |
+| 10 | UI | Dialog closes, table refreshes |
+
 ## Files Modified
 
 | File | Change |
 |------|--------|
-| New migration SQL | Drop INTEGER version, keep BIGINT version with updated logic |
+| New migration SQL | Fix both CSC assignment functions to use `client_audit_log` |
 
-## Result
+## Testing Steps
 
-After this migration:
-- Only one version of the function will exist (using `BIGINT`)
-- CSC assignments will work correctly from the UI
-- The `staff_teams` array check will remain intact
+After migration:
+1. Navigate to Manage Clients page
+2. Click "Assign" on any client's CSC column
+3. Select a user with Client Success team assignment
+4. Verify assignment saves without error
+5. Verify CSC name appears in the table column
+6. Check `client_audit_log` table for new audit entry
