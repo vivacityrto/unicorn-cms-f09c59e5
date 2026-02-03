@@ -3,12 +3,15 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Plus, AlertTriangle, Lightbulb, TrendingUp, Shield, User, Calendar, Link as LinkIcon, Filter, X } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
+import { Plus, AlertTriangle, Lightbulb, TrendingUp, Shield, User, Calendar, Link as LinkIcon, Filter, X, Clock, History } from 'lucide-react';
 import { useRisksOpportunities } from '@/hooks/useRisksOpportunities';
 import { useEosRocks } from '@/hooks/useEos';
 import { useEosStatusOptions, useEosCategoryOptions } from '@/hooks/useEosOptions';
-import { format } from 'date-fns';
+import { useTenantUsers } from '@/hooks/useTenantUsers';
+import { format, formatDistanceToNow } from 'date-fns';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { RiskOpportunityForm, type RiskOpportunityFormData } from '@/components/eos/RiskOpportunityForm';
 import type { RiskOpportunityType, RiskOpportunityCategory, RiskOpportunityStatus } from '@/types/risksOpportunities';
@@ -26,12 +29,15 @@ function RisksOpportunitiesContent() {
   const { rocks } = useEosRocks();
   const { data: statusOptions = [] } = useEosStatusOptions();
   const { data: categoryOptions = [] } = useEosCategoryOptions();
+  const { getUserName } = useTenantUsers();
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<typeof items extends (infer T)[] | undefined ? T | null : null>(null);
   const [filterType, setFilterType] = useState<'all' | RiskOpportunityType>('all');
   const [filterCategory, setFilterCategory] = useState<'all' | RiskOpportunityCategory>('all');
   const [filterStatus, setFilterStatus] = useState<'all' | RiskOpportunityStatus>('all');
+  const [escalationDialog, setEscalationDialog] = useState<{ isOpen: boolean; itemId?: string; currentStatus?: string }>({ isOpen: false });
+  const [escalationReason, setEscalationReason] = useState('');
 
   const handleCreate = async (formData: RiskOpportunityFormData) => {
     await createItem.mutateAsync({
@@ -96,12 +102,33 @@ function RisksOpportunitiesContent() {
     }
   };
 
-  const handleStatusChange = async (id: string, newStatus: RiskOpportunityStatus, outcomeNote?: string) => {
-    const updates: any = { status: newStatus };
-    if (newStatus === 'Closed' && outcomeNote) {
-      updates.outcome_note = outcomeNote;
+  const handleStatusChange = async (id: string, newStatus: RiskOpportunityStatus, currentStatus?: string, escalationReasonText?: string) => {
+    // If escalating, require a reason
+    if (newStatus === 'Escalated' && !escalationReasonText) {
+      setEscalationDialog({ isOpen: true, itemId: id, currentStatus });
+      return;
     }
-    await updateItem.mutateAsync({ id, ...updates });
+    
+    const updates: any = { id, currentStatus, status: newStatus };
+    if (newStatus === 'Closed' || newStatus === 'Solved') {
+      updates.outcome_note = 'Resolved';
+    }
+    if (escalationReasonText) {
+      updates.escalation_reason = escalationReasonText;
+    }
+    await updateItem.mutateAsync(updates);
+  };
+
+  const handleEscalate = async () => {
+    if (!escalationDialog.itemId || !escalationReason.trim()) return;
+    await handleStatusChange(
+      escalationDialog.itemId, 
+      'Escalated', 
+      escalationDialog.currentStatus,
+      escalationReason
+    );
+    setEscalationDialog({ isOpen: false });
+    setEscalationReason('');
   };
 
   const filteredItems = items?.filter(item => {
@@ -406,11 +433,33 @@ function RisksOpportunitiesContent() {
                           {item.assigned_to && (
                             <span className="flex items-center gap-1">
                               <User className="w-4 h-4" />
-                              Owner assigned
+                              {getUserName(item.assigned_to)}
                             </span>
                           )}
-                          <span>Created {format(new Date(item.created_at), 'MMM d, yyyy')}</span>
+                          <span className="flex items-center gap-1">
+                            <Clock className="w-4 h-4" />
+                            {formatDistanceToNow(new Date(item.created_at), { addSuffix: true })}
+                          </span>
+                          {item.resolved_at && (
+                            <span className="flex items-center gap-1 text-emerald-600">
+                              <History className="w-4 h-4" />
+                              Resolved {format(new Date(item.resolved_at), 'MMM d, yyyy')}
+                            </span>
+                          )}
+                          {item.escalated_at && (
+                            <span className="flex items-center gap-1 text-destructive">
+                              <TrendingUp className="w-4 h-4" />
+                              Escalated {format(new Date(item.escalated_at), 'MMM d, yyyy')}
+                            </span>
+                          )}
                         </div>
+                        {/* Escalation reason display */}
+                        {item.status === 'Escalated' && item.escalation_reason && (
+                          <div className="mt-2 p-2 bg-destructive/10 border-l-2 border-destructive rounded-r">
+                            <p className="text-xs font-medium text-destructive">Escalation Reason</p>
+                            <p className="text-sm text-destructive/80">{item.escalation_reason}</p>
+                          </div>
+                        )}
                       </div>
                     </div>
                     <div className="flex flex-col gap-2 items-end">
@@ -423,7 +472,7 @@ function RisksOpportunitiesContent() {
                   <div className="flex gap-2 flex-wrap">
                     <Select 
                       value={item.status} 
-                      onValueChange={(v) => handleStatusChange(item.id, v as RiskOpportunityStatus)}
+                      onValueChange={(v) => handleStatusChange(item.id, v as RiskOpportunityStatus, item.status)}
                     >
                       <SelectTrigger className="w-[140px]">
                         <SelectValue />
@@ -459,6 +508,50 @@ function RisksOpportunitiesContent() {
           </Card>
         )}
       </div>
+
+      {/* Escalation Reason Dialog */}
+      <Dialog open={escalationDialog.isOpen} onOpenChange={(open) => {
+        if (!open) {
+          setEscalationDialog({ isOpen: false });
+          setEscalationReason('');
+        }
+      }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Escalate Item</DialogTitle>
+            <DialogDescription>
+              Escalating this item will flag it for leadership review. Please provide a reason.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="escalation-reason">Reason for Escalation</Label>
+              <Textarea
+                id="escalation-reason"
+                placeholder="Why does this need to be escalated? What action is needed from leadership?"
+                value={escalationReason}
+                onChange={(e) => setEscalationReason(e.target.value)}
+                rows={3}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => {
+              setEscalationDialog({ isOpen: false });
+              setEscalationReason('');
+            }}>
+              Cancel
+            </Button>
+            <Button 
+              variant="destructive" 
+              onClick={handleEscalate}
+              disabled={!escalationReason.trim()}
+            >
+              Escalate
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

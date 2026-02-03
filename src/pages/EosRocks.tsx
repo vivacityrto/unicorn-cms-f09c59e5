@@ -2,14 +2,16 @@ import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Target, TrendingUp, TrendingDown, CheckCircle, Filter } from 'lucide-react';
+import { Plus, Target, TrendingUp, TrendingDown, CheckCircle, Filter, AlertTriangle, Lightbulb, Link as LinkIcon } from 'lucide-react';
 import { useEosRocks } from '@/hooks/useEos';
+import { useRisksOpportunities } from '@/hooks/useRisksOpportunities';
 import { format } from 'date-fns';
 import { RockFormDialog } from '@/components/eos/RockFormDialog';
 import { RockProgressControl } from '@/components/eos/RockProgressControl';
 import { ClientBadge } from '@/components/eos/ClientBadge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { DashboardLayout } from '@/components/DashboardLayout';
+import { Link } from 'react-router-dom';
 
 export default function EosRocks() {
   return (
@@ -21,10 +23,16 @@ export default function EosRocks() {
 
 function RocksContent() {
   const { rocks, isLoading } = useEosRocks();
+  const { items: risksOpportunities } = useRisksOpportunities();
   const [filter, setFilter] = useState<'all' | string>('all');
   const [clientFilter, setClientFilter] = useState<string>('all');
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingRock, setEditingRock] = useState<any>(null);
+
+  // Helper to get linked R&O items for a rock
+  const getLinkedROItems = (rockId: string) => {
+    return risksOpportunities?.filter(item => item.linked_rock_id === rockId) || [];
+  };
 
   const getStatusBadge = (status: string) => {
     const statusLower = status?.toLowerCase() || '';
@@ -231,6 +239,43 @@ function RocksContent() {
                     </>
                   )}
                 </div>
+
+                {/* Linked Risks & Opportunities */}
+                {(() => {
+                  const linkedItems = getLinkedROItems(rock.id);
+                  if (linkedItems.length === 0) return null;
+                  return (
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2">
+                        <LinkIcon className="w-4 h-4 text-muted-foreground" />
+                        <span className="text-sm font-medium">Linked Risks & Opportunities</span>
+                        <Badge variant="secondary" className="text-xs">{linkedItems.length}</Badge>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        {linkedItems.map((item) => (
+                          <Link 
+                            key={item.id} 
+                            to="/eos/risks-opportunities"
+                            className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-xs bg-muted hover:bg-muted/80 transition-colors"
+                          >
+                            {item.item_type === 'risk' ? (
+                              <AlertTriangle className="w-3 h-3 text-amber-500" />
+                            ) : (
+                              <Lightbulb className="w-3 h-3 text-emerald-500" />
+                            )}
+                            <span className="max-w-[150px] truncate">{item.title}</span>
+                            <Badge 
+                              variant={item.status === 'Escalated' ? 'destructive' : 'outline'} 
+                              className="text-[10px] px-1 py-0"
+                            >
+                              {item.status}
+                            </Badge>
+                          </Link>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })()}
 
                 {/* Actions */}
                 <div className="flex gap-2 pt-2">

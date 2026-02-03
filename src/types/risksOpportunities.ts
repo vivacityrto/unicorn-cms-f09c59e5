@@ -48,6 +48,12 @@ export interface RiskOpportunity {
   meeting_id?: string;
   meeting_segment_id?: string;
   source?: 'ad_hoc' | 'meeting_ids' | 'ro_page' | 'meeting_l10' | 'meeting_quarterly' | 'meeting_annual';
+  // Lifecycle tracking
+  resolved_at?: string;
+  resolved_by?: string;
+  escalated_at?: string;
+  escalation_reason?: string;
+  deleted_at?: string;
   created_at: string;
   updated_at: string;
 }
