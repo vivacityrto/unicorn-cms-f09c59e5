@@ -7698,6 +7698,8 @@ export type Database = {
           quarter_number: number
           quarter_start: string | null
           quarter_year: number
+          seat_id: string | null
+          seat_owner_user_id: string | null
           status: Database["public"]["Enums"]["eos_rock_status"] | null
           status_note: string | null
           tenant_id: number
@@ -7724,6 +7726,8 @@ export type Database = {
           quarter_number: number
           quarter_start?: string | null
           quarter_year: number
+          seat_id?: string | null
+          seat_owner_user_id?: string | null
           status?: Database["public"]["Enums"]["eos_rock_status"] | null
           status_note?: string | null
           tenant_id: number
@@ -7750,6 +7754,8 @@ export type Database = {
           quarter_number?: number
           quarter_start?: string | null
           quarter_year?: number
+          seat_id?: string | null
+          seat_owner_user_id?: string | null
           status?: Database["public"]["Enums"]["eos_rock_status"] | null
           status_note?: string | null
           tenant_id?: number
@@ -7770,6 +7776,20 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "dashboard_client_snapshot"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "eos_rocks_seat_id_fkey"
+            columns: ["seat_id"]
+            isOneToOne: false
+            referencedRelation: "accountability_seats"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "eos_rocks_seat_id_fkey"
+            columns: ["seat_id"]
+            isOneToOne: false
+            referencedRelation: "seat_linked_data"
+            referencedColumns: ["seat_id"]
           },
         ]
       }

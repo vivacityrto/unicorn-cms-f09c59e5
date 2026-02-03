@@ -204,6 +204,8 @@ function calculateRockDiscipline(
   
   const ownedRocks = currentRocks.filter(r => r.owner_id);
   const unownedCount = currentRocks.length - ownedRocks.length;
+  const rocksWithSeat = currentRocks.filter(r => r.seat_id);
+  const rocksWithoutSeat = currentRocks.length - rocksWithSeat.length;
   const onTrack = currentRocks.filter(r => r.status === 'on_track').length;
   const offTrack = currentRocks.filter(r => r.status === 'off_track').length;
   const completed = currentRocks.filter(r => r.status === 'complete').length;
@@ -220,6 +222,17 @@ function calculateRockDiscipline(
       link: '/eos/rocks',
     });
   } else {
+    // Rocks without seats - heavy penalty
+    if (rocksWithoutSeat > 0) {
+      score -= rocksWithoutSeat * 12;
+      issues.push({
+        id: 'no-seat',
+        message: `${rocksWithoutSeat} Rock${rocksWithoutSeat > 1 ? 's' : ''} not linked to a seat`,
+        severity: 'warning',
+        link: '/eos/rocks',
+      });
+    }
+
     // Unowned rocks - heavy penalty
     if (unownedCount > 0) {
       score -= unownedCount * 15;

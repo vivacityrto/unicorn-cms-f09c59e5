@@ -2,11 +2,13 @@ import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Target, TrendingUp, TrendingDown, CheckCircle, Filter, AlertTriangle, Lightbulb, Link as LinkIcon } from 'lucide-react';
+import { Plus, Target, TrendingUp, TrendingDown, CheckCircle, Filter, AlertTriangle, Lightbulb, Link as LinkIcon, Armchair } from 'lucide-react';
 import { useEosRocks } from '@/hooks/useEos';
 import { useRisksOpportunities } from '@/hooks/useRisksOpportunities';
 import { useRBAC } from '@/hooks/useRBAC';
 import { useAuth } from '@/hooks/useAuth';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
 import { RockFormDialog } from '@/components/eos/RockFormDialog';
 import { RockProgressControl } from '@/components/eos/RockProgressControl';
@@ -16,6 +18,7 @@ import { RocksInsights } from '@/components/eos/facilitator/RocksInsights';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { Link } from 'react-router-dom';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 export default function EosRocks() {
   return (
@@ -29,11 +32,63 @@ function RocksContent() {
   const { rocks, isLoading } = useEosRocks();
   const { items: risksOpportunities } = useRisksOpportunities();
   const { canCreateRocks, canEditOwnRocks, canEditOthersRocks } = useRBAC();
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const [filter, setFilter] = useState<'all' | string>('all');
   const [clientFilter, setClientFilter] = useState<string>('all');
+  const [seatFilter, setSeatFilter] = useState<string>('all');
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingRock, setEditingRock] = useState<any>(null);
+
+  // Fetch seats for filter and display
+  const { data: seats } = useQuery({
+    queryKey: ['seats-for-rocks-display', profile?.tenant_id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('accountability_seats')
+        .select(`
+          id,
+          seat_name,
+          accountability_functions!inner(name)
+        `)
+        .eq('tenant_id', profile?.tenant_id!);
+      
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!profile?.tenant_id,
+  });
+
+  // Fetch users for owner display
+  const { data: users } = useQuery({
+    queryKey: ['users-for-rocks-display', profile?.tenant_id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('users')
+        .select('user_uuid, first_name, last_name')
+        .eq('tenant_id', profile?.tenant_id!);
+      
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!profile?.tenant_id,
+  });
+
+  const getSeatInfo = (seatId: string | null | undefined) => {
+    if (!seatId) return null;
+    const seat = seats?.find(s => s.id === seatId);
+    if (!seat) return null;
+    return {
+      name: seat.seat_name,
+      function: (seat.accountability_functions as any)?.name || '',
+    };
+  };
+
+  const getOwnerName = (userId: string | null | undefined) => {
+    if (!userId) return null;
+    const user = users?.find(u => u.user_uuid === userId);
+    if (!user) return null;
+    return `${user.first_name || ''} ${user.last_name || ''}`.trim() || 'Unknown';
+  };
 
   // Permission helper for editing a specific rock
   const canEditRock = (rock: any) => {
@@ -69,9 +124,8 @@ function RocksContent() {
   };
 
   const getPriorityBadge = (rock: any) => {
-    // Since rock_type isn't in the schema, show quarter info instead
     return (
-      <Badge variant="outline" className="bg-blue-50 text-blue-800">
+      <Badge variant="outline" className="bg-primary/5 text-primary">
         Q{rock.quarter_number} {rock.quarter_year}
       </Badge>
     );
@@ -80,10 +134,13 @@ function RocksContent() {
   const filteredRocks = rocks?.filter(rock => {
     const statusMatch = filter === 'all' || rock.status === filter;
     const clientMatch = clientFilter === 'all' || rock.client_id === clientFilter;
-    return statusMatch && clientMatch;
+    const seatMatch = seatFilter === 'all' || rock.seat_id === seatFilter;
+    return statusMatch && clientMatch && seatMatch;
   });
 
   const uniqueClients = Array.from(new Set(rocks?.map(r => r.client_id).filter(Boolean)));
+  const uniqueSeats = Array.from(new Set(rocks?.map(r => r.seat_id).filter(Boolean)));
+  const rocksWithoutSeat = rocks?.filter(r => !r.seat_id) || [];
 
   const stats = {
     total: rocks?.length || 0,
@@ -181,13 +238,41 @@ function RocksContent() {
         </Card>
       </div>
 
+      {/* Rocks Without Seat Warning */}
+      {rocksWithoutSeat.length > 0 && (
+        <Alert variant="default" className="border-amber-300 bg-amber-50/50 dark:bg-amber-950/20">
+          <AlertTriangle className="h-4 w-4 text-amber-600" />
+          <AlertDescription className="text-amber-700 dark:text-amber-300">
+            {rocksWithoutSeat.length} Rock{rocksWithoutSeat.length > 1 ? 's are' : ' is'} not linked to an Accountability Seat.
+            Link them to ensure proper ownership tracking.
+          </AlertDescription>
+        </Alert>
+      )}
+
       {/* Filters */}
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-4 flex-wrap">
         <div className="flex items-center gap-2">
           <Filter className="w-4 h-4 text-muted-foreground" />
           <span className="text-sm font-medium">Filters:</span>
         </div>
         
+        {/* Seat Filter */}
+        {seats && seats.length > 0 && (
+          <Select value={seatFilter} onValueChange={setSeatFilter}>
+            <SelectTrigger className="w-48">
+              <SelectValue placeholder="All seats" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All seats</SelectItem>
+              {seats.map((seat) => (
+                <SelectItem key={seat.id} value={seat.id}>
+                  {seat.seat_name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
+
         {uniqueClients.length > 0 && (
           <Select value={clientFilter} onValueChange={setClientFilter}>
             <SelectTrigger className="w-48">
@@ -204,13 +289,14 @@ function RocksContent() {
           </Select>
         )}
 
-        {(filter !== 'all' || clientFilter !== 'all') && (
+        {(filter !== 'all' || clientFilter !== 'all' || seatFilter !== 'all') && (
           <Button
             variant="ghost"
             size="sm"
             onClick={() => {
               setFilter('all');
               setClientFilter('all');
+              setSeatFilter('all');
             }}
           >
             Clear filters
@@ -222,7 +308,7 @@ function RocksContent() {
       <div className="grid gap-4">
         {filteredRocks && filteredRocks.length > 0 ? (
           filteredRocks.map((rock) => (
-            <Card key={rock.id} className="hover:shadow-lg transition-shadow">
+            <Card key={rock.id} className={`hover:shadow-lg transition-shadow ${!rock.seat_id ? 'border-l-4 border-l-amber-400' : ''}`}>
               <CardHeader>
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
@@ -230,6 +316,27 @@ function RocksContent() {
                       <CardTitle className="text-lg">{rock.title}</CardTitle>
                       {getPriorityBadge(rock)}
                       <ClientBadge clientId={rock.client_id} />
+                    </div>
+                    {/* Seat and Owner Display */}
+                    <div className="flex items-center gap-2 mb-2 flex-wrap">
+                      {rock.seat_id ? (
+                        <>
+                          <Badge variant="outline" className="gap-1 text-xs">
+                            <Armchair className="w-3 h-3" />
+                            {getSeatInfo(rock.seat_id)?.name || 'Unknown Seat'}
+                          </Badge>
+                          {getOwnerName(rock.owner_id || rock.seat_owner_user_id) && (
+                            <span className="text-xs text-muted-foreground">
+                              — {getOwnerName(rock.owner_id || rock.seat_owner_user_id)}
+                            </span>
+                          )}
+                        </>
+                      ) : (
+                        <Badge variant="outline" className="gap-1 text-xs text-amber-600 border-amber-300 bg-amber-50 dark:bg-amber-950/30">
+                          <AlertTriangle className="w-3 h-3" />
+                          No Seat Linked
+                        </Badge>
+                      )}
                     </div>
                     {rock.description && (
                       <p className="text-sm text-muted-foreground">{rock.description}</p>
