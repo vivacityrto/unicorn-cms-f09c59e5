@@ -19,10 +19,13 @@ import type {
   SaveVersionInput,
   ChartStatus,
   ChartSnapshot,
+  SeatLinkedData,
+  UpdateSeatInput,
 } from '@/types/accountabilityChart';
 
 /**
  * Hook to manage the EOS Accountability Chart for a tenant.
+ * Access: SuperAdmin and Team Leader can view. SuperAdmin only can edit.
  */
 export function useAccountabilityChart() {
   const { profile, isSuperAdmin } = useAuth();
@@ -52,7 +55,7 @@ export function useAccountabilityChart() {
       if (!chartData) return null;
 
       // Fetch all related data in parallel
-      const [functionsRes, seatsRes, rolesRes, assignmentsRes, versionsRes, usersRes] = await Promise.all([
+      const [functionsRes, seatsRes, rolesRes, assignmentsRes, versionsRes, usersRes, linkedDataRes] = await Promise.all([
         supabase
           .from('accountability_functions')
           .select('*')
@@ -82,6 +85,11 @@ export function useAccountabilityChart() {
           .from('users')
           .select('user_uuid, first_name, last_name, email, avatar_url')
           .eq('tenant_id', tenantId),
+        // Fetch linked data from the view
+        supabase
+          .from('seat_linked_data')
+          .select('*')
+          .eq('tenant_id', tenantId),
       ]);
 
       const functions = (functionsRes.data || []) as AccountabilityFunction[];
@@ -93,9 +101,11 @@ export function useAccountabilityChart() {
         snapshot: v.snapshot as unknown as ChartSnapshot,
       })) as ChartVersion[];
       const users = usersRes.data || [];
+      const linkedData = (linkedDataRes.data || []) as SeatLinkedData[];
 
-      // Build user map
+      // Build user map and linked data map
       const userMap = new Map(users.map(u => [u.user_uuid, u]));
+      const linkedDataMap = new Map(linkedData.map(ld => [ld.seat_id, ld]));
 
       // Build seats with details
       const seatsWithDetails: SeatWithDetails[] = seats.map(seat => {
@@ -110,6 +120,7 @@ export function useAccountabilityChart() {
           roles: seatRoles,
           assignments: seatAssignments,
           primaryOwner,
+          linkedData: linkedDataMap.get(seat.id),
         };
       });
 
@@ -251,12 +262,12 @@ export function useAccountabilityChart() {
     },
   });
 
-  // Update seat
+  // Update seat (supports all fields)
   const updateSeat = useMutation({
-    mutationFn: async ({ id, seat_name }: { id: string; seat_name: string }) => {
+    mutationFn: async ({ id, ...updates }: { id: string } & UpdateSeatInput) => {
       const { data, error } = await supabase
         .from('accountability_seats')
-        .update({ seat_name })
+        .update(updates)
         .eq('id', id)
         .select()
         .single();
@@ -509,11 +520,13 @@ export function useAccountabilityChart() {
     },
   });
 
-  // Check if user can edit
-  const canEdit = profile && tenantId && (
+  // Check if user can edit - SuperAdmin only per EOS spec
+  const canEdit = profile && tenantId && isSuper;
+
+  // Check if user can view - SuperAdmin and Team Leader
+  const canView = profile && tenantId && (
     isSuper ||
-    profile.unicorn_role === 'Team Leader' ||
-    profile.unicorn_role === 'Admin'
+    profile.unicorn_role === 'Team Leader'
   );
 
   return {
@@ -521,6 +534,7 @@ export function useAccountabilityChart() {
     isLoading,
     refetch,
     canEdit,
+    canView,
     createChart,
     addFunction,
     updateFunction,

@@ -27,12 +27,16 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
-import { Loader2, Plus, Save, History, CheckCircle, Archive, MoreHorizontal, AlertCircle, Users, Info, LayoutGrid } from 'lucide-react';
+import { Loader2, Plus, Save, History, CheckCircle, Archive, MoreHorizontal, AlertCircle, Users, Info, LayoutGrid, Network } from 'lucide-react';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { cn } from '@/lib/utils';
 import { useAccountabilityChart } from '@/hooks/useAccountabilityChart';
 import { FunctionColumn } from './FunctionColumn';
 import { SaveVersionDialog, VersionHistoryDialog } from './VersionDialogs';
-import { STATUS_COLORS, type ChartStatus, type UserBasic } from '@/types/accountabilityChart';
+import { SeatDetailPanel } from './SeatDetailPanel';
+import { AccountabilityGaps } from './AccountabilityGaps';
+import { OrgChartView } from './OrgChartView';
+import { STATUS_COLORS, type ChartStatus, type UserBasic, type SeatWithDetails } from '@/types/accountabilityChart';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useFacilitatorMode } from '@/contexts/FacilitatorModeContext';
@@ -71,6 +75,9 @@ export function ChartBuilder() {
   const [showSaveDialog, setShowSaveDialog] = useState(false);
   const [showHistoryDialog, setShowHistoryDialog] = useState(false);
   const [showActivateDialog, setShowActivateDialog] = useState(false);
+  const [viewMode, setViewMode] = useState<'org' | 'builder'>('org');
+  const [selectedSeat, setSelectedSeat] = useState<SeatWithDetails | null>(null);
+  const [showSeatDetail, setShowSeatDetail] = useState(false);
 
   // Fetch tenant users (Vivacity team members only for internal EOS)
   useEffect(() => {
@@ -290,6 +297,20 @@ export function ChartBuilder() {
               v{chart.versions[0].version_number}
             </span>
           )}
+
+          {/* View Toggle */}
+          <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as 'org' | 'builder')}>
+            <TabsList className="h-8">
+              <TabsTrigger value="org" className="text-xs px-3">
+                <Network className="h-3 w-3 mr-1" />
+                Org View
+              </TabsTrigger>
+              <TabsTrigger value="builder" className="text-xs px-3">
+                <LayoutGrid className="h-3 w-3 mr-1" />
+                Builder
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
         </div>
 
         {canEdit && (
@@ -348,30 +369,48 @@ export function ChartBuilder() {
         )}
       </div>
 
-      {/* Chart grid */}
-      <div className="flex gap-4 overflow-x-auto pb-4">
-        {chart.functions.map((func) => (
-          <FunctionColumn
-            key={func.id}
-            func={func}
-            canEdit={!!canEdit}
-            tenantUsers={tenantUsers}
-            onUpdateFunction={(id, name) => updateFunction.mutate({ id, name })}
-            onDeleteFunction={(id) => deleteFunction.mutate(id)}
-            onAddSeat={(functionId, name) =>
-              addSeat.mutate({ function_id: functionId, chart_id: chart.id, seat_name: name })
-            }
-            onUpdateSeat={(id, name) => updateSeat.mutate({ id, seat_name: name })}
-            onDeleteSeat={(id) => deleteSeat.mutate(id)}
-            onAddRole={(seatId, text) => addRole.mutate({ seat_id: seatId, role_text: text })}
-            onUpdateRole={(id, text) => updateRole.mutate({ id, role_text: text })}
-            onDeleteRole={(id) => deleteRole.mutate(id)}
-            onAssign={(seatId, userId, type) =>
-              addAssignment.mutate({ seat_id: seatId, user_id: userId, assignment_type: type })
-            }
-            onUnassign={(id) => removeAssignment.mutate(id)}
+      {/* View Mode Content */}
+      {viewMode === 'org' ? (
+        <div className="space-y-6">
+          <OrgChartView 
+            functions={chart.functions} 
+            onSeatClick={(seat) => {
+              setSelectedSeat(seat);
+              setShowSeatDetail(true);
+            }} 
           />
-        ))}
+          <AccountabilityGaps 
+            seats={chart.functions.flatMap(f => f.seats)}
+            onSeatClick={(seat) => {
+              setSelectedSeat(seat);
+              setShowSeatDetail(true);
+            }}
+          />
+        </div>
+      ) : (
+        <div className="flex gap-4 overflow-x-auto pb-4">
+          {chart.functions.map((func) => (
+            <FunctionColumn
+              key={func.id}
+              func={func}
+              canEdit={!!canEdit}
+              tenantUsers={tenantUsers}
+              onUpdateFunction={(id, name) => updateFunction.mutate({ id, name })}
+              onDeleteFunction={(id) => deleteFunction.mutate(id)}
+              onAddSeat={(functionId, name) =>
+                addSeat.mutate({ function_id: functionId, chart_id: chart.id, seat_name: name })
+              }
+              onUpdateSeat={(id, name) => updateSeat.mutate({ id, seat_name: name })}
+              onDeleteSeat={(id) => deleteSeat.mutate(id)}
+              onAddRole={(seatId, text) => addRole.mutate({ seat_id: seatId, role_text: text })}
+              onUpdateRole={(id, text) => updateRole.mutate({ id, role_text: text })}
+              onDeleteRole={(id) => deleteRole.mutate(id)}
+              onAssign={(seatId, userId, type) =>
+                addAssignment.mutate({ seat_id: seatId, user_id: userId, assignment_type: type })
+              }
+              onUnassign={(id) => removeAssignment.mutate(id)}
+            />
+          ))}
 
         {/* Add function */}
         {canEdit && (
@@ -418,8 +457,17 @@ export function ChartBuilder() {
             </Button>
           )
         )}
-      </div>
+        </div>
+      )}
 
+      {/* Seat Detail Panel */}
+      <SeatDetailPanel
+        seat={selectedSeat}
+        open={showSeatDetail}
+        onOpenChange={setShowSeatDetail}
+        canEdit={!!canEdit}
+        onUpdate={(seatId, updates) => updateSeat.mutate({ id: seatId, ...updates })}
+      />
       {/* Dialogs */}
       <SaveVersionDialog
         open={showSaveDialog}
