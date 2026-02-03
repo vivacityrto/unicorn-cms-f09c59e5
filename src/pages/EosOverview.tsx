@@ -8,6 +8,7 @@ import { useEosRocks, useEosIssues, useEosTodos, useEosMeetings } from '@/hooks/
 import { Badge } from '@/components/ui/badge';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { ReadinessCard } from '@/components/eos/ReadinessCard';
+import { HealthScoreWidget } from '@/components/eos/HealthScoreWidget';
 
 export default function EosOverview() {
   return (
@@ -157,7 +158,8 @@ function OverviewContent() {
           </Link>
           </div>
         </div>
-        <div className="lg:col-span-1">
+        <div className="lg:col-span-1 space-y-4">
+          <HealthScoreWidget />
           <ReadinessCard />
         </div>
       </div>
