@@ -11,6 +11,7 @@ import { useRisksOpportunities } from '@/hooks/useRisksOpportunities';
 import { useEosRocks } from '@/hooks/useEos';
 import { useEosStatusOptions, useEosCategoryOptions } from '@/hooks/useEosOptions';
 import { useTenantUsers } from '@/hooks/useTenantUsers';
+import { useRBAC } from '@/hooks/useRBAC';
 import { format, formatDistanceToNow } from 'date-fns';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { RiskOpportunityForm, type RiskOpportunityFormData } from '@/components/eos/RiskOpportunityForm';
@@ -30,6 +31,7 @@ function RisksOpportunitiesContent() {
   const { data: statusOptions = [] } = useEosStatusOptions();
   const { data: categoryOptions = [] } = useEosCategoryOptions();
   const { getUserName } = useTenantUsers();
+  const { canCreateRisks, canEscalateRisks, canCloseCriticalRisks } = useRBAC();
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<typeof items extends (infer T)[] | undefined ? T | null : null>(null);
@@ -210,24 +212,31 @@ function RisksOpportunitiesContent() {
             This page captures anything that could materially impact delivery, revenue, compliance, or growth.
           </p>
         </div>
-        <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="w-4 h-4 mr-2" />
-              Add Item
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-lg">
-            <DialogHeader>
-              <DialogTitle>Add Risk or Opportunity</DialogTitle>
-            </DialogHeader>
-            <RiskOpportunityForm
-              onSubmit={handleCreate}
-              onCancel={() => setIsCreateOpen(false)}
-              isSubmitting={createItem.isPending}
-            />
-          </DialogContent>
-        </Dialog>
+        {canCreateRisks() ? (
+          <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
+            <DialogTrigger asChild>
+              <Button>
+                <Plus className="w-4 h-4 mr-2" />
+                Add Item
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-lg">
+              <DialogHeader>
+                <DialogTitle>Add Risk or Opportunity</DialogTitle>
+              </DialogHeader>
+              <RiskOpportunityForm
+                onSubmit={handleCreate}
+                onCancel={() => setIsCreateOpen(false)}
+                isSubmitting={createItem.isPending}
+              />
+            </DialogContent>
+          </Dialog>
+        ) : (
+          <Button disabled title="Creating items requires appropriate permissions">
+            <Plus className="w-4 h-4 mr-2" />
+            Add Item
+          </Button>
+        )}
 
         {/* Edit Dialog */}
         <Dialog open={isEditOpen} onOpenChange={(open) => {
@@ -469,23 +478,54 @@ function RisksOpportunitiesContent() {
                   </div>
                 </CardHeader>
                 <CardContent>
-                  <div className="flex gap-2 flex-wrap">
+                  <div className="flex gap-2 flex-wrap items-center">
                     <Select 
                       value={item.status} 
-                      onValueChange={(v) => handleStatusChange(item.id, v as RiskOpportunityStatus, item.status)}
+                      onValueChange={(v) => {
+                        // Check permission for escalation
+                        if (v === 'Escalated' && !canEscalateRisks()) {
+                          return;
+                        }
+                        // Check permission for closing critical items
+                        if ((v === 'Closed' || v === 'Solved') && item.impact === 'Critical' && !canCloseCriticalRisks()) {
+                          return;
+                        }
+                        handleStatusChange(item.id, v as RiskOpportunityStatus, item.status);
+                      }}
                     >
                       <SelectTrigger className="w-[140px]">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        {statusOptions.map(status => (
-                          <SelectItem key={status} value={status}>{status}</SelectItem>
-                        ))}
+                        {statusOptions.map(status => {
+                          // Disable Escalated option if user doesn't have permission
+                          const isEscalated = status === 'Escalated';
+                          const isClosed = status === 'Closed' || status === 'Solved';
+                          const isCritical = item.impact === 'Critical';
+                          const disabled = (isEscalated && !canEscalateRisks()) || 
+                                          (isClosed && isCritical && !canCloseCriticalRisks());
+                          return (
+                            <SelectItem 
+                              key={status} 
+                              value={status}
+                              disabled={disabled}
+                            >
+                              {status}
+                              {disabled && ' (restricted)'}
+                            </SelectItem>
+                          );
+                        })}
                       </SelectContent>
                     </Select>
                     <Button variant="outline" size="sm" onClick={() => handleEdit(item)}>Edit</Button>
                     {item.status === 'Escalated' && (
                       <Badge variant="destructive" className="animate-pulse">Requires Leadership</Badge>
+                    )}
+                    {/* Show guidance for restricted actions */}
+                    {item.impact === 'Critical' && !canCloseCriticalRisks() && item.status !== 'Closed' && item.status !== 'Solved' && (
+                      <p className="text-xs text-muted-foreground">
+                        Closing critical items requires Super Admin access.
+                      </p>
                     )}
                   </div>
                 </CardContent>

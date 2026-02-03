@@ -112,6 +112,14 @@ const eosMenuItems = [{
   icon: Users,
   label: "Quarterly Conversations",
   path: "/eos/qc"
+}, {
+  icon: Briefcase,
+  label: "Accountability Chart",
+  path: "/eos/accountability"
+}, {
+  icon: FileText,
+  label: "Processes",
+  path: "/processes"
 }];
 
 const userMenuItems = {
@@ -170,15 +178,7 @@ const superAdminMenuItems = {
     label: "User Audit",
     path: "/admin/user-audit"
   }],
-  eos: [
-    ...eosMenuItems.slice(0, 1), // EOS Overview
-    {
-      icon: FileText,
-      label: "Processes",
-      path: "/processes"
-    },
-    ...eosMenuItems.slice(1) // Rest of EOS items
-  ],
+  eos: eosMenuItems,
   advanced: [{
     icon: FileCode,
     label: "Templates",

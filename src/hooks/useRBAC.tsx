@@ -9,7 +9,15 @@ export type Permission =
   | 'eos_meetings:edit'
   | 'qc:schedule'
   | 'qc:edit'
-  | 'qc:view_all';
+  | 'qc:view_all'
+  | 'qc:sign'
+  | 'rocks:create'
+  | 'rocks:edit_own'
+  | 'rocks:edit_others'
+  | 'risks:create'
+  | 'risks:escalate'
+  | 'risks:close_critical'
+  | 'agenda_templates:manage';
 
 // Role-based permission mappings
 const ROLE_PERMISSIONS: Record<string, Permission[]> = {
@@ -23,6 +31,14 @@ const ROLE_PERMISSIONS: Record<string, Permission[]> = {
     'qc:schedule',
     'qc:edit',
     'qc:view_all',
+    'qc:sign',
+    'rocks:create',
+    'rocks:edit_own',
+    'rocks:edit_others',
+    'risks:create',
+    'risks:escalate',
+    'risks:close_critical',
+    'agenda_templates:manage',
   ],
   // Super Admin (alternate spelling used in DB)
   'Super Admin': [
@@ -34,6 +50,14 @@ const ROLE_PERMISSIONS: Record<string, Permission[]> = {
     'qc:schedule',
     'qc:edit',
     'qc:view_all',
+    'qc:sign',
+    'rocks:create',
+    'rocks:edit_own',
+    'rocks:edit_others',
+    'risks:create',
+    'risks:escalate',
+    'risks:close_critical',
+    'agenda_templates:manage',
   ],
   // Team Leader - Vivacity staff, sees everything EXCEPT administration
   'Team Leader': [
@@ -44,20 +68,53 @@ const ROLE_PERMISSIONS: Record<string, Permission[]> = {
     'qc:schedule',
     'qc:edit',
     'qc:view_all',
+    'qc:sign',
+    'rocks:create',
+    'rocks:edit_own',
+    'rocks:edit_others',
+    'risks:create',
+    'risks:escalate',
   ],
-  // Team Member - Vivacity staff, sees everything EXCEPT administration
+  // Team Member - Vivacity staff, limited escalation abilities
   'Team Member': [
     'advanced_features:access',
+    'vto:edit',
+    'qc:edit',
+    'qc:view_all',
+    'qc:sign',
+    'rocks:create',
+    'rocks:edit_own',
+    'risks:create',
+  ],
+  // Admin - Client tenant admin, can manage most EOS features
+  'Admin': [
     'vto:edit',
     'eos_meetings:schedule',
     'eos_meetings:edit',
     'qc:schedule',
     'qc:edit',
     'qc:view_all',
+    'qc:sign',
+    'rocks:create',
+    'rocks:edit_own',
+    'rocks:edit_others',
+    'risks:create',
+    'risks:escalate',
+    'agenda_templates:manage',
+  ],
+  // User - Client tenant user, limited permissions
+  'User': [
+    'qc:sign',
+    'rocks:create',
+    'rocks:edit_own',
+    'risks:create',
   ],
   // General User has limited permissions (read-only for most EOS features)
   'General User': [
-    // No special permissions - can only view
+    'qc:sign',
+    'rocks:create',
+    'rocks:edit_own',
+    'risks:create',
   ],
 };
 
@@ -212,6 +269,62 @@ export const useRBAC = () => {
     return true;
   };
 
+  /**
+   * Check if current user can create rocks
+   */
+  const canCreateRocks = (): boolean => {
+    return hasPermission('rocks:create');
+  };
+
+  /**
+   * Check if current user can edit their own rocks
+   */
+  const canEditOwnRocks = (): boolean => {
+    return hasPermission('rocks:edit_own');
+  };
+
+  /**
+   * Check if current user can edit rocks owned by others
+   */
+  const canEditOthersRocks = (): boolean => {
+    return hasPermission('rocks:edit_others');
+  };
+
+  /**
+   * Check if current user can create risks/opportunities
+   */
+  const canCreateRisks = (): boolean => {
+    return hasPermission('risks:create');
+  };
+
+  /**
+   * Check if current user can escalate risks
+   */
+  const canEscalateRisks = (): boolean => {
+    return hasPermission('risks:escalate');
+  };
+
+  /**
+   * Check if current user can close critical risks
+   */
+  const canCloseCriticalRisks = (): boolean => {
+    return hasPermission('risks:close_critical');
+  };
+
+  /**
+   * Check if current user can manage agenda templates
+   */
+  const canManageAgendaTemplates = (): boolean => {
+    return hasPermission('agenda_templates:manage');
+  };
+
+  /**
+   * Check if current user can sign quarterly conversations
+   */
+  const canSignQC = (): boolean => {
+    return hasPermission('qc:sign');
+  };
+
   return {
     hasPermission,
     canAccessAdmin,
@@ -223,6 +336,14 @@ export const useRBAC = () => {
     canEditQC,
     canViewAllQC,
     canAccessRoute,
+    canCreateRocks,
+    canEditOwnRocks,
+    canEditOthersRocks,
+    canCreateRisks,
+    canEscalateRisks,
+    canCloseCriticalRisks,
+    canManageAgendaTemplates,
+    canSignQC,
     isSuperAdmin: is_super_admin,
     isVivacityTeam: is_vivacity_team,
   };

@@ -5,6 +5,8 @@ import { Badge } from '@/components/ui/badge';
 import { Plus, Target, TrendingUp, TrendingDown, CheckCircle, Filter, AlertTriangle, Lightbulb, Link as LinkIcon } from 'lucide-react';
 import { useEosRocks } from '@/hooks/useEos';
 import { useRisksOpportunities } from '@/hooks/useRisksOpportunities';
+import { useRBAC } from '@/hooks/useRBAC';
+import { useAuth } from '@/hooks/useAuth';
 import { format } from 'date-fns';
 import { RockFormDialog } from '@/components/eos/RockFormDialog';
 import { RockProgressControl } from '@/components/eos/RockProgressControl';
@@ -24,10 +26,19 @@ export default function EosRocks() {
 function RocksContent() {
   const { rocks, isLoading } = useEosRocks();
   const { items: risksOpportunities } = useRisksOpportunities();
+  const { canCreateRocks, canEditOwnRocks, canEditOthersRocks } = useRBAC();
+  const { user } = useAuth();
   const [filter, setFilter] = useState<'all' | string>('all');
   const [clientFilter, setClientFilter] = useState<string>('all');
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingRock, setEditingRock] = useState<any>(null);
+
+  // Permission helper for editing a specific rock
+  const canEditRock = (rock: any) => {
+    if (canEditOthersRocks()) return true;
+    if (canEditOwnRocks() && rock.owner_user_id === user?.id) return true;
+    return false;
+  };
 
   // Helper to get linked R&O items for a rock
   const getLinkedROItems = (rockId: string) => {
@@ -103,10 +114,17 @@ function RocksContent() {
             Focus on 3-7 most important priorities each quarter
           </p>
         </div>
-        <Button onClick={() => { setEditingRock(null); setIsFormOpen(true); }}>
-          <Plus className="w-4 h-4 mr-2" />
-          Add Rock
-        </Button>
+        {canCreateRocks() ? (
+          <Button onClick={() => { setEditingRock(null); setIsFormOpen(true); }}>
+            <Plus className="w-4 h-4 mr-2" />
+            Add Rock
+          </Button>
+        ) : (
+          <Button disabled title="Creating rocks requires appropriate permissions">
+            <Plus className="w-4 h-4 mr-2" />
+            Add Rock
+          </Button>
+        )}
       </div>
 
       {/* Stats Cards */}
@@ -279,16 +297,27 @@ function RocksContent() {
 
                 {/* Actions */}
                 <div className="flex gap-2 pt-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      setEditingRock(rock);
-                      setIsFormOpen(true);
-                    }}
-                  >
-                    Edit
-                  </Button>
+                  {canEditRock(rock) ? (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setEditingRock(rock);
+                        setIsFormOpen(true);
+                      }}
+                    >
+                      Edit
+                    </Button>
+                  ) : (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled
+                      title="You can only edit rocks you own"
+                    >
+                      Edit
+                    </Button>
+                  )}
                 </div>
               </CardContent>
             </Card>
