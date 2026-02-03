@@ -5534,7 +5534,10 @@ export type Database = {
           client_id: string | null
           created_at: string | null
           created_by: string | null
+          deleted_at: string | null
           description: string | null
+          escalated_at: string | null
+          escalation_reason: string | null
           id: string
           impact: string | null
           item_type: string | null
@@ -5563,7 +5566,10 @@ export type Database = {
           client_id?: string | null
           created_at?: string | null
           created_by?: string | null
+          deleted_at?: string | null
           description?: string | null
+          escalated_at?: string | null
+          escalation_reason?: string | null
           id?: string
           impact?: string | null
           item_type?: string | null
@@ -5592,7 +5598,10 @@ export type Database = {
           client_id?: string | null
           created_at?: string | null
           created_by?: string | null
+          deleted_at?: string | null
           description?: string | null
+          escalated_at?: string | null
+          escalation_reason?: string | null
           id?: string
           impact?: string | null
           item_type?: string | null

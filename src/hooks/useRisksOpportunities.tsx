@@ -99,7 +99,7 @@ export const useRisksOpportunities = () => {
   });
 
   const updateItem = useMutation({
-    mutationFn: async ({ id, currentStatus, ...updates }: Partial<RiskOpportunity> & { id: string; currentStatus?: string }) => {
+    mutationFn: async ({ id, currentStatus, ...updates }: Partial<RiskOpportunity> & { id: string; currentStatus?: string; escalation_reason?: string }) => {
       // Validate status value is a valid enum member
       if (updates.status !== undefined && !VALID_STATUSES.includes(updates.status as typeof VALID_STATUSES[number])) {
         throw new Error(`Invalid status value: "${updates.status}". Must be one of: ${VALID_STATUSES.join(', ')}`);
@@ -131,6 +131,7 @@ export const useRisksOpportunities = () => {
       if (updates.linked_rock_id !== undefined) dbUpdates.linked_rock_id = updates.linked_rock_id;
       if (updates.assigned_to !== undefined) dbUpdates.assigned_to = updates.assigned_to;
       if (updates.outcome_note !== undefined) dbUpdates.outcome_note = updates.outcome_note;
+      if (updates.escalation_reason !== undefined) dbUpdates.escalation_reason = updates.escalation_reason;
       
       const { data, error } = await supabase
         .from('eos_issues')
