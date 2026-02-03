@@ -11,6 +11,7 @@ import { format } from 'date-fns';
 import { RockFormDialog } from '@/components/eos/RockFormDialog';
 import { RockProgressControl } from '@/components/eos/RockProgressControl';
 import { ClientBadge } from '@/components/eos/ClientBadge';
+import { PermissionTooltip, CustomPermissionTooltip } from '@/components/eos/PermissionTooltip';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { Link } from 'react-router-dom';
@@ -114,17 +115,15 @@ function RocksContent() {
             Focus on 3-7 most important priorities each quarter
           </p>
         </div>
-        {canCreateRocks() ? (
-          <Button onClick={() => { setEditingRock(null); setIsFormOpen(true); }}>
+        <PermissionTooltip permission="rocks:create" action="create rocks">
+          <Button 
+            onClick={() => { setEditingRock(null); setIsFormOpen(true); }}
+            disabled={!canCreateRocks()}
+          >
             <Plus className="w-4 h-4 mr-2" />
             Add Rock
           </Button>
-        ) : (
-          <Button disabled title="Creating rocks requires appropriate permissions">
-            <Plus className="w-4 h-4 mr-2" />
-            Add Rock
-          </Button>
-        )}
+        </PermissionTooltip>
       </div>
 
       {/* Stats Cards */}
@@ -297,10 +296,15 @@ function RocksContent() {
 
                 {/* Actions */}
                 <div className="flex gap-2 pt-2">
-                  {canEditRock(rock) ? (
+                  <CustomPermissionTooltip 
+                    hasAccess={canEditRock(rock)}
+                    message="You can only edit rocks you own, or require Team Leader/Admin access to edit others' rocks."
+                    guidance="Contact your admin if you need to edit this rock."
+                  >
                     <Button
                       variant="outline"
                       size="sm"
+                      disabled={!canEditRock(rock)}
                       onClick={() => {
                         setEditingRock(rock);
                         setIsFormOpen(true);
@@ -308,16 +312,7 @@ function RocksContent() {
                     >
                       Edit
                     </Button>
-                  ) : (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      disabled
-                      title="You can only edit rocks you own"
-                    >
-                      Edit
-                    </Button>
-                  )}
+                  </CustomPermissionTooltip>
                 </div>
               </CardContent>
             </Card>

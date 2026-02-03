@@ -15,6 +15,8 @@ import { useRBAC } from '@/hooks/useRBAC';
 import { format, formatDistanceToNow } from 'date-fns';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { RiskOpportunityForm, type RiskOpportunityFormData } from '@/components/eos/RiskOpportunityForm';
+import { PermissionTooltip } from '@/components/eos/PermissionTooltip';
+import { WhyCantILink } from '@/components/eos/RoleInfoPanel';
 import type { RiskOpportunityType, RiskOpportunityCategory, RiskOpportunityStatus } from '@/types/risksOpportunities';
 
 export default function EosRisksOpportunities() {
@@ -212,10 +214,10 @@ function RisksOpportunitiesContent() {
             This page captures anything that could materially impact delivery, revenue, compliance, or growth.
           </p>
         </div>
-        {canCreateRisks() ? (
+        <PermissionTooltip permission="risks:create" action="add risks or opportunities">
           <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
             <DialogTrigger asChild>
-              <Button>
+              <Button disabled={!canCreateRisks()}>
                 <Plus className="w-4 h-4 mr-2" />
                 Add Item
               </Button>
@@ -231,12 +233,7 @@ function RisksOpportunitiesContent() {
               />
             </DialogContent>
           </Dialog>
-        ) : (
-          <Button disabled title="Creating items requires appropriate permissions">
-            <Plus className="w-4 h-4 mr-2" />
-            Add Item
-          </Button>
-        )}
+        </PermissionTooltip>
 
         {/* Edit Dialog */}
         <Dialog open={isEditOpen} onOpenChange={(open) => {
@@ -523,8 +520,16 @@ function RisksOpportunitiesContent() {
                     )}
                     {/* Show guidance for restricted actions */}
                     {item.impact === 'Critical' && !canCloseCriticalRisks() && item.status !== 'Closed' && item.status !== 'Solved' && (
+                      <div className="flex items-center gap-2">
+                        <p className="text-xs text-muted-foreground">
+                          Closing critical items requires Super Admin access.
+                        </p>
+                        <WhyCantILink />
+                      </div>
+                    )}
+                    {!canEscalateRisks() && item.status !== 'Escalated' && (
                       <p className="text-xs text-muted-foreground">
-                        Closing critical items requires Super Admin access.
+                        Escalation requires Admin or Team Leader access.
                       </p>
                     )}
                   </div>

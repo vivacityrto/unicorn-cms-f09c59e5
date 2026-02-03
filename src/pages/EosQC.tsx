@@ -10,6 +10,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useRBAC } from '@/hooks/useRBAC';
 import { useNavigate } from 'react-router-dom';
 import { QCScheduler } from '@/components/eos/qc/QCScheduler';
+import { PermissionTooltip } from '@/components/eos/PermissionTooltip';
 import { format } from 'date-fns';
 import type { QCStatus } from '@/types/qc';
 
@@ -72,12 +73,15 @@ const QCContent = () => {
             One-on-one strategic alignment sessions between managers and team members
           </p>
         </div>
-        {canScheduleQC() && (
-          <Button onClick={() => setSchedulerOpen(true)}>
+        <PermissionTooltip permission="qc:schedule" action="schedule Quarterly Conversations">
+          <Button 
+            onClick={() => setSchedulerOpen(true)}
+            disabled={!canScheduleQC()}
+          >
             <Plus className="h-4 w-4 mr-2" />
             Schedule QC
           </Button>
-        )}
+        </PermissionTooltip>
       </div>
 
       <QCScheduler 
@@ -178,12 +182,15 @@ const QCContent = () => {
                     ? "Schedule your first Quarterly Conversation to get started"
                     : "No Quarterly Conversations have been scheduled for you yet."}
                 </p>
-                {canScheduleQC() && (
-                  <Button onClick={() => setSchedulerOpen(true)}>
+                <PermissionTooltip permission="qc:schedule" action="schedule Quarterly Conversations">
+                  <Button 
+                    onClick={() => setSchedulerOpen(true)}
+                    disabled={!canScheduleQC()}
+                  >
                     <Plus className="h-4 w-4 mr-2" />
                     Schedule First QC
                   </Button>
-                )}
+                </PermissionTooltip>
               </CardContent>
             </Card>
           )}
