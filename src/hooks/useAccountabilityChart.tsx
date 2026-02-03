@@ -156,7 +156,7 @@ export function useAccountabilityChart() {
     enabled: !!tenantId,
   });
 
-  // Create initial chart
+  // Create initial chart (blank)
   const createChart = useMutation({
     mutationFn: async () => {
       if (!tenantId || !userId) throw new Error('Not authenticated');
@@ -179,12 +179,42 @@ export function useAccountabilityChart() {
       toast({ title: 'Accountability Chart created' });
     },
     onError: (error: Error) => {
-      // Provide user-friendly message, log technical details
       console.error('Accountability Chart creation failed:', error.message);
       const userMessage = error.message.includes('entity_id') || error.message.includes('type uuid')
         ? 'Accountability Chart cannot be created because the system entity is not initialised. Please contact support.'
         : error.message;
       toast({ title: 'Error creating chart', description: userMessage, variant: 'destructive' });
+    },
+  });
+
+  // Create chart from EOS template (pre-seeded with standard Functions, Seats, Accountabilities)
+  const createChartFromTemplate = useMutation({
+    mutationFn: async () => {
+      if (!tenantId || !userId) throw new Error('Not authenticated');
+
+      const { data, error } = await supabase
+        .rpc('seed_eos_accountability_chart', {
+          p_tenant_id: tenantId,
+          p_created_by: userId,
+        });
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['accountability-chart'] });
+      toast({ 
+        title: 'EOS template created', 
+        description: 'Assign owners to the Visionary and Integrator seats to activate.' 
+      });
+    },
+    onError: (error: Error) => {
+      console.error('Template creation failed:', error.message);
+      toast({ 
+        title: 'Error creating template', 
+        description: error.message, 
+        variant: 'destructive' 
+      });
     },
   });
 
@@ -623,6 +653,7 @@ export function useAccountabilityChart() {
     canEdit,
     canView,
     createChart,
+    createChartFromTemplate,
     addFunction,
     updateFunction,
     deleteFunction,

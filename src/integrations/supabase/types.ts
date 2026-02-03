@@ -17948,6 +17948,10 @@ export type Database = {
       }
       seed_default_meeting_templates: { Args: never; Returns: undefined }
       seed_default_qc_template: { Args: never; Returns: undefined }
+      seed_eos_accountability_chart: {
+        Args: { p_created_by: string; p_tenant_id: number }
+        Returns: string
+      }
       seed_meeting_attendees_from_roles: {
         Args: { p_meeting_id: string }
         Returns: number
