@@ -77,6 +77,10 @@ export interface AccountabilitySeat {
   gwc_want_it?: string | null;
   gwc_capacity?: string | null;
   sort_order: number;
+  is_required_for_quorum?: boolean;
+  backup_owner_user_id?: string | null;
+  critical_seat?: boolean;
+  cover_notes?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -167,6 +171,7 @@ export interface UpdateSeatInput {
   gwc_get_it?: string | null;
   gwc_want_it?: string | null;
   gwc_capacity?: string | null;
+  is_required_for_quorum?: boolean;
 }
 
 export interface CreateRoleInput {

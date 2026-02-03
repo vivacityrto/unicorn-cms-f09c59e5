@@ -293,6 +293,7 @@ export type Database = {
           gwc_get_it: string | null
           gwc_want_it: string | null
           id: string
+          is_required_for_quorum: boolean
           seat_name: string
           sort_order: number
           tenant_id: number
@@ -314,6 +315,7 @@ export type Database = {
           gwc_get_it?: string | null
           gwc_want_it?: string | null
           id?: string
+          is_required_for_quorum?: boolean
           seat_name: string
           sort_order?: number
           tenant_id: number
@@ -335,6 +337,7 @@ export type Database = {
           gwc_get_it?: string | null
           gwc_want_it?: string | null
           id?: string
+          is_required_for_quorum?: boolean
           seat_name?: string
           sort_order?: number
           tenant_id?: number
@@ -6683,6 +6686,7 @@ export type Database = {
           meeting_id: string
           notes: string | null
           role_in_meeting: Database["public"]["Enums"]["meeting_role"]
+          seat_id: string | null
           updated_at: string
           user_id: string
         }
@@ -6696,6 +6700,7 @@ export type Database = {
           meeting_id: string
           notes?: string | null
           role_in_meeting?: Database["public"]["Enums"]["meeting_role"]
+          seat_id?: string | null
           updated_at?: string
           user_id: string
         }
@@ -6709,6 +6714,7 @@ export type Database = {
           meeting_id?: string
           notes?: string | null
           role_in_meeting?: Database["public"]["Enums"]["meeting_role"]
+          seat_id?: string | null
           updated_at?: string
           user_id?: string
         }
@@ -6747,6 +6753,27 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "eos_upcoming_meetings"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "eos_meeting_attendees_seat_id_fkey"
+            columns: ["seat_id"]
+            isOneToOne: false
+            referencedRelation: "accountability_seats"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "eos_meeting_attendees_seat_id_fkey"
+            columns: ["seat_id"]
+            isOneToOne: false
+            referencedRelation: "seat_linked_data"
+            referencedColumns: ["seat_id"]
+          },
+          {
+            foreignKeyName: "eos_meeting_attendees_seat_id_fkey"
+            columns: ["seat_id"]
+            isOneToOne: false
+            referencedRelation: "seat_succession_status"
+            referencedColumns: ["seat_id"]
           },
           {
             foreignKeyName: "eos_meeting_attendees_user_id_fkey"
@@ -7212,18 +7239,22 @@ export type Database = {
           created_by: string | null
           description: string | null
           duration_minutes: number
+          facilitator_seat_id: string | null
           id: string
+          integrator_seat_id: string | null
           is_active: boolean
           location: string | null
           meeting_type: Database["public"]["Enums"]["eos_meeting_type"]
           recurrence_rule: string | null
           recurrence_type: string
+          required_seat_ids: string[] | null
           start_date: string
           start_time: string
           tenant_id: number
           timezone: string
           title: string
           updated_at: string
+          visionary_seat_id: string | null
         }
         Insert: {
           agenda_template_id?: string | null
@@ -7232,18 +7263,22 @@ export type Database = {
           created_by?: string | null
           description?: string | null
           duration_minutes?: number
+          facilitator_seat_id?: string | null
           id?: string
+          integrator_seat_id?: string | null
           is_active?: boolean
           location?: string | null
           meeting_type: Database["public"]["Enums"]["eos_meeting_type"]
           recurrence_rule?: string | null
           recurrence_type: string
+          required_seat_ids?: string[] | null
           start_date: string
           start_time?: string
           tenant_id: number
           timezone?: string
           title: string
           updated_at?: string
+          visionary_seat_id?: string | null
         }
         Update: {
           agenda_template_id?: string | null
@@ -7252,20 +7287,88 @@ export type Database = {
           created_by?: string | null
           description?: string | null
           duration_minutes?: number
+          facilitator_seat_id?: string | null
           id?: string
+          integrator_seat_id?: string | null
           is_active?: boolean
           location?: string | null
           meeting_type?: Database["public"]["Enums"]["eos_meeting_type"]
           recurrence_rule?: string | null
           recurrence_type?: string
+          required_seat_ids?: string[] | null
           start_date?: string
           start_time?: string
           tenant_id?: number
           timezone?: string
           title?: string
           updated_at?: string
+          visionary_seat_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "eos_meeting_series_facilitator_seat_id_fkey"
+            columns: ["facilitator_seat_id"]
+            isOneToOne: false
+            referencedRelation: "accountability_seats"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "eos_meeting_series_facilitator_seat_id_fkey"
+            columns: ["facilitator_seat_id"]
+            isOneToOne: false
+            referencedRelation: "seat_linked_data"
+            referencedColumns: ["seat_id"]
+          },
+          {
+            foreignKeyName: "eos_meeting_series_facilitator_seat_id_fkey"
+            columns: ["facilitator_seat_id"]
+            isOneToOne: false
+            referencedRelation: "seat_succession_status"
+            referencedColumns: ["seat_id"]
+          },
+          {
+            foreignKeyName: "eos_meeting_series_integrator_seat_id_fkey"
+            columns: ["integrator_seat_id"]
+            isOneToOne: false
+            referencedRelation: "accountability_seats"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "eos_meeting_series_integrator_seat_id_fkey"
+            columns: ["integrator_seat_id"]
+            isOneToOne: false
+            referencedRelation: "seat_linked_data"
+            referencedColumns: ["seat_id"]
+          },
+          {
+            foreignKeyName: "eos_meeting_series_integrator_seat_id_fkey"
+            columns: ["integrator_seat_id"]
+            isOneToOne: false
+            referencedRelation: "seat_succession_status"
+            referencedColumns: ["seat_id"]
+          },
+          {
+            foreignKeyName: "eos_meeting_series_visionary_seat_id_fkey"
+            columns: ["visionary_seat_id"]
+            isOneToOne: false
+            referencedRelation: "accountability_seats"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "eos_meeting_series_visionary_seat_id_fkey"
+            columns: ["visionary_seat_id"]
+            isOneToOne: false
+            referencedRelation: "seat_linked_data"
+            referencedColumns: ["seat_id"]
+          },
+          {
+            foreignKeyName: "eos_meeting_series_visionary_seat_id_fkey"
+            columns: ["visionary_seat_id"]
+            isOneToOne: false
+            referencedRelation: "seat_succession_status"
+            referencedColumns: ["seat_id"]
+          },
+        ]
       }
       eos_meeting_summaries: {
         Row: {

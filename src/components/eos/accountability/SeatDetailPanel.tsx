@@ -8,10 +8,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import { 
   User, 
   Target, 
-  Calendar, 
   AlertTriangle, 
   CheckCircle2, 
   XCircle,
@@ -20,7 +20,8 @@ import {
   Edit2,
   Save,
   X,
-  BarChart3
+  BarChart3,
+  Vote
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useState, useEffect } from 'react';
@@ -151,21 +152,48 @@ export function SeatDetailPanel({
           <div className="space-y-6">
             {/* EOS Role Type Selector */}
             {canEdit && (
-              <div className="space-y-2">
-                <Label>EOS Role Type</Label>
-                <Select value={selectedRoleType} onValueChange={handleRoleTypeChange}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select role type..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">None</SelectItem>
-                    {(Object.keys(EOS_SEAT_ROLE_LABELS) as EosSeatRoleType[]).map(role => (
-                      <SelectItem key={role} value={role}>
-                        {EOS_SEAT_ROLE_LABELS[role]}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label>EOS Role Type</Label>
+                  <Select value={selectedRoleType} onValueChange={handleRoleTypeChange}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select role type..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">None</SelectItem>
+                      {(Object.keys(EOS_SEAT_ROLE_LABELS) as EosSeatRoleType[]).map(role => (
+                        <SelectItem key={role} value={role}>
+                          {EOS_SEAT_ROLE_LABELS[role]}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Quorum Required Checkbox */}
+                <div className="flex items-center space-x-2 p-3 border rounded-lg bg-muted/30">
+                  <Checkbox 
+                    id="quorum-required" 
+                    checked={seat.is_required_for_quorum || false}
+                    onCheckedChange={(checked) => {
+                      if (onUpdate) {
+                        onUpdate(seat.id, { is_required_for_quorum: checked === true });
+                      }
+                    }}
+                  />
+                  <div className="grid gap-1.5 leading-none">
+                    <label
+                      htmlFor="quorum-required"
+                      className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 flex items-center gap-2"
+                    >
+                      <Vote className="h-4 w-4 text-muted-foreground" />
+                      Required for Meeting Quorum
+                    </label>
+                    <p className="text-xs text-muted-foreground">
+                      This seat's owner must be present for meeting quorum to be met
+                    </p>
+                  </div>
+                </div>
               </div>
             )}
 
