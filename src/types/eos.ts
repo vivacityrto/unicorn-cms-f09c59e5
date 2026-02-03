@@ -104,6 +104,8 @@ export interface EosRock {
   title: string;
   description?: string;
   owner_id?: string;
+  seat_id?: string | null;
+  seat_owner_user_id?: string | null;
   status: string; // USER-DEFINED enum
   quarter_year: number;
   quarter_number: number;
@@ -111,6 +113,7 @@ export interface EosRock {
   completed_date?: string;
   priority?: number;
   progress?: number;
+  level?: string;
   created_at: string;
   updated_at: string;
   created_by?: string;
