@@ -119,6 +119,10 @@ const eosMenuItems = [{
   label: "Accountability Chart",
   path: "/eos/accountability"
 }, {
+  icon: TrendingUp,
+  label: "GWC Trends",
+  path: "/eos/gwc-trends"
+}, {
   icon: FileText,
   label: "Processes",
   path: "/processes"
