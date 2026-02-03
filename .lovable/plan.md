@@ -1,227 +1,111 @@
 
-# Add Role Explanation Tooltips and Action Guidance Across EOS
+Context recap (what’s happening)
+- In /eos/accountability, clicking “Assign Owner” triggers a write to public.accountability_seat_assignments (via useAccountabilityChart.addAssignment()).
+- That INSERT fires two DB-side triggers:
+  1) audit_accountability_chart_change() → writes to public.audit_eos_events
+  2) tr_cascade_seat_owner_to_rocks → calls public.cascade_seat_owner_to_rocks() → writes to public.eos_rocks (and also writes an audit row)
 
-## Overview
+What the current error actually is (root cause)
+- The toast in your screenshot now shows:
+  “column ‘entity_id’ is of type uuid but expression is of type text”
+- That error is coming from the DB audit trigger function audit_accountability_chart_change() defined in:
+  supabase/migrations/20260203075508_6e3899c3-ebac-4c14-b0c8-2f8e4c7fc579.sql
+- In that function, entity_id is being inserted as COALESCE(NEW.id::text, OLD.id::text).
+- But public.audit_eos_events.entity_id is UUID (confirmed via schema query), so inserting text fails.
 
-This plan adds role-aware guidance across all EOS modules to reduce user confusion when actions are disabled. The implementation follows the core principle: "Never hide capability without explaining it."
+Why the previous “enum eos_rock_status: complete” fix didn’t fully resolve it
+- We patched cascade_seat_owner_to_rocks() to avoid invalid enum comparisons.
+- However, the owner assignment flow still triggers audit_accountability_chart_change(), which still casts id::text and fails before you ever see a successful owner assignment.
 
-## Current State Analysis
+Required outcomes (per your prompt)
+1) Assign Owner succeeds and persists.
+2) Assign Owner from Accountability Chart must not write to Rocks (no eos_rocks updates).
+3) Eliminate uuid/text mismatches (no casts from uuid to text where the DB expects uuid).
+4) Improve error visibility (no silent failures; console logging in dev).
 
-### Existing Patterns
-- **RBAC Hook** (`useRBAC.tsx`): Defines permission checks for all EOS actions
-- **Existing Tooltips**: Some pages (EosMeetings, EosVto) now have basic tooltips from the previous implementation
-- **Inline Guidance**: EosRisksOpportunities has partial inline text for critical risk restrictions
+Implementation plan
 
-### Gaps Identified
-1. Most disabled buttons show basic `title` attributes, not proper tooltips with role context
-2. No reusable component for consistent permission denial messaging
-3. No Role Reference page for users to understand permissions
-4. No audit logging for restricted action attempts
-5. Inconsistent messaging across EOS pages
+Phase 1 — Fix the blocking UUID audit error (DB)
+A. Patch audit_accountability_chart_change() to insert UUID into audit_eos_events.entity_id
+- Create a new Supabase migration that:
+  - CREATE OR REPLACE FUNCTION public.audit_accountability_chart_change()
+  - Change:
+    entity_id = COALESCE(NEW.id::text, OLD.id::text)
+    to:
+    entity_id = COALESCE(NEW.id, OLD.id)
+  - Keep the rest of the JSON details as-is.
+- This immediately unblocks writes to accountability_* tables that currently fail due to the audit trigger.
 
-## Implementation Plan
+B. Sanity check (DB read-only verification steps)
+- After migration, verify:
+  - INSERT into accountability_seat_assignments succeeds (no uuid/text error)
+  - An audit row is created in audit_eos_events with entity_id as a UUID.
 
-### Phase 1: Create Reusable Permission Guidance Components
+Phase 2 — Enforce “no Rocks writes” during Accountability owner assignment (DB)
+C. Disable seat-assignment → rock cascade from this flow
+- Today, inserting a “Primary” assignment triggers tr_cascade_seat_owner_to_rocks on public.accountability_seat_assignments.
+- To satisfy “Assigning an owner must only update accountability ownership and must not touch Rocks”, we will:
+  - DROP TRIGGER IF EXISTS tr_cascade_seat_owner_to_rocks ON public.accountability_seat_assignments;
+  - (Optional, but recommended) Leave the function public.cascade_seat_owner_to_rocks() in place with an updated COMMENT explaining it is currently detached/disabled to prevent cross-module side effects from Accountability UI.
+- Result: accountability owner assignment won’t modify eos_rocks at all.
 
-**New File: `src/components/eos/PermissionTooltip.tsx`**
+D. (Optional follow-up, not required for this patch) Re-introduce rock-owner sync safely elsewhere
+- If you still want the “Rocks follow seat owner” behaviour, we can implement it later in a controlled way:
+  - On explicit “Sync rock owners” action from Rocks module, or
+  - On a dedicated, well-scoped RPC invoked only where intended
+- This avoids accidental coupling and exactly matches your “no side effects” requirement.
 
-A wrapper component that:
-- Shows a tooltip on disabled buttons explaining the restriction
-- Displays current user role vs required role
-- Suggests next steps (e.g., "Contact your Admin")
+Phase 3 — Make the UI error handling explicit and add dev logging (Frontend)
+E. Add console logging for the Assign Owner mutation
+- In src/hooks/useAccountabilityChart.tsx, inside addAssignment mutation:
+  - Wrap the “end-date previous primary” update call with error handling and logging.
+  - If either the “close old primary” update or the insert fails:
+    - console.error() with:
+      - the payload being inserted (seat_id, user_id, assignment_type, tenant_id, start_date)
+      - Supabase error object
+    - show the existing destructive toast with the error message (already present).
+- This ensures there is never a “no-op” silent failure during development.
 
-```text
-Example output:
-+-----------------------------------------+
-| This action requires Admin access       |
-| Your role: User                         |
-|                                         |
-| Contact your organisation admin         |
-| to request this permission.             |
-+-----------------------------------------+
-```
+F. Make the toast text specific to “Owner assignment”
+- The mutation currently toasts “Assignment added”.
+- Update copy (only) so the user sees:
+  - Success: “Owner assigned”
+  - Error title: “Owner assignment failed”
+  - Error description: include error.message
+- This reduces confusion for non-technical users.
 
-**New File: `src/components/eos/RoleInfoPanel.tsx`**
+Phase 4 — Verify the flow end-to-end (QA checklist)
+G. Manual acceptance checks (must pass)
+1) Go to /eos/accountability
+2) Click Assign Owner on Visionary
+3) Pick a Vivacity Team user
+Expected:
+- No toast error
+- Owner appears on the card immediately
+- Refresh page → owner persists
 
-A reusable panel/popover component that:
-- Shows current user's role and context (Vivacity Team vs Client)
-- Lists what the role CAN do in EOS
-- Lists what the role CANNOT do
-- Can be triggered from info icons or "Why can't I do this?" links
+4) Confirm no Rocks writes occurred
+- In Supabase SQL editor (read-only check), compare eos_rocks updated_at before/after, or filter recent updates by current user/time window:
+Expected:
+- No eos_rocks rows updated as a result of owner assignment.
 
-### Phase 2: Add Role Reference Page
+5) Confirm audit row created correctly
+Expected:
+- audit_eos_events contains a record for accountability_seat_assignments (or whichever table changed)
+- entity_id is a UUID, not text.
 
-**New File: `src/pages/RoleReference.tsx`**
+Files / resources we will touch (next step when approved)
+- Database migration (new): fix audit_accountability_chart_change() + drop tr_cascade_seat_owner_to_rocks trigger
+- Frontend:
+  - src/hooks/useAccountabilityChart.tsx (add logs + adjust toasts for the “Assign Owner” path)
 
-Read-only reference page at `/settings/roles` containing:
+Notes on scope and safety
+- This plan intentionally does not refactor your overall EOS model (functions vs seats vs roles) further; it is a surgical fix to:
+  - remove the blocking uuid/text error
+  - ensure Assign Owner has no Rocks side effects
+  - improve observability for future debugging
+- It preserves audit logging (required by your guardrails) and fixes it to be type-correct.
 
-| Section | Content |
-|---------|---------|
-| Vivacity Team Roles | Super Admin, Team Leader, Team Member with permissions |
-| Client Tenant Roles | Admin, User with permissions |
-| EOS Permissions Matrix | Table showing which roles can do what |
-
-**Route Addition in `App.tsx`:**
-```tsx
-<Route 
-  path="/settings/roles" 
-  element={
-    <ProtectedRoute>
-      <RoleReference />
-    </ProtectedRoute>
-  } 
-/>
-```
-
-### Phase 3: Update EOS Pages with Consistent Tooltips
-
-Each EOS page will be updated to use the new PermissionTooltip component:
-
-| Page | Actions to Wrap | Required Permission |
-|------|-----------------|---------------------|
-| `EosRocks.tsx` | Add Rock, Edit Rock (others) | `rocks:create`, `rocks:edit_others` |
-| `EosFlightPlan.tsx` | Edit sections (inherited from VTO) | `vto:edit` |
-| `EosMeetings.tsx` | Schedule, Manage Templates (done) | `eos_meetings:schedule` |
-| `EosVto.tsx` | Edit Plan (done) | `vto:edit` |
-| `EosRisksOpportunities.tsx` | Add Item, Escalate, Close Critical | `risks:create`, `risks:escalate`, `risks:close_critical` |
-| `EosQC.tsx` | Schedule QC | `qc:schedule` |
-| `EosTodos.tsx` | Add To-Do, Edit | Role-based |
-| `Processes.tsx` | Add Process, Edit, Archive | Role-based |
-| `EosAccountabilityChart.tsx` | Add/Assign seats (future) | Admin only |
-| `EosScorecard.tsx` | Add Metric | Role-based |
-
-### Phase 4: Meeting-Specific Guidance
-
-**Updates to Live Meeting Components:**
-- `FacilitatorSelectDialog.tsx`: Add tooltip explaining only facilitator can control segments
-- `MeetingCloseValidationDialog.tsx`: Add guidance on who can close meetings
-- `FinaliseMinutesDialog.tsx`: Add tooltip for finalise restrictions
-
-**QC Session Updates:**
-- `EosQCSession.tsx`: Add section headers explaining manager-only vs reviewee sections
-- Signature areas: Add guidance on who can sign
-
-### Phase 5: Lightweight Audit Logging
-
-**New Database Migration:**
-```sql
-CREATE TABLE public.audit_restricted_actions (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id uuid NOT NULL REFERENCES auth.users(id),
-  tenant_id bigint REFERENCES public.tenants(id),
-  action_attempted text NOT NULL,
-  permission_required text,
-  user_role text,
-  page_path text,
-  created_at timestamptz DEFAULT now()
-);
-
--- Enable RLS
-ALTER TABLE public.audit_restricted_actions ENABLE ROW LEVEL SECURITY;
-
--- Staff can read for analytics
-CREATE POLICY "Staff can view restricted action logs"
-  ON public.audit_restricted_actions FOR SELECT
-  TO authenticated
-  USING (public.is_staff());
-
--- System can insert via RPC
-CREATE POLICY "Allow insert for authenticated users"
-  ON public.audit_restricted_actions FOR INSERT
-  TO authenticated
-  WITH CHECK (auth.uid() = user_id);
-```
-
-**New Hook: `src/hooks/useRestrictedActionLog.tsx`**
-- Logs when user clicks a disabled action
-- Used for analytics to identify friction hotspots
-- Debounced to prevent spam
-
-## Files to Create
-
-| File | Purpose |
-|------|---------|
-| `src/components/eos/PermissionTooltip.tsx` | Reusable tooltip wrapper for disabled actions |
-| `src/components/eos/RoleInfoPanel.tsx` | Panel showing role capabilities |
-| `src/pages/RoleReference.tsx` | Read-only role reference page |
-| `src/hooks/useRestrictedActionLog.tsx` | Hook for logging restriction attempts |
-| Migration file | Create `audit_restricted_actions` table |
-
-## Files to Modify
-
-| File | Changes |
-|------|---------|
-| `src/pages/EosRocks.tsx` | Wrap Add/Edit buttons with PermissionTooltip |
-| `src/pages/EosFlightPlan.tsx` | Add edit restriction tooltips |
-| `src/pages/EosRisksOpportunities.tsx` | Upgrade inline text to proper tooltips |
-| `src/pages/EosQC.tsx` | Wrap Schedule QC button |
-| `src/pages/EosTodos.tsx` | Add permission tooltips to actions |
-| `src/pages/Processes.tsx` | Add tooltips to restricted actions |
-| `src/pages/EosScorecard.tsx` | Wrap Add Metric button |
-| `src/pages/EosAccountabilityChart.tsx` | Add governance restriction tooltips |
-| `src/hooks/useRBAC.tsx` | Add helper to get user's role display name |
-| `src/App.tsx` | Add route for `/settings/roles` |
-
-## Technical Details
-
-### PermissionTooltip Component API
-
-```tsx
-interface PermissionTooltipProps {
-  permission: Permission;
-  children: React.ReactNode;
-  action?: string; // e.g., "schedule meetings"
-  logAttempt?: boolean; // Whether to log clicks on disabled state
-}
-
-// Usage:
-<PermissionTooltip permission="rocks:edit_others" action="edit other users' rocks">
-  <Button disabled={!canEditOthersRocks()} onClick={handleEdit}>
-    Edit Rock
-  </Button>
-</PermissionTooltip>
-```
-
-### Role Display Name Mapping
-
-```tsx
-const ROLE_DISPLAY_NAMES: Record<string, string> = {
-  'Super Admin': 'Super Admin',
-  'Team Leader': 'Team Leader',
-  'Team Member': 'Team Member',
-  'Admin': 'Admin',
-  'User': 'General User',
-  'General User': 'General User',
-};
-
-const PERMISSION_REQUIRED_ROLE: Record<Permission, string[]> = {
-  'rocks:create': ['All roles'],
-  'rocks:edit_others': ['Super Admin', 'Team Leader', 'Admin'],
-  'risks:escalate': ['Super Admin', 'Team Leader', 'Admin'],
-  'risks:close_critical': ['Super Admin only'],
-  'eos_meetings:schedule': ['Super Admin', 'Team Leader', 'Admin'],
-  'vto:edit': ['Super Admin', 'Team Leader', 'Team Member', 'Admin'],
-  // ... etc
-};
-```
-
-## Validation Checklist
-
-1. Log in as User (lowest-permission client role)
-2. Navigate to each EOS page
-3. Verify disabled actions show tooltip with:
-   - Required role
-   - Current user role
-   - Next step guidance
-4. Verify no EOS pages disappear for any role
-5. Verify role names are context-appropriate (no "Team Member" shown to clients)
-6. Access `/settings/roles` and verify content is accurate
-7. Check audit_restricted_actions table captures attempts
-
-## Outcome
-
-- Users understand the system faster
-- Fewer "why can't I..." support tickets
-- EOS feels transparent and intentional
-- Analytics identify permission friction hotspots
-- Training dependency reduced via Role Reference page
+Open question (non-blocking, but helps finalize the “no Rocks writes” guarantee)
+- Do you want to permanently disable automatic “seat owner → rock owner” cascading, or do you want it moved behind an explicit action/RPC used only from the Rocks area?
+  - This plan disables it now to meet your acceptance criteria, and we can reintroduce it safely later if needed.
