@@ -5553,6 +5553,56 @@ export type Database = {
           },
         ]
       }
+      eos_health_snapshots: {
+        Row: {
+          cadence_score: number
+          created_at: string
+          id: string
+          ids_score: number
+          overall_band: string
+          overall_score: number
+          people_score: number
+          quarterly_score: number
+          rocks_score: number
+          snapshot_date: string
+          tenant_id: number
+        }
+        Insert: {
+          cadence_score: number
+          created_at?: string
+          id?: string
+          ids_score: number
+          overall_band: string
+          overall_score: number
+          people_score: number
+          quarterly_score: number
+          rocks_score: number
+          snapshot_date: string
+          tenant_id: number
+        }
+        Update: {
+          cadence_score?: number
+          created_at?: string
+          id?: string
+          ids_score?: number
+          overall_band?: string
+          overall_score?: number
+          people_score?: number
+          quarterly_score?: number
+          rocks_score?: number
+          snapshot_date?: string
+          tenant_id?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "eos_health_snapshots_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       eos_issue_status_transitions: {
         Row: {
           from_status: Database["public"]["Enums"]["eos_issue_status"]
