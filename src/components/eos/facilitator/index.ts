@@ -12,3 +12,4 @@ export {
 } from './FacilitatorPrompts';
 export { RocksInsights } from './RocksInsights';
 export { QCInsights } from './QCInsights';
+export { FacilitatorOnboardingPanel } from './FacilitatorOnboardingPanel';
