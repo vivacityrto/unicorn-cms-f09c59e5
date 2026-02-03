@@ -6,7 +6,7 @@ import {
   CheckSquare,
   TrendingUp,
   TrendingDown,
-  Minus
+  Briefcase
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Link } from 'react-router-dom';
@@ -35,6 +35,9 @@ export function LeadershipKPICards({
       title: 'Scorecard Health',
       value: `${scorecardHealth.healthPercentage}%`,
       subtitle: `${scorecardHealth.onTrackCount} of ${scorecardHealth.totalMetrics} on track`,
+      seatInfo: scorecardHealth.seatsAtRisk > 0 
+        ? `${scorecardHealth.seatsAtRisk} seats at risk`
+        : undefined,
       icon: Target,
       trend: scorecardHealth.trendVsLastWeek,
       isHealthy: scorecardHealth.healthPercentage >= 80,
@@ -44,6 +47,9 @@ export function LeadershipKPICards({
       title: 'Rocks Status',
       value: rockStatus.totalRocks.toString(),
       subtitle: `${rockStatus.onTrack} On Track · ${rockStatus.atRisk + rockStatus.offTrack} At Risk`,
+      seatInfo: rockStatus.seatsWithMultipleOffTrack > 0
+        ? `${rockStatus.seatsWithMultipleOffTrack} seat${rockStatus.seatsWithMultipleOffTrack > 1 ? 's' : ''} overloaded`
+        : undefined,
       icon: Mountain,
       isHealthy: rockStatus.offTrack === 0,
       link: '/eos/rocks',
@@ -54,8 +60,11 @@ export function LeadershipKPICards({
       subtitle: riskRadar.escalatedCount > 0 
         ? `${riskRadar.escalatedCount} escalated`
         : 'No escalations',
+      seatInfo: riskRadar.seatsWithCriticalRisks > 0
+        ? `${riskRadar.seatsWithCriticalRisks} seat${riskRadar.seatsWithCriticalRisks > 1 ? 's' : ''} with critical >30d`
+        : undefined,
       icon: AlertTriangle,
-      isHealthy: riskRadar.escalatedCount === 0,
+      isHealthy: riskRadar.escalatedCount === 0 && riskRadar.seatsWithCriticalRisks === 0,
       link: '/eos/risks-opportunities',
     },
     {
@@ -76,7 +85,7 @@ export function LeadershipKPICards({
         <Link key={card.title} to={card.link}>
           <Card 
             className={cn(
-              'transition-all duration-200 hover:shadow-md hover:scale-[1.02] cursor-pointer',
+              'transition-all duration-200 hover:shadow-md hover:scale-[1.02] cursor-pointer h-full',
               !card.isHealthy && 'border-destructive/50'
             )}
           >
@@ -95,6 +104,12 @@ export function LeadershipKPICards({
                   <p className="text-xs text-muted-foreground">
                     {card.subtitle}
                   </p>
+                  {card.seatInfo && (
+                    <div className="flex items-center gap-1 text-xs text-amber-600 dark:text-amber-400 font-medium mt-1">
+                      <Briefcase className="h-3 w-3" />
+                      {card.seatInfo}
+                    </div>
+                  )}
                   {card.trend !== undefined && card.trend !== 0 && (
                     <div className={cn(
                       'flex items-center gap-1 text-xs font-medium',

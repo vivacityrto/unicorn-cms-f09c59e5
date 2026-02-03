@@ -9,6 +9,9 @@ import {
   LeadershipScorecardExceptions,
   LeadershipRiskRadar,
   LeadershipMeetingDiscipline,
+  SeatDrillDownPanel,
+  UnassignedAccountability,
+  LeadershipAccountabilityGaps,
 } from '@/components/eos/leadership';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -18,9 +21,8 @@ import { Shield, AlertTriangle } from 'lucide-react';
 export default function EosLeadershipDashboard() {
   const { isSuperAdmin, hasPermission } = useRBAC();
   const isSuper = isSuperAdmin;
-  const isTeamLeader = hasPermission('eos_meetings:schedule'); // Team Leaders have this
+  const isTeamLeader = hasPermission('eos_meetings:schedule');
 
-  // Access check: Only Super Admin and Team Leader
   if (!isSuper && !isTeamLeader) {
     return <Navigate to="/eos/overview" replace />;
   }
@@ -38,6 +40,7 @@ function LeadershipContent() {
   
   const [selectedYear, setSelectedYear] = useState(currentYear);
   const [selectedQuarter, setSelectedQuarter] = useState(currentQuarter);
+  const [selectedSeatId, setSelectedSeatId] = useState<string | null>(null);
 
   const { data, isLoading, error } = useLeadershipDashboard({
     year: selectedYear,
@@ -46,6 +49,12 @@ function LeadershipContent() {
 
   const years = [currentYear - 1, currentYear, currentYear + 1];
   const quarters = [1, 2, 3, 4];
+
+  const selectedSeat = data?.seats.find(s => s.id === selectedSeatId) || null;
+
+  const handleSeatClick = (seatId: string) => {
+    setSelectedSeatId(seatId);
+  };
 
   if (error) {
     return (
@@ -68,11 +77,10 @@ function LeadershipContent() {
             <h1 className="text-3xl font-bold">EOS Leadership Dashboard</h1>
           </div>
           <p className="text-muted-foreground mt-1">
-            Weekly execution health across priorities, scorecard, and risks
+            Execution health with full seat accountability traceability
           </p>
         </div>
 
-        {/* Quarter Selector */}
         <div className="flex items-center gap-2">
           <Select
             value={selectedQuarter.toString()}
@@ -83,9 +91,7 @@ function LeadershipContent() {
             </SelectTrigger>
             <SelectContent>
               {quarters.map((q) => (
-                <SelectItem key={q} value={q.toString()}>
-                  Q{q}
-                </SelectItem>
+                <SelectItem key={q} value={q.toString()}>Q{q}</SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -99,9 +105,7 @@ function LeadershipContent() {
             </SelectTrigger>
             <SelectContent>
               {years.map((y) => (
-                <SelectItem key={y} value={y.toString()}>
-                  {y}
-                </SelectItem>
+                <SelectItem key={y} value={y.toString()}>{y}</SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -112,7 +116,6 @@ function LeadershipContent() {
         <LeadershipSkeleton />
       ) : data ? (
         <>
-          {/* Section 1: Execution Health Snapshot - KPI Cards */}
           <LeadershipKPICards
             scorecardHealth={data.scorecardHealth}
             rockStatus={data.rockStatus}
@@ -120,19 +123,30 @@ function LeadershipContent() {
             todosDiscipline={data.todosDiscipline}
           />
 
-          <div className="grid lg:grid-cols-2 gap-6">
-            {/* Section 2: Quarterly Rocks Overview */}
-            <LeadershipRocksTable rockStatus={data.rockStatus} />
+          {/* Unassigned Accountability - visible warning if items exist */}
+          <UnassignedAccountability items={data.unassignedItems} />
 
-            {/* Section 3: Scorecard Exceptions */}
+          <div className="grid lg:grid-cols-2 gap-6">
+            <LeadershipRocksTable rockStatus={data.rockStatus} onSeatClick={handleSeatClick} />
             <LeadershipScorecardExceptions exceptions={data.scorecardExceptions} />
           </div>
 
-          {/* Section 4: Risks & Opportunities Radar */}
-          <LeadershipRiskRadar riskRadar={data.riskRadar} />
+          <LeadershipRiskRadar riskRadar={data.riskRadar} onSeatClick={handleSeatClick} />
 
-          {/* Section 5: Meeting Discipline */}
-          <LeadershipMeetingDiscipline meetingDiscipline={data.meetingDiscipline} />
+          <div className="grid lg:grid-cols-2 gap-6">
+            <LeadershipMeetingDiscipline meetingDiscipline={data.meetingDiscipline} />
+            <LeadershipAccountabilityGaps gaps={data.accountabilityGaps} />
+          </div>
+
+          {/* Seat Drill-Down Panel */}
+          <SeatDrillDownPanel
+            seat={selectedSeat}
+            isOpen={!!selectedSeatId}
+            onClose={() => setSelectedSeatId(null)}
+            rockStatus={data.rockStatus}
+            riskRadar={data.riskRadar}
+            meetingDiscipline={data.meetingDiscipline}
+          />
         </>
       ) : null}
     </div>
@@ -142,18 +156,13 @@ function LeadershipContent() {
 function LeadershipSkeleton() {
   return (
     <div className="space-y-6">
-      {/* KPI Cards Skeleton */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {[1, 2, 3, 4].map((i) => (
-          <Skeleton key={i} className="h-32" />
-        ))}
+        {[1, 2, 3, 4].map((i) => (<Skeleton key={i} className="h-32" />))}
       </div>
-
       <div className="grid lg:grid-cols-2 gap-6">
         <Skeleton className="h-80" />
         <Skeleton className="h-80" />
       </div>
-
       <Skeleton className="h-64" />
       <Skeleton className="h-40" />
     </div>
