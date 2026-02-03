@@ -179,7 +179,12 @@ export function useAccountabilityChart() {
       toast({ title: 'Accountability Chart created' });
     },
     onError: (error: Error) => {
-      toast({ title: 'Error creating chart', description: error.message, variant: 'destructive' });
+      // Provide user-friendly message, log technical details
+      console.error('Accountability Chart creation failed:', error.message);
+      const userMessage = error.message.includes('entity_id') || error.message.includes('type uuid')
+        ? 'Accountability Chart cannot be created because the system entity is not initialised. Please contact support.'
+        : error.message;
+      toast({ title: 'Error creating chart', description: userMessage, variant: 'destructive' });
     },
   });
 
