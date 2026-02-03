@@ -57,6 +57,7 @@ import EosRisksOpportunities from "./pages/EosRisksOpportunities";
 import EosAccountabilityChart from "./pages/EosAccountabilityChart";
 import EosOnboarding from "./pages/EosOnboarding";
 import EosHealth from "./pages/EosHealth";
+import EosPeopleAnalyzer from "./pages/EosPeopleAnalyzer";
 import ResetPassword from "./pages/ResetPassword";
 import Audits from "./pages/Audits";
 import AuditWorkspace from "./pages/AuditWorkspace";
@@ -565,6 +566,14 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <EosAccountabilityChart />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/eos/people-analyzer" 
+              element={
+                <ProtectedRoute>
+                  <EosPeopleAnalyzer />
                 </ProtectedRoute>
               } 
             />

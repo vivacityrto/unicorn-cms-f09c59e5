@@ -987,6 +987,51 @@ export type Database = {
           },
         ]
       }
+      audit_people_analyzer: {
+        Row: {
+          created_at: string
+          details: Json | null
+          entry_id: string | null
+          event_type: string
+          id: string
+          tenant_id: number
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          details?: Json | null
+          entry_id?: string | null
+          event_type: string
+          id?: string
+          tenant_id: number
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          details?: Json | null
+          entry_id?: string | null
+          event_type?: string
+          id?: string
+          tenant_id?: number
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "audit_people_analyzer_entry_id_fkey"
+            columns: ["entry_id"]
+            isOneToOne: false
+            referencedRelation: "people_analyzer_entries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "audit_people_analyzer_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       audit_question: {
         Row: {
           audit_section_id: number
@@ -9952,6 +9997,180 @@ export type Database = {
           total_hours?: number | null
         }
         Relationships: []
+      }
+      people_analyzer_entries: {
+        Row: {
+          assessed_by: string
+          core_value_id: string
+          core_value_text: string
+          created_at: string
+          created_by: string | null
+          id: string
+          qc_id: string
+          quarter_number: number
+          quarter_year: number
+          rating: string
+          seat_id: string | null
+          tenant_id: number
+          user_id: string
+        }
+        Insert: {
+          assessed_by: string
+          core_value_id: string
+          core_value_text: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          qc_id: string
+          quarter_number: number
+          quarter_year: number
+          rating: string
+          seat_id?: string | null
+          tenant_id: number
+          user_id: string
+        }
+        Update: {
+          assessed_by?: string
+          core_value_id?: string
+          core_value_text?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          qc_id?: string
+          quarter_number?: number
+          quarter_year?: number
+          rating?: string
+          seat_id?: string | null
+          tenant_id?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "people_analyzer_entries_qc_id_fkey"
+            columns: ["qc_id"]
+            isOneToOne: false
+            referencedRelation: "eos_qc"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "people_analyzer_entries_seat_id_fkey"
+            columns: ["seat_id"]
+            isOneToOne: false
+            referencedRelation: "accountability_seats"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "people_analyzer_entries_seat_id_fkey"
+            columns: ["seat_id"]
+            isOneToOne: false
+            referencedRelation: "seat_linked_data"
+            referencedColumns: ["seat_id"]
+          },
+          {
+            foreignKeyName: "people_analyzer_entries_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      people_analyzer_trends: {
+        Row: {
+          calculated_at: string
+          consecutive_minus_count: number | null
+          core_value_id: string
+          core_value_text: string
+          created_at: string
+          has_divergence: boolean | null
+          id: string
+          is_at_risk: boolean | null
+          manager_rating: string | null
+          minus_rate: number
+          period_end: string
+          period_start: string
+          plus_minus_rate: number
+          plus_rate: number
+          quarter_number: number
+          quarter_year: number
+          seat_id: string | null
+          team_member_rating: string | null
+          tenant_id: number
+          trend: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          calculated_at?: string
+          consecutive_minus_count?: number | null
+          core_value_id: string
+          core_value_text: string
+          created_at?: string
+          has_divergence?: boolean | null
+          id?: string
+          is_at_risk?: boolean | null
+          manager_rating?: string | null
+          minus_rate?: number
+          period_end: string
+          period_start: string
+          plus_minus_rate?: number
+          plus_rate?: number
+          quarter_number: number
+          quarter_year: number
+          seat_id?: string | null
+          team_member_rating?: string | null
+          tenant_id: number
+          trend?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          calculated_at?: string
+          consecutive_minus_count?: number | null
+          core_value_id?: string
+          core_value_text?: string
+          created_at?: string
+          has_divergence?: boolean | null
+          id?: string
+          is_at_risk?: boolean | null
+          manager_rating?: string | null
+          minus_rate?: number
+          period_end?: string
+          period_start?: string
+          plus_minus_rate?: number
+          plus_rate?: number
+          quarter_number?: number
+          quarter_year?: number
+          seat_id?: string | null
+          team_member_rating?: string | null
+          tenant_id?: number
+          trend?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "people_analyzer_trends_seat_id_fkey"
+            columns: ["seat_id"]
+            isOneToOne: false
+            referencedRelation: "accountability_seats"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "people_analyzer_trends_seat_id_fkey"
+            columns: ["seat_id"]
+            isOneToOne: false
+            referencedRelation: "seat_linked_data"
+            referencedColumns: ["seat_id"]
+          },
+          {
+            foreignKeyName: "people_analyzer_trends_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       place_holders: {
         Row: {
