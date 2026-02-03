@@ -15,3 +15,4 @@ export { SeatHealthSection } from './SeatHealthSection';
 export { RecommendationsPanel } from './RecommendationsPanel';
 export { SeatCoverageIndicator } from './SeatCoverageIndicator';
 export { SeatSuccessionSection } from './SeatSuccessionSection';
+export { SubFunctionCard } from './SubFunctionCard';
