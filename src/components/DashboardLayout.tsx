@@ -123,6 +123,10 @@ const eosMenuItems = [{
   label: "GWC Trends",
   path: "/eos/gwc-trends"
 }, {
+  icon: BarChart3,
+  label: "Client Impact",
+  path: "/eos/client-impact"
+}, {
   icon: FileText,
   label: "Processes",
   path: "/processes"

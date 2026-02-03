@@ -59,6 +59,9 @@ import EosOnboarding from "./pages/EosOnboarding";
 import EosHealth from "./pages/EosHealth";
 import EosPeopleAnalyzer from "./pages/EosPeopleAnalyzer";
 import EosGWCTrends from "./pages/EosGWCTrends";
+import EosClientImpact from "./pages/EosClientImpact";
+import EosClientImpactDetail from "./pages/EosClientImpactDetail";
+import ClientImpactPage from "./pages/ClientImpactPage";
 import ResetPassword from "./pages/ResetPassword";
 import Audits from "./pages/Audits";
 import AuditWorkspace from "./pages/AuditWorkspace";
@@ -583,6 +586,31 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <EosGWCTrends />
+                </ProtectedRoute>
+              } 
+            />
+            {/* Client Impact Reporting Routes */}
+            <Route 
+              path="/eos/client-impact" 
+              element={
+                <ProtectedRoute>
+                  <EosClientImpact />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/eos/client-impact/:reportId" 
+              element={
+                <ProtectedRoute>
+                  <EosClientImpactDetail />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/clients/:clientId/impact" 
+              element={
+                <ProtectedRoute>
+                  <ClientImpactPage />
                 </ProtectedRoute>
               } 
             />

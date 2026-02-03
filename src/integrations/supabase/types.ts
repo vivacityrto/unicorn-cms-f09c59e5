@@ -3074,6 +3074,148 @@ export type Database = {
           },
         ]
       }
+      client_impact_items: {
+        Row: {
+          category: string | null
+          client_benefit: string | null
+          completed_date: string | null
+          created_at: string | null
+          description: string | null
+          display_order: number | null
+          id: string
+          report_id: string
+          section: string
+          source_id: string | null
+          source_type: string | null
+          status: string | null
+          tenant_id: number
+          title: string
+        }
+        Insert: {
+          category?: string | null
+          client_benefit?: string | null
+          completed_date?: string | null
+          created_at?: string | null
+          description?: string | null
+          display_order?: number | null
+          id?: string
+          report_id: string
+          section: string
+          source_id?: string | null
+          source_type?: string | null
+          status?: string | null
+          tenant_id: number
+          title: string
+        }
+        Update: {
+          category?: string | null
+          client_benefit?: string | null
+          completed_date?: string | null
+          created_at?: string | null
+          description?: string | null
+          display_order?: number | null
+          id?: string
+          report_id?: string
+          section?: string
+          source_id?: string | null
+          source_type?: string | null
+          status?: string | null
+          tenant_id?: number
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_impact_items_report_id_fkey"
+            columns: ["report_id"]
+            isOneToOne: false
+            referencedRelation: "client_impact_reports"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_impact_items_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      client_impact_reports: {
+        Row: {
+          client_id: string | null
+          created_at: string | null
+          executive_summary: string | null
+          focus_areas: string[] | null
+          generated_at: string | null
+          id: string
+          is_published: boolean | null
+          overall_status: string | null
+          period_end: string
+          period_start: string
+          published_at: string | null
+          published_by: string | null
+          reporting_period: string
+          tenant_id: number
+          updated_at: string | null
+        }
+        Insert: {
+          client_id?: string | null
+          created_at?: string | null
+          executive_summary?: string | null
+          focus_areas?: string[] | null
+          generated_at?: string | null
+          id?: string
+          is_published?: boolean | null
+          overall_status?: string | null
+          period_end: string
+          period_start: string
+          published_at?: string | null
+          published_by?: string | null
+          reporting_period: string
+          tenant_id: number
+          updated_at?: string | null
+        }
+        Update: {
+          client_id?: string | null
+          created_at?: string | null
+          executive_summary?: string | null
+          focus_areas?: string[] | null
+          generated_at?: string | null
+          id?: string
+          is_published?: boolean | null
+          overall_status?: string | null
+          period_end?: string
+          period_start?: string
+          published_at?: string | null
+          published_by?: string | null
+          reporting_period?: string
+          tenant_id?: number
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_impact_reports_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients_legacy"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_impact_reports_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "dashboard_client_snapshot"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_impact_reports_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       client_liaisons: {
         Row: {
           assigned_at: string | null
