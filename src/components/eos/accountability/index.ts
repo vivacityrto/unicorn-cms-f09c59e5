@@ -5,3 +5,6 @@ export { SaveVersionDialog, VersionHistoryDialog } from './VersionDialogs';
 export { SeatDetailPanel } from './SeatDetailPanel';
 export { AccountabilityGaps } from './AccountabilityGaps';
 export { OrgChartView } from './OrgChartView';
+export { DraggableFunctionColumn } from './DraggableFunctionColumn';
+export { DraggableSeatCard } from './DraggableSeatCard';
+export { SwimlaneDragDropProvider } from './SwimlaneDragDropProvider';

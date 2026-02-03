@@ -1,8 +1,7 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Card, CardContent } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import {
   AlertDialog,
@@ -27,15 +26,16 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
-import { Loader2, Plus, Save, History, CheckCircle, Archive, MoreHorizontal, AlertCircle, Users, Info, LayoutGrid, Network } from 'lucide-react';
+import { Loader2, Plus, Save, History, CheckCircle, Archive, MoreHorizontal, AlertCircle, Users, Info, LayoutGrid, Network, GripVertical } from 'lucide-react';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { cn } from '@/lib/utils';
 import { useAccountabilityChart } from '@/hooks/useAccountabilityChart';
-import { FunctionColumn } from './FunctionColumn';
 import { SaveVersionDialog, VersionHistoryDialog } from './VersionDialogs';
 import { SeatDetailPanel } from './SeatDetailPanel';
 import { AccountabilityGaps } from './AccountabilityGaps';
 import { OrgChartView } from './OrgChartView';
+import { DraggableFunctionColumn } from './DraggableFunctionColumn';
+import { SwimlaneDragDropProvider } from './SwimlaneDragDropProvider';
 import { STATUS_COLORS, type ChartStatus, type UserBasic, type SeatWithDetails } from '@/types/accountabilityChart';
 import { useAuth } from '@/hooks/useAuth';
 import { useFacilitatorMode } from '@/contexts/FacilitatorModeContext';
@@ -63,6 +63,9 @@ export function ChartBuilder() {
     removeAssignment,
     saveVersion,
     updateStatus,
+    reorderFunctions,
+    reorderSeats,
+    moveSeat,
   } = useAccountabilityChart();
 
   // Fetch Vivacity Team users only (EOS is internal-only)
@@ -389,76 +392,102 @@ export function ChartBuilder() {
           />
         </div>
       ) : (
-        <div className="flex gap-4 overflow-x-auto pb-4">
-          {chart.functions.map((func) => (
-            <FunctionColumn
-              key={func.id}
-              func={func}
-              canEdit={!!canEdit}
-              tenantUsers={tenantUsers}
-              onUpdateFunction={(id, name) => updateFunction.mutate({ id, name })}
-              onDeleteFunction={(id) => deleteFunction.mutate(id)}
-              onAddSeat={(functionId, name) =>
-                addSeat.mutate({ function_id: functionId, chart_id: chart.id, seat_name: name })
-              }
-              onUpdateSeat={(id, name) => updateSeat.mutate({ id, seat_name: name })}
-              onDeleteSeat={(id) => deleteSeat.mutate(id)}
-              onAddRole={(seatId, text) => addRole.mutate({ seat_id: seatId, role_text: text })}
-              onUpdateRole={(id, text) => updateRole.mutate({ id, role_text: text })}
-              onDeleteRole={(id) => deleteRole.mutate(id)}
-              onAssign={(seatId, userId, type) =>
-                addAssignment.mutate({ seat_id: seatId, user_id: userId, assignment_type: type })
-              }
-              onUnassign={(id) => removeAssignment.mutate(id)}
-            />
-          ))}
-
-        {/* Add function */}
-        {canEdit && (
-          isAddingFunction ? (
-            <div className="w-64 min-w-64 p-3 border-2 border-dashed rounded-lg bg-muted/30">
-              <Input
-                placeholder="Function name..."
-                value={newFunctionName}
-                onChange={(e) => setNewFunctionName(e.target.value)}
-                className="mb-2"
-                autoFocus
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') handleAddFunction();
-                  if (e.key === 'Escape') {
-                    setIsAddingFunction(false);
-                    setNewFunctionName('');
+        <SwimlaneDragDropProvider
+          functions={chart.functions}
+          canEdit={!!canEdit}
+          tenantUsers={tenantUsers}
+          onReorderFunctions={(ids) => reorderFunctions.mutate(ids)}
+          onReorderSeats={(functionId, seatIds) => reorderSeats.mutate({ functionId, seatIds })}
+          onMoveSeat={(seatId, fromFunctionId, toFunctionId, newIndex) => 
+            moveSeat.mutate({ seatId, fromFunctionId, toFunctionId, newIndex })
+          }
+        >
+          <div className="flex gap-4 overflow-x-auto pb-4">
+            {/* EOS Guidance hint for Facilitator */}
+            {isFacilitatorMode && (
+              <div className="absolute top-0 right-0 bg-primary/10 text-primary text-xs px-2 py-1 rounded-bl-lg">
+                <GripVertical className="h-3 w-3 inline mr-1" />
+                Drag to reorder
+              </div>
+            )}
+            
+            {chart.functions.map((func) => (
+              <DraggableFunctionColumn
+                key={func.id}
+                func={func}
+                canEdit={!!canEdit}
+                tenantUsers={tenantUsers}
+                onUpdateFunction={(id, name) => updateFunction.mutate({ id, name })}
+                onDeleteFunction={(id) => deleteFunction.mutate(id)}
+                onAddSeat={(functionId, name) =>
+                  addSeat.mutate({ function_id: functionId, chart_id: chart.id, seat_name: name })
+                }
+                onUpdateSeat={(id, name) => updateSeat.mutate({ id, seat_name: name })}
+                onDeleteSeat={(id) => deleteSeat.mutate(id)}
+                onAddRole={(seatId, text) => addRole.mutate({ seat_id: seatId, role_text: text })}
+                onUpdateRole={(id, text) => updateRole.mutate({ id, role_text: text })}
+                onDeleteRole={(id) => deleteRole.mutate(id)}
+                onAssign={(seatId, userId, type) =>
+                  addAssignment.mutate({ seat_id: seatId, user_id: userId, assignment_type: type })
+                }
+                onUnassign={(id) => removeAssignment.mutate(id)}
+                onSeatClick={(seatId) => {
+                  const seat = chart.functions.flatMap(f => f.seats).find(s => s.id === seatId);
+                  if (seat) {
+                    setSelectedSeat(seat);
+                    setShowSeatDetail(true);
                   }
                 }}
               />
-              <div className="flex gap-2">
-                <Button size="sm" className="flex-1" onClick={handleAddFunction}>
-                  Add
-                </Button>
+            ))}
+
+            {/* Add function */}
+            {canEdit && (
+              isAddingFunction ? (
+                <div className="w-72 min-w-72 p-3 border-2 border-dashed rounded-lg bg-muted/30">
+                  <Input
+                    placeholder="Function name..."
+                    value={newFunctionName}
+                    onChange={(e) => setNewFunctionName(e.target.value)}
+                    className="mb-2"
+                    autoFocus
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') handleAddFunction();
+                      if (e.key === 'Escape') {
+                        setIsAddingFunction(false);
+                        setNewFunctionName('');
+                      }
+                    }}
+                  />
+                  <div className="flex gap-2">
+                    <Button size="sm" className="flex-1" onClick={handleAddFunction}>
+                      Add
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => {
+                        setIsAddingFunction(false);
+                        setNewFunctionName('');
+                      }}
+                    >
+                      Cancel
+                    </Button>
+                  </div>
+                </div>
+              ) : (
                 <Button
-                  size="sm"
                   variant="outline"
-                  onClick={() => {
-                    setIsAddingFunction(false);
-                    setNewFunctionName('');
-                  }}
+                  className="w-72 min-w-72 h-24 border-2 border-dashed flex-col gap-2"
+                  onClick={() => setIsAddingFunction(true)}
                 >
-                  Cancel
+                  <Plus className="h-5 w-5" />
+                  Add Function
                 </Button>
-              </div>
-            </div>
-          ) : (
-            <Button
-              variant="outline"
-              className="w-64 min-w-64 h-24 border-2 border-dashed flex-col gap-2"
-              onClick={() => setIsAddingFunction(true)}
-            >
-              <Plus className="h-5 w-5" />
-              Add Function
-            </Button>
-          )
-        )}
-        </div>
+              )
+            )}
+          </div>
+        </SwimlaneDragDropProvider>
       )}
 
       {/* Seat Detail Panel */}

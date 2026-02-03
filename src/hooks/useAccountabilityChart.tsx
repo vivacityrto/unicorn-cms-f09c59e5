@@ -537,6 +537,80 @@ export function useAccountabilityChart() {
     },
   });
 
+  // Reorder functions
+  const reorderFunctions = useMutation({
+    mutationFn: async (functionIds: string[]) => {
+      // Update sort_order for each function
+      const updates = functionIds.map((id, index) => 
+        supabase
+          .from('accountability_functions')
+          .update({ sort_order: index })
+          .eq('id', id)
+      );
+      
+      await Promise.all(updates);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['accountability-chart'] });
+    },
+    onError: (error: Error) => {
+      toast({ title: 'Error reordering functions', description: error.message, variant: 'destructive' });
+    },
+  });
+
+  // Reorder seats within a function
+  const reorderSeats = useMutation({
+    mutationFn: async ({ functionId, seatIds }: { functionId: string; seatIds: string[] }) => {
+      // Update sort_order for each seat
+      const updates = seatIds.map((id, index) => 
+        supabase
+          .from('accountability_seats')
+          .update({ sort_order: index })
+          .eq('id', id)
+      );
+      
+      await Promise.all(updates);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['accountability-chart'] });
+    },
+    onError: (error: Error) => {
+      toast({ title: 'Error reordering seats', description: error.message, variant: 'destructive' });
+    },
+  });
+
+  // Move seat to a different function
+  const moveSeat = useMutation({
+    mutationFn: async ({ 
+      seatId, 
+      fromFunctionId, 
+      toFunctionId, 
+      newIndex 
+    }: { 
+      seatId: string; 
+      fromFunctionId: string; 
+      toFunctionId: string; 
+      newIndex: number;
+    }) => {
+      // Update the seat's function_id and sort_order
+      const { error } = await supabase
+        .from('accountability_seats')
+        .update({ 
+          function_id: toFunctionId,
+          sort_order: newIndex 
+        })
+        .eq('id', seatId);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['accountability-chart'] });
+    },
+    onError: (error: Error) => {
+      toast({ title: 'Error moving seat', description: error.message, variant: 'destructive' });
+    },
+  });
+
   return {
     chart,
     isLoading,
@@ -557,6 +631,9 @@ export function useAccountabilityChart() {
     removeAssignment,
     saveVersion,
     updateStatus,
+    reorderFunctions,
+    reorderSeats,
+    moveSeat,
   };
 }
 
