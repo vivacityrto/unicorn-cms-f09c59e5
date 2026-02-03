@@ -104,6 +104,8 @@ export type Database = {
         Row: {
           chart_id: string
           created_at: string
+          description: string | null
+          function_type: Database["public"]["Enums"]["eos_function_type"] | null
           id: string
           name: string
           sort_order: number
@@ -113,6 +115,10 @@ export type Database = {
         Insert: {
           chart_id: string
           created_at?: string
+          description?: string | null
+          function_type?:
+            | Database["public"]["Enums"]["eos_function_type"]
+            | null
           id?: string
           name: string
           sort_order?: number
@@ -122,6 +128,10 @@ export type Database = {
         Update: {
           chart_id?: string
           created_at?: string
+          description?: string | null
+          function_type?:
+            | Database["public"]["Enums"]["eos_function_type"]
+            | null
           id?: string
           name?: string
           sort_order?: number
@@ -188,6 +198,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "accountability_seat_assignments_seat_id_fkey"
+            columns: ["seat_id"]
+            isOneToOne: false
+            referencedRelation: "seat_linked_data"
+            referencedColumns: ["seat_id"]
+          },
+          {
             foreignKeyName: "accountability_seat_assignments_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
@@ -230,6 +247,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "accountability_seat_roles_seat_id_fkey"
+            columns: ["seat_id"]
+            isOneToOne: false
+            referencedRelation: "seat_linked_data"
+            referencedColumns: ["seat_id"]
+          },
+          {
             foreignKeyName: "accountability_seat_roles_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
@@ -242,7 +266,14 @@ export type Database = {
         Row: {
           chart_id: string
           created_at: string
+          description: string | null
+          eos_role_type:
+            | Database["public"]["Enums"]["eos_seat_role_type"]
+            | null
           function_id: string
+          gwc_capacity: string | null
+          gwc_get_it: string | null
+          gwc_want_it: string | null
           id: string
           seat_name: string
           sort_order: number
@@ -252,7 +283,14 @@ export type Database = {
         Insert: {
           chart_id: string
           created_at?: string
+          description?: string | null
+          eos_role_type?:
+            | Database["public"]["Enums"]["eos_seat_role_type"]
+            | null
           function_id: string
+          gwc_capacity?: string | null
+          gwc_get_it?: string | null
+          gwc_want_it?: string | null
           id?: string
           seat_name: string
           sort_order?: number
@@ -262,7 +300,14 @@ export type Database = {
         Update: {
           chart_id?: string
           created_at?: string
+          description?: string | null
+          eos_role_type?:
+            | Database["public"]["Enums"]["eos_seat_role_type"]
+            | null
           function_id?: string
+          gwc_capacity?: string | null
+          gwc_get_it?: string | null
+          gwc_want_it?: string | null
           id?: string
           seat_name?: string
           sort_order?: number
@@ -10932,6 +10977,55 @@ export type Database = {
           },
         ]
       }
+      seat_meeting_requirements: {
+        Row: {
+          created_at: string
+          id: string
+          is_required: boolean
+          meeting_type: string
+          seat_id: string
+          tenant_id: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_required?: boolean
+          meeting_type: string
+          seat_id: string
+          tenant_id: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_required?: boolean
+          meeting_type?: string
+          seat_id?: string
+          tenant_id?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "seat_meeting_requirements_seat_id_fkey"
+            columns: ["seat_id"]
+            isOneToOne: false
+            referencedRelation: "accountability_seats"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "seat_meeting_requirements_seat_id_fkey"
+            columns: ["seat_id"]
+            isOneToOne: false
+            referencedRelation: "seat_linked_data"
+            referencedColumns: ["seat_id"]
+          },
+          {
+            foreignKeyName: "seat_meeting_requirements_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       seat_scorecard_versions: {
         Row: {
           change_summary: string
@@ -11015,6 +11109,13 @@ export type Database = {
             isOneToOne: true
             referencedRelation: "accountability_seats"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "seat_scorecards_seat_id_fkey"
+            columns: ["seat_id"]
+            isOneToOne: true
+            referencedRelation: "seat_linked_data"
+            referencedColumns: ["seat_id"]
           },
           {
             foreignKeyName: "seat_scorecards_tenant_id_fkey"
@@ -15346,6 +15447,29 @@ export type Database = {
           },
         ]
       }
+      seat_linked_data: {
+        Row: {
+          active_rocks_count: number | null
+          eos_role_type:
+            | Database["public"]["Enums"]["eos_seat_role_type"]
+            | null
+          meetings_attended_count: number | null
+          meetings_missed_count: number | null
+          primary_owner_id: string | null
+          seat_id: string | null
+          seat_name: string | null
+          tenant_id: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "accountability_seats_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       accept_ai_suggestion: {
@@ -16898,6 +17022,13 @@ export type Database = {
         | "TAS"
         | "ACT"
         | "NT"
+      eos_function_type:
+        | "leadership"
+        | "operations"
+        | "finance"
+        | "delivery"
+        | "support"
+        | "sales_marketing"
       eos_issue_status:
         | "Open"
         | "Discussing"
@@ -16928,6 +17059,11 @@ export type Database = {
         | "scribe"
         | "participant"
         | "client_viewer"
+      eos_seat_role_type:
+        | "visionary"
+        | "integrator"
+        | "leadership_team"
+        | "functional_lead"
       eos_segment_type:
         | "Segue"
         | "Scorecard"
@@ -17142,6 +17278,14 @@ export const Constants = {
   public: {
     Enums: {
       australian_state: ["NSW", "VIC", "QLD", "WA", "SA", "TAS", "ACT", "NT"],
+      eos_function_type: [
+        "leadership",
+        "operations",
+        "finance",
+        "delivery",
+        "support",
+        "sales_marketing",
+      ],
       eos_issue_status: [
         "Open",
         "Discussing",
@@ -17175,6 +17319,12 @@ export const Constants = {
         "scribe",
         "participant",
         "client_viewer",
+      ],
+      eos_seat_role_type: [
+        "visionary",
+        "integrator",
+        "leadership_team",
+        "functional_lead",
       ],
       eos_segment_type: [
         "Segue",
