@@ -12,3 +12,4 @@ export { MeetingExecutionPanel, type MeetingSeriesData } from './MeetingExecutio
 export { IDSMasterPanel, type IDSSummary } from './IDSMasterPanel';
 export { ClientImpactPanel, type ClientImpactItem } from './ClientImpactPanel';
 export { SeatRebalancingPanel, type RebalancingRecommendation } from './SeatRebalancingPanel';
+export { LeadershipSuccessionRisks } from './LeadershipSuccessionRisks';

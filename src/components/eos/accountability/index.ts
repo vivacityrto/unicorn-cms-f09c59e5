@@ -11,3 +11,5 @@ export { SwimlaneDragDropProvider } from './SwimlaneDragDropProvider';
 export { SeatHealthBadge } from './SeatHealthBadge';
 export { SeatHealthSection } from './SeatHealthSection';
 export { RecommendationsPanel } from './RecommendationsPanel';
+export { SeatCoverageIndicator } from './SeatCoverageIndicator';
+export { SeatSuccessionSection } from './SeatSuccessionSection';

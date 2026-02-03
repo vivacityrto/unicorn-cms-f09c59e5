@@ -205,6 +205,13 @@ export type Database = {
             referencedColumns: ["seat_id"]
           },
           {
+            foreignKeyName: "accountability_seat_assignments_seat_id_fkey"
+            columns: ["seat_id"]
+            isOneToOne: false
+            referencedRelation: "seat_succession_status"
+            referencedColumns: ["seat_id"]
+          },
+          {
             foreignKeyName: "accountability_seat_assignments_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
@@ -254,6 +261,13 @@ export type Database = {
             referencedColumns: ["seat_id"]
           },
           {
+            foreignKeyName: "accountability_seat_roles_seat_id_fkey"
+            columns: ["seat_id"]
+            isOneToOne: false
+            referencedRelation: "seat_succession_status"
+            referencedColumns: ["seat_id"]
+          },
+          {
             foreignKeyName: "accountability_seat_roles_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
@@ -264,8 +278,12 @@ export type Database = {
       }
       accountability_seats: {
         Row: {
+          backup_owner_user_id: string | null
           chart_id: string
+          cover_notes: string | null
+          cover_required: boolean | null
           created_at: string
+          critical_seat: boolean | null
           description: string | null
           eos_role_type:
             | Database["public"]["Enums"]["eos_seat_role_type"]
@@ -281,8 +299,12 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          backup_owner_user_id?: string | null
           chart_id: string
+          cover_notes?: string | null
+          cover_required?: boolean | null
           created_at?: string
+          critical_seat?: boolean | null
           description?: string | null
           eos_role_type?:
             | Database["public"]["Enums"]["eos_seat_role_type"]
@@ -298,8 +320,12 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          backup_owner_user_id?: string | null
           chart_id?: string
+          cover_notes?: string | null
+          cover_required?: boolean | null
           created_at?: string
+          critical_seat?: boolean | null
           description?: string | null
           eos_role_type?:
             | Database["public"]["Enums"]["eos_seat_role_type"]
@@ -315,6 +341,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "accountability_seats_backup_owner_user_id_fkey"
+            columns: ["backup_owner_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["user_uuid"]
+          },
           {
             foreignKeyName: "accountability_seats_chart_id_fkey"
             columns: ["chart_id"]
@@ -845,6 +878,13 @@ export type Database = {
             referencedColumns: ["seat_id"]
           },
           {
+            foreignKeyName: "audit_gwc_trends_seat_id_fkey"
+            columns: ["seat_id"]
+            isOneToOne: false
+            referencedRelation: "seat_succession_status"
+            referencedColumns: ["seat_id"]
+          },
+          {
             foreignKeyName: "audit_gwc_trends_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
@@ -1322,6 +1362,13 @@ export type Database = {
             referencedColumns: ["seat_id"]
           },
           {
+            foreignKeyName: "audit_seat_health_seat_id_fkey"
+            columns: ["seat_id"]
+            isOneToOne: false
+            referencedRelation: "seat_succession_status"
+            referencedColumns: ["seat_id"]
+          },
+          {
             foreignKeyName: "audit_seat_health_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
@@ -1361,6 +1408,65 @@ export type Database = {
             columns: ["audit_id"]
             isOneToOne: false
             referencedRelation: "audit"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      audit_succession_events: {
+        Row: {
+          created_at: string | null
+          details: Json | null
+          event_type: string
+          id: string
+          seat_id: string | null
+          tenant_id: number
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          details?: Json | null
+          event_type: string
+          id?: string
+          seat_id?: string | null
+          tenant_id: number
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          details?: Json | null
+          event_type?: string
+          id?: string
+          seat_id?: string | null
+          tenant_id?: number
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "audit_succession_events_seat_id_fkey"
+            columns: ["seat_id"]
+            isOneToOne: false
+            referencedRelation: "accountability_seats"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "audit_succession_events_seat_id_fkey"
+            columns: ["seat_id"]
+            isOneToOne: false
+            referencedRelation: "seat_linked_data"
+            referencedColumns: ["seat_id"]
+          },
+          {
+            foreignKeyName: "audit_succession_events_seat_id_fkey"
+            columns: ["seat_id"]
+            isOneToOne: false
+            referencedRelation: "seat_succession_status"
+            referencedColumns: ["seat_id"]
+          },
+          {
+            foreignKeyName: "audit_succession_events_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
             referencedColumns: ["id"]
           },
         ]
@@ -7985,6 +8091,13 @@ export type Database = {
             referencedRelation: "seat_linked_data"
             referencedColumns: ["seat_id"]
           },
+          {
+            foreignKeyName: "eos_rocks_seat_id_fkey"
+            columns: ["seat_id"]
+            isOneToOne: false
+            referencedRelation: "seat_succession_status"
+            referencedColumns: ["seat_id"]
+          },
         ]
       }
       eos_scorecard: {
@@ -10281,6 +10394,13 @@ export type Database = {
             referencedColumns: ["seat_id"]
           },
           {
+            foreignKeyName: "people_analyzer_entries_seat_id_fkey"
+            columns: ["seat_id"]
+            isOneToOne: false
+            referencedRelation: "seat_succession_status"
+            referencedColumns: ["seat_id"]
+          },
+          {
             foreignKeyName: "people_analyzer_entries_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
@@ -10375,6 +10495,13 @@ export type Database = {
             columns: ["seat_id"]
             isOneToOne: false
             referencedRelation: "seat_linked_data"
+            referencedColumns: ["seat_id"]
+          },
+          {
+            foreignKeyName: "people_analyzer_trends_seat_id_fkey"
+            columns: ["seat_id"]
+            isOneToOne: false
+            referencedRelation: "seat_succession_status"
             referencedColumns: ["seat_id"]
           },
           {
@@ -11102,6 +11229,13 @@ export type Database = {
             referencedColumns: ["seat_id"]
           },
           {
+            foreignKeyName: "rock_outcomes_seat_id_fkey"
+            columns: ["seat_id"]
+            isOneToOne: false
+            referencedRelation: "seat_succession_status"
+            referencedColumns: ["seat_id"]
+          },
+          {
             foreignKeyName: "rock_outcomes_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
@@ -11571,6 +11705,13 @@ export type Database = {
             referencedColumns: ["seat_id"]
           },
           {
+            foreignKeyName: "seat_health_scores_seat_id_fkey"
+            columns: ["seat_id"]
+            isOneToOne: false
+            referencedRelation: "seat_succession_status"
+            referencedColumns: ["seat_id"]
+          },
+          {
             foreignKeyName: "seat_health_scores_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
@@ -11737,6 +11878,13 @@ export type Database = {
             referencedColumns: ["seat_id"]
           },
           {
+            foreignKeyName: "seat_meeting_requirements_seat_id_fkey"
+            columns: ["seat_id"]
+            isOneToOne: false
+            referencedRelation: "seat_succession_status"
+            referencedColumns: ["seat_id"]
+          },
+          {
             foreignKeyName: "seat_meeting_requirements_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
@@ -11843,6 +11991,13 @@ export type Database = {
             referencedColumns: ["seat_id"]
           },
           {
+            foreignKeyName: "seat_rebalancing_recommendations_seat_id_fkey"
+            columns: ["seat_id"]
+            isOneToOne: false
+            referencedRelation: "seat_succession_status"
+            referencedColumns: ["seat_id"]
+          },
+          {
             foreignKeyName: "seat_rebalancing_recommendations_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
@@ -11940,6 +12095,13 @@ export type Database = {
             columns: ["seat_id"]
             isOneToOne: true
             referencedRelation: "seat_linked_data"
+            referencedColumns: ["seat_id"]
+          },
+          {
+            foreignKeyName: "seat_scorecards_seat_id_fkey"
+            columns: ["seat_id"]
+            isOneToOne: true
+            referencedRelation: "seat_succession_status"
             referencedColumns: ["seat_id"]
           },
           {
@@ -16317,6 +16479,41 @@ export type Database = {
           tenant_id: number | null
         }
         Relationships: [
+          {
+            foreignKeyName: "accountability_seats_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      seat_succession_status: {
+        Row: {
+          backup_avatar_url: string | null
+          backup_email: string | null
+          backup_first_name: string | null
+          backup_last_name: string | null
+          backup_on_leave: boolean | null
+          backup_owner_user_id: string | null
+          cover_notes: string | null
+          cover_required: boolean | null
+          coverage_status: string | null
+          critical_seat: boolean | null
+          primary_on_leave: boolean | null
+          primary_owner_user_id: string | null
+          seat_id: string | null
+          seat_name: string | null
+          tenant_id: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "accountability_seats_backup_owner_user_id_fkey"
+            columns: ["backup_owner_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["user_uuid"]
+          },
           {
             foreignKeyName: "accountability_seats_tenant_id_fkey"
             columns: ["tenant_id"]

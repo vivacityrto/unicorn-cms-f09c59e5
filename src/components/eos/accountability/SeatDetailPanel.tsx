@@ -28,9 +28,13 @@ import { useNavigate, Link } from 'react-router-dom';
 import type { SeatWithDetails, UserBasic, EosSeatRoleType } from '@/types/accountabilityChart';
 import { EOS_SEAT_ROLE_LABELS, EOS_ROLE_COLORS } from '@/types/accountabilityChart';
 import { useSeatHealth } from '@/hooks/useSeatHealth';
+import { useSeatSuccession } from '@/hooks/useSeatSuccession';
+import { useVivacityTeamUsers } from '@/hooks/useVivacityTeamUsers';
 import { SeatHealthSection } from './SeatHealthSection';
 import { RecommendationsPanel } from './RecommendationsPanel';
 import { SeatGWCDashboard } from '@/components/eos/gwc';
+import { SeatSuccessionSection } from './SeatSuccessionSection';
+import { SeatCoverageIndicator } from './SeatCoverageIndicator';
 
 interface SeatDetailPanelProps {
   seat: SeatWithDetails | null;
@@ -49,6 +53,8 @@ export function SeatDetailPanel({
 }: SeatDetailPanelProps) {
   const navigate = useNavigate();
   const { getSeatHealth, getSeatRecommendations } = useSeatHealth();
+  const { getSeatSuccession, updateBackupOwner, updateCriticalSeat, updateCoverNotes, canEdit: canEditSuccession } = useSeatSuccession();
+  const { data: teamUsers = [] } = useVivacityTeamUsers();
   
   const [isEditingGwc, setIsEditingGwc] = useState(false);
   const [gwcDraft, setGwcDraft] = useState({
@@ -78,6 +84,7 @@ export function SeatDetailPanel({
   // Get seat health data
   const seatHealth = getSeatHealth(seat.id);
   const seatRecommendations = getSeatRecommendations(seat.id);
+  const seatSuccession = getSeatSuccession(seat.id);
   
   // Navigation handler for capacity section
   const handleNavigate = (type: 'rocks' | 'scorecard' | 'gwc' | 'rollover') => {
@@ -135,6 +142,7 @@ export function SeatDetailPanel({
                 {EOS_SEAT_ROLE_LABELS[seat.eos_role_type]}
               </Badge>
             )}
+            {seatSuccession && <SeatCoverageIndicator succession={seatSuccession} />}
           </div>
           <SheetDescription>{seat.description || 'No description provided'}</SheetDescription>
         </SheetHeader>
@@ -262,6 +270,17 @@ export function SeatDetailPanel({
                 </CardContent>
               </Card>
             )}
+
+            {/* Succession & Cover Section */}
+            <SeatSuccessionSection
+              succession={seatSuccession}
+              seatId={seat.id}
+              canEdit={canEditSuccession}
+              teamUsers={teamUsers}
+              onUpdateBackup={(seatId, userId) => updateBackupOwner({ seatId, backupUserId: userId })}
+              onUpdateCritical={(seatId, critical) => updateCriticalSeat({ seatId, critical })}
+              onUpdateCoverNotes={(seatId, notes) => updateCoverNotes({ seatId, notes })}
+            />
 
             {/* Seat Health Section */}
             <SeatHealthSection health={seatHealth} onNavigate={handleNavigate} />

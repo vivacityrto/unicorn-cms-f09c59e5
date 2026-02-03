@@ -35,6 +35,7 @@ import {
   User,
   BarChart3,
   AlertCircle,
+  Shield,
 } from 'lucide-react';
 import {
   Tooltip,
@@ -44,12 +45,15 @@ import {
 } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 import type { SeatWithDetails, UserBasic } from '@/types/accountabilityChart';
+import type { SeatSuccessionStatus } from '@/hooks/useSeatSuccession';
 import { SeatScorecardBuilder } from '@/components/eos/scorecard';
+import { SeatCoverageIndicator } from './SeatCoverageIndicator';
 
 interface SeatCardProps {
   seat: SeatWithDetails;
   canEdit: boolean;
   tenantUsers: UserBasic[];
+  succession?: SeatSuccessionStatus | null;
   onUpdateSeat: (id: string, name: string) => void;
   onDeleteSeat: (id: string) => void;
   onAddRole: (seatId: string, text: string) => void;
@@ -63,6 +67,7 @@ export function SeatCard({
   seat,
   canEdit,
   tenantUsers,
+  succession,
   onUpdateSeat,
   onDeleteSeat,
   onAddRole,
@@ -140,7 +145,10 @@ export function SeatCard({
               </Button>
             </div>
           ) : (
-            <h4 className="font-semibold text-sm">{seat.seat_name}</h4>
+            <div className="flex items-center gap-2">
+              <h4 className="font-semibold text-sm">{seat.seat_name}</h4>
+              {succession && <SeatCoverageIndicator succession={succession} compact />}
+            </div>
           )}
 
           {canEdit && !isEditing && (
