@@ -5,6 +5,7 @@ import { useRBAC } from '@/hooks/useRBAC';
 import { useAuth } from '@/hooks/useAuth';
 import { useLeadershipDashboard } from '@/hooks/useLeadershipDashboard';
 import { useSeatSuccession } from '@/hooks/useSeatSuccession';
+import { useNextMeeting } from '@/hooks/useNextMeeting';
 import { 
   LeadershipKPICards,
   LeadershipRocksTable,
@@ -21,6 +22,7 @@ import {
   ClientImpactPanel,
   SeatRebalancingPanel,
   LeadershipSuccessionRisks,
+  NextMeetingCard,
   type DateRangeFilter,
   type MeetingTypeFilter,
   type SeatFilter,
@@ -89,6 +91,9 @@ function LeadershipContent({ isSuper, isTeamLeader, isTeamMember, currentUserId 
     year: dateRange === 'custom' ? selectedYear : currentYear,
     quarter: dateRange === 'custom' ? selectedQuarter : currentQuarter,
   });
+  
+  // Get next meeting data
+  const { data: nextMeeting, isLoading: nextMeetingLoading } = useNextMeeting();
   
   // Get succession data
   const { successionRisks, seatsWithActiveCover } = useSeatSuccession();
@@ -354,6 +359,12 @@ function LeadershipContent({ isSuper, isTeamLeader, isTeamMember, currentUserId 
 
           {/* Overview Tab */}
           <TabsContent value="overview" className="space-y-6 mt-6">
+            {/* Row 1: Next Meeting + IDS Command Center */}
+            <div className="grid lg:grid-cols-2 gap-6">
+              <NextMeetingCard meeting={nextMeeting} isLoading={nextMeetingLoading} />
+              <IDSMasterPanel summary={idsSummary} />
+            </div>
+
             <LeadershipKPICards
               scorecardHealth={data.scorecardHealth}
               rockStatus={data.rockStatus}
@@ -363,16 +374,24 @@ function LeadershipContent({ isSuper, isTeamLeader, isTeamMember, currentUserId 
 
             <UnassignedAccountability items={data.unassignedItems} />
 
+            {/* Row 2: Rocks + Scorecard */}
             <div className="grid lg:grid-cols-2 gap-6">
               <LeadershipRocksTable rockStatus={data.rockStatus} onSeatClick={handleSeatClick} />
               <LeadershipScorecardExceptions exceptions={data.scorecardExceptions} />
             </div>
 
+            {/* Row 3: Accountability Chart status */}
+            <LeadershipAccountabilityGaps gaps={data.accountabilityGaps} />
+
             <LeadershipRiskRadar riskRadar={data.riskRadar} onSeatClick={handleSeatClick} />
 
             <div className="grid lg:grid-cols-2 gap-6">
               <LeadershipMeetingDiscipline meetingDiscipline={data.meetingDiscipline} />
-              <LeadershipAccountabilityGaps gaps={data.accountabilityGaps} />
+              <LeadershipSuccessionRisks
+                risks={successionRisks}
+                seatsWithActiveCover={seatsWithActiveCover}
+                onSeatClick={handleSeatClick}
+              />
             </div>
           </TabsContent>
 
@@ -400,6 +419,8 @@ function LeadershipContent({ isSuper, isTeamLeader, isTeamMember, currentUserId 
 
           {/* Meetings Tab */}
           <TabsContent value="meetings" className="space-y-6 mt-6">
+            <NextMeetingCard meeting={nextMeeting} isLoading={nextMeetingLoading} />
+
             <MeetingExecutionPanel meetingSeries={meetingSeries} />
 
             <LeadershipMeetingDiscipline meetingDiscipline={data.meetingDiscipline} />
@@ -411,9 +432,8 @@ function LeadershipContent({ isSuper, isTeamLeader, isTeamMember, currentUserId 
 
             <LeadershipRiskRadar riskRadar={data.riskRadar} onSeatClick={handleSeatClick} />
 
-            {clientImpactItems.length > 0 && (
-              <ClientImpactPanel items={clientImpactItems} />
-            )}
+            {/* Client Impact - Read-only summaries */}
+            <ClientImpactPanel items={clientImpactItems} />
           </TabsContent>
         </Tabs>
       ) : null}
