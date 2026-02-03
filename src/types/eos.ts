@@ -1,6 +1,6 @@
 // EOS Type Definitions
 export type EosRole = 'admin' | 'facilitator' | 'scribe' | 'participant' | 'client_viewer';
-export type MeetingStatus = 'scheduled' | 'in_progress' | 'completed' | 'cancelled';
+export type MeetingStatus = 'scheduled' | 'in_progress' | 'completed' | 'closed' | 'cancelled';
 export type MeetingType = 'L10' | 'Quarterly' | 'Annual' | 'Same_Page' | 'Focus_Day' | 'Custom';
 export type RockType = 'company' | 'team' | 'individual';
 export type RockStatus = 'on_track' | 'off_track' | 'complete';
@@ -220,6 +220,7 @@ export interface EosMeeting {
   rock_reviews?: Record<string, any>;
   headlines?: Record<string, any>;
   issues_discussed?: string[];
+  status?: MeetingStatus;
   is_complete?: boolean;
   completed_at?: string;
   recurrence_rule?: string;
@@ -230,6 +231,9 @@ export interface EosMeeting {
   current_minutes_version_id?: string;
   minutes_status?: MinutesStatus;
   is_multi_client?: boolean;
+  previous_meeting_id?: string;
+  next_meeting_id?: string;
+  quorum_status?: 'met' | 'not_met' | 'overridden' | 'pending';
   created_at: string;
   updated_at: string;
   created_by?: string;

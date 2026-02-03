@@ -6402,6 +6402,8 @@ export type Database = {
           created_by: string | null
           current_minutes_version_id: string | null
           duration_minutes: number | null
+          fiscal_quarter: number | null
+          fiscal_year: number | null
           headlines: Json | null
           id: string
           is_complete: boolean | null
@@ -6410,11 +6412,14 @@ export type Database = {
           location: string | null
           meeting_type: Database["public"]["Enums"]["eos_meeting_type"]
           minutes_status: string
+          next_meeting_id: string | null
           notes: string | null
           parent_meeting_id: string | null
+          previous_meeting_id: string | null
           quorum_met: boolean | null
           quorum_override_by: string | null
           quorum_override_reason: string | null
+          quorum_status: string | null
           recurrence_end_date: string | null
           recurrence_rule: string | null
           rock_reviews: Json | null
@@ -6439,6 +6444,8 @@ export type Database = {
           created_by?: string | null
           current_minutes_version_id?: string | null
           duration_minutes?: number | null
+          fiscal_quarter?: number | null
+          fiscal_year?: number | null
           headlines?: Json | null
           id?: string
           is_complete?: boolean | null
@@ -6447,11 +6454,14 @@ export type Database = {
           location?: string | null
           meeting_type: Database["public"]["Enums"]["eos_meeting_type"]
           minutes_status?: string
+          next_meeting_id?: string | null
           notes?: string | null
           parent_meeting_id?: string | null
+          previous_meeting_id?: string | null
           quorum_met?: boolean | null
           quorum_override_by?: string | null
           quorum_override_reason?: string | null
+          quorum_status?: string | null
           recurrence_end_date?: string | null
           recurrence_rule?: string | null
           rock_reviews?: Json | null
@@ -6476,6 +6486,8 @@ export type Database = {
           created_by?: string | null
           current_minutes_version_id?: string | null
           duration_minutes?: number | null
+          fiscal_quarter?: number | null
+          fiscal_year?: number | null
           headlines?: Json | null
           id?: string
           is_complete?: boolean | null
@@ -6484,11 +6496,14 @@ export type Database = {
           location?: string | null
           meeting_type?: Database["public"]["Enums"]["eos_meeting_type"]
           minutes_status?: string
+          next_meeting_id?: string | null
           notes?: string | null
           parent_meeting_id?: string | null
+          previous_meeting_id?: string | null
           quorum_met?: boolean | null
           quorum_override_by?: string | null
           quorum_override_reason?: string | null
+          quorum_status?: string | null
           recurrence_end_date?: string | null
           recurrence_rule?: string | null
           rock_reviews?: Json | null
@@ -6519,6 +6534,34 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "eos_meetings_next_meeting_id_fkey"
+            columns: ["next_meeting_id"]
+            isOneToOne: false
+            referencedRelation: "eos_meeting_attendance_summary"
+            referencedColumns: ["meeting_id"]
+          },
+          {
+            foreignKeyName: "eos_meetings_next_meeting_id_fkey"
+            columns: ["next_meeting_id"]
+            isOneToOne: false
+            referencedRelation: "eos_meetings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "eos_meetings_next_meeting_id_fkey"
+            columns: ["next_meeting_id"]
+            isOneToOne: false
+            referencedRelation: "eos_past_meetings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "eos_meetings_next_meeting_id_fkey"
+            columns: ["next_meeting_id"]
+            isOneToOne: false
+            referencedRelation: "eos_upcoming_meetings"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "eos_meetings_parent_meeting_id_fkey"
             columns: ["parent_meeting_id"]
             isOneToOne: false
@@ -6542,6 +6585,34 @@ export type Database = {
           {
             foreignKeyName: "eos_meetings_parent_meeting_id_fkey"
             columns: ["parent_meeting_id"]
+            isOneToOne: false
+            referencedRelation: "eos_upcoming_meetings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "eos_meetings_previous_meeting_id_fkey"
+            columns: ["previous_meeting_id"]
+            isOneToOne: false
+            referencedRelation: "eos_meeting_attendance_summary"
+            referencedColumns: ["meeting_id"]
+          },
+          {
+            foreignKeyName: "eos_meetings_previous_meeting_id_fkey"
+            columns: ["previous_meeting_id"]
+            isOneToOne: false
+            referencedRelation: "eos_meetings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "eos_meetings_previous_meeting_id_fkey"
+            columns: ["previous_meeting_id"]
+            isOneToOne: false
+            referencedRelation: "eos_past_meetings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "eos_meetings_previous_meeting_id_fkey"
+            columns: ["previous_meeting_id"]
             isOneToOne: false
             referencedRelation: "eos_upcoming_meetings"
             referencedColumns: ["id"]
@@ -14873,6 +14944,10 @@ export type Database = {
         Args: { p_recurrence_id: string }
         Returns: number
       }
+      carry_forward_open_todos: {
+        Args: { p_source_meeting_id: string; p_target_meeting_id: string }
+        Returns: string[]
+      }
       carry_forward_unresolved_issues: {
         Args: { p_meeting_id: string; p_target_meeting_id: string }
         Returns: string[]
@@ -14901,6 +14976,10 @@ export type Database = {
       complete_meeting_instance: {
         Args: { p_meeting_id: string }
         Returns: boolean
+      }
+      complete_meeting_with_carry_forward: {
+        Args: { p_meeting_id: string }
+        Returns: Json
       }
       copy_stage_template_to_package: {
         Args: { p_package_id: number; p_stage_id: number }
