@@ -6,6 +6,7 @@ import { useRBAC } from '@/hooks/useRBAC';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip';
 import { Eye, Edit, History, Target } from 'lucide-react';
 import { VtoEditor } from '@/components/eos/VtoEditor';
 import { VtoViewer } from '@/components/eos/VtoViewer';
@@ -86,11 +87,28 @@ function VtoContent() {
           </p>
         </div>
         <div className="flex gap-2">
-          {activeVto && !isEditing && canEditVTO() && (
-            <Button onClick={() => setIsEditing(true)} variant="default">
-              <Edit className="h-4 w-4 mr-2" />
-              Edit Plan
-            </Button>
+          {activeVto && !isEditing && (
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span>
+                    <Button 
+                      onClick={() => setIsEditing(true)} 
+                      variant="default"
+                      disabled={!canEditVTO()}
+                    >
+                      <Edit className="h-4 w-4 mr-2" />
+                      Edit Plan
+                    </Button>
+                  </span>
+                </TooltipTrigger>
+                {!canEditVTO() && (
+                  <TooltipContent>
+                    Editing Mission Control requires Admin access.
+                  </TooltipContent>
+                )}
+              </Tooltip>
+            </TooltipProvider>
           )}
           {isEditing && (
             <Button onClick={() => setIsEditing(false)} variant="outline">
