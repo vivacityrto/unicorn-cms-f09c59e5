@@ -3,8 +3,10 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Plus } from 'lucide-react';
 import { useEosScorecardMetrics } from '@/hooks/useEos';
+import { useRBAC } from '@/hooks/useRBAC';
 import { ScorecardEntryGrid } from '@/components/eos/ScorecardEntryGrid';
 import { MetricEditorDialog } from '@/components/eos/MetricEditorDialog';
+import { PermissionTooltip } from '@/components/eos/PermissionTooltip';
 import { DashboardLayout } from '@/components/DashboardLayout';
 
 export default function EosScorecard() {
@@ -17,6 +19,7 @@ export default function EosScorecard() {
 
 function ScorecardContent() {
   const { metrics, isLoading } = useEosScorecardMetrics();
+  const { canEditVTO } = useRBAC();
   const [isEditorOpen, setIsEditorOpen] = useState(false);
 
   if (isLoading) {
@@ -39,10 +42,12 @@ function ScorecardContent() {
             Track your most important weekly metrics
           </p>
         </div>
-        <Button onClick={() => setIsEditorOpen(true)}>
-          <Plus className="h-4 w-4 mr-2" />
-          Add Metric
-        </Button>
+        <PermissionTooltip permission="vto:edit" action="add scorecard metrics">
+          <Button onClick={() => setIsEditorOpen(true)} disabled={!canEditVTO()}>
+            <Plus className="h-4 w-4 mr-2" />
+            Add Metric
+          </Button>
+        </PermissionTooltip>
       </div>
 
       {metrics && metrics.length > 0 ? (
@@ -58,10 +63,12 @@ function ScorecardContent() {
             <p className="text-muted-foreground mb-4 text-center max-w-md">
               Add your first metric to start tracking your scorecard
             </p>
-            <Button onClick={() => setIsEditorOpen(true)}>
-              <Plus className="h-4 w-4 mr-2" />
-              Add Your First Metric
-            </Button>
+            <PermissionTooltip permission="vto:edit" action="add scorecard metrics">
+              <Button onClick={() => setIsEditorOpen(true)} disabled={!canEditVTO()}>
+                <Plus className="h-4 w-4 mr-2" />
+                Add Your First Metric
+              </Button>
+            </PermissionTooltip>
           </CardContent>
         </Card>
       )}

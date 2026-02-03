@@ -803,6 +803,47 @@ export type Database = {
           },
         ]
       }
+      audit_restricted_actions: {
+        Row: {
+          action_attempted: string
+          created_at: string | null
+          id: string
+          page_path: string | null
+          permission_required: string | null
+          tenant_id: number | null
+          user_id: string
+          user_role: string | null
+        }
+        Insert: {
+          action_attempted: string
+          created_at?: string | null
+          id?: string
+          page_path?: string | null
+          permission_required?: string | null
+          tenant_id?: number | null
+          user_id: string
+          user_role?: string | null
+        }
+        Update: {
+          action_attempted?: string
+          created_at?: string | null
+          id?: string
+          page_path?: string | null
+          permission_required?: string | null
+          tenant_id?: number | null
+          user_id?: string
+          user_role?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "audit_restricted_actions_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       audit_section: {
         Row: {
           audit_id: number

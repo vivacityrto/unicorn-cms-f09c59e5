@@ -90,6 +90,7 @@ import TimeInbox from "./pages/TimeInbox";
 import ProcessesWrapper from "./pages/ProcessesWrapper";
 import ProcessDetail from "./pages/ProcessDetail";
 import ProcessForm from "./pages/ProcessForm";
+import RoleReference from "./pages/RoleReference";
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -593,6 +594,14 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <IntegrationSettings />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/settings/roles" 
+              element={
+                <ProtectedRoute>
+                  <RoleReference />
                 </ProtectedRoute>
               } 
             />

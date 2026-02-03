@@ -1,21 +1,41 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Users, Construction } from 'lucide-react';
+import { Users, Construction, Info } from 'lucide-react';
 import { DashboardLayout } from '@/components/DashboardLayout';
+import { RoleInfoPanel } from '@/components/eos/RoleInfoPanel';
 
 export default function EosAccountabilityChart() {
   return (
     <DashboardLayout>
       <div className="space-y-6">
         {/* Header */}
-        <div>
-          <h1 className="text-3xl font-bold flex items-center gap-3">
-            <Users className="w-8 h-8 text-primary" />
-            Accountability Chart
-          </h1>
-          <p className="text-muted-foreground mt-2">
-            Define roles, responsibilities, and reporting relationships
-          </p>
+        <div className="flex justify-between items-start">
+          <div>
+            <h1 className="text-3xl font-bold flex items-center gap-3">
+              <Users className="w-8 h-8 text-primary" />
+              Accountability Chart
+            </h1>
+            <p className="text-muted-foreground mt-2">
+              Define roles, responsibilities, and reporting relationships
+            </p>
+          </div>
+          <RoleInfoPanel />
         </div>
+
+        {/* Governance Note */}
+        <Card className="bg-muted/30 border-muted">
+          <CardContent className="py-4">
+            <div className="flex items-start gap-3">
+              <Info className="h-5 w-5 text-muted-foreground mt-0.5" />
+              <div className="text-sm text-muted-foreground">
+                <p className="font-medium mb-1">Governance Rules</p>
+                <p>
+                  Only Admin roles can modify the Accountability Chart. This ensures organisational 
+                  structure changes go through proper approval channels.
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Placeholder Content */}
         <Card>
