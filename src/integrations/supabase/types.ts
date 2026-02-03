@@ -11034,6 +11034,82 @@ export type Database = {
           },
         ]
       }
+      rock_outcomes: {
+        Row: {
+          completed_at: string | null
+          created_at: string | null
+          due_date: string | null
+          id: string
+          notes: string | null
+          outcome_type: string
+          owner_id: string | null
+          quarter_number: number
+          quarter_year: number
+          rock_id: string
+          rock_title: string
+          rolled_from_quarter: string | null
+          rolled_to_quarter: string | null
+          seat_id: string | null
+          tenant_id: number
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string | null
+          due_date?: string | null
+          id?: string
+          notes?: string | null
+          outcome_type: string
+          owner_id?: string | null
+          quarter_number: number
+          quarter_year: number
+          rock_id: string
+          rock_title: string
+          rolled_from_quarter?: string | null
+          rolled_to_quarter?: string | null
+          seat_id?: string | null
+          tenant_id: number
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string | null
+          due_date?: string | null
+          id?: string
+          notes?: string | null
+          outcome_type?: string
+          owner_id?: string | null
+          quarter_number?: number
+          quarter_year?: number
+          rock_id?: string
+          rock_title?: string
+          rolled_from_quarter?: string | null
+          rolled_to_quarter?: string | null
+          seat_id?: string | null
+          tenant_id?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rock_outcomes_seat_id_fkey"
+            columns: ["seat_id"]
+            isOneToOne: false
+            referencedRelation: "accountability_seats"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rock_outcomes_seat_id_fkey"
+            columns: ["seat_id"]
+            isOneToOne: false
+            referencedRelation: "seat_linked_data"
+            referencedColumns: ["seat_id"]
+          },
+          {
+            foreignKeyName: "rock_outcomes_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       rto_cache: {
         Row: {
           data: Json
@@ -16742,6 +16818,14 @@ export type Database = {
       generate_meeting_summary: {
         Args: { p_meeting_id: string }
         Returns: string
+      }
+      generate_rock_outcomes: {
+        Args: {
+          p_quarter_number: number
+          p_quarter_year: number
+          p_tenant_id: number
+        }
+        Returns: number
       }
       generate_series_instances: {
         Args: { p_series_id: string; p_weeks_ahead?: number }
