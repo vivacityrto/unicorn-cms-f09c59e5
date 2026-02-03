@@ -39,6 +39,7 @@ import { TenantUsersTab } from '@/components/client/TenantUsersTab';
 import { ClientTimeWidget } from '@/components/client/ClientTimeWidget';
 import { ClientTimeSummaryCard } from '@/components/client/ClientTimeSummaryCard';
 import { RiskLevelBadge } from '@/components/client/RiskLevelBadge';
+import { CSCAssignmentSelector } from '@/components/client/CSCAssignmentSelector';
 
 interface TenantBasic {
   id: number;
@@ -54,7 +55,6 @@ export default function ClientDetail() {
   const [tenant, setTenant] = useState<TenantBasic | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('overview');
-  const [cscUser, setCscUser] = useState<{ name: string; avatar: string | null } | null>(null);
   const [profileHasChanges, setProfileHasChanges] = useState(false);
   const [profileSaving, setProfileSaving] = useState(false);
   const [triggerProfileSave, setTriggerProfileSave] = useState<(() => void) | null>(null);
@@ -94,7 +94,6 @@ export default function ClientDetail() {
   useEffect(() => {
     if (tenantIdNum) {
       fetchTenantBasic();
-      fetchCscUser();
     }
   }, [tenantIdNum]);
 
@@ -116,31 +115,6 @@ export default function ClientDetail() {
       navigate('/manage-tenants');
     } finally {
       setLoading(false);
-    }
-  };
-
-  const fetchCscUser = async () => {
-    if (!tenantIdNum) return;
-
-    const { data: connection } = await supabase
-      .from('connected_tenants')
-      .select('user_uuid')
-      .eq('tenant_id', tenantIdNum)
-      .maybeSingle();
-
-    if (connection?.user_uuid) {
-      const { data: user } = await supabase
-        .from('users')
-        .select('first_name, last_name, avatar_url')
-        .eq('user_uuid', connection.user_uuid)
-        .single();
-
-      if (user) {
-        setCscUser({
-          name: `${user.first_name || ''} ${user.last_name || ''}`.trim(),
-          avatar: user.avatar_url
-        });
-      }
     }
   };
 
@@ -211,18 +185,13 @@ export default function ClientDetail() {
                 <p className="text-muted-foreground mt-1">/{tenant.slug}</p>
                 
                 {/* CSC Assignment */}
-                {cscUser && (
-                  <div className="flex items-center gap-2 mt-2">
-                    <span className="text-sm text-muted-foreground">CSC:</span>
-                    <Avatar className="h-6 w-6">
-                      <AvatarImage src={cscUser.avatar || undefined} />
-                      <AvatarFallback className="text-xs">
-                        {cscUser.name.split(' ').map(n => n[0]).join('').slice(0, 2)}
-                      </AvatarFallback>
-                    </Avatar>
-                    <span className="text-sm font-medium">{cscUser.name}</span>
-                  </div>
-                )}
+                <div className="mt-2">
+                  <CSCAssignmentSelector 
+                    tenantId={tenantIdNum!} 
+                    canEdit={canEdit}
+                    canRemove={isSuperAdminUser}
+                  />
+                </div>
               </div>
             </div>
 
