@@ -73,6 +73,7 @@ export function useTenantCSCAssignment(tenantId: number | null) {
         .eq('is_team', true)
         .eq('disabled', false)
         .eq('archived', false)
+        .eq('staff_team', 'client_success')
         .order('first_name', { ascending: true });
       
       if (error) throw error;
