@@ -274,7 +274,29 @@ export function useSeatHealth() {
           .maybeSingle();
         
         const ownerId = assignment?.user_id;
-        if (!ownerId) continue;
+        const isVacant = !ownerId;
+        
+        // For vacant seats, generate recommendation immediately
+        if (isVacant) {
+          await generateRecommendations(seatId, {
+            rocks_score: 0, todos_score: 0, ids_score: 0, cadence_score: 0, gwc_score: 0,
+            total_score: 0, health_band: 'healthy', contributing_factors: []
+          }, {
+            seat_id: seatId, owner_id: null, active_rocks_count: 0, off_track_rocks_count: 0,
+            overdue_todos_count: 0, total_todos_count: 0, completed_todos_count: 0,
+            open_critical_issues_count: 0, old_issues_count: 0, meetings_attended: 0,
+            meetings_missed: 0, gwc_capacity_no: false, gwc_declining: false,
+          }, true, 0, false);
+          continue;
+        }
+        
+        // Count how many seats this owner has (seat concentration risk)
+        const { count: ownerSeatCount } = await supabase
+          .from('accountability_seat_assignments')
+          .select('*', { count: 'exact', head: true })
+          .eq('user_id', ownerId)
+          .eq('assignment_type', 'Primary')
+          .is('end_date', null);
         
         // Get rocks data - status uses underscores: On_Track, Off_Track, etc.
         const { data: rocks } = await supabase
@@ -319,7 +341,7 @@ export function useSeatHealth() {
         const attended = attendance?.filter(a => a.attended === true) || [];
         const missed = attendance?.filter(a => a.attended === false) || [];
         
-        // Get GWC data from QC
+        // Get GWC data from QC (capacity only - want_it may not exist)
         const { data: fitData } = await supabase
           .from('eos_qc_fit')
           .select('capacity, qc_id')
@@ -327,9 +349,11 @@ export function useSeatHealth() {
           .order('created_at', { ascending: false })
           .limit(2);
         
-        const gwcCapacityNo = fitData?.[0]?.capacity === false;
+        const gwcCapacityNo = (fitData?.[0] as any)?.capacity === false;
+        // For want_it, we need to check separately as field may not exist
+        const gwcWantItNo = false; // Will be enhanced when want_it column is available
         const gwcDeclining = fitData && fitData.length >= 2 && 
-          fitData[0]?.capacity === false && fitData[1]?.capacity === true;
+          (fitData[0] as any)?.capacity === false && (fitData[1] as any)?.capacity === true;
         
         const rawData: RawSeatData = {
           seat_id: seatId,
@@ -387,9 +411,16 @@ export function useSeatHealth() {
           },
         });
         
-        // Generate recommendations if needed
-        if (healthData.health_band === 'overloaded') {
-          await generateRecommendations(seatId, healthData, rawData);
+        // Generate recommendations if seat is at risk or overloaded
+        if (healthData.health_band !== 'healthy') {
+          await generateRecommendations(
+            seatId, 
+            healthData, 
+            rawData, 
+            false, 
+            ownerSeatCount || 1,
+            gwcWantItNo
+          );
         }
       }
       
@@ -405,71 +436,145 @@ export function useSeatHealth() {
     },
   });
   
-  // Generate recommendations based on health data
+  // Generate recommendations based on health data - advisory language, no judgement
   async function generateRecommendations(
     seatId: string, 
     healthData: ReturnType<typeof calculateSeatHealth>,
-    rawData: RawSeatData
+    rawData: RawSeatData,
+    isVacant: boolean = false,
+    ownerSeatCount: number = 1,
+    gwcWantItNo: boolean = false
   ) {
+    type RecType = 'reduce_rock_load' | 'move_rock' | 'add_backup' | 'split_seat' | 'seat_redesign' | 'people_review' | 'vacant_seat';
+    
     const recommendations: Array<{
-      type: 'reduce_rock_load' | 'move_rock' | 'add_backup' | 'split_seat';
+      type: RecType;
       title: string;
       description: string;
       trigger_type: string;
+      severity: 'high' | 'medium';
     }> = [];
     
-    // High rock load
+    // 1. Vacant seat - high severity
+    if (isVacant) {
+      recommendations.push({
+        type: 'vacant_seat',
+        title: 'Seat needs owner',
+        description: 'This seat has no primary owner assigned. Consider identifying an appropriate team member.',
+        trigger_type: 'vacant_seat',
+        severity: 'high',
+      });
+    }
+    
+    // 2. High rock load - severity based on count
     if (rawData.active_rocks_count > 3) {
+      const isHighSeverity = rawData.active_rocks_count >= 5;
       recommendations.push({
         type: 'reduce_rock_load',
-        title: 'Consider reducing Rock load',
-        description: `This seat has ${rawData.active_rocks_count} active Rocks. Consider reducing to 3 or fewer next quarter.`,
+        title: 'Consider Rock load for next quarter',
+        description: `This seat has ${rawData.active_rocks_count} active Rocks. The recommended maximum is 3. Consider adjusting priorities for next quarter.`,
         trigger_type: 'high_rock_count',
+        severity: isHighSeverity ? 'high' : 'medium',
       });
     }
     
-    // Off-track rocks
-    if (rawData.off_track_rocks_count > 0) {
+    // 3. Off-track rocks
+    if (rawData.off_track_rocks_count >= 2) {
       recommendations.push({
         type: 'move_rock',
-        title: 'Consider moving off-track Rocks',
-        description: `${rawData.off_track_rocks_count} Rock(s) are off track. Consider reassigning to a seat with more capacity.`,
+        title: 'Review Rock alignment',
+        description: `${rawData.off_track_rocks_count} Rock(s) are currently off track. Consider whether any may align better with another seat that has capacity.`,
         trigger_type: 'off_track_rocks',
+        severity: 'high',
+      });
+    } else if (rawData.off_track_rocks_count === 1) {
+      recommendations.push({
+        type: 'move_rock',
+        title: 'Review Rock progress',
+        description: 'One Rock is off track. Consider whether support or reallocation may help.',
+        trigger_type: 'off_track_rocks',
+        severity: 'medium',
       });
     }
     
-    // GWC capacity issues
+    // 4. GWC Capacity constraints
     if (rawData.gwc_capacity_no) {
       recommendations.push({
         type: 'add_backup',
-        title: 'Add backup owner',
-        description: 'Recent quarterly conversation indicates capacity constraints. Consider adding a secondary owner.',
+        title: 'Consider backup owner',
+        description: 'Recent Quarterly Conversation indicates capacity constraints. A secondary owner may help distribute the load.',
         trigger_type: 'capacity_constraint',
+        severity: 'high',
       });
     }
     
-    // Insert recommendations
+    // 5. GWC Want It = No - people review
+    if (gwcWantItNo) {
+      recommendations.push({
+        type: 'people_review',
+        title: 'Review seat fit',
+        description: 'Quarterly Conversation data suggests reviewing this seat assignment during the next planning session.',
+        trigger_type: 'gwc_want_it_no',
+        severity: 'medium',
+      });
+    }
+    
+    // 6. Seat concentration risk (owner has 3+ seats)
+    if (ownerSeatCount >= 3) {
+      recommendations.push({
+        type: 'add_backup',
+        title: 'Review seat concentration',
+        description: `The owner of this seat holds ${ownerSeatCount} seats. Consider whether backup owners could reduce risk.`,
+        trigger_type: 'seat_concentration',
+        severity: ownerSeatCount >= 4 ? 'high' : 'medium',
+      });
+    }
+    
+    // 7. Chronic overload - seat redesign
+    if (healthData.health_band === 'overloaded' && rawData.gwc_declining) {
+      recommendations.push({
+        type: 'seat_redesign',
+        title: 'Consider seat scope',
+        description: 'This seat shows ongoing capacity challenges. Consider whether scope clarification or restructuring may help.',
+        trigger_type: 'chronic_overload',
+        severity: 'high',
+      });
+    }
+    
+    // Insert recommendations (avoid duplicates)
     for (const rec of recommendations) {
-      await supabase.from('seat_rebalancing_recommendations').insert({
-        tenant_id: VIVACITY_TENANT_ID,
-        seat_id: seatId,
-        recommendation_type: rec.type,
-        title: rec.title,
-        description: rec.description,
-        status: 'new',
-        trigger_type: rec.trigger_type,
-        quarter_year,
-        quarter_number,
-      });
+      // Check for existing active recommendation of same type
+      const { data: existing } = await supabase
+        .from('seat_rebalancing_recommendations')
+        .select('id')
+        .eq('seat_id', seatId)
+        .eq('recommendation_type', rec.type)
+        .in('status', ['new', 'acknowledged'])
+        .maybeSingle();
       
-      // Log audit
-      await supabase.from('audit_seat_health').insert({
-        tenant_id: VIVACITY_TENANT_ID,
-        seat_id: seatId,
-        user_id: profile?.user_uuid,
-        event_type: 'recommendation_created',
-        details: { recommendation_type: rec.type },
-      });
+      if (!existing) {
+        await supabase.from('seat_rebalancing_recommendations').insert({
+          tenant_id: VIVACITY_TENANT_ID,
+          seat_id: seatId,
+          recommendation_type: rec.type,
+          title: rec.title,
+          description: rec.description,
+          status: 'new',
+          severity: rec.severity,
+          trigger_type: rec.trigger_type,
+          quarter_year,
+          quarter_number,
+        });
+        
+        // Log audit
+        await supabase.from('audit_seat_health').insert({
+          tenant_id: VIVACITY_TENANT_ID,
+          seat_id: seatId,
+          user_id: profile?.user_uuid,
+          event_type: 'recommendation_created',
+          details: { recommendation_type: rec.type, severity: rec.severity },
+        });
+      }
     }
   }
   

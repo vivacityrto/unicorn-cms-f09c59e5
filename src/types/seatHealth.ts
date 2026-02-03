@@ -1,8 +1,9 @@
 // Seat Health Scoring Types
 
 export type HealthBand = 'healthy' | 'at_risk' | 'overloaded';
-export type RecommendationType = 'reduce_rock_load' | 'move_rock' | 'add_backup' | 'split_seat';
+export type RecommendationType = 'reduce_rock_load' | 'move_rock' | 'add_backup' | 'split_seat' | 'seat_redesign' | 'people_review' | 'vacant_seat';
 export type RecommendationStatus = 'new' | 'acknowledged' | 'action_taken' | 'dismissed';
+export type RecommendationSeverity = 'high' | 'medium';
 
 export interface ContributingFactor {
   type: 'rocks' | 'todos' | 'ids' | 'cadence' | 'gwc';
@@ -74,6 +75,8 @@ export interface SeatRebalancingRecommendation {
   suggested_seats: SuggestedSeat[];
   
   status: RecommendationStatus;
+  severity: RecommendationSeverity;
+  resolution_note?: string;
   dismissed_reason?: string;
   dismissed_by?: string;
   dismissed_at?: string;
@@ -124,28 +127,43 @@ export const HEALTH_BAND_CONFIG: Record<HealthBand, {
 
 export const RECOMMENDATION_TYPE_CONFIG: Record<RecommendationType, {
   label: string;
-  icon: 'minus-circle' | 'arrow-right' | 'user-plus' | 'scissors';
+  icon: 'minus-circle' | 'arrow-right' | 'user-plus' | 'scissors' | 'settings' | 'users' | 'user-x';
   description: string;
 }> = {
   reduce_rock_load: {
-    label: 'Reduce Rock Load',
+    label: 'Consider Rock Load',
     icon: 'minus-circle',
-    description: 'Recommend lowering active Rocks next quarter',
+    description: 'This seat may benefit from fewer active Rocks next quarter',
   },
   move_rock: {
-    label: 'Move Rock',
+    label: 'Review Rock Alignment',
     icon: 'arrow-right',
-    description: 'Suggest moving specific Rocks to another seat',
+    description: 'Some Rocks may align better with another seat',
   },
   add_backup: {
-    label: 'Add Backup',
+    label: 'Consider Backup Owner',
     icon: 'user-plus',
-    description: 'Suggest adding a secondary seat owner',
+    description: 'A secondary owner may reduce single-point dependency',
   },
   split_seat: {
-    label: 'Split Seat',
+    label: 'Review Seat Scope',
     icon: 'scissors',
-    description: 'Suggest splitting accountabilities into two seats',
+    description: 'This seat may benefit from scope clarification or split',
+  },
+  seat_redesign: {
+    label: 'Seat Redesign Flag',
+    icon: 'settings',
+    description: 'This seat may require scope clarification or restructure',
+  },
+  people_review: {
+    label: 'People Review Prompt',
+    icon: 'users',
+    description: 'Consider reviewing seat fit during next Quarterly Conversation',
+  },
+  vacant_seat: {
+    label: 'Vacant Seat',
+    icon: 'user-x',
+    description: 'This seat needs a primary owner assigned',
   },
 };
 
