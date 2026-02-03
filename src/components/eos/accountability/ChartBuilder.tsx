@@ -26,7 +26,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
-import { Loader2, Plus, Save, History, CheckCircle, Archive, MoreHorizontal, AlertCircle, Users, Info, LayoutGrid, Network, GripVertical } from 'lucide-react';
+import { Loader2, Plus, Save, History, CheckCircle, Archive, MoreHorizontal, AlertCircle, Users, Info, LayoutGrid, Network, GripVertical, FileText } from 'lucide-react';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { cn } from '@/lib/utils';
 import { useAccountabilityChart } from '@/hooks/useAccountabilityChart';
@@ -50,6 +50,7 @@ export function ChartBuilder() {
     isLoading,
     canEdit: hasEditPermission,
     createChart,
+    createChartFromTemplate,
     addFunction,
     updateFunction,
     deleteFunction,
@@ -98,6 +99,10 @@ export function ChartBuilder() {
 
   const handleCreateChart = async () => {
     await createChart.mutateAsync();
+  };
+
+  const handleCreateFromTemplate = async () => {
+    await createChartFromTemplate.mutateAsync();
   };
 
   const handleAddFunction = () => {
@@ -170,28 +175,45 @@ export function ChartBuilder() {
       });
   }, [chart, tenantUsers]);
 
-  // Validation for activation
+  // Validation for activation - specifically checks Visionary/Integrator seats
   const canActivate = useMemo(() => {
     if (!chart) return { valid: false, errors: [] as string[] };
     const errors: string[] = [];
     
-    if (chart.functions.length === 0) {
-      errors.push('At least one Function is required');
+    const allSeats = chart.functions.flatMap(f => f.seats);
+    
+    // Check for minimum seats
+    if (allSeats.length < 3) {
+      errors.push('At least 3 seats are required to activate');
     }
     
-    chart.functions.forEach(func => {
-      if (func.seats.length === 0) {
-        errors.push(`Function "${func.name}" needs at least one Seat`);
+    // Find Visionary and Integrator seats
+    const visionarySeat = allSeats.find(s => s.eos_role_type === 'visionary');
+    const integratorSeat = allSeats.find(s => s.eos_role_type === 'integrator');
+    
+    // Visionary validation
+    if (!visionarySeat) {
+      errors.push('A Visionary seat is required');
+    } else {
+      if (!visionarySeat.primaryOwner) {
+        errors.push('Visionary seat must have a primary owner assigned');
       }
-      func.seats.forEach(seat => {
-        if (!seat.primaryOwner) {
-          errors.push(`Seat "${seat.seat_name}" needs a primary owner`);
-        }
-        if (seat.roles.length < 3) {
-          errors.push(`Seat "${seat.seat_name}" needs at least 3 accountabilities`);
-        }
-      });
-    });
+      if (visionarySeat.roles.length < 1) {
+        errors.push('Visionary seat needs at least 1 accountability');
+      }
+    }
+    
+    // Integrator validation
+    if (!integratorSeat) {
+      errors.push('An Integrator seat is required');
+    } else {
+      if (!integratorSeat.primaryOwner) {
+        errors.push('Integrator seat must have a primary owner assigned');
+      }
+      if (integratorSeat.roles.length < 1) {
+        errors.push('Integrator seat needs at least 1 accountability');
+      }
+    }
     
     return { valid: errors.length === 0, errors };
   }, [chart]);
@@ -205,23 +227,48 @@ export function ChartBuilder() {
   }
 
   if (!chart) {
+    const isCreating = createChart.isPending || createChartFromTemplate.isPending;
+    
     return (
-      <EmptyState
-        icon={LayoutGrid}
-        title="No Accountability Chart"
-        description="Create your Accountability Chart to define Functions, Seats, and Accountabilities. This is not an org chart—it defines how work gets done."
-        action={hasEditPermission ? {
-          label: createChart.isPending ? 'Creating...' : 'Create Accountability Chart',
-          onClick: handleCreateChart,
-          icon: Plus,
-        } : undefined}
-      >
-        {!hasEditPermission && (
-          <p className="text-sm text-muted-foreground mt-4">
-            Contact a Super Admin or Team Leader to create the chart.
-          </p>
-        )}
-      </EmptyState>
+      <div className="space-y-4">
+        <EmptyState
+          icon={LayoutGrid}
+          title="No Accountability Chart"
+          description="Create your Accountability Chart to define Functions, Seats, and Accountabilities. This is not an org chart—it defines how work gets done."
+        >
+          {hasEditPermission ? (
+            <div className="flex flex-col sm:flex-row gap-3 mt-4">
+              <Button 
+                onClick={handleCreateFromTemplate}
+                disabled={isCreating}
+              >
+                {createChartFromTemplate.isPending ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <FileText className="h-4 w-4 mr-2" />
+                )}
+                Create from EOS Template
+              </Button>
+              <Button 
+                variant="outline" 
+                onClick={handleCreateChart}
+                disabled={isCreating}
+              >
+                {createChart.isPending ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <Plus className="h-4 w-4 mr-2" />
+                )}
+                Start from Scratch
+              </Button>
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground mt-4">
+              Contact a Super Admin or Team Leader to create the chart.
+            </p>
+          )}
+        </EmptyState>
+      </div>
     );
   }
 
@@ -229,6 +276,16 @@ export function ChartBuilder() {
 
   return (
     <div className="space-y-4">
+      {/* Unassigned key seats banner for Draft charts */}
+      {chart.status === 'Draft' && !canActivate.valid && (
+        <Alert className="bg-warning/10 border-warning/30">
+          <AlertCircle className="h-4 w-4 text-warning" />
+          <AlertDescription className="text-warning">
+            <strong>Activation blocked:</strong> Assign owners to {seatsWithoutOwner} unassigned seat{seatsWithoutOwner !== 1 ? 's' : ''} (including Visionary and Integrator) to activate this chart.
+          </AlertDescription>
+        </Alert>
+      )}
+
       {/* Read-only mode indicator */}
       {chart.status === 'Active' && !isFacilitatorMode && hasEditPermission && (
         <Alert>
