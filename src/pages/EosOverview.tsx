@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { ReadinessCard } from '@/components/eos/ReadinessCard';
 import { HealthScoreWidget } from '@/components/eos/HealthScoreWidget';
+import { AlertsBanner } from '@/components/eos/alerts';
 
 export default function EosOverview() {
   return (
@@ -115,6 +116,9 @@ function OverviewContent() {
         title="EOS Overview"
         description="Entrepreneurial Operating System - Manage your business with clarity and accountability"
       />
+
+      {/* Alerts Banner */}
+      <AlertsBanner />
 
       {/* Readiness Card */}
       <div className="grid gap-6 lg:grid-cols-3">
