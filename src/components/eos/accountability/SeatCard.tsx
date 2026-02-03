@@ -17,6 +17,12 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import {
   ChevronDown,
   ChevronUp,
   MoreVertical,
@@ -27,9 +33,11 @@ import {
   Check,
   X,
   User,
+  BarChart3,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { SeatWithDetails, UserBasic } from '@/types/accountabilityChart';
+import { SeatScorecardBuilder } from '@/components/eos/scorecard';
 
 interface SeatCardProps {
   seat: SeatWithDetails;
@@ -62,6 +70,7 @@ export function SeatCard({
   const [newRole, setNewRole] = useState('');
   const [editingRoleId, setEditingRoleId] = useState<string | null>(null);
   const [editRoleText, setEditRoleText] = useState('');
+  const [showScorecard, setShowScorecard] = useState(false);
 
   const handleSaveName = () => {
     if (editName.trim() && editName !== seat.seat_name) {
@@ -100,6 +109,7 @@ export function SeatCard({
   };
 
   return (
+    <>
     <Card className="shadow-sm hover:shadow-md transition-shadow">
       <CardHeader className="p-3 pb-2">
         <div className="flex items-start justify-between gap-2">
@@ -137,6 +147,10 @@ export function SeatCard({
                 <DropdownMenuItem onClick={() => setIsEditing(true)}>
                   <Edit2 className="h-3 w-3 mr-2" />
                   Rename
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setShowScorecard(true)}>
+                  <BarChart3 className="h-3 w-3 mr-2" />
+                  Scorecard
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem 
@@ -354,5 +368,20 @@ export function SeatCard({
         </CollapsibleContent>
       </Collapsible>
     </Card>
+
+      {/* Scorecard Dialog */}
+      <Dialog open={showScorecard} onOpenChange={setShowScorecard}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Seat Scorecard</DialogTitle>
+          </DialogHeader>
+          <SeatScorecardBuilder
+            seatId={seat.id}
+            seatName={seat.seat_name}
+            onClose={() => setShowScorecard(false)}
+          />
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
