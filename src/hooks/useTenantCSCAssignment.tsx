@@ -9,6 +9,7 @@ export interface CSCUser {
   email: string;
   job_title: string | null;
   avatar_url: string | null;
+  archived?: boolean;
 }
 
 export interface CSCAssignment {
@@ -63,16 +64,17 @@ export function useTenantCSCAssignment(tenantId: number | null) {
     enabled: !!tenantId,
   });
 
-  // Fetch all Vivacity Team users (staff who can be assigned as CSC)
+  // Fetch all Vivacity Team users (staff who can be assigned as CSC) - including archived
   const { data: availableCSCs = [], isLoading: isLoadingCSCs } = useQuery({
-    queryKey: ['vivacity-team-users'],
+    queryKey: ['vivacity-team-users-with-archived'],
     queryFn: async () => {
       // Query users who have 'client_success' in their staff_teams array OR staff_team field
+      // Include archived users for historical accuracy
       const { data, error } = await supabase
         .from('users')
-        .select('user_uuid, first_name, last_name, email, job_title, avatar_url, staff_teams, staff_team')
+        .select('user_uuid, first_name, last_name, email, job_title, avatar_url, staff_teams, staff_team, archived')
         .eq('disabled', false)
-        .eq('archived', false)
+        .order('archived', { ascending: true }) // Active first, then archived
         .order('first_name', { ascending: true });
       
       if (error) throw error;
@@ -84,7 +86,15 @@ export function useTenantCSCAssignment(tenantId: number | null) {
         return hasInTeams || hasInTeam;
       });
       
-      return cscUsers as CSCUser[];
+      return cscUsers.map(user => ({
+        user_uuid: user.user_uuid,
+        first_name: user.first_name,
+        last_name: user.last_name,
+        email: user.email,
+        job_title: user.job_title,
+        avatar_url: user.avatar_url,
+        archived: user.archived || false,
+      })) as CSCUser[];
     },
   });
 
