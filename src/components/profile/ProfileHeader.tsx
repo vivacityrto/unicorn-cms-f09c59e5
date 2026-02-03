@@ -32,6 +32,7 @@ interface ProfileHeaderProps {
     created_at: string;
     last_sign_in_at: string | null;
     staff_team?: string | null;
+    staff_teams?: string[] | null;  // New array field for multiple teams
   };
   tenantName: string | null;
   canEdit: boolean;
@@ -48,6 +49,11 @@ const TEAM_LABELS: Record<string, { label: string; color: string }> = {
   growth: { label: 'Business Growth', color: 'bg-purple-500/10 text-purple-700 border-purple-200' },
   leadership: { label: 'Leadership', color: 'bg-amber-500/10 text-amber-700 border-amber-200' },
   other: { label: 'Staff', color: 'bg-gray-500/10 text-gray-700 border-gray-200' },
+  // New standardized team keys
+  business_growth: { label: 'Business Growth', color: 'bg-purple-500/10 text-purple-700 border-purple-200' },
+  client_success: { label: 'Client Success', color: 'bg-emerald-500/10 text-emerald-700 border-emerald-200' },
+  client_experience: { label: 'Client Experience', color: 'bg-blue-500/10 text-blue-700 border-blue-200' },
+  software_development: { label: 'Software Development', color: 'bg-indigo-500/10 text-indigo-700 border-indigo-200' },
 };
 
 export function ProfileHeader({ user, tenantName, canEdit, onAvatarChange, onEditClick, isEditing, isSuperAdmin = false, isViewingOwnProfile = true }: ProfileHeaderProps) {
@@ -398,11 +404,22 @@ export function ProfileHeader({ user, tenantName, canEdit, onAvatarChange, onEdi
             <Badge variant="outline">{user.user_type}</Badge>
           )}
 
-          {user.staff_team && TEAM_LABELS[user.staff_team] && (
-            <Badge variant="outline" className={TEAM_LABELS[user.staff_team].color}>
-              {TEAM_LABELS[user.staff_team].label}
-            </Badge>
-          )}
+          {/* Display multiple team badges if staff_teams array exists, otherwise fall back to single staff_team */}
+          {(() => {
+            const teamsToShow = user.staff_teams && user.staff_teams.length > 0 
+              ? user.staff_teams 
+              : (user.staff_team ? [user.staff_team] : []);
+            
+            return teamsToShow.map((team) => {
+              const teamInfo = TEAM_LABELS[team];
+              if (!teamInfo) return null;
+              return (
+                <Badge key={team} variant="outline" className={teamInfo.color}>
+                  {teamInfo.label}
+                </Badge>
+              );
+            });
+          })()}
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">

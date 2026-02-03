@@ -14187,6 +14187,7 @@ export type Database = {
           rto_id: number | null
           rto_name: string | null
           staff_team: Database["public"]["Enums"]["staff_team_type"] | null
+          staff_teams: string[] | null
           state: number | null
           street_address: string | null
           street_number_and_name: string | null
@@ -14266,6 +14267,7 @@ export type Database = {
           rto_id?: number | null
           rto_name?: string | null
           staff_team?: Database["public"]["Enums"]["staff_team_type"] | null
+          staff_teams?: string[] | null
           state?: number | null
           street_address?: string | null
           street_number_and_name?: string | null
@@ -14345,6 +14347,7 @@ export type Database = {
           rto_id?: number | null
           rto_name?: string | null
           staff_team?: Database["public"]["Enums"]["staff_team_type"] | null
+          staff_teams?: string[] | null
           state?: number | null
           street_address?: string | null
           street_number_and_name?: string | null

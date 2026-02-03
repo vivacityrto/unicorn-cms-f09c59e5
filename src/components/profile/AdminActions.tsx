@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
-import { Switch } from '@/components/ui/switch';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Separator } from '@/components/ui/separator';
 import { 
@@ -49,6 +49,7 @@ interface AdminActionsProps {
     user_type: string;
     tenant_name?: string | null;
     staff_team?: string | null;
+    staff_teams?: string[] | null;  // New array field for multiple teams
   };
   currentUserRole: string | null;
   currentUserType: string | null;
@@ -57,7 +58,6 @@ interface AdminActionsProps {
 }
 
 const STAFF_TEAM_OPTIONS = [
-  { value: 'none', label: 'No Team Assigned' },
   { value: 'business_growth', label: 'Business Growth Team' },
   { value: 'client_success', label: 'Client Success Team' },
   { value: 'client_experience', label: 'Client Experience Team' },
@@ -137,7 +137,11 @@ export function AdminActions({
   const [roleType, setRoleType] = useState<RoleType>(() => 
     deriveRoleType(user.unicorn_role, user.user_type)
   );
-  const [selectedStaffTeam, setSelectedStaffTeam] = useState<string>(user.staff_team || 'none');
+  // Use staff_teams array if available, otherwise fall back to staff_team for backwards compatibility
+  const initialTeams = user.staff_teams && user.staff_teams.length > 0 
+    ? user.staff_teams 
+    : (user.staff_team && user.staff_team !== 'none' ? [user.staff_team] : []);
+  const [selectedStaffTeams, setSelectedStaffTeams] = useState<string[]>(initialTeams);
   const [selectedTenantId, setSelectedTenantId] = useState<string>(
     user.tenant_id?.toString() || ''
   );
@@ -155,11 +159,14 @@ export function AdminActions({
 
   // Derive original role type for comparison
   const originalRoleType = deriveRoleType(user.unicorn_role, user.user_type);
+  const originalTeams = user.staff_teams && user.staff_teams.length > 0 
+    ? user.staff_teams 
+    : (user.staff_team && user.staff_team !== 'none' ? [user.staff_team] : []);
   
   const hasChanges = 
     roleType !== originalRoleType || 
     selectedTenantId !== (user.tenant_id?.toString() || '') ||
-    selectedStaffTeam !== (user.staff_team || 'none');
+    JSON.stringify(selectedStaffTeams.sort()) !== JSON.stringify(originalTeams.sort());
 
   // Validation
   const needsTenant = isTenantRole && !selectedTenantId;
@@ -225,14 +232,16 @@ export function AdminActions({
 
       const dbFields = roleTypeToDbFields(roleType);
       
-      // Only include staff_team for SuperAdmin roles
+      // Include both staff_team (for backwards compatibility) and staff_teams (new array)
+      const primaryTeam = selectedStaffTeams.length > 0 ? selectedStaffTeams[0] : null;
       const { data, error } = await supabase.functions.invoke('update-user-role', {
         body: {
           user_uuid: user.user_uuid,
           unicorn_role: dbFields.unicorn_role,
           user_type: dbFields.user_type,
           tenant_id: isTenantRole ? (selectedTenantId ? parseInt(selectedTenantId) : null) : null,
-          staff_team: isSuperAdminRole ? (selectedStaffTeam === 'none' ? null : selectedStaffTeam) : null,
+          staff_team: isSuperAdminRole ? primaryTeam : null,
+          staff_teams: isSuperAdminRole ? selectedStaffTeams : [],
         },
       });
 
@@ -440,27 +449,38 @@ export function AdminActions({
                 </Select>
               </div>
 
-              {/* Team - only for SuperAdmin roles */}
+              {/* Teams - only for SuperAdmin roles - multi-select */}
               {isSuperAdminRole && (
-                <div className="space-y-2">
-                  <Label htmlFor="staff-team" className="flex items-center gap-2">
+                <div className="space-y-3">
+                  <Label className="flex items-center gap-2">
                     <Users className="h-4 w-4" />
-                    Team
+                    Teams (select all that apply)
                   </Label>
-                  <Select value={selectedStaffTeam} onValueChange={setSelectedStaffTeam}>
-                    <SelectTrigger id="staff-team">
-                      <SelectValue placeholder="Select staff team" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {STAFF_TEAM_OPTIONS.map((team) => (
-                        <SelectItem key={team.value} value={team.value}>
+                  <div className="grid grid-cols-1 gap-2 p-3 border rounded-lg bg-muted/30">
+                    {STAFF_TEAM_OPTIONS.map((team) => (
+                      <div key={team.value} className="flex items-center space-x-2">
+                        <Checkbox
+                          id={`team-${team.value}`}
+                          checked={selectedStaffTeams.includes(team.value)}
+                          onCheckedChange={(checked) => {
+                            if (checked) {
+                              setSelectedStaffTeams([...selectedStaffTeams, team.value]);
+                            } else {
+                              setSelectedStaffTeams(selectedStaffTeams.filter(t => t !== team.value));
+                            }
+                          }}
+                        />
+                        <label
+                          htmlFor={`team-${team.value}`}
+                          className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                        >
                           {team.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                        </label>
+                      </div>
+                    ))}
+                  </div>
                   <p className="text-xs text-muted-foreground">
-                    Determines the team badge shown on the user's profile
+                    Select multiple teams if the user works across different areas
                   </p>
                 </div>
               )}

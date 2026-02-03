@@ -11,6 +11,7 @@ interface UpdateUserRoleRequest {
   user_type?: 'Vivacity' | 'Vivacity Team' | 'Client' | 'Client Parent' | 'Client Child' | 'Member';
   tenant_id?: number | null;
   staff_team?: 'none' | 'business_growth' | 'client_success' | 'client_experience' | 'software_development' | 'leadership' | null;
+  staff_teams?: string[];  // New array field for multiple team assignments
 }
 
 Deno.serve(async (req) => {
@@ -59,7 +60,7 @@ Deno.serve(async (req) => {
 
     // Parse request body
     const body: UpdateUserRoleRequest = await req.json();
-    const { user_uuid, unicorn_role, user_type, tenant_id, staff_team } = body;
+    const { user_uuid, unicorn_role, user_type, tenant_id, staff_team, staff_teams } = body;
 
     if (!user_uuid) {
       return new Response(
@@ -107,6 +108,7 @@ Deno.serve(async (req) => {
     if (user_type !== undefined) updates.user_type = user_type;
     if (tenant_id !== undefined) updates.tenant_id = tenant_id;
     if (staff_team !== undefined) updates.staff_team = staff_team;
+    if (staff_teams !== undefined) updates.staff_teams = staff_teams;
 
     // Set superadmin_level based on role
     if (unicorn_role === 'Super Admin' && user_type === 'Vivacity') {
