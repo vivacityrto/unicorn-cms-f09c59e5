@@ -147,6 +147,9 @@ export const EOS_ROUTES = [
   '/eos/qc',
   '/eos/quarterly-conversations',
   '/eos/accountability',
+  '/eos/leadership',
+  '/eos/rock-analysis',
+  '/eos/client-impact',
   '/processes',
 ];
 

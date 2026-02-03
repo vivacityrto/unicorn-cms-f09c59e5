@@ -83,6 +83,11 @@ const eosMenuItems = [{
   label: "EOS Overview",
   path: "/eos"
 }, {
+  icon: ShieldCheck,
+  label: "Leadership Dashboard",
+  path: "/eos/leadership",
+  leadershipOnly: true  // Special flag for Super Admin + Team Leader only
+}, {
   icon: BarChart3,
   label: "Scorecard",
   path: "/eos/scorecard"
@@ -304,7 +309,8 @@ export const DashboardLayout = ({
   } = useAuth();
   const {
     canAccessAdmin,
-    canAccessAdvanced
+    canAccessAdvanced,
+    isSuperAdmin
   } = useRBAC();
   const {
     isViewingAsClient
@@ -582,7 +588,15 @@ export const DashboardLayout = ({
                       {sectionsOpen.eos ? <ChevronDown className="w-3 h-3 text-white/70" /> : <ChevronRight className="w-3 h-3 text-white/70" />}
                     </CollapsibleTrigger>}
                   <CollapsibleContent>
-                    {menuItems.eos.map((item: any) => {
+                    {menuItems.eos
+                      .filter((item: any) => {
+                        // Filter out leadership-only items for Team Members
+                        if (item.leadershipOnly) {
+                          return isSuperAdmin || profile?.unicorn_role === 'Team Leader';
+                        }
+                        return true;
+                      })
+                      .map((item: any) => {
                 const Icon = item.icon;
                 const isActive = location.pathname === item.path;
                 return <Link key={item.path} to={item.path} data-active={isActive} className={`flex items-center gap-2 px-4 mx-2 mb-1 transition-colors text-sm rounded-full ${isActive ? "bg-white/10 border border-white/20 text-white" : "text-white/80 hover:bg-white/10 hover:text-white"}`} style={{

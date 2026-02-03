@@ -63,6 +63,7 @@ import EosClientImpact from "./pages/EosClientImpact";
 import EosClientImpactDetail from "./pages/EosClientImpactDetail";
 import ClientImpactPage from "./pages/ClientImpactPage";
 import EosRockAnalysis from "./pages/EosRockAnalysis";
+import EosLeadershipDashboard from "./pages/EosLeadershipDashboard";
 import ResetPassword from "./pages/ResetPassword";
 import Audits from "./pages/Audits";
 import AuditWorkspace from "./pages/AuditWorkspace";
@@ -621,6 +622,15 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <EosRockAnalysis />
+                </ProtectedRoute>
+              } 
+            />
+            {/* Leadership Dashboard Route */}
+            <Route 
+              path="/eos/leadership" 
+              element={
+                <ProtectedRoute>
+                  <EosLeadershipDashboard />
                 </ProtectedRoute>
               } 
             />
