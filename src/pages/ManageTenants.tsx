@@ -10,7 +10,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
-import { Building2, Users, Search, CheckCircle2, XCircle, Activity, Link as LinkIcon, AlertCircle, Calendar, Package2 } from "lucide-react";
+import { Building2, Users, Search, CheckCircle2, XCircle, Activity, Link as LinkIcon, AlertCircle, Calendar, Package2, UserPlus } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { AddTenantDialog } from "@/components/AddTenantDialog";
@@ -18,6 +18,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from "@/components/ui/pagination";
 import { cn } from "@/lib/utils";
+import { CSCQuickAssignDialog } from "@/components/client/CSCQuickAssignDialog";
 interface Tenant {
   id: number;
   name: string;
@@ -60,6 +61,10 @@ export default function ManageTenants() {
   });
   const [connectAllDialog, setConnectAllDialog] = useState(false);
   const [addTenantDialog, setAddTenantDialog] = useState(false);
+  const [cscAssignDialog, setCscAssignDialog] = useState<{ open: boolean; tenant: Tenant | null }>({
+    open: false,
+    tenant: null
+  });
   const [stats, setStats] = useState({
     total: 0,
     active: 0,
@@ -206,19 +211,21 @@ export default function ManageTenants() {
         return acc;
       }, {} as Record<number, number>);
 
-      // Batch fetch all connected CSC data
+      // Batch fetch CSC data from tenant_csc_assignments (primary only)
       const {
-        data: connectedData
-      } = await supabase.from("connected_tenants").select("tenant_id, user_uuid").in("tenant_id", tenantIds);
-      const connectedMap = (connectedData || []).reduce((acc, conn) => {
-        if (!acc[conn.tenant_id]) {
-          acc[conn.tenant_id] = conn.user_uuid;
-        }
+        data: cscAssignments
+      } = await supabase
+        .from("tenant_csc_assignments")
+        .select("tenant_id, csc_user_id")
+        .in("tenant_id", tenantIds)
+        .eq("is_primary", true);
+      const cscMap = (cscAssignments || []).reduce((acc, assignment) => {
+        acc[assignment.tenant_id] = assignment.csc_user_id;
         return acc;
       }, {} as Record<number, string>);
 
       // Batch fetch all CSC user names and avatars
-      const userUuids = Object.values(connectedMap).filter(Boolean);
+      const userUuids = Object.values(cscMap).filter(Boolean);
       const {
         data: usersData
       } = await supabase.from("users").select("user_uuid, first_name, last_name, avatar_url").in("user_uuid", userUuids);
@@ -262,8 +269,8 @@ export default function ManageTenants() {
         return {
           ...tenant,
           member_count: memberCountMap[tenant.id] || 0,
-          csc_name: connectedMap[tenant.id] ? userDataMap[connectedMap[tenant.id]]?.name : null,
-          csc_avatar: connectedMap[tenant.id] ? userDataMap[connectedMap[tenant.id]]?.avatar : null,
+          csc_name: cscMap[tenant.id] ? userDataMap[cscMap[tenant.id]]?.name : null,
+          csc_avatar: cscMap[tenant.id] ? userDataMap[cscMap[tenant.id]]?.avatar : null,
           package_name: firstPackage?.name || null,
           package_full_text: firstPackage?.full_text || null,
           package_id: firstPackage?.id || null,
@@ -326,26 +333,25 @@ export default function ManageTenants() {
     };
   }, []);
 
-  // Subscribe to connected_tenants changes for real-time CSC updates
+  // Subscribe to tenant_csc_assignments changes for real-time CSC updates
   useEffect(() => {
-    const connectionsChannel = supabase
-      .channel('connected-tenants-changes')
+    const cscChannel = supabase
+      .channel('csc-assignments-changes')
       .on(
         'postgres_changes',
         {
           event: '*',
           schema: 'public',
-          table: 'connected_tenants'
+          table: 'tenant_csc_assignments'
         },
         () => {
           fetchTenants();
-          checkConnectedTenant();
         }
       )
       .subscribe();
 
     return () => {
-      supabase.removeChannel(connectionsChannel);
+      supabase.removeChannel(cscChannel);
     };
   }, []);
   const applyFiltersAndSort = () => {
@@ -759,12 +765,23 @@ export default function ManageTenants() {
                         {tenant.status}
                       </Badge>
                     </TableCell>
-                    <TableCell className="py-6 border-r border-border/50 whitespace-nowrap">
+                    <TableCell 
+                      className="py-6 border-r border-border/50 whitespace-nowrap"
+                      onClick={(e) => {
+                        if (isSuperAdmin || isTeamLeader) {
+                          e.stopPropagation();
+                          setCscAssignDialog({ open: true, tenant });
+                        }
+                      }}
+                    >
                       {tenant.csc_name ? (
                         <TooltipProvider>
                           <Tooltip>
                             <TooltipTrigger asChild>
-                              <div className="flex justify-center cursor-pointer">
+                              <div className={cn(
+                                "flex justify-center",
+                                (isSuperAdmin || isTeamLeader) && "cursor-pointer hover:opacity-80"
+                              )}>
                                 <Avatar className="h-9 w-9">
                                   <AvatarImage src={tenant.csc_avatar || undefined} alt={tenant.csc_name} />
                                   <AvatarFallback className="bg-primary/10 text-primary text-xs">
@@ -775,9 +792,27 @@ export default function ManageTenants() {
                             </TooltipTrigger>
                             <TooltipContent>
                               <p>{tenant.csc_name}</p>
+                              {(isSuperAdmin || isTeamLeader) && (
+                                <p className="text-xs text-muted-foreground">Click to change</p>
+                              )}
                             </TooltipContent>
                           </Tooltip>
                         </TooltipProvider>
+                      ) : (isSuperAdmin || isTeamLeader) ? (
+                        <div className="flex justify-center">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-xs text-muted-foreground hover:text-primary"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setCscAssignDialog({ open: true, tenant });
+                            }}
+                          >
+                            <UserPlus className="h-3 w-3 mr-1" />
+                            Assign
+                          </Button>
+                        </div>
                       ) : (
                         <div className="flex justify-center">
                           <span className="text-sm text-muted-foreground">Not Assigned</span>
@@ -938,5 +973,16 @@ export default function ManageTenants() {
 
       {/* Add Tenant Dialog */}
       <AddTenantDialog open={addTenantDialog} onOpenChange={setAddTenantDialog} onSuccess={fetchTenants} />
+
+      {/* CSC Quick Assign Dialog */}
+      {cscAssignDialog.tenant && (
+        <CSCQuickAssignDialog
+          open={cscAssignDialog.open}
+          onOpenChange={(open) => setCscAssignDialog({ open, tenant: open ? cscAssignDialog.tenant : null })}
+          tenantId={cscAssignDialog.tenant.id}
+          tenantName={cscAssignDialog.tenant.name}
+          canRemove={isSuperAdmin}
+        />
+      )}
     </div>;
 }
