@@ -25,7 +25,7 @@ export interface MeetingSeries {
   updated_at: string;
 }
 
-export interface MeetingInstance extends EosMeeting {
+export interface MeetingInstance extends Omit<EosMeeting, 'status'> {
   series_id?: string;
   agenda_snapshot?: Record<string, any>;
   actual_duration_minutes?: number;
