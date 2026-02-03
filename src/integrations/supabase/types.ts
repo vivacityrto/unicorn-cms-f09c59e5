@@ -5098,6 +5098,7 @@ export type Database = {
           email_id: number | null
           id: number
           is_sent: boolean
+          sender: string | null
           sender_id: number | null
           sender_uuid: string | null
           sent_date: string | null
@@ -5113,6 +5114,7 @@ export type Database = {
           email_id?: number | null
           id?: number
           is_sent: boolean
+          sender?: string | null
           sender_id?: number | null
           sender_uuid?: string | null
           sent_date?: string | null
@@ -5128,6 +5130,7 @@ export type Database = {
           email_id?: number | null
           id?: number
           is_sent?: boolean
+          sender?: string | null
           sender_id?: number | null
           sender_uuid?: string | null
           sent_date?: string | null
