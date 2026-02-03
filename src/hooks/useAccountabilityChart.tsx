@@ -1,7 +1,9 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
+import { useRBAC } from './useRBAC';
 import { toast } from '@/hooks/use-toast';
+import { VIVACITY_TENANT_ID } from './useVivacityTeamUsers';
 import type {
   AccountabilityChart,
   ChartVersion,
@@ -24,21 +26,36 @@ import type {
 } from '@/types/accountabilityChart';
 
 /**
- * Hook to manage the EOS Accountability Chart for a tenant.
- * Access: SuperAdmin and Team Leader can view. SuperAdmin only can edit.
+ * Hook to manage the EOS Accountability Chart.
+ * 
+ * EOS is Vivacity-internal only:
+ * - Only Vivacity Team users can access (Super Admin, Team Leader, Team Member)
+ * - All data belongs to the Vivacity system tenant (ID: 6372)
+ * - Clients cannot view or edit any EOS data
+ * 
+ * Access:
+ * - View: Super Admin, Team Leader (read-only)
+ * - Edit: Super Admin only
  */
 export function useAccountabilityChart() {
   const { profile, isSuperAdmin } = useAuth();
+  const { isVivacityTeam, canAccessEOS } = useRBAC();
   const queryClient = useQueryClient();
-  const tenantId = profile?.tenant_id;
+  
+  // EOS always uses the Vivacity system tenant, not the user's tenant
+  const tenantId = VIVACITY_TENANT_ID;
   const userId = profile?.user_uuid;
   const isSuper = isSuperAdmin();
+  
+  // Only Vivacity Team can view, only SuperAdmin can edit
+  const canView = canAccessEOS();
+  const canEdit = isSuper;
 
   // Fetch the chart with all related data
   const { data: chart, isLoading, refetch } = useQuery({
     queryKey: ['accountability-chart', tenantId],
     queryFn: async (): Promise<ChartWithDetails | null> => {
-      if (!tenantId) return null;
+      if (!tenantId || !canView) return null;
 
       // Get or create chart
       let { data: chartData, error } = await supabase
@@ -519,15 +536,6 @@ export function useAccountabilityChart() {
       toast({ title: 'Error updating status', description: error.message, variant: 'destructive' });
     },
   });
-
-  // Check if user can edit - SuperAdmin only per EOS spec
-  const canEdit = profile && tenantId && isSuper;
-
-  // Check if user can view - SuperAdmin and Team Leader
-  const canView = profile && tenantId && (
-    isSuper ||
-    profile.unicorn_role === 'Team Leader'
-  );
 
   return {
     chart,

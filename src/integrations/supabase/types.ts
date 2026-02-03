@@ -5544,6 +5544,69 @@ export type Database = {
         }
         Relationships: []
       }
+      emails_duplicate: {
+        Row: {
+          auth_mode: boolean
+          auto_send_on_document_added: boolean | null
+          auto_send_on_document_updated: boolean | null
+          auto_send_on_task_assignment: boolean | null
+          automation_enabled: boolean | null
+          content: string | null
+          created_at: string | null
+          created_by: string | null
+          description: string | null
+          files: string[] | null
+          id: number
+          name: string | null
+          order_number: number
+          package_id: number | null
+          stage_id: number | null
+          subject: string | null
+          to: string | null
+          u1_id: number | null
+        }
+        Insert: {
+          auth_mode?: boolean
+          auto_send_on_document_added?: boolean | null
+          auto_send_on_document_updated?: boolean | null
+          auto_send_on_task_assignment?: boolean | null
+          automation_enabled?: boolean | null
+          content?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          files?: string[] | null
+          id: number
+          name?: string | null
+          order_number: number
+          package_id?: number | null
+          stage_id?: number | null
+          subject?: string | null
+          to?: string | null
+          u1_id?: number | null
+        }
+        Update: {
+          auth_mode?: boolean
+          auto_send_on_document_added?: boolean | null
+          auto_send_on_document_updated?: boolean | null
+          auto_send_on_task_assignment?: boolean | null
+          automation_enabled?: boolean | null
+          content?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          files?: string[] | null
+          id?: number
+          name?: string | null
+          order_number?: number
+          package_id?: number | null
+          stage_id?: number | null
+          subject?: string | null
+          to?: string | null
+          u1_id?: number | null
+        }
+        Relationships: []
+      }
       eos_accountability_chart: {
         Row: {
           assigned_user_id: string | null
@@ -12817,6 +12880,7 @@ export type Database = {
           id: number
           id_uuid: string | null
           import_id: number
+          is_system_tenant: boolean
           legal_name: string | null
           lms: string | null
           metadata: Json | null
@@ -12850,6 +12914,7 @@ export type Database = {
           id: number
           id_uuid?: string | null
           import_id?: number
+          is_system_tenant?: boolean
           legal_name?: string | null
           lms?: string | null
           metadata?: Json | null
@@ -12883,6 +12948,7 @@ export type Database = {
           id?: number
           id_uuid?: string | null
           import_id?: number
+          is_system_tenant?: boolean
           legal_name?: string | null
           lms?: string | null
           metadata?: Json | null
@@ -16140,6 +16206,7 @@ export type Database = {
         Args: { p_version_from: string; p_version_to: string }
         Returns: Json
       }
+      get_system_tenant_id: { Args: never; Returns: number }
       get_team_users: {
         Args: never
         Returns: {
@@ -16333,6 +16400,7 @@ export type Database = {
       is_user_super_admin: { Args: { user_id: string }; Returns: boolean }
       is_vivacity: { Args: never; Returns: boolean }
       is_vivacity_super_admin: { Args: never; Returns: boolean }
+      is_vivacity_team: { Args: { p_user_id?: string }; Returns: boolean }
       is_vivacity_user: { Args: never; Returns: boolean }
       list_meeting_summaries_for_client: {
         Args: { p_client_id: string; p_limit?: number; p_offset?: number }
