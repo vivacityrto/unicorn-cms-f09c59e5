@@ -14,6 +14,285 @@ export type Database = {
   }
   public: {
     Tables: {
+      accountability_chart_versions: {
+        Row: {
+          change_summary: string
+          chart_id: string
+          created_at: string
+          created_by: string
+          id: string
+          snapshot: Json
+          tenant_id: number
+          version_number: number
+        }
+        Insert: {
+          change_summary: string
+          chart_id: string
+          created_at?: string
+          created_by: string
+          id?: string
+          snapshot?: Json
+          tenant_id: number
+          version_number?: number
+        }
+        Update: {
+          change_summary?: string
+          chart_id?: string
+          created_at?: string
+          created_by?: string
+          id?: string
+          snapshot?: Json
+          tenant_id?: number
+          version_number?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "accountability_chart_versions_chart_id_fkey"
+            columns: ["chart_id"]
+            isOneToOne: false
+            referencedRelation: "accountability_charts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "accountability_chart_versions_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      accountability_charts: {
+        Row: {
+          created_at: string
+          created_by: string
+          current_version_id: string | null
+          id: string
+          status: string
+          tenant_id: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          current_version_id?: string | null
+          id?: string
+          status?: string
+          tenant_id: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          current_version_id?: string | null
+          id?: string
+          status?: string
+          tenant_id?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "accountability_charts_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      accountability_functions: {
+        Row: {
+          chart_id: string
+          created_at: string
+          id: string
+          name: string
+          sort_order: number
+          tenant_id: number
+          updated_at: string
+        }
+        Insert: {
+          chart_id: string
+          created_at?: string
+          id?: string
+          name: string
+          sort_order?: number
+          tenant_id: number
+          updated_at?: string
+        }
+        Update: {
+          chart_id?: string
+          created_at?: string
+          id?: string
+          name?: string
+          sort_order?: number
+          tenant_id?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "accountability_functions_chart_id_fkey"
+            columns: ["chart_id"]
+            isOneToOne: false
+            referencedRelation: "accountability_charts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "accountability_functions_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      accountability_seat_assignments: {
+        Row: {
+          assignment_type: string
+          created_at: string
+          end_date: string | null
+          id: string
+          seat_id: string
+          start_date: string
+          tenant_id: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          assignment_type: string
+          created_at?: string
+          end_date?: string | null
+          id?: string
+          seat_id: string
+          start_date?: string
+          tenant_id: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          assignment_type?: string
+          created_at?: string
+          end_date?: string | null
+          id?: string
+          seat_id?: string
+          start_date?: string
+          tenant_id?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "accountability_seat_assignments_seat_id_fkey"
+            columns: ["seat_id"]
+            isOneToOne: false
+            referencedRelation: "accountability_seats"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "accountability_seat_assignments_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      accountability_seat_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role_text: string
+          seat_id: string
+          sort_order: number
+          tenant_id: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role_text: string
+          seat_id: string
+          sort_order?: number
+          tenant_id: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role_text?: string
+          seat_id?: string
+          sort_order?: number
+          tenant_id?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "accountability_seat_roles_seat_id_fkey"
+            columns: ["seat_id"]
+            isOneToOne: false
+            referencedRelation: "accountability_seats"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "accountability_seat_roles_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      accountability_seats: {
+        Row: {
+          chart_id: string
+          created_at: string
+          function_id: string
+          id: string
+          seat_name: string
+          sort_order: number
+          tenant_id: number
+          updated_at: string
+        }
+        Insert: {
+          chart_id: string
+          created_at?: string
+          function_id: string
+          id?: string
+          seat_name: string
+          sort_order?: number
+          tenant_id: number
+          updated_at?: string
+        }
+        Update: {
+          chart_id?: string
+          created_at?: string
+          function_id?: string
+          id?: string
+          seat_name?: string
+          sort_order?: number
+          tenant_id?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "accountability_seats_chart_id_fkey"
+            columns: ["chart_id"]
+            isOneToOne: false
+            referencedRelation: "accountability_charts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "accountability_seats_function_id_fkey"
+            columns: ["function_id"]
+            isOneToOne: false
+            referencedRelation: "accountability_functions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "accountability_seats_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       active_timers: {
         Row: {
           client_id: number
