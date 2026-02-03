@@ -365,7 +365,8 @@ function calculateIDSEffectiveness(issues: any[]): DimensionScore {
 function calculatePeopleSystem(
   qcs: any[],
   currentQuarter: number,
-  currentYear: number
+  currentYear: number,
+  paTrends?: any[]
 ): DimensionScore {
   const currentQCs = qcs.filter(
     q => q.quarter_year === currentYear && q.quarter_number === currentQuarter
@@ -425,6 +426,36 @@ function calculatePeopleSystem(
         message: `${unsigned} completed QC${unsigned > 1 ? 's' : ''} missing signatures`,
         severity: 'info',
         link: '/eos/qc',
+      });
+    }
+  }
+
+  // People Analyzer trend impact
+  if (paTrends && paTrends.length > 0) {
+    const atRiskTrends = paTrends.filter(t => t.is_at_risk);
+    const decliningTrends = paTrends.filter(t => t.trend === 'Declining');
+    
+    // Persistent Minus trends reduce score
+    if (atRiskTrends.length >= 3) {
+      score -= 15;
+      healthIssues.push({
+        id: 'pa-at-risk',
+        message: `${atRiskTrends.length} Core Values at risk across team`,
+        severity: 'warning',
+        link: '/eos/people-analyzer',
+      });
+    } else if (atRiskTrends.length > 0) {
+      score -= atRiskTrends.length * 3;
+    }
+
+    // Declining trends also impact
+    if (decliningTrends.length >= 2) {
+      score -= 10;
+      healthIssues.push({
+        id: 'pa-declining',
+        message: `${decliningTrends.length} declining values alignment trends`,
+        severity: 'info',
+        link: '/eos/people-analyzer',
       });
     }
   }
