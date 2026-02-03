@@ -70,7 +70,6 @@ export function useTenantCSCAssignment(tenantId: number | null) {
       const { data, error } = await supabase
         .from('users')
         .select('user_uuid, first_name, last_name, email, job_title, avatar_url')
-        .eq('is_team', true)
         .eq('disabled', false)
         .eq('archived', false)
         .eq('staff_team', 'client_success')
