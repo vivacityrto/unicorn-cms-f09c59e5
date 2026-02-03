@@ -62,6 +62,7 @@ import EosGWCTrends from "./pages/EosGWCTrends";
 import EosClientImpact from "./pages/EosClientImpact";
 import EosClientImpactDetail from "./pages/EosClientImpactDetail";
 import ClientImpactPage from "./pages/ClientImpactPage";
+import EosRockAnalysis from "./pages/EosRockAnalysis";
 import ResetPassword from "./pages/ResetPassword";
 import Audits from "./pages/Audits";
 import AuditWorkspace from "./pages/AuditWorkspace";
@@ -611,6 +612,15 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <ClientImpactPage />
+                </ProtectedRoute>
+              } 
+            />
+            {/* Rock Analysis Route */}
+            <Route 
+              path="/eos/rock-analysis" 
+              element={
+                <ProtectedRoute>
+                  <EosRockAnalysis />
                 </ProtectedRoute>
               } 
             />
