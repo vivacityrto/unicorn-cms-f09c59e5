@@ -1168,6 +1168,71 @@ export type Database = {
           },
         ]
       }
+      audit_seat_health: {
+        Row: {
+          created_at: string
+          details: Json | null
+          event_type: string
+          id: string
+          reason: string | null
+          recommendation_id: string | null
+          seat_id: string | null
+          tenant_id: number
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          details?: Json | null
+          event_type: string
+          id?: string
+          reason?: string | null
+          recommendation_id?: string | null
+          seat_id?: string | null
+          tenant_id: number
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          details?: Json | null
+          event_type?: string
+          id?: string
+          reason?: string | null
+          recommendation_id?: string | null
+          seat_id?: string | null
+          tenant_id?: number
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "audit_seat_health_recommendation_id_fkey"
+            columns: ["recommendation_id"]
+            isOneToOne: false
+            referencedRelation: "seat_rebalancing_recommendations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "audit_seat_health_seat_id_fkey"
+            columns: ["seat_id"]
+            isOneToOne: false
+            referencedRelation: "accountability_seats"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "audit_seat_health_seat_id_fkey"
+            columns: ["seat_id"]
+            isOneToOne: false
+            referencedRelation: "seat_linked_data"
+            referencedColumns: ["seat_id"]
+          },
+          {
+            foreignKeyName: "audit_seat_health_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       audit_section: {
         Row: {
           audit_id: number
@@ -10923,6 +10988,85 @@ export type Database = {
           },
         ]
       }
+      seat_health_scores: {
+        Row: {
+          cadence_score: number
+          calculated_at: string
+          contributing_factors: Json
+          created_at: string
+          gwc_score: number
+          health_band: string
+          id: string
+          ids_score: number
+          quarter_number: number
+          quarter_year: number
+          rocks_score: number
+          seat_id: string
+          tenant_id: number
+          todos_score: number
+          total_score: number
+          updated_at: string
+        }
+        Insert: {
+          cadence_score?: number
+          calculated_at?: string
+          contributing_factors?: Json
+          created_at?: string
+          gwc_score?: number
+          health_band?: string
+          id?: string
+          ids_score?: number
+          quarter_number: number
+          quarter_year: number
+          rocks_score?: number
+          seat_id: string
+          tenant_id: number
+          todos_score?: number
+          total_score?: number
+          updated_at?: string
+        }
+        Update: {
+          cadence_score?: number
+          calculated_at?: string
+          contributing_factors?: Json
+          created_at?: string
+          gwc_score?: number
+          health_band?: string
+          id?: string
+          ids_score?: number
+          quarter_number?: number
+          quarter_year?: number
+          rocks_score?: number
+          seat_id?: string
+          tenant_id?: number
+          todos_score?: number
+          total_score?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "seat_health_scores_seat_id_fkey"
+            columns: ["seat_id"]
+            isOneToOne: false
+            referencedRelation: "accountability_seats"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "seat_health_scores_seat_id_fkey"
+            columns: ["seat_id"]
+            isOneToOne: false
+            referencedRelation: "seat_linked_data"
+            referencedColumns: ["seat_id"]
+          },
+          {
+            foreignKeyName: "seat_health_scores_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       seat_measurable_entries: {
         Row: {
           actual_value: number
@@ -11082,6 +11226,106 @@ export type Database = {
           },
           {
             foreignKeyName: "seat_meeting_requirements_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      seat_rebalancing_recommendations: {
+        Row: {
+          acknowledged_at: string | null
+          acknowledged_by: string | null
+          created_at: string
+          description: string
+          dismissed_at: string | null
+          dismissed_by: string | null
+          dismissed_reason: string | null
+          id: string
+          quarter_number: number
+          quarter_year: number
+          recommendation_type: string
+          resolved_at: string | null
+          resolved_by: string | null
+          seat_id: string
+          status: string
+          suggested_rocks: Json | null
+          suggested_seats: Json | null
+          suggested_users: Json | null
+          tenant_id: number
+          title: string
+          trigger_details: Json | null
+          trigger_type: string
+          updated_at: string
+        }
+        Insert: {
+          acknowledged_at?: string | null
+          acknowledged_by?: string | null
+          created_at?: string
+          description: string
+          dismissed_at?: string | null
+          dismissed_by?: string | null
+          dismissed_reason?: string | null
+          id?: string
+          quarter_number: number
+          quarter_year: number
+          recommendation_type: string
+          resolved_at?: string | null
+          resolved_by?: string | null
+          seat_id: string
+          status?: string
+          suggested_rocks?: Json | null
+          suggested_seats?: Json | null
+          suggested_users?: Json | null
+          tenant_id: number
+          title: string
+          trigger_details?: Json | null
+          trigger_type: string
+          updated_at?: string
+        }
+        Update: {
+          acknowledged_at?: string | null
+          acknowledged_by?: string | null
+          created_at?: string
+          description?: string
+          dismissed_at?: string | null
+          dismissed_by?: string | null
+          dismissed_reason?: string | null
+          id?: string
+          quarter_number?: number
+          quarter_year?: number
+          recommendation_type?: string
+          resolved_at?: string | null
+          resolved_by?: string | null
+          seat_id?: string
+          status?: string
+          suggested_rocks?: Json | null
+          suggested_seats?: Json | null
+          suggested_users?: Json | null
+          tenant_id?: number
+          title?: string
+          trigger_details?: Json | null
+          trigger_type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "seat_rebalancing_recommendations_seat_id_fkey"
+            columns: ["seat_id"]
+            isOneToOne: false
+            referencedRelation: "accountability_seats"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "seat_rebalancing_recommendations_seat_id_fkey"
+            columns: ["seat_id"]
+            isOneToOne: false
+            referencedRelation: "seat_linked_data"
+            referencedColumns: ["seat_id"]
+          },
+          {
+            foreignKeyName: "seat_rebalancing_recommendations_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"

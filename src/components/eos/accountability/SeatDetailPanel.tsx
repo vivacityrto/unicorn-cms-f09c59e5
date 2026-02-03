@@ -23,8 +23,12 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import type { SeatWithDetails, UserBasic, EosSeatRoleType } from '@/types/accountabilityChart';
 import { EOS_SEAT_ROLE_LABELS, EOS_ROLE_COLORS } from '@/types/accountabilityChart';
+import { useSeatHealth } from '@/hooks/useSeatHealth';
+import { SeatHealthSection } from './SeatHealthSection';
+import { RecommendationsPanel } from './RecommendationsPanel';
 
 interface SeatDetailPanelProps {
   seat: SeatWithDetails | null;
@@ -41,6 +45,9 @@ export function SeatDetailPanel({
   canEdit,
   onUpdate 
 }: SeatDetailPanelProps) {
+  const navigate = useNavigate();
+  const { getSeatHealth, getSeatRecommendations } = useSeatHealth();
+  
   const [isEditingGwc, setIsEditingGwc] = useState(false);
   const [gwcDraft, setGwcDraft] = useState({
     get_it: seat?.gwc_get_it || '',
@@ -65,6 +72,22 @@ export function SeatDetailPanel({
   const primaryOwner = seat.primaryOwner;
   const secondaryOwners = seat.assignments.filter(a => a.assignment_type === 'Secondary');
   const linkedData = seat.linkedData;
+  
+  // Get seat health data
+  const seatHealth = getSeatHealth(seat.id);
+  const seatRecommendations = getSeatRecommendations(seat.id);
+  
+  // Navigation handler for health section
+  const handleNavigate = (type: 'rocks' | 'todos' | 'issues' | 'meetings') => {
+    const routes = {
+      rocks: '/eos/rocks',
+      todos: '/eos/to-dos',
+      issues: '/eos/risks-opportunities',
+      meetings: '/eos/meetings',
+    };
+    navigate(routes[type]);
+    onOpenChange(false);
+  };
 
   const getInitials = (user?: UserBasic) => {
     if (!user) return '?';
@@ -236,6 +259,14 @@ export function SeatDetailPanel({
                   )}
                 </CardContent>
               </Card>
+            )}
+
+            {/* Seat Health Section */}
+            <SeatHealthSection health={seatHealth} onNavigate={handleNavigate} />
+            
+            {/* Rebalancing Recommendations */}
+            {seatRecommendations.length > 0 && (
+              <RecommendationsPanel seatId={seat.id} recommendations={seatRecommendations} />
             )}
 
             {/* GWC Criteria */}
