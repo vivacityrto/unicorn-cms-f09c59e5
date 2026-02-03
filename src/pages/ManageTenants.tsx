@@ -982,6 +982,7 @@ export default function ManageTenants() {
           tenantId={cscAssignDialog.tenant.id}
           tenantName={cscAssignDialog.tenant.name}
           canRemove={isSuperAdmin}
+          onSuccess={fetchTenants}
         />
       )}
     </div>;

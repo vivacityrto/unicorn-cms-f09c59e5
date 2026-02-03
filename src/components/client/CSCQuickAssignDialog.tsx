@@ -19,6 +19,7 @@ interface CSCQuickAssignDialogProps {
   tenantId: number;
   tenantName: string;
   canRemove?: boolean;
+  onSuccess?: () => void;
 }
 
 export function CSCQuickAssignDialog({ 
@@ -26,7 +27,8 @@ export function CSCQuickAssignDialog({
   onOpenChange, 
   tenantId, 
   tenantName,
-  canRemove = false 
+  canRemove = false,
+  onSuccess
 }: CSCQuickAssignDialogProps) {
   const { 
     currentCSC, 
@@ -41,11 +43,13 @@ export function CSCQuickAssignDialog({
   const handleSelect = async (user: CSCUser) => {
     await assignCSC(user.user_uuid);
     onOpenChange(false);
+    onSuccess?.();
   };
 
   const handleRemove = async () => {
     await removeCSC();
     onOpenChange(false);
+    onSuccess?.();
   };
 
   const currentUser = currentCSC?.user;
