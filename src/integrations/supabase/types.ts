@@ -8154,6 +8154,7 @@ export type Database = {
       }
       eos_rocks: {
         Row: {
+          archived_at: string | null
           client_id: string | null
           completed_date: string | null
           completion_percentage: number | null
@@ -8161,6 +8162,7 @@ export type Database = {
           created_by: string | null
           description: string | null
           due_date: string
+          function_id: string | null
           id: string
           issue: string | null
           level: string | null
@@ -8168,20 +8170,25 @@ export type Database = {
           milestones: Json | null
           outcome: string | null
           owner_id: string | null
+          parent_rock_id: string | null
           priority: number | null
           quarter_end: string | null
           quarter_number: number
           quarter_start: string | null
           quarter_year: number
+          rock_level: string | null
           seat_id: string | null
           seat_owner_user_id: string | null
+          sort_order: number | null
           status: Database["public"]["Enums"]["eos_rock_status"] | null
           status_note: string | null
           tenant_id: number
           title: string
           updated_at: string | null
+          vto_id: string | null
         }
         Insert: {
+          archived_at?: string | null
           client_id?: string | null
           completed_date?: string | null
           completion_percentage?: number | null
@@ -8189,6 +8196,7 @@ export type Database = {
           created_by?: string | null
           description?: string | null
           due_date: string
+          function_id?: string | null
           id?: string
           issue?: string | null
           level?: string | null
@@ -8196,20 +8204,25 @@ export type Database = {
           milestones?: Json | null
           outcome?: string | null
           owner_id?: string | null
+          parent_rock_id?: string | null
           priority?: number | null
           quarter_end?: string | null
           quarter_number: number
           quarter_start?: string | null
           quarter_year: number
+          rock_level?: string | null
           seat_id?: string | null
           seat_owner_user_id?: string | null
+          sort_order?: number | null
           status?: Database["public"]["Enums"]["eos_rock_status"] | null
           status_note?: string | null
           tenant_id: number
           title: string
           updated_at?: string | null
+          vto_id?: string | null
         }
         Update: {
+          archived_at?: string | null
           client_id?: string | null
           completed_date?: string | null
           completion_percentage?: number | null
@@ -8217,6 +8230,7 @@ export type Database = {
           created_by?: string | null
           description?: string | null
           due_date?: string
+          function_id?: string | null
           id?: string
           issue?: string | null
           level?: string | null
@@ -8224,18 +8238,22 @@ export type Database = {
           milestones?: Json | null
           outcome?: string | null
           owner_id?: string | null
+          parent_rock_id?: string | null
           priority?: number | null
           quarter_end?: string | null
           quarter_number?: number
           quarter_start?: string | null
           quarter_year?: number
+          rock_level?: string | null
           seat_id?: string | null
           seat_owner_user_id?: string | null
+          sort_order?: number | null
           status?: Database["public"]["Enums"]["eos_rock_status"] | null
           status_note?: string | null
           tenant_id?: number
           title?: string
           updated_at?: string | null
+          vto_id?: string | null
         }
         Relationships: [
           {
@@ -8250,6 +8268,20 @@ export type Database = {
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "dashboard_client_snapshot"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "eos_rocks_function_id_fkey"
+            columns: ["function_id"]
+            isOneToOne: false
+            referencedRelation: "accountability_functions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "eos_rocks_parent_rock_id_fkey"
+            columns: ["parent_rock_id"]
+            isOneToOne: false
+            referencedRelation: "eos_rocks"
             referencedColumns: ["id"]
           },
           {
@@ -8272,6 +8304,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "seat_succession_status"
             referencedColumns: ["seat_id"]
+          },
+          {
+            foreignKeyName: "eos_rocks_vto_id_fkey"
+            columns: ["vto_id"]
+            isOneToOne: false
+            referencedRelation: "eos_vto"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -16987,6 +17026,7 @@ export type Database = {
         Args: { p_meeting_id: string }
         Returns: Json
       }
+      compute_rock_rollup_status: { Args: { rock_id: string }; Returns: string }
       copy_stage_template_to_package: {
         Args: { p_package_id: number; p_stage_id: number }
         Returns: undefined
