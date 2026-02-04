@@ -5936,7 +5936,7 @@ export type Database = {
           created_by?: string | null
           description?: string | null
           files?: string[] | null
-          id?: never
+          id?: number
           name?: string | null
           order_number: number
           package_id?: number | null
@@ -5956,7 +5956,7 @@ export type Database = {
           created_by?: string | null
           description?: string | null
           files?: string[] | null
-          id?: never
+          id?: number
           name?: string | null
           order_number?: number
           package_id?: number | null
