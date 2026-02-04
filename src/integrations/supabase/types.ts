@@ -17429,6 +17429,7 @@ export type Database = {
       }
       get_current_user_role: { Args: never; Returns: string }
       get_current_user_tenant: { Args: never; Returns: number }
+      get_current_user_tenant_id: { Args: never; Returns: number }
       get_current_user_type: { Args: never; Returns: string }
       get_document_stage_usage: {
         Args: { p_document_id: number }
