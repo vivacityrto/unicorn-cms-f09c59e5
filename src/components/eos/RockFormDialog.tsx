@@ -401,7 +401,21 @@ export function RockFormDialog({ open, onOpenChange, rock }: RockFormDialogProps
               <User className="h-4 w-4" />
               Team Member Responsible
             </Label>
-            <Select value={ownerId || "none"} onValueChange={(v) => setOwnerId(v === "none" ? "" : v)}>
+            <Select 
+              value={ownerId || "none"} 
+              onValueChange={(v) => {
+                const newOwnerId = v === "none" ? "" : v;
+                setOwnerId(newOwnerId);
+                
+                // Auto-select the seat this user occupies (as primary owner)
+                if (newOwnerId && seats) {
+                  const userSeat = seats.find(s => s.primary_owner_id === newOwnerId);
+                  if (userSeat) {
+                    setSeatId(userSeat.id);
+                  }
+                }
+              }}
+            >
               <SelectTrigger>
                 <SelectValue placeholder="Select team member..." />
               </SelectTrigger>
