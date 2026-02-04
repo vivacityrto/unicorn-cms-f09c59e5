@@ -2,6 +2,7 @@
 
 export type QCStatus = 'scheduled' | 'in_progress' | 'completed' | 'cancelled';
 export type QCVisibility = 'private' | 'hr_only';
+export type QCScope = 'vivacity' | 'tenant';
 
 export interface QCTemplate {
   id: string;
@@ -31,7 +32,8 @@ export interface QCPrompt {
 
 export interface QuarterlyConversation {
   id: string;
-  tenant_id: number;
+  tenant_id: number | null;
+  scope: QCScope;
   reviewee_id: string;
   manager_ids: string[];
   template_id: string | null;
