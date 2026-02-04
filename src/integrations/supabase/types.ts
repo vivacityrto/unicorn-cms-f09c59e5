@@ -6381,6 +6381,65 @@ export type Database = {
         }
         Relationships: []
       }
+      eos_function_team_members: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          function_id: string
+          id: string
+          sort_order: number
+          tenant_id: number
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          function_id: string
+          id?: string
+          sort_order?: number
+          tenant_id: number
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          function_id?: string
+          id?: string
+          sort_order?: number
+          tenant_id?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "eos_function_team_members_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "eos_function_team_members_function_id_fkey"
+            columns: ["function_id"]
+            isOneToOne: false
+            referencedRelation: "accountability_functions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "eos_function_team_members_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "eos_function_team_members_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["user_uuid"]
+          },
+        ]
+      }
       eos_headlines: {
         Row: {
           created_at: string | null

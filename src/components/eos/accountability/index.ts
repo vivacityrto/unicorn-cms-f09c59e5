@@ -16,3 +16,5 @@ export { RecommendationsPanel } from './RecommendationsPanel';
 export { SeatCoverageIndicator } from './SeatCoverageIndicator';
 export { SeatSuccessionSection } from './SeatSuccessionSection';
 export { SubFunctionCard } from './SubFunctionCard';
+export { TeamMemberRow } from './TeamMemberRow';
+export { TeamMembersSection } from './TeamMembersSection';
