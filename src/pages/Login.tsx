@@ -166,7 +166,7 @@ const Login = () => {
         {/* Login Form Card - Matching Settings page style */}
         <Card className="border-0 shadow-lg overflow-hidden">
           <div className="bg-muted/30 px-6 py-0 h-[84px] border-b border-border/50 flex items-center justify-between">
-            <img src={unicornLogo} alt="Unicorn" className="h-16 w-auto" />
+            <img src={unicornLogo} alt="Unicorn" className="h-16 w-auto" width="127" height="69" fetchPriority="high" />
             {getHeaderIcon()}
           </div>
           <CardContent className="p-6">
