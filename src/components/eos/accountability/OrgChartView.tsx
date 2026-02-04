@@ -12,10 +12,16 @@ interface OrgChartViewProps {
   onSeatClick?: (seat: SeatWithDetails) => void;
 }
 
+// Extended seat type that includes parent function name for display
+type SeatWithFunction = SeatWithDetails & { functionName?: string };
+
 export function OrgChartView({ functions, onSeatClick }: OrgChartViewProps) {
-  // Organize seats by EOS role type for visual hierarchy
+  // Organize seats by EOS role type for visual hierarchy, including function name
   const { visionary, integrator, leadershipTeam, functionalLeads, otherSeats } = useMemo(() => {
-    const allSeats = functions.flatMap(f => f.seats);
+    // Flatten seats but keep track of function name
+    const allSeats: SeatWithFunction[] = functions.flatMap(f => 
+      f.seats.map(s => ({ ...s, functionName: f.name }))
+    );
     return {
       visionary: allSeats.filter(s => s.eos_role_type === 'visionary'),
       integrator: allSeats.filter(s => s.eos_role_type === 'integrator'),
@@ -102,7 +108,7 @@ export function OrgChartView({ functions, onSeatClick }: OrgChartViewProps) {
 }
 
 interface SeatNodeProps {
-  seat: SeatWithDetails;
+  seat: SeatWithDetails & { functionName?: string };
   onClick?: () => void;
   size: 'small' | 'medium' | 'large';
 }
@@ -150,14 +156,14 @@ function SeatNode({ seat, onClick, size }: SeatNodeProps) {
           </Avatar>
         </div>
 
-        {/* Seat Name */}
+        {/* Display function name for functional leads/leadership, seat name otherwise */}
         <p className={cn(
           'font-semibold line-clamp-2',
           size === 'small' && 'text-sm',
           size === 'medium' && 'text-sm',
           size === 'large' && 'text-base'
         )}>
-          {seat.seat_name}
+          {seat.functionName || seat.seat_name}
         </p>
 
         {/* Owner Name */}
