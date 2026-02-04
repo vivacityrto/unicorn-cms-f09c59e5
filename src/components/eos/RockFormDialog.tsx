@@ -14,7 +14,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useVivacityTeamUsers, VIVACITY_TENANT_ID } from '@/hooks/useVivacityTeamUsers';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { AlertTriangle, Armchair, User, Plus, X, ListChecks } from 'lucide-react';
+import { AlertTriangle, Armchair, User, Plus, X, ListChecks, GitBranch } from 'lucide-react';
 import { DB_ROCK_STATUS, getStatusOptions, dbToUiStatus, uiToDbStatus } from '@/utils/rockStatusUtils';
 import type { EosRock } from '@/types/eos';
 
@@ -58,6 +58,7 @@ export function RockFormDialog({ open, onOpenChange, rock }: RockFormDialogProps
   const [clientId, setClientId] = useState(rock?.client_id || '');
   const [seatId, setSeatId] = useState(rock?.seat_id || '');
   const [ownerId, setOwnerId] = useState((rock as any)?.owner_id || '');
+  const [parentRockId, setParentRockId] = useState((rock as any)?.parent_rock_id || '');
   const [status, setStatus] = useState(rock?.status || DB_ROCK_STATUS.ON_TRACK);
   const [priority, setPriority] = useState(rock?.priority || 1);
   const [quarterNumber, setQuarterNumber] = useState(
@@ -65,6 +66,9 @@ export function RockFormDialog({ open, onOpenChange, rock }: RockFormDialogProps
   );
   const [quarterYear, setQuarterYear] = useState(rock?.quarter_year || new Date().getFullYear());
   const [dueDate, setDueDate] = useState(rock?.due_date ? rock.due_date.split('T')[0] : '');
+  
+  // Determine rock level for conditional fields
+  const rockLevel = (rock as any)?.rock_level;
 
   // Initialization tracking to prevent duplicate state syncs
   const [isInitialized, setIsInitialized] = useState(false);
@@ -97,6 +101,7 @@ export function RockFormDialog({ open, onOpenChange, rock }: RockFormDialogProps
         setClientId(rock.client_id || '');
         setSeatId(rock.seat_id || '');
         setOwnerId((rock as any)?.owner_id || '');
+        setParentRockId((rock as any)?.parent_rock_id || '');
         setStatus(rock.status || DB_ROCK_STATUS.ON_TRACK);
         setPriority(rock.priority || 1);
         setQuarterNumber(rock.quarter_number || Math.ceil((new Date().getMonth() + 1) / 3));
@@ -181,6 +186,24 @@ export function RockFormDialog({ open, onOpenChange, rock }: RockFormDialogProps
     enabled: !!profile && open,
   });
 
+  // Fetch Company Rocks for parent rock selection (for Team rocks)
+  const { data: companyRocks } = useQuery({
+    queryKey: ['company-rocks-for-parent', VIVACITY_TENANT_ID, quarterYear, quarterNumber],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('eos_rocks')
+        .select('id, title, quarter_year, quarter_number')
+        .eq('tenant_id', VIVACITY_TENANT_ID)
+        .eq('rock_level', 'company')
+        .is('archived_at', null)
+        .order('title');
+      
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!profile && open && rockLevel === 'team',
+  });
+
   // Get selected seat info
   const selectedSeat = useMemo(() => 
     seats?.find(s => s.id === seatId), 
@@ -220,7 +243,7 @@ export function RockFormDialog({ open, onOpenChange, rock }: RockFormDialogProps
   const handleSubmit = async () => {
     if (!canSubmit) return;
 
-    const rockData = {
+    const rockData: Record<string, any> = {
       title,
       description: description || null,
       issue: issue || null,
@@ -238,6 +261,11 @@ export function RockFormDialog({ open, onOpenChange, rock }: RockFormDialogProps
       due_date: dueDate,
       tenant_id: VIVACITY_TENANT_ID,
     };
+
+    // Include parent_rock_id for team rocks
+    if (rockLevel === 'team') {
+      rockData.parent_rock_id = parentRockId || null;
+    }
 
     if (rock?.id) {
       await updateRock.mutateAsync({ id: rock.id, ...rockData });
@@ -258,6 +286,7 @@ export function RockFormDialog({ open, onOpenChange, rock }: RockFormDialogProps
     setClientId('');
     setSeatId('');
     setOwnerId('');
+    setParentRockId('');
     setStatus(DB_ROCK_STATUS.ON_TRACK);
     setPriority(1);
     setQuarterNumber(Math.ceil((new Date().getMonth() + 1) / 3));
@@ -282,6 +311,40 @@ export function RockFormDialog({ open, onOpenChange, rock }: RockFormDialogProps
                 Select a seat to ensure proper ownership and tracking.
               </AlertDescription>
             </Alert>
+          )}
+
+          {/* Parent Company Rock (for Team rocks only) */}
+          {rockLevel === 'team' && (
+            <div className="space-y-2">
+              <Label htmlFor="parent-rock" className="flex items-center gap-2">
+                <GitBranch className="h-4 w-4" />
+                Parent Company Rock
+              </Label>
+              <Select 
+                value={parentRockId || "none"} 
+                onValueChange={(v) => setParentRockId(v === "none" ? "" : v)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select parent company rock..." />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">None (no parent)</SelectItem>
+                  {companyRocks?.map((companyRock) => (
+                    <SelectItem key={companyRock.id} value={companyRock.id}>
+                      <div className="flex items-center gap-2">
+                        <span className="truncate max-w-[350px]">{companyRock.title}</span>
+                        <Badge variant="outline" className="text-[10px] shrink-0">
+                          Q{companyRock.quarter_number} {companyRock.quarter_year}
+                        </Badge>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                This Team Rock cascades from the selected Company Rock.
+              </p>
+            </div>
           )}
 
           {/* Title */}
