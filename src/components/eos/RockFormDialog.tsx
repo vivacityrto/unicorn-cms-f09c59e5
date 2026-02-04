@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -58,32 +58,53 @@ export function RockFormDialog({ open, onOpenChange, rock }: RockFormDialogProps
   const [quarterYear, setQuarterYear] = useState(rock?.quarter_year || new Date().getFullYear());
   const [dueDate, setDueDate] = useState(rock?.due_date ? rock.due_date.split('T')[0] : '');
 
-  // Reset form when rock changes
+  // Initialization tracking to prevent duplicate state syncs
+  const [isInitialized, setIsInitialized] = useState(false);
+  const previousRockId = useRef<string | null>(null);
+
+  // Initialize form only when rock ID changes or dialog opens fresh
   useEffect(() => {
-    if (rock) {
-      setTitle(rock.title || '');
-      setDescription(rock.description || '');
-      setIssue((rock as any)?.issue || '');
-      setProblemSolved((rock as any)?.outcome || '');
-      // Parse milestones from JSON
-      const savedMilestones = (rock as any)?.milestones;
-      if (Array.isArray(savedMilestones)) {
-        setMilestones(savedMilestones);
+    const rockId = rock?.id ?? null;
+    
+    // Only reinitialize if rock ID actually changed or dialog just opened
+    if (rockId !== previousRockId.current || (open && !isInitialized)) {
+      previousRockId.current = rockId;
+      
+      if (rock) {
+        setTitle(rock.title || '');
+        setDescription(rock.description || '');
+        setIssue((rock as any)?.issue || '');
+        setProblemSolved((rock as any)?.outcome || '');
+        // Parse milestones from JSON
+        const savedMilestones = (rock as any)?.milestones;
+        if (Array.isArray(savedMilestones)) {
+          setMilestones(savedMilestones);
+        } else {
+          setMilestones([]);
+        }
+        setClientId(rock.client_id || '');
+        setSeatId(rock.seat_id || '');
+        setOwnerId((rock as any)?.owner_id || '');
+        setStatus(rock.status || 'on_track');
+        setPriority(rock.priority || 1);
+        setQuarterNumber(rock.quarter_number || Math.ceil((new Date().getMonth() + 1) / 3));
+        setQuarterYear(rock.quarter_year || new Date().getFullYear());
+        setDueDate(rock.due_date ? rock.due_date.split('T')[0] : '');
       } else {
-        setMilestones([]);
+        resetForm();
       }
-      setClientId(rock.client_id || '');
-      setSeatId(rock.seat_id || '');
-      setOwnerId((rock as any)?.owner_id || '');
-      setStatus(rock.status || 'on_track');
-      setPriority(rock.priority || 1);
-      setQuarterNumber(rock.quarter_number || Math.ceil((new Date().getMonth() + 1) / 3));
-      setQuarterYear(rock.quarter_year || new Date().getFullYear());
-      setDueDate(rock.due_date ? rock.due_date.split('T')[0] : '');
-    } else {
-      resetForm();
+      
+      setIsInitialized(true);
     }
-  }, [rock]);
+  }, [rock?.id, open]);
+
+  // Reset initialization state when dialog closes
+  useEffect(() => {
+    if (!open) {
+      setIsInitialized(false);
+      previousRockId.current = null;
+    }
+  }, [open]);
 
   // Fetch seats with their primary owners
   const { data: seats, isLoading: seatsLoading } = useQuery({
