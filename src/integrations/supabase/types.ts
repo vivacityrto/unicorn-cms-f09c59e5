@@ -6448,6 +6448,7 @@ export type Database = {
           is_good_news: boolean | null
           meeting_id: string
           user_id: string | null
+          workspace_id: string | null
         }
         Insert: {
           created_at?: string | null
@@ -6456,6 +6457,7 @@ export type Database = {
           is_good_news?: boolean | null
           meeting_id: string
           user_id?: string | null
+          workspace_id?: string | null
         }
         Update: {
           created_at?: string | null
@@ -6464,6 +6466,7 @@ export type Database = {
           is_good_news?: boolean | null
           meeting_id?: string
           user_id?: string | null
+          workspace_id?: string | null
         }
         Relationships: [
           {
@@ -6492,6 +6495,13 @@ export type Database = {
             columns: ["meeting_id"]
             isOneToOne: false
             referencedRelation: "eos_upcoming_meetings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_eos_headlines_workspace"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "eos_workspaces"
             referencedColumns: ["id"]
           },
         ]
@@ -6593,6 +6603,7 @@ export type Database = {
           title: string
           updated_at: string | null
           why_it_matters: string | null
+          workspace_id: string | null
         }
         Insert: {
           assigned_to?: string | null
@@ -6625,6 +6636,7 @@ export type Database = {
           title: string
           updated_at?: string | null
           why_it_matters?: string | null
+          workspace_id?: string | null
         }
         Update: {
           assigned_to?: string | null
@@ -6657,6 +6669,7 @@ export type Database = {
           title?: string
           updated_at?: string | null
           why_it_matters?: string | null
+          workspace_id?: string | null
         }
         Relationships: [
           {
@@ -6713,6 +6726,13 @@ export type Database = {
             columns: ["meeting_segment_id"]
             isOneToOne: false
             referencedRelation: "eos_meeting_segments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_eos_issues_workspace"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "eos_workspaces"
             referencedColumns: ["id"]
           },
         ]
@@ -7324,6 +7344,7 @@ export type Database = {
           title: string
           updated_at: string
           visionary_seat_id: string | null
+          workspace_id: string | null
         }
         Insert: {
           agenda_template_id?: string | null
@@ -7348,6 +7369,7 @@ export type Database = {
           title: string
           updated_at?: string
           visionary_seat_id?: string | null
+          workspace_id?: string | null
         }
         Update: {
           agenda_template_id?: string | null
@@ -7372,6 +7394,7 @@ export type Database = {
           title?: string
           updated_at?: string
           visionary_seat_id?: string | null
+          workspace_id?: string | null
         }
         Relationships: [
           {
@@ -7436,6 +7459,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "seat_succession_status"
             referencedColumns: ["seat_id"]
+          },
+          {
+            foreignKeyName: "fk_eos_meeting_series_workspace"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "eos_workspaces"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -7567,6 +7597,7 @@ export type Database = {
           tenant_id: number
           title: string
           updated_at: string | null
+          workspace_id: string | null
         }
         Insert: {
           actual_duration_minutes?: number | null
@@ -7609,6 +7640,7 @@ export type Database = {
           tenant_id: number
           title: string
           updated_at?: string | null
+          workspace_id?: string | null
         }
         Update: {
           actual_duration_minutes?: number | null
@@ -7651,6 +7683,7 @@ export type Database = {
           tenant_id?: number
           title?: string
           updated_at?: string | null
+          workspace_id?: string | null
         }
         Relationships: [
           {
@@ -7786,6 +7819,13 @@ export type Database = {
             referencedRelation: "eos_meeting_minutes_versions"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "fk_eos_meetings_workspace"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "eos_workspaces"
+            referencedColumns: ["id"]
+          },
         ]
       }
       eos_minutes_audit_log: {
@@ -7877,6 +7917,7 @@ export type Database = {
           tenant_id: number | null
           updated_at: string
           visibility: string
+          workspace_id: string | null
         }
         Insert: {
           completed_at?: string | null
@@ -7894,6 +7935,7 @@ export type Database = {
           tenant_id?: number | null
           updated_at?: string
           visibility?: string
+          workspace_id?: string | null
         }
         Update: {
           completed_at?: string | null
@@ -7911,6 +7953,7 @@ export type Database = {
           tenant_id?: number | null
           updated_at?: string
           visibility?: string
+          workspace_id?: string | null
         }
         Relationships: [
           {
@@ -7918,6 +7961,13 @@ export type Database = {
             columns: ["template_id"]
             isOneToOne: false
             referencedRelation: "eos_qc_templates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_eos_qc_workspace"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "eos_workspaces"
             referencedColumns: ["id"]
           },
         ]
@@ -8186,6 +8236,7 @@ export type Database = {
           title: string
           updated_at: string | null
           vto_id: string | null
+          workspace_id: string | null
         }
         Insert: {
           archived_at?: string | null
@@ -8220,6 +8271,7 @@ export type Database = {
           title: string
           updated_at?: string | null
           vto_id?: string | null
+          workspace_id?: string | null
         }
         Update: {
           archived_at?: string | null
@@ -8254,6 +8306,7 @@ export type Database = {
           title?: string
           updated_at?: string | null
           vto_id?: string | null
+          workspace_id?: string | null
         }
         Relationships: [
           {
@@ -8312,6 +8365,13 @@ export type Database = {
             referencedRelation: "eos_vto"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "fk_eos_rocks_workspace"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "eos_workspaces"
+            referencedColumns: ["id"]
+          },
         ]
       }
       eos_scorecard: {
@@ -8355,6 +8415,7 @@ export type Database = {
           tenant_id: number
           value: number
           week_ending: string
+          workspace_id: string | null
         }
         Insert: {
           entered_at?: string
@@ -8366,6 +8427,7 @@ export type Database = {
           tenant_id: number
           value: number
           week_ending: string
+          workspace_id?: string | null
         }
         Update: {
           entered_at?: string
@@ -8377,6 +8439,7 @@ export type Database = {
           tenant_id?: number
           value?: number
           week_ending?: string
+          workspace_id?: string | null
         }
         Relationships: [
           {
@@ -8384,6 +8447,13 @@ export type Database = {
             columns: ["metric_id"]
             isOneToOne: false
             referencedRelation: "eos_scorecard_metrics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_eos_scorecard_entries_workspace"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "eos_workspaces"
             referencedColumns: ["id"]
           },
         ]
@@ -8406,6 +8476,7 @@ export type Database = {
           tenant_id: number
           unit: string
           updated_at: string
+          workspace_id: string | null
         }
         Insert: {
           created_at?: string
@@ -8424,6 +8495,7 @@ export type Database = {
           tenant_id: number
           unit: string
           updated_at?: string
+          workspace_id?: string | null
         }
         Update: {
           created_at?: string
@@ -8442,8 +8514,16 @@ export type Database = {
           tenant_id?: number
           unit?: string
           updated_at?: string
+          workspace_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "fk_eos_scorecard_metrics_workspace"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "eos_workspaces"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "fk_scorecard_metrics_scorecard"
             columns: ["scorecard_id"]
@@ -8521,6 +8601,7 @@ export type Database = {
           tenant_id: number
           title: string
           updated_at: string | null
+          workspace_id: string | null
         }
         Insert: {
           assigned_to?: string | null
@@ -8538,6 +8619,7 @@ export type Database = {
           tenant_id: number
           title: string
           updated_at?: string | null
+          workspace_id?: string | null
         }
         Update: {
           assigned_to?: string | null
@@ -8555,6 +8637,7 @@ export type Database = {
           tenant_id?: number
           title?: string
           updated_at?: string | null
+          workspace_id?: string | null
         }
         Relationships: [
           {
@@ -8597,6 +8680,13 @@ export type Database = {
             columns: ["meeting_id"]
             isOneToOne: false
             referencedRelation: "eos_upcoming_meetings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_eos_todos_workspace"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "eos_workspaces"
             referencedColumns: ["id"]
           },
         ]
@@ -8668,6 +8758,7 @@ export type Database = {
           three_year_target_date: string | null
           updated_at: string | null
           updated_by: string | null
+          workspace_id: string | null
         }
         Insert: {
           client_id?: string | null
@@ -8693,6 +8784,7 @@ export type Database = {
           three_year_target_date?: string | null
           updated_at?: string | null
           updated_by?: string | null
+          workspace_id?: string | null
         }
         Update: {
           client_id?: string | null
@@ -8718,6 +8810,7 @@ export type Database = {
           three_year_target_date?: string | null
           updated_at?: string | null
           updated_by?: string | null
+          workspace_id?: string | null
         }
         Relationships: [
           {
@@ -8732,6 +8825,13 @@ export type Database = {
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "dashboard_client_snapshot"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_eos_vto_workspace"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "eos_workspaces"
             referencedColumns: ["id"]
           },
         ]
@@ -8825,6 +8925,30 @@ export type Database = {
           notes?: string | null
           tenant_id?: number
           version_number?: number
+        }
+        Relationships: []
+      }
+      eos_workspaces: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          slug: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          slug: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          slug?: string
+          updated_at?: string
         }
         Relationships: []
       }
@@ -17548,6 +17672,7 @@ export type Database = {
           user_uuid: string
         }[]
       }
+      get_vivacity_workspace_id: { Args: never; Returns: string }
       go_to_previous_segment: {
         Args: { p_meeting_id: string }
         Returns: string
