@@ -76,7 +76,7 @@ export function ScoreboardSection({ flightPlan, canEdit, onSave, isSaving }: Sco
 
           {/* Profit Target */}
           <div className="space-y-2">
-            <label className="text-sm font-medium">Profit</label>
+            <label className="text-sm font-medium">Profit (%)</label>
             <Input
               type="text"
               placeholder="Break-even or target amount"
