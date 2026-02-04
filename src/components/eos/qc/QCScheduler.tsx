@@ -166,7 +166,7 @@ export const QCScheduler = ({ open, onOpenChange, onScheduled }: QCSchedulerProp
               <PopoverContent className="w-[400px] p-0" align="start">
                 <Command>
                   <CommandInput placeholder="Search team members..." />
-                  <CommandList>
+                  <CommandList className="max-h-[300px] overflow-y-auto">
                     <CommandEmpty>No team members found.</CommandEmpty>
                     <CommandGroup>
                       {usersLoading ? (
@@ -245,7 +245,7 @@ export const QCScheduler = ({ open, onOpenChange, onScheduled }: QCSchedulerProp
               <PopoverContent className="w-[400px] p-0" align="start">
                 <Command>
                   <CommandInput placeholder="Search managers..." />
-                  <CommandList>
+                  <CommandList className="max-h-[300px] overflow-y-auto">
                     <CommandEmpty>No managers found.</CommandEmpty>
                     <CommandGroup>
                       {usersLoading ? (
