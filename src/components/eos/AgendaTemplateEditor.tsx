@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Plus, X, GripVertical, AlertCircle } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useEosAgendaTemplates } from '@/hooks/useEosAgendaTemplates';
+import { VIVACITY_TENANT_ID } from '@/hooks/useVivacityTeamUsers';
 import type { EosAgendaSegment, EosAgendaTemplate, MeetingType } from '@/types/eos';
 
 interface AgendaTemplateEditorProps {
@@ -114,7 +115,7 @@ export const AgendaTemplateEditor = ({ open, onOpenChange, template }: AgendaTem
   const hasZeroDuration = totalDuration === 0;
 
   const handleSave = async () => {
-    if (!profile?.tenant_id || !templateName.trim()) return;
+    if (!profile || !templateName.trim()) return;
 
     const templateData = {
       meeting_type: meetingType,
@@ -131,7 +132,7 @@ export const AgendaTemplateEditor = ({ open, onOpenChange, template }: AgendaTem
     } else {
       await createTemplate.mutateAsync({
         ...templateData,
-        tenant_id: profile.tenant_id,
+        tenant_id: VIVACITY_TENANT_ID,
         is_default: false,
         created_by: profile.user_uuid,
       });
