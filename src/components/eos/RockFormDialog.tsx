@@ -8,11 +8,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Slider } from '@/components/ui/slider';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useEosRocks } from '@/hooks/useEos';
 import { useAuth } from '@/hooks/useAuth';
+import { useVivacityTeamUsers } from '@/hooks/useVivacityTeamUsers';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { AlertTriangle, Armchair, User } from 'lucide-react';
+import { AlertTriangle, Armchair, User, Plus, X, ListChecks } from 'lucide-react';
 import type { EosRock } from '@/types/eos';
 
 interface RockFormDialogProps {
@@ -29,14 +31,25 @@ interface SeatWithOwner {
   primary_owner_name: string | null;
 }
 
+interface Milestone {
+  id: string;
+  text: string;
+  completed: boolean;
+}
+
 export function RockFormDialog({ open, onOpenChange, rock }: RockFormDialogProps) {
   const { profile } = useAuth();
   const { createRock, updateRock } = useEosRocks();
+  const { data: vivacityUsers } = useVivacityTeamUsers();
   
   const [title, setTitle] = useState(rock?.title || '');
   const [description, setDescription] = useState(rock?.description || '');
+  const [issue, setIssue] = useState((rock as any)?.issue || '');
+  const [problemSolved, setProblemSolved] = useState((rock as any)?.outcome || '');
+  const [milestones, setMilestones] = useState<Milestone[]>([]);
   const [clientId, setClientId] = useState(rock?.client_id || '');
   const [seatId, setSeatId] = useState(rock?.seat_id || '');
+  const [ownerId, setOwnerId] = useState((rock as any)?.owner_id || '');
   const [status, setStatus] = useState(rock?.status || 'on_track');
   const [priority, setPriority] = useState(rock?.priority || 1);
   const [quarterNumber, setQuarterNumber] = useState(
@@ -50,8 +63,18 @@ export function RockFormDialog({ open, onOpenChange, rock }: RockFormDialogProps
     if (rock) {
       setTitle(rock.title || '');
       setDescription(rock.description || '');
+      setIssue((rock as any)?.issue || '');
+      setProblemSolved((rock as any)?.outcome || '');
+      // Parse milestones from JSON
+      const savedMilestones = (rock as any)?.milestones;
+      if (Array.isArray(savedMilestones)) {
+        setMilestones(savedMilestones);
+      } else {
+        setMilestones([]);
+      }
       setClientId(rock.client_id || '');
       setSeatId(rock.seat_id || '');
+      setOwnerId((rock as any)?.owner_id || '');
       setStatus(rock.status || 'on_track');
       setPriority(rock.priority || 1);
       setQuarterNumber(rock.quarter_number || Math.ceil((new Date().getMonth() + 1) / 3));
@@ -131,10 +154,35 @@ export function RockFormDialog({ open, onOpenChange, rock }: RockFormDialogProps
     [seats, seatId]
   );
 
+  // Get user info helper
+  const getUserInfo = (userId: string) => {
+    const user = vivacityUsers?.find(u => u.user_uuid === userId);
+    if (!user) return null;
+    return {
+      name: [user.first_name, user.last_name].filter(Boolean).join(' ') || user.email,
+      initials: [user.first_name?.[0], user.last_name?.[0]].filter(Boolean).join('').toUpperCase() || '?',
+      avatarUrl: user.avatar_url,
+      role: user.unicorn_role
+    };
+  };
+
   // Validation states
   const seatHasNoOwner = selectedSeat && !selectedSeat.primary_owner_id;
   const isExistingRockWithoutSeat = rock && !rock.seat_id && !seatId;
   const canSubmit = title.trim() && dueDate && seatId && !seatHasNoOwner;
+
+  // Milestone handlers
+  const addMilestone = () => {
+    setMilestones([...milestones, { id: crypto.randomUUID(), text: '', completed: false }]);
+  };
+
+  const updateMilestone = (id: string, text: string) => {
+    setMilestones(milestones.map(m => m.id === id ? { ...m, text } : m));
+  };
+
+  const removeMilestone = (id: string) => {
+    setMilestones(milestones.filter(m => m.id !== id));
+  };
 
   const handleSubmit = async () => {
     if (!canSubmit) return;
@@ -142,15 +190,20 @@ export function RockFormDialog({ open, onOpenChange, rock }: RockFormDialogProps
     const rockData = {
       title,
       description: description || null,
+      issue: issue || null,
+      outcome: problemSolved || null,
+      milestones: milestones.filter(m => m.text.trim()).length > 0 
+        ? milestones.filter(m => m.text.trim()) 
+        : null,
       client_id: clientId || null,
       seat_id: seatId || null,
+      owner_id: ownerId || null,
       status,
       priority,
       quarter_number: quarterNumber,
       quarter_year: quarterYear,
       due_date: dueDate,
       tenant_id: profile?.tenant_id,
-      // owner_id will be set automatically by trigger from seat assignment
     };
 
     if (rock?.id) {
@@ -166,8 +219,12 @@ export function RockFormDialog({ open, onOpenChange, rock }: RockFormDialogProps
   const resetForm = () => {
     setTitle('');
     setDescription('');
+    setIssue('');
+    setProblemSolved('');
+    setMilestones([]);
     setClientId('');
     setSeatId('');
+    setOwnerId('');
     setStatus('on_track');
     setPriority(1);
     setQuarterNumber(Math.ceil((new Date().getMonth() + 1) / 3));
@@ -194,6 +251,7 @@ export function RockFormDialog({ open, onOpenChange, rock }: RockFormDialogProps
             </Alert>
           )}
 
+          {/* Title */}
           <div className="space-y-2">
             <Label htmlFor="title">Title *</Label>
             <Input
@@ -204,6 +262,7 @@ export function RockFormDialog({ open, onOpenChange, rock }: RockFormDialogProps
             />
           </div>
 
+          {/* Description */}
           <div className="space-y-2">
             <Label htmlFor="description">Description</Label>
             <Textarea
@@ -213,6 +272,70 @@ export function RockFormDialog({ open, onOpenChange, rock }: RockFormDialogProps
               onChange={(e) => setDescription(e.target.value)}
               rows={3}
             />
+          </div>
+
+          {/* Issue this rock addresses */}
+          <div className="space-y-2">
+            <Label htmlFor="issue">Issue This Rock Addresses</Label>
+            <Textarea
+              id="issue"
+              placeholder="What issue or challenge does this rock address?"
+              value={issue}
+              onChange={(e) => setIssue(e.target.value)}
+              rows={2}
+            />
+          </div>
+
+          {/* The Problem This Solves */}
+          <div className="space-y-2">
+            <Label htmlFor="problem">The Problem This Solves</Label>
+            <Textarea
+              id="problem"
+              placeholder="What outcome will be achieved when this rock is complete?"
+              value={problemSolved}
+              onChange={(e) => setProblemSolved(e.target.value)}
+              rows={2}
+            />
+          </div>
+
+          {/* Milestones */}
+          <div className="space-y-2">
+            <Label className="flex items-center gap-2">
+              <ListChecks className="h-4 w-4" />
+              Milestones
+            </Label>
+            <div className="space-y-2">
+              {milestones.map((milestone, index) => (
+                <div key={milestone.id} className="flex items-center gap-2">
+                  <span className="text-sm text-muted-foreground w-6">{index + 1}.</span>
+                  <Input
+                    placeholder={`Milestone ${index + 1}`}
+                    value={milestone.text}
+                    onChange={(e) => updateMilestone(milestone.id, e.target.value)}
+                    className="flex-1"
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => removeMilestone(milestone.id)}
+                    className="h-8 w-8"
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              ))}
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={addMilestone}
+                className="w-full"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Add Milestone
+              </Button>
+            </div>
           </div>
 
           {/* Seat Selection - Required */}
@@ -252,8 +375,7 @@ export function RockFormDialog({ open, onOpenChange, rock }: RockFormDialogProps
                 <User className="h-4 w-4 text-muted-foreground" />
                 {selectedSeat.primary_owner_name ? (
                   <span className="text-sm">
-                    Owner: <strong>{selectedSeat.primary_owner_name}</strong>
-                    <span className="text-muted-foreground ml-1">(auto-assigned from seat)</span>
+                    Seat Owner: <strong>{selectedSeat.primary_owner_name}</strong>
                   </span>
                 ) : (
                   <span className="text-sm text-destructive">
@@ -270,6 +392,50 @@ export function RockFormDialog({ open, onOpenChange, rock }: RockFormDialogProps
                   Cannot save Rock until this seat has a primary owner assigned.
                 </AlertDescription>
               </Alert>
+            )}
+          </div>
+
+          {/* Team Member Responsible */}
+          <div className="space-y-2">
+            <Label htmlFor="owner" className="flex items-center gap-2">
+              <User className="h-4 w-4" />
+              Team Member Responsible
+            </Label>
+            <Select value={ownerId || "none"} onValueChange={(v) => setOwnerId(v === "none" ? "" : v)}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select team member..." />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">Use seat owner</SelectItem>
+                {vivacityUsers?.map((user) => {
+                  const info = getUserInfo(user.user_uuid);
+                  return (
+                    <SelectItem key={user.user_uuid} value={user.user_uuid}>
+                      <div className="flex items-center gap-2">
+                        <Avatar className="h-5 w-5">
+                          <AvatarImage src={info?.avatarUrl || undefined} />
+                          <AvatarFallback className="text-[10px]">{info?.initials}</AvatarFallback>
+                        </Avatar>
+                        <span>{info?.name}</span>
+                        {info?.role && (
+                          <Badge variant="outline" className="text-[10px]">{info.role}</Badge>
+                        )}
+                      </div>
+                    </SelectItem>
+                  );
+                })}
+              </SelectContent>
+            </Select>
+            {ownerId && getUserInfo(ownerId) && (
+              <div className="flex items-center gap-2 p-2 rounded-md bg-muted/50">
+                <Avatar className="h-6 w-6">
+                  <AvatarImage src={getUserInfo(ownerId)?.avatarUrl || undefined} />
+                  <AvatarFallback className="text-xs">{getUserInfo(ownerId)?.initials}</AvatarFallback>
+                </Avatar>
+                <span className="text-sm">
+                  Assigned to: <strong>{getUserInfo(ownerId)?.name}</strong>
+                </span>
+              </div>
             )}
           </div>
 

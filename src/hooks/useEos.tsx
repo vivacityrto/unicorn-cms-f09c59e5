@@ -69,7 +69,7 @@ export const useEosRocks = () => {
     mutationFn: async ({ id, status, ...updates }: Partial<EosRock> & { id: string; status?: string }) => {
       const { data, error} = await supabase
         .from('eos_rocks')
-        .update(updates)
+        .update(updates as any)
         .eq('id', id)
         .select()
         .single();

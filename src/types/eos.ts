@@ -96,6 +96,13 @@ export interface EosScorecardEntry {
   entered_at: string;
 }
 
+// Milestone type for Rock milestones
+export interface Milestone {
+  id: string;
+  text: string;
+  completed: boolean;
+}
+
 // Using existing database schema for Rocks
 export interface EosRock {
   id: string;
@@ -103,6 +110,9 @@ export interface EosRock {
   client_id?: string;
   title: string;
   description?: string;
+  issue?: string | null;
+  outcome?: string | null;
+  milestones?: unknown; // JSON in database, parsed as Milestone[] in UI
   owner_id?: string;
   seat_id?: string | null;
   seat_owner_user_id?: string | null;
