@@ -1,111 +1,150 @@
 
-Context recap (what’s happening)
-- In /eos/accountability, clicking “Assign Owner” triggers a write to public.accountability_seat_assignments (via useAccountabilityChart.addAssignment()).
-- That INSERT fires two DB-side triggers:
-  1) audit_accountability_chart_change() → writes to public.audit_eos_events
-  2) tr_cascade_seat_owner_to_rocks → calls public.cascade_seat_owner_to_rocks() → writes to public.eos_rocks (and also writes an audit row)
+# Fix: Mission Control Not Appearing After Save
 
-What the current error actually is (root cause)
-- The toast in your screenshot now shows:
-  “column ‘entity_id’ is of type uuid but expression is of type text”
-- That error is coming from the DB audit trigger function audit_accountability_chart_change() defined in:
-  supabase/migrations/20260203075508_6e3899c3-ebac-4c14-b0c8-2f8e4c7fc579.sql
-- In that function, entity_id is being inserted as COALESCE(NEW.id::text, OLD.id::text).
-- But public.audit_eos_events.entity_id is UUID (confirmed via schema query), so inserting text fails.
+## Problem Summary
 
-Why the previous “enum eos_rock_status: complete” fix didn’t fully resolve it
-- We patched cascade_seat_owner_to_rocks() to avoid invalid enum comparisons.
-- However, the owner assignment flow still triggers audit_accountability_chart_change(), which still casts id::text and fails before you ever see a successful owner assignment.
+After creating and saving a Superhero Mission Control (V/TO), the "Current Plan" view shows "No Mission Control Created Yet" even though the data was successfully saved to the database.
 
-Required outcomes (per your prompt)
-1) Assign Owner succeeds and persists.
-2) Assign Owner from Accountability Chart must not write to Rocks (no eos_rocks updates).
-3) Eliminate uuid/text mismatches (no casts from uuid to text where the DB expects uuid).
-4) Improve error visibility (no silent failures; console logging in dev).
+**Root Cause Analysis:**
 
-Implementation plan
+The network request shows the POST succeeded with status 201, but the saved data has `tenant_id: null`. This happens because:
 
-Phase 1 — Fix the blocking UUID audit error (DB)
-A. Patch audit_accountability_chart_change() to insert UUID into audit_eos_events.entity_id
-- Create a new Supabase migration that:
-  - CREATE OR REPLACE FUNCTION public.audit_accountability_chart_change()
-  - Change:
-    entity_id = COALESCE(NEW.id::text, OLD.id::text)
-    to:
-    entity_id = COALESCE(NEW.id, OLD.id)
-  - Keep the rest of the JSON details as-is.
-- This immediately unblocks writes to accountability_* tables that currently fail due to the audit trigger.
+1. **VtoEditor.tsx (line 56)** saves with `tenant_id: profile?.tenant_id!`
+2. Angela (Super Admin) has `tenant_id: null` in her profile - this is correct for Vivacity team users
+3. **EosVto.tsx (lines 36, 53)** queries filter by `.eq('tenant_id', profile?.tenant_id!)`
+4. **EosVto.tsx (lines 43, 58)** disables queries when `!profile?.tenant_id`
 
-B. Sanity check (DB read-only verification steps)
-- After migration, verify:
-  - INSERT into accountability_seat_assignments succeeds (no uuid/text error)
-  - An audit row is created in audit_eos_events with entity_id as a UUID.
+The result: VTO saved with `null` tenant, but query looking for `null` match won't work properly.
 
-Phase 2 — Enforce “no Rocks writes” during Accountability owner assignment (DB)
-C. Disable seat-assignment → rock cascade from this flow
-- Today, inserting a “Primary” assignment triggers tr_cascade_seat_owner_to_rocks on public.accountability_seat_assignments.
-- To satisfy “Assigning an owner must only update accountability ownership and must not touch Rocks”, we will:
-  - DROP TRIGGER IF EXISTS tr_cascade_seat_owner_to_rocks ON public.accountability_seat_assignments;
-  - (Optional, but recommended) Leave the function public.cascade_seat_owner_to_rocks() in place with an updated COMMENT explaining it is currently detached/disabled to prevent cross-module side effects from Accountability UI.
-- Result: accountability owner assignment won’t modify eos_rocks at all.
+**Correct Pattern:**
 
-D. (Optional follow-up, not required for this patch) Re-introduce rock-owner sync safely elsewhere
-- If you still want the “Rocks follow seat owner” behaviour, we can implement it later in a controlled way:
-  - On explicit “Sync rock owners” action from Rocks module, or
-  - On a dedicated, well-scoped RPC invoked only where intended
-- This avoids accidental coupling and exactly matches your “no side effects” requirement.
+EOS is Vivacity-internal only. All EOS data should use `VIVACITY_TENANT_ID = 6372` (the system tenant), not `profile?.tenant_id`. This pattern is already established in:
+- `useVivacityTeamUsers.tsx` - exports `VIVACITY_TENANT_ID` constant
+- `useClientImpact.tsx` - uses 6372 for EOS data
+- `IDSMasterPanel.tsx` - uses 6372 for EOS data
 
-Phase 3 — Make the UI error handling explicit and add dev logging (Frontend)
-E. Add console logging for the Assign Owner mutation
-- In src/hooks/useAccountabilityChart.tsx, inside addAssignment mutation:
-  - Wrap the “end-date previous primary” update call with error handling and logging.
-  - If either the “close old primary” update or the insert fails:
-    - console.error() with:
-      - the payload being inserted (seat_id, user_id, assignment_type, tenant_id, start_date)
-      - Supabase error object
-    - show the existing destructive toast with the error message (already present).
-- This ensures there is never a “no-op” silent failure during development.
+---
 
-F. Make the toast text specific to “Owner assignment”
-- The mutation currently toasts “Assignment added”.
-- Update copy (only) so the user sees:
-  - Success: “Owner assigned”
-  - Error title: “Owner assignment failed”
-  - Error description: include error.message
-- This reduces confusion for non-technical users.
+## Implementation Plan
 
-Phase 4 — Verify the flow end-to-end (QA checklist)
-G. Manual acceptance checks (must pass)
-1) Go to /eos/accountability
-2) Click Assign Owner on Visionary
-3) Pick a Vivacity Team user
-Expected:
-- No toast error
-- Owner appears on the card immediately
-- Refresh page → owner persists
+### 1. Update EosVto.tsx - Fix Query to Use System Tenant
 
-4) Confirm no Rocks writes occurred
-- In Supabase SQL editor (read-only check), compare eos_rocks updated_at before/after, or filter recent updates by current user/time window:
-Expected:
-- No eos_rocks rows updated as a result of owner assignment.
+**File:** `src/pages/EosVto.tsx`
 
-5) Confirm audit row created correctly
-Expected:
-- audit_eos_events contains a record for accountability_seat_assignments (or whichever table changed)
-- entity_id is a UUID, not text.
+**Changes:**
+- Import `VIVACITY_TENANT_ID` from `useVivacityTeamUsers`
+- Update both queries to use `VIVACITY_TENANT_ID` instead of `profile?.tenant_id`
+- Update `enabled` conditions to always run for authenticated users (EOS pages are already protected by route guards)
 
-Files / resources we will touch (next step when approved)
-- Database migration (new): fix audit_accountability_chart_change() + drop tr_cascade_seat_owner_to_rocks trigger
-- Frontend:
-  - src/hooks/useAccountabilityChart.tsx (add logs + adjust toasts for the “Assign Owner” path)
+```tsx
+// Before (lines 31-44)
+const { data: activeVto, isLoading } = useQuery({
+  queryKey: ['eos-vto-active', profile?.tenant_id],
+  queryFn: async () => {
+    const { data, error } = await supabase
+      .from('eos_vto')
+      .select('*')
+      .eq('tenant_id', profile?.tenant_id!)
+      ...
+  },
+  enabled: !!profile?.tenant_id,
+});
 
-Notes on scope and safety
-- This plan intentionally does not refactor your overall EOS model (functions vs seats vs roles) further; it is a surgical fix to:
-  - remove the blocking uuid/text error
-  - ensure Assign Owner has no Rocks side effects
-  - improve observability for future debugging
-- It preserves audit logging (required by your guardrails) and fixes it to be type-correct.
+// After
+import { VIVACITY_TENANT_ID } from '@/hooks/useVivacityTeamUsers';
 
-Open question (non-blocking, but helps finalize the “no Rocks writes” guarantee)
-- Do you want to permanently disable automatic “seat owner → rock owner” cascading, or do you want it moved behind an explicit action/RPC used only from the Rocks area?
-  - This plan disables it now to meet your acceptance criteria, and we can reintroduce it safely later if needed.
+const { data: activeVto, isLoading } = useQuery({
+  queryKey: ['eos-vto-active', VIVACITY_TENANT_ID],
+  queryFn: async () => {
+    const { data, error } = await supabase
+      .from('eos_vto')
+      .select('*')
+      .eq('tenant_id', VIVACITY_TENANT_ID)
+      ...
+  },
+  enabled: !!profile,  // Just need authenticated user
+});
+```
+
+Same change for the `vtoVersions` query (lines 47-59).
+
+### 2. Update VtoEditor.tsx - Fix Save to Use System Tenant
+
+**File:** `src/components/eos/VtoEditor.tsx`
+
+**Changes:**
+- Import `VIVACITY_TENANT_ID` from `useVivacityTeamUsers`
+- Update the upsert mutation to use `VIVACITY_TENANT_ID` instead of `profile?.tenant_id`
+
+```tsx
+// Before (lines 54-68)
+const upsertData: Record<string, unknown> = {
+  tenant_id: profile?.tenant_id!,
+  ...
+};
+
+// After
+import { VIVACITY_TENANT_ID } from '@/hooks/useVivacityTeamUsers';
+
+const upsertData: Record<string, unknown> = {
+  tenant_id: VIVACITY_TENANT_ID,
+  ...
+};
+```
+
+### 3. Fix Existing Broken Data
+
+**Database update needed** to fix the VTO that was just created with `tenant_id: null`:
+
+```sql
+UPDATE eos_vto 
+SET tenant_id = 6372 
+WHERE tenant_id IS NULL;
+```
+
+This will ensure the recently saved Mission Control becomes visible immediately.
+
+---
+
+## Technical Details
+
+### Files Modified
+
+| File | Change Type | Description |
+|------|-------------|-------------|
+| `src/pages/EosVto.tsx` | Edit | Use `VIVACITY_TENANT_ID` for queries |
+| `src/components/eos/VtoEditor.tsx` | Edit | Use `VIVACITY_TENANT_ID` for saves |
+| SQL migration | Create | Fix existing null tenant_id records |
+
+### Query Key Change
+
+The query key changes from `['eos-vto-active', profile?.tenant_id]` to `['eos-vto-active', VIVACITY_TENANT_ID]`. This is safe because:
+- EOS pages are Vivacity-internal only
+- The constant `6372` never changes
+- Cache invalidation in VtoEditor already invalidates by prefix `['eos-vto-active']`
+
+### Why Not Use `useSystemTenantId()` Hook?
+
+While there is a `useSystemTenantId()` hook that fetches the tenant ID via RPC, using the constant `VIVACITY_TENANT_ID = 6372` is preferred because:
+1. It avoids an extra async call
+2. The system tenant ID never changes
+3. This pattern is already used elsewhere in the codebase
+4. Simpler code with fewer loading states
+
+---
+
+## Acceptance Criteria
+
+1. Create a new Mission Control - it saves with `tenant_id: 6372`
+2. Return to Current Plan view - the saved Mission Control appears
+3. Edit an existing Mission Control - updates work correctly
+4. Version History shows all previous versions
+5. Super Admins with null `profile.tenant_id` can fully use Mission Control
+
+---
+
+## Risk Assessment
+
+**Low risk** - This follows established patterns already in use for other EOS features.
+
+**No breaking changes** - Existing VTOs with `tenant_id: 319` or `111` will need manual migration to 6372, but the immediate fix focuses on the null case and future saves.
