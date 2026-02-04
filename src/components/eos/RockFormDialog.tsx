@@ -11,7 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useEosRocks } from '@/hooks/useEos';
 import { useAuth } from '@/hooks/useAuth';
-import { useVivacityTeamUsers } from '@/hooks/useVivacityTeamUsers';
+import { useVivacityTeamUsers, VIVACITY_TENANT_ID } from '@/hooks/useVivacityTeamUsers';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { AlertTriangle, Armchair, User, Plus, X, ListChecks } from 'lucide-react';
@@ -87,7 +87,7 @@ export function RockFormDialog({ open, onOpenChange, rock }: RockFormDialogProps
 
   // Fetch seats with their primary owners
   const { data: seats, isLoading: seatsLoading } = useQuery({
-    queryKey: ['seats-for-rocks', profile?.tenant_id],
+    queryKey: ['seats-for-rocks', VIVACITY_TENANT_ID],
     queryFn: async () => {
       // Get all seats
       const { data: seatsData, error: seatsError } = await supabase
@@ -97,7 +97,7 @@ export function RockFormDialog({ open, onOpenChange, rock }: RockFormDialogProps
           seat_name,
           accountability_functions!inner(name)
         `)
-        .eq('tenant_id', profile?.tenant_id!);
+        .eq('tenant_id', VIVACITY_TENANT_ID);
       
       if (seatsError) throw seatsError;
 
@@ -105,7 +105,7 @@ export function RockFormDialog({ open, onOpenChange, rock }: RockFormDialogProps
       const { data: assignments, error: assignError } = await supabase
         .from('accountability_seat_assignments')
         .select('seat_id, user_id')
-        .eq('tenant_id', profile?.tenant_id!)
+        .eq('tenant_id', VIVACITY_TENANT_ID)
         .eq('assignment_type', 'Primary')
         .or('end_date.is.null,end_date.gt.' + new Date().toISOString());
       
@@ -129,23 +129,23 @@ export function RockFormDialog({ open, onOpenChange, rock }: RockFormDialogProps
         primary_owner_name: assignmentMap.get(seat.id) ? userMap.get(assignmentMap.get(seat.id)!) || 'Unknown' : null,
       })) || [];
     },
-    enabled: !!profile?.tenant_id && open,
+    enabled: !!profile && open,
   });
 
   // Fetch clients for dropdown
   const { data: clients } = useQuery({
-    queryKey: ['clients-for-rocks', profile?.tenant_id],
+    queryKey: ['clients-for-rocks', VIVACITY_TENANT_ID],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('clients_legacy')
         .select('id, companyname, contactname')
-        .eq('tenant_id', profile?.tenant_id!)
+        .eq('tenant_id', VIVACITY_TENANT_ID)
         .order('companyname');
       
       if (error) throw error;
       return data;
     },
-    enabled: !!profile?.tenant_id && open,
+    enabled: !!profile && open,
   });
 
   // Get selected seat info
@@ -203,7 +203,7 @@ export function RockFormDialog({ open, onOpenChange, rock }: RockFormDialogProps
       quarter_number: quarterNumber,
       quarter_year: quarterYear,
       due_date: dueDate,
-      tenant_id: profile?.tenant_id,
+      tenant_id: VIVACITY_TENANT_ID,
     };
 
     if (rock?.id) {
