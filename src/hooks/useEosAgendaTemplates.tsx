@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 import { toast } from '@/hooks/use-toast';
+import { VIVACITY_TENANT_ID } from './useVivacityTeamUsers';
 import type { EosAgendaTemplate, MeetingType } from '@/types/eos';
 
 export const useEosAgendaTemplates = () => {
@@ -9,12 +10,12 @@ export const useEosAgendaTemplates = () => {
   const queryClient = useQueryClient();
 
   const { data: templates, isLoading } = useQuery({
-    queryKey: ['eos-agenda-templates', profile?.tenant_id],
+    queryKey: ['eos-agenda-templates', VIVACITY_TENANT_ID],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('eos_agenda_templates')
         .select('*')
-        .eq('tenant_id', profile?.tenant_id!)
+        .eq('tenant_id', VIVACITY_TENANT_ID)
         .eq('is_archived', false)
         .order('is_default', { ascending: false })
         .order('is_system', { ascending: false })
@@ -23,7 +24,7 @@ export const useEosAgendaTemplates = () => {
       if (error) throw error;
       return data as unknown as EosAgendaTemplate[];
     },
-    enabled: !!profile?.tenant_id,
+    enabled: !!profile,
   });
 
   // Get templates by meeting type
@@ -43,7 +44,7 @@ export const useEosAgendaTemplates = () => {
         .from('eos_agenda_templates')
         .insert({ 
           ...templateData, 
-          tenant_id: profile?.tenant_id,
+          tenant_id: VIVACITY_TENANT_ID,
           is_system: false,
           is_archived: false,
         } as any)
@@ -91,7 +92,7 @@ export const useEosAgendaTemplates = () => {
       const { data, error } = await supabase
         .from('eos_agenda_templates')
         .insert({
-          tenant_id: profile?.tenant_id,
+          tenant_id: VIVACITY_TENANT_ID,
           meeting_type: original.meeting_type,
           template_name: `${original.template_name} (Copy)`,
           description: original.description,
@@ -122,7 +123,7 @@ export const useEosAgendaTemplates = () => {
       await supabase
         .from('eos_agenda_templates')
         .update({ is_default: false } as any)
-        .eq('tenant_id', profile?.tenant_id!)
+        .eq('tenant_id', VIVACITY_TENANT_ID)
         .eq('meeting_type', meetingType);
 
       // Set the new default
