@@ -8,16 +8,10 @@ import {
   DialogDescription,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { useFacilitatorChange } from '@/hooks/useFacilitatorChange';
 import { Users, Play, Loader2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { VivacityTeamPicker } from './VivacityTeamPicker';
 
 interface FacilitatorSelectDialogProps {
   open: boolean;
@@ -34,7 +28,7 @@ export const FacilitatorSelectDialog = ({
   onStartMeeting,
   isStarting = false,
 }: FacilitatorSelectDialogProps) => {
-  const { participants, participantsLoading, currentFacilitator, changeFacilitator } = 
+  const { participantsLoading, currentFacilitator, changeFacilitator } = 
     useFacilitatorChange(meetingId);
   
   const [selectedFacilitator, setSelectedFacilitator] = useState<string>('');
@@ -57,13 +51,6 @@ export const FacilitatorSelectDialog = ({
     onOpenChange(false);
   };
 
-  const getParticipantName = (participant: any) => {
-    if (participant.users?.first_name || participant.users?.last_name) {
-      return `${participant.users?.first_name || ''} ${participant.users?.last_name || ''}`.trim();
-    }
-    return 'Unknown User';
-  };
-
   const isPending = changeFacilitator.isPending || isStarting;
 
   return (
@@ -84,36 +71,20 @@ export const FacilitatorSelectDialog = ({
             <div className="flex items-center justify-center py-8">
               <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
             </div>
-          ) : participants && participants.length > 0 ? (
+          ) : (
             <>
               <div className="space-y-2">
-                <label className="text-sm font-medium">Facilitator</label>
-                <Select
+                <label className="text-sm font-medium">
+                  Facilitator
+                  <Badge variant="secondary" className="ml-2 text-xs">Vivacity Team</Badge>
+                </label>
+                <VivacityTeamPicker
+                  mode="single"
                   value={selectedFacilitator}
-                  onValueChange={setSelectedFacilitator}
+                  onChange={setSelectedFacilitator}
+                  placeholder="Select facilitator..."
                   disabled={isPending}
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Select facilitator..." />
-                  </SelectTrigger>
-                  <SelectContent className="bg-popover z-50">
-                    {participants.map((participant) => (
-                      <SelectItem 
-                        key={participant.id} 
-                        value={participant.user_id}
-                      >
-                        <div className="flex items-center gap-2">
-                          <span>{getParticipantName(participant)}</span>
-                          {participant.role === 'Leader' && (
-                            <Badge variant="secondary" className="text-xs">
-                              Current
-                            </Badge>
-                          )}
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                />
               </div>
 
               {selectedFacilitator && selectedFacilitator !== currentFacilitator?.user_id && (
@@ -122,11 +93,6 @@ export const FacilitatorSelectDialog = ({
                 </p>
               )}
             </>
-          ) : (
-            <div className="text-center py-4 text-muted-foreground">
-              <p>No participants found for this meeting.</p>
-              <p className="text-sm mt-1">You'll be set as the facilitator.</p>
-            </div>
           )}
         </div>
 

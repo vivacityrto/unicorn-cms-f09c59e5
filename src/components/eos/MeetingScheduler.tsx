@@ -5,15 +5,16 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Checkbox } from '@/components/ui/checkbox';
-import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
+import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/hooks/useAuth';
 import { useEosAgendaTemplates } from '@/hooks/useEosAgendaTemplates';
 import { Calendar, Repeat, FileText, Users } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { MeetingTypeSelector } from './MeetingTypeSelector';
 import { useEosMeetingRecurrences } from '@/hooks/useEosMeetingRecurrences';
+import { VivacityTeamPicker } from './VivacityTeamPicker';
+import { VIVACITY_TENANT_ID } from '@/hooks/useVivacityTeamUsers';
+import { supabase } from '@/integrations/supabase/client';
 import type { MeetingType } from '@/types/eos';
 
 interface MeetingSchedulerProps {
@@ -54,31 +55,8 @@ export const MeetingScheduler = ({ open, onOpenChange, onScheduled }: MeetingSch
     }
   }, [meetingType, templates]);
 
-  // Fetch users for facilitator/participant selection
-  const { data: users } = useQuery({
-    queryKey: ['users', profile?.tenant_id],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('users')
-        .select('user_uuid, first_name, last_name, email')
-        .eq('tenant_id', profile?.tenant_id!)
-        .eq('disabled', false);
-      if (error) throw error;
-      return data;
-    },
-    enabled: !!profile?.tenant_id && open,
-  });
-
-  const toggleParticipant = (userId: string) => {
-    setParticipantIds(prev => 
-      prev.includes(userId) 
-        ? prev.filter(id => id !== userId)
-        : [...prev, userId]
-    );
-  };
-
   const handleSchedule = async () => {
-    if (!title || !scheduledDate || !facilitatorId || !profile?.tenant_id) {
+    if (!title || !scheduledDate || !facilitatorId || !profile) {
       toast({ title: 'Please fill in all required fields', variant: 'destructive' });
       return;
     }
@@ -93,9 +71,9 @@ export const MeetingScheduler = ({ open, onOpenChange, onScheduled }: MeetingSch
       let meetingId: string;
 
       if (templateId) {
-        // Create meeting from template
+        // Create meeting from template - use VIVACITY_TENANT_ID for EOS
         const { data, error: meetingError } = await supabase.rpc('create_meeting_from_template', {
-          p_tenant_id: profile.tenant_id,
+          p_tenant_id: VIVACITY_TENANT_ID,
           p_agenda_template_id: templateId,
           p_title: title,
           p_scheduled_date: scheduledDate,
@@ -107,9 +85,9 @@ export const MeetingScheduler = ({ open, onOpenChange, onScheduled }: MeetingSch
         if (meetingError) throw meetingError;
         meetingId = data;
       } else {
-        // Create meeting directly without template using RPC to avoid RLS recursion
+        // Create meeting directly without template - use VIVACITY_TENANT_ID for EOS
         const { data, error: meetingError } = await supabase.rpc('create_meeting_basic', {
-          p_tenant_id: profile.tenant_id,
+          p_tenant_id: VIVACITY_TENANT_ID,
           p_meeting_type: meetingType,
           p_title: title,
           p_scheduled_date: scheduledDate,
@@ -126,7 +104,7 @@ export const MeetingScheduler = ({ open, onOpenChange, onScheduled }: MeetingSch
         
         await generateRecurrence.mutateAsync({
           meeting_id: meetingId,
-          tenant_id: profile.tenant_id,
+          tenant_id: VIVACITY_TENANT_ID,
           recurrence_type: frequency,
           start_date: datePart,
           start_time: timePart,
@@ -310,58 +288,39 @@ export const MeetingScheduler = ({ open, onOpenChange, onScheduled }: MeetingSch
             </div>
           )}
 
+          {/* Facilitator - Vivacity Team only */}
           <div className="space-y-2">
-            <Label htmlFor="facilitator">Facilitator *</Label>
-            <Select value={facilitatorId} onValueChange={setFacilitatorId}>
-              <SelectTrigger id="facilitator">
-                <SelectValue placeholder="Select facilitator" />
-              </SelectTrigger>
-              <SelectContent>
-                {users?.map((user) => (
-                  <SelectItem key={user.user_uuid} value={user.user_uuid}>
-                    {user.first_name} {user.last_name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Label>
+              Facilitator *
+              <Badge variant="secondary" className="ml-2 text-xs">Vivacity Team</Badge>
+            </Label>
+            <VivacityTeamPicker
+              mode="single"
+              value={facilitatorId}
+              onChange={setFacilitatorId}
+              placeholder="Select facilitator..."
+            />
           </div>
 
-          {/* Participants Selection */}
+          {/* Participants - Vivacity Team only */}
           <div className="space-y-2">
             <Label className="flex items-center gap-2">
               <Users className="h-4 w-4" />
               Participants
+              <Badge variant="secondary" className="ml-2 text-xs">Vivacity Team</Badge>
             </Label>
             <p className="text-xs text-muted-foreground mb-2">
               {meetingType === 'Same_Page' 
                 ? 'Add your Integrator or other key participants to this Same Page meeting.'
                 : 'Select team members to include in this meeting.'}
             </p>
-            <div className="border rounded-md p-3 max-h-[150px] overflow-y-auto space-y-2">
-              {users?.filter(u => u.user_uuid !== facilitatorId).map((user) => (
-                <div key={user.user_uuid} className="flex items-center space-x-2">
-                  <Checkbox
-                    id={`participant-${user.user_uuid}`}
-                    checked={participantIds.includes(user.user_uuid)}
-                    onCheckedChange={() => toggleParticipant(user.user_uuid)}
-                  />
-                  <label
-                    htmlFor={`participant-${user.user_uuid}`}
-                    className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
-                  >
-                    {user.first_name} {user.last_name}
-                  </label>
-                </div>
-              ))}
-              {users?.filter(u => u.user_uuid !== facilitatorId).length === 0 && (
-                <p className="text-sm text-muted-foreground">No other users available</p>
-              )}
-            </div>
-            {participantIds.length > 0 && (
-              <p className="text-xs text-muted-foreground">
-                {participantIds.length} participant{participantIds.length > 1 ? 's' : ''} selected
-              </p>
-            )}
+            <VivacityTeamPicker
+              mode="multi"
+              value={participantIds}
+              onChange={setParticipantIds}
+              placeholder="Select participants..."
+              excludeUserIds={facilitatorId ? [facilitatorId] : undefined}
+            />
           </div>
 
           <div className="grid grid-cols-2 gap-4">
