@@ -75,14 +75,14 @@ export default function EosRockAnalysis() {
           actions={
             <div className="flex items-center gap-2">
               <Select
-                value={selectedQuarter || ''}
-                onValueChange={(v) => setSelectedQuarter(v || null)}
+                value={selectedQuarter || 'all'}
+                onValueChange={(v) => setSelectedQuarter(v === 'all' ? null : v)}
               >
                 <SelectTrigger className="w-36">
                   <SelectValue placeholder="All Quarters" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All Quarters</SelectItem>
+                  <SelectItem value="all">All Quarters</SelectItem>
                   {availableQuarters?.map(q => (
                     <SelectItem key={q} value={q}>{q}</SelectItem>
                   ))}
