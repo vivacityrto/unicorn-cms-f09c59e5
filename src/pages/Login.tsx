@@ -7,7 +7,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import unicornLogo from "@/assets/unicorn-logo-login.svg";
+const unicornLogo = "/unicorn-logo.svg";
 import { LogIn, KeyRound, Sparkles } from "lucide-react";
 
 const Login = () => {
