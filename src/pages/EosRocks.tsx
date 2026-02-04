@@ -2,11 +2,14 @@ import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Target, TrendingUp, TrendingDown, CheckCircle, Filter, AlertTriangle, Lightbulb, Link as LinkIcon, Armchair } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Plus, Target, TrendingUp, TrendingDown, CheckCircle, Filter, AlertTriangle, Lightbulb, Link as LinkIcon, Armchair, User, ListChecks } from 'lucide-react';
 import { useEosRocks } from '@/hooks/useEos';
 import { useRisksOpportunities } from '@/hooks/useRisksOpportunities';
 import { useRBAC } from '@/hooks/useRBAC';
 import { useAuth } from '@/hooks/useAuth';
+import { useVivacityTeamUsers, VIVACITY_TENANT_ID } from '@/hooks/useVivacityTeamUsers';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
@@ -29,19 +32,20 @@ export default function EosRocks() {
 }
 
 function RocksContent() {
-  const { rocks, isLoading } = useEosRocks();
+  const { rocks, isLoading, updateRock } = useEosRocks();
   const { items: risksOpportunities } = useRisksOpportunities();
   const { canCreateRocks, canEditOwnRocks, canEditOthersRocks } = useRBAC();
   const { user, profile } = useAuth();
+  const { data: vivacityUsers } = useVivacityTeamUsers();
   const [filter, setFilter] = useState<'all' | string>('all');
   const [clientFilter, setClientFilter] = useState<string>('all');
   const [seatFilter, setSeatFilter] = useState<string>('all');
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingRock, setEditingRock] = useState<any>(null);
 
-  // Fetch seats for filter and display
+  // Fetch seats for filter and display - use system tenant for EOS data
   const { data: seats } = useQuery({
-    queryKey: ['seats-for-rocks-display', profile?.tenant_id],
+    queryKey: ['seats-for-rocks-display', VIVACITY_TENANT_ID],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('accountability_seats')
@@ -50,28 +54,25 @@ function RocksContent() {
           seat_name,
           accountability_functions!inner(name)
         `)
-        .eq('tenant_id', profile?.tenant_id!);
+        .eq('tenant_id', VIVACITY_TENANT_ID);
       
       if (error) throw error;
       return data;
     },
-    enabled: !!profile?.tenant_id,
+    enabled: !!profile,
   });
 
-  // Fetch users for owner display
-  const { data: users } = useQuery({
-    queryKey: ['users-for-rocks-display', profile?.tenant_id],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('users')
-        .select('user_uuid, first_name, last_name')
-        .eq('tenant_id', profile?.tenant_id!);
-      
-      if (error) throw error;
-      return data;
-    },
-    enabled: !!profile?.tenant_id,
-  });
+  // Get user info helper for Team Member Responsible
+  const getUserInfo = (userId: string | null | undefined) => {
+    if (!userId) return null;
+    const user = vivacityUsers?.find(u => u.user_uuid === userId);
+    if (!user) return null;
+    return {
+      name: [user.first_name, user.last_name].filter(Boolean).join(' ') || user.email,
+      initials: [user.first_name?.[0], user.last_name?.[0]].filter(Boolean).join('').toUpperCase() || '?',
+      avatarUrl: user.avatar_url,
+    };
+  };
 
   const getSeatInfo = (seatId: string | null | undefined) => {
     if (!seatId) return null;
@@ -84,10 +85,21 @@ function RocksContent() {
   };
 
   const getOwnerName = (userId: string | null | undefined) => {
-    if (!userId) return null;
-    const user = users?.find(u => u.user_uuid === userId);
-    if (!user) return null;
-    return `${user.first_name || ''} ${user.last_name || ''}`.trim() || 'Unknown';
+    const info = getUserInfo(userId);
+    return info?.name || null;
+  };
+
+  // Handle milestone toggle
+  const handleMilestoneToggle = async (rock: any, milestoneId: string, completed: boolean) => {
+    const milestones = rock.milestones || [];
+    const updatedMilestones = milestones.map((m: any) => 
+      m.id === milestoneId ? { ...m, completed } : m
+    );
+    
+    await updateRock.mutateAsync({
+      id: rock.id,
+      milestones: updatedMilestones,
+    });
   };
 
   // Permission helper for editing a specific rock
@@ -318,24 +330,30 @@ function RocksContent() {
                       <ClientBadge clientId={rock.client_id} />
                     </div>
                     {/* Seat and Owner Display */}
-                    <div className="flex items-center gap-2 mb-2 flex-wrap">
+                    <div className="flex items-center gap-3 mb-2 flex-wrap">
                       {rock.seat_id ? (
-                        <>
-                          <Badge variant="outline" className="gap-1 text-xs">
-                            <Armchair className="w-3 h-3" />
-                            {getSeatInfo(rock.seat_id)?.name || 'Unknown Seat'}
-                          </Badge>
-                          {getOwnerName(rock.owner_id || rock.seat_owner_user_id) && (
-                            <span className="text-xs text-muted-foreground">
-                              — {getOwnerName(rock.owner_id || rock.seat_owner_user_id)}
-                            </span>
-                          )}
-                        </>
+                        <Badge variant="outline" className="gap-1 text-xs">
+                          <Armchair className="w-3 h-3" />
+                          {getSeatInfo(rock.seat_id)?.name || 'Unknown Seat'}
+                        </Badge>
                       ) : (
                         <Badge variant="outline" className="gap-1 text-xs text-amber-600 border-amber-300 bg-amber-50 dark:bg-amber-950/30">
                           <AlertTriangle className="w-3 h-3" />
                           No Seat Linked
                         </Badge>
+                      )}
+                      
+                      {/* Team Member Responsible */}
+                      {(rock as any).owner_id && getUserInfo((rock as any).owner_id) && (
+                        <div className="flex items-center gap-1.5">
+                          <Avatar className="h-5 w-5">
+                            <AvatarImage src={getUserInfo((rock as any).owner_id)?.avatarUrl || undefined} />
+                            <AvatarFallback className="text-[10px]">{getUserInfo((rock as any).owner_id)?.initials}</AvatarFallback>
+                          </Avatar>
+                          <span className="text-xs text-muted-foreground">
+                            {getUserInfo((rock as any).owner_id)?.name}
+                          </span>
+                        </div>
                       )}
                     </div>
                     {rock.description && (
@@ -367,6 +385,46 @@ function RocksContent() {
                     </>
                   )}
                 </div>
+
+                {/* Milestones */}
+                {(() => {
+                  const milestones = (rock as any).milestones;
+                  if (!milestones || !Array.isArray(milestones) || milestones.length === 0) return null;
+                  const completedCount = milestones.filter((m: any) => m.completed).length;
+                  return (
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2">
+                        <ListChecks className="w-4 h-4 text-muted-foreground" />
+                        <span className="text-sm font-medium">Milestones</span>
+                        <Badge variant="secondary" className="text-xs">
+                          {completedCount}/{milestones.length}
+                        </Badge>
+                      </div>
+                      <div className="space-y-1.5 pl-6">
+                        {milestones.map((milestone: any, index: number) => (
+                          <div key={milestone.id || index} className="flex items-center gap-2">
+                            <Checkbox
+                              id={`milestone-${rock.id}-${milestone.id || index}`}
+                              checked={milestone.completed || false}
+                              onCheckedChange={(checked) => 
+                                handleMilestoneToggle(rock, milestone.id, checked as boolean)
+                              }
+                              disabled={!canEditRock(rock)}
+                            />
+                            <label
+                              htmlFor={`milestone-${rock.id}-${milestone.id || index}`}
+                              className={`text-sm cursor-pointer ${
+                                milestone.completed ? 'line-through text-muted-foreground' : ''
+                              }`}
+                            >
+                              {milestone.text}
+                            </label>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })()}
 
                 {/* Linked Risks & Opportunities */}
                 {(() => {
