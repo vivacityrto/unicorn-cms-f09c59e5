@@ -3,7 +3,8 @@ export type EosRole = 'admin' | 'facilitator' | 'scribe' | 'participant' | 'clie
 export type MeetingStatus = 'scheduled' | 'in_progress' | 'completed' | 'closed' | 'cancelled';
 export type MeetingType = 'L10' | 'Quarterly' | 'Annual' | 'Same_Page' | 'Focus_Day' | 'Custom';
 export type RockType = 'company' | 'team' | 'individual';
-export type RockStatus = 'on_track' | 'off_track' | 'complete';
+export type RockLevel = 'company' | 'team' | 'individual';
+export type RockStatus = 'on_track' | 'off_track' | 'complete' | 'at_risk' | 'not_started';
 export type IssueStatus = 'open' | 'discussing' | 'solved' | 'archived';
 export type IssuePriority = 'high' | 'medium' | 'low';
 export type IssueCategory = 'weekly' | 'quarterly' | 'annual';
@@ -124,9 +125,40 @@ export interface EosRock {
   priority?: number;
   progress?: number;
   level?: string;
+  // Hierarchy fields
+  rock_level?: RockLevel;
+  parent_rock_id?: string | null;
+  function_id?: string | null;
+  vto_id?: string | null;
+  archived_at?: string | null;
+  sort_order?: number;
   created_at: string;
   updated_at: string;
   created_by?: string;
+}
+
+// Extended rock with computed hierarchy data
+export interface RockWithHierarchy extends EosRock {
+  children?: EosRock[];
+  parent?: EosRock | null;
+  rollupStatus?: string;
+  childStats?: {
+    total: number;
+    complete: number;
+    offTrack: number;
+  };
+  function?: {
+    id: string;
+    name: string;
+  } | null;
+  seat?: {
+    id: string;
+    seat_name: string;
+  } | null;
+  vto?: {
+    id: string;
+    ten_year_target: string | null;
+  } | null;
 }
 
 // Using existing database schema for Issues (with Phase 4 additions)
