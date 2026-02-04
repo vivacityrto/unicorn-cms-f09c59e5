@@ -1,101 +1,142 @@
 
-# Fix: Accountability Seat Not Auto-Populating When Selecting Team Member
+# Fix: Milestone Duplication When Adding New Milestones
 
 ## Problem Summary
 
-When editing a Rock and selecting a Team Member Responsible (Angela Connell-Richards), the Accountability Seat field remains empty showing "Select a seat..." even though:
-1. Angela holds multiple seats (Operations, Client Experience Team, Angela)
-2. The auto-select logic was added in the last change
+When adding milestones to a Rock, they duplicate unless removed first. The screenshot shows 6 identical milestones with the same text, all repeating the same content.
 
-## Root Cause
+## Root Cause Analysis
 
-The seats query in `RockFormDialog.tsx` filters by `profile?.tenant_id`:
+The issue is in the `useEffect` that syncs the form state with the `rock` prop in `RockFormDialog.tsx`:
 
 ```tsx
-// Line 100
-.eq('tenant_id', profile?.tenant_id!)
+useEffect(() => {
+  if (rock) {
+    // ... sets milestones from rock.milestones
+    setMilestones(savedMilestones);
+  }
+}, [rock]);
 ```
 
-Angela (Super Admin) has `tenant_id: null` in her profile, so this query returns **zero seats** because there are no seats with `tenant_id = NULL`. All accountability seats exist under `tenant_id = 6372` (Vivacity system tenant).
+**The Problem:**
+1. User opens the dialog - `useEffect` loads milestones from database (e.g., 1 milestone)
+2. User adds a new milestone - state now has 2 milestones
+3. User saves - `updateRock.mutateAsync()` is called
+4. `queryClient.invalidateQueries({ queryKey: ['eos-rocks'] })` triggers
+5. The `rocks` query refetches, giving the `rock` prop a **new object reference**
+6. The `useEffect` runs again because `rock` dependency changed
+7. The effect reloads milestones from the now-updated database (2 milestones)
+8. If timing is off or there's any async overlap, this can cause duplicates
 
-**Data Evidence:**
-- Angela's profile: `tenant_id: null`, `user_uuid: 611a7972-c465-4b08-8ff4-ebbb5faa14f0`
-- Seats exist with `tenant_id: 6372` where Angela is primary owner of 3 seats
-- Query with `tenant_id = null` returns 0 seats
-
-The auto-select logic works correctly:
-```tsx
-if (newOwnerId && seats) {
-  const userSeat = seats.find(s => s.primary_owner_id === newOwnerId);
-}
-```
-But `seats` is an empty array, so no seat is found.
+**Additional Issue:**
+The `useEffect` runs on every `rock` reference change, not just when the rock ID changes. This means even after saving, if the dialog is still mounted, it re-syncs state with database data.
 
 ---
 
 ## Solution
 
-Apply the same pattern used for VTO and other EOS features: use `VIVACITY_TENANT_ID` constant instead of `profile?.tenant_id` for all EOS-internal data queries.
+Implement a stable initialization pattern that:
+1. Only initializes form state when the **rock ID changes** (not just reference)
+2. Tracks whether the form has been initialized to prevent re-runs
+3. Properly resets initialization state when dialog closes
 
 ### File: `src/components/eos/RockFormDialog.tsx`
 
 **Changes:**
-1. Import `VIVACITY_TENANT_ID` from `useVivacityTeamUsers`
-2. Update the seats query to use `VIVACITY_TENANT_ID` instead of `profile?.tenant_id`
-3. Update the assignments query similarly
-4. Update the clients query similarly (if needed for EOS rocks)
-5. Update the rockData `tenant_id` in handleSubmit
 
+1. **Add initialization tracking state**
 ```tsx
-// Before (line 100, 108)
-.eq('tenant_id', profile?.tenant_id!)
+const [isInitialized, setIsInitialized] = useState(false);
+const previousRockId = useRef<string | null>(null);
+```
 
-// After
-import { VIVACITY_TENANT_ID } from '@/hooks/useVivacityTeamUsers';
+2. **Update useEffect to check rock ID, not reference**
+```tsx
+useEffect(() => {
+  // Only reinitialize if rock ID actually changed or dialog just opened
+  const rockId = rock?.id ?? null;
+  
+  if (rockId !== previousRockId.current || (open && !isInitialized)) {
+    previousRockId.current = rockId;
+    
+    if (rock) {
+      setTitle(rock.title || '');
+      setDescription(rock.description || '');
+      setIssue((rock as any)?.issue || '');
+      setProblemSolved((rock as any)?.outcome || '');
+      
+      // Parse milestones from JSON
+      const savedMilestones = (rock as any)?.milestones;
+      if (Array.isArray(savedMilestones)) {
+        setMilestones(savedMilestones);
+      } else {
+        setMilestones([]);
+      }
+      
+      setClientId(rock.client_id || '');
+      setSeatId(rock.seat_id || '');
+      setOwnerId((rock as any)?.owner_id || '');
+      setStatus(rock.status || 'on_track');
+      setPriority(rock.priority || 1);
+      setQuarterNumber(rock.quarter_number || Math.ceil((new Date().getMonth() + 1) / 3));
+      setQuarterYear(rock.quarter_year || new Date().getFullYear());
+      setDueDate(rock.due_date ? rock.due_date.split('T')[0] : '');
+    } else {
+      resetForm();
+    }
+    
+    setIsInitialized(true);
+  }
+}, [rock?.id, open]);
+```
 
-.eq('tenant_id', VIVACITY_TENANT_ID)
+3. **Reset initialization state when dialog closes**
+```tsx
+// Add effect to reset init flag when dialog closes
+useEffect(() => {
+  if (!open) {
+    setIsInitialized(false);
+    previousRockId.current = null;
+  }
+}, [open]);
+```
+
+4. **Import useRef**
+```tsx
+import { useState, useEffect, useMemo, useRef } from 'react';
 ```
 
 ---
 
 ## Technical Details
 
-### Changes Required
-
-| Location | Current | Fixed |
-|----------|---------|-------|
-| Line 14 | (no import) | Add `VIVACITY_TENANT_ID` import |
-| Line 90 | `queryKey: ['seats-for-rocks', profile?.tenant_id]` | `queryKey: ['seats-for-rocks', VIVACITY_TENANT_ID]` |
-| Line 100 | `.eq('tenant_id', profile?.tenant_id!)` | `.eq('tenant_id', VIVACITY_TENANT_ID)` |
-| Line 108 | `.eq('tenant_id', profile?.tenant_id!)` | `.eq('tenant_id', VIVACITY_TENANT_ID)` |
-| Line 132 | `enabled: !!profile?.tenant_id && open` | `enabled: !!profile && open` |
-| Line 142 | `.eq('tenant_id', profile?.tenant_id!)` | `.eq('tenant_id', VIVACITY_TENANT_ID)` |
-| Line 148 | `enabled: !!profile?.tenant_id && open` | `enabled: !!profile && open` |
-| Line 206 | `tenant_id: profile?.tenant_id` | `tenant_id: VIVACITY_TENANT_ID` |
+| Change | Location | Purpose |
+|--------|----------|---------|
+| Add `useRef` import | Line 1 | Track previous rock ID |
+| Add `isInitialized` state | After line 59 | Prevent re-initialization |
+| Add `previousRockId` ref | After line 59 | Compare IDs, not references |
+| Update `useEffect` | Lines 62-86 | Use ID comparison instead of reference |
+| Add dialog close effect | After main useEffect | Reset tracking when dialog closes |
 
 ### Why This Works
 
-1. EOS (Accountability Chart, Rocks, VTO) is Vivacity-internal only
-2. All EOS data belongs to the system tenant (6372)
-3. Super Admins and team members often have `tenant_id: null` in their profile
-4. This pattern is already established in:
-   - `EosVto.tsx` (just fixed)
-   - `VtoEditor.tsx` (just fixed)
-   - `useClientImpact.tsx`
-   - `IDSMasterPanel.tsx`
+1. **ID-based comparison**: Only re-initializes when the actual rock ID changes, not when the object reference changes due to query cache updates
+2. **Initialization flag**: Prevents the effect from running multiple times while the dialog is open
+3. **Dialog close cleanup**: Ensures fresh initialization when reopening the dialog
 
 ---
 
 ## Expected Behavior After Fix
 
-1. Open Rock edit dialog
-2. Select "Angela Connell-Richards" as Team Member Responsible
-3. The seats query returns all 7 seats with `tenant_id = 6372`
-4. Auto-select logic finds Angela's seat (e.g., "Operations" or "Angela")
-5. Accountability Seat field automatically populates
+1. Open Rock edit dialog with existing milestone
+2. Add new milestone by clicking "Add Milestone"
+3. Enter milestone text
+4. Click Save
+5. Milestones are saved correctly without duplication
+6. Reopen the dialog - milestones show correctly (no duplicates)
 
 ---
 
 ## Risk Assessment
 
-**Low risk** - This follows the established pattern used across all EOS features. The change is isolated to the Rock form and uses the proven constant-based approach.
+**Low risk** - This is a targeted fix to the form initialization logic. It uses React's standard `useRef` pattern for tracking previous values, which is a well-established pattern for preventing unnecessary effect runs.
