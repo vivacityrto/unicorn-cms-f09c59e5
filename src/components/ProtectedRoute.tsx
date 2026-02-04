@@ -1,6 +1,8 @@
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useRBAC, ADMIN_ROUTES, ADVANCED_ROUTES, EOS_ROUTES } from '@/hooks/useRBAC';
+import { useEffect, useRef } from 'react';
+import { toast } from '@/hooks/use-toast';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -9,8 +11,11 @@ interface ProtectedRouteProps {
 
 export const ProtectedRoute = ({ children, requireSuperAdmin = false }: ProtectedRouteProps) => {
   const { user, loading } = useAuth();
-  const { canAccessRoute, isSuperAdmin, canAccessEOS } = useRBAC();
+  const { canAccessRoute, isSuperAdmin, canAccessEOS, isVivacityTeam } = useRBAC();
   const location = useLocation();
+  
+  // Track if we've shown the EOS redirect toast to avoid duplicates
+  const hasShownEosToast = useRef(false);
 
   if (loading) {
     return (
@@ -42,8 +47,25 @@ export const ProtectedRoute = ({ children, requireSuperAdmin = false }: Protecte
 
   // Block EOS routes for non-Vivacity users (clients)
   if (isEosRoute && !canAccessEOS()) {
+    // Show toast only once per session to avoid spam
+    if (!hasShownEosToast.current) {
+      hasShownEosToast.current = true;
+      // Use setTimeout to ensure toast fires after redirect
+      setTimeout(() => {
+        toast({
+          title: 'EOS is available to Vivacity Team only',
+          description: 'Contact Vivacity Coaching & Consulting if you need access to EOS features.',
+          variant: 'default',
+        });
+      }, 100);
+    }
     // Clients trying to access EOS get redirected to dashboard
     return <Navigate to="/dashboard" replace />;
+  }
+
+  // Reset toast flag when navigating to non-EOS routes
+  if (!isEosRoute) {
+    hasShownEosToast.current = false;
   }
 
   return <>{children}</>;
