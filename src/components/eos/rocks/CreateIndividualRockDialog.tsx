@@ -11,6 +11,7 @@ import { User, Plus, X, GitBranch } from 'lucide-react';
 import { useEosRocksHierarchy } from '@/hooks/useEosRocksHierarchy';
 import { useVivacityTeamUsers } from '@/hooks/useVivacityTeamUsers';
 import { getCurrentQuarter } from '@/utils/rockRollup';
+import { DB_ROCK_STATUS } from '@/utils/rockStatusUtils';
 import type { RockWithHierarchy } from '@/types/eos';
 
 interface CreateIndividualRockDialogProps {
@@ -71,7 +72,7 @@ export function CreateIndividualRockDialog({ open, onOpenChange, parentRock, onS
       quarter_year: selectedParent?.quarter_year || currentQuarter.year,
       quarter_number: selectedParent?.quarter_number || currentQuarter.quarter,
       due_date: dueDate,
-      status: 'on_track',
+      status: DB_ROCK_STATUS.ON_TRACK,
     });
 
     resetForm();

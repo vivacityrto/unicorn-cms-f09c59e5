@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -15,6 +15,7 @@ import { useVivacityTeamUsers, VIVACITY_TENANT_ID } from '@/hooks/useVivacityTea
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { AlertTriangle, Armchair, User, Plus, X, ListChecks } from 'lucide-react';
+import { DB_ROCK_STATUS, getStatusOptions, dbToUiStatus, uiToDbStatus } from '@/utils/rockStatusUtils';
 import type { EosRock } from '@/types/eos';
 
 interface RockFormDialogProps {
@@ -46,11 +47,18 @@ export function RockFormDialog({ open, onOpenChange, rock }: RockFormDialogProps
   const [description, setDescription] = useState(rock?.description || '');
   const [issue, setIssue] = useState((rock as any)?.issue || '');
   const [problemSolved, setProblemSolved] = useState((rock as any)?.outcome || '');
-  const [milestones, setMilestones] = useState<Milestone[]>([]);
+  const [milestones, setMilestones] = useState<Milestone[]>(() => {
+    // Initialize milestones with proper deep copies
+    const savedMilestones = (rock as any)?.milestones;
+    if (Array.isArray(savedMilestones)) {
+      return savedMilestones.map(m => ({ ...m, id: m.id || crypto.randomUUID() }));
+    }
+    return [];
+  });
   const [clientId, setClientId] = useState(rock?.client_id || '');
   const [seatId, setSeatId] = useState(rock?.seat_id || '');
   const [ownerId, setOwnerId] = useState((rock as any)?.owner_id || '');
-  const [status, setStatus] = useState(rock?.status || 'on_track');
+  const [status, setStatus] = useState(rock?.status || DB_ROCK_STATUS.ON_TRACK);
   const [priority, setPriority] = useState(rock?.priority || 1);
   const [quarterNumber, setQuarterNumber] = useState(
     rock?.quarter_number || Math.ceil((new Date().getMonth() + 1) / 3)
@@ -75,17 +83,21 @@ export function RockFormDialog({ open, onOpenChange, rock }: RockFormDialogProps
         setDescription(rock.description || '');
         setIssue((rock as any)?.issue || '');
         setProblemSolved((rock as any)?.outcome || '');
-        // Parse milestones from JSON
+        // Parse milestones from JSON - create deep copies with proper IDs
         const savedMilestones = (rock as any)?.milestones;
         if (Array.isArray(savedMilestones)) {
-          setMilestones(savedMilestones);
+          setMilestones(savedMilestones.map(m => ({
+            id: m.id || crypto.randomUUID(),
+            text: m.text || '',
+            completed: !!m.completed,
+          })));
         } else {
           setMilestones([]);
         }
         setClientId(rock.client_id || '');
         setSeatId(rock.seat_id || '');
         setOwnerId((rock as any)?.owner_id || '');
-        setStatus(rock.status || 'on_track');
+        setStatus(rock.status || DB_ROCK_STATUS.ON_TRACK);
         setPriority(rock.priority || 1);
         setQuarterNumber(rock.quarter_number || Math.ceil((new Date().getMonth() + 1) / 3));
         setQuarterYear(rock.quarter_year || new Date().getFullYear());
@@ -246,7 +258,7 @@ export function RockFormDialog({ open, onOpenChange, rock }: RockFormDialogProps
     setClientId('');
     setSeatId('');
     setOwnerId('');
-    setStatus('on_track');
+    setStatus(DB_ROCK_STATUS.ON_TRACK);
     setPriority(1);
     setQuarterNumber(Math.ceil((new Date().getMonth() + 1) / 3));
     setQuarterYear(new Date().getFullYear());
@@ -534,10 +546,11 @@ export function RockFormDialog({ open, onOpenChange, rock }: RockFormDialogProps
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="on_track">On Track</SelectItem>
-                <SelectItem value="off_track">Off Track</SelectItem>
-                <SelectItem value="complete">Complete</SelectItem>
-                <SelectItem value="abandoned">Abandoned</SelectItem>
+                {getStatusOptions().map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>

@@ -14,11 +14,12 @@ import {
   Armchair,
   Calendar,
   Target,
-  GitBranch
+  GitBranch,
+  Clock
 } from 'lucide-react';
 import { format } from 'date-fns';
 import type { RockWithHierarchy, RockLevel } from '@/types/eos';
-import { normalizeStatus } from '@/utils/rockRollup';
+import { dbToUiStatus, getStatusConfig as getStatusConfigUtil } from '@/utils/rockStatusUtils';
 import { cn } from '@/lib/utils';
 
 interface RockCardProps {
@@ -44,7 +45,7 @@ export function RockCard({
   getUserName,
   getSeatName,
 }: RockCardProps) {
-  const status = normalizeStatus(rock.rollupStatus || rock.status);
+  const status = dbToUiStatus(rock.rollupStatus || rock.status);
   const hasChildren = rock.childStats && rock.childStats.total > 0;
   const milestones = Array.isArray(rock.milestones) ? rock.milestones : [];
   const completedMilestones = milestones.filter((m: any) => m.completed).length;
@@ -54,11 +55,11 @@ export function RockCard({
 
   const getStatusConfig = (s: string) => {
     const configs: Record<string, { variant: 'default' | 'destructive' | 'secondary' | 'outline'; icon: typeof TrendingUp; label: string; className?: string }> = {
+      not_started: { variant: 'outline', icon: Clock, label: 'Not Started' },
       on_track: { variant: 'default', icon: TrendingUp, label: 'On Track', className: 'bg-green-600' },
       off_track: { variant: 'destructive', icon: TrendingDown, label: 'Off Track' },
       at_risk: { variant: 'destructive', icon: AlertCircle, label: 'At Risk', className: 'bg-amber-600' },
       complete: { variant: 'secondary', icon: CheckCircle, label: 'Complete', className: 'bg-blue-600 text-white' },
-      not_started: { variant: 'outline', icon: Target, label: 'Not Started' },
     };
     return configs[s] || configs.on_track;
   };

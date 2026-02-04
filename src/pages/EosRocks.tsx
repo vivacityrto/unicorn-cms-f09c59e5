@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -21,6 +21,7 @@ import {
 import { useEosRocksHierarchy } from '@/hooks/useEosRocksHierarchy';
 import { useVivacityTeamUsers } from '@/hooks/useVivacityTeamUsers';
 import { useRBAC } from '@/hooks/useRBAC';
+import { useAuth } from '@/hooks/useAuth';
 import { RockCard } from '@/components/eos/rocks/RockCard';
 import { RockCascadeView } from '@/components/eos/rocks/RockCascadeView';
 import { CreateCompanyRockDialog } from '@/components/eos/rocks/CreateCompanyRockDialog';
@@ -29,7 +30,8 @@ import { CreateIndividualRockDialog } from '@/components/eos/rocks/CreateIndivid
 import { RockFormDialog } from '@/components/eos/RockFormDialog';
 import { PermissionTooltip } from '@/components/eos/PermissionTooltip';
 import { DashboardLayout } from '@/components/DashboardLayout';
-import { normalizeStatus, getCurrentQuarter, formatQuarter } from '@/utils/rockRollup';
+import { dbToUiStatus } from '@/utils/rockStatusUtils';
+import { getCurrentQuarter, formatQuarter } from '@/utils/rockRollup';
 import type { RockWithHierarchy } from '@/types/eos';
 
 export default function EosRocks() {
@@ -90,7 +92,7 @@ function RocksHierarchyContent() {
   const filterRocks = (rockList: RockWithHierarchy[] | undefined) => {
     if (!rockList) return [];
     return rockList.filter(rock => {
-      const status = normalizeStatus(rock.rollupStatus || rock.status);
+      const status = dbToUiStatus(rock.rollupStatus || rock.status);
       const matchesStatus = statusFilter === 'all' || status === statusFilter;
       const matchesSearch = !searchQuery || 
         rock.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -106,9 +108,9 @@ function RocksHierarchyContent() {
   // Stats
   const stats = {
     total: rocks?.length || 0,
-    onTrack: rocks?.filter(r => normalizeStatus(r.status) === 'on_track').length || 0,
-    offTrack: rocks?.filter(r => ['off_track', 'at_risk'].includes(normalizeStatus(r.status))).length || 0,
-    complete: rocks?.filter(r => normalizeStatus(r.status) === 'complete').length || 0,
+    onTrack: rocks?.filter(r => dbToUiStatus(r.status) === 'on_track').length || 0,
+    offTrack: rocks?.filter(r => ['off_track', 'at_risk'].includes(dbToUiStatus(r.status))).length || 0,
+    complete: rocks?.filter(r => dbToUiStatus(r.status) === 'complete').length || 0,
   };
 
   // Handlers

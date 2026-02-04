@@ -11,8 +11,8 @@ import {
   groupTeamRocksByFunction,
   groupIndividualRocksByOwner,
   getCurrentQuarter,
-  normalizeStatus
 } from '@/utils/rockRollup';
+import { DB_ROCK_STATUS, uiToDbStatus } from '@/utils/rockStatusUtils';
 
 export interface CreateRockInput {
   title: string;
@@ -139,7 +139,7 @@ export function useEosRocksHierarchy(options?: { quarterYear?: number; quarterNu
       const rockData = {
         ...input,
         tenant_id: VIVACITY_TENANT_ID,
-        status: input.status || 'on_track',
+        status: input.status || DB_ROCK_STATUS.ON_TRACK,
         quarter_year: input.quarter_year || quarterYear,
         quarter_number: input.quarter_number || quarterNumber,
         // Auto-link to VTO for company rocks

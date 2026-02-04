@@ -12,6 +12,7 @@ import { useVivacityTeamUsers, VIVACITY_TENANT_ID } from '@/hooks/useVivacityTea
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { getCurrentQuarter } from '@/utils/rockRollup';
+import { DB_ROCK_STATUS } from '@/utils/rockStatusUtils';
 
 interface CreateCompanyRockDialogProps {
   open: boolean;
@@ -81,7 +82,7 @@ export function CreateCompanyRockDialog({ open, onOpenChange, onSuccess }: Creat
       quarter_year: quarterYear,
       quarter_number: quarterNumber,
       due_date: dueDate,
-      status: 'on_track',
+      status: DB_ROCK_STATUS.ON_TRACK,
     });
 
     resetForm();
