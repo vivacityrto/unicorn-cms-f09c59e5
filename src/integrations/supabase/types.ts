@@ -6000,7 +6000,7 @@ export type Database = {
           created_by?: string | null
           description?: string | null
           files?: string[] | null
-          id: number
+          id?: number
           name?: string | null
           order_number: number
           package_id?: number | null
