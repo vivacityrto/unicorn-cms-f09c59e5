@@ -5,11 +5,6 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from '@/components/ui/collapsible';
-import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -33,25 +28,18 @@ import {
   AlertCircle,
   CheckCircle2,
   XCircle,
-  ChevronDown,
-  ChevronRight,
-  FolderPlus,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { FunctionWithSeats, UserBasic, SeatWithDetails } from '@/types/accountabilityChart';
 import { EOS_SEAT_ROLE_LABELS, EOS_ROLE_COLORS, type EosSeatRoleType } from '@/types/accountabilityChart';
-import { SubFunctionCard } from './SubFunctionCard';
+import { TeamMembersSection } from './TeamMembersSection';
 
 interface EosFunctionCardProps {
   func: FunctionWithSeats;
   canEdit: boolean;
   tenantUsers: UserBasic[];
-  childFunctions?: FunctionWithSeats[];
-  allLeads?: FunctionWithSeats[];
   onUpdateFunction: (id: string, name: string) => void;
   onDeleteFunction: (id: string) => void;
-  onAddSubFunction?: (parentId: string, name: string) => void;
-  onMoveFunction?: (functionId: string, newParentId: string | null, newIndex: number) => void;
   onAddRole: (seatId: string, text: string) => void;
   onUpdateRole: (id: string, text: string) => void;
   onDeleteRole: (id: string) => void;
@@ -75,12 +63,8 @@ export function EosFunctionCard({
   func,
   canEdit,
   tenantUsers,
-  childFunctions = [],
-  allLeads = [],
   onUpdateFunction,
   onDeleteFunction,
-  onAddSubFunction,
-  onMoveFunction,
   onAddRole,
   onUpdateRole,
   onDeleteRole,
@@ -94,9 +78,6 @@ export function EosFunctionCard({
   const [newRole, setNewRole] = useState('');
   const [editingRoleId, setEditingRoleId] = useState<string | null>(null);
   const [editRoleText, setEditRoleText] = useState('');
-  const [showSubFunctions, setShowSubFunctions] = useState(childFunctions.length > 0);
-  const [showAddSubFunction, setShowAddSubFunction] = useState(false);
-  const [newSubFunctionName, setNewSubFunctionName] = useState('');
 
   // Get the primary seat for this function (in EOS, each function has exactly one seat)
   const primarySeat: SeatWithDetails | undefined = func.seats[0];
@@ -108,21 +89,12 @@ export function EosFunctionCard({
   const hasAccountabilityWarning = (roleCount > 0 && roleCount < 3) || roleCount > 7;
   const roleType = primarySeat?.eos_role_type;
 
-  // Check if this is a Functional Lead (can have sub-functions)
+  // Check if this is a Functional Lead (has team members section)
   const isFunctionalLead = roleType === 'functional_lead';
-  const hasChildren = childFunctions.length > 0;
 
   // Available users for assignment (exclude already assigned)
   const assignedUserIds = primarySeat?.assignments.map(a => a.user_id) || [];
   const availableUsers = tenantUsers.filter(u => !assignedUserIds.includes(u.user_uuid));
-
-  const handleAddSubFunction = () => {
-    if (newSubFunctionName.trim() && onAddSubFunction) {
-      onAddSubFunction(func.id, newSubFunctionName.trim());
-      setNewSubFunctionName('');
-      setShowAddSubFunction(false);
-    }
-  };
 
   const handleSaveName = () => {
     if (editName.trim() && editName !== func.name) {
@@ -495,90 +467,9 @@ export function EosFunctionCard({
           )}
         </div>
 
-        {/* Sub-functions section (for Functional Leads only) */}
+        {/* Team Members section (for Functional Leads only) */}
         {isFunctionalLead && (
-          <div className="space-y-2 pt-2 border-t border-muted">
-            <Collapsible open={showSubFunctions} onOpenChange={setShowSubFunctions}>
-              <div className="flex items-center justify-between">
-                <CollapsibleTrigger asChild>
-                  <Button variant="ghost" size="sm" className="h-7 px-2 gap-1 text-xs">
-                    {showSubFunctions ? (
-                      <ChevronDown className="h-3 w-3" />
-                    ) : (
-                      <ChevronRight className="h-3 w-3" />
-                    )}
-                    Functions ({childFunctions.length})
-                  </Button>
-                </CollapsibleTrigger>
-                {canEdit && onAddSubFunction && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-7 px-2 gap-1 text-xs"
-                    onClick={() => setShowAddSubFunction(true)}
-                  >
-                    <FolderPlus className="h-3 w-3" />
-                    Add
-                  </Button>
-                )}
-              </div>
-
-              <CollapsibleContent className="space-y-2 pt-2">
-                {/* Add sub-function form */}
-                {showAddSubFunction && canEdit && (
-                  <div className="flex items-center gap-1">
-                    <Input
-                      placeholder="Function name..."
-                      value={newSubFunctionName}
-                      onChange={(e) => setNewSubFunctionName(e.target.value)}
-                      className="h-7 text-sm"
-                      autoFocus
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') handleAddSubFunction();
-                        if (e.key === 'Escape') {
-                          setShowAddSubFunction(false);
-                          setNewSubFunctionName('');
-                        }
-                      }}
-                    />
-                    <Button size="icon" variant="ghost" className="h-6 w-6" onClick={handleAddSubFunction} disabled={!newSubFunctionName.trim()}>
-                      <Check className="h-3 w-3" />
-                    </Button>
-                    <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => { setShowAddSubFunction(false); setNewSubFunctionName(''); }}>
-                      <X className="h-3 w-3" />
-                    </Button>
-                  </div>
-                )}
-
-                {/* Child function cards */}
-                {childFunctions.map((child) => (
-                  <SubFunctionCard
-                    key={child.id}
-                    func={child}
-                    canEdit={canEdit}
-                    tenantUsers={tenantUsers}
-                    parentLeads={allLeads}
-                    onUpdateFunction={onUpdateFunction}
-                    onDeleteFunction={onDeleteFunction}
-                    onMoveFunction={onMoveFunction || (() => {})}
-                    onAddRole={onAddRole}
-                    onUpdateRole={onUpdateRole}
-                    onDeleteRole={onDeleteRole}
-                    onAssignOwner={onAssignOwner}
-                    onUnassignOwner={onUnassignOwner}
-                    onCreateSeatForFunction={onCreateSeatForFunction}
-                  />
-                ))}
-
-                {/* Empty state */}
-                {childFunctions.length === 0 && !showAddSubFunction && (
-                  <p className="text-xs text-muted-foreground text-center py-2">
-                    No functions yet. Click "Add" to create one.
-                  </p>
-                )}
-              </CollapsibleContent>
-            </Collapsible>
-          </div>
+          <TeamMembersSection functionId={func.id} canEdit={canEdit} />
         )}
       </CardContent>
     </Card>
