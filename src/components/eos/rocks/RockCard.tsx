@@ -22,6 +22,12 @@ import type { RockWithHierarchy, RockLevel } from '@/types/eos';
 import { dbToUiStatus, getStatusConfig as getStatusConfigUtil } from '@/utils/rockStatusUtils';
 import { cn } from '@/lib/utils';
 
+interface UserInfo {
+  name: string;
+  initials: string;
+  avatarUrl?: string | null;
+}
+
 interface RockCardProps {
   rock: RockWithHierarchy;
   onEdit?: (rock: RockWithHierarchy) => void;
@@ -31,6 +37,7 @@ interface RockCardProps {
   showChildren?: boolean;
   compact?: boolean;
   getUserName?: (userId: string) => string | null;
+  getUserInfo?: (userId: string) => UserInfo | null;
   getSeatName?: (seatId: string) => string | null;
 }
 
@@ -43,6 +50,7 @@ export function RockCard({
   showChildren = true,
   compact = false,
   getUserName,
+  getUserInfo,
   getSeatName,
 }: RockCardProps) {
   const status = dbToUiStatus(rock.rollupStatus || rock.status);
@@ -81,7 +89,8 @@ export function RockCard({
     );
   };
 
-  const ownerName = rock.owner_id && getUserName ? getUserName(rock.owner_id) : null;
+  const ownerInfo = rock.owner_id && getUserInfo ? getUserInfo(rock.owner_id) : null;
+  const ownerName = ownerInfo?.name || (rock.owner_id && getUserName ? getUserName(rock.owner_id) : null);
   const seatName = rock.seat_id && getSeatName ? getSeatName(rock.seat_id) : rock.seat?.seat_name;
 
   if (compact) {
@@ -132,8 +141,19 @@ export function RockCard({
                 </div>
               )}
               {ownerName && (
-                <div className="flex items-center gap-1">
-                  <Users className="h-3.5 w-3.5" />
+                <div className="flex items-center gap-1.5">
+                  {ownerInfo?.avatarUrl ? (
+                    <Avatar className="h-5 w-5">
+                      <AvatarImage src={ownerInfo.avatarUrl} alt={ownerName} />
+                      <AvatarFallback className="text-[9px]">{ownerInfo.initials}</AvatarFallback>
+                    </Avatar>
+                  ) : ownerInfo?.initials ? (
+                    <Avatar className="h-5 w-5">
+                      <AvatarFallback className="text-[9px]">{ownerInfo.initials}</AvatarFallback>
+                    </Avatar>
+                  ) : (
+                    <Users className="h-3.5 w-3.5" />
+                  )}
                   <span>{ownerName}</span>
                 </div>
               )}
