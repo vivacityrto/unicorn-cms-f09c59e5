@@ -674,7 +674,7 @@ export const DashboardLayout = ({
         {/* Top Bar */}
         <header className="h-16 bg-card border-b border-border flex items-center justify-between px-6 sticky top-0 z-20">
           <div className="flex items-center gap-4">
-            <img src={unicornLogo} alt="Unicorn 2.0" className="h-16" />
+            <img src={unicornLogo} alt="Unicorn 2.0" className="h-16" width="117" height="64" fetchPriority="high" />
             {/* Real-time Australian Clock */}
             
           </div>
