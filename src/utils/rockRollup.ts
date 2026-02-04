@@ -1,4 +1,8 @@
 import type { EosRock, RockWithHierarchy } from '@/types/eos';
+import { dbToUiStatus, uiToDbStatus, DB_ROCK_STATUS, type UiRockStatus } from './rockStatusUtils';
+
+// Re-export for backwards compatibility
+export { dbToUiStatus as normalizeStatus, uiToDbStatus, getStatusConfig } from './rockStatusUtils';
 
 /**
  * Compute the roll-up status for a rock based on its children's statuses.
@@ -7,22 +11,22 @@ import type { EosRock, RockWithHierarchy } from '@/types/eos';
  * - If all children are complete, parent can be complete
  * - Otherwise, parent is on_track
  */
-export function computeRollupStatus(rock: EosRock, allRocks: EosRock[]): string {
+export function computeRollupStatus(rock: EosRock, allRocks: EosRock[]): UiRockStatus {
   const children = allRocks.filter(r => r.parent_rock_id === rock.id && !r.archived_at);
   
   if (children.length === 0) {
-    return normalizeStatus(rock.status);
+    return dbToUiStatus(rock.status);
   }
   
   const hasOffTrack = children.some(c => {
-    const status = normalizeStatus(c.status);
+    const status = dbToUiStatus(c.status);
     return status === 'off_track' || status === 'at_risk';
   });
   
   if (hasOffTrack) return 'off_track';
   
   const allComplete = children.every(c => 
-    normalizeStatus(c.status) === 'complete'
+    dbToUiStatus(c.status) === 'complete'
   );
   
   if (allComplete) return 'complete';
@@ -38,36 +42,12 @@ export function getChildStats(rock: EosRock, allRocks: EosRock[]): { total: numb
   
   return {
     total: children.length,
-    complete: children.filter(c => normalizeStatus(c.status) === 'complete').length,
+    complete: children.filter(c => dbToUiStatus(c.status) === 'complete').length,
     offTrack: children.filter(c => {
-      const status = normalizeStatus(c.status);
+      const status = dbToUiStatus(c.status);
       return status === 'off_track' || status === 'at_risk';
     }).length,
   };
-}
-
-/**
- * Normalize status strings to lowercase, handling various formats
- */
-export function normalizeStatus(status: string | null | undefined): string {
-  if (!status) return 'on_track';
-  const lower = status.toLowerCase().replace(/-/g, '_');
-  
-  // Map common variations
-  const statusMap: Record<string, string> = {
-    'on_track': 'on_track',
-    'ontrack': 'on_track',
-    'off_track': 'off_track',
-    'offtrack': 'off_track',
-    'at_risk': 'at_risk',
-    'atrisk': 'at_risk',
-    'complete': 'complete',
-    'completed': 'complete',
-    'not_started': 'not_started',
-    'notstarted': 'not_started',
-  };
-  
-  return statusMap[lower] || lower;
 }
 
 /**
@@ -82,7 +62,7 @@ export function buildRockHierarchy(rocks: EosRock[]): RockWithHierarchy[] {
       ...rock,
       children: [],
       parent: null,
-      rollupStatus: normalizeStatus(rock.status),
+      rollupStatus: dbToUiStatus(rock.status),
       childStats: { total: 0, complete: 0, offTrack: 0 },
     });
   });
@@ -173,7 +153,7 @@ export function canMarkComplete(rock: EosRock, allRocks: EosRock[]): boolean {
   
   if (children.length === 0) return true;
   
-  return children.every(c => normalizeStatus(c.status) === 'complete');
+  return children.every(c => dbToUiStatus(c.status) === 'complete');
 }
 
 /**

@@ -13,6 +13,7 @@ import { useVivacityTeamUsers, VIVACITY_TENANT_ID } from '@/hooks/useVivacityTea
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { getCurrentQuarter } from '@/utils/rockRollup';
+import { DB_ROCK_STATUS } from '@/utils/rockStatusUtils';
 import type { RockWithHierarchy } from '@/types/eos';
 
 interface CreateTeamRockDialogProps {
@@ -81,7 +82,7 @@ export function CreateTeamRockDialog({ open, onOpenChange, parentRock, onSuccess
       quarter_year: selectedParent?.quarter_year || currentQuarter.year,
       quarter_number: selectedParent?.quarter_number || currentQuarter.quarter,
       due_date: dueDate,
-      status: 'on_track',
+      status: DB_ROCK_STATUS.ON_TRACK,
     });
 
     resetForm();
