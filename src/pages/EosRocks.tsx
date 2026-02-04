@@ -78,6 +78,18 @@ function RocksHierarchyContent() {
     return [user.first_name, user.last_name].filter(Boolean).join(' ') || user.email;
   };
 
+  const getUserInfo = (userId: string) => {
+    const user = vivacityUsers?.find(u => u.user_uuid === userId);
+    if (!user) return null;
+    const name = [user.first_name, user.last_name].filter(Boolean).join(' ') || user.email;
+    const initials = [user.first_name?.[0], user.last_name?.[0]].filter(Boolean).join('').toUpperCase() || '?';
+    return {
+      name,
+      initials,
+      avatarUrl: user.avatar_url,
+    };
+  };
+
   const getFunctionName = (functionId: string): string | null => {
     const func = functions?.find(f => f.id === functionId);
     return func?.name || null;
@@ -338,6 +350,7 @@ function RocksHierarchyContent() {
                   onEdit={handleEditRock}
                   onViewCascade={handleViewCascade}
                   getUserName={getUserName}
+                  getUserInfo={getUserInfo}
                   getSeatName={getSeatName}
                   showChildren={true}
                 />
@@ -388,6 +401,7 @@ function RocksHierarchyContent() {
                           onEdit={handleEditRock}
                           onViewCascade={handleViewCascade}
                           getUserName={getUserName}
+                          getUserInfo={getUserInfo}
                           getSeatName={getSeatName}
                           showParent={true}
                           showChildren={true}
@@ -428,6 +442,7 @@ function RocksHierarchyContent() {
                   rock={rock}
                   onEdit={handleEditRock}
                   getUserName={getUserName}
+                  getUserInfo={getUserInfo}
                   getSeatName={getSeatName}
                   showParent={true}
                   showChildren={false}
@@ -456,6 +471,7 @@ function RocksHierarchyContent() {
                 onCreateIndividualRock={handleCreateIndividualRock}
                 onEditRock={handleEditRock}
                 getUserName={getUserName}
+                getUserInfo={getUserInfo}
                 getFunctionName={getFunctionName}
               />
             </div>
@@ -480,6 +496,7 @@ function RocksHierarchyContent() {
                     onCreateIndividualRock={handleCreateIndividualRock}
                     onEditRock={handleEditRock}
                     getUserName={getUserName}
+                    getUserInfo={getUserInfo}
                     getFunctionName={getFunctionName}
                   />
                 ))

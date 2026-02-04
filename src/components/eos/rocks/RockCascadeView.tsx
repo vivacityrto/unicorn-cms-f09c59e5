@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { 
   ChevronDown, 
@@ -19,6 +20,12 @@ import type { RockWithHierarchy } from '@/types/eos';
 import { normalizeStatus } from '@/utils/rockRollup';
 import { cn } from '@/lib/utils';
 
+interface UserInfo {
+  name: string;
+  initials: string;
+  avatarUrl?: string | null;
+}
+
 interface RockCascadeViewProps {
   rock: RockWithHierarchy;
   allRocks: RockWithHierarchy[];
@@ -26,6 +33,7 @@ interface RockCascadeViewProps {
   onCreateIndividualRock?: (parentRock: RockWithHierarchy) => void;
   onEditRock?: (rock: RockWithHierarchy) => void;
   getUserName?: (userId: string) => string | null;
+  getUserInfo?: (userId: string) => UserInfo | null;
   getFunctionName?: (functionId: string) => string | null;
   level?: number;
 }
@@ -37,6 +45,7 @@ export function RockCascadeView({
   onCreateIndividualRock,
   onEditRock,
   getUserName,
+  getUserInfo,
   getFunctionName,
   level = 0,
 }: RockCascadeViewProps) {
@@ -78,7 +87,8 @@ export function RockCascadeView({
   const StatusIcon = statusConfig.icon;
   const LevelIcon = getLevelIcon(rock.rock_level);
 
-  const ownerName = rock.owner_id && getUserName ? getUserName(rock.owner_id) : null;
+  const ownerInfo = rock.owner_id && getUserInfo ? getUserInfo(rock.owner_id) : null;
+  const ownerName = ownerInfo?.name || (rock.owner_id && getUserName ? getUserName(rock.owner_id) : null);
   const functionName = rock.function_id && getFunctionName ? getFunctionName(rock.function_id) : rock.function?.name;
 
   return (
@@ -128,8 +138,18 @@ export function RockCascadeView({
                   </div>
                   
                   {ownerName && (
-                    <div className="text-sm text-muted-foreground mt-1">
-                      {ownerName}
+                    <div className="flex items-center gap-1.5 text-sm text-muted-foreground mt-1">
+                      {ownerInfo?.avatarUrl ? (
+                        <Avatar className="h-5 w-5">
+                          <AvatarImage src={ownerInfo.avatarUrl} alt={ownerName} />
+                          <AvatarFallback className="text-[9px]">{ownerInfo.initials}</AvatarFallback>
+                        </Avatar>
+                      ) : ownerInfo?.initials ? (
+                        <Avatar className="h-5 w-5">
+                          <AvatarFallback className="text-[9px]">{ownerInfo.initials}</AvatarFallback>
+                        </Avatar>
+                      ) : null}
+                      <span>{ownerName}</span>
                     </div>
                   )}
                 </div>
@@ -161,6 +181,7 @@ export function RockCascadeView({
                   onCreateIndividualRock={onCreateIndividualRock}
                   onEditRock={onEditRock}
                   getUserName={getUserName}
+                  getUserInfo={getUserInfo}
                   getFunctionName={getFunctionName}
                   level={level + 1}
                 />
