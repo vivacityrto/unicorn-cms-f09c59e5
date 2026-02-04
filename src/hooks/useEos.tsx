@@ -66,8 +66,8 @@ export const useEosRocks = () => {
   });
 
   const updateRock = useMutation({
-    mutationFn: async ({ id, status, ...updates }: Partial<EosRock> & { id: string; status?: string }) => {
-      const { data, error} = await supabase
+    mutationFn: async ({ id, ...updates }: Partial<EosRock> & { id: string }) => {
+      const { data, error } = await supabase
         .from('eos_rocks')
         .update(updates as any)
         .eq('id', id)
