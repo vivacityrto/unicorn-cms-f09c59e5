@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { VIVACITY_TENANT_ID } from '@/hooks/useVivacityTeamUsers';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -53,7 +54,7 @@ export function VtoEditor({ vto, onCancel }: VtoEditorProps) {
   const publishVto = useMutation({
     mutationFn: async () => {
       const upsertData: Record<string, unknown> = {
-        tenant_id: profile?.tenant_id!,
+        tenant_id: VIVACITY_TENANT_ID,
         ten_year_target: tenYearTarget,
         core_values: coreValues.filter(v => v.trim()),
         target_market: targetMarket,

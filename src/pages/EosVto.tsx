@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { VIVACITY_TENANT_ID } from '@/hooks/useVivacityTeamUsers';
 import { useRBAC } from '@/hooks/useRBAC';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -26,36 +27,36 @@ function VtoContent() {
   const [isEditing, setIsEditing] = useState(false);
   const [selectedVersion, setSelectedVersion] = useState<string | null>(null);
 
-  // Fetch active VTO (most recently updated)
+  // Fetch active VTO (most recently updated) - EOS is Vivacity-internal only
   const { data: activeVto, isLoading } = useQuery({
-    queryKey: ['eos-vto-active', profile?.tenant_id],
+    queryKey: ['eos-vto-active', VIVACITY_TENANT_ID],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('eos_vto')
         .select('*')
-        .eq('tenant_id', profile?.tenant_id!)
+        .eq('tenant_id', VIVACITY_TENANT_ID)
         .order('updated_at', { ascending: false })
         .limit(1)
         .maybeSingle();
       if (error) throw error;
       return data;
     },
-    enabled: !!profile?.tenant_id,
+    enabled: !!profile,
   });
 
-  // Fetch all VTO versions
+  // Fetch all VTO versions - EOS is Vivacity-internal only
   const { data: vtoVersions } = useQuery({
-    queryKey: ['eos-vto-versions', profile?.tenant_id],
+    queryKey: ['eos-vto-versions', VIVACITY_TENANT_ID],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('eos_vto')
         .select('*')
-        .eq('tenant_id', profile?.tenant_id!)
+        .eq('tenant_id', VIVACITY_TENANT_ID)
         .order('created_at', { ascending: false });
       if (error) throw error;
       return data;
     },
-    enabled: !!profile?.tenant_id,
+    enabled: !!profile,
   });
 
   if (isLoading) {
