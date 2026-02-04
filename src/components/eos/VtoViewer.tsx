@@ -107,7 +107,7 @@ export function VtoViewer({ vto }: VtoViewerProps) {
             <div className="p-4 rounded-lg bg-muted/50">
               <p className="text-sm text-muted-foreground mb-1">Profit Target</p>
               <p className="text-xl font-semibold">
-                ${vto.three_year_profit_target?.toLocaleString() || '—'}
+                {vto.three_year_profit_target != null ? `${vto.three_year_profit_target}%` : '—'}
               </p>
             </div>
           </div>
@@ -146,7 +146,7 @@ export function VtoViewer({ vto }: VtoViewerProps) {
             <div className="p-4 rounded-lg bg-muted/50">
               <p className="text-sm text-muted-foreground mb-1">Profit Target</p>
               <p className="text-xl font-semibold">
-                ${vto.one_year_profit_target?.toLocaleString() || '—'}
+                {vto.one_year_profit_target != null ? `${vto.one_year_profit_target}%` : '—'}
               </p>
             </div>
           </div>
