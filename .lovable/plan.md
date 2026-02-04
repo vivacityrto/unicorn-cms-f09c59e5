@@ -1,142 +1,111 @@
 
-# Fix: Milestone Duplication When Adding New Milestones
+# Fix: Create Template Not Working
 
 ## Problem Summary
 
-When adding milestones to a Rock, they duplicate unless removed first. The screenshot shows 6 identical milestones with the same text, all repeating the same content.
+When clicking "Create Template" in the Agenda Template Library, nothing happens. The button appears to not respond, and no template is created.
 
 ## Root Cause Analysis
 
-The issue is in the `useEffect` that syncs the form state with the `rock` prop in `RockFormDialog.tsx`:
+The issue is the same `tenant_id: null` pattern that has been fixed in other EOS components. Super Admins have `tenant_id: null` in their profile, but all EOS data belongs to `VIVACITY_TENANT_ID` (6372).
 
+### Location 1: `AgendaTemplateEditor.tsx` (line 117)
 ```tsx
-useEffect(() => {
-  if (rock) {
-    // ... sets milestones from rock.milestones
-    setMilestones(savedMilestones);
-  }
-}, [rock]);
+const handleSave = async () => {
+  if (!profile?.tenant_id || !templateName.trim()) return;  // <-- Early return for Super Admins!
 ```
+When a Super Admin clicks "Create Template", this check fails because `profile.tenant_id` is `null`, causing the function to return immediately without doing anything.
 
-**The Problem:**
-1. User opens the dialog - `useEffect` loads milestones from database (e.g., 1 milestone)
-2. User adds a new milestone - state now has 2 milestones
-3. User saves - `updateRock.mutateAsync()` is called
-4. `queryClient.invalidateQueries({ queryKey: ['eos-rocks'] })` triggers
-5. The `rocks` query refetches, giving the `rock` prop a **new object reference**
-6. The `useEffect` runs again because `rock` dependency changed
-7. The effect reloads milestones from the now-updated database (2 milestones)
-8. If timing is off or there's any async overlap, this can cause duplicates
-
-**Additional Issue:**
-The `useEffect` runs on every `rock` reference change, not just when the rock ID changes. This means even after saving, if the dialog is still mounted, it re-syncs state with database data.
+### Location 2: `useEosAgendaTemplates.tsx` (multiple lines)
+The hook has several issues:
+- **Line 17**: `.eq('tenant_id', profile?.tenant_id!)` - Query filters by null, returns nothing
+- **Line 26**: `enabled: !!profile?.tenant_id` - Prevents query from running at all
+- **Line 46**: `tenant_id: profile?.tenant_id` - Would insert null if it ran
+- **Line 94**: `tenant_id: profile?.tenant_id` - Duplicate inserts null
+- **Line 125**: `.eq('tenant_id', profile?.tenant_id!)` - Set default uses null
 
 ---
 
 ## Solution
 
-Implement a stable initialization pattern that:
-1. Only initializes form state when the **rock ID changes** (not just reference)
-2. Tracks whether the form has been initialized to prevent re-runs
-3. Properly resets initialization state when dialog closes
+Apply the same pattern used successfully in `RockFormDialog.tsx`, `VtoEditor.tsx`, and other EOS components: use the `VIVACITY_TENANT_ID` constant (6372) for all EOS data operations.
 
-### File: `src/components/eos/RockFormDialog.tsx`
+### File 1: `src/components/eos/AgendaTemplateEditor.tsx`
 
 **Changes:**
+1. Import `VIVACITY_TENANT_ID` from `useVivacityTeamUsers`
+2. Update `handleSave` validation to check for `profile` (not `profile.tenant_id`)
+3. Use `VIVACITY_TENANT_ID` when calling `createTemplate`
 
-1. **Add initialization tracking state**
 ```tsx
-const [isInitialized, setIsInitialized] = useState(false);
-const previousRockId = useRef<string | null>(null);
+// Before (line 117)
+if (!profile?.tenant_id || !templateName.trim()) return;
+// ...
+tenant_id: profile.tenant_id,
+
+// After
+import { VIVACITY_TENANT_ID } from '@/hooks/useVivacityTeamUsers';
+// ...
+if (!profile || !templateName.trim()) return;
+// ...
+tenant_id: VIVACITY_TENANT_ID,
 ```
 
-2. **Update useEffect to check rock ID, not reference**
-```tsx
-useEffect(() => {
-  // Only reinitialize if rock ID actually changed or dialog just opened
-  const rockId = rock?.id ?? null;
-  
-  if (rockId !== previousRockId.current || (open && !isInitialized)) {
-    previousRockId.current = rockId;
-    
-    if (rock) {
-      setTitle(rock.title || '');
-      setDescription(rock.description || '');
-      setIssue((rock as any)?.issue || '');
-      setProblemSolved((rock as any)?.outcome || '');
-      
-      // Parse milestones from JSON
-      const savedMilestones = (rock as any)?.milestones;
-      if (Array.isArray(savedMilestones)) {
-        setMilestones(savedMilestones);
-      } else {
-        setMilestones([]);
-      }
-      
-      setClientId(rock.client_id || '');
-      setSeatId(rock.seat_id || '');
-      setOwnerId((rock as any)?.owner_id || '');
-      setStatus(rock.status || 'on_track');
-      setPriority(rock.priority || 1);
-      setQuarterNumber(rock.quarter_number || Math.ceil((new Date().getMonth() + 1) / 3));
-      setQuarterYear(rock.quarter_year || new Date().getFullYear());
-      setDueDate(rock.due_date ? rock.due_date.split('T')[0] : '');
-    } else {
-      resetForm();
-    }
-    
-    setIsInitialized(true);
-  }
-}, [rock?.id, open]);
-```
+### File 2: `src/hooks/useEosAgendaTemplates.tsx`
 
-3. **Reset initialization state when dialog closes**
-```tsx
-// Add effect to reset init flag when dialog closes
-useEffect(() => {
-  if (!open) {
-    setIsInitialized(false);
-    previousRockId.current = null;
-  }
-}, [open]);
-```
+**Changes:**
+1. Import `VIVACITY_TENANT_ID` from `useVivacityTeamUsers`
+2. Update all queries to use `VIVACITY_TENANT_ID` instead of `profile?.tenant_id`
+3. Update `enabled` conditions to check for `profile` instead of `profile?.tenant_id`
+4. Update all inserts to use `VIVACITY_TENANT_ID`
 
-4. **Import useRef**
-```tsx
-import { useState, useEffect, useMemo, useRef } from 'react';
-```
+| Line | Current | Fixed |
+|------|---------|-------|
+| 12 | `queryKey: ['eos-agenda-templates', profile?.tenant_id]` | `queryKey: ['eos-agenda-templates', VIVACITY_TENANT_ID]` |
+| 17 | `.eq('tenant_id', profile?.tenant_id!)` | `.eq('tenant_id', VIVACITY_TENANT_ID)` |
+| 26 | `enabled: !!profile?.tenant_id` | `enabled: !!profile` |
+| 46 | `tenant_id: profile?.tenant_id` | `tenant_id: VIVACITY_TENANT_ID` |
+| 94 | `tenant_id: profile?.tenant_id` | `tenant_id: VIVACITY_TENANT_ID` |
+| 125 | `.eq('tenant_id', profile?.tenant_id!)` | `.eq('tenant_id', VIVACITY_TENANT_ID)` |
 
 ---
 
 ## Technical Details
 
-| Change | Location | Purpose |
-|--------|----------|---------|
-| Add `useRef` import | Line 1 | Track previous rock ID |
-| Add `isInitialized` state | After line 59 | Prevent re-initialization |
-| Add `previousRockId` ref | After line 59 | Compare IDs, not references |
-| Update `useEffect` | Lines 62-86 | Use ID comparison instead of reference |
-| Add dialog close effect | After main useEffect | Reset tracking when dialog closes |
-
 ### Why This Works
 
-1. **ID-based comparison**: Only re-initializes when the actual rock ID changes, not when the object reference changes due to query cache updates
-2. **Initialization flag**: Prevents the effect from running multiple times while the dialog is open
-3. **Dialog close cleanup**: Ensures fresh initialization when reopening the dialog
+1. EOS (Accountability Chart, Rocks, VTO, Agenda Templates) is Vivacity-internal only
+2. All EOS data belongs to the system tenant (6372)
+3. Super Admins and team members often have `tenant_id: null` in their profile
+4. This pattern is already established and working in:
+   - `EosVto.tsx`
+   - `VtoEditor.tsx`
+   - `RockFormDialog.tsx`
+   - `EosRocks.tsx`
+   - `useClientImpact.tsx`
+   - `IDSMasterPanel.tsx`
+
+### Files to Modify
+
+| File | Changes |
+|------|---------|
+| `src/components/eos/AgendaTemplateEditor.tsx` | Import constant, update validation and tenant_id usage |
+| `src/hooks/useEosAgendaTemplates.tsx` | Import constant, update all queries and mutations |
 
 ---
 
 ## Expected Behavior After Fix
 
-1. Open Rock edit dialog with existing milestone
-2. Add new milestone by clicking "Add Milestone"
-3. Enter milestone text
-4. Click Save
-5. Milestones are saved correctly without duplication
-6. Reopen the dialog - milestones show correctly (no duplicates)
+1. Open EOS Meetings page
+2. Click "Agenda Template Library" or similar
+3. Click "Create Template"
+4. Fill in template details (name, type, segments)
+5. Click "Create Template" button
+6. Template is saved successfully with `tenant_id: 6372`
+7. Template appears in the library list
 
 ---
 
 ## Risk Assessment
 
-**Low risk** - This is a targeted fix to the form initialization logic. It uses React's standard `useRef` pattern for tracking previous values, which is a well-established pattern for preventing unnecessary effect runs.
+**Low risk** - This follows the exact same pattern already applied successfully to multiple EOS components. The change is isolated to EOS features and uses the proven constant-based approach.
