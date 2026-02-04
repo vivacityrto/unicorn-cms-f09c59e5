@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { NotificationDropdown } from "@/components/NotificationDropdown";
-import unicornLogo from "@/assets/unicorn-logo-full.png";
+import unicornLogo from "@/assets/unicorn-logo-login.svg";
 import Footer from "@/components/layout/Footer";
 import { TimeInboxBanner } from "@/components/dashboard/TimeInboxWidget";
 import { FacilitatorModeToggle } from "@/components/eos/FacilitatorModeToggle";
