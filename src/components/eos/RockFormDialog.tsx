@@ -66,6 +66,29 @@ export function RockFormDialog({ open, onOpenChange, rock }: RockFormDialogProps
   );
   const [quarterYear, setQuarterYear] = useState(rock?.quarter_year || new Date().getFullYear());
   const [dueDate, setDueDate] = useState(rock?.due_date ? rock.due_date.split('T')[0] : '');
+
+  // Helper function to calculate quarter end date
+  const getQuarterEndDate = (year: number, quarter: number): string => {
+    const quarterEndDates: Record<number, { month: number; day: number }> = {
+      1: { month: 3, day: 31 },   // March 31
+      2: { month: 6, day: 30 },   // June 30
+      3: { month: 9, day: 30 },   // September 30
+      4: { month: 12, day: 31 }, // December 31
+    };
+    const { month, day } = quarterEndDates[quarter];
+    return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+  };
+
+  // Auto-update due date when quarter or year changes
+  const handleQuarterChange = (newQuarter: number) => {
+    setQuarterNumber(newQuarter);
+    setDueDate(getQuarterEndDate(quarterYear, newQuarter));
+  };
+
+  const handleYearChange = (newYear: number) => {
+    setQuarterYear(newYear);
+    setDueDate(getQuarterEndDate(newYear, quarterNumber));
+  };
   
   // Determine rock level for conditional fields
   const rockLevel = (rock as any)?.rock_level;
@@ -553,7 +576,7 @@ export function RockFormDialog({ open, onOpenChange, rock }: RockFormDialogProps
             <div className="space-y-2">
               <Label htmlFor="quarter">Quarter *</Label>
               <div className="flex gap-2">
-                <Select value={String(quarterNumber)} onValueChange={(v) => setQuarterNumber(Number(v))}>
+                <Select value={String(quarterNumber)} onValueChange={(v) => handleQuarterChange(Number(v))}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
@@ -568,7 +591,7 @@ export function RockFormDialog({ open, onOpenChange, rock }: RockFormDialogProps
                   type="number"
                   placeholder="Year"
                   value={quarterYear}
-                  onChange={(e) => setQuarterYear(Number(e.target.value))}
+                  onChange={(e) => handleYearChange(Number(e.target.value))}
                   className="w-24"
                 />
               </div>

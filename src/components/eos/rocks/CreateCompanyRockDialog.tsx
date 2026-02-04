@@ -34,6 +34,29 @@ export function CreateCompanyRockDialog({ open, onOpenChange, onSuccess }: Creat
   const [dueDate, setDueDate] = useState('');
   const [milestones, setMilestones] = useState<{ id: string; text: string; completed: boolean }[]>([]);
 
+  // Helper function to calculate quarter end date
+  const getQuarterEndDate = (year: number, quarter: number): string => {
+    const quarterEndDates: Record<number, { month: number; day: number }> = {
+      1: { month: 3, day: 31 },   // March 31
+      2: { month: 6, day: 30 },   // June 30
+      3: { month: 9, day: 30 },   // September 30
+      4: { month: 12, day: 31 }, // December 31
+    };
+    const { month, day } = quarterEndDates[quarter];
+    return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+  };
+
+  // Auto-update due date when quarter or year changes
+  const handleQuarterChange = (newQuarter: number) => {
+    setQuarterNumber(newQuarter);
+    setDueDate(getQuarterEndDate(quarterYear, newQuarter));
+  };
+
+  const handleYearChange = (newYear: number) => {
+    setQuarterYear(newYear);
+    setDueDate(getQuarterEndDate(newYear, quarterNumber));
+  };
+
   // Fetch seats
   const { data: seats } = useQuery({
     queryKey: ['seats-for-rocks', VIVACITY_TENANT_ID],
@@ -234,7 +257,7 @@ export function CreateCompanyRockDialog({ open, onOpenChange, onSuccess }: Creat
           <div className="grid grid-cols-3 gap-4">
             <div className="space-y-2">
               <Label>Year</Label>
-              <Select value={String(quarterYear)} onValueChange={(v) => setQuarterYear(Number(v))}>
+              <Select value={String(quarterYear)} onValueChange={(v) => handleYearChange(Number(v))}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
@@ -247,7 +270,7 @@ export function CreateCompanyRockDialog({ open, onOpenChange, onSuccess }: Creat
             </div>
             <div className="space-y-2">
               <Label>Quarter</Label>
-              <Select value={String(quarterNumber)} onValueChange={(v) => setQuarterNumber(Number(v))}>
+              <Select value={String(quarterNumber)} onValueChange={(v) => handleQuarterChange(Number(v))}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
