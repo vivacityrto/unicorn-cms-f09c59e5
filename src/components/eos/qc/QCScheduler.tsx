@@ -3,14 +3,17 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
+import { Badge } from '@/components/ui/badge';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useAuth } from '@/hooks/useAuth';
-import { Calendar, Users } from 'lucide-react';
+import { Users, Check, ChevronsUpDown } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { useQuarterlyConversations } from '@/hooks/useQuarterlyConversations';
+import { useVivacityTeamUsers, VivacityTeamUser } from '@/hooks/useVivacityTeamUsers';
 import { format, addMonths } from 'date-fns';
+import { cn } from '@/lib/utils';
 
 interface QCSchedulerProps {
   open: boolean;
@@ -18,36 +21,66 @@ interface QCSchedulerProps {
   onScheduled?: () => void;
 }
 
+// Role badge color helper
+const getRoleBadgeVariant = (role: string | null) => {
+  switch (role) {
+    case 'Super Admin': return 'default';
+    case 'Team Leader': return 'secondary';
+    case 'Team Member': return 'outline';
+    default: return 'outline';
+  }
+};
+
 export const QCScheduler = ({ open, onOpenChange, onScheduled }: QCSchedulerProps) => {
   const { profile } = useAuth();
   const { templates, scheduleQC } = useQuarterlyConversations();
+  const { data: vivacityUsers, isLoading: usersLoading } = useVivacityTeamUsers();
+  
   const [revieweeId, setRevieweeId] = useState('');
   const [managerIds, setManagerIds] = useState<string[]>([]);
   const [quarterStart, setQuarterStart] = useState('');
   const [scheduledDate, setScheduledDate] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  const [revieweeOpen, setRevieweeOpen] = useState(false);
+  const [managerOpen, setManagerOpen] = useState(false);
 
   // Auto-calculate quarter end (3 months from start)
   const quarterEnd = quarterStart 
     ? format(addMonths(new Date(quarterStart), 3), 'yyyy-MM-dd')
     : '';
 
-  // Fetch users for selection
-  const { data: users } = useQuery({
-    queryKey: ['users', profile?.tenant_id],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('users')
-        .select('user_uuid, first_name, last_name, email')
-        .eq('tenant_id', profile?.tenant_id!)
-        .eq('disabled', false);
-      if (error) throw error;
-      return data;
-    },
-    enabled: !!profile?.tenant_id && open,
-  });
+  // Filter managers to only Super Admin and Team Leader
+  const managerOptions = vivacityUsers?.filter(u => 
+    u.unicorn_role === 'Super Admin' || u.unicorn_role === 'Team Leader'
+  ) || [];
+
+  // Auto-select manager when reviewee changes (if they have a manager)
+  useEffect(() => {
+    if (revieweeId && vivacityUsers) {
+      const selectedUser = vivacityUsers.find(u => u.user_uuid === revieweeId);
+      // If user has a manager_uuid field, auto-select it
+      // For now, we leave it blank as the schema may not have this field
+    }
+  }, [revieweeId, vivacityUsers]);
 
   const defaultTemplate = templates?.find(t => t.is_default);
+
+  const getSelectedUser = (userId: string): VivacityTeamUser | undefined => {
+    return vivacityUsers?.find(u => u.user_uuid === userId);
+  };
+
+  const getDisplayName = (user: VivacityTeamUser | undefined): string => {
+    if (!user) return '';
+    return `${user.first_name || ''} ${user.last_name || ''}`.trim() || user.email;
+  };
+
+  const getInitials = (user: VivacityTeamUser | undefined): string => {
+    if (!user) return '?';
+    const first = user.first_name?.[0] || '';
+    const last = user.last_name?.[0] || '';
+    return (first + last).toUpperCase() || user.email[0].toUpperCase();
+  };
 
   const handleSchedule = async () => {
     if (!revieweeId || managerIds.length === 0 || !quarterStart || !scheduledDate || !defaultTemplate) {
@@ -81,6 +114,9 @@ export const QCScheduler = ({ open, onOpenChange, onScheduled }: QCSchedulerProp
     }
   };
 
+  const selectedReviewee = getSelectedUser(revieweeId);
+  const selectedManager = getSelectedUser(managerIds[0]);
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[600px]">
@@ -92,39 +128,162 @@ export const QCScheduler = ({ open, onOpenChange, onScheduled }: QCSchedulerProp
         </DialogHeader>
         
         <div className="space-y-4 py-4">
+          {/* Team Member (Reviewee) Selector */}
           <div className="space-y-2">
-            <Label htmlFor="reviewee">Team Member (Reviewee) *</Label>
-            <Select value={revieweeId} onValueChange={setRevieweeId}>
-              <SelectTrigger id="reviewee">
-                <SelectValue placeholder="Select team member" />
-              </SelectTrigger>
-              <SelectContent>
-                {users?.map((user) => (
-                  <SelectItem key={user.user_uuid} value={user.user_uuid}>
-                    {user.first_name} {user.last_name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Label>Team Member (Reviewee) *</Label>
+            <Popover open={revieweeOpen} onOpenChange={setRevieweeOpen}>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  role="combobox"
+                  aria-expanded={revieweeOpen}
+                  className="w-full justify-between h-auto min-h-10"
+                >
+                  {selectedReviewee ? (
+                    <div className="flex items-center gap-2">
+                      <Avatar className="h-6 w-6">
+                        <AvatarImage src={selectedReviewee.avatar_url || undefined} />
+                        <AvatarFallback className="text-xs">{getInitials(selectedReviewee)}</AvatarFallback>
+                      </Avatar>
+                      <div className="text-left">
+                        <span>{getDisplayName(selectedReviewee)}</span>
+                        {selectedReviewee.unicorn_role && (
+                          <Badge variant={getRoleBadgeVariant(selectedReviewee.unicorn_role)} className="ml-2 text-xs">
+                            {selectedReviewee.unicorn_role}
+                          </Badge>
+                        )}
+                      </div>
+                    </div>
+                  ) : (
+                    <span className="text-muted-foreground">Select team member...</span>
+                  )}
+                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-[400px] p-0" align="start">
+                <Command>
+                  <CommandInput placeholder="Search team members..." />
+                  <CommandList>
+                    <CommandEmpty>No team members found.</CommandEmpty>
+                    <CommandGroup>
+                      {usersLoading ? (
+                        <CommandItem disabled>Loading...</CommandItem>
+                      ) : (
+                        vivacityUsers?.map((user) => (
+                          <CommandItem
+                            key={user.user_uuid}
+                            value={`${user.first_name} ${user.last_name} ${user.email}`}
+                            onSelect={() => {
+                              setRevieweeId(user.user_uuid);
+                              setRevieweeOpen(false);
+                            }}
+                          >
+                            <Check
+                              className={cn(
+                                "mr-2 h-4 w-4",
+                                revieweeId === user.user_uuid ? "opacity-100" : "opacity-0"
+                              )}
+                            />
+                            <Avatar className="h-6 w-6 mr-2">
+                              <AvatarImage src={user.avatar_url || undefined} />
+                              <AvatarFallback className="text-xs">{getInitials(user)}</AvatarFallback>
+                            </Avatar>
+                            <div className="flex flex-col flex-1">
+                              <span>{getDisplayName(user)}</span>
+                              <span className="text-xs text-muted-foreground">{user.email}</span>
+                            </div>
+                            {user.unicorn_role && (
+                              <Badge variant={getRoleBadgeVariant(user.unicorn_role)} className="text-xs ml-2">
+                                {user.unicorn_role}
+                              </Badge>
+                            )}
+                          </CommandItem>
+                        ))
+                      )}
+                    </CommandGroup>
+                  </CommandList>
+                </Command>
+              </PopoverContent>
+            </Popover>
           </div>
 
+          {/* Manager Selector */}
           <div className="space-y-2">
-            <Label htmlFor="manager">Manager (Facilitator) *</Label>
-            <Select 
-              value={managerIds[0] || ''} 
-              onValueChange={(value) => setManagerIds([value])}
-            >
-              <SelectTrigger id="manager">
-                <SelectValue placeholder="Select manager" />
-              </SelectTrigger>
-              <SelectContent>
-                {users?.map((user) => (
-                  <SelectItem key={user.user_uuid} value={user.user_uuid}>
-                    {user.first_name} {user.last_name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Label>Manager (Facilitator) *</Label>
+            <Popover open={managerOpen} onOpenChange={setManagerOpen}>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  role="combobox"
+                  aria-expanded={managerOpen}
+                  className="w-full justify-between h-auto min-h-10"
+                >
+                  {selectedManager ? (
+                    <div className="flex items-center gap-2">
+                      <Avatar className="h-6 w-6">
+                        <AvatarImage src={selectedManager.avatar_url || undefined} />
+                        <AvatarFallback className="text-xs">{getInitials(selectedManager)}</AvatarFallback>
+                      </Avatar>
+                      <div className="text-left">
+                        <span>{getDisplayName(selectedManager)}</span>
+                        {selectedManager.unicorn_role && (
+                          <Badge variant={getRoleBadgeVariant(selectedManager.unicorn_role)} className="ml-2 text-xs">
+                            {selectedManager.unicorn_role}
+                          </Badge>
+                        )}
+                      </div>
+                    </div>
+                  ) : (
+                    <span className="text-muted-foreground">Select manager...</span>
+                  )}
+                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-[400px] p-0" align="start">
+                <Command>
+                  <CommandInput placeholder="Search managers..." />
+                  <CommandList>
+                    <CommandEmpty>No managers found.</CommandEmpty>
+                    <CommandGroup>
+                      {usersLoading ? (
+                        <CommandItem disabled>Loading...</CommandItem>
+                      ) : (
+                        managerOptions.map((user) => (
+                          <CommandItem
+                            key={user.user_uuid}
+                            value={`${user.first_name} ${user.last_name} ${user.email}`}
+                            onSelect={() => {
+                              setManagerIds([user.user_uuid]);
+                              setManagerOpen(false);
+                            }}
+                          >
+                            <Check
+                              className={cn(
+                                "mr-2 h-4 w-4",
+                                managerIds[0] === user.user_uuid ? "opacity-100" : "opacity-0"
+                              )}
+                            />
+                            <Avatar className="h-6 w-6 mr-2">
+                              <AvatarImage src={user.avatar_url || undefined} />
+                              <AvatarFallback className="text-xs">{getInitials(user)}</AvatarFallback>
+                            </Avatar>
+                            <div className="flex flex-col flex-1">
+                              <span>{getDisplayName(user)}</span>
+                              <span className="text-xs text-muted-foreground">{user.email}</span>
+                            </div>
+                            {user.unicorn_role && (
+                              <Badge variant={getRoleBadgeVariant(user.unicorn_role)} className="text-xs ml-2">
+                                {user.unicorn_role}
+                              </Badge>
+                            )}
+                          </CommandItem>
+                        ))
+                      )}
+                    </CommandGroup>
+                  </CommandList>
+                </Command>
+              </PopoverContent>
+            </Popover>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
