@@ -4512,6 +4512,42 @@ export type Database = {
         }
         Relationships: []
       }
+      dd_document_categories: {
+        Row: {
+          id: number
+          label: string
+          value: string
+        }
+        Insert: {
+          id: number
+          label: string
+          value: string
+        }
+        Update: {
+          id?: number
+          label?: string
+          value?: string
+        }
+        Relationships: []
+      }
+      dd_fields: {
+        Row: {
+          id: number
+          name: string | null
+          tag: string | null
+        }
+        Insert: {
+          id?: number
+          name?: string | null
+          tag?: string | null
+        }
+        Update: {
+          id?: number
+          name?: string | null
+          tag?: string | null
+        }
+        Relationships: []
+      }
       dd_status: {
         Row: {
           code: number
