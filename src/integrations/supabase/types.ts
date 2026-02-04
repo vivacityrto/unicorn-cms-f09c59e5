@@ -4736,6 +4736,49 @@ export type Database = {
           },
         ]
       }
+      document_fields: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          document_id: number
+          field_id: number
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          document_id: number
+          field_id: number
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          document_id?: number
+          field_id?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "document_fields_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "document_stage_usage"
+            referencedColumns: ["document_id"]
+          },
+          {
+            foreignKeyName: "document_fields_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "documents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "document_fields_field_id_fkey"
+            columns: ["field_id"]
+            isOneToOne: false
+            referencedRelation: "dd_fields"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       document_files: {
         Row: {
           created_at: string
@@ -4943,39 +4986,6 @@ export type Database = {
           },
           {
             foreignKeyName: "document_versions_document_id_fkey"
-            columns: ["document_id"]
-            isOneToOne: false
-            referencedRelation: "documents"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      documentfields: {
-        Row: {
-          document_id: number
-          field_id: number
-          id: number
-        }
-        Insert: {
-          document_id: number
-          field_id: number
-          id?: never
-        }
-        Update: {
-          document_id?: number
-          field_id?: number
-          id?: never
-        }
-        Relationships: [
-          {
-            foreignKeyName: "fk_document"
-            columns: ["document_id"]
-            isOneToOne: false
-            referencedRelation: "document_stage_usage"
-            referencedColumns: ["document_id"]
-          },
-          {
-            foreignKeyName: "fk_document"
             columns: ["document_id"]
             isOneToOne: false
             referencedRelation: "documents"
