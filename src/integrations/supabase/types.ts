@@ -16803,6 +16803,48 @@ export type Database = {
           },
         ]
       }
+      oauth_tokens_safe: {
+        Row: {
+          access_token_status: string | null
+          created_at: string | null
+          expires_at: string | null
+          id: string | null
+          is_expired: boolean | null
+          provider: string | null
+          refresh_token_status: string | null
+          scope: string | null
+          tenant_id: number | null
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          access_token_status?: never
+          created_at?: string | null
+          expires_at?: string | null
+          id?: string | null
+          is_expired?: never
+          provider?: string | null
+          refresh_token_status?: never
+          scope?: string | null
+          tenant_id?: number | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          access_token_status?: never
+          created_at?: string | null
+          expires_at?: string | null
+          id?: string | null
+          is_expired?: never
+          provider?: string | null
+          refresh_token_status?: never
+          scope?: string | null
+          tenant_id?: number | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       seat_linked_data: {
         Row: {
           active_rocks_count: number | null
