@@ -124,6 +124,9 @@ export const QCScheduler = ({ open, onOpenChange, onScheduled }: QCSchedulerProp
           <DialogTitle className="flex items-center gap-2">
             <Users className="h-5 w-5" />
             Schedule Quarterly Conversation
+            <Badge variant="secondary" className="ml-2 text-xs font-normal">
+              Vivacity Internal
+            </Badge>
           </DialogTitle>
         </DialogHeader>
         
