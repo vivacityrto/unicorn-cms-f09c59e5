@@ -35,8 +35,8 @@
  }
  
  export function AIChatbot() {
-   const { user } = useAuth();
-   const { isSuperAdmin } = useRBAC();
+  const { user, profile, loading } = useAuth();
+  const { isSuperAdmin } = useRBAC();
    
    const [isOpen, setIsOpen] = useState(false);
    const [isExpanded, setIsExpanded] = useState(false);
@@ -60,8 +60,18 @@
      }
    }, [isOpen]);
  
-   // Only render for SuperAdmins
-   if (!isSuperAdmin) {
+  // Wait for auth to load before checking access
+  if (loading || !profile) {
+    return null;
+  }
+
+  // Only render for SuperAdmins
+  if (!isSuperAdmin) {
+    console.debug('[AIChatbot] Access denied:', { 
+      isSuperAdmin, 
+      unicorn_role: profile?.unicorn_role,
+      global_role: profile?.global_role 
+    });
      return null;
    }
  
