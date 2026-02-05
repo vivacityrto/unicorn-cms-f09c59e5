@@ -1,5 +1,5 @@
 import { useState, useMemo, useRef, useEffect, useLayoutEffect } from "react";
-import { LayoutDashboard, FileText, BarChart3, Calendar, MessageSquare, Settings, LogOut, Menu, X, Users, Building2, Package2, Wrench, FileCode, Blocks, ScrollText, Flag, AlertTriangle, Heart, ChevronDown, ChevronRight, Bell, Target, TrendingUp, ListTodo, User, Mail, ClipboardCheck, Lightbulb, Home, Sparkles, Library, CheckSquare, ClipboardList, Search, Video, BookOpen, Clock, ShieldCheck, Shield, Briefcase, Inbox, Rocket, Bot } from "lucide-react";
+ import { LayoutDashboard, FileText, BarChart3, Calendar, MessageSquare, Settings, LogOut, Menu, X, Users, Building2, Package2, Wrench, FileCode, Blocks, ScrollText, Flag, AlertTriangle, Heart, ChevronDown, ChevronRight, Bell, Target, TrendingUp, ListTodo, User, Mail, ClipboardCheck, Lightbulb, Home, Sparkles, Library, CheckSquare, ClipboardList, Search, Video, BookOpen, Clock, ShieldCheck, Shield, Briefcase, Inbox, Rocket, Bot, Cog } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
@@ -202,6 +202,14 @@ const superAdminMenuItems = {
   icon: Bot,
   label: "AI Assistant",
   path: "/admin/assistant"
+ }, {
+   icon: Library,
+   label: "Knowledge Library",
+   path: "/admin/knowledge"
+ }, {
+   icon: Cog,
+   label: "EOS Processes",
+   path: "/admin/eos-processes"
   }],
   eos: eosMenuItems,
   advanced: [{

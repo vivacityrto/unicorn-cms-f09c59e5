@@ -106,6 +106,8 @@ import { FacilitatorModeProvider } from "./contexts/FacilitatorModeContext";
  const ProcessForm = lazy(() => import("./pages/ProcessForm"));
  const RoleReference = lazy(() => import("./pages/RoleReference"));
 const AdminAssistant = lazy(() => import("./pages/AdminAssistant"));
+ const AdminKnowledgeLibrary = lazy(() => import("./pages/AdminKnowledgeLibrary"));
+ const AdminEOSProcesses = lazy(() => import("./pages/AdminEOSProcesses"));
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -787,6 +789,8 @@ const App = () => (
             <Route path="/admin/reviews" element={<ProtectedRoute><AdminReviews /></ProtectedRoute>} />
             {/* AI Assistant - SuperAdmin only */}
             <Route path="/admin/assistant" element={<ProtectedRoute requireSuperAdmin><AdminAssistant /></ProtectedRoute>} />
+           <Route path="/admin/knowledge" element={<ProtectedRoute requireSuperAdmin><AdminKnowledgeLibrary /></ProtectedRoute>} />
+           <Route path="/admin/eos-processes" element={<ProtectedRoute requireSuperAdmin><AdminEOSProcesses /></ProtectedRoute>} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
