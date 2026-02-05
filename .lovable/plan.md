@@ -1,281 +1,155 @@
 
-# Fix EOS Meetings Infinite RLS Recursion (42P17)
+
+# Fix Missing Recurring L10 Meetings on EOS Meetings Page
 
 ## Problem Summary
 
-The `/eos/meetings` page fails with Postgres error **42P17: infinite recursion detected in policy for relation "eos_meetings"**. This blocks all EOS meeting functionality.
+Your recurring Level 10 meeting series is set up correctly, but **no future L10 meeting instances are displaying** on the `/eos/meetings` page. The original L10 meeting from January 27, 2026 appears in the "Completed" tab, but no upcoming weekly L10 meetings are shown.
 
 ---
 
-## Root Cause
+## Root Cause Analysis
 
-Three interrelated issues cause the recursion:
+Three issues are contributing to this problem:
 
-### 1. Direct Table Cross-Reference (Primary Cause)
-The policy `Vivacity team can view vivacity_team meetings` on `eos_meetings` contains:
-```sql
-EXISTS (SELECT 1 FROM eos_meeting_attendees ema 
-        WHERE ema.meeting_id = eos_meetings.id AND ema.user_id = auth.uid())
-```
-Meanwhile, `eos_meeting_attendees` has a policy that references back:
-```sql
-EXISTS (SELECT 1 FROM eos_meetings m WHERE m.id = eos_meeting_attendees.meeting_id ...)
-```
-**This creates an infinite loop between the two tables.**
+### Issue 1: Status Inconsistency (Primary Cause)
+The L10 meeting has inconsistent state:
+- `is_complete: true` (marked as completed)
+- `status: 'scheduled'` (never updated to 'closed' or 'completed')
 
-### 2. Multiple Overlapping Policies
-There are **10 SELECT policies** on `eos_meetings`, many redundant and using different helper functions:
-- `Vivacity can view L10 meetings`
-- `Vivacity team can view meetings`
-- `Vivacity team can view vivacity_team meetings` (problematic)
-- `Meetings read access for authenticated users`
-- `Users with EOS access can view meetings`
-- etc.
+The `auto_generate_next_meeting` trigger only fires when `status` changes to `'closed'` or `'completed'`. Since the status was never properly updated, the trigger never fired and **no new L10 instances were generated**.
 
-### 3. Helper Functions Missing row_security=off
-Only `is_vivacity_member(uuid)` has `SET row_security = off`. These do not:
-- `is_vivacity_team_user(uuid)` 
-- `is_staff()`
-- `can_access_vivacity_meetings(uuid)`
-- `get_vivacity_workspace_id()`
+### Issue 2: No Future Instances Generated
+The L10 meeting series (`id: 7ba1d1e6-189d-4814-9c91-9cd1549895c6`) has `recurrence_type: 'weekly'` and `is_active: true`, but only ONE meeting instance exists in `eos_meetings`:
+- Jan 27, 2026 (completed) - **No Feb 3, Feb 10, Feb 17, etc.**
 
-When these query `public.users` or `eos_workspaces`, they can trigger nested RLS evaluation.
+### Issue 3: Unused Data from Occurrences Table
+There ARE 12 weekly occurrences in `eos_meeting_occurrences` (Feb 3 through April 14), but these come from a separate recurrence system and are **not displayed on the meetings page**. The page only reads from `eos_meetings`.
 
 ---
 
 ## Solution Overview
 
-Create a **clean, minimal, recursion-proof** RLS configuration:
-
 ```text
-┌─────────────────────────────────────────────────────────────────┐
-│                        SAFE APPROACH                            │
-├─────────────────────────────────────────────────────────────────┤
-│  1. Create recursion-safe helper functions (row_security=off)  │
-│  2. Drop ALL existing eos_meetings SELECT/DELETE policies      │
-│  3. Drop ALL existing eos_meeting_participants policies        │
-│  4. Create minimal workspace-based policies                     │
-│  5. Use only safe functions in all new policies                │
-└─────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────┐
+│                      FIX APPROACH                           │
+├─────────────────────────────────────────────────────────────┤
+│  1. Data Fix: Generate missing L10 meeting instances        │
+│  2. Status Fix: Update the completed L10 meeting's status   │
+│  3. Future-Proofing: Ensure trigger works for future runs   │
+└─────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
 ## Implementation Steps
 
-### Step 1: Create Recursion-Safe Helper Functions
+### Step 1: Generate Missing L10 Meeting Instances (Database Migration)
 
-Two new functions with `SECURITY DEFINER` and `SET row_security = off`:
-
-**1a. `is_vivacity_team_safe(uuid)`** - Membership check that bypasses RLS
-```sql
-CREATE OR REPLACE FUNCTION public.is_vivacity_team_safe(p_user_id uuid)
-RETURNS boolean
-LANGUAGE sql STABLE SECURITY DEFINER
-SET search_path = public, auth
-SET row_security = off
-AS $$
-  SELECT EXISTS (
-    SELECT 1 FROM auth.users au
-    JOIN public.users u ON u.user_uuid = au.id
-    WHERE au.id = p_user_id
-      AND u.unicorn_role IN ('Super Admin', 'Team Leader', 'Team Member')
-      AND u.archived IS DISTINCT FROM true
-  );
-$$;
-```
-
-**1b. `get_vivacity_workspace_id_safe()`** - Workspace ID getter that bypasses RLS
-```sql
-CREATE OR REPLACE FUNCTION public.get_vivacity_workspace_id_safe()
-RETURNS uuid
-LANGUAGE sql STABLE SECURITY DEFINER
-SET search_path = public
-SET row_security = off
-AS $$
-  SELECT id FROM public.eos_workspaces WHERE slug = 'vivacity' LIMIT 1;
-$$;
-```
-
-Grant execute only to `authenticated` role.
-
----
-
-### Step 2: Drop All Existing Policies on Target Tables
-
-Use a loop to drop all policies, avoiding partial fixes:
+Call the existing `generate_series_instances` function to create the missing L10 meetings:
 
 ```sql
--- Drop all policies on eos_meetings
-DO $$
-DECLARE r RECORD;
-BEGIN
-  FOR r IN SELECT policyname FROM pg_policies 
-           WHERE schemaname = 'public' AND tablename = 'eos_meetings'
-  LOOP
-    EXECUTE format('DROP POLICY IF EXISTS %I ON public.eos_meetings;', r.policyname);
-  END LOOP;
-END $$;
-
--- Drop all policies on eos_meeting_participants
-DO $$
-DECLARE r RECORD;
-BEGIN
-  FOR r IN SELECT policyname FROM pg_policies 
-           WHERE schemaname = 'public' AND tablename = 'eos_meeting_participants'
-  LOOP
-    EXECUTE format('DROP POLICY IF EXISTS %I ON public.eos_meeting_participants;', r.policyname);
-  END LOOP;
-END $$;
-
--- Drop all policies on eos_meeting_attendees
-DO $$
-DECLARE r RECORD;
-BEGIN
-  FOR r IN SELECT policyname FROM pg_policies 
-           WHERE schemaname = 'public' AND tablename = 'eos_meeting_attendees'
-  LOOP
-    EXECUTE format('DROP POLICY IF EXISTS %I ON public.eos_meeting_attendees;', r.policyname);
-  END LOOP;
-END $$;
-```
-
----
-
-### Step 3: Create Clean Workspace-Based Policies
-
-**Policy Design Rules:**
-- Use ONLY `is_vivacity_team_safe()` and `get_vivacity_workspace_id_safe()`
-- Filter by `workspace_id` column (row data only, no subqueries)
-- Never reference another EOS table in a policy
-- Separate policies per operation (SELECT, INSERT, UPDATE, DELETE)
-
-**3a. eos_meetings Policies**
-```sql
--- SELECT: Vivacity team can view meetings in vivacity workspace
-CREATE POLICY "vivacity_select_meetings"
-ON public.eos_meetings FOR SELECT TO authenticated
-USING (
-  is_vivacity_team_safe(auth.uid())
-  AND (workspace_id IS NULL OR workspace_id = get_vivacity_workspace_id_safe())
-);
-
--- INSERT: Vivacity team can create meetings in vivacity workspace
-CREATE POLICY "vivacity_insert_meetings"
-ON public.eos_meetings FOR INSERT TO authenticated
-WITH CHECK (
-  is_vivacity_team_safe(auth.uid())
-  AND (workspace_id IS NULL OR workspace_id = get_vivacity_workspace_id_safe())
-);
-
--- UPDATE: Vivacity team can update their workspace meetings
-CREATE POLICY "vivacity_update_meetings"
-ON public.eos_meetings FOR UPDATE TO authenticated
-USING (is_vivacity_team_safe(auth.uid()) 
-       AND (workspace_id IS NULL OR workspace_id = get_vivacity_workspace_id_safe()))
-WITH CHECK (is_vivacity_team_safe(auth.uid())
-            AND (workspace_id IS NULL OR workspace_id = get_vivacity_workspace_id_safe()));
-
--- DELETE: Vivacity team can delete their workspace meetings
-CREATE POLICY "vivacity_delete_meetings"
-ON public.eos_meetings FOR DELETE TO authenticated
-USING (
-  is_vivacity_team_safe(auth.uid())
-  AND (workspace_id IS NULL OR workspace_id = get_vivacity_workspace_id_safe())
+-- Generate 12 weeks of L10 meetings for the active series
+SELECT * FROM generate_series_instances(
+  '7ba1d1e6-189d-4814-9c91-9cd1549895c6'::uuid,  -- L10 series ID
+  12  -- Generate 12 weeks ahead
 );
 ```
 
-**3b. eos_meeting_participants Policies**
-```sql
--- SELECT: Vivacity team can view all participants
-CREATE POLICY "vivacity_select_participants"
-ON public.eos_meeting_participants FOR SELECT TO authenticated
-USING (is_vivacity_team_safe(auth.uid()));
+This will create meeting instances in `eos_meetings` for:
+- Feb 10, 2026 (Mon)
+- Feb 17, 2026 (Mon)
+- Feb 24, 2026 (Mon)
+- And so on...
 
--- INSERT/UPDATE/DELETE: Vivacity team can manage participants
-CREATE POLICY "vivacity_manage_participants"
-ON public.eos_meeting_participants FOR ALL TO authenticated
-USING (is_vivacity_team_safe(auth.uid()))
-WITH CHECK (is_vivacity_team_safe(auth.uid()));
-```
+### Step 2: Fix the Completed Meeting Status
 
-**3c. eos_meeting_attendees Policies**
-```sql
--- SELECT: Vivacity team can view all attendees
-CREATE POLICY "vivacity_select_attendees"
-ON public.eos_meeting_attendees FOR SELECT TO authenticated
-USING (is_vivacity_team_safe(auth.uid()));
-
--- ALL: Vivacity team can manage attendees
-CREATE POLICY "vivacity_manage_attendees"
-ON public.eos_meeting_attendees FOR ALL TO authenticated
-USING (is_vivacity_team_safe(auth.uid()))
-WITH CHECK (is_vivacity_team_safe(auth.uid()));
-```
-
----
-
-### Step 4: Validation Queries
-
-After migration, run these to confirm the fix:
+Update the original L10 meeting to have consistent status:
 
 ```sql
--- 1. Verify safe functions exist
-SELECT proname FROM pg_proc 
-WHERE proname IN ('is_vivacity_team_safe', 'get_vivacity_workspace_id_safe');
-
--- 2. Verify no recursion-prone policies remain
-SELECT policyname, qual::text FROM pg_policies
-WHERE tablename IN ('eos_meetings', 'eos_meeting_participants', 'eos_meeting_attendees')
-  AND schemaname = 'public'
-  AND (qual::text ILIKE '%eos_meetings%' OR qual::text ILIKE '%eos_meeting%');
-
--- 3. Test meetings query (should not error)
-SELECT id, title, meeting_type FROM public.eos_meetings LIMIT 5;
-
--- 4. Count Vivacity team members (expected: ~13-15)
-SELECT count(*) FROM public.users u
-JOIN auth.users au ON au.id = u.user_uuid
-WHERE u.unicorn_role IN ('Super Admin', 'Team Leader', 'Team Member')
-  AND u.archived IS DISTINCT FROM true;
+UPDATE eos_meetings 
+SET status = 'completed'
+WHERE id = '64a80954-66e0-40b6-b595-0fa68a1ec4bb'
+  AND is_complete = true
+  AND status = 'scheduled';
 ```
+
+### Step 3: Add Workspace ID to Generated Meetings
+
+Ensure all generated meetings have the correct `workspace_id` for Vivacity access:
+
+```sql
+UPDATE eos_meetings m
+SET workspace_id = s.workspace_id,
+    meeting_scope = 'vivacity_team'
+FROM eos_meeting_series s
+WHERE m.series_id = s.id
+  AND m.workspace_id IS NULL
+  AND s.workspace_id IS NOT NULL;
+```
+
+### Step 4: Verify the Fix
+
+After migration, verify:
+1. L10 meetings appear in the Upcoming tab
+2. RLS policies allow viewing the meetings
+3. Meeting instances have correct workspace_id
 
 ---
 
 ## Technical Details
 
-### Why workspace_id is the Safe Filter
+### Database Tables Involved
 
-The `workspace_id` column on `eos_meetings` defaults to `get_vivacity_workspace_id()` and identifies internal vs client meetings:
-- Internal Vivacity meetings: `workspace_id = (vivacity workspace UUID)`
-- Client meetings: different workspace or NULL
+| Table | Role |
+|-------|------|
+| `eos_meeting_series` | Defines the recurring series (weekly L10) |
+| `eos_meetings` | Stores individual meeting instances (what the page displays) |
+| `eos_meeting_recurrences` | Alternative recurrence system (not used by page) |
+| `eos_meeting_occurrences` | Occurrence slots from alternative system (not used by page) |
 
-By filtering on this column value directly (not via subquery), we avoid any cross-table RLS triggers.
+### Why the Trigger Didn't Fire
 
-### Why row_security=off is Required
+The `auto_generate_next_meeting` trigger condition:
+```sql
+IF NEW.status IN ('closed', 'completed') AND OLD.status NOT IN ('closed', 'completed')
+```
 
-`SECURITY DEFINER` alone elevates to the function owner's permissions, but RLS policies still apply to queries inside the function. Adding `SET row_security = off` completely disables RLS evaluation within the function, preventing any recursion path.
+The meeting's `is_complete` was set to `true` without updating the `status` column, so the trigger never fired.
 
-### Files Changed
+### RLS Consideration
 
-Only Supabase migration SQL is required. No frontend code changes needed since:
-- Query in `useEosMeetings` hook is unchanged
-- RLS filtering happens server-side transparently
-
----
-
-## Acceptance Criteria
-
-1. `/eos/meetings` loads without 42P17 error
-2. Vivacity Team members see all workspace meetings
-3. Non-Vivacity users cannot see EOS meetings (empty result)
-4. Create, update, delete operations work for Vivacity Team
-5. No recursion errors in Supabase logs
+The generated meetings will automatically be accessible because:
+- They will have `workspace_id = ae971006-d1a1-48ad-b26a-1d933ded2509` (Vivacity workspace)
+- The RLS policy `vivacity_select_meetings` allows authenticated users who pass `is_vivacity_team_safe(auth.uid())` and have matching workspace_id
 
 ---
 
-## Risks & Rollback
+## Files to Modify
 
-**Risk**: Dropping all policies temporarily opens tables. The migration is atomic (single transaction), so this is safe.
+1. **New Migration SQL** - Database migration to generate missing instances and fix status
 
-**Rollback**: If issues occur, revert by restoring previous policies from Supabase dashboard > Auth > Policies history, or run a new migration recreating the old policies.
+No frontend code changes are required since:
+- The `useEosMeetings` hook already fetches all meetings
+- The page categorization logic correctly handles upcoming vs completed meetings
+- RLS policies are already in place
+
+---
+
+## Expected Outcome
+
+After implementation:
+1. The `/eos/meetings` page will show upcoming L10 meetings in the "Upcoming" tab
+2. L10 meetings will appear for the next 12 Mondays at 10:00 AM
+3. Future meeting completions will properly trigger the auto-generation of next instances
+
+---
+
+## Migration Summary
+
+A single idempotent migration will:
+1. Generate 12 weeks of L10 meeting instances using `generate_series_instances`
+2. Update the completed meeting's status to 'completed'
+3. Ensure all generated meetings have proper `workspace_id` and `meeting_scope`
+4. Add a data integrity check to prevent future status/is_complete inconsistencies
+
