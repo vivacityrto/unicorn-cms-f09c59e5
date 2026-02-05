@@ -73,7 +73,7 @@ export const MeetingScheduler = ({ open, onOpenChange, onScheduled }: MeetingSch
       if (templateId) {
         // Create meeting from template - use VIVACITY_TENANT_ID for EOS
         const { data, error: meetingError } = await supabase.rpc('create_meeting_from_template', {
-          p_tenant_id: VIVACITY_TENANT_ID,
+          p_tenant_id: Number(VIVACITY_TENANT_ID),
           p_agenda_template_id: templateId,
           p_title: title,
           p_scheduled_date: scheduledDate,
@@ -87,7 +87,7 @@ export const MeetingScheduler = ({ open, onOpenChange, onScheduled }: MeetingSch
       } else {
         // Create meeting directly without template - use VIVACITY_TENANT_ID for EOS
         const { data, error: meetingError } = await supabase.rpc('create_meeting_basic', {
-          p_tenant_id: VIVACITY_TENANT_ID,
+          p_tenant_id: Number(VIVACITY_TENANT_ID),
           p_meeting_type: meetingType,
           p_title: title,
           p_scheduled_date: scheduledDate,
@@ -104,7 +104,7 @@ export const MeetingScheduler = ({ open, onOpenChange, onScheduled }: MeetingSch
         
         await generateRecurrence.mutateAsync({
           meeting_id: meetingId,
-          tenant_id: VIVACITY_TENANT_ID,
+          tenant_id: Number(VIVACITY_TENANT_ID),
           recurrence_type: frequency,
           start_date: datePart,
           start_time: timePart,

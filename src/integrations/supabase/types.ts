@@ -18565,44 +18565,19 @@ export type Database = {
             }
             Returns: string
           }
-      create_meeting_from_template:
-        | {
-            Args: {
-              p_agenda_template_id: string
-              p_duration_minutes: number
-              p_facilitator_id: string
-              p_participant_ids?: string[]
-              p_scheduled_date: string
-              p_scribe_id?: string
-              p_tenant_id: number
-              p_title: string
-            }
-            Returns: string
-          }
-        | {
-            Args: {
-              p_agenda_template_id: string
-              p_duration_minutes: number
-              p_facilitator_id?: string
-              p_participant_ids?: string[]
-              p_scheduled_date: string
-              p_scribe_id?: string
-              p_tenant_id: number
-              p_title: string
-            }
-            Returns: string
-          }
-        | {
-            Args: {
-              p_created_by: string
-              p_meeting_type: string
-              p_scheduled_at: string
-              p_template_id: string
-              p_tenant_id: number
-              p_title: string
-            }
-            Returns: string
-          }
+      create_meeting_from_template: {
+        Args: {
+          p_agenda_template_id: string
+          p_duration_minutes: number
+          p_facilitator_id: string
+          p_participant_ids?: string[]
+          p_scheduled_date: string
+          p_scribe_id?: string
+          p_tenant_id: number
+          p_title: string
+        }
+        Returns: string
+      }
       create_meeting_series: {
         Args: {
           p_duration_minutes?: number
