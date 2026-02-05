@@ -348,7 +348,24 @@ export const useEosMeetings = () => {
       }
       
       const { data, error } = await query;
-      if (error) throw error;
+      if (error) {
+        console.error('[useEosMeetings] Query failed:', {
+          message: error.message,
+          details: error.details,
+          code: error.code,
+          hint: error.hint,
+        });
+        // Create a new error that includes all details for the UI
+        const detailedError = new Error(error.message) as Error & { 
+          details?: string; 
+          code?: string;
+          hint?: string;
+        };
+        detailedError.details = error.details;
+        detailedError.code = error.code;
+        detailedError.hint = error.hint;
+        throw detailedError;
+      }
       return data as EosMeeting[];
     },
     enabled: isSuper || isVivacityTeam || !!profile?.tenant_id,

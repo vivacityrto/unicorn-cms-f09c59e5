@@ -141,6 +141,14 @@ function MeetingsContent() {
   }
 
   if (error) {
+    const errorDetails = error as Error & { details?: string; code?: string; hint?: string };
+    console.error('[EosMeetings] Error loading meetings:', {
+      message: errorDetails.message,
+      details: errorDetails.details,
+      code: errorDetails.code,
+      hint: errorDetails.hint,
+    });
+    
     return (
       <div className="flex items-center justify-center h-64">
         <Card className="max-w-md">
@@ -150,6 +158,18 @@ function MeetingsContent() {
             <p className="text-muted-foreground mb-4 text-sm">
               There was an issue loading your meetings. This may be a permissions or configuration issue.
             </p>
+            <div className="text-left bg-muted/50 rounded-md p-3 mb-4 text-xs font-mono overflow-auto max-h-40">
+              <p><span className="text-destructive font-semibold">Message:</span> {errorDetails.message}</p>
+              {errorDetails.code && (
+                <p className="mt-1"><span className="text-destructive font-semibold">Code:</span> {errorDetails.code}</p>
+              )}
+              {errorDetails.details && (
+                <p className="mt-1"><span className="text-destructive font-semibold">Details:</span> {errorDetails.details}</p>
+              )}
+              {errorDetails.hint && (
+                <p className="mt-1"><span className="text-destructive font-semibold">Hint:</span> {errorDetails.hint}</p>
+              )}
+            </div>
             <Button onClick={() => refetch()} variant="outline">
               <RefreshCw className="w-4 h-4 mr-2" />
               Retry
