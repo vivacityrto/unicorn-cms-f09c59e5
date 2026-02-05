@@ -16,6 +16,8 @@ import { VivacityTeamPicker } from './VivacityTeamPicker';
 import { VIVACITY_TENANT_ID } from '@/hooks/useVivacityTeamUsers';
 import { supabase } from '@/integrations/supabase/client';
 import type { MeetingType } from '@/types/eos';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Info } from 'lucide-react';
 
 interface MeetingSchedulerProps {
   open: boolean;
@@ -309,19 +311,31 @@ export const MeetingScheduler = ({ open, onOpenChange, onScheduled }: MeetingSch
               Participants
               <Badge variant="secondary" className="ml-2 text-xs">Vivacity Team</Badge>
             </Label>
-            <p className="text-xs text-muted-foreground mb-2">
-              {meetingType === 'Same_Page' 
-                ? 'Add your Integrator or other key participants to this Same Page meeting.'
-                : 'Select team members to include in this meeting.'}
-            </p>
-            <VivacityTeamPicker
-              mode="multi"
-              value={participantIds}
-              onChange={setParticipantIds}
-              placeholder="Select participants..."
-              excludeUserIds={facilitatorId ? [facilitatorId] : undefined}
-              showSelectAll={true}
-            />
+            {meetingType === 'L10' ? (
+              <Alert className="bg-muted/50 border-primary/20">
+                <Info className="h-4 w-4 text-primary" />
+                <AlertDescription className="text-sm">
+                  L10 meetings automatically include all active Vivacity Team members.
+                  Participants are managed by the system and cannot be manually changed.
+                </AlertDescription>
+              </Alert>
+            ) : (
+              <>
+                <p className="text-xs text-muted-foreground mb-2">
+                  {meetingType === 'Same_Page' 
+                    ? 'Add your Integrator or other key participants to this Same Page meeting.'
+                    : 'Select team members to include in this meeting.'}
+                </p>
+                <VivacityTeamPicker
+                  mode="multi"
+                  value={participantIds}
+                  onChange={setParticipantIds}
+                  placeholder="Select participants..."
+                  excludeUserIds={facilitatorId ? [facilitatorId] : undefined}
+                  showSelectAll={true}
+                />
+              </>
+            )}
           </div>
 
           <div className="grid grid-cols-2 gap-4">

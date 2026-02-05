@@ -18416,6 +18416,7 @@ export type Database = {
           user_id: string
         }[]
       }
+      backfill_l10_meeting_participants: { Args: never; Returns: Json }
       bulk_create_documents_with_versions: {
         Args: {
           p_auto_publish?: boolean
