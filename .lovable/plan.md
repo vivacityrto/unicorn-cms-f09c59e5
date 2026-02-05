@@ -1,155 +1,81 @@
 
 
-# Fix Missing Recurring L10 Meetings on EOS Meetings Page
+# Fix Risks & Opportunities Default Status Filter
 
-## Problem Summary
+## Problem
 
-Your recurring Level 10 meeting series is set up correctly, but **no future L10 meeting instances are displaying** on the `/eos/meetings` page. The original L10 meeting from January 27, 2026 appears in the "Completed" tab, but no upcoming weekly L10 meetings are shown.
-
----
-
-## Root Cause Analysis
-
-Three issues are contributing to this problem:
-
-### Issue 1: Status Inconsistency (Primary Cause)
-The L10 meeting has inconsistent state:
-- `is_complete: true` (marked as completed)
-- `status: 'scheduled'` (never updated to 'closed' or 'completed')
-
-The `auto_generate_next_meeting` trigger only fires when `status` changes to `'closed'` or `'completed'`. Since the status was never properly updated, the trigger never fired and **no new L10 instances were generated**.
-
-### Issue 2: No Future Instances Generated
-The L10 meeting series (`id: 7ba1d1e6-189d-4814-9c91-9cd1549895c6`) has `recurrence_type: 'weekly'` and `is_active: true`, but only ONE meeting instance exists in `eos_meetings`:
-- Jan 27, 2026 (completed) - **No Feb 3, Feb 10, Feb 17, etc.**
-
-### Issue 3: Unused Data from Occurrences Table
-There ARE 12 weekly occurrences in `eos_meeting_occurrences` (Feb 3 through April 14), but these come from a separate recurrence system and are **not displayed on the meetings page**. The page only reads from `eos_meetings`.
+Currently, the Risks & Opportunities page shows **all statuses** by default, displaying completed/closed items alongside open ones. The user wants to see only "Open" items by default, while still being able to change the filter to view other statuses.
 
 ---
 
-## Solution Overview
+## Solution
 
-```text
-┌─────────────────────────────────────────────────────────────┐
-│                      FIX APPROACH                           │
-├─────────────────────────────────────────────────────────────┤
-│  1. Data Fix: Generate missing L10 meeting instances        │
-│  2. Status Fix: Update the completed L10 meeting's status   │
-│  3. Future-Proofing: Ensure trigger works for future runs   │
-└─────────────────────────────────────────────────────────────┘
+A single-line change to set the default status filter to `'Open'` instead of `'all'`.
+
+---
+
+## Implementation
+
+### File: `src/pages/EosRisksOpportunities.tsx`
+
+**Current code (line 42):**
+```tsx
+const [filterStatus, setFilterStatus] = useState<'all' | RiskOpportunityStatus>('all');
+```
+
+**Updated code:**
+```tsx
+const [filterStatus, setFilterStatus] = useState<'all' | RiskOpportunityStatus>('Open');
 ```
 
 ---
 
-## Implementation Steps
+## Behaviour After Change
 
-### Step 1: Generate Missing L10 Meeting Instances (Database Migration)
+| Scenario | Result |
+|----------|--------|
+| Page loads | Only items with status "Open" are displayed |
+| User selects "All Statuses" | All items are displayed (including Closed, Solved, etc.) |
+| User selects specific status | Only items with that status are displayed |
+| User clicks "Clear" filters | Filters reset to default (Open status) |
 
-Call the existing `generate_series_instances` function to create the missing L10 meetings:
+---
 
-```sql
--- Generate 12 weeks of L10 meetings for the active series
-SELECT * FROM generate_series_instances(
-  '7ba1d1e6-189d-4814-9c91-9cd1549895c6'::uuid,  -- L10 series ID
-  12  -- Generate 12 weeks ahead
-);
+## Additional Consideration: Clear Button Behaviour
+
+The "Clear" button currently resets all filters to `'all'`:
+
+```tsx
+onClick={() => { setFilterType('all'); setFilterCategory('all'); setFilterStatus('all'); }}
 ```
 
-This will create meeting instances in `eos_meetings` for:
-- Feb 10, 2026 (Mon)
-- Feb 17, 2026 (Mon)
-- Feb 24, 2026 (Mon)
-- And so on...
+This should be updated to reset status back to `'Open'` to maintain consistency with the new default:
 
-### Step 2: Fix the Completed Meeting Status
-
-Update the original L10 meeting to have consistent status:
-
-```sql
-UPDATE eos_meetings 
-SET status = 'completed'
-WHERE id = '64a80954-66e0-40b6-b595-0fa68a1ec4bb'
-  AND is_complete = true
-  AND status = 'scheduled';
+```tsx
+onClick={() => { setFilterType('all'); setFilterCategory('all'); setFilterStatus('Open'); }}
 ```
 
-### Step 3: Add Workspace ID to Generated Meetings
-
-Ensure all generated meetings have the correct `workspace_id` for Vivacity access:
-
-```sql
-UPDATE eos_meetings m
-SET workspace_id = s.workspace_id,
-    meeting_scope = 'vivacity_team'
-FROM eos_meeting_series s
-WHERE m.series_id = s.id
-  AND m.workspace_id IS NULL
-  AND s.workspace_id IS NOT NULL;
-```
-
-### Step 4: Verify the Fix
-
-After migration, verify:
-1. L10 meetings appear in the Upcoming tab
-2. RLS policies allow viewing the meetings
-3. Meeting instances have correct workspace_id
+The same applies to the "Critical Impact" stat card click handler (line 314) which also resets filters.
 
 ---
 
 ## Technical Details
 
-### Database Tables Involved
+### Files Changed
+- `src/pages/EosRisksOpportunities.tsx` - 3 small changes:
+  1. Line 42: Change default state from `'all'` to `'Open'`
+  2. Line 314: Update Critical Impact card click to reset status to `'Open'`
+  3. Line 375: Update Clear button to reset status to `'Open'`
 
-| Table | Role |
-|-------|------|
-| `eos_meeting_series` | Defines the recurring series (weekly L10) |
-| `eos_meetings` | Stores individual meeting instances (what the page displays) |
-| `eos_meeting_recurrences` | Alternative recurrence system (not used by page) |
-| `eos_meeting_occurrences` | Occurrence slots from alternative system (not used by page) |
-
-### Why the Trigger Didn't Fire
-
-The `auto_generate_next_meeting` trigger condition:
-```sql
-IF NEW.status IN ('closed', 'completed') AND OLD.status NOT IN ('closed', 'completed')
-```
-
-The meeting's `is_complete` was set to `true` without updating the `status` column, so the trigger never fired.
-
-### RLS Consideration
-
-The generated meetings will automatically be accessible because:
-- They will have `workspace_id = ae971006-d1a1-48ad-b26a-1d933ded2509` (Vivacity workspace)
-- The RLS policy `vivacity_select_meetings` allows authenticated users who pass `is_vivacity_team_safe(auth.uid())` and have matching workspace_id
-
----
-
-## Files to Modify
-
-1. **New Migration SQL** - Database migration to generate missing instances and fix status
-
-No frontend code changes are required since:
-- The `useEosMeetings` hook already fetches all meetings
-- The page categorization logic correctly handles upcoming vs completed meetings
-- RLS policies are already in place
+### No Database Changes Required
+This is purely a frontend filter change.
 
 ---
 
 ## Expected Outcome
 
-After implementation:
-1. The `/eos/meetings` page will show upcoming L10 meetings in the "Upcoming" tab
-2. L10 meetings will appear for the next 12 Mondays at 10:00 AM
-3. Future meeting completions will properly trigger the auto-generation of next instances
-
----
-
-## Migration Summary
-
-A single idempotent migration will:
-1. Generate 12 weeks of L10 meeting instances using `generate_series_instances`
-2. Update the completed meeting's status to 'completed'
-3. Ensure all generated meetings have proper `workspace_id` and `meeting_scope`
-4. Add a data integrity check to prevent future status/is_complete inconsistencies
+1. When the page loads, users see only "Open" items
+2. The status dropdown shows "Open" as selected by default
+3. Users can still select "All Statuses" or any specific status
+4. The "Clear" button returns the view to Open items only
 
