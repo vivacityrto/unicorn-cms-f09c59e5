@@ -39,7 +39,7 @@ function RisksOpportunitiesContent() {
   const [editingItem, setEditingItem] = useState<typeof items extends (infer T)[] | undefined ? T | null : null>(null);
   const [filterType, setFilterType] = useState<'all' | RiskOpportunityType>('all');
   const [filterCategory, setFilterCategory] = useState<'all' | RiskOpportunityCategory>('all');
-  const [filterStatus, setFilterStatus] = useState<'all' | RiskOpportunityStatus>('all');
+  const [filterStatus, setFilterStatus] = useState<'all' | RiskOpportunityStatus>('Open');
   const [escalationDialog, setEscalationDialog] = useState<{ isOpen: boolean; itemId?: string; currentStatus?: string }>({ isOpen: false });
   const [escalationReason, setEscalationReason] = useState('');
 
@@ -311,7 +311,7 @@ function RisksOpportunitiesContent() {
           </CardContent>
         </Card>
 
-        <Card className="cursor-pointer hover:shadow-md" onClick={() => { setFilterType('all'); setFilterStatus('all'); setFilterCategory('all'); }}>
+        <Card className="cursor-pointer hover:shadow-md" onClick={() => { setFilterType('all'); setFilterStatus('Open'); setFilterCategory('all'); }}>
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
@@ -372,7 +372,7 @@ function RisksOpportunitiesContent() {
               <Button 
                 variant="ghost" 
                 size="sm"
-                onClick={() => { setFilterType('all'); setFilterCategory('all'); setFilterStatus('all'); }}
+                onClick={() => { setFilterType('all'); setFilterCategory('all'); setFilterStatus('Open'); }}
               >
                 <X className="w-4 h-4 mr-1" />
                 Clear
