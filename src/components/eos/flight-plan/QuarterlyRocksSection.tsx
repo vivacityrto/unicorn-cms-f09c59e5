@@ -130,7 +130,7 @@ export function QuarterlyRocksSection({ rocks, isLoading, quarter, year }: Quart
                           <div key={i} className="flex items-center gap-2 text-xs">
                             <span className="text-muted-foreground">{i + 1}.</span>
                             <span className={milestone.completed ? 'line-through text-muted-foreground' : ''}>
-                              {milestone.title || milestone}
+                             {milestone.text || milestone.title || (typeof milestone === 'string' ? milestone : '')}
                             </span>
                           </div>
                         ))}
