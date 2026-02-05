@@ -13,6 +13,7 @@ import { LogConsultDialog, AddNoteDialog, CreateTaskDialog } from '@/components/
 import { MembershipWithDetails } from '@/types/membership';
 import { MyWorkWidget } from '@/components/dashboard/MyWorkWidget';
 import { TimeInboxWidget } from '@/components/dashboard/TimeInboxWidget';
+ import { ProcessesWidget } from '@/components/dashboard/ProcessesWidget';
 
 export default function MembershipDashboard() {
   const { profile } = useAuth();
@@ -124,6 +125,9 @@ export default function MembershipDashboard() {
 
           {/* Time Inbox Widget */}
           <TimeInboxWidget />
+ 
+           {/* Processes Widget */}
+           <ProcessesWidget />
 
           {/* Command Bar */}
           <MembershipCommandBar
