@@ -18583,19 +18583,35 @@ export type Database = {
             }
             Returns: string
           }
-      create_meeting_from_template: {
-        Args: {
-          p_agenda_template_id: string
-          p_duration_minutes: number
-          p_facilitator_id: string
-          p_participant_ids?: string[]
-          p_scheduled_date: string
-          p_scribe_id?: string
-          p_tenant_id: number
-          p_title: string
-        }
-        Returns: string
-      }
+      create_meeting_from_template:
+        | {
+            Args: {
+              p_facilitator_id: string
+              p_location?: string
+              p_participant_ids?: string[]
+              p_scheduled_date: string
+              p_scheduled_end_time: string
+              p_scribe_id: string
+              p_series_id?: string
+              p_template_id: string
+              p_tenant_id?: number
+              p_title?: string
+            }
+            Returns: string
+          }
+        | {
+            Args: {
+              p_agenda_template_id: string
+              p_duration_minutes: number
+              p_facilitator_id: string
+              p_participant_ids?: string[]
+              p_scheduled_date: string
+              p_scribe_id?: string
+              p_tenant_id: number
+              p_title: string
+            }
+            Returns: string
+          }
       create_meeting_series: {
         Args: {
           p_duration_minutes?: number
@@ -19010,6 +19026,7 @@ export type Database = {
         Args: { _tenant_id: number; _user_id: string }
         Returns: boolean
       }
+      has_auth_account: { Args: { p_user_uuid: string }; Returns: boolean }
       has_eos_role: {
         Args: {
           _role: Database["public"]["Enums"]["eos_role"]
@@ -19565,6 +19582,10 @@ export type Database = {
         Returns: Json
       }
       start_meeting_with_validation: {
+        Args: { p_meeting_id: string }
+        Returns: Json
+      }
+      sync_l10_meeting_participants: {
         Args: { p_meeting_id: string }
         Returns: Json
       }

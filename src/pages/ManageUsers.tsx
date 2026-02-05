@@ -262,6 +262,31 @@ export default function ManageUsers() {
     if (!roleChangeDialog) return;
 
     try {
+      const isVivacityRole = ['Super Admin', 'Team Leader', 'Team Member']
+        .includes(roleChangeDialog.newRole);
+      
+      // For Vivacity Team roles, verify auth account exists
+      if (isVivacityRole) {
+        const { data: hasAuth, error: authCheckError } = await supabase.rpc('has_auth_account', {
+          p_user_uuid: roleChangeDialog.userId
+        });
+        
+        if (authCheckError) {
+          console.error('Auth check error:', authCheckError);
+          throw new Error('Failed to verify auth account status');
+        }
+        
+        if (!hasAuth) {
+          toast({
+            title: 'Auth Account Required',
+            description: 'This user must have an auth account for Vivacity Team roles. Send them an invite first.',
+            variant: 'destructive',
+          });
+          setRoleChangeDialog(null);
+          return;
+        }
+      }
+      
       const { error } = await supabase
         .from('users')
         .update({ unicorn_role: roleChangeDialog.newRole })
