@@ -15,6 +15,7 @@ import Footer from "@/components/layout/Footer";
 import { TimeInboxBanner } from "@/components/dashboard/TimeInboxWidget";
 import { FacilitatorModeToggle } from "@/components/eos/FacilitatorModeToggle";
 import { FacilitatorModeBanner } from "@/components/eos/FacilitatorModeBanner";
+ import { AIChatbot } from "@/components/admin/AIChatbot";
 const baseMenuItems = [{
   icon: LayoutDashboard,
   label: "Dashboard",
@@ -749,6 +750,9 @@ export const DashboardLayout = ({
 
         {/* Footer */}
         <Footer />
+         
+         {/* AI Chatbot - SuperAdmin only */}
+         <AIChatbot />
       </div>
     </div>;
 };
