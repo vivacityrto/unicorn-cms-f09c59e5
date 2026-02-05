@@ -19085,6 +19085,7 @@ export type Database = {
       is_vivacity_team:
         | { Args: never; Returns: boolean }
         | { Args: { p_user_id?: string }; Returns: boolean }
+      is_vivacity_team_rls: { Args: { p_user_id: string }; Returns: boolean }
       is_vivacity_team_user: { Args: { p_user_id: string }; Returns: boolean }
       is_vivacity_team_v2: { Args: { p_user_id: string }; Returns: boolean }
       is_vivacity_user: { Args: never; Returns: boolean }
