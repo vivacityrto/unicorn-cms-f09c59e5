@@ -104,10 +104,11 @@ import { FacilitatorModeProvider } from "./contexts/FacilitatorModeContext";
  const ProcessesWrapper = lazy(() => import("./pages/ProcessesWrapper"));
  const ProcessDetail = lazy(() => import("./pages/ProcessDetail"));
  const ProcessForm = lazy(() => import("./pages/ProcessForm"));
- const RoleReference = lazy(() => import("./pages/RoleReference"));
+const RoleReference = lazy(() => import("./pages/RoleReference"));
 const AdminAssistant = lazy(() => import("./pages/AdminAssistant"));
- const AdminKnowledgeLibrary = lazy(() => import("./pages/AdminKnowledgeLibrary"));
- const AdminEOSProcesses = lazy(() => import("./pages/AdminEOSProcesses"));
+const AdminKnowledgeLibrary = lazy(() => import("./pages/AdminKnowledgeLibrary"));
+const AdminEOSProcesses = lazy(() => import("./pages/AdminEOSProcesses"));
+const EosHealthCheck = lazy(() => import("./pages/EosHealthCheck"));
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -639,6 +640,15 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <EosLeadershipDashboard />
+                </ProtectedRoute>
+              } 
+            />
+            {/* EOS Health Check Route */}
+            <Route 
+              path="/eos/health-check" 
+              element={
+                <ProtectedRoute>
+                  <EosHealthCheck />
                 </ProtectedRoute>
               } 
             />

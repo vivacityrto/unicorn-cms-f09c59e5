@@ -153,6 +153,7 @@ export const EOS_ROUTES = [
   '/eos/leadership',
   '/eos/rock-analysis',
   '/eos/client-impact',
+  '/eos/health-check',
   '/processes',
 ];
 
