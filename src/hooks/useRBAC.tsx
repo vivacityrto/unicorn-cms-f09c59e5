@@ -119,6 +119,7 @@ export const ADMIN_ROUTES = [
   '/admin/stage-analytics',
   '/admin/team-users',
   '/admin/tenant-users',
+  '/admin/assistant',
 ];
 
 // Advanced Features routes that require SuperAdmin
