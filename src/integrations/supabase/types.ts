@@ -19019,6 +19019,7 @@ export type Database = {
         }[]
       }
       get_vivacity_workspace_id: { Args: never; Returns: string }
+      get_vivacity_workspace_id_safe: { Args: never; Returns: string }
       go_to_previous_segment: {
         Args: { p_meeting_id: string }
         Returns: string
@@ -19087,6 +19088,7 @@ export type Database = {
         | { Args: never; Returns: boolean }
         | { Args: { p_user_id?: string }; Returns: boolean }
       is_vivacity_team_rls: { Args: { p_user_id: string }; Returns: boolean }
+      is_vivacity_team_safe: { Args: { p_user_id: string }; Returns: boolean }
       is_vivacity_team_user: { Args: { p_user_id: string }; Returns: boolean }
       is_vivacity_team_v2: { Args: { p_user_id: string }; Returns: boolean }
       is_vivacity_user: { Args: never; Returns: boolean }
