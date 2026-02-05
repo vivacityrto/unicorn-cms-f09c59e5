@@ -6577,6 +6577,7 @@ export type Database = {
           is_archived: boolean
           is_default: boolean | null
           is_system: boolean
+          meeting_scope: string
           meeting_type: Database["public"]["Enums"]["eos_meeting_type"]
           segments: Json
           template_name: string
@@ -6592,6 +6593,7 @@ export type Database = {
           is_archived?: boolean
           is_default?: boolean | null
           is_system?: boolean
+          meeting_scope?: string
           meeting_type: Database["public"]["Enums"]["eos_meeting_type"]
           segments?: Json
           template_name: string
@@ -6607,6 +6609,7 @@ export type Database = {
           is_archived?: boolean
           is_default?: boolean | null
           is_system?: boolean
+          meeting_scope?: string
           meeting_type?: Database["public"]["Enums"]["eos_meeting_type"]
           segments?: Json
           template_name?: string
@@ -8135,6 +8138,7 @@ export type Database = {
           is_multi_client: boolean | null
           issues_discussed: string[] | null
           location: string | null
+          meeting_scope: string
           meeting_type: Database["public"]["Enums"]["eos_meeting_type"]
           minutes_status: string
           next_meeting_id: string | null
@@ -8178,6 +8182,7 @@ export type Database = {
           is_multi_client?: boolean | null
           issues_discussed?: string[] | null
           location?: string | null
+          meeting_scope?: string
           meeting_type: Database["public"]["Enums"]["eos_meeting_type"]
           minutes_status?: string
           next_meeting_id?: string | null
@@ -8221,6 +8226,7 @@ export type Database = {
           is_multi_client?: boolean | null
           issues_discussed?: string[] | null
           location?: string | null
+          meeting_scope?: string
           meeting_type?: Database["public"]["Enums"]["eos_meeting_type"]
           minutes_status?: string
           next_meeting_id?: string | null
@@ -18440,6 +18446,10 @@ export type Database = {
       }
       can_access_qc: {
         Args: { _qc_id: string; _user_id: string }
+        Returns: boolean
+      }
+      can_access_vivacity_meetings: {
+        Args: { user_id: string }
         Returns: boolean
       }
       can_edit_certified_stage: { Args: { p_stage_id: number }; Returns: Json }

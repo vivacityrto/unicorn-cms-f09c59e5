@@ -23,17 +23,22 @@ export const useEosRocks = () => {
   const { profile, isSuperAdmin } = useAuth();
   const queryClient = useQueryClient();
   const isSuper = isSuperAdmin();
+  
+  // Check if user is Vivacity Team member (Super Admin, Team Leader, Team Member)
+  const isVivacityTeam = ['Super Admin', 'Team Leader', 'Team Member'].includes(
+    profile?.unicorn_role || ''
+  );
 
   const { data: rocks, isLoading } = useQuery({
-    queryKey: ['eos-rocks', isSuper ? 'all' : profile?.tenant_id],
+    queryKey: ['eos-rocks', isSuper || isVivacityTeam ? 'vivacity_team' : profile?.tenant_id],
     queryFn: async () => {
       let query = supabase
         .from('eos_rocks')
         .select('*')
         .order('created_at', { ascending: false });
       
-      // SuperAdmins see all data; others filter by their tenant
-      if (!isSuper && profile?.tenant_id) {
+      // Vivacity Team sees all; client users filter by tenant
+      if (!isSuper && !isVivacityTeam && profile?.tenant_id) {
         query = query.eq('tenant_id', profile.tenant_id);
       }
       
@@ -41,7 +46,7 @@ export const useEosRocks = () => {
       if (error) throw error;
       return data as EosRock[];
     },
-    enabled: isSuper || !!profile?.tenant_id,
+    enabled: isSuper || isVivacityTeam || !!profile?.tenant_id,
   });
 
   const createRock = useMutation({
@@ -118,17 +123,22 @@ export const useEosIssues = () => {
   const { profile, isSuperAdmin } = useAuth();
   const queryClient = useQueryClient();
   const isSuper = isSuperAdmin();
+  
+  // Check if user is Vivacity Team member
+  const isVivacityTeam = ['Super Admin', 'Team Leader', 'Team Member'].includes(
+    profile?.unicorn_role || ''
+  );
 
   const { data: issues, isLoading } = useQuery({
-    queryKey: ['eos-issues', isSuper ? 'all' : profile?.tenant_id],
+    queryKey: ['eos-issues', isSuper || isVivacityTeam ? 'vivacity_team' : profile?.tenant_id],
     queryFn: async () => {
       let query = supabase
         .from('eos_issues')
         .select('*')
         .order('created_at', { ascending: false });
       
-      // SuperAdmins see all data; others filter by their tenant
-      if (!isSuper && profile?.tenant_id) {
+      // Vivacity Team sees all; client users filter by tenant
+      if (!isSuper && !isVivacityTeam && profile?.tenant_id) {
         query = query.eq('tenant_id', profile.tenant_id);
       }
       
@@ -136,7 +146,7 @@ export const useEosIssues = () => {
       if (error) throw error;
       return data as EosIssue[];
     },
-    enabled: isSuper || !!profile?.tenant_id,
+    enabled: isSuper || isVivacityTeam || !!profile?.tenant_id,
   });
 
   const createIssue = useMutation({
@@ -213,17 +223,22 @@ export const useEosTodos = () => {
   const { profile, isSuperAdmin } = useAuth();
   const queryClient = useQueryClient();
   const isSuper = isSuperAdmin();
+  
+  // Check if user is Vivacity Team member
+  const isVivacityTeam = ['Super Admin', 'Team Leader', 'Team Member'].includes(
+    profile?.unicorn_role || ''
+  );
 
   const { data: todos, isLoading } = useQuery({
-    queryKey: ['eos-todos', isSuper ? 'all' : profile?.tenant_id],
+    queryKey: ['eos-todos', isSuper || isVivacityTeam ? 'vivacity_team' : profile?.tenant_id],
     queryFn: async () => {
       let query = supabase
         .from('eos_todos')
         .select('*')
         .order('created_at', { ascending: false });
       
-      // SuperAdmins see all data; others filter by their tenant
-      if (!isSuper && profile?.tenant_id) {
+      // Vivacity Team sees all; client users filter by tenant
+      if (!isSuper && !isVivacityTeam && profile?.tenant_id) {
         query = query.eq('tenant_id', profile.tenant_id);
       }
       
@@ -231,7 +246,7 @@ export const useEosTodos = () => {
       if (error) throw error;
       return data as EosTodo[];
     },
-    enabled: isSuper || !!profile?.tenant_id,
+    enabled: isSuper || isVivacityTeam || !!profile?.tenant_id,
   });
 
   const createTodo = useMutation({
@@ -312,17 +327,23 @@ export const useEosMeetings = () => {
   const { profile, isSuperAdmin } = useAuth();
   const queryClient = useQueryClient();
   const isSuper = isSuperAdmin();
+  
+  // Check if user is Vivacity Team member (Super Admin, Team Leader, Team Member)
+  const isVivacityTeam = ['Super Admin', 'Team Leader', 'Team Member'].includes(
+    profile?.unicorn_role || ''
+  );
 
   const { data: meetings, isLoading, error, refetch } = useQuery({
-    queryKey: ['eos-meetings', isSuper ? 'all' : profile?.tenant_id],
+    queryKey: ['eos-meetings', isSuper || isVivacityTeam ? 'vivacity_team' : profile?.tenant_id],
     queryFn: async () => {
       let query = supabase
         .from('eos_meetings')
         .select('*')
         .order('scheduled_date', { ascending: false });
       
-      // SuperAdmins see all data; others filter by their tenant
-      if (!isSuper && profile?.tenant_id) {
+      // Vivacity Team members (including SuperAdmins) see all vivacity_team scoped meetings
+      // RLS will handle the filtering server-side
+      if (!isSuper && !isVivacityTeam && profile?.tenant_id) {
         query = query.eq('tenant_id', profile.tenant_id);
       }
       
@@ -330,7 +351,7 @@ export const useEosMeetings = () => {
       if (error) throw error;
       return data as EosMeeting[];
     },
-    enabled: isSuper || !!profile?.tenant_id,
+    enabled: isSuper || isVivacityTeam || !!profile?.tenant_id,
   });
 
   const createMeeting = useMutation({
@@ -409,9 +430,14 @@ export const useEosScorecardMetrics = () => {
   const { profile, isSuperAdmin } = useAuth();
   const queryClient = useQueryClient();
   const isSuper = isSuperAdmin();
+  
+  // Check if user is Vivacity Team member
+  const isVivacityTeam = ['Super Admin', 'Team Leader', 'Team Member'].includes(
+    profile?.unicorn_role || ''
+  );
 
   const { data: metrics, isLoading } = useQuery({
-    queryKey: ['eos-scorecard-metrics', isSuper ? 'all' : profile?.tenant_id],
+    queryKey: ['eos-scorecard-metrics', isSuper || isVivacityTeam ? 'vivacity_team' : profile?.tenant_id],
     queryFn: async () => {
       let query = supabase
         .from('eos_scorecard_metrics')
@@ -419,8 +445,8 @@ export const useEosScorecardMetrics = () => {
         .eq('is_active', true)
         .order('display_order', { ascending: true });
       
-      // SuperAdmins see all data; others filter by their tenant
-      if (!isSuper && profile?.tenant_id) {
+      // Vivacity Team sees all; client users filter by tenant
+      if (!isSuper && !isVivacityTeam && profile?.tenant_id) {
         query = query.eq('tenant_id', profile.tenant_id);
       }
       
@@ -428,7 +454,7 @@ export const useEosScorecardMetrics = () => {
       if (error) throw error;
       return data as EosScorecardMetric[];
     },
-    enabled: isSuper || !!profile?.tenant_id,
+    enabled: isSuper || isVivacityTeam || !!profile?.tenant_id,
   });
 
   const createMetric = useMutation({

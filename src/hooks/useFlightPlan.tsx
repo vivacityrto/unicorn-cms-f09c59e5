@@ -11,9 +11,14 @@ export function useFlightPlan(quarter: number, year: number) {
   const { profile, isSuperAdmin } = useAuth();
   const queryClient = useQueryClient();
   const isSuper = isSuperAdmin();
+  
+  // Check if user is Vivacity Team member (Super Admin, Team Leader, Team Member)
+  const isVivacityTeam = ['Super Admin', 'Team Leader', 'Team Member'].includes(
+    profile?.unicorn_role || ''
+  );
 
   const { data: flightPlan, isLoading } = useQuery({
-    queryKey: ['flight-plan', isSuper ? 'all' : profile?.tenant_id, quarter, year],
+    queryKey: ['flight-plan', isSuper || isVivacityTeam ? 'vivacity_team' : profile?.tenant_id, quarter, year],
     queryFn: async () => {
       let query = supabase
         .from('eos_flight_plans')
@@ -21,8 +26,8 @@ export function useFlightPlan(quarter: number, year: number) {
         .eq('quarter_number', quarter)
         .eq('quarter_year', year);
       
-      // SuperAdmins see all data; others filter by their tenant
-      if (!isSuper && profile?.tenant_id) {
+      // Vivacity Team sees all; client users filter by tenant
+      if (!isSuper && !isVivacityTeam && profile?.tenant_id) {
         query = query.eq('tenant_id', profile.tenant_id);
       }
       
@@ -43,7 +48,7 @@ export function useFlightPlan(quarter: number, year: number) {
         month_3_focus: data.month_3_focus || defaultMonthFocus,
       } as FlightPlan;
     },
-    enabled: (isSuper || !!profile?.tenant_id) && !!quarter && !!year,
+    enabled: (isSuper || isVivacityTeam || !!profile?.tenant_id) && !!quarter && !!year,
   });
 
   const upsertFlightPlan = useMutation({
@@ -98,9 +103,14 @@ export function useFlightPlan(quarter: number, year: number) {
 export function useQuarterlyRocks(quarter: number, year: number) {
   const { profile, isSuperAdmin } = useAuth();
   const isSuper = isSuperAdmin();
+  
+  // Check if user is Vivacity Team member
+  const isVivacityTeam = ['Super Admin', 'Team Leader', 'Team Member'].includes(
+    profile?.unicorn_role || ''
+  );
 
   return useQuery({
-    queryKey: ['quarterly-rocks', isSuper ? 'all' : profile?.tenant_id, quarter, year],
+    queryKey: ['quarterly-rocks', isSuper || isVivacityTeam ? 'vivacity_team' : profile?.tenant_id, quarter, year],
     queryFn: async () => {
       let query = supabase
         .from('eos_rocks')
@@ -109,8 +119,8 @@ export function useQuarterlyRocks(quarter: number, year: number) {
         .eq('quarter_year', year)
         .order('priority', { ascending: true });
       
-      // SuperAdmins see all data; others filter by their tenant
-      if (!isSuper && profile?.tenant_id) {
+      // Vivacity Team sees all; client users filter by tenant
+      if (!isSuper && !isVivacityTeam && profile?.tenant_id) {
         query = query.eq('tenant_id', profile.tenant_id);
       }
       
@@ -119,6 +129,6 @@ export function useQuarterlyRocks(quarter: number, year: number) {
       if (error) throw error;
       return data;
     },
-    enabled: (isSuper || !!profile?.tenant_id) && !!quarter && !!year,
+    enabled: (isSuper || isVivacityTeam || !!profile?.tenant_id) && !!quarter && !!year,
   });
 }
