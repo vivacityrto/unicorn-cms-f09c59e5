@@ -41,10 +41,15 @@ export const useMeetingSeries = () => {
   const { profile, isSuperAdmin } = useAuth();
   const queryClient = useQueryClient();
   const isSuper = isSuperAdmin();
+  
+  // Check if user is Vivacity Team member (Super Admin, Team Leader, Team Member)
+  const isVivacityTeam = ['Super Admin', 'Team Leader', 'Team Member'].includes(
+    profile?.unicorn_role || ''
+  );
 
   // Fetch all series for tenant
   const { data: series, isLoading: isLoadingSeries } = useQuery({
-    queryKey: ['eos-meeting-series', isSuper ? 'all' : profile?.tenant_id],
+    queryKey: ['eos-meeting-series', isSuper || isVivacityTeam ? 'vivacity_team' : profile?.tenant_id],
     queryFn: async () => {
       let query = supabase
         .from('eos_meeting_series')
@@ -52,8 +57,8 @@ export const useMeetingSeries = () => {
         .eq('is_active', true)
         .order('created_at', { ascending: false });
       
-      // SuperAdmins see all data; others filter by their tenant
-      if (!isSuper && profile?.tenant_id) {
+      // Vivacity Team sees all; client users filter by tenant
+      if (!isSuper && !isVivacityTeam && profile?.tenant_id) {
         query = query.eq('tenant_id', profile.tenant_id);
       }
       
@@ -62,12 +67,12 @@ export const useMeetingSeries = () => {
       if (error) throw error;
       return data as MeetingSeries[];
     },
-    enabled: isSuper || !!profile?.tenant_id,
+    enabled: isSuper || isVivacityTeam || !!profile?.tenant_id,
   });
 
   // Fetch upcoming meetings
   const { data: upcomingMeetings, isLoading: isLoadingUpcoming } = useQuery({
-    queryKey: ['eos-upcoming-meetings', isSuper ? 'all' : profile?.tenant_id],
+    queryKey: ['eos-upcoming-meetings', isSuper || isVivacityTeam ? 'vivacity_team' : profile?.tenant_id],
     queryFn: async () => {
       let query = supabase
         .from('eos_meetings')
@@ -76,8 +81,8 @@ export const useMeetingSeries = () => {
         .gte('scheduled_date', new Date().toISOString().split('T')[0])
         .order('scheduled_date', { ascending: true });
       
-      // SuperAdmins see all data; others filter by their tenant
-      if (!isSuper && profile?.tenant_id) {
+      // Vivacity Team sees all; client users filter by tenant
+      if (!isSuper && !isVivacityTeam && profile?.tenant_id) {
         query = query.eq('tenant_id', profile.tenant_id);
       }
       
@@ -86,12 +91,12 @@ export const useMeetingSeries = () => {
       if (error) throw error;
       return data as MeetingInstance[];
     },
-    enabled: isSuper || !!profile?.tenant_id,
+    enabled: isSuper || isVivacityTeam || !!profile?.tenant_id,
   });
 
   // Fetch past meetings
   const { data: pastMeetings, isLoading: isLoadingPast } = useQuery({
-    queryKey: ['eos-past-meetings', isSuper ? 'all' : profile?.tenant_id],
+    queryKey: ['eos-past-meetings', isSuper || isVivacityTeam ? 'vivacity_team' : profile?.tenant_id],
     queryFn: async () => {
       let query = supabase
         .from('eos_meetings')
@@ -100,8 +105,8 @@ export const useMeetingSeries = () => {
         .order('scheduled_date', { ascending: false })
         .limit(50);
       
-      // SuperAdmins see all data; others filter by their tenant
-      if (!isSuper && profile?.tenant_id) {
+      // Vivacity Team sees all; client users filter by tenant
+      if (!isSuper && !isVivacityTeam && profile?.tenant_id) {
         query = query.eq('tenant_id', profile.tenant_id);
       }
       
@@ -110,7 +115,7 @@ export const useMeetingSeries = () => {
       if (error) throw error;
       return data as MeetingInstance[];
     },
-    enabled: isSuper || !!profile?.tenant_id,
+    enabled: isSuper || isVivacityTeam || !!profile?.tenant_id,
   });
 
   // Create a new meeting series

@@ -6,9 +6,14 @@ import type { EosScorecardMetric } from '@/types/eos';
 export const useEosScorecardMetrics = () => {
   const { profile, isSuperAdmin } = useAuth();
   const isSuper = isSuperAdmin();
+  
+  // Check if user is Vivacity Team member (Super Admin, Team Leader, Team Member)
+  const isVivacityTeam = ['Super Admin', 'Team Leader', 'Team Member'].includes(
+    profile?.unicorn_role || ''
+  );
 
   const { data: metrics, isLoading } = useQuery({
-    queryKey: ['eos-scorecard-metrics', isSuper ? 'all' : profile?.tenant_id],
+    queryKey: ['eos-scorecard-metrics', isSuper || isVivacityTeam ? 'vivacity_team' : profile?.tenant_id],
     queryFn: async () => {
       let query = supabase
         .from('eos_scorecard_metrics')
@@ -16,8 +21,8 @@ export const useEosScorecardMetrics = () => {
         .eq('is_active', true)
         .order('display_order', { ascending: true });
       
-      // SuperAdmins see all data; others filter by their tenant
-      if (!isSuper && profile?.tenant_id) {
+      // Vivacity Team sees all; client users filter by tenant
+      if (!isSuper && !isVivacityTeam && profile?.tenant_id) {
         query = query.eq('tenant_id', profile.tenant_id);
       }
       
@@ -25,7 +30,7 @@ export const useEosScorecardMetrics = () => {
       if (error) throw error;
       return data as EosScorecardMetric[];
     },
-    enabled: isSuper || !!profile?.tenant_id,
+    enabled: isSuper || isVivacityTeam || !!profile?.tenant_id,
   });
 
   return {

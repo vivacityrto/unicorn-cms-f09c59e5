@@ -31,19 +31,24 @@ export const useRisksOpportunities = () => {
   const queryClient = useQueryClient();
   const isSuper = isSuperAdmin();
   
+  // Check if user is Vivacity Team member (Super Admin, Team Leader, Team Member)
+  const isVivacityTeam = ['Super Admin', 'Team Leader', 'Team Member'].includes(
+    profile?.unicorn_role || ''
+  );
+  
   // Load status transitions for validation
   const { data: statusTransitions } = useEosStatusTransitions();
 
   const { data: items, isLoading } = useQuery({
-    queryKey: ['risks-opportunities', isSuper ? 'all' : profile?.tenant_id],
+    queryKey: ['risks-opportunities', isSuper || isVivacityTeam ? 'vivacity_team' : profile?.tenant_id],
     queryFn: async () => {
       let query = supabase
         .from('eos_issues')
         .select('*')
         .order('created_at', { ascending: false });
       
-      // SuperAdmins see all data; others filter by their tenant
-      if (!isSuper && profile?.tenant_id) {
+      // Vivacity Team sees all; client users filter by tenant
+      if (!isSuper && !isVivacityTeam && profile?.tenant_id) {
         query = query.eq('tenant_id', profile.tenant_id);
       }
       
@@ -51,7 +56,7 @@ export const useRisksOpportunities = () => {
       if (error) throw error;
       return (data || []).map(normalizeItem);
     },
-    enabled: isSuper || !!profile?.tenant_id,
+    enabled: isSuper || isVivacityTeam || !!profile?.tenant_id,
   });
 
   const createItem = useMutation({

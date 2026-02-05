@@ -2,10 +2,11 @@ import { useState, useMemo } from 'react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Button } from '@/components/ui/button';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
+import { Separator } from '@/components/ui/separator';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Check, ChevronsUpDown, Users, X, Loader2 } from 'lucide-react';
+import { Check, ChevronsUpDown, Users, X, Loader2, UserCheck } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useVivacityTeamUsers, VivacityTeamUser } from '@/hooks/useVivacityTeamUsers';
 
@@ -72,6 +73,8 @@ interface VivacityTeamPickerMultiProps {
   /** User IDs to exclude from selection */
   excludeUserIds?: string[];
   className?: string;
+  /** Show "Select All" action button */
+  showSelectAll?: boolean;
 }
 
 type VivacityTeamPickerProps = VivacityTeamPickerSingleProps | VivacityTeamPickerMultiProps;
@@ -203,8 +206,44 @@ export function VivacityTeamPicker(props: VivacityTeamPickerProps) {
     props.onChange(props.value.filter(id => id !== userId));
   };
 
+  const selectAll = () => {
+    props.onChange(filteredUsers.map(u => u.user_uuid));
+  };
+
+  const clearAll = () => {
+    props.onChange([]);
+  };
+
   return (
     <div className={cn("space-y-2", props.className)}>
+      {/* Select All / Clear All actions for multi-select */}
+      {props.showSelectAll !== false && (
+        <div className="flex gap-2 mb-2">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={selectAll}
+            disabled={props.disabled || filteredUsers.length === 0 || props.value.length === filteredUsers.length}
+            className="text-xs"
+          >
+            <UserCheck className="h-3 w-3 mr-1" />
+            Select All Vivacity Team
+          </Button>
+          {props.value.length > 0 && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={clearAll}
+              disabled={props.disabled}
+              className="text-xs text-muted-foreground"
+            >
+              Clear All
+            </Button>
+          )}
+        </div>
+      )}
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
           <Button

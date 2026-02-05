@@ -320,6 +320,7 @@ export const MeetingScheduler = ({ open, onOpenChange, onScheduled }: MeetingSch
               onChange={setParticipantIds}
               placeholder="Select participants..."
               excludeUserIds={facilitatorId ? [facilitatorId] : undefined}
+              showSelectAll={true}
             />
           </div>
 
