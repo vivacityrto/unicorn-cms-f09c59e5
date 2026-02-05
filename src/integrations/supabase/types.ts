@@ -19081,6 +19081,7 @@ export type Database = {
       is_tenant_member_uuid: { Args: { p_tenant_id: string }; Returns: boolean }
       is_user_super_admin: { Args: { user_id: string }; Returns: boolean }
       is_vivacity: { Args: never; Returns: boolean }
+      is_vivacity_member: { Args: { p_user_id: string }; Returns: boolean }
       is_vivacity_super_admin: { Args: never; Returns: boolean }
       is_vivacity_team:
         | { Args: never; Returns: boolean }
