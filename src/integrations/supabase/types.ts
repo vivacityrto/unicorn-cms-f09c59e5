@@ -19086,6 +19086,7 @@ export type Database = {
         | { Args: never; Returns: boolean }
         | { Args: { p_user_id?: string }; Returns: boolean }
       is_vivacity_team_user: { Args: { p_user_id: string }; Returns: boolean }
+      is_vivacity_team_v2: { Args: { p_user_id: string }; Returns: boolean }
       is_vivacity_user: { Args: never; Returns: boolean }
       list_meeting_summaries_for_client: {
         Args: { p_client_id: string; p_limit?: number; p_offset?: number }
