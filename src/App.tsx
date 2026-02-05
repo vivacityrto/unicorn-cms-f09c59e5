@@ -1,4 +1,5 @@
-import { Toaster } from "@/components/ui/toaster";
+ import { lazy, Suspense } from "react";
+ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -6,101 +7,104 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "./hooks/useAuth";
 import { ViewModeProvider } from "./contexts/ViewModeContext";
 import { FacilitatorModeProvider } from "./contexts/FacilitatorModeContext";
-import { ProtectedRoute } from "./components/ProtectedRoute";
-import Index from "./pages/Index";
-import Login from "./pages/Login";
-import Dashboard from "./pages/Dashboard";
-import ManageUsersWrapper from "./pages/ManageUsersWrapper";
-import ManageInvitesWrapper from "./pages/ManageInvitesWrapper";
-import ManageTenantsWrapper from "./pages/ManageTenantsWrapper";
-import ManageDocumentsWrapper from "./pages/ManageDocumentsWrapper";
-import ManageCategoriesWrapper from "./pages/ManageCategoriesWrapper";
-import ManageStagesWrapper from "./pages/ManageStagesWrapper";
-import ManageFieldsWrapper from "./pages/ManageFieldsWrapper";
-import UserProfileWrapper from "./pages/UserProfileWrapper";
-import TenantDetailWrapper from "./pages/TenantDetailWrapper";
-import TenantLoginsWrapper from "./pages/TenantLoginsWrapper";
-import TenantMembersWrapper from "./pages/TenantMembersWrapper";
-import TenantDocumentsWrapper from "./pages/TenantDocumentsWrapper";
-import TenantDocumentDetailWrapper from "./pages/TenantDocumentDetailWrapper";
-import TenantNotesWrapper from "./pages/TenantNotesWrapper";
-import ManagePackagesWrapper from "./pages/ManagePackagesWrapper";
-import PackageDetail from "./pages/PackageDetail";
-import AdminPackageDetailWrapper from "./pages/AdminPackageDetailWrapper";
-import AdminPackageTenantDetailWrapper from "./pages/AdminPackageTenantDetailWrapper";
-import PackageBuilder from "./pages/PackageBuilder";
-import PackageBuilderDetail from "./pages/PackageBuilderDetail";
-import ManageEmailTemplatesWrapper from "./pages/ManageEmailTemplatesWrapper";
-import DocumentDetailWrapper from "./pages/DocumentDetailWrapper";
-import TeamSettingsWrapper from "./pages/TeamSettingsWrapper";
-import SettingsWrapper from "./pages/SettingsWrapper";
-import CalendarWrapper from "./pages/CalendarWrapper";
-import AcceptInvitationWrapper from "./pages/AcceptInvitationWrapper";
-import NotFound from "./pages/NotFound";
-import EosOverview from "./pages/EosOverview";
-import EosRocks from "./pages/EosRocks";
-import EosIssues from "./pages/EosIssues";
-import EosTodos from "./pages/EosTodos";
-import EosMeetings from "./pages/EosMeetings";
-import EosScorecard from "./pages/EosScorecard";
-import EosVto from "./pages/EosVto";
-import EosMeetingSummary from "./pages/EosMeetingSummary";
-import { LiveMeetingView } from "./components/eos/LiveMeetingView";
-import ClientEosOverview from "./pages/ClientEosOverview";
-import NotificationSettings from "./pages/NotificationSettings";
-import IntegrationSettings from "./pages/IntegrationSettings";
-import EosCalendar from "./pages/EosCalendar";
-import EosQC from "./pages/EosQC";
-import EosQCSession from "./pages/EosQCSession";
-import EosFlightPlan from "./pages/EosFlightPlan";
-import EosRisksOpportunities from "./pages/EosRisksOpportunities";
-import EosAccountabilityChart from "./pages/EosAccountabilityChart";
-import EosOnboarding from "./pages/EosOnboarding";
-import EosHealth from "./pages/EosHealth";
-import EosPeopleAnalyzer from "./pages/EosPeopleAnalyzer";
-import EosGWCTrends from "./pages/EosGWCTrends";
-import EosClientImpact from "./pages/EosClientImpact";
-import EosClientImpactDetail from "./pages/EosClientImpactDetail";
-import ClientImpactPage from "./pages/ClientImpactPage";
-import EosRockAnalysis from "./pages/EosRockAnalysis";
-import EosLeadershipDashboard from "./pages/EosLeadershipDashboard";
-import ResetPassword from "./pages/ResetPassword";
-import Audits from "./pages/Audits";
-import AuditWorkspace from "./pages/AuditWorkspace";
-import AuditFindings from "./pages/AuditFindings";
-import AuditActions from "./pages/AuditActions";
-import AuditReport from "./pages/AuditReport";
-import AuditTemplateBuilder from "./pages/AuditTemplateBuilder";
-import TasksManagementWrapper from "./pages/TasksManagementWrapper";
-import RtoTipsWrapper from "./pages/RtoTipsWrapper";
-import ResourceHubDashboard from "./pages/ResourceHubDashboard";
-import ResourceCategoryPage from "./pages/ResourceCategoryPage";
-import ResourceRecentlyAdded from "./pages/ResourceRecentlyAdded";
-import ResourceMostUsed from "./pages/ResourceMostUsed";
-import ResourceFavourites from "./pages/ResourceFavourites";
-import ResourceUpdatesLog from "./pages/ResourceUpdatesLog";
-import MembershipDashboardWrapper from "./pages/MembershipDashboardWrapper";
-import ClientDetailWrapper from "./pages/ClientDetailWrapper";
-import AdminTgaIntegrationWrapper from "./pages/AdminTgaIntegrationWrapper";
-import AdminUserAudit from "./pages/AdminUserAudit";
-import TeamUsers from "./pages/TeamUsers";
-import TenantUsers from "./pages/TenantUsers";
-import ClientPackageDetailWrapper from "./pages/ClientPackageDetailWrapper";
-import AdminManageStagesWrapper from "./pages/AdminManageStagesWrapper";
-import AdminStageDetailWrapper from "./pages/AdminStageDetailWrapper";
-import StageBuilder from "./pages/StageBuilder";
-import AdminStageAnalytics from "./pages/AdminStageAnalytics";
-import AdminOperations from "./pages/AdminOperations";
-import AdminCompliancePacks from "./pages/AdminCompliancePacks";
-import AdminReviews from "./pages/AdminReviews";
-import MyWork from "./pages/MyWork";
-import CalendarTimeCapture from "./pages/CalendarTimeCapture";
-import OutlookCallback from "./pages/OutlookCallback";
-import TimeInbox from "./pages/TimeInbox";
-import ProcessesWrapper from "./pages/ProcessesWrapper";
-import ProcessDetail from "./pages/ProcessDetail";
-import ProcessForm from "./pages/ProcessForm";
-import RoleReference from "./pages/RoleReference";
+ import { ProtectedRoute } from "./components/ProtectedRoute";
+ import { LazyLoadFallback } from "./components/LazyLoadFallback";
+ 
+ // Lazy load all page components for code splitting
+ const Index = lazy(() => import("./pages/Index"));
+ const Login = lazy(() => import("./pages/Login"));
+ const Dashboard = lazy(() => import("./pages/Dashboard"));
+ const ManageUsersWrapper = lazy(() => import("./pages/ManageUsersWrapper"));
+ const ManageInvitesWrapper = lazy(() => import("./pages/ManageInvitesWrapper"));
+ const ManageTenantsWrapper = lazy(() => import("./pages/ManageTenantsWrapper"));
+ const ManageDocumentsWrapper = lazy(() => import("./pages/ManageDocumentsWrapper"));
+ const ManageCategoriesWrapper = lazy(() => import("./pages/ManageCategoriesWrapper"));
+ const ManageStagesWrapper = lazy(() => import("./pages/ManageStagesWrapper"));
+ const ManageFieldsWrapper = lazy(() => import("./pages/ManageFieldsWrapper"));
+ const UserProfileWrapper = lazy(() => import("./pages/UserProfileWrapper"));
+ const TenantDetailWrapper = lazy(() => import("./pages/TenantDetailWrapper"));
+ const TenantLoginsWrapper = lazy(() => import("./pages/TenantLoginsWrapper"));
+ const TenantMembersWrapper = lazy(() => import("./pages/TenantMembersWrapper"));
+ const TenantDocumentsWrapper = lazy(() => import("./pages/TenantDocumentsWrapper"));
+ const TenantDocumentDetailWrapper = lazy(() => import("./pages/TenantDocumentDetailWrapper"));
+ const TenantNotesWrapper = lazy(() => import("./pages/TenantNotesWrapper"));
+ const ManagePackagesWrapper = lazy(() => import("./pages/ManagePackagesWrapper"));
+ const PackageDetail = lazy(() => import("./pages/PackageDetail"));
+ const AdminPackageDetailWrapper = lazy(() => import("./pages/AdminPackageDetailWrapper"));
+ const AdminPackageTenantDetailWrapper = lazy(() => import("./pages/AdminPackageTenantDetailWrapper"));
+ const PackageBuilder = lazy(() => import("./pages/PackageBuilder"));
+ const PackageBuilderDetail = lazy(() => import("./pages/PackageBuilderDetail"));
+ const ManageEmailTemplatesWrapper = lazy(() => import("./pages/ManageEmailTemplatesWrapper"));
+ const DocumentDetailWrapper = lazy(() => import("./pages/DocumentDetailWrapper"));
+ const TeamSettingsWrapper = lazy(() => import("./pages/TeamSettingsWrapper"));
+ const SettingsWrapper = lazy(() => import("./pages/SettingsWrapper"));
+ const CalendarWrapper = lazy(() => import("./pages/CalendarWrapper"));
+ const AcceptInvitationWrapper = lazy(() => import("./pages/AcceptInvitationWrapper"));
+ const NotFound = lazy(() => import("./pages/NotFound"));
+ const EosOverview = lazy(() => import("./pages/EosOverview"));
+ const EosRocks = lazy(() => import("./pages/EosRocks"));
+ const EosIssues = lazy(() => import("./pages/EosIssues"));
+ const EosTodos = lazy(() => import("./pages/EosTodos"));
+ const EosMeetings = lazy(() => import("./pages/EosMeetings"));
+ const EosScorecard = lazy(() => import("./pages/EosScorecard"));
+ const EosVto = lazy(() => import("./pages/EosVto"));
+ const EosMeetingSummary = lazy(() => import("./pages/EosMeetingSummary"));
+ const LiveMeetingView = lazy(() => import("./components/eos/LiveMeetingView").then(m => ({ default: m.LiveMeetingView })));
+ const ClientEosOverview = lazy(() => import("./pages/ClientEosOverview"));
+ const NotificationSettings = lazy(() => import("./pages/NotificationSettings"));
+ const IntegrationSettings = lazy(() => import("./pages/IntegrationSettings"));
+ const EosCalendar = lazy(() => import("./pages/EosCalendar"));
+ const EosQC = lazy(() => import("./pages/EosQC"));
+ const EosQCSession = lazy(() => import("./pages/EosQCSession"));
+ const EosFlightPlan = lazy(() => import("./pages/EosFlightPlan"));
+ const EosRisksOpportunities = lazy(() => import("./pages/EosRisksOpportunities"));
+ const EosAccountabilityChart = lazy(() => import("./pages/EosAccountabilityChart"));
+ const EosOnboarding = lazy(() => import("./pages/EosOnboarding"));
+ const EosHealth = lazy(() => import("./pages/EosHealth"));
+ const EosPeopleAnalyzer = lazy(() => import("./pages/EosPeopleAnalyzer"));
+ const EosGWCTrends = lazy(() => import("./pages/EosGWCTrends"));
+ const EosClientImpact = lazy(() => import("./pages/EosClientImpact"));
+ const EosClientImpactDetail = lazy(() => import("./pages/EosClientImpactDetail"));
+ const ClientImpactPage = lazy(() => import("./pages/ClientImpactPage"));
+ const EosRockAnalysis = lazy(() => import("./pages/EosRockAnalysis"));
+ const EosLeadershipDashboard = lazy(() => import("./pages/EosLeadershipDashboard"));
+ const ResetPassword = lazy(() => import("./pages/ResetPassword"));
+ const Audits = lazy(() => import("./pages/Audits"));
+ const AuditWorkspace = lazy(() => import("./pages/AuditWorkspace"));
+ const AuditFindings = lazy(() => import("./pages/AuditFindings"));
+ const AuditActions = lazy(() => import("./pages/AuditActions"));
+ const AuditReport = lazy(() => import("./pages/AuditReport"));
+ const AuditTemplateBuilder = lazy(() => import("./pages/AuditTemplateBuilder"));
+ const TasksManagementWrapper = lazy(() => import("./pages/TasksManagementWrapper"));
+ const RtoTipsWrapper = lazy(() => import("./pages/RtoTipsWrapper"));
+ const ResourceHubDashboard = lazy(() => import("./pages/ResourceHubDashboard"));
+ const ResourceCategoryPage = lazy(() => import("./pages/ResourceCategoryPage"));
+ const ResourceRecentlyAdded = lazy(() => import("./pages/ResourceRecentlyAdded"));
+ const ResourceMostUsed = lazy(() => import("./pages/ResourceMostUsed"));
+ const ResourceFavourites = lazy(() => import("./pages/ResourceFavourites"));
+ const ResourceUpdatesLog = lazy(() => import("./pages/ResourceUpdatesLog"));
+ const MembershipDashboardWrapper = lazy(() => import("./pages/MembershipDashboardWrapper"));
+ const ClientDetailWrapper = lazy(() => import("./pages/ClientDetailWrapper"));
+ const AdminTgaIntegrationWrapper = lazy(() => import("./pages/AdminTgaIntegrationWrapper"));
+ const AdminUserAudit = lazy(() => import("./pages/AdminUserAudit"));
+ const TeamUsers = lazy(() => import("./pages/TeamUsers"));
+ const TenantUsers = lazy(() => import("./pages/TenantUsers"));
+ const ClientPackageDetailWrapper = lazy(() => import("./pages/ClientPackageDetailWrapper"));
+ const AdminManageStagesWrapper = lazy(() => import("./pages/AdminManageStagesWrapper"));
+ const AdminStageDetailWrapper = lazy(() => import("./pages/AdminStageDetailWrapper"));
+ const StageBuilder = lazy(() => import("./pages/StageBuilder"));
+ const AdminStageAnalytics = lazy(() => import("./pages/AdminStageAnalytics"));
+ const AdminOperations = lazy(() => import("./pages/AdminOperations"));
+ const AdminCompliancePacks = lazy(() => import("./pages/AdminCompliancePacks"));
+ const AdminReviews = lazy(() => import("./pages/AdminReviews"));
+ const MyWork = lazy(() => import("./pages/MyWork"));
+ const CalendarTimeCapture = lazy(() => import("./pages/CalendarTimeCapture"));
+ const OutlookCallback = lazy(() => import("./pages/OutlookCallback"));
+ const TimeInbox = lazy(() => import("./pages/TimeInbox"));
+ const ProcessesWrapper = lazy(() => import("./pages/ProcessesWrapper"));
+ const ProcessDetail = lazy(() => import("./pages/ProcessDetail"));
+ const ProcessForm = lazy(() => import("./pages/ProcessForm"));
+ const RoleReference = lazy(() => import("./pages/RoleReference"));
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -112,7 +116,8 @@ const App = () => (
         <AuthProvider>
           <ViewModeProvider>
           <FacilitatorModeProvider>
-          <Routes>
+           <Suspense fallback={<LazyLoadFallback />}>
+           <Routes>
             <Route path="/" element={<Login />} />
             <Route path="/login" element={<Login />} />
             <Route path="/reset-password" element={<ResetPassword />} />
@@ -782,6 +787,7 @@ const App = () => (
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
+           </Suspense>
           </FacilitatorModeProvider>
           </ViewModeProvider>
         </AuthProvider>
