@@ -1,5 +1,8 @@
 project_id = "yxkgdalkbrriasiyyrwk"
 
+ [functions.assistant-answer]
+ verify_jwt = false
+ 
 [functions.tga-integration]
 verify_jwt = false
 
