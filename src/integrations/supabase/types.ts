@@ -544,6 +544,122 @@ export type Database = {
         }
         Relationships: []
       }
+      assistant_audit_log: {
+        Row: {
+          action: string
+          client_tenant_id: number | null
+          created_at: string
+          id: string
+          redactions_applied: Json
+          report_type: string | null
+          request_text: string
+          response_summary: string
+          sources_used: Json
+          thread_id: string | null
+          viewer_user_id: string
+        }
+        Insert: {
+          action: string
+          client_tenant_id?: number | null
+          created_at?: string
+          id?: string
+          redactions_applied?: Json
+          report_type?: string | null
+          request_text: string
+          response_summary: string
+          sources_used?: Json
+          thread_id?: string | null
+          viewer_user_id: string
+        }
+        Update: {
+          action?: string
+          client_tenant_id?: number | null
+          created_at?: string
+          id?: string
+          redactions_applied?: Json
+          report_type?: string | null
+          request_text?: string
+          response_summary?: string
+          sources_used?: Json
+          thread_id?: string | null
+          viewer_user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "assistant_audit_log_client_tenant_id_fkey"
+            columns: ["client_tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "assistant_audit_log_thread_id_fkey"
+            columns: ["thread_id"]
+            isOneToOne: false
+            referencedRelation: "assistant_threads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      assistant_messages: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          role: string
+          sources_used: Json | null
+          thread_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          role: string
+          sources_used?: Json | null
+          thread_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          role?: string
+          sources_used?: Json | null
+          thread_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "assistant_messages_thread_id_fkey"
+            columns: ["thread_id"]
+            isOneToOne: false
+            referencedRelation: "assistant_threads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      assistant_threads: {
+        Row: {
+          created_at: string
+          id: string
+          title: string
+          updated_at: string
+          viewer_user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          title?: string
+          updated_at?: string
+          viewer_user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          title?: string
+          updated_at?: string
+          viewer_user_id?: string
+        }
+        Relationships: []
+      }
       audit: {
         Row: {
           action_title: string | null
@@ -9337,6 +9453,63 @@ export type Database = {
             referencedColumns: ["user_uuid"]
           },
         ]
+      }
+      knowledge_items: {
+        Row: {
+          applicable_packages: Json | null
+          applicable_phases: Json | null
+          applicable_roles: Json | null
+          approval_status: string
+          content: string
+          created_at: string
+          excludes_rto_2015: boolean
+          id: string
+          owner_user_id: string | null
+          regulatory_standard: string | null
+          review_date: string | null
+          source_type: string
+          tags: string[] | null
+          title: string
+          updated_at: string
+          version: string
+        }
+        Insert: {
+          applicable_packages?: Json | null
+          applicable_phases?: Json | null
+          applicable_roles?: Json | null
+          approval_status?: string
+          content: string
+          created_at?: string
+          excludes_rto_2015?: boolean
+          id?: string
+          owner_user_id?: string | null
+          regulatory_standard?: string | null
+          review_date?: string | null
+          source_type: string
+          tags?: string[] | null
+          title: string
+          updated_at?: string
+          version?: string
+        }
+        Update: {
+          applicable_packages?: Json | null
+          applicable_phases?: Json | null
+          applicable_roles?: Json | null
+          approval_status?: string
+          content?: string
+          created_at?: string
+          excludes_rto_2015?: boolean
+          id?: string
+          owner_user_id?: string | null
+          regulatory_standard?: string | null
+          review_date?: string | null
+          source_type?: string
+          tags?: string[] | null
+          title?: string
+          updated_at?: string
+          version?: string
+        }
+        Relationships: []
       }
       labels: {
         Row: {
@@ -18254,6 +18427,22 @@ export type Database = {
           p_outcome_type: string
         }
         Returns: Json
+      }
+      search_knowledge_items: {
+        Args: {
+          p_limit?: number
+          p_search_query: string
+          p_source_types?: string[]
+        }
+        Returns: {
+          content: string
+          id: string
+          rank: number
+          source_type: string
+          tags: string[]
+          title: string
+          version: string
+        }[]
       }
       search_resources: {
         Args: { p_category?: string; p_search_term: string; p_tags?: string[] }
