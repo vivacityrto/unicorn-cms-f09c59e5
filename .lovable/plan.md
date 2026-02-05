@@ -1,92 +1,169 @@
 
 
-# Fix: Database Constraint Mismatch for Process Categories
+# Fix: Meeting Scheduling RPC Ambiguity (`create_meeting_from_template`)
 
 ## Problem Summary
 
-The error occurs because the database has a **check constraint** that only allows 5 category values, but the frontend form offers 10 categories:
+When scheduling an EOS meeting, the RPC call fails with:
 
-| Database Allows | Frontend Uses |
-|-----------------|---------------|
-| operations      | operations |
-| compliance      | compliance |
-| eos             | eos |
-| hr              | hr_people (mismatch!) |
-| client_delivery | client_delivery |
-| (none)          | sales_marketing |
-| (none)          | finance |
-| (none)          | it_systems |
-| (none)          | governance |
-| (none)          | risk_management |
+```
+Could not choose the best candidate function between:
+public.create_meeting_from_template(p_tenant_id => bigint, ...)
+public.create_meeting_from_template(p_tenant_id => integer, ...)
+```
 
-When you selected "Sales & Marketing", it tried to insert `sales_marketing` which violates the constraint.
+**Root Cause**: Two overloaded PostgreSQL functions exist with the same name but different parameter types for `p_tenant_id`:
+
+| Function 1 | Function 2 |
+|------------|------------|
+| `p_tenant_id bigint` | `p_tenant_id integer` |
+
+When the frontend sends `p_tenant_id: 6372` (a JavaScript number), PostgREST cannot determine which function to call because both `integer` and `bigint` are valid matches for a numeric value.
+
+---
+
+## Investigation Findings
+
+### Database Functions (Confirmed)
+Two functions found in `pg_proc`:
+
+```text
+1. p_tenant_id bigint, p_agenda_template_id uuid, ... (8 params)
+2. p_tenant_id integer, p_agenda_template_id uuid, ... (8 params)
+```
+
+### Frontend Code
+- **File**: `src/components/eos/MeetingScheduler.tsx` (line 75)
+- **Constant**: `VIVACITY_TENANT_ID = 6372` (from `src/hooks/useVivacityTeamUsers.tsx`)
+- **RPC Call**:
+```typescript
+await supabase.rpc('create_meeting_from_template', {
+  p_tenant_id: VIVACITY_TENANT_ID,  // JavaScript number, ambiguous to Postgres
+  ...
+});
+```
+
+### Target Table Column Type
+- `eos_meetings.tenant_id` is `bigint` (int8)
 
 ---
 
 ## Solution
 
-Update the database constraint to include all the categories the application needs.
+### Strategy
+Drop the duplicate `integer` overload and keep only the `bigint` version (canonical signature). This is the safest approach since:
+1. The target table uses `bigint`
+2. `bigint` is a superset of `integer`
+3. No data loss or type coercion issues
+
+---
+
+## Implementation Steps
 
 ### Step 1: Database Migration
 
-Create a migration to:
+Drop the `integer` overload function:
 
-1. Drop the existing `processes_category_check` constraint
-2. Add a new constraint with all 10 categories
-3. Also update the `applies_to` constraint to align with frontend values
+```sql
+-- Drop the integer overload (exact signature match required)
+DROP FUNCTION IF EXISTS public.create_meeting_from_template(
+  integer,      -- p_tenant_id
+  uuid,         -- p_agenda_template_id
+  text,         -- p_title
+  timestamp with time zone,  -- p_scheduled_date
+  integer,      -- p_duration_minutes
+  uuid,         -- p_facilitator_id
+  uuid,         -- p_scribe_id
+  uuid[]        -- p_participant_ids
+);
 
-```text
-SQL Changes:
-
--- Drop old constraint
-ALTER TABLE public.processes 
-DROP CONSTRAINT processes_category_check;
-
--- Add new constraint with all categories
-ALTER TABLE public.processes 
-ADD CONSTRAINT processes_category_check 
-CHECK (category IN (
-  'eos',
-  'operations', 
-  'compliance', 
-  'client_delivery',
-  'sales_marketing',
-  'finance',
-  'hr_people',
-  'it_systems',
-  'governance',
-  'risk_management'
-));
-
--- Also fix applies_to constraint if needed
-ALTER TABLE public.processes 
-DROP CONSTRAINT processes_applies_to_check;
-
-ALTER TABLE public.processes 
-ADD CONSTRAINT processes_applies_to_check 
-CHECK (applies_to IN (
-  'vivacity_internal', 
-  'all_clients', 
-  'specific_client'
-));
+-- Also drop any legacy overload with different parameter order if exists
+DROP FUNCTION IF EXISTS public.create_meeting_from_template(
+  integer,      -- p_tenant_id
+  text,         -- p_title
+  uuid,         -- p_agenda_template_id
+  timestamp with time zone,
+  integer,
+  uuid,
+  uuid,
+  uuid[]
+);
 ```
 
-### Step 2: No Frontend Changes Required
+### Step 2: Frontend Patch (Defensive Type Coercion)
 
-The frontend code in `src/hooks/useProcesses.tsx` and `src/pages/ProcessForm.tsx` already has the correct category list. Once the database constraint is updated, the form will work correctly.
+Update `src/components/eos/MeetingScheduler.tsx` to explicitly cast the tenant ID as a number:
+
+```typescript
+// Line 75-84 - Add explicit Number() cast for safety
+const { data, error: meetingError } = await supabase.rpc('create_meeting_from_template', {
+  p_tenant_id: Number(VIVACITY_TENANT_ID),  // Explicit cast
+  p_agenda_template_id: templateId,
+  p_title: title,
+  p_scheduled_date: scheduledDate,
+  p_duration_minutes: parseInt(duration),
+  p_facilitator_id: facilitatorId,
+  p_scribe_id: null,
+  p_participant_ids: participantIds,
+});
+```
+
+This ensures consistent type handling even if `VIVACITY_TENANT_ID` were ever changed to a string in the future.
 
 ---
 
 ## Technical Details
 
-**Files to modify:**
-- New migration file (database schema change only)
+### Files to Modify
 
-**Risk assessment:**
-- Low risk: This is an additive change (allowing more values)
-- No data migration needed (no existing data uses the new categories yet)
-- Constraint is on the main `processes` table only
+| File | Change |
+|------|--------|
+| New migration SQL | Drop duplicate `integer` function |
+| `src/components/eos/MeetingScheduler.tsx` | Add explicit `Number()` cast (lines 76, 90) |
 
-**Testing:**
-After applying the migration, verify that creating a process with any of the 10 categories succeeds.
+### Verification Query
+
+After migration, run this to confirm only one function exists:
+
+```sql
+SELECT p.oid::regproc as signature, 
+       pg_get_function_identity_arguments(p.oid) as args
+FROM pg_proc p
+JOIN pg_namespace n ON n.oid = p.pronamespace
+WHERE n.nspname = 'public'
+  AND p.proname = 'create_meeting_from_template';
+```
+
+Expected: Only one row with `p_tenant_id bigint`.
+
+### Risk Assessment
+
+| Risk | Level | Mitigation |
+|------|-------|------------|
+| Breaking existing calls | Low | All callers already pass numeric values which work with `bigint` |
+| Data loss | None | This is a function signature change, not data modification |
+| Rollback | Easy | Function can be recreated if needed |
+
+---
+
+## Testing Plan
+
+After implementation:
+
+1. Navigate to `/eos/meetings`
+2. Click "Schedule Meeting"
+3. Select template, facilitator, set date/time
+4. Click "Schedule Meeting" button
+5. Verify meeting is created successfully
+6. Check `eos_meetings` table for the new record
+7. Test all three meeting types: L10 (Weekly), Quarterly, Annual
+
+---
+
+## Done Criteria
+
+- No "best candidate function" errors when scheduling meetings
+- Only one `create_meeting_from_template` function exists in `public` schema
+- Meeting scheduling works for Weekly, Quarterly, and Annual templates
+- Participants are correctly added to meetings
 
