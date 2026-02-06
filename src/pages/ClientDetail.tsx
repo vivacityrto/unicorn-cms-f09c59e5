@@ -6,6 +6,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { ClientTimelineTab } from '@/components/client/ClientTimelineTab';
 import { ClientStructuredNotesTab } from '@/components/client/ClientStructuredNotesTab';
 import { ClientActionItemsTab } from '@/components/client/ClientActionItemsTab';
+import { ClientEmailsTab } from '@/components/client/ClientEmailsTab';
 import { useClientProfile, useClientPackages } from '@/hooks/useClientManagement';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -27,7 +28,8 @@ import {
   CheckSquare,
   Calendar,
   Save,
-  Loader2
+  Loader2,
+  Mail
 } from 'lucide-react';
 import { ClientProfileForm } from '@/components/client/ClientProfileForm';
 import { ClientAddressSection } from '@/components/client/ClientAddressSection';
@@ -278,6 +280,13 @@ export default function ClientDetail() {
                 Actions
               </TabsTrigger>
               <TabsTrigger
+                value="emails"
+                className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none bg-transparent px-1 pb-3"
+              >
+                <Mail className="h-4 w-4 mr-2" />
+                Emails
+              </TabsTrigger>
+              <TabsTrigger
                 value="timeline"
                 className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none bg-transparent px-1 pb-3"
               >
@@ -377,6 +386,10 @@ export default function ClientDetail() {
 
           <TabsContent value="actions" className="mt-0">
             <ClientActionItemsTab tenantId={tenantIdNum!} clientId={tenant.id.toString()} />
+          </TabsContent>
+
+          <TabsContent value="emails" className="mt-0">
+            <ClientEmailsTab tenantId={tenantIdNum!} clientName={tenant.name} />
           </TabsContent>
 
           <TabsContent value="timeline" className="mt-0">
