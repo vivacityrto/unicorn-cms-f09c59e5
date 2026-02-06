@@ -10115,6 +10115,284 @@ export type Database = {
         }
         Relationships: []
       }
+      evidence_request_items: {
+        Row: {
+          accepted_file_types: string[] | null
+          created_at: string
+          display_order: number
+          guidance_text: string | null
+          id: string
+          is_required: boolean
+          item_name: string
+          received_at: string | null
+          received_document_id: string | null
+          request_id: string
+          review_notes: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          accepted_file_types?: string[] | null
+          created_at?: string
+          display_order?: number
+          guidance_text?: string | null
+          id?: string
+          is_required?: boolean
+          item_name: string
+          received_at?: string | null
+          received_document_id?: string | null
+          request_id: string
+          review_notes?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          accepted_file_types?: string[] | null
+          created_at?: string
+          display_order?: number
+          guidance_text?: string | null
+          id?: string
+          is_required?: boolean
+          item_name?: string
+          received_at?: string | null
+          received_document_id?: string | null
+          request_id?: string
+          review_notes?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "evidence_request_items_received_document_id_fkey"
+            columns: ["received_document_id"]
+            isOneToOne: false
+            referencedRelation: "portal_documents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "evidence_request_items_request_id_fkey"
+            columns: ["request_id"]
+            isOneToOne: false
+            referencedRelation: "evidence_requests"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "evidence_request_items_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["user_uuid"]
+          },
+        ]
+      }
+      evidence_request_template_items: {
+        Row: {
+          accepted_file_types: string[] | null
+          created_at: string
+          display_order: number
+          guidance_text: string | null
+          id: string
+          is_required: boolean
+          item_name: string
+          template_id: string
+        }
+        Insert: {
+          accepted_file_types?: string[] | null
+          created_at?: string
+          display_order?: number
+          guidance_text?: string | null
+          id?: string
+          is_required?: boolean
+          item_name: string
+          template_id: string
+        }
+        Update: {
+          accepted_file_types?: string[] | null
+          created_at?: string
+          display_order?: number
+          guidance_text?: string | null
+          id?: string
+          is_required?: boolean
+          item_name?: string
+          template_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "evidence_request_template_items_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "evidence_request_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      evidence_request_templates: {
+        Row: {
+          category: string
+          code: string
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          is_active: boolean
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          category?: string
+          code: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          category?: string
+          code?: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "evidence_request_templates_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["user_uuid"]
+          },
+        ]
+      }
+      evidence_requests: {
+        Row: {
+          assigned_to_client_user_id: string | null
+          category: string
+          completed_at: string | null
+          created_at: string
+          description: string | null
+          due_date: string | null
+          id: string
+          linked_package_id: number | null
+          linked_stage_id: number | null
+          linked_support_request_id: string | null
+          requested_by_user_id: string
+          sent_at: string | null
+          status: string
+          template_id: string | null
+          tenant_id: number
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          assigned_to_client_user_id?: string | null
+          category?: string
+          completed_at?: string | null
+          created_at?: string
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          linked_package_id?: number | null
+          linked_stage_id?: number | null
+          linked_support_request_id?: string | null
+          requested_by_user_id: string
+          sent_at?: string | null
+          status?: string
+          template_id?: string | null
+          tenant_id: number
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          assigned_to_client_user_id?: string | null
+          category?: string
+          completed_at?: string | null
+          created_at?: string
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          linked_package_id?: number | null
+          linked_stage_id?: number | null
+          linked_support_request_id?: string | null
+          requested_by_user_id?: string
+          sent_at?: string | null
+          status?: string
+          template_id?: string | null
+          tenant_id?: number
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "evidence_requests_assigned_to_client_user_id_fkey"
+            columns: ["assigned_to_client_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "evidence_requests_linked_support_request_id_fkey"
+            columns: ["linked_support_request_id"]
+            isOneToOne: false
+            referencedRelation: "support_requests"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "evidence_requests_requested_by_user_id_fkey"
+            columns: ["requested_by_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "evidence_requests_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "evidence_request_templates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "evidence_requests_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "evidence_requests_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_engagement_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "evidence_requests_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_eos_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "evidence_requests_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_compliance_entitlements"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
       excel_generated_files: {
         Row: {
           client_legacy_id: string | null
@@ -10260,6 +10538,7 @@ export type Database = {
         Row: {
           client_legacy_id: string | null
           created_at: string | null
+          direction: string
           document_version_id: string | null
           error_message: string | null
           file_name: string
@@ -10267,19 +10546,24 @@ export type Database = {
           generated_at: string | null
           generated_by: string | null
           id: string
+          is_client_visible: boolean
           last_retry_at: string | null
           merge_data: Json | null
           package_id: number | null
           retry_count: number | null
+          shared_at: string | null
+          shared_by: string | null
           source_document_id: number | null
           stage_id: number | null
           status: string | null
           tenant_id: number | null
           updated_at: string | null
+          version_group_id: string | null
         }
         Insert: {
           client_legacy_id?: string | null
           created_at?: string | null
+          direction?: string
           document_version_id?: string | null
           error_message?: string | null
           file_name: string
@@ -10287,19 +10571,24 @@ export type Database = {
           generated_at?: string | null
           generated_by?: string | null
           id?: string
+          is_client_visible?: boolean
           last_retry_at?: string | null
           merge_data?: Json | null
           package_id?: number | null
           retry_count?: number | null
+          shared_at?: string | null
+          shared_by?: string | null
           source_document_id?: number | null
           stage_id?: number | null
           status?: string | null
           tenant_id?: number | null
           updated_at?: string | null
+          version_group_id?: string | null
         }
         Update: {
           client_legacy_id?: string | null
           created_at?: string | null
+          direction?: string
           document_version_id?: string | null
           error_message?: string | null
           file_name?: string
@@ -10307,15 +10596,19 @@ export type Database = {
           generated_at?: string | null
           generated_by?: string | null
           id?: string
+          is_client_visible?: boolean
           last_retry_at?: string | null
           merge_data?: Json | null
           package_id?: number | null
           retry_count?: number | null
+          shared_at?: string | null
+          shared_by?: string | null
           source_document_id?: number | null
           stage_id?: number | null
           status?: string | null
           tenant_id?: number | null
           updated_at?: string | null
+          version_group_id?: string | null
         }
         Relationships: [
           {
@@ -10338,6 +10631,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "document_versions"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "generated_documents_shared_by_fkey"
+            columns: ["shared_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["user_uuid"]
           },
           {
             foreignKeyName: "generated_documents_source_document_id_fkey"
@@ -12230,6 +12530,299 @@ export type Database = {
           Value?: string
         }
         Relationships: []
+      }
+      portal_document_audit: {
+        Row: {
+          action: string
+          actor_role: string | null
+          actor_user_id: string | null
+          document_id: string
+          document_type: string
+          id: string
+          metadata: Json | null
+          occurred_at: string
+          reason: string | null
+          tenant_id: number
+        }
+        Insert: {
+          action: string
+          actor_role?: string | null
+          actor_user_id?: string | null
+          document_id: string
+          document_type: string
+          id?: string
+          metadata?: Json | null
+          occurred_at?: string
+          reason?: string | null
+          tenant_id: number
+        }
+        Update: {
+          action?: string
+          actor_role?: string | null
+          actor_user_id?: string | null
+          document_id?: string
+          document_type?: string
+          id?: string
+          metadata?: Json | null
+          occurred_at?: string
+          reason?: string | null
+          tenant_id?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "portal_document_audit_actor_user_id_fkey"
+            columns: ["actor_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "portal_document_audit_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "portal_document_audit_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_engagement_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "portal_document_audit_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_eos_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "portal_document_audit_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_compliance_entitlements"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
+      portal_document_categories: {
+        Row: {
+          code: string
+          created_at: string
+          created_by: string | null
+          description: string | null
+          display_order: number
+          id: string
+          is_active: boolean
+          name: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          display_order?: number
+          id?: string
+          is_active?: boolean
+          name: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          display_order?: number
+          id?: string
+          is_active?: boolean
+          name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "portal_document_categories_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["user_uuid"]
+          },
+        ]
+      }
+      portal_documents: {
+        Row: {
+          category_id: string | null
+          created_at: string
+          deleted_at: string | null
+          deleted_by: string | null
+          description: string | null
+          direction: string
+          evidence_request_item_id: string | null
+          file_name: string
+          file_size: number | null
+          file_type: string | null
+          id: string
+          internal_notes: string | null
+          is_client_visible: boolean
+          linked_package_id: number | null
+          linked_stage_id: number | null
+          linked_support_request_id: string | null
+          linked_task_id: string | null
+          shared_at: string | null
+          shared_by: string | null
+          source: string
+          status: string
+          storage_path: string
+          supersedes_id: string | null
+          tags: string[] | null
+          tenant_id: number
+          updated_at: string
+          uploaded_at: string
+          uploaded_by: string | null
+          version_group_id: string | null
+          version_number: number
+        }
+        Insert: {
+          category_id?: string | null
+          created_at?: string
+          deleted_at?: string | null
+          deleted_by?: string | null
+          description?: string | null
+          direction?: string
+          evidence_request_item_id?: string | null
+          file_name: string
+          file_size?: number | null
+          file_type?: string | null
+          id?: string
+          internal_notes?: string | null
+          is_client_visible?: boolean
+          linked_package_id?: number | null
+          linked_stage_id?: number | null
+          linked_support_request_id?: string | null
+          linked_task_id?: string | null
+          shared_at?: string | null
+          shared_by?: string | null
+          source?: string
+          status?: string
+          storage_path: string
+          supersedes_id?: string | null
+          tags?: string[] | null
+          tenant_id: number
+          updated_at?: string
+          uploaded_at?: string
+          uploaded_by?: string | null
+          version_group_id?: string | null
+          version_number?: number
+        }
+        Update: {
+          category_id?: string | null
+          created_at?: string
+          deleted_at?: string | null
+          deleted_by?: string | null
+          description?: string | null
+          direction?: string
+          evidence_request_item_id?: string | null
+          file_name?: string
+          file_size?: number | null
+          file_type?: string | null
+          id?: string
+          internal_notes?: string | null
+          is_client_visible?: boolean
+          linked_package_id?: number | null
+          linked_stage_id?: number | null
+          linked_support_request_id?: string | null
+          linked_task_id?: string | null
+          shared_at?: string | null
+          shared_by?: string | null
+          source?: string
+          status?: string
+          storage_path?: string
+          supersedes_id?: string | null
+          tags?: string[] | null
+          tenant_id?: number
+          updated_at?: string
+          uploaded_at?: string
+          uploaded_by?: string | null
+          version_group_id?: string | null
+          version_number?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "portal_documents_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "portal_document_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "portal_documents_deleted_by_fkey"
+            columns: ["deleted_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "portal_documents_evidence_item_fk"
+            columns: ["evidence_request_item_id"]
+            isOneToOne: false
+            referencedRelation: "evidence_request_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "portal_documents_linked_support_request_id_fkey"
+            columns: ["linked_support_request_id"]
+            isOneToOne: false
+            referencedRelation: "support_requests"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "portal_documents_shared_by_fkey"
+            columns: ["shared_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "portal_documents_supersedes_id_fkey"
+            columns: ["supersedes_id"]
+            isOneToOne: false
+            referencedRelation: "portal_documents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "portal_documents_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "portal_documents_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_engagement_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "portal_documents_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_eos_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "portal_documents_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_compliance_entitlements"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "portal_documents_uploaded_by_fkey"
+            columns: ["uploaded_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["user_uuid"]
+          },
+        ]
       }
       process_audit_log: {
         Row: {
@@ -19099,6 +19692,35 @@ export type Database = {
         }
         Relationships: []
       }
+      v_portal_documents_unified: {
+        Row: {
+          category_name: string | null
+          deleted_at: string | null
+          description: string | null
+          direction: string | null
+          document_type: string | null
+          evidence_request_item_id: string | null
+          file_name: string | null
+          file_size: number | null
+          file_type: string | null
+          id: string | null
+          is_client_visible: boolean | null
+          linked_package_id: number | null
+          linked_stage_id: number | null
+          shared_at: string | null
+          source: string | null
+          status: string | null
+          storage_path: string | null
+          tags: string[] | null
+          tenant_id: number | null
+          uploaded_at: string | null
+          uploaded_by: string | null
+          uploaded_by_name: string | null
+          uploaded_by_type: string | null
+          version_number: number | null
+        }
+        Relationships: []
+      }
       v_tenant_compliance_entitlements: {
         Row: {
           assigned_csc_user_id: string | null
@@ -20035,6 +20657,17 @@ export type Database = {
       lock_meeting_minutes: {
         Args: { p_meeting_id: string; p_reason?: string }
         Returns: undefined
+      }
+      log_portal_document_event: {
+        Args: {
+          p_action: string
+          p_document_id: string
+          p_document_type: string
+          p_metadata?: Json
+          p_reason?: string
+          p_tenant_id: number
+        }
+        Returns: string
       }
       mark_all_present: { Args: { p_meeting_id: string }; Returns: Json }
       normalize_company_key: { Args: { txt: string }; Returns: string }
