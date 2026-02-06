@@ -1,0 +1,262 @@
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { jwtVerify } from "https://deno.land/x/jose@v5.2.2/index.ts";
+
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, idempotency-key',
+};
+
+const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
+const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+const ADDIN_JWT_SECRET = Deno.env.get('ADDIN_JWT_SECRET') || Deno.env.get('JWT_SECRET') || SUPABASE_SERVICE_ROLE_KEY;
+
+interface CaptureRequest {
+  provider: string;
+  external_event_id: string;
+  title: string;
+  starts_at: string;
+  ends_at: string;
+  organiser_email: string;
+  teams_join_url?: string;
+  location?: string;
+  attendees_count?: number;
+  link?: {
+    client_id?: string | null;
+    package_id?: string | null;
+  };
+}
+
+interface AddinTokenPayload {
+  user_uuid: string;
+  email: string;
+  role: string;
+  tenant_id: number | null;
+  purpose: string;
+}
+
+function errorResponse(status: number, code: string, message: string, details: Record<string, unknown> = {}): Response {
+  return new Response(
+    JSON.stringify({ error: { code, message, details } }),
+    { status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+  );
+}
+
+async function verifyAddinToken(authHeader: string | null): Promise<AddinTokenPayload | null> {
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return null;
+  }
+
+  const token = authHeader.substring(7);
+  try {
+    const secret = new TextEncoder().encode(ADDIN_JWT_SECRET);
+    const { payload } = await jwtVerify(token, secret, {
+      issuer: 'unicorn-addin',
+    });
+    
+    if (payload.purpose !== 'addin') {
+      return null;
+    }
+    
+    return payload as unknown as AddinTokenPayload;
+  } catch (error) {
+    console.error('[addin-meeting-capture] Token verification failed:', error);
+    return null;
+  }
+}
+
+serve(async (req) => {
+  // Handle CORS preflight
+  if (req.method === 'OPTIONS') {
+    return new Response(null, { headers: corsHeaders });
+  }
+
+  if (req.method !== 'POST') {
+    return errorResponse(405, 'METHOD_NOT_ALLOWED', 'Method not allowed');
+  }
+
+  try {
+    // Verify add-in JWT token
+    const tokenPayload = await verifyAddinToken(req.headers.get('Authorization'));
+    if (!tokenPayload) {
+      return errorResponse(401, 'UNAUTHORIZED', 'Invalid or missing add-in token');
+    }
+
+    const idempotencyKey = req.headers.get('Idempotency-Key');
+    const body: CaptureRequest = await req.json();
+    
+    console.log('[addin-meeting-capture] Request:', {
+      user: tokenPayload.email,
+      external_event_id: body.external_event_id?.substring(0, 20) + '...',
+      title: body.title,
+      client_id: body.link?.client_id,
+      idempotency_key: idempotencyKey,
+    });
+
+    // Validate required fields
+    if (!body.external_event_id) {
+      return errorResponse(400, 'VALIDATION_ERROR', 'external_event_id is required');
+    }
+    if (!body.title) {
+      return errorResponse(400, 'VALIDATION_ERROR', 'title is required');
+    }
+    if (!body.starts_at) {
+      return errorResponse(400, 'VALIDATION_ERROR', 'starts_at is required');
+    }
+    if (!body.ends_at) {
+      return errorResponse(400, 'VALIDATION_ERROR', 'ends_at is required');
+    }
+    if (!body.organiser_email) {
+      return errorResponse(400, 'VALIDATION_ERROR', 'organiser_email is required');
+    }
+
+    const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+
+    // Get user's tenant_id
+    const tenantId = tokenPayload.tenant_id;
+    if (!tenantId) {
+      return errorResponse(403, 'NO_TENANT', 'User is not associated with any tenant');
+    }
+
+    // Check if event already exists for this user
+    const { data: existingEvent, error: checkError } = await supabaseAdmin
+      .from('calendar_events')
+      .select('id, user_id, addin_captured_at')
+      .eq('provider_event_id', body.external_event_id)
+      .eq('user_id', tokenPayload.user_uuid)
+      .maybeSingle();
+
+    if (checkError) {
+      console.error('[addin-meeting-capture] Check error:', checkError);
+      return errorResponse(500, 'DATABASE_ERROR', 'Failed to check existing event', { detail: checkError.message });
+    }
+
+    // Determine if this is an insert or update
+    const isUpdate = !!existingEvent;
+
+    // Prepare event data
+    const eventData = {
+      tenant_id: tenantId,
+      user_id: tokenPayload.user_uuid,
+      provider: body.provider || 'microsoft',
+      provider_event_id: body.external_event_id,
+      title: body.title,
+      start_at: body.starts_at,
+      end_at: body.ends_at,
+      location: body.location || null,
+      organiser_email: body.organiser_email,
+      teams_join_url: body.teams_join_url || null,
+      client_id: body.link?.client_id ? parseInt(body.link.client_id, 10) : null,
+      package_id: body.link?.package_id ? parseInt(body.link.package_id, 10) : null,
+      addin_captured_at: new Date().toISOString(),
+      addin_captured_by: tokenPayload.user_uuid,
+      source: 'addin',
+      raw: {
+        attendees_count: body.attendees_count || 0,
+        captured_via: 'outlook_addin',
+      },
+    };
+
+    let eventRecord;
+
+    if (isUpdate) {
+      // Update existing event
+      const { data, error: updateError } = await supabaseAdmin
+        .from('calendar_events')
+        .update({
+          title: eventData.title,
+          start_at: eventData.start_at,
+          end_at: eventData.end_at,
+          location: eventData.location,
+          organiser_email: eventData.organiser_email,
+          teams_join_url: eventData.teams_join_url,
+          client_id: eventData.client_id,
+          package_id: eventData.package_id,
+          addin_captured_at: eventData.addin_captured_at,
+          raw: eventData.raw,
+        })
+        .eq('id', existingEvent.id)
+        .select('id, provider_event_id, title, start_at, end_at, client_id, package_id, teams_join_url, addin_captured_at')
+        .single();
+
+      if (updateError) {
+        console.error('[addin-meeting-capture] Update error:', updateError);
+        return errorResponse(500, 'DATABASE_ERROR', 'Failed to update event', { detail: updateError.message });
+      }
+      eventRecord = data;
+    } else {
+      // Insert new event
+      const { data, error: insertError } = await supabaseAdmin
+        .from('calendar_events')
+        .insert(eventData)
+        .select('id, provider_event_id, title, start_at, end_at, client_id, package_id, teams_join_url, addin_captured_at')
+        .single();
+
+      if (insertError) {
+        console.error('[addin-meeting-capture] Insert error:', insertError);
+        return errorResponse(500, 'DATABASE_ERROR', 'Failed to create event', { detail: insertError.message });
+      }
+      eventRecord = data;
+    }
+
+    // Log audit event
+    const { data: auditEvent, error: auditError } = await supabaseAdmin
+      .from('meeting_capture_audit')
+      .insert({
+        calendar_event_id: eventRecord.id,
+        user_id: tokenPayload.user_uuid,
+        action: 'meeting_captured',
+        entity_type: body.link?.client_id ? 'client' : null,
+        entity_id: body.link?.client_id || null,
+        metadata: {
+          title: body.title,
+          starts_at: body.starts_at,
+          ends_at: body.ends_at,
+          package_id: body.link?.package_id || null,
+          is_update: isUpdate,
+          idempotency_key: idempotencyKey,
+        },
+      })
+      .select('id')
+      .single();
+
+    if (auditError) {
+      console.warn('[addin-meeting-capture] Audit log failed:', auditError);
+    }
+
+    console.log('[addin-meeting-capture] Meeting captured successfully:', eventRecord.id);
+
+    // Build response links
+    const links: Record<string, string> = {};
+    if (body.link?.client_id) {
+      links.open_client_timeline = `/clients/${body.link.client_id}?tab=timeline`;
+    }
+    links.open_meetings = '/work/meetings';
+
+    // Return success
+    return new Response(
+      JSON.stringify({
+        meeting_record: {
+          id: eventRecord.id,
+          external_event_id: eventRecord.provider_event_id,
+          title: eventRecord.title,
+          starts_at: eventRecord.start_at,
+          ends_at: eventRecord.end_at,
+          client_id: eventRecord.client_id,
+          package_id: eventRecord.package_id,
+          teams_join_url: eventRecord.teams_join_url,
+          captured_at: eventRecord.addin_captured_at,
+        },
+        status: isUpdate ? 'updated' : 'created',
+        audit_event_id: auditEvent?.id || null,
+        links,
+      }),
+      { status: isUpdate ? 200 : 201, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
+
+  } catch (error) {
+    console.error('[addin-meeting-capture] Unhandled error:', error);
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    return errorResponse(500, 'INTERNAL_ERROR', message, {});
+  }
+});

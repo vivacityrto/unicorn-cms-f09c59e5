@@ -18,6 +18,7 @@ import { useAddinContext } from '@/hooks/useAddinContext';
 import { useAddinSession } from '@/hooks/useAddinSession';
 import { useAuth } from '@/hooks/useAuth';
 import { MailPanel } from '@/components/addin/MailPanel';
+import { MeetingPanel } from '@/components/addin/MeetingPanel';
 import type { AddinUser } from '@/lib/addin/types';
 
 export default function AddinShell() {
@@ -151,8 +152,16 @@ export default function AddinShell() {
           />
         )}
 
-        {/* Context Status - show when no mail context */}
-        {!mailContext && (
+        {/* Meeting Panel - show when meeting context is detected */}
+        {meetingContext && isConnected && tenantId && (
+          <MeetingPanel 
+            meetingContext={meetingContext}
+            tenantId={tenantId}
+          />
+        )}
+
+        {/* Context Status - show when no mail or meeting context */}
+        {!mailContext && !meetingContext && (
           <Card>
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
@@ -181,9 +190,7 @@ export default function AddinShell() {
               ) : (
                 <div className="space-y-3">
                   <p className="text-sm text-muted-foreground">
-                    {hasContext 
-                      ? (meetingContext ? `Meeting: ${meetingContext.subject}` : 'Context detected')
-                      : 'Context not detected yet'}
+                    Context not detected yet
                   </p>
                   
                   {!isOffice && (
@@ -193,18 +200,6 @@ export default function AddinShell() {
                         Running in browser mode. Open this page inside Outlook or Teams to detect context.
                       </AlertDescription>
                     </Alert>
-                  )}
-
-                  {meetingContext && (
-                    <div className="rounded-lg border p-3 space-y-2">
-                      <div className="flex items-center gap-2">
-                        <Calendar className="h-4 w-4 text-primary" />
-                        <span className="font-medium text-sm">{meetingContext.subject}</span>
-                      </div>
-                      <p className="text-xs text-muted-foreground">
-                        {new Date(meetingContext.startTime).toLocaleString()}
-                      </p>
-                    </div>
                   )}
                 </div>
               )}

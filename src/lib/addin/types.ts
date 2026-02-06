@@ -26,6 +26,7 @@ export interface MailContext {
 }
 
 export interface MeetingContext {
+  id: string;
   meetingId: string;
   subject: string;
   startTime: string;
@@ -39,9 +40,11 @@ export interface MeetingContext {
     name: string;
     response: 'accepted' | 'declined' | 'tentative' | 'none';
   }>;
+  attendeesCount: number;
   location?: string;
   isOnlineMeeting: boolean;
   onlineMeetingUrl?: string;
+  teamsJoinUrl?: string;
 }
 
 export interface AddinUser {

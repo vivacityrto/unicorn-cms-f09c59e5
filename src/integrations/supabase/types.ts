@@ -2894,6 +2894,8 @@ export type Database = {
       }
       calendar_events: {
         Row: {
+          addin_captured_at: string | null
+          addin_captured_by: string | null
           attendees: Json
           calendar_id: string
           client_id: number | null
@@ -2904,6 +2906,7 @@ export type Database = {
           last_synced_at: string
           location: string | null
           meeting_url: string | null
+          organiser_email: string | null
           organizer_email: string | null
           package_id: number | null
           processed_at: string | null
@@ -2912,13 +2915,17 @@ export type Database = {
           provider_event_id: string
           raw: Json
           sensitivity: string | null
+          source: string
           start_at: string
           status: string
+          teams_join_url: string | null
           tenant_id: number
           title: string
           user_id: string
         }
         Insert: {
+          addin_captured_at?: string | null
+          addin_captured_by?: string | null
           attendees?: Json
           calendar_id: string
           client_id?: number | null
@@ -2929,6 +2936,7 @@ export type Database = {
           last_synced_at?: string
           location?: string | null
           meeting_url?: string | null
+          organiser_email?: string | null
           organizer_email?: string | null
           package_id?: number | null
           processed_at?: string | null
@@ -2937,13 +2945,17 @@ export type Database = {
           provider_event_id: string
           raw?: Json
           sensitivity?: string | null
+          source?: string
           start_at: string
           status?: string
+          teams_join_url?: string | null
           tenant_id: number
           title: string
           user_id: string
         }
         Update: {
+          addin_captured_at?: string | null
+          addin_captured_by?: string | null
           attendees?: Json
           calendar_id?: string
           client_id?: number | null
@@ -2954,6 +2966,7 @@ export type Database = {
           last_synced_at?: string
           location?: string | null
           meeting_url?: string | null
+          organiser_email?: string | null
           organizer_email?: string | null
           package_id?: number | null
           processed_at?: string | null
@@ -2962,8 +2975,10 @@ export type Database = {
           provider_event_id?: string
           raw?: Json
           sensitivity?: string | null
+          source?: string
           start_at?: string
           status?: string
+          teams_join_url?: string | null
           tenant_id?: number
           title?: string
           user_id?: string
@@ -3105,6 +3120,7 @@ export type Database = {
           package_id: number | null
           posted_time_entry_id: string | null
           snoozed_until: string | null
+          source: string
           stage_id: number | null
           status: string
           suggested_client_id: number | null
@@ -3131,6 +3147,7 @@ export type Database = {
           package_id?: number | null
           posted_time_entry_id?: string | null
           snoozed_until?: string | null
+          source?: string
           stage_id?: number | null
           status?: string
           suggested_client_id?: number | null
@@ -3157,6 +3174,7 @@ export type Database = {
           package_id?: number | null
           posted_time_entry_id?: string | null
           snoozed_until?: string | null
+          source?: string
           stage_id?: number | null
           status?: string
           suggested_client_id?: number | null
@@ -11654,6 +11672,54 @@ export type Database = {
             columns: ["meeting_id"]
             isOneToOne: false
             referencedRelation: "meetings_shared"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      meeting_capture_audit: {
+        Row: {
+          action: string
+          calendar_event_id: string
+          created_at: string
+          entity_id: string | null
+          entity_type: string | null
+          id: string
+          metadata: Json
+          user_id: string
+        }
+        Insert: {
+          action: string
+          calendar_event_id: string
+          created_at?: string
+          entity_id?: string | null
+          entity_type?: string | null
+          id?: string
+          metadata?: Json
+          user_id: string
+        }
+        Update: {
+          action?: string
+          calendar_event_id?: string
+          created_at?: string
+          entity_id?: string | null
+          entity_type?: string | null
+          id?: string
+          metadata?: Json
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meeting_capture_audit_calendar_event_id_fkey"
+            columns: ["calendar_event_id"]
+            isOneToOne: false
+            referencedRelation: "calendar_events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "meeting_capture_audit_calendar_event_id_fkey"
+            columns: ["calendar_event_id"]
+            isOneToOne: false
+            referencedRelation: "calendar_events_shared"
             referencedColumns: ["id"]
           },
         ]

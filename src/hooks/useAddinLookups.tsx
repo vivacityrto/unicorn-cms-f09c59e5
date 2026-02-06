@@ -9,6 +9,7 @@ export interface ClientOption {
 export interface PackageOption {
   id: number;
   name: string;
+  client_id?: number | null;
 }
 
 export interface UserOption {
@@ -47,17 +48,18 @@ export function useAddinLookups(tenantId?: number | null) {
           setClients(typedClients);
         }
 
-        // Load all packages (they're global templates)
+        // Load all packages with client_id for filtering
         const { data: packagesData } = await supabase
           .from('packages')
-          .select('id, name')
+          .select('id, name, client_id')
           .order('name');
 
         if (packagesData) {
-          const typedPackages = packagesData as unknown as { id: number; name: string }[];
+          const typedPackages = packagesData as unknown as { id: number; name: string; client_id: number | null }[];
           setPackages(typedPackages.map(p => ({
             id: p.id,
             name: p.name,
+            client_id: p.client_id,
           })));
         }
 
