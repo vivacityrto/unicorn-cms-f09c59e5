@@ -77,3 +77,6 @@ verify_jwt = false
 
 [functions.link-sharepoint-document]
 verify_jwt = false
+
+[functions.process-notification-outbox]
+verify_jwt = false

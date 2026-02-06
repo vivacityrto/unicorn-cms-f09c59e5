@@ -12363,6 +12363,137 @@ export type Database = {
         }
         Relationships: []
       }
+      notification_audit_log: {
+        Row: {
+          action: string
+          created_at: string
+          details: Json | null
+          event_type: Database["public"]["Enums"]["notification_event_type"]
+          id: string
+          notification_id: string | null
+          recipient_user_uuid: string
+          record_id: string | null
+          record_type: string | null
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          details?: Json | null
+          event_type: Database["public"]["Enums"]["notification_event_type"]
+          id?: string
+          notification_id?: string | null
+          recipient_user_uuid: string
+          record_id?: string | null
+          record_type?: string | null
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          details?: Json | null
+          event_type?: Database["public"]["Enums"]["notification_event_type"]
+          id?: string
+          notification_id?: string | null
+          recipient_user_uuid?: string
+          record_id?: string | null
+          record_type?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notification_audit_log_notification_id_fkey"
+            columns: ["notification_id"]
+            isOneToOne: false
+            referencedRelation: "notification_outbox"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      notification_outbox: {
+        Row: {
+          attempt_count: number
+          client_id: number | null
+          created_at: string
+          event_type: Database["public"]["Enums"]["notification_event_type"]
+          id: string
+          last_error: string | null
+          next_retry_at: string | null
+          payload: Json
+          recipient_user_uuid: string
+          record_id: string
+          record_type: string
+          sent_at: string | null
+          status: Database["public"]["Enums"]["notification_status"]
+          tenant_id: number | null
+        }
+        Insert: {
+          attempt_count?: number
+          client_id?: number | null
+          created_at?: string
+          event_type: Database["public"]["Enums"]["notification_event_type"]
+          id?: string
+          last_error?: string | null
+          next_retry_at?: string | null
+          payload?: Json
+          recipient_user_uuid: string
+          record_id: string
+          record_type: string
+          sent_at?: string | null
+          status?: Database["public"]["Enums"]["notification_status"]
+          tenant_id?: number | null
+        }
+        Update: {
+          attempt_count?: number
+          client_id?: number | null
+          created_at?: string
+          event_type?: Database["public"]["Enums"]["notification_event_type"]
+          id?: string
+          last_error?: string | null
+          next_retry_at?: string | null
+          payload?: Json
+          recipient_user_uuid?: string
+          record_id?: string
+          record_type?: string
+          sent_at?: string | null
+          status?: Database["public"]["Enums"]["notification_status"]
+          tenant_id?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notification_outbox_recipient_user_uuid_fkey"
+            columns: ["recipient_user_uuid"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "notification_outbox_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notification_outbox_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_engagement_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "notification_outbox_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_eos_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "notification_outbox_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_compliance_entitlements"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
       notification_queue: {
         Row: {
           channel: string
@@ -12401,6 +12532,50 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      notification_rules: {
+        Row: {
+          created_at: string
+          delivery_target: Database["public"]["Enums"]["notification_delivery_target"]
+          event_type: Database["public"]["Enums"]["notification_event_type"]
+          id: string
+          is_enabled: boolean
+          quiet_hours_end: string | null
+          quiet_hours_start: string | null
+          updated_at: string
+          user_uuid: string
+        }
+        Insert: {
+          created_at?: string
+          delivery_target?: Database["public"]["Enums"]["notification_delivery_target"]
+          event_type: Database["public"]["Enums"]["notification_event_type"]
+          id?: string
+          is_enabled?: boolean
+          quiet_hours_end?: string | null
+          quiet_hours_start?: string | null
+          updated_at?: string
+          user_uuid: string
+        }
+        Update: {
+          created_at?: string
+          delivery_target?: Database["public"]["Enums"]["notification_delivery_target"]
+          event_type?: Database["public"]["Enums"]["notification_event_type"]
+          id?: string
+          is_enabled?: boolean
+          quiet_hours_end?: string | null
+          quiet_hours_start?: string | null
+          updated_at?: string
+          user_uuid?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notification_rules_user_uuid_fkey"
+            columns: ["user_uuid"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["user_uuid"]
+          },
+        ]
       }
       notification_schedule: {
         Row: {
@@ -19563,6 +19738,53 @@ export type Database = {
         }
         Relationships: []
       }
+      user_notification_integrations: {
+        Row: {
+          created_at: string
+          id: string
+          ms_user_id: string | null
+          preferred_channel_id: string | null
+          preferred_team_id: string | null
+          provider: string
+          status: Database["public"]["Enums"]["notification_integration_status"]
+          updated_at: string
+          user_uuid: string
+          webhook_url: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          ms_user_id?: string | null
+          preferred_channel_id?: string | null
+          preferred_team_id?: string | null
+          provider?: string
+          status?: Database["public"]["Enums"]["notification_integration_status"]
+          updated_at?: string
+          user_uuid: string
+          webhook_url?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          ms_user_id?: string | null
+          preferred_channel_id?: string | null
+          preferred_team_id?: string | null
+          provider?: string
+          status?: Database["public"]["Enums"]["notification_integration_status"]
+          updated_at?: string
+          user_uuid?: string
+          webhook_url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_notification_integrations_user_uuid_fkey"
+            columns: ["user_uuid"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["user_uuid"]
+          },
+        ]
+      }
       user_notification_prefs: {
         Row: {
           created_at: string | null
@@ -21364,6 +21586,18 @@ export type Database = {
       current_user_tenant: { Args: never; Returns: number }
       current_user_tenant_ids: { Args: never; Returns: string[] }
       drop_rock_to_issue: { Args: { p_rock_id: string }; Returns: string }
+      emit_notification: {
+        Args: {
+          p_client_id?: number
+          p_event_type: Database["public"]["Enums"]["notification_event_type"]
+          p_payload: Json
+          p_recipient_user_uuid: string
+          p_record_id: string
+          p_record_type: string
+          p_tenant_id?: number
+        }
+        Returns: string
+      }
       finalise_meeting_minutes: {
         Args: { p_meeting_id: string; p_summary: string }
         Returns: string
@@ -22618,6 +22852,17 @@ export type Database = {
         | "closed"
         | "locked"
       meeting_type: "level_10" | "quarterly" | "annual"
+      notification_delivery_target: "dm" | "channel"
+      notification_event_type:
+        | "task_assigned"
+        | "task_overdue"
+        | "risk_flagged"
+        | "package_threshold_80"
+        | "package_threshold_95"
+        | "package_threshold_100"
+        | "meeting_action_created"
+      notification_integration_status: "connected" | "disconnected" | "error"
+      notification_status: "queued" | "sent" | "failed" | "skipped"
       rock_type: "company" | "team" | "individual"
       sch_booking_status: "pending" | "confirmed" | "rescheduled" | "cancelled"
       segment_type:
@@ -22898,6 +23143,18 @@ export const Constants = {
         "locked",
       ],
       meeting_type: ["level_10", "quarterly", "annual"],
+      notification_delivery_target: ["dm", "channel"],
+      notification_event_type: [
+        "task_assigned",
+        "task_overdue",
+        "risk_flagged",
+        "package_threshold_80",
+        "package_threshold_95",
+        "package_threshold_100",
+        "meeting_action_created",
+      ],
+      notification_integration_status: ["connected", "disconnected", "error"],
+      notification_status: ["queued", "sent", "failed", "skipped"],
       rock_type: ["company", "team", "individual"],
       sch_booking_status: ["pending", "confirmed", "rescheduled", "cancelled"],
       segment_type: [
