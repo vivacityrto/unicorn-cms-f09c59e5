@@ -4,12 +4,16 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/hooks/useAuth";
 import { useTenantType } from "@/contexts/TenantTypeContext";
 import { PlanInfoCard } from "@/components/academy/PlanInfoCard";
+import { ComplianceBillingBlock } from "@/components/billing/ComplianceBillingBlock";
 import { User, CreditCard, Bell, Shield } from "lucide-react";
 
 const AcademySettings = () => {
   const { profile } = useAuth();
-  const { academyTier, tenantType } = useTenantType();
+  const { academyTier, tenantType} = useTenantType();
   const tenantId = profile?.tenant_id;
+  
+  // Check if this is a Compliance System tenant (managed billing)
+  const isComplianceTenant = tenantType === "compliance_system";
 
   return (
     <AcademyLayout>
@@ -43,91 +47,98 @@ const AcademySettings = () => {
 
           {/* Billing Tab */}
           <TabsContent value="billing" className="space-y-6">
-            {/* Current Plan */}
-            {tenantId && (
-              <PlanInfoCard tenantId={tenantId} showUpgradeCTA />
+            {/* Compliance tenants see managed billing block */}
+            {isComplianceTenant ? (
+              <ComplianceBillingBlock showFullPage={false} />
+            ) : (
+              <>
+                {/* Current Plan - Academy tenants only */}
+                {tenantId && (
+                  <PlanInfoCard tenantId={tenantId} showUpgradeCTA />
+                )}
+
+                {/* Billing History */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Billing History</CardTitle>
+                    <CardDescription>View your past invoices and payments</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-center py-8 text-muted-foreground">
+                      <p>No billing history available</p>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Academy Benefits by Tier */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Plan Comparison</CardTitle>
+                    <CardDescription>See what's included in each Academy tier</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      {/* Solo */}
+                      <div className={`p-4 rounded-lg border ${academyTier === 'solo' ? 'border-primary bg-primary/5' : 'border-border'}`}>
+                        <h4 className="font-semibold mb-2">Academy Solo</h4>
+                        <ul className="text-sm space-y-2 text-muted-foreground">
+                          <li>• 1 user seat</li>
+                          <li>• All courses</li>
+                          <li>• Certificates</li>
+                          <li>• Events access</li>
+                          <li>• Community access</li>
+                        </ul>
+                        {academyTier === 'solo' && (
+                          <span className="inline-block mt-3 text-xs font-medium text-primary">Current Plan</span>
+                        )}
+                      </div>
+
+                      {/* Team */}
+                      <div className={`p-4 rounded-lg border ${academyTier === 'team' ? 'border-primary bg-primary/5' : 'border-border'}`}>
+                        <h4 className="font-semibold mb-2">Academy Team</h4>
+                        <ul className="text-sm space-y-2 text-muted-foreground">
+                          <li>• Up to 10 user seats</li>
+                          <li>• All Solo features</li>
+                          <li>• Team management</li>
+                          <li>• Progress tracking</li>
+                          <li>• Team analytics</li>
+                        </ul>
+                        {academyTier === 'team' && (
+                          <span className="inline-block mt-3 text-xs font-medium text-primary">Current Plan</span>
+                        )}
+                      </div>
+
+                      {/* Elite */}
+                      <div className={`p-4 rounded-lg border ${academyTier === 'elite' ? 'border-primary bg-primary/5' : 'border-border'}`}>
+                        <h4 className="font-semibold mb-2">Academy Elite</h4>
+                        <ul className="text-sm space-y-2 text-muted-foreground">
+                          <li>• Up to 30 user seats</li>
+                          <li>• All Team features</li>
+                          <li>• Priority support</li>
+                          <li>• Custom onboarding</li>
+                          <li>• Upgrade path to Compliance</li>
+                        </ul>
+                        {academyTier === 'elite' && (
+                          <span className="inline-block mt-3 text-xs font-medium text-primary">Current Plan</span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Compliance System CTA */}
+                    <div className="mt-6 p-4 bg-muted/50 rounded-lg border border-dashed">
+                      <h4 className="font-semibold mb-2">Ready for Full Compliance?</h4>
+                      <p className="text-sm text-muted-foreground mb-3">
+                        Upgrade to the Compliance System for full RTO compliance management, 
+                        branded documents, resource hub access, and a dedicated Vivacity consultant.
+                      </p>
+                      <span className="text-xs text-muted-foreground">
+                        Contact us to discuss your upgrade options.
+                      </span>
+                    </div>
+                  </CardContent>
+                </Card>
+              </>
             )}
-
-            {/* Billing History */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Billing History</CardTitle>
-                <CardDescription>View your past invoices and payments</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="text-center py-8 text-muted-foreground">
-                  <p>No billing history available</p>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Academy Benefits by Tier */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Plan Comparison</CardTitle>
-                <CardDescription>See what's included in each Academy tier</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  {/* Solo */}
-                  <div className={`p-4 rounded-lg border ${academyTier === 'solo' ? 'border-primary bg-primary/5' : 'border-border'}`}>
-                    <h4 className="font-semibold mb-2">Academy Solo</h4>
-                    <ul className="text-sm space-y-2 text-muted-foreground">
-                      <li>• 1 user seat</li>
-                      <li>• All courses</li>
-                      <li>• Certificates</li>
-                      <li>• Events access</li>
-                      <li>• Community access</li>
-                    </ul>
-                    {academyTier === 'solo' && (
-                      <span className="inline-block mt-3 text-xs font-medium text-primary">Current Plan</span>
-                    )}
-                  </div>
-
-                  {/* Team */}
-                  <div className={`p-4 rounded-lg border ${academyTier === 'team' ? 'border-primary bg-primary/5' : 'border-border'}`}>
-                    <h4 className="font-semibold mb-2">Academy Team</h4>
-                    <ul className="text-sm space-y-2 text-muted-foreground">
-                      <li>• Up to 10 user seats</li>
-                      <li>• All Solo features</li>
-                      <li>• Team management</li>
-                      <li>• Progress tracking</li>
-                      <li>• Team analytics</li>
-                    </ul>
-                    {academyTier === 'team' && (
-                      <span className="inline-block mt-3 text-xs font-medium text-primary">Current Plan</span>
-                    )}
-                  </div>
-
-                  {/* Elite */}
-                  <div className={`p-4 rounded-lg border ${academyTier === 'elite' ? 'border-primary bg-primary/5' : 'border-border'}`}>
-                    <h4 className="font-semibold mb-2">Academy Elite</h4>
-                    <ul className="text-sm space-y-2 text-muted-foreground">
-                      <li>• Up to 30 user seats</li>
-                      <li>• All Team features</li>
-                      <li>• Priority support</li>
-                      <li>• Custom onboarding</li>
-                      <li>• Upgrade path to Compliance</li>
-                    </ul>
-                    {academyTier === 'elite' && (
-                      <span className="inline-block mt-3 text-xs font-medium text-primary">Current Plan</span>
-                    )}
-                  </div>
-                </div>
-
-                {/* Compliance System CTA */}
-                <div className="mt-6 p-4 bg-muted/50 rounded-lg border border-dashed">
-                  <h4 className="font-semibold mb-2">Ready for Full Compliance?</h4>
-                  <p className="text-sm text-muted-foreground mb-3">
-                    Upgrade to the Compliance System for full RTO compliance management, 
-                    branded documents, resource hub access, and a dedicated Vivacity consultant.
-                  </p>
-                  <span className="text-xs text-muted-foreground">
-                    Contact us to discuss your upgrade options.
-                  </span>
-                </div>
-              </CardContent>
-            </Card>
           </TabsContent>
 
           {/* Profile Tab */}

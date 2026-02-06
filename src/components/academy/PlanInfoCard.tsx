@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { Users, Crown, ArrowUpRight, AlertTriangle, CheckCircle } from "lucide-react";
+import { Users, Crown, ArrowUpRight, AlertTriangle, CheckCircle, Building2, Mail } from "lucide-react";
 
 interface PlanInfoCardProps {
   tenantId: number;
@@ -14,6 +14,8 @@ interface PlanInfoCardProps {
 
 export function PlanInfoCard({ tenantId, showUpgradeCTA = true, compact = false }: PlanInfoCardProps) {
   const { tenantType, isAcademyMember } = useTenantType();
+  const isComplianceTenant = tenantType === "compliance_system";
+  
   const {
     currentUsers,
     maxUsers,
@@ -133,8 +135,8 @@ export function PlanInfoCard({ tenantId, showUpgradeCTA = true, compact = false 
           </div>
         )}
 
-        {/* Upgrade CTA */}
-        {showUpgradeCTA && nextPlanName && (
+        {/* Upgrade CTA - Only for Academy tenants (self-service billing) */}
+        {showUpgradeCTA && nextPlanName && !isComplianceTenant && (
           <div className="pt-4 border-t">
             <div className="flex items-center justify-between">
               <div>
@@ -150,6 +152,30 @@ export function PlanInfoCard({ tenantId, showUpgradeCTA = true, compact = false 
               <Button>
                 Upgrade
                 <ArrowUpRight className="ml-2 h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {/* Managed billing notice for Compliance tenants */}
+        {isComplianceTenant && (
+          <div className="pt-4 border-t">
+            <div className="rounded-lg bg-muted/50 p-4 space-y-3">
+              <div className="flex items-center gap-2 text-sm font-medium">
+                <Building2 className="h-4 w-4 text-primary" />
+                Billing Managed by Vivacity
+              </div>
+              <p className="text-sm text-muted-foreground">
+                Your subscription is managed directly by our team. For billing enquiries, 
+                contact your Vivacity consultant.
+              </p>
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => window.location.href = "mailto:accounts@vivacitycoaching.com.au?subject=Billing Enquiry"}
+              >
+                <Mail className="h-4 w-4 mr-2" />
+                Contact Accounts
               </Button>
             </div>
           </div>

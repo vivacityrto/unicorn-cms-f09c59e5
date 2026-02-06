@@ -46,6 +46,12 @@ export interface BillingSignals {
   planName: string;
   nextPlan: TenantType | null;
   nextPlanName: string | null;
+  
+  // Billing mode flags
+  isComplianceTenant: boolean;
+  isAcademyTenant: boolean;
+  isManagedBilling: boolean; // true = no self-service billing (Compliance)
+  isSelfServiceBilling: boolean; // true = eWay billing enabled (Academy)
 }
 
 interface UseBillingSignalsState extends BillingSignals {
@@ -83,6 +89,10 @@ export function useBillingSignals(options: UseBillingSignalsOptions = {}): UseBi
     planName: "Unknown",
     nextPlan: null,
     nextPlanName: null,
+    isComplianceTenant: false,
+    isAcademyTenant: false,
+    isManagedBilling: false,
+    isSelfServiceBilling: false,
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -149,6 +159,13 @@ export function useBillingSignals(options: UseBillingSignalsOptions = {}): UseBi
       const planName = PLAN_NAMES[tenantType];
       const nextPlan = UPGRADE_PATHS[tenantType];
       const nextPlanName = nextPlan ? PLAN_NAMES[nextPlan] : null;
+      
+      // Billing mode flags
+      const isComplianceTenant = tenantType === "compliance_system";
+      const isAcademyTenant = tenantType?.startsWith("academy_") ?? false;
+      // Compliance = managed billing (Xero/contracts), Academy = self-service (eWay)
+      const isManagedBilling = isComplianceTenant;
+      const isSelfServiceBilling = isAcademyTenant;
 
       setSignals({
         currentUsers,
@@ -171,6 +188,10 @@ export function useBillingSignals(options: UseBillingSignalsOptions = {}): UseBi
         planName,
         nextPlan,
         nextPlanName,
+        isComplianceTenant,
+        isAcademyTenant,
+        isManagedBilling,
+        isSelfServiceBilling,
       });
     } catch (err) {
       console.error("Error fetching billing signals:", err);
