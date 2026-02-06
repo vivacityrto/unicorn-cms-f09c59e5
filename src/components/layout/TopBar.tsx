@@ -78,8 +78,7 @@ const routeTitles: Record<string, string> = {
   "/admin/eos-processes": "EOS Processes",
   "/admin/knowledge": "Knowledge Library",
   "/admin/assistant": "AI Assistant",
-  "/settings": "Settings",
-  "/settings/calendar": "Calendar Integration",
+  "/settings": "Profile Settings",
   "/reports": "Reports",
   "/team-settings": "Team Settings",
   // Academy routes
@@ -277,7 +276,7 @@ export function TopBar({ showSearch = false }: TopBarProps) {
               
               {/* Menu Items */}
               <DropdownMenuItem asChild className="cursor-pointer">
-                <Link to="/profile" className="flex items-center">
+                <Link to="/settings?tab=profile" className="flex items-center">
                   <Settings className="mr-2 h-4 w-4" />
                   <span>Profile Settings</span>
                 </Link>
