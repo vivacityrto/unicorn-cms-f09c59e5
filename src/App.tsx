@@ -106,6 +106,7 @@ const AdminOperations = lazy(() => import("./pages/AdminOperations"));
  const OutlookCallback = lazy(() => import("./pages/OutlookCallback"));
 const TimeInbox = lazy(() => import("./pages/TimeInbox"));
 const WorkCalendarWrapper = lazy(() => import("./pages/WorkCalendarWrapper"));
+const WorkMeetings = lazy(() => import("./pages/WorkMeetingsWrapper"));
 const ProcessesWrapper = lazy(() => import("./pages/ProcessesWrapper"));
 const ProcessDetail = lazy(() => import("./pages/ProcessDetail"));
 const ProcessForm = lazy(() => import("./pages/ProcessForm"));
@@ -196,6 +197,14 @@ const App = () => (
               } 
             />
             <Route 
+              path="/work/meetings" 
+              element={
+                <ProtectedRoute>
+                  <WorkMeetings />
+                </ProtectedRoute>
+              }
+            />
+            <Route
               path="/calendar/time-capture" 
               element={
                 <ProtectedRoute>

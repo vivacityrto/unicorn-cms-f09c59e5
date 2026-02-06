@@ -130,6 +130,15 @@ serve(async (req) => {
   console.log('[sync-outlook] Sync request received at:', new Date().toISOString());
 
   try {
+    // Parse request body for options
+    let includeMeetings = false;
+    try {
+      const body = await req.json();
+      includeMeetings = body?.includeMeetings === true;
+    } catch {
+      // No body or invalid JSON, use defaults
+    }
+
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
       console.log('[sync-outlook] No auth header');
@@ -242,6 +251,88 @@ serve(async (req) => {
           errors++;
         } else {
           synced++;
+        }
+
+        // Also sync to meetings table if it's an online meeting
+        if (includeMeetings && event.onlineMeeting?.joinUrl) {
+          try {
+            const now = new Date();
+            const eventEnd = new Date(event.end.dateTime + 'Z');
+            const isCompleted = eventEnd < now;
+            const organizerEmail = event.organizer?.emailAddress?.address?.toLowerCase();
+            
+            // Get user's email to check if they're the organizer
+            const { data: userData } = await supabaseAdmin
+              .from('users')
+              .select('email')
+              .eq('user_uuid', user.id)
+              .single();
+            
+            const userEmail = userData?.email?.toLowerCase();
+            const isOrganizer = userEmail && organizerEmail && userEmail === organizerEmail;
+
+            const { error: meetingError } = await supabaseAdmin.from('meetings').upsert({
+              tenant_id: (tokenRecord as TokenRecord).tenant_id,
+              owner_user_uuid: user.id,
+              provider: 'microsoft',
+              external_event_id: event.id,
+              external_meeting_url: event.onlineMeeting.joinUrl,
+              title: event.subject || 'Untitled',
+              starts_at: event.start.dateTime + 'Z',
+              ends_at: event.end.dateTime + 'Z',
+              timezone: event.start.timeZone,
+              location: event.location?.displayName,
+              is_online: true,
+              is_organizer: isOrganizer,
+              status: event.isCancelled ? 'cancelled' : (isCompleted ? 'completed' : 'scheduled'),
+              sensitivity: event.sensitivity || 'normal',
+              needs_linking: true, // Mark for client linking
+              provider_payload: event
+            }, {
+              onConflict: 'owner_user_uuid,provider,external_event_id',
+              ignoreDuplicates: false
+            });
+
+            if (meetingError) {
+              console.error('[sync-outlook] Meeting upsert error:', meetingError);
+            } else {
+              // Upsert participants
+              const participants = (event.attendees || []).map(a => ({
+                meeting_id: null, // Will be set after we get the meeting ID
+                participant_email: a.emailAddress?.address || '',
+                participant_name: a.emailAddress?.name,
+                participant_type: a.type === 'required' ? 'required' : (a.type === 'optional' ? 'optional' : 'required')
+              }));
+
+              // Get the meeting ID we just upserted
+              const { data: meeting } = await supabaseAdmin
+                .from('meetings')
+                .select('id')
+                .eq('owner_user_uuid', user.id)
+                .eq('provider', 'microsoft')
+                .eq('external_event_id', event.id)
+                .single();
+
+              if (meeting && participants.length > 0) {
+                // Delete existing participants and insert new ones
+                await supabaseAdmin
+                  .from('meeting_participants')
+                  .delete()
+                  .eq('meeting_id', meeting.id);
+
+                const participantsWithMeetingId = participants.map(p => ({
+                  ...p,
+                  meeting_id: meeting.id
+                }));
+
+                await supabaseAdmin
+                  .from('meeting_participants')
+                  .insert(participantsWithMeetingId);
+              }
+            }
+          } catch (meetingErr) {
+            console.error('[sync-outlook] Error syncing meeting:', meetingErr);
+          }
         }
       } catch (e) {
         console.error('[sync-outlook] Error processing event:', e);
