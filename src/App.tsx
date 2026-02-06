@@ -58,6 +58,7 @@ import { ClientPreviewProvider } from "./contexts/ClientPreviewContext";
 const NotificationSettings = lazy(() => import("./pages/NotificationSettings"));
 const IntegrationSettings = lazy(() => import("./pages/IntegrationSettings"));
 const AddinSettings = lazy(() => import("./pages/admin/AddinSettings"));
+const AddinShell = lazy(() => import("./pages/addin/AddinShell"));
 const EosCalendar = lazy(() => import("./pages/EosCalendar"));
  const EosQC = lazy(() => import("./pages/EosQC"));
  const EosQCSession = lazy(() => import("./pages/EosQCSession"));
@@ -885,8 +886,10 @@ const App = () => (
             {/* Client Preview Routes */}
             <Route path="/client-preview" element={<ProtectedRoute><ClientPreview /></ProtectedRoute>} />
             <Route path="/client-preview/academy" element={<ProtectedRoute><ClientPreviewAcademy /></ProtectedRoute>} />
+            
+            {/* Add-in Shell Route - works without full auth for add-in JWT holders */}
+            <Route path="/addin" element={<AddinShell />} />
 
-            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
            </Suspense>
