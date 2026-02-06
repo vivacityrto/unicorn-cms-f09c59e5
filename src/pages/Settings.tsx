@@ -192,7 +192,7 @@ export default function Settings() {
 
   return (
     <div className="min-h-screen bg-background animate-fade-in">
-      <div className="px-6 pt-6">
+      <div className="px-6 pt-2">
         <div className="mb-6">
           <h1 className="text-2xl font-bold text-foreground">Profile Settings</h1>
           <p className="text-sm text-muted-foreground">
