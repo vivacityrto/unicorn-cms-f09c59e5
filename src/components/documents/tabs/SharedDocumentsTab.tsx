@@ -6,7 +6,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Search, Download, Eye, EyeOff, Trash2, FileText, Calendar, User, Package, Tag } from 'lucide-react';
+import { Search, Download, Eye, EyeOff, Trash2, FileText, Calendar, User, Package, Tag, Plus } from 'lucide-react';
 import { format } from 'date-fns';
 import {
   AlertDialog,
@@ -18,6 +18,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import { UploadDocumentDialog } from '../dialogs/UploadDocumentDialog';
 
 interface SharedDocumentsTabProps {
   tenantId: number;
@@ -27,7 +28,7 @@ interface SharedDocumentsTabProps {
 export function SharedDocumentsTab({ tenantId, isClientView = false }: SharedDocumentsTabProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [deleteDoc, setDeleteDoc] = useState<PortalDocument | null>(null);
-
+  const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
   // For client view, only show client-visible docs from Vivacity
   // For staff view, show all Vivacity→Client docs
   const { data: documents = [], isLoading } = usePortalDocuments(tenantId, 'vivacity_to_client');
@@ -83,15 +84,23 @@ export function SharedDocumentsTab({ tenantId, isClientView = false }: SharedDoc
 
   return (
     <div className="space-y-4">
-      {/* Search */}
-      <div className="relative max-w-md">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-        <Input
-          placeholder="Search documents..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          className="pl-10"
-        />
+      {/* Actions Bar */}
+      <div className="flex items-center justify-between gap-4 flex-wrap">
+        <div className="relative flex-1 max-w-md">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search documents..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-10"
+          />
+        </div>
+        {!isClientView && (
+          <Button onClick={() => setUploadDialogOpen(true)} className="gap-2">
+            <Plus className="h-4 w-4" />
+            Upload Documents
+          </Button>
+        )}
       </div>
 
       {/* Documents Table */}
@@ -232,6 +241,14 @@ export function SharedDocumentsTab({ tenantId, isClientView = false }: SharedDoc
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Upload Dialog */}
+      <UploadDocumentDialog
+        open={uploadDialogOpen}
+        onOpenChange={setUploadDialogOpen}
+        tenantId={tenantId}
+        direction="vivacity_to_client"
+      />
     </div>
   );
 }
