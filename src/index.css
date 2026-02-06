@@ -94,6 +94,16 @@
     /* Sidebar gradient - Purple to Fuchsia */
     --gradient-sidebar: linear-gradient(180deg, hsl(270 55% 41%), hsl(330 86% 51%));
 
+    /* Sidebar colors - for gradient purple-to-pink sidebar */
+    --sidebar-background: 270 55% 41%;
+    --sidebar-foreground: 0 0% 100%;
+    --sidebar-primary: 330 86% 51%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 0 0% 100% / 0.1;
+    --sidebar-accent-foreground: 0 0% 100%;
+    --sidebar-border: 0 0% 100% / 0.2;
+    --sidebar-ring: 187 74% 50%;
+
     /* Animation durations */
     --duration-fast: 150ms;
     --duration-normal: 200ms;

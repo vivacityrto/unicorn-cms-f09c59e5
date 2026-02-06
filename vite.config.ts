@@ -77,6 +77,11 @@ export default defineConfig(({ mode }) => ({
           /duration-/,
           /ease-/,
           /delay-/,
+          /^text-white/,
+          /^bg-white/,
+          /^border-white/,
+          /^hover:text-/,
+          /^hover:bg-/,
         ],
         deep: [
           /radix/,
