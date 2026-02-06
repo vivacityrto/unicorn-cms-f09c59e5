@@ -1,5 +1,5 @@
- import { lazy, Suspense } from "react";
- import { Toaster } from "@/components/ui/toaster";
+import { lazy, Suspense } from "react";
+import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -9,9 +9,10 @@ import { ViewModeProvider } from "./contexts/ViewModeContext";
 import { FacilitatorModeProvider } from "./contexts/FacilitatorModeContext";
 import { TenantTypeProvider } from "./contexts/TenantTypeContext";
 import { ClientPreviewProvider } from "./contexts/ClientPreviewContext";
- import { ProtectedRoute } from "./components/ProtectedRoute";
- import { LazyLoadFallback } from "./components/LazyLoadFallback";
- 
+import { ProtectedRoute } from "./components/ProtectedRoute";
+import { LazyLoadFallback } from "./components/LazyLoadFallback";
+import { ErrorBoundary } from "./components/ErrorBoundary";
+
  // Lazy load all page components for code splitting
  const Index = lazy(() => import("./pages/Index"));
  const Login = lazy(() => import("./pages/Login"));
@@ -142,11 +143,12 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <AuthProvider>
-          <TenantTypeProvider>
-          <ClientPreviewProvider>
-          <ViewModeProvider>
-          <FacilitatorModeProvider>
-           <Suspense fallback={<LazyLoadFallback />}>
+          <ErrorBoundary>
+            <TenantTypeProvider>
+            <ClientPreviewProvider>
+            <ViewModeProvider>
+            <FacilitatorModeProvider>
+             <Suspense fallback={<LazyLoadFallback />}>
            <Routes>
             <Route path="/" element={<Login />} />
             <Route path="/login" element={<Login />} />
@@ -898,11 +900,12 @@ const App = () => (
 
             <Route path="*" element={<NotFound />} />
           </Routes>
-           </Suspense>
-          </FacilitatorModeProvider>
-          </ViewModeProvider>
-          </ClientPreviewProvider>
-          </TenantTypeProvider>
+             </Suspense>
+            </FacilitatorModeProvider>
+            </ViewModeProvider>
+            </ClientPreviewProvider>
+            </TenantTypeProvider>
+          </ErrorBoundary>
         </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>
