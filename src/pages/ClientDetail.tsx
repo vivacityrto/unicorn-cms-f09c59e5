@@ -40,8 +40,9 @@ import { ClientTimeSummaryCard } from '@/components/client/ClientTimeSummaryCard
 import { RiskLevelBadge } from '@/components/client/RiskLevelBadge';
 import { CSCAssignmentSelector } from '@/components/client/CSCAssignmentSelector';
 import { AddTimeFromMeetingDialog } from '@/components/client/AddTimeFromMeetingDialog';
-import { useTimeTracking } from '@/hooks/useTimeTracking';
-import { usePackageUsage } from '@/hooks/usePackageUsage';
+import { useInvalidateTimeTracking, timeTrackingKeys } from '@/hooks/useTimeTrackingQuery';
+import { useInvalidatePackageUsage, packageUsageKeys } from '@/hooks/usePackageUsageQuery';
+import { useQueryClient } from '@tanstack/react-query';
 
 interface TenantBasic {
   id: number;
@@ -64,9 +65,8 @@ export default function ClientDetail() {
 
   const tenantIdNum = tenantId ? parseInt(tenantId) : null;
   
-  // Time tracking hooks for cache invalidation
-  const { refresh: refreshTimeTracking } = useTimeTracking(tenantIdNum);
-  const { refresh: refreshPackageUsage } = usePackageUsage(tenantIdNum);
+  // React Query client for cache invalidation
+  const queryClient = useQueryClient();
   
   const { 
     profile, 
@@ -403,8 +403,21 @@ export default function ClientDetail() {
         clientId={tenantIdNum!}
         clientName={tenant.name}
         onSuccess={async () => {
-          await refreshTimeTracking();
-          await refreshPackageUsage();
+          // Invalidate React Query caches for time and package data
+          if (tenantIdNum) {
+            queryClient.invalidateQueries({ queryKey: timeTrackingKeys.summary(tenantIdNum) });
+            queryClient.invalidateQueries({ queryKey: timeTrackingKeys.entries(tenantIdNum) });
+            queryClient.invalidateQueries({ queryKey: packageUsageKeys.packages(tenantIdNum) });
+            queryClient.invalidateQueries({ 
+              predicate: (query) => {
+                const key = query.queryKey;
+                return Array.isArray(key) && 
+                       key[0] === 'package-usage' && 
+                       key[1] === 'usage' && 
+                       key[2] === tenantIdNum;
+              }
+            });
+          }
         }}
       />
     </div>

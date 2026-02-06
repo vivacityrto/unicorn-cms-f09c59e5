@@ -3,8 +3,8 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Clock, TrendingUp, DollarSign, ExternalLink, AlertTriangle, X, TrendingDown, Calendar, Timer, PenLine } from 'lucide-react';
-import { useTimeTracking, formatDuration } from '@/hooks/useTimeTracking';
-import { usePackageUsage, formatHours, formatForecast } from '@/hooks/usePackageUsage';
+import { useTimeTrackingQuery, formatDuration } from '@/hooks/useTimeTrackingQuery';
+import { usePackageUsageQuery, formatHours, formatForecast } from '@/hooks/usePackageUsageQuery';
 import { useState } from 'react';
 import { TimeLogDrawer } from './TimeLogDrawer';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -15,14 +15,14 @@ interface ClientTimeSummaryCardProps {
 }
 
 export function ClientTimeSummaryCard({ clientId }: ClientTimeSummaryCardProps) {
-  const { summary, loading: timeLoading } = useTimeTracking(clientId);
+  const { summary, loading: timeLoading } = useTimeTrackingQuery(clientId);
   const { 
     usage, 
     alerts, 
     selectedPackage, 
     dismissAlert, 
     loading: usageLoading 
-  } = usePackageUsage(clientId);
+  } = usePackageUsageQuery(clientId);
   const [logOpen, setLogOpen] = useState(false);
   const [sourceFilter, setSourceFilter] = useState<'all' | 'calendar' | 'timer' | 'manual'>('all');
 
