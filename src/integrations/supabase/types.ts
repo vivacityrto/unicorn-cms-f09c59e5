@@ -19751,6 +19751,41 @@ export type Database = {
         }
         Relationships: []
       }
+      user_microsoft_identities: {
+        Row: {
+          created_at: string
+          display_name: string | null
+          email: string
+          ms_user_id: string
+          updated_at: string
+          user_uuid: string
+        }
+        Insert: {
+          created_at?: string
+          display_name?: string | null
+          email: string
+          ms_user_id: string
+          updated_at?: string
+          user_uuid: string
+        }
+        Update: {
+          created_at?: string
+          display_name?: string | null
+          email?: string
+          ms_user_id?: string
+          updated_at?: string
+          user_uuid?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_microsoft_identities_user_uuid_fkey"
+            columns: ["user_uuid"]
+            isOneToOne: true
+            referencedRelation: "users"
+            referencedColumns: ["user_uuid"]
+          },
+        ]
+      }
       user_notification_integrations: {
         Row: {
           created_at: string
