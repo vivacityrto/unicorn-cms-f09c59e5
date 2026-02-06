@@ -33,7 +33,7 @@ import { ClientProfileForm } from '@/components/client/ClientProfileForm';
 import { ClientAddressSection } from '@/components/client/ClientAddressSection';
 import { ClientPackagesTab } from '@/components/client/ClientPackagesTab';
 import { ClientIntegrationsTab } from '@/components/client/ClientIntegrationsTab';
-import { ClientDocumentsTab } from '@/components/client/ClientDocumentsTab';
+import { DocumentsHub } from '@/components/documents/DocumentsHub';
 import { TenantUsersTab } from '@/components/client/TenantUsersTab';
 import { ClientTimeWidget } from '@/components/client/ClientTimeWidget';
 import { ClientTimeSummaryCard } from '@/components/client/ClientTimeSummaryCard';
@@ -360,9 +360,10 @@ export default function ClientDetail() {
           </TabsContent>
 
           <TabsContent value="documents" className="mt-0">
-            <ClientDocumentsTab
+            <DocumentsHub
               tenantId={tenantIdNum!}
-              packages={packages}
+              isClientView={false}
+              tenantName={tenant.name}
             />
           </TabsContent>
 
