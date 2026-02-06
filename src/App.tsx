@@ -104,10 +104,11 @@ const AdminOperations = lazy(() => import("./pages/AdminOperations"));
  const MyWork = lazy(() => import("./pages/MyWork"));
  const CalendarTimeCapture = lazy(() => import("./pages/CalendarTimeCapture"));
  const OutlookCallback = lazy(() => import("./pages/OutlookCallback"));
- const TimeInbox = lazy(() => import("./pages/TimeInbox"));
- const ProcessesWrapper = lazy(() => import("./pages/ProcessesWrapper"));
- const ProcessDetail = lazy(() => import("./pages/ProcessDetail"));
- const ProcessForm = lazy(() => import("./pages/ProcessForm"));
+const TimeInbox = lazy(() => import("./pages/TimeInbox"));
+const WorkCalendarWrapper = lazy(() => import("./pages/WorkCalendarWrapper"));
+const ProcessesWrapper = lazy(() => import("./pages/ProcessesWrapper"));
+const ProcessDetail = lazy(() => import("./pages/ProcessDetail"));
+const ProcessForm = lazy(() => import("./pages/ProcessForm"));
 const RoleReference = lazy(() => import("./pages/RoleReference"));
 const AdminAssistant = lazy(() => import("./pages/AdminAssistant"));
 const AdminKnowledgeLibrary = lazy(() => import("./pages/AdminKnowledgeLibrary"));
@@ -183,6 +184,14 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <CalendarWrapper />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/work/calendar" 
+              element={
+                <ProtectedRoute>
+                  <WorkCalendarWrapper />
                 </ProtectedRoute>
               } 
             />

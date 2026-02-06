@@ -23,7 +23,7 @@ const workMenuItems = [
   { icon: Briefcase, label: "My Work", path: "/my-work" },
   { icon: ListTodo, label: "Tasks", path: "/tasks" },
   { icon: Inbox, label: "Time Inbox", path: "/time-inbox" },
-  { icon: Calendar, label: "Event Calendar", path: "/calendar" },
+  { icon: Calendar, label: "Calendar", path: "/work/calendar" },
 ];
 
 // 2. CLIENTS Section - All Vivacity Team Roles
