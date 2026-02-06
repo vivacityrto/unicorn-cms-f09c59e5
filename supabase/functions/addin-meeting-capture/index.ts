@@ -11,16 +11,27 @@ const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 const ADDIN_JWT_SECRET = Deno.env.get('ADDIN_JWT_SECRET') || Deno.env.get('JWT_SECRET') || SUPABASE_SERVICE_ROLE_KEY;
 
+interface Organiser {
+  email: string;
+  name?: string;
+}
+
+interface Attendee {
+  email: string;
+  name?: string;
+  type?: 'required' | 'optional' | 'resource';
+}
+
 interface CaptureRequest {
-  provider: string;
+  provider?: string;
   external_event_id: string;
   title: string;
   starts_at: string;
   ends_at: string;
-  organiser_email: string;
+  organiser: Organiser;
   teams_join_url?: string;
   location?: string;
-  attendees_count?: number;
+  attendees?: Attendee[];
   link?: {
     client_id?: string | null;
     package_id?: string | null;
@@ -90,6 +101,7 @@ serve(async (req) => {
       external_event_id: body.external_event_id?.substring(0, 20) + '...',
       title: body.title,
       client_id: body.link?.client_id,
+      attendees_count: body.attendees?.length || 0,
       idempotency_key: idempotencyKey,
     });
 
@@ -106,8 +118,8 @@ serve(async (req) => {
     if (!body.ends_at) {
       return errorResponse(400, 'VALIDATION_ERROR', 'ends_at is required');
     }
-    if (!body.organiser_email) {
-      return errorResponse(400, 'VALIDATION_ERROR', 'organiser_email is required');
+    if (!body.organiser?.email) {
+      return errorResponse(400, 'VALIDATION_ERROR', 'organiser.email is required');
     }
 
     const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
@@ -135,6 +147,7 @@ serve(async (req) => {
     const isUpdate = !!existingEvent;
 
     // Prepare event data
+    const attendeesCount = body.attendees?.length || 0;
     const eventData = {
       tenant_id: tenantId,
       user_id: tokenPayload.user_uuid,
@@ -144,7 +157,7 @@ serve(async (req) => {
       start_at: body.starts_at,
       end_at: body.ends_at,
       location: body.location || null,
-      organiser_email: body.organiser_email,
+      organiser_email: body.organiser.email,
       teams_join_url: body.teams_join_url || null,
       client_id: body.link?.client_id ? parseInt(body.link.client_id, 10) : null,
       package_id: body.link?.package_id ? parseInt(body.link.package_id, 10) : null,
@@ -152,7 +165,9 @@ serve(async (req) => {
       addin_captured_by: tokenPayload.user_uuid,
       source: 'addin',
       raw: {
-        attendees_count: body.attendees_count || 0,
+        attendees_count: attendeesCount,
+        attendees: body.attendees || [],
+        organiser_name: body.organiser.name || null,
         captured_via: 'outlook_addin',
       },
     };
@@ -213,6 +228,7 @@ serve(async (req) => {
           starts_at: body.starts_at,
           ends_at: body.ends_at,
           package_id: body.link?.package_id || null,
+          attendees_count: attendeesCount,
           is_update: isUpdate,
           idempotency_key: idempotencyKey,
         },
@@ -227,31 +243,32 @@ serve(async (req) => {
     console.log('[addin-meeting-capture] Meeting captured successfully:', eventRecord.id);
 
     // Build response links
-    const links: Record<string, string> = {};
+    const links: Record<string, string> = {
+      open_meeting: `/meetings/${eventRecord.id}`,
+    };
     if (body.link?.client_id) {
-      links.open_client_timeline = `/clients/${body.link.client_id}?tab=timeline`;
+      links.open_client = `/clients/${body.link.client_id}`;
     }
-    links.open_meetings = '/work/meetings';
 
-    // Return success
+    // Return success response matching API contract
     return new Response(
       JSON.stringify({
-        meeting_record: {
+        meeting: {
           id: eventRecord.id,
           external_event_id: eventRecord.provider_event_id,
           title: eventRecord.title,
           starts_at: eventRecord.start_at,
           ends_at: eventRecord.end_at,
+          teams_join_url: eventRecord.teams_join_url,
           client_id: eventRecord.client_id,
           package_id: eventRecord.package_id,
-          teams_join_url: eventRecord.teams_join_url,
-          captured_at: eventRecord.addin_captured_at,
+          status: 'scheduled',
         },
-        status: isUpdate ? 'updated' : 'created',
+        participants_upserted: attendeesCount,
         audit_event_id: auditEvent?.id || null,
         links,
       }),
-      { status: isUpdate ? 200 : 201, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 
   } catch (error) {
