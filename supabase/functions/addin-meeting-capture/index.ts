@@ -9,6 +9,12 @@ import {
   logFailedAction,
   type AddinTokenPayload 
 } from "../_shared/addin-auth.ts";
+import {
+  getUserGraphToken,
+  fetchMeetingFromGraph,
+  type GraphMeetingDetails,
+  type GraphAttendee,
+} from "../_shared/graph-client.ts";
 
 const FUNCTION_NAME = 'addin-meeting-capture';
 
@@ -21,6 +27,7 @@ interface Attendee {
   email: string;
   name?: string;
   type?: 'required' | 'optional' | 'resource';
+  response?: string;
 }
 
 interface CaptureRequest {
@@ -37,6 +44,8 @@ interface CaptureRequest {
     client_id?: string | null;
     package_id?: string | null;
   };
+  // Optional: request Graph enrichment
+  enrich_via_graph?: boolean;
 }
 
 serve(async (req) => {
@@ -75,6 +84,7 @@ serve(async (req) => {
       title: body.title,
       client_id: body.link?.client_id,
       attendees_count: body.attendees?.length || 0,
+      enrich_via_graph: body.enrich_via_graph ?? false,
       idempotency_key: idempotencyKey,
     });
 
@@ -128,8 +138,56 @@ serve(async (req) => {
     // Determine if this is an insert or update
     const isUpdate = !!existingEvent;
 
+    // ========== GRAPH ENRICHMENT (Phase 8.2) ==========
+    let graphEnrichment: GraphMeetingDetails | null = null;
+    let graphEnriched = false;
+    let enrichedAttendees: Attendee[] = body.attendees || [];
+    let enrichedJoinUrl = body.teams_join_url;
+    let enrichedLocation = body.location;
+
+    if (body.enrich_via_graph !== false) {
+      // Attempt Graph enrichment when token exists
+      const graphToken = await getUserGraphToken(tokenPayload.user_uuid);
+      
+      if (graphToken) {
+        console.log('[addin-meeting-capture] Attempting Graph enrichment...');
+        graphEnrichment = await fetchMeetingFromGraph(graphToken.access_token, body.external_event_id);
+        
+        if (graphEnrichment) {
+          graphEnriched = true;
+          console.log('[addin-meeting-capture] Graph enrichment successful');
+          
+          // Enrich Teams join URL
+          if (!enrichedJoinUrl) {
+            enrichedJoinUrl = graphEnrichment.onlineMeeting?.joinUrl || 
+                              graphEnrichment.onlineMeetingUrl || 
+                              undefined;
+          }
+          
+          // Enrich location
+          if (!enrichedLocation && graphEnrichment.location?.displayName) {
+            enrichedLocation = graphEnrichment.location.displayName;
+          }
+          
+          // Enrich attendees with response status from Graph
+          if (graphEnrichment.attendees && graphEnrichment.attendees.length > 0) {
+            enrichedAttendees = graphEnrichment.attendees.map((att: GraphAttendee) => ({
+              email: att.emailAddress.address,
+              name: att.emailAddress.name,
+              type: att.type,
+              response: att.status?.response,
+            }));
+          }
+        } else {
+          console.log('[addin-meeting-capture] Graph enrichment failed, falling back to metadata');
+        }
+      } else {
+        console.log('[addin-meeting-capture] No Graph token available, using metadata only');
+      }
+    }
+
     // Prepare event data
-    const attendeesCount = body.attendees?.length || 0;
+    const attendeesCount = enrichedAttendees.length;
     const eventData = {
       tenant_id: tenantId,
       user_id: tokenPayload.user_uuid,
@@ -138,19 +196,32 @@ serve(async (req) => {
       title: body.title,
       start_at: body.starts_at,
       end_at: body.ends_at,
-      location: body.location || null,
+      location: enrichedLocation || null,
       organiser_email: body.organiser.email,
-      teams_join_url: body.teams_join_url || null,
+      teams_join_url: enrichedJoinUrl || null,
       client_id: body.link?.client_id ? parseInt(body.link.client_id, 10) : null,
       package_id: body.link?.package_id ? parseInt(body.link.package_id, 10) : null,
       addin_captured_at: new Date().toISOString(),
       addin_captured_by: tokenPayload.user_uuid,
       source: 'addin',
+      // Graph-enriched fields
+      web_link: graphEnrichment?.webLink || null,
+      body_preview: graphEnrichment?.bodyPreview || null,
+      importance: graphEnrichment?.importance || null,
+      is_all_day: graphEnrichment?.isAllDay ?? null,
+      is_cancelled: graphEnrichment?.isCancelled ?? null,
+      is_organizer: graphEnrichment?.isOrganizer ?? null,
+      show_as: graphEnrichment?.showAs || null,
+      response_status: graphEnrichment?.responseStatus?.response || null,
+      is_recurring: !!graphEnrichment?.recurrence,
+      graph_enriched: graphEnriched,
+      graph_enriched_at: graphEnriched ? new Date().toISOString() : null,
       raw: {
         attendees_count: attendeesCount,
-        attendees: body.attendees || [],
+        attendees: enrichedAttendees,
         organiser_name: body.organiser.name || null,
         captured_via: 'outlook_addin',
+        graph_enriched: graphEnriched,
       },
     };
 
@@ -170,10 +241,21 @@ serve(async (req) => {
           client_id: eventData.client_id,
           package_id: eventData.package_id,
           addin_captured_at: eventData.addin_captured_at,
+          web_link: eventData.web_link,
+          body_preview: eventData.body_preview,
+          importance: eventData.importance,
+          is_all_day: eventData.is_all_day,
+          is_cancelled: eventData.is_cancelled,
+          is_organizer: eventData.is_organizer,
+          show_as: eventData.show_as,
+          response_status: eventData.response_status,
+          is_recurring: eventData.is_recurring,
+          graph_enriched: eventData.graph_enriched,
+          graph_enriched_at: eventData.graph_enriched_at,
           raw: eventData.raw,
         })
         .eq('id', existingEvent.id)
-        .select('id, provider_event_id, title, start_at, end_at, client_id, package_id, teams_join_url, addin_captured_at')
+        .select('id, provider_event_id, title, start_at, end_at, client_id, package_id, teams_join_url, addin_captured_at, web_link, graph_enriched')
         .single();
 
       if (updateError) {
@@ -186,7 +268,7 @@ serve(async (req) => {
       const { data, error: insertError } = await supabaseAdmin
         .from('calendar_events')
         .insert(eventData)
-        .select('id, provider_event_id, title, start_at, end_at, client_id, package_id, teams_join_url, addin_captured_at')
+        .select('id, provider_event_id, title, start_at, end_at, client_id, package_id, teams_join_url, addin_captured_at, web_link, graph_enriched')
         .single();
 
       if (insertError) {
@@ -194,6 +276,30 @@ serve(async (req) => {
         return errorResponse(500, 'DATABASE_ERROR', 'Failed to create event', { detail: insertError.message });
       }
       eventRecord = data;
+    }
+
+    // Upsert attendees to dedicated table if we have enriched data
+    if (graphEnriched && enrichedAttendees.length > 0) {
+      const attendeeRecords = enrichedAttendees.map(att => ({
+        calendar_event_id: eventRecord.id,
+        email: att.email,
+        name: att.name || null,
+        type: att.type || 'required',
+        response_status: att.response || null,
+      }));
+
+      const { error: attError } = await supabaseAdmin
+        .from('calendar_event_attendees')
+        .upsert(attendeeRecords, {
+          onConflict: 'calendar_event_id,email',
+          ignoreDuplicates: false,
+        });
+
+      if (attError) {
+        console.warn('[addin-meeting-capture] Failed to store attendees:', attError);
+      } else {
+        console.log(`[addin-meeting-capture] Stored ${attendeeRecords.length} attendees`);
+      }
     }
 
     // Log audit event
@@ -213,6 +319,7 @@ serve(async (req) => {
           attendees_count: attendeesCount,
           is_update: isUpdate,
           idempotency_key: idempotencyKey,
+          graph_enriched: graphEnriched,
         },
       })
       .select('id')
@@ -222,7 +329,7 @@ serve(async (req) => {
       console.warn('[addin-meeting-capture] Audit log failed:', auditError);
     }
 
-    console.log('[addin-meeting-capture] Meeting captured successfully:', eventRecord.id);
+    console.log('[addin-meeting-capture] Meeting captured successfully:', eventRecord.id, { graph_enriched: graphEnriched });
 
     // Build response links
     const links: Record<string, string> = {
@@ -230,6 +337,9 @@ serve(async (req) => {
     };
     if (body.link?.client_id) {
       links.open_client = `/clients/${body.link.client_id}`;
+    }
+    if (eventRecord.web_link) {
+      links.open_in_outlook = eventRecord.web_link;
     }
 
     // Return success response matching API contract
@@ -245,8 +355,10 @@ serve(async (req) => {
           client_id: eventRecord.client_id,
           package_id: eventRecord.package_id,
           status: 'scheduled',
+          web_link: eventRecord.web_link,
         },
         participants_upserted: attendeesCount,
+        graph_enriched: graphEnriched,
         audit_event_id: auditEvent?.id || null,
         links,
       }),
