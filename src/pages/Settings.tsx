@@ -6,6 +6,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useRBAC } from '@/hooks/useRBAC';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { User, Clock, Calendar, Users, Shield } from 'lucide-react';
+import { ProfileBanner } from '@/components/settings/ProfileBanner';
 import { ProfileTab } from '@/components/settings/ProfileTab';
 import { TimeCaptureTab } from '@/components/settings/TimeCaptureTab';
 import { CalendarTab } from '@/components/settings/CalendarTab';
@@ -193,7 +194,16 @@ export default function Settings() {
   return (
     <div className="min-h-screen bg-background animate-fade-in">
       <div className="px-6">
-        <Tabs value={currentTab} onValueChange={handleTabChange} className="w-full">
+        {/* Profile Banner - shared across all tabs */}
+        <ProfileBanner
+          formData={formData}
+          avatarUrl={avatarUrl}
+          setAvatarUrl={setAvatarUrl}
+          timezoneOptions={timezoneOptions}
+          liveTime={liveTime}
+        />
+
+        <Tabs value={currentTab} onValueChange={handleTabChange} className="w-full mt-6">
           <TabsList className="mb-6 bg-muted/50 p-1 h-auto flex-wrap gap-1">
             <TabsTrigger value="profile" className="gap-2 data-[state=active]:bg-background">
               <User className="h-4 w-4" />
@@ -225,10 +235,7 @@ export default function Settings() {
             <ProfileTab
               formData={formData}
               setFormData={setFormData}
-              avatarUrl={avatarUrl}
-              setAvatarUrl={setAvatarUrl}
               timezoneOptions={timezoneOptions}
-              liveTime={liveTime}
               onSaveProfile={handleSaveProfile}
               loading={loading}
             />
