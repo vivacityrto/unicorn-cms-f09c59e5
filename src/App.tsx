@@ -59,6 +59,7 @@ const NotificationSettings = lazy(() => import("./pages/NotificationSettings"));
 const IntegrationSettings = lazy(() => import("./pages/IntegrationSettings"));
 const AddinSettings = lazy(() => import("./pages/admin/AddinSettings"));
 const AddinShell = lazy(() => import("./pages/addin/AddinShell"));
+const TeamsShell = lazy(() => import("./pages/teams/TeamsShell"));
 const EosCalendar = lazy(() => import("./pages/EosCalendar"));
  const EosQC = lazy(() => import("./pages/EosQC"));
  const EosQCSession = lazy(() => import("./pages/EosQCSession"));
@@ -889,6 +890,9 @@ const App = () => (
             
             {/* Add-in Shell Route - works without full auth for add-in JWT holders */}
             <Route path="/addin" element={<AddinShell />} />
+            
+            {/* Teams Shell Route - embedded as Teams tab, supports ?mode=meeting */}
+            <Route path="/teams" element={<TeamsShell />} />
 
             <Route path="*" element={<NotFound />} />
           </Routes>
