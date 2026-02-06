@@ -62,7 +62,7 @@ export interface CreateTaskResponse {
 export interface AttachmentItem {
   file_name: string;
   mime_type?: string;
-  size?: number;
+  file_size?: number;
   source_url?: string;
   provider_item_id?: string;
 }
@@ -71,27 +71,26 @@ export interface LinkAttachmentsRequest {
   external_message_id: string;
   client_id: string;
   package_id?: string;
+  evidence_type?: string;
   attachments: AttachmentItem[];
 }
 
-export interface DocumentLinkResult {
-  id: string;
+export interface LinkedDocumentResult {
+  document_link_id: string;
   file_name: string;
-  file_extension: string | null;
-  mime_type: string | null;
-  size_bytes: number | null;
   web_url: string;
+  client_id: string;
+  package_id: string | null;
+  evidence_type: string;
 }
 
 export interface LinkAttachmentsResponse {
-  document_links: DocumentLinkResult[];
-  email: {
-    id: string;
-    subject: string;
-  };
-  attachments_linked: number;
+  linked: LinkedDocumentResult[];
+  skipped: string[];
   audit_event_id: string | null;
-  links: Record<string, string>;
+  links: {
+    open_client_documents: string;
+  };
 }
 
 export interface AddinApiError {
@@ -216,8 +215,9 @@ export async function createTaskFromEmail(
  */
 export async function linkEmailAttachments(
   mailContext: MailContext,
-  clientId: number,
-  packageId?: number
+  clientId: string,
+  packageId?: string,
+  evidenceType?: string
 ): Promise<LinkAttachmentsResponse> {
   if (!mailContext.attachments || mailContext.attachments.length === 0) {
     throw new Error('No attachments to link');
@@ -225,12 +225,13 @@ export async function linkEmailAttachments(
 
   const request: LinkAttachmentsRequest = {
     external_message_id: mailContext.messageId,
-    client_id: clientId.toString(),
-    package_id: packageId?.toString(),
+    client_id: clientId,
+    package_id: packageId,
+    evidence_type: evidenceType || 'record',
     attachments: mailContext.attachments.map((att) => ({
       file_name: att.name,
       mime_type: att.contentType,
-      size: att.size,
+      file_size: att.size,
       provider_item_id: att.id,
     })),
   };
