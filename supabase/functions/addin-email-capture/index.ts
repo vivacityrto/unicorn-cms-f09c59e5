@@ -33,8 +33,14 @@ interface CaptureRequest {
     package_id?: string | null;
     task_id?: string | null;
   };
-  // Optional: request Graph enrichment
-  enrich_via_graph?: boolean;
+  // Optional: request Graph enrichment (fetch full email from Graph)
+  fetch_from_graph?: boolean;
+}
+
+interface AttachmentResponse {
+  file_name: string;
+  mime_type: string;
+  file_size: number;
 }
 
 serve(async (req) => {
@@ -71,7 +77,7 @@ serve(async (req) => {
       role: tokenPayload.role,
       external_message_id: body.external_message_id?.substring(0, 20) + '...',
       client_id: body.link?.client_id,
-      enrich_via_graph: body.enrich_via_graph ?? false,
+      fetch_from_graph: body.fetch_from_graph ?? false,
       idempotency_key: idempotencyKey,
     });
 
@@ -141,8 +147,8 @@ serve(async (req) => {
     let graphEnrichment: GraphEmailDetails | null = null;
     let graphEnriched = false;
 
-    if (body.enrich_via_graph !== false) {
-      // Attempt Graph enrichment when token exists
+    if (body.fetch_from_graph === true) {
+      // Attempt Graph enrichment when explicitly requested and token exists
       const graphToken = await getUserGraphToken(tokenPayload.user_uuid);
       
       if (graphToken) {
@@ -255,7 +261,16 @@ serve(async (req) => {
 
     console.log('[addin-email-capture] Email captured successfully:', emailRecord.id, { graph_enriched: graphEnriched });
 
-    // Return success with new format
+    // Build attachments array for response (from Graph or empty)
+    const attachmentsResponse: AttachmentResponse[] = graphEnriched && graphEnrichment?.attachments 
+      ? graphEnrichment.attachments.map(att => ({
+          file_name: att.name,
+          mime_type: att.contentType,
+          file_size: att.size,
+        }))
+      : [];
+
+    // Return success with API contract format
     return new Response(
       JSON.stringify({
         email_record: {
@@ -263,21 +278,12 @@ serve(async (req) => {
           external_message_id: emailRecord.external_message_id,
           subject: emailRecord.subject,
           sender_email: emailRecord.sender_email,
-          sender_name: emailRecord.sender_name,
           received_at: emailRecord.received_at,
           has_attachments: emailRecord.has_attachments,
-          client_id: emailRecord.client_id,
-          package_id: emailRecord.package_id,
-          task_id: emailRecord.task_id,
-          body_preview: emailRecord.body_preview,
-          web_link: emailRecord.web_link,
         },
+        attachments: attachmentsResponse,
         status: isUpdate ? 'updated' : 'upserted',
-        graph_enriched: graphEnriched,
         audit_event_id: auditEvent?.id || null,
-        links: {
-          open_in_unicorn: `/clients/${body.link.client_id}?tab=emails`,
-        },
       }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
