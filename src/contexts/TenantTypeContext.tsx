@@ -13,6 +13,7 @@ export type AcademyTier = "solo" | "team" | "elite";
 
 interface TenantTypeContextValue {
   tenantType: TenantType | null;
+  tenantId: number | null;
   isComplianceMember: boolean;
   isAcademyMember: boolean;
   academyTier: AcademyTier | null;
@@ -32,6 +33,7 @@ export const TenantTypeProvider = ({
 }) => {
   const { profile, memberships } = useAuth();
   const [tenantType, setTenantType] = useState<TenantType | null>(null);
+  const [tenantId, setTenantId] = useState<number | null>(null);
   const [academyMaxUsers, setAcademyMaxUsers] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -44,6 +46,7 @@ export const TenantTypeProvider = ({
     if (isVivacityTeam) {
       // Vivacity team gets full compliance access
       setTenantType("compliance_system");
+      setTenantId(6372); // Vivacity system tenant
       setAcademyMaxUsers(null);
       setLoading(false);
       return;
@@ -54,9 +57,12 @@ export const TenantTypeProvider = ({
 
     if (!primaryTenantId) {
       setTenantType(null);
+      setTenantId(null);
       setLoading(false);
       return;
     }
+
+    setTenantId(primaryTenantId);
 
     try {
       const { data, error } = await supabase
@@ -123,6 +129,7 @@ export const TenantTypeProvider = ({
     <TenantTypeContext.Provider
       value={{
         tenantType,
+        tenantId,
         isComplianceMember,
         isAcademyMember,
         academyTier,
