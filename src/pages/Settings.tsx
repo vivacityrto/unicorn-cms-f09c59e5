@@ -192,14 +192,7 @@ export default function Settings() {
 
   return (
     <div className="min-h-screen bg-background animate-fade-in">
-      <div className="px-6 pt-2">
-        <div className="mb-6">
-          <h1 className="text-2xl font-bold text-foreground">Profile Settings</h1>
-          <p className="text-sm text-muted-foreground">
-            Manage your account settings and preferences
-          </p>
-        </div>
-
+      <div className="px-6">
         <Tabs value={currentTab} onValueChange={handleTabChange} className="w-full">
           <TabsList className="mb-6 bg-muted/50 p-1 h-auto flex-wrap gap-1">
             <TabsTrigger value="profile" className="gap-2 data-[state=active]:bg-background">
