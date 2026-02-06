@@ -64,90 +64,94 @@ export function UploadDocumentDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-w-md">
-        <DialogHeader>
+      <DialogContent className="max-w-md flex flex-col max-h-[85vh]">
+        <DialogHeader className="flex-shrink-0">
           <DialogTitle>Upload Document</DialogTitle>
           <DialogDescription>
             Upload a document to share with the client.
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
-          {/* File Upload Area */}
-          <div className="space-y-3">
-            <Label>Select Files</Label>
-            <input
-              type="file"
-              ref={fileInputRef}
-              onChange={handleFileSelect}
-              multiple
-              className="hidden"
-            />
-            
-            {selectedFiles.length === 0 ? (
-              <button
-                type="button"
-                onClick={() => fileInputRef.current?.click()}
-                className="w-full border-2 border-dashed rounded-lg p-8 text-center hover:border-primary hover:bg-primary/5 transition-colors"
-              >
-                <Upload className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
-                <p className="text-sm font-medium">Click to select files</p>
-                <p className="text-xs text-muted-foreground mt-1">or drag and drop</p>
-              </button>
-            ) : (
-              <div className="space-y-2">
-                <div className="max-h-[200px] overflow-y-auto space-y-2 pr-1">
-                  {selectedFiles.map((file, index) => (
-                    <div key={index} className="flex items-center gap-3 p-3 bg-muted/30 rounded-lg">
-                      <FileText className="h-5 w-5 text-primary flex-shrink-0" />
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium truncate">{file.name}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {(file.size / 1024 / 1024).toFixed(2)} MB
-                        </p>
-                      </div>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleRemoveFile(index)}
-                        className="h-8 w-8 flex-shrink-0"
-                      >
-                        <X className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-                <Button
+        <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0">
+          {/* Scrollable content area */}
+          <div className="flex-1 overflow-y-auto space-y-6 py-2">
+            {/* File Upload Area */}
+            <div className="space-y-3">
+              <Label>Select Files</Label>
+              <input
+                type="file"
+                ref={fileInputRef}
+                onChange={handleFileSelect}
+                multiple
+                className="hidden"
+              />
+              
+              {selectedFiles.length === 0 ? (
+                <button
                   type="button"
-                  variant="outline"
-                  size="sm"
                   onClick={() => fileInputRef.current?.click()}
-                  className="w-full"
+                  className="w-full border-2 border-dashed rounded-lg p-8 text-center hover:border-primary hover:bg-primary/5 transition-colors"
                 >
-                  Add more files
-                </Button>
+                  <Upload className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
+                  <p className="text-sm font-medium">Click to select files</p>
+                  <p className="text-xs text-muted-foreground mt-1">or drag and drop</p>
+                </button>
+              ) : (
+                <div className="space-y-2">
+                  <div className="max-h-[200px] overflow-y-auto space-y-2 pr-1">
+                    {selectedFiles.map((file, index) => (
+                      <div key={index} className="flex items-center gap-3 p-3 bg-muted/30 rounded-lg">
+                        <FileText className="h-5 w-5 text-primary flex-shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium truncate">{file.name}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {(file.size / 1024 / 1024).toFixed(2)} MB
+                          </p>
+                        </div>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleRemoveFile(index)}
+                          className="h-8 w-8 flex-shrink-0"
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="w-full"
+                  >
+                    Add more files
+                  </Button>
+                </div>
+              )}
+            </div>
+
+            {/* Share Option */}
+            {direction === 'vivacity_to_client' && (
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label>Share with client immediately</Label>
+                  <p className="text-xs text-muted-foreground">
+                    Client will see this document in their portal
+                  </p>
+                </div>
+                <Switch
+                  checked={shareWithClient}
+                  onCheckedChange={setShareWithClient}
+                />
               </div>
             )}
           </div>
 
-          {/* Share Option */}
-          {direction === 'vivacity_to_client' && (
-            <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-                <Label>Share with client immediately</Label>
-                <p className="text-xs text-muted-foreground">
-                  Client will see this document in their portal
-                </p>
-              </div>
-              <Switch
-                checked={shareWithClient}
-                onCheckedChange={setShareWithClient}
-              />
-            </div>
-          )}
-
-          <DialogFooter>
+          {/* Fixed footer - always visible */}
+          <DialogFooter className="flex-shrink-0 pt-4 border-t mt-4">
             <Button type="button" variant="outline" onClick={handleClose}>
               Cancel
             </Button>

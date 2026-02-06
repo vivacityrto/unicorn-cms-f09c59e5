@@ -113,6 +113,18 @@ export function useClientVisibleDocuments(tenantId: number | null) {
   });
 }
 
+// Sanitize filename for Supabase Storage paths
+function sanitizeStoragePath(filename: string): string {
+  return filename
+    .normalize('NFD')                          // Decompose accents
+    .replace(/[\u0300-\u036f]/g, '')           // Remove accent marks
+    .replace(/[\u2013\u2014]/g, '-')           // Replace en-dash/em-dash with hyphen
+    .replace(/\s+/g, '_')                      // Replace spaces with underscores
+    .replace(/[^a-zA-Z0-9._-]/g, '')           // Remove any remaining special chars
+    .replace(/_+/g, '_')                       // Collapse multiple underscores
+    .replace(/-+/g, '-');                      // Collapse multiple hyphens
+}
+
 interface UploadDocumentParams {
   tenantId: number;
   file: File;
@@ -143,8 +155,9 @@ export function useUploadPortalDocument() {
       linkedTaskId,
       evidenceRequestItemId,
     }: UploadDocumentParams) => {
-      // Upload to storage
-      const storagePath = `${tenantId}/${direction}/${Date.now()}_${file.name}`;
+      // Upload to storage with sanitized filename
+      const sanitizedName = sanitizeStoragePath(file.name);
+      const storagePath = `${tenantId}/${direction}/${Date.now()}_${sanitizedName}`;
       
       const { error: uploadError } = await supabase.storage
         .from('portal-documents')
