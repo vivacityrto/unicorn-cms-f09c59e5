@@ -9,6 +9,11 @@ import {
   logFailedAction,
   type AddinTokenPayload 
 } from "../_shared/addin-auth.ts";
+import {
+  getUserGraphToken,
+  fetchEmailFromGraph,
+  type GraphEmailDetails,
+} from "../_shared/graph-client.ts";
 
 const FUNCTION_NAME = 'addin-email-capture';
 
@@ -28,6 +33,8 @@ interface CaptureRequest {
     package_id?: string | null;
     task_id?: string | null;
   };
+  // Optional: request Graph enrichment
+  enrich_via_graph?: boolean;
 }
 
 serve(async (req) => {
@@ -64,6 +71,7 @@ serve(async (req) => {
       role: tokenPayload.role,
       external_message_id: body.external_message_id?.substring(0, 20) + '...',
       client_id: body.link?.client_id,
+      enrich_via_graph: body.enrich_via_graph ?? false,
       idempotency_key: idempotencyKey,
     });
 
@@ -129,7 +137,30 @@ serve(async (req) => {
     // Determine if this is an insert or update
     const isUpdate = !!existingEmail;
 
-    // Insert/update email record
+    // ========== GRAPH ENRICHMENT (Phase 8.1) ==========
+    let graphEnrichment: GraphEmailDetails | null = null;
+    let graphEnriched = false;
+
+    if (body.enrich_via_graph !== false) {
+      // Attempt Graph enrichment when token exists
+      const graphToken = await getUserGraphToken(tokenPayload.user_uuid);
+      
+      if (graphToken) {
+        console.log('[addin-email-capture] Attempting Graph enrichment...');
+        graphEnrichment = await fetchEmailFromGraph(graphToken.access_token, body.external_message_id);
+        
+        if (graphEnrichment) {
+          graphEnriched = true;
+          console.log('[addin-email-capture] Graph enrichment successful');
+        } else {
+          console.log('[addin-email-capture] Graph enrichment failed, falling back to metadata');
+        }
+      } else {
+        console.log('[addin-email-capture] No Graph token available, using metadata only');
+      }
+    }
+
+    // Build email data, enriching with Graph data when available
     const emailData = {
       user_uuid: tokenPayload.user_uuid,
       tenant_id: tenantId,
@@ -138,14 +169,23 @@ serve(async (req) => {
       subject: body.subject,
       sender_email: body.sender.email,
       sender_name: body.sender.name || null,
-      received_at: body.received_at,
-      body_preview: body.body_preview || null,
-      has_attachments: body.has_attachments || false,
+      received_at: graphEnrichment?.receivedDateTime || body.received_at,
+      body_preview: graphEnrichment?.bodyPreview || body.body_preview || null,
+      body_content: graphEnrichment?.body?.content || null,
+      body_content_type: graphEnrichment?.body?.contentType || null,
+      has_attachments: graphEnrichment?.hasAttachments ?? body.has_attachments ?? false,
       client_id: parseInt(body.link.client_id, 10),
       package_id: body.link.package_id ? parseInt(body.link.package_id, 10) : null,
       task_id: body.link.task_id || null,
       linked_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
+      // Graph-enriched fields
+      importance: graphEnrichment?.importance || null,
+      is_read: graphEnrichment?.isRead ?? null,
+      web_link: graphEnrichment?.webLink || null,
+      categories: graphEnrichment?.categories || null,
+      graph_enriched: graphEnriched,
+      graph_enriched_at: graphEnriched ? new Date().toISOString() : null,
     };
 
     const { data: emailRecord, error: insertError } = await supabaseAdmin
@@ -154,7 +194,7 @@ serve(async (req) => {
         onConflict: 'user_uuid,external_message_id',
         ignoreDuplicates: false,
       })
-      .select('id, external_message_id, subject, sender_email, sender_name, received_at, has_attachments, client_id, package_id, task_id')
+      .select('id, external_message_id, subject, sender_email, sender_name, received_at, has_attachments, client_id, package_id, task_id, body_preview, web_link, graph_enriched')
       .single();
 
     if (insertError) {
@@ -162,6 +202,31 @@ serve(async (req) => {
       return errorResponse(500, 'DATABASE_ERROR', 'Failed to save email record', { 
         detail: insertError.message 
       });
+    }
+
+    // If Graph returned attachments, store them
+    if (graphEnriched && graphEnrichment?.attachments && graphEnrichment.attachments.length > 0) {
+      const attachmentRecords = graphEnrichment.attachments.map(att => ({
+        email_message_id: emailRecord.id,
+        provider_attachment_id: att.id,
+        file_name: att.name,
+        content_type: att.contentType,
+        size: att.size,
+        is_inline: att.isInline ?? false,
+      }));
+
+      const { error: attError } = await supabaseAdmin
+        .from('email_attachments')
+        .upsert(attachmentRecords, {
+          onConflict: 'email_message_id,provider_attachment_id',
+          ignoreDuplicates: false,
+        });
+
+      if (attError) {
+        console.warn('[addin-email-capture] Failed to store attachments:', attError);
+      } else {
+        console.log(`[addin-email-capture] Stored ${attachmentRecords.length} attachments`);
+      }
     }
 
     // Log audit event
@@ -178,6 +243,7 @@ serve(async (req) => {
           task_id: body.link.task_id || null,
           subject: body.subject,
           idempotency_key: idempotencyKey,
+          graph_enriched: graphEnriched,
         },
       })
       .select('id')
@@ -187,7 +253,7 @@ serve(async (req) => {
       console.warn('[addin-email-capture] Audit log failed:', auditError);
     }
 
-    console.log('[addin-email-capture] Email captured successfully:', emailRecord.id);
+    console.log('[addin-email-capture] Email captured successfully:', emailRecord.id, { graph_enriched: graphEnriched });
 
     // Return success with new format
     return new Response(
@@ -203,8 +269,11 @@ serve(async (req) => {
           client_id: emailRecord.client_id,
           package_id: emailRecord.package_id,
           task_id: emailRecord.task_id,
+          body_preview: emailRecord.body_preview,
+          web_link: emailRecord.web_link,
         },
         status: isUpdate ? 'updated' : 'upserted',
+        graph_enriched: graphEnriched,
         audit_event_id: auditEvent?.id || null,
         links: {
           open_in_unicorn: `/clients/${body.link.client_id}?tab=emails`,
