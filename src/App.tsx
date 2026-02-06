@@ -97,8 +97,10 @@ import { ClientPreviewProvider } from "./contexts/ClientPreviewContext";
  const AdminManageStagesWrapper = lazy(() => import("./pages/AdminManageStagesWrapper"));
  const AdminStageDetailWrapper = lazy(() => import("./pages/AdminStageDetailWrapper"));
  const StageBuilder = lazy(() => import("./pages/StageBuilder"));
- const AdminStageAnalytics = lazy(() => import("./pages/AdminStageAnalytics"));
- const AdminOperations = lazy(() => import("./pages/AdminOperations"));
+const AdminStageAnalytics = lazy(() => import("./pages/AdminStageAnalytics"));
+const ProfileRedirect = lazy(() => import("./pages/ProfileRedirect"));
+const CalendarIntegrationWrapper = lazy(() => import("./pages/CalendarIntegrationWrapper"));
+const AdminOperations = lazy(() => import("./pages/AdminOperations"));
  const AdminCompliancePacks = lazy(() => import("./pages/AdminCompliancePacks"));
  const AdminReviews = lazy(() => import("./pages/AdminReviews"));
  const MyWork = lazy(() => import("./pages/MyWork"));
@@ -722,6 +724,22 @@ const App = () => (
               } 
             />
             <Route
+              path="/profile"
+              element={
+                <ProtectedRoute>
+                  <ProfileRedirect />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/settings/calendar"
+              element={
+                <ProtectedRoute>
+                  <CalendarIntegrationWrapper />
+                </ProtectedRoute>
+              }
+            />
+            <Route
               path="/settings/notifications" 
               element={
                 <ProtectedRoute>
@@ -730,7 +748,7 @@ const App = () => (
               } 
             />
             <Route 
-              path="/settings/integrations" 
+              path="/settings/integrations"
               element={
                 <ProtectedRoute>
                   <IntegrationSettings />

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -7,7 +8,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
-import { Upload, Save, Lock, Mail, User, Phone, Briefcase, Clock, Globe, MapPin, Calendar, CalendarClock } from 'lucide-react';
+import { Upload, Save, Lock, Mail, User, Phone, Briefcase, Clock, Globe, MapPin, Calendar, CalendarClock, ExternalLink } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectSeparator } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
@@ -664,6 +665,34 @@ export default function Settings() {
 
         {/* Time Capture Settings */}
         <TimeCaptureSettingsCard />
+
+        {/* Calendar Integration Link - only for team users */}
+        {teamUserData && (
+          <Card className="border-0 shadow-lg overflow-hidden animate-scale-in" style={{ animationDelay: '175ms' }}>
+            <div className="bg-muted/30 px-6 h-14 border-b border-border/50 flex items-center gap-2">
+              <Calendar className="h-5 w-5 text-muted-foreground" />
+              <h2 className="font-semibold">Calendar Integration</h2>
+            </div>
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <p className="text-base font-medium">
+                    Microsoft Outlook Calendar
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    Connect your calendar to capture time from meetings automatically
+                  </p>
+                </div>
+                <Button variant="outline" asChild>
+                  <Link to="/settings/calendar">
+                    <ExternalLink className="h-4 w-4 mr-2" />
+                    Configure
+                  </Link>
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Team Profile Section - only shows for team users */}
         {teamUserData && (
