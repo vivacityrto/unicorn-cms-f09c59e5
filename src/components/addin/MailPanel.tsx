@@ -144,12 +144,12 @@ export function MailPanel({ mailContext, user, tenantId }: MailPanelProps) {
     try {
       const result = await linkEmailAttachments(
         mailContext,
-        selectedClientId,
-        selectedPackageId || undefined
+        selectedClientId.toString(),
+        selectedPackageId?.toString() || undefined
       );
 
       setStatus('success');
-      setSuccessMessage(`${result.attachments_linked} attachment(s) linked!`);
+      setSuccessMessage(`${result.linked.length} attachment(s) linked!`);
       setDeepLink(result.links.open_client_documents);
     } catch (err) {
       setStatus('error');
