@@ -110,6 +110,13 @@ export function enforceVivacityTeamRole(tokenPayload: AddinTokenPayload): RBACRe
 /**
  * Verify user has access to the specified client/tenant
  */
+/**
+ * Verify user has access to the specified client/tenant
+ * Uses the consolidated has_tenant_access_safe RPC which checks:
+ * - SuperAdmin status (unicorn_role or global_role)
+ * - Vivacity Team membership (with archived check)
+ * - Active tenant_members entry (status = 'active')
+ */
 export async function verifyClientAccess(
   userUuid: string, 
   clientId: string | number,
@@ -119,74 +126,25 @@ export async function verifyClientAccess(
   
   const clientIdNum = typeof clientId === 'string' ? parseInt(clientId, 10) : clientId;
   
-  // Check if user has access via tenant_users or is Vivacity staff
-  const { data: access, error } = await supabaseAdmin.rpc('user_has_tenant_access', {
-    p_user_id: userUuid,
+  // Use the consolidated safe RPC for tenant access
+  const { data: hasAccess, error } = await supabaseAdmin.rpc('has_tenant_access_safe', {
     p_tenant_id: clientIdNum,
+    p_user_id: userUuid,
   });
 
   if (error) {
     console.error(`[${functionName}] Tenant access check error:`, error);
-    // Fall back to checking tenant_users directly
-    const { data: tenantUser, error: tenantError } = await supabaseAdmin
-      .from('tenant_users')
-      .select('id')
-      .eq('user_id', userUuid)
-      .eq('tenant_id', clientIdNum)
-      .maybeSingle();
-    
-    if (tenantError) {
-      console.error(`[${functionName}] Fallback tenant check error:`, tenantError);
-      return {
-        success: false,
-        error: {
-          status: 500,
-          code: 'DATABASE_ERROR',
-          message: 'Failed to verify client access',
-        },
-      };
-    }
-    
-    if (!tenantUser) {
-      // Also check if user is Vivacity staff (they have global access)
-      const { data: user, error: userError } = await supabaseAdmin
-        .from('users')
-        .select('unicorn_role, global_role')
-        .eq('user_uuid', userUuid)
-        .single();
-      
-      if (userError || !user) {
-        return {
-          success: false,
-          error: {
-            status: 403,
-            code: 'CLIENT_ACCESS_DENIED',
-            message: 'You do not have access to this client.',
-            details: { client_id: clientIdNum },
-          },
-        };
-      }
-      
-      const isStaff = isVivacityTeamRole(user.unicorn_role || '') || 
-                      isVivacityTeamRole(user.global_role || '');
-      
-      if (!isStaff) {
-        return {
-          success: false,
-          error: {
-            status: 403,
-            code: 'CLIENT_ACCESS_DENIED',
-            message: 'You do not have access to this client.',
-            details: { client_id: clientIdNum },
-          },
-        };
-      }
-    }
-    
-    return { success: true };
+    return {
+      success: false,
+      error: {
+        status: 500,
+        code: 'DATABASE_ERROR',
+        message: 'Failed to verify client access',
+      },
+    };
   }
 
-  if (!access) {
+  if (!hasAccess) {
     return {
       success: false,
       error: {
