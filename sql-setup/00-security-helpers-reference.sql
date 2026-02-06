@@ -1,0 +1,374 @@
+-- ============================================================================
+-- SECURITY HELPER FUNCTIONS REFERENCE
+-- ============================================================================
+-- 
+-- This file documents all RLS (Row Level Security) helper functions used
+-- throughout the Unicorn 2.0 platform. These functions are designed to be
+-- recursion-safe and should be used consistently in all RLS policies.
+--
+-- IMPORTANT: All helper functions use SECURITY DEFINER with SET row_security = off
+-- to prevent infinite recursion when called from RLS policies.
+--
+-- Last Updated: 2026-02-06
+-- ============================================================================
+
+
+-- ============================================================================
+-- CORE ROLE-CHECKING FUNCTIONS
+-- ============================================================================
+
+-- -----------------------------------------------------------------------------
+-- is_super_admin_safe(p_user_id uuid) -> boolean
+-- -----------------------------------------------------------------------------
+-- PURPOSE: Check if the specified user has Super Admin privileges
+-- 
+-- USE WHEN:
+--   - Granting unrestricted access to sensitive data
+--   - Allowing management of global system settings
+--   - Permitting cross-tenant data access
+--   - Enabling destructive operations (DELETE on protected tables)
+--
+-- RETURNS: true if user has 'Super Admin' role (checks both legacy 'global_role' 
+--          and current 'unicorn_role' columns)
+--
+-- EXAMPLE USAGE IN RLS POLICY:
+--   CREATE POLICY "superadmin_full_access" ON public.some_table
+--   FOR ALL TO authenticated
+--   USING (public.is_super_admin_safe(auth.uid()));
+--
+-- NOTES:
+--   - SuperAdmins bypass all tenant restrictions
+--   - Always check 'archived' flag to exclude deactivated accounts
+-- -----------------------------------------------------------------------------
+
+
+-- -----------------------------------------------------------------------------
+-- is_vivacity_team_safe(p_user_id uuid) -> boolean
+-- -----------------------------------------------------------------------------
+-- PURPOSE: Check if the specified user is an internal Vivacity staff member
+-- 
+-- USE WHEN:
+--   - Granting read access to cross-tenant data for internal operations
+--   - Allowing staff to manage client accounts
+--   - Enabling internal-only features (EOS modules, consulting workflows)
+--   - Permitting content management (Resource Hub, templates)
+--
+-- RETURNS: true if user has role 'Super Admin', 'Team Leader', or 'Team Member'
+--
+-- VALID ROLES:
+--   - 'Super Admin' - Full system access
+--   - 'Team Leader' - Operational management, team oversight
+--   - 'Team Member' - Core execution, client-facing work
+--
+-- EXAMPLE USAGE IN RLS POLICY:
+--   CREATE POLICY "staff_can_view" ON public.clients_legacy
+--   FOR SELECT TO authenticated
+--   USING (
+--     public.is_vivacity_team_safe(auth.uid())
+--     OR public.has_tenant_access_safe(tenant_id, auth.uid())
+--   );
+--
+-- NOTES:
+--   - Use this instead of is_super_admin_safe when Team Members should have access
+--   - EOS modules restrict access to Vivacity team only
+-- -----------------------------------------------------------------------------
+
+
+-- -----------------------------------------------------------------------------
+-- has_tenant_access_safe(p_tenant_id bigint, p_user_id uuid) -> boolean
+-- -----------------------------------------------------------------------------
+-- PURPOSE: Check if the specified user has access to a specific tenant
+-- 
+-- USE WHEN:
+--   - Enforcing tenant isolation for client data
+--   - Validating access before INSERT/UPDATE operations
+--   - Filtering SELECT results to user's tenant(s)
+--
+-- RETURNS: true if:
+--   - User is internal Vivacity staff (automatic cross-tenant access), OR
+--   - User has an active membership in tenant_members for the specified tenant
+--
+-- EXAMPLE USAGE IN RLS POLICY:
+--   CREATE POLICY "tenant_isolation" ON public.documents
+--   FOR SELECT TO authenticated
+--   USING (public.has_tenant_access_safe(tenant_id, auth.uid()));
+--
+-- NOTES:
+--   - Checks tenant_members.status = 'active' to exclude suspended users
+--   - Most common helper for tenant-scoped tables
+-- -----------------------------------------------------------------------------
+
+
+-- -----------------------------------------------------------------------------
+-- has_tenant_admin_safe(p_tenant_id bigint, p_user_id uuid) -> boolean
+-- -----------------------------------------------------------------------------
+-- PURPOSE: Check if the user has admin privileges within a specific tenant
+-- 
+-- USE WHEN:
+--   - Allowing tenant admins to manage their organization's users
+--   - Permitting configuration changes at the tenant level
+--   - Granting write access to tenant-specific settings
+--
+-- RETURNS: true if:
+--   - User is SuperAdmin/Vivacity staff, OR
+--   - User has role = 'admin' in tenant_members for the specified tenant
+--
+-- EXAMPLE USAGE IN RLS POLICY:
+--   CREATE POLICY "tenant_admin_manage_members" ON public.tenant_members
+--   FOR ALL TO authenticated
+--   USING (public.has_tenant_admin_safe(tenant_id, auth.uid()));
+--
+-- NOTES:
+--   - Use for operations that require elevated tenant privileges
+--   - Regular users ('user' role) should not pass this check
+-- -----------------------------------------------------------------------------
+
+
+-- ============================================================================
+-- DEPRECATED FUNCTIONS (DO NOT USE IN NEW POLICIES)
+-- ============================================================================
+-- 
+-- The following functions are deprecated and have been replaced by the 
+-- recursion-safe (*_safe) versions above. They may still exist in the database
+-- for backward compatibility but should NOT be used in new RLS policies.
+--
+-- DEPRECATED              | REPLACEMENT
+-- ------------------------|----------------------------------
+-- is_super_admin()        | is_super_admin_safe(auth.uid())
+-- is_staff()              | is_vivacity_team_safe(auth.uid())
+-- is_vivacity_team()      | is_vivacity_team_safe(auth.uid())
+-- is_vivacity_team_user() | is_vivacity_team_safe(auth.uid())
+-- user_in_tenant(tid)     | has_tenant_access_safe(tid, auth.uid())
+-- user_has_tenant_access()| has_tenant_access_safe(tid, auth.uid())
+--
+-- ============================================================================
+
+
+-- ============================================================================
+-- POLICY PATTERNS & BEST PRACTICES
+-- ============================================================================
+
+-- -----------------------------------------------------------------------------
+-- PATTERN 1: Standard Tenant-Scoped Table
+-- -----------------------------------------------------------------------------
+-- For tables with a direct tenant_id column where:
+-- - SuperAdmins and staff can view all records
+-- - Clients can only view records in their tenant
+-- - Management (INSERT/UPDATE/DELETE) requires tenant access
+--
+-- Example:
+--   DROP POLICY IF EXISTS "table_select" ON public.my_table;
+--   DROP POLICY IF EXISTS "table_manage" ON public.my_table;
+--
+--   CREATE POLICY "table_select" ON public.my_table
+--   FOR SELECT TO authenticated
+--   USING (
+--     public.is_super_admin_safe(auth.uid())
+--     OR public.is_vivacity_team_safe(auth.uid())
+--     OR public.has_tenant_access_safe(tenant_id, auth.uid())
+--   );
+--
+--   CREATE POLICY "table_manage" ON public.my_table
+--   FOR ALL TO authenticated
+--   USING (
+--     public.is_super_admin_safe(auth.uid())
+--     OR public.is_vivacity_team_safe(auth.uid())
+--     OR public.has_tenant_access_safe(tenant_id, auth.uid())
+--   )
+--   WITH CHECK (
+--     public.is_super_admin_safe(auth.uid())
+--     OR public.is_vivacity_team_safe(auth.uid())
+--     OR public.has_tenant_access_safe(tenant_id, auth.uid())
+--   );
+
+
+-- -----------------------------------------------------------------------------
+-- PATTERN 2: User-Owned Records (No tenant_id)
+-- -----------------------------------------------------------------------------
+-- For tables where records belong to individual users (e.g., auth_tokens, threads)
+--
+-- Example:
+--   CREATE POLICY "user_owned_select" ON public.assistant_threads
+--   FOR SELECT TO authenticated
+--   USING (
+--     public.is_super_admin_safe(auth.uid())
+--     OR viewer_user_id = auth.uid()
+--   );
+--
+--   CREATE POLICY "user_owned_manage" ON public.assistant_threads
+--   FOR ALL TO authenticated
+--   USING (viewer_user_id = auth.uid())
+--   WITH CHECK (viewer_user_id = auth.uid());
+
+
+-- -----------------------------------------------------------------------------
+-- PATTERN 3: Global Reference/Lookup Tables
+-- -----------------------------------------------------------------------------
+-- For tables that contain shared reference data (e.g., packages, compliance_frameworks)
+-- - Everyone can read
+-- - Only SuperAdmins/staff can write
+--
+-- Example:
+--   CREATE POLICY "reference_select" ON public.packages
+--   FOR SELECT TO authenticated
+--   USING (true);
+--
+--   CREATE POLICY "reference_manage" ON public.packages
+--   FOR ALL TO authenticated
+--   USING (
+--     public.is_super_admin_safe(auth.uid())
+--     OR public.is_vivacity_team_safe(auth.uid())
+--   )
+--   WITH CHECK (
+--     public.is_super_admin_safe(auth.uid())
+--     OR public.is_vivacity_team_safe(auth.uid())
+--   );
+
+
+-- -----------------------------------------------------------------------------
+-- PATTERN 4: Child Tables (Linked via Parent)
+-- -----------------------------------------------------------------------------
+-- For tables without tenant_id that link to a parent table with tenant_id
+--
+-- Example:
+--   CREATE POLICY "child_select" ON public.document_versions
+--   FOR SELECT TO authenticated
+--   USING (
+--     public.is_super_admin_safe(auth.uid())
+--     OR public.is_vivacity_team_safe(auth.uid())
+--     OR EXISTS (
+--       SELECT 1 FROM public.documents d
+--       WHERE d.id = document_versions.document_id
+--       AND public.has_tenant_access_safe(d.tenant_id, auth.uid())
+--     )
+--   );
+
+
+-- -----------------------------------------------------------------------------
+-- PATTERN 5: Audit/Logging Tables (Insert-Only for Users)
+-- -----------------------------------------------------------------------------
+-- For audit tables where users can insert their own actions but only admins can read
+--
+-- Example:
+--   CREATE POLICY "audit_select" ON public.audit_events
+--   FOR SELECT TO authenticated
+--   USING (
+--     public.is_super_admin_safe(auth.uid())
+--     OR public.is_vivacity_team_safe(auth.uid())
+--   );
+--
+--   CREATE POLICY "audit_insert" ON public.audit_events
+--   FOR INSERT TO authenticated
+--   WITH CHECK (user_id = auth.uid());
+
+
+-- -----------------------------------------------------------------------------
+-- PATTERN 6: Staff-Only Tables
+-- -----------------------------------------------------------------------------
+-- For internal tables that clients should never access
+--
+-- Example:
+--   CREATE POLICY "staff_only" ON public.clickup_tasks
+--   FOR ALL TO authenticated
+--   USING (
+--     public.is_super_admin_safe(auth.uid())
+--     OR public.is_vivacity_team_safe(auth.uid())
+--   )
+--   WITH CHECK (
+--     public.is_super_admin_safe(auth.uid())
+--     OR public.is_vivacity_team_safe(auth.uid())
+--   );
+
+
+-- ============================================================================
+-- SECURITY CONSIDERATIONS
+-- ============================================================================
+--
+-- 1. ALWAYS use the *_safe functions in RLS policies to prevent recursion
+--
+-- 2. NEVER use SELECT queries on the same table within its RLS policy
+--    (this causes infinite recursion)
+--
+-- 3. For tables with user_id or similar ownership columns, ALWAYS validate
+--    that the user is setting themselves as the owner on INSERT:
+--    WITH CHECK (created_by = auth.uid())
+--
+-- 4. SuperAdmin checks should typically come FIRST in OR chains for performance
+--
+-- 5. When joining to parent tables for tenant access, use EXISTS for efficiency
+--
+-- 6. System tables used by edge functions (oauth_states) may need permissive
+--    policies since service_role bypasses RLS anyway
+--
+-- 7. All helper functions are defined with:
+--    - SECURITY DEFINER: Runs with creator's privileges
+--    - SET row_security = off: Bypasses RLS for internal queries
+--    - SET search_path = public: Prevents search_path injection
+--
+-- ============================================================================
+
+
+-- ============================================================================
+-- FUNCTION DEFINITIONS (For Reference)
+-- ============================================================================
+-- 
+-- The actual function implementations are in the migrations. Below are the
+-- signatures for documentation purposes:
+--
+-- CREATE OR REPLACE FUNCTION public.is_super_admin_safe(p_user_id uuid)
+-- RETURNS boolean
+-- LANGUAGE sql
+-- STABLE
+-- SECURITY DEFINER
+-- SET row_security = off
+-- SET search_path = public
+-- AS $$
+--   SELECT EXISTS (
+--     SELECT 1 FROM public.users
+--     WHERE user_uuid = p_user_id
+--     AND archived = false
+--     AND (
+--       global_role = 'SuperAdmin' 
+--       OR unicorn_role = 'Super Admin'
+--     )
+--   );
+-- $$;
+--
+-- CREATE OR REPLACE FUNCTION public.is_vivacity_team_safe(p_user_id uuid)
+-- RETURNS boolean
+-- LANGUAGE sql
+-- STABLE
+-- SECURITY DEFINER
+-- SET row_security = off
+-- SET search_path = public
+-- AS $$
+--   SELECT EXISTS (
+--     SELECT 1 FROM public.users
+--     WHERE user_uuid = p_user_id
+--     AND archived = false
+--     AND unicorn_role IN ('Super Admin', 'Team Leader', 'Team Member')
+--   );
+-- $$;
+--
+-- CREATE OR REPLACE FUNCTION public.has_tenant_access_safe(
+--   p_tenant_id bigint,
+--   p_user_id uuid
+-- )
+-- RETURNS boolean
+-- LANGUAGE sql
+-- STABLE
+-- SECURITY DEFINER
+-- SET row_security = off
+-- SET search_path = public
+-- AS $$
+--   SELECT 
+--     public.is_vivacity_team_safe(p_user_id)
+--     OR EXISTS (
+--       SELECT 1 FROM public.tenant_members
+--       WHERE tenant_id = p_tenant_id
+--       AND user_id = p_user_id
+--       AND status = 'active'
+--     );
+-- $$;
+--
+-- ============================================================================
