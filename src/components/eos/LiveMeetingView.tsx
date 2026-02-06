@@ -18,7 +18,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { 
   Play, SkipForward, SkipBack, CheckCircle, Clock, Users, X, Target, 
   TrendingUp, AlertCircle, ListTodo, MessageSquare, Sparkles,
-  ArrowRight, Timer, PlayCircle, Star
+  ArrowRight, Timer, PlayCircle, Star, LogOut, Eye
 } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { useEosRocks, useEosScorecardMetrics } from '@/hooks/useEos';
@@ -635,11 +635,23 @@ export const LiveMeetingView = () => {
       {/* Header */}
       <div className="border-b bg-card p-4 shrink-0">
         <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold">{meeting.title}</h1>
-            <p className="text-muted-foreground text-sm">
-              {new Date(meeting.scheduled_date).toLocaleString()} • {meeting.meeting_type} Meeting
-            </p>
+          <div className="flex items-center gap-4">
+            {/* Leave/Back button - always visible */}
+            <Button 
+              variant="ghost" 
+              size="sm"
+              onClick={() => navigate('/eos/meetings')}
+              className="gap-2"
+            >
+              <LogOut className="h-4 w-4" />
+              Leave Meeting
+            </Button>
+            <div className="border-l pl-4">
+              <h1 className="text-2xl font-bold">{meeting.title}</h1>
+              <p className="text-muted-foreground text-sm">
+                {new Date(meeting.scheduled_date).toLocaleString()} • {meeting.meeting_type} Meeting
+              </p>
+            </div>
           </div>
           <div className="flex items-center gap-4">
             <OnlineUsersIndicator onlineUsers={onlineUsers} attendees={attendees} />
@@ -770,29 +782,55 @@ export const LiveMeetingView = () => {
         {/* Center: Main Content */}
         <div className="flex-1 overflow-y-auto p-6">
           <div className="max-w-3xl mx-auto space-y-6">
-            {/* Not started state */}
+            {/* Not started state - viewing mode */}
             {!meetingStarted && (
-              <Card className="p-8 text-center">
-                <PlayCircle className="h-16 w-16 mx-auto mb-4 text-primary" />
-                <h2 className="text-xl font-bold mb-2">Ready to Start</h2>
-                <p className="text-muted-foreground mb-6">
-                  This {meeting.meeting_type} meeting has {segments.length} agenda segments 
-                  ({segments.reduce((sum, s) => sum + s.duration_minutes, 0)} minutes total).
-                </p>
-                {isFacilitator ? (
-                  <Button 
-                    size="lg"
-                    onClick={() => setFacilitatorDialogOpen(true)}
-                  >
-                    <Play className="h-5 w-5 mr-2" />
-                    Start Meeting
-                  </Button>
-                ) : (
-                  <p className="text-sm text-muted-foreground">
-                    Waiting for the facilitator to start the meeting...
+              <div className="space-y-6">
+                <Card className="p-8 text-center">
+                  <Eye className="h-16 w-16 mx-auto mb-4 text-primary" />
+                  <h2 className="text-xl font-bold mb-2">Meeting Preview</h2>
+                  <p className="text-muted-foreground mb-6">
+                    This {meeting.meeting_type} meeting has {segments.length} agenda segments 
+                    ({segments.reduce((sum, s) => sum + s.duration_minutes, 0)} minutes total).
                   </p>
-                )}
-              </Card>
+                  {isFacilitator ? (
+                    <Button 
+                      size="lg"
+                      onClick={() => setFacilitatorDialogOpen(true)}
+                    >
+                      <Play className="h-5 w-5 mr-2" />
+                      Start Meeting
+                    </Button>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">
+                      Waiting for the facilitator to start the meeting...
+                    </p>
+                  )}
+                </Card>
+                
+                {/* Preview of agenda segments */}
+                <Card className="p-6">
+                  <h3 className="font-semibold mb-4 flex items-center gap-2">
+                    <ListTodo className="h-5 w-5 text-primary" />
+                    Agenda Overview
+                  </h3>
+                  <div className="space-y-3">
+                    {segments.map((segment, idx) => (
+                      <div key={segment.id} className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
+                        <div className="w-6 h-6 rounded-full bg-muted flex items-center justify-center text-xs font-medium">
+                          {idx + 1}
+                        </div>
+                        <div className="flex-1">
+                          <p className="font-medium text-sm">{segment.segment_name}</p>
+                        </div>
+                        <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                          <Clock className="h-3 w-3" />
+                          {segment.duration_minutes} min
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </Card>
+              </div>
             )}
 
             {/* Current Segment Header */}
