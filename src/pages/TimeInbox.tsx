@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { format, differenceInMinutes } from 'date-fns';
-import { Inbox, Clock, Calendar, Check, X, Edit, ChevronDown, Filter, Users, Building2, DollarSign, FileText, Sparkles, AlertCircle, RefreshCw, Package, Wand2, AlarmClock } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { Inbox, Clock, Calendar, Check, X, Edit, ChevronDown, Filter, Users, Building2, DollarSign, FileText, Sparkles, AlertCircle, RefreshCw, Package, Wand2, AlarmClock, Settings } from 'lucide-react';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -16,17 +17,18 @@ import { Switch } from '@/components/ui/switch';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator, DropdownMenuLabel } from '@/components/ui/dropdown-menu';
 import { useTimeInbox, TimeDraftRow, DateFilter, ConfidenceFilter } from '@/hooks/useTimeInbox';
+import { useOutlookConnectionStatus } from '@/hooks/useOutlookConnectionStatus';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 
 function ConfidenceBadge({ confidence }: { confidence: number }) {
   if (confidence >= 0.85) {
-    return <Badge variant="default" className="bg-green-600">High</Badge>;
+    return <Badge variant="default" className="bg-primary">High</Badge>;
   } else if (confidence >= 0.5) {
     return <Badge variant="secondary">Medium</Badge>;
   } else {
-    return <Badge variant="outline" className="text-amber-600 border-amber-600">Low</Badge>;
+    return <Badge variant="outline" className="text-warning border-warning">Low</Badge>;
   }
 }
 
@@ -62,8 +64,16 @@ export default function TimeInbox() {
     clearSelection
   } = useTimeInbox();
 
-  // Sync state
-  const [syncing, setSyncing] = useState(false);
+  // Outlook connection status (owned by Profile Settings)
+  const { 
+    isConnected: outlookConnected, 
+    isLoading: outlookLoading,
+    connectionStatus,
+    sync: syncOutlook,
+    isSyncing: syncing
+  } = useOutlookConnectionStatus();
+
+  // Local sync result state
   const [lastSync, setLastSync] = useState<{ time: Date; created: number; updated: number; skipped: number } | null>(null);
 
   // Drawer state
@@ -125,28 +135,19 @@ export default function TimeInbox() {
     }
   };
 
-  const handleSyncOutlook = async () => {
-    setSyncing(true);
-    try {
-      const { data, error } = await supabase.functions.invoke('sync-outlook-calendar');
-      
-      if (error) {
-        if (error.message?.includes('Not connected') || error.message?.includes('Token expired')) {
-          toast({ 
-            title: 'Outlook not connected', 
-            description: 'Please reconnect your Outlook calendar in Settings.',
-            variant: 'destructive'
-          });
-        } else {
-          toast({ 
-            title: 'Sync failed', 
-            description: error.message,
-            variant: 'destructive'
-          });
-        }
-        return;
-      }
+  const handleRefreshDrafts = async () => {
+    if (!outlookConnected) {
+      toast({ 
+        title: 'Outlook not connected', 
+        description: 'Connect your Outlook calendar in Profile Settings.',
+        variant: 'destructive'
+      });
+      return;
+    }
 
+    try {
+      const data = await syncOutlook();
+      
       setLastSync({
         time: new Date(),
         created: data?.synced || 0,
@@ -157,13 +158,11 @@ export default function TimeInbox() {
       // Trigger draft worker after calendar sync
       await supabase.functions.invoke('outlook-time-draft-worker');
       
-      toast({ title: 'Outlook synced', description: `${data?.synced || 0} events processed` });
+      toast({ title: 'Drafts refreshed', description: `${data?.synced || 0} events processed` });
       fetchDrafts();
     } catch (err) {
-      console.error('[TimeInbox] Sync error:', err);
-      toast({ title: 'Sync failed', variant: 'destructive' });
-    } finally {
-      setSyncing(false);
+      console.error('[TimeInbox] Refresh error:', err);
+      // Error toast handled by hook
     }
   };
 
@@ -374,17 +373,36 @@ export default function TimeInbox() {
               </div>
 
               <div className="ml-auto flex items-center gap-3">
-                {lastSync && (
-                  <span className="text-xs text-muted-foreground">
-                    Last sync: {format(lastSync.time, 'h:mm a')} ({lastSync.created} synced)
-                  </span>
+                {/* Show connection status or last sync */}
+                {outlookConnected ? (
+                  <>
+                    {connectionStatus?.last_synced_at && (
+                      <span className="text-xs text-muted-foreground">
+                        Last sync: {format(new Date(connectionStatus.last_synced_at), 'h:mm a')}
+                      </span>
+                    )}
+                    <Button variant="outline" size="sm" onClick={handleRefreshDrafts} disabled={syncing}>
+                      <RefreshCw className={`h-4 w-4 mr-1 ${syncing ? 'animate-spin' : ''}`} />
+                      {syncing ? 'Refreshing...' : 'Refresh Drafts'}
+                    </Button>
+                  </>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-muted-foreground flex items-center gap-1">
+                      <AlertCircle className="h-3 w-3" />
+                      Outlook not connected
+                    </span>
+                    <Button variant="outline" size="sm" asChild>
+                      <Link to="/profile">
+                        <Settings className="h-4 w-4 mr-1" />
+                        Connect in Settings
+                      </Link>
+                    </Button>
+                  </div>
                 )}
-                <Button variant="outline" size="sm" onClick={handleSyncOutlook} disabled={syncing}>
-                  <RefreshCw className={`h-4 w-4 mr-1 ${syncing ? 'animate-spin' : ''}`} />
-                  {syncing ? 'Syncing...' : 'Sync Outlook'}
-                </Button>
                 <Button variant="outline" size="sm" onClick={fetchDrafts}>
-                  Refresh
+                  <RefreshCw className="h-4 w-4 mr-1" />
+                  Refresh List
                 </Button>
               </div>
             </div>
@@ -538,7 +556,7 @@ export default function TimeInbox() {
                                 <TooltipTrigger asChild>
                                   <Badge 
                                     variant="outline" 
-                                    className="flex items-center gap-1 border-purple-500 text-purple-600 cursor-pointer hover:bg-purple-50"
+                                    className="flex items-center gap-1 border-accent text-accent-foreground cursor-pointer hover:bg-accent/10"
                                     onClick={(e) => {
                                       e.stopPropagation();
                                       applySuggestion(draft.id);
@@ -553,7 +571,7 @@ export default function TimeInbox() {
                                 </TooltipContent>
                               </Tooltip>
                             ) : (
-                              <Badge variant="outline" className="text-amber-600 border-amber-600">
+                              <Badge variant="outline" className="text-warning border-warning">
                                 No client
                               </Badge>
                             )}
@@ -575,7 +593,7 @@ export default function TimeInbox() {
                             <Button 
                               size="icon" 
                               variant="ghost" 
-                              className="text-green-600 hover:text-green-700"
+                              className="text-primary hover:text-primary/80"
                               onClick={() => postDraft(draft.id)}
                               disabled={!draft.client_id}
                             >
@@ -589,7 +607,7 @@ export default function TimeInbox() {
                             <Button 
                               size="icon" 
                               variant="ghost" 
-                              className="text-amber-600 hover:text-amber-700"
+                              className="text-muted-foreground hover:text-foreground"
                               onClick={() => {
                                 const tomorrow = new Date();
                                 tomorrow.setDate(tomorrow.getDate() + 1);
@@ -606,7 +624,7 @@ export default function TimeInbox() {
                             <Button 
                               size="icon" 
                               variant="ghost" 
-                              className="text-red-600 hover:text-red-700"
+                              className="text-destructive hover:text-destructive/80"
                               onClick={() => discardDraft(draft.id)}
                             >
                               <X className="h-4 w-4" />
