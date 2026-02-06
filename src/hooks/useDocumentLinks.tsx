@@ -24,8 +24,18 @@ export interface DocumentLink {
   evidence_type: string | null;
   notes: string | null;
   version_confirmed_at: string | null;
+  source_type: string | null;
+  source_email_id: string | null;
   created_at: string;
   updated_at: string;
+}
+
+export interface EmailAttachmentInput {
+  file_name: string;
+  mime_type?: string;
+  size?: number;
+  source_url?: string;
+  provider_item_id?: string;
 }
 
 export interface Drive {
@@ -62,6 +72,17 @@ interface LinkDocumentParams {
   meeting_id?: string;
   evidence_type?: string;
   notes?: string;
+}
+
+interface LinkEmailAttachmentsParams {
+  client_id: number;
+  package_id?: number;
+  task_id?: string;
+  evidence_type?: string;
+  notes?: string;
+  external_message_id?: string;
+  email_message_id?: string;
+  attachment_list: EmailAttachmentInput[];
 }
 
 interface UseDocumentLinksOptions {
@@ -175,6 +196,29 @@ export function useDocumentLinks(options?: UseDocumentLinksOptions) {
     },
   });
 
+  // Link email attachments mutation
+  const linkEmailAttachmentsMutation = useMutation({
+    mutationFn: async (params: LinkEmailAttachmentsParams) => {
+      const { data, error } = await supabase.functions.invoke("link-sharepoint-document", {
+        body: { action: "link-email-attachments", ...params },
+      });
+
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+
+      return data;
+    },
+    onSuccess: (data) => {
+      const count = data?.linkedCount || 0;
+      toast.success(`${count} attachment${count !== 1 ? 's' : ''} linked successfully`);
+      queryClient.invalidateQueries({ queryKey: ["document-links"] });
+    },
+    onError: (error: Error) => {
+      console.error("Link email attachments error:", error);
+      toast.error(error.message || "Failed to link attachments");
+    },
+  });
+
   return {
     documents: documents || [],
     isLoading,
@@ -186,6 +230,8 @@ export function useDocumentLinks(options?: UseDocumentLinksOptions) {
     isCheckingVersion: checkVersionMutation.isPending,
     confirmVersion: confirmVersionMutation.mutate,
     isConfirmingVersion: confirmVersionMutation.isPending,
+    linkEmailAttachments: linkEmailAttachmentsMutation.mutate,
+    isLinkingEmailAttachments: linkEmailAttachmentsMutation.isPending,
   };
 }
 
