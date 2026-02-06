@@ -1,32 +1,34 @@
 
-
-# RLS Standardization: meetings Table
+# RLS Standardization: meeting_participants Table
 
 ## Current State
-- **Table**: `public.meetings`
+- **Table**: `public.meeting_participants`
 - **RLS**: Already enabled
 - **Existing Policies** (4 total, using legacy patterns):
 
 | Policy Name | Operation | Logic |
 |-------------|-----------|-------|
-| `Users can view own meetings` | SELECT | `owner_user_uuid = auth.uid()` |
-| `Users can view shared meetings` | SELECT | EXISTS check on `calendar_shares` |
-| `Users can insert own meetings` | INSERT | `owner_user_uuid = auth.uid()` |
-| `Users can update own meetings` | UPDATE | `owner_user_uuid = auth.uid()` |
+| `Users can view participants of own meetings` | SELECT | EXISTS check on parent meeting ownership |
+| `Users can view participants of shared meetings with details` | SELECT | EXISTS check with `cs.scope = 'details'` |
+| `Users can insert participants to own meetings` | INSERT | EXISTS check on parent meeting ownership |
+| `Users can delete participants from own meetings` | DELETE | EXISTS check on parent meeting ownership |
 
-**Missing**: No SuperAdmin access, no DELETE policy, INSERT doesn't check tenant access, UPDATE doesn't support shared manage permission.
+**Missing**: No SuperAdmin access, no UPDATE policy, SELECT scope restriction differs from spec.
 
 ---
 
 ## Schema Discovery
 
-### calendar_shares table columns:
+### meeting_participants columns:
 | Column | Type | Notes |
 |--------|------|-------|
-| `permission` | text | Values: `view`, `manage` |
-| `scope` | text | Values: `busy_only`, `details` (controls event detail visibility) |
-
-The spec correctly references `permission` for access control (view/manage) and `scope` for data redaction (busy_only/details).
+| `id` | uuid | PK, auto-generated |
+| `meeting_id` | uuid | FK to meetings |
+| `participant_email` | text | Required |
+| `participant_name` | text | Nullable |
+| `participant_type` | text | Default 'required' |
+| `attended` | boolean | Nullable |
+| `created_at` | timestamptz | Auto-generated |
 
 ---
 
@@ -39,104 +41,114 @@ Remove 4 legacy policies to replace with standardized versions.
 
 | Operation | Policy Name | Logic |
 |-----------|-------------|-------|
-| **SELECT** | `meetings_select` | Owner OR shared viewer OR SuperAdmin |
-| **INSERT** | `meetings_insert` | Owner with tenant access |
-| **UPDATE** | `meetings_update` | Owner OR shared manage OR SuperAdmin |
-| **DELETE** | `meetings_delete` | SuperAdmin only |
+| **SELECT** | `meeting_participants_select` | Access via parent meeting OR SuperAdmin |
+| **INSERT** | `meeting_participants_insert` | Meeting owner only |
+| **UPDATE** | `meeting_participants_update` | Meeting owner OR SuperAdmin |
+| **DELETE** | `meeting_participants_delete` | Meeting owner OR SuperAdmin |
 
 ### 3. Policy Definitions
 
-**SELECT** — Owner, shared viewer, or SuperAdmin
+**SELECT** — Via parent meeting access (owner, shared viewer) or SuperAdmin
 ```sql
-CREATE POLICY "meetings_select"
-ON public.meetings
+CREATE POLICY "meeting_participants_select"
+ON public.meeting_participants
 FOR SELECT TO authenticated
 USING (
-  owner_user_uuid = auth.uid()
-  OR EXISTS (
-    SELECT 1 FROM public.calendar_shares cs
-    WHERE cs.owner_user_uuid = meetings.owner_user_uuid
-      AND cs.viewer_user_uuid = auth.uid()
+  EXISTS (
+    SELECT 1 FROM public.meetings m
+    WHERE m.id = meeting_participants.meeting_id
+      AND (
+        m.owner_user_uuid = auth.uid()
+        OR EXISTS (
+          SELECT 1 FROM public.calendar_shares cs
+          WHERE cs.owner_user_uuid = m.owner_user_uuid
+            AND cs.viewer_user_uuid = auth.uid()
+        )
+      )
   )
   OR public.is_super_admin_safe(auth.uid())
 );
 ```
 
-**INSERT** — Owner with tenant access
+**INSERT** — Meeting owner only
 ```sql
-CREATE POLICY "meetings_insert"
-ON public.meetings
+CREATE POLICY "meeting_participants_insert"
+ON public.meeting_participants
 FOR INSERT TO authenticated
 WITH CHECK (
-  owner_user_uuid = auth.uid()
-  AND public.has_tenant_access_safe(tenant_id, auth.uid())
+  EXISTS (
+    SELECT 1 FROM public.meetings m
+    WHERE m.id = meeting_participants.meeting_id
+      AND m.owner_user_uuid = auth.uid()
+  )
 );
 ```
 
-**UPDATE** — Owner, shared manage permission, or SuperAdmin
+**UPDATE** — Meeting owner or SuperAdmin
 ```sql
-CREATE POLICY "meetings_update"
-ON public.meetings
+CREATE POLICY "meeting_participants_update"
+ON public.meeting_participants
 FOR UPDATE TO authenticated
 USING (
-  owner_user_uuid = auth.uid()
-  OR EXISTS (
-    SELECT 1 FROM public.calendar_shares cs
-    WHERE cs.owner_user_uuid = meetings.owner_user_uuid
-      AND cs.viewer_user_uuid = auth.uid()
-      AND cs.permission = 'manage'
+  EXISTS (
+    SELECT 1 FROM public.meetings m
+    WHERE m.id = meeting_participants.meeting_id
+      AND m.owner_user_uuid = auth.uid()
   )
   OR public.is_super_admin_safe(auth.uid())
 )
 WITH CHECK (
-  owner_user_uuid = auth.uid()
-  OR EXISTS (
-    SELECT 1 FROM public.calendar_shares cs
-    WHERE cs.owner_user_uuid = meetings.owner_user_uuid
-      AND cs.viewer_user_uuid = auth.uid()
-      AND cs.permission = 'manage'
+  EXISTS (
+    SELECT 1 FROM public.meetings m
+    WHERE m.id = meeting_participants.meeting_id
+      AND m.owner_user_uuid = auth.uid()
   )
   OR public.is_super_admin_safe(auth.uid())
 );
 ```
 
-**DELETE** — SuperAdmin only
+**DELETE** — Meeting owner or SuperAdmin
 ```sql
-CREATE POLICY "meetings_delete"
-ON public.meetings
+CREATE POLICY "meeting_participants_delete"
+ON public.meeting_participants
 FOR DELETE TO authenticated
-USING (public.is_super_admin_safe(auth.uid()));
+USING (
+  EXISTS (
+    SELECT 1 FROM public.meetings m
+    WHERE m.id = meeting_participants.meeting_id
+      AND m.owner_user_uuid = auth.uid()
+  )
+  OR public.is_super_admin_safe(auth.uid())
+);
 ```
 
 ---
 
 ## Technical Details
 
-### Shared Calendar Access
-The `calendar_shares` table uses:
-- **`permission`**: Controls access level (`view` = read-only, `manage` = read/write)
-- **`scope`**: Controls data visibility (`busy_only` = redacted, `details` = full)
+### Parent Table Access Pattern
+All policies use `EXISTS` subqueries to check access through the parent `meetings` table. This is Pattern 4 (Child Tables) from the security helpers.
 
-The RLS policies check `permission` for access control. The `scope` column is used by the `calendar_events_shared` view for data redaction per the memory context.
+### Scope Restriction Removed
+The current SELECT policy for shared meetings restricts to `cs.scope = 'details'`. Your spec removes this restriction, allowing any shared viewer to see participants (not just those with `details` scope). This aligns with the general meeting sharing model.
 
-### Tenant Access Validation
-The INSERT policy uses `has_tenant_access_safe(tenant_id, auth.uid())` to ensure users can only create meetings for tenants they belong to.
+### SuperAdmin Access Added
+All operations now include SuperAdmin access via `is_super_admin_safe()`, which was missing from all existing policies.
 
-### UPDATE Ownership Protection
-Your spec mentions `WITH CHECK (owner_user_uuid = meetings.owner_user_uuid)` to prevent ownership changes. However, this syntax references the current row value which is valid in WITH CHECK. The policy prevents changing ownership while allowing other field updates.
+### UPDATE Policy Added
+Previously missing - now meeting owners and SuperAdmins can update participant records (e.g., mark attendance).
 
 ---
 
 ## Migration Summary
 A single migration will:
 1. Drop 4 existing legacy policies
-2. Create 4 standardized policies using `*_safe` functions
+2. Create 4 standardized policies using `is_super_admin_safe()`
 
 ---
 
 ## Impact Assessment
-- **Calendar sharing fully supported** — Both view and manage permissions respected
 - **SuperAdmin access added** — Was missing from all operations
-- **DELETE policy added** — Previously missing (restricted to SuperAdmin)
-- **Tenant isolation enforced** — INSERT now validates tenant access
-
+- **UPDATE policy added** — Previously missing (meeting owner or SuperAdmin)
+- **Shared viewer access simplified** — Removed `scope = 'details'` restriction
+- **No code changes needed** — RLS is transparent to the frontend
