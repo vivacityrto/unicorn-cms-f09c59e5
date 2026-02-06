@@ -98,8 +98,6 @@ import { ClientPreviewProvider } from "./contexts/ClientPreviewContext";
  const AdminStageDetailWrapper = lazy(() => import("./pages/AdminStageDetailWrapper"));
  const StageBuilder = lazy(() => import("./pages/StageBuilder"));
 const AdminStageAnalytics = lazy(() => import("./pages/AdminStageAnalytics"));
-const ProfileRedirect = lazy(() => import("./pages/ProfileRedirect"));
-const CalendarIntegrationWrapper = lazy(() => import("./pages/CalendarIntegrationWrapper"));
 const AdminOperations = lazy(() => import("./pages/AdminOperations"));
  const AdminCompliancePacks = lazy(() => import("./pages/AdminCompliancePacks"));
  const AdminReviews = lazy(() => import("./pages/AdminReviews"));
@@ -727,7 +725,7 @@ const App = () => (
               path="/profile"
               element={
                 <ProtectedRoute>
-                  <ProfileRedirect />
+                  <Navigate to="/settings?tab=profile" replace />
                 </ProtectedRoute>
               }
             />
@@ -735,7 +733,7 @@ const App = () => (
               path="/settings/calendar"
               element={
                 <ProtectedRoute>
-                  <CalendarIntegrationWrapper />
+                  <Navigate to="/settings?tab=calendar" replace />
                 </ProtectedRoute>
               }
             />

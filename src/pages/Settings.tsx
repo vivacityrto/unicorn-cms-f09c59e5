@@ -1,126 +1,28 @@
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Card, CardContent } from '@/components/ui/card';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
-import { Upload, Save, Lock, Mail, User, Phone, Briefcase, Clock, Globe, MapPin, Calendar, CalendarClock, ExternalLink } from 'lucide-react';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectSeparator } from '@/components/ui/select';
-import { Textarea } from '@/components/ui/textarea';
-import { Switch } from '@/components/ui/switch';
-import { TeamProfileFields } from '@/components/profile/TeamProfileFields';
-import { useTimeCaptureSettings } from '@/hooks/useTimeCaptureSettings';
+import { useRBAC } from '@/hooks/useRBAC';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { User, Clock, Calendar, Users, Shield } from 'lucide-react';
+import { ProfileTab } from '@/components/settings/ProfileTab';
+import { TimeCaptureTab } from '@/components/settings/TimeCaptureTab';
+import { CalendarTab } from '@/components/settings/CalendarTab';
+import { TeamProfileTab } from '@/components/settings/TeamProfileTab';
+import { AdminActionsTab } from '@/components/settings/AdminActionsTab';
 
-// Time Capture Settings Card Component
-function TimeCaptureSettingsCard() {
-  const { settings, loading, saving, updateSettings } = useTimeCaptureSettings();
-
-  if (loading) {
-    return (
-      <Card className="border-0 shadow-lg overflow-hidden animate-scale-in" style={{ animationDelay: '150ms' }}>
-        <div className="bg-muted/30 px-6 h-14 border-b border-border/50 flex items-center">
-          <h2 className="font-semibold">Time Capture Settings</h2>
-        </div>
-        <CardContent className="p-6">
-          <div className="animate-pulse space-y-4">
-            <div className="h-4 bg-muted rounded w-1/2"></div>
-            <div className="h-10 bg-muted rounded"></div>
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  return (
-    <Card className="border-0 shadow-lg overflow-hidden animate-scale-in" style={{ animationDelay: '150ms' }}>
-      <div className="bg-muted/30 px-6 h-14 border-b border-border/50 flex items-center gap-2">
-        <CalendarClock className="h-5 w-5 text-muted-foreground" />
-        <h2 className="font-semibold">Time Capture Settings</h2>
-      </div>
-      <CardContent className="p-6 space-y-6">
-        <div className="flex items-center justify-between">
-          <div className="space-y-0.5">
-            <Label htmlFor="auto-create-drafts" className="text-base font-medium">
-              Auto-create drafts from ended meetings
-            </Label>
-            <p className="text-sm text-muted-foreground">
-              Automatically create time entry drafts when your calendar meetings end
-            </p>
-          </div>
-          <Switch
-            id="auto-create-drafts"
-            checked={settings?.auto_create_meeting_drafts ?? true}
-            onCheckedChange={(checked) => updateSettings({ auto_create_meeting_drafts: checked })}
-            disabled={saving}
-          />
-        </div>
-
-        {settings?.auto_create_meeting_drafts && (
-          <>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="min-minutes">Minimum duration (minutes)</Label>
-                <Input
-                  id="min-minutes"
-                  type="number"
-                  min={1}
-                  max={settings?.max_minutes || 240}
-                  value={settings?.min_minutes || 10}
-                  onChange={(e) => updateSettings({ min_minutes: parseInt(e.target.value) || 10 })}
-                  disabled={saving}
-                />
-                <p className="text-xs text-muted-foreground">Skip meetings shorter than this</p>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="max-minutes">Maximum duration (minutes)</Label>
-                <Input
-                  id="max-minutes"
-                  type="number"
-                  min={settings?.min_minutes || 10}
-                  max={480}
-                  value={settings?.max_minutes || 240}
-                  onChange={(e) => updateSettings({ max_minutes: parseInt(e.target.value) || 240 })}
-                  disabled={saving}
-                />
-                <p className="text-xs text-muted-foreground">Skip meetings longer than this</p>
-              </div>
-            </div>
-
-            <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-                <Label htmlFor="organizer-only" className="text-base font-medium">
-                  Only for meetings I organized
-                </Label>
-                <p className="text-sm text-muted-foreground">
-                  Only create drafts for meetings where you are the organizer
-                </p>
-              </div>
-              <Switch
-                id="organizer-only"
-                checked={settings?.include_organizer_only ?? false}
-                onCheckedChange={(checked) => updateSettings({ include_organizer_only: checked })}
-                disabled={saving}
-              />
-            </div>
-          </>
-        )}
-      </CardContent>
-    </Card>
-  );
-}
+const TAB_VALUES = ['profile', 'time', 'calendar', 'team', 'admin'] as const;
+type TabValue = typeof TAB_VALUES[number];
 
 export default function Settings() {
   const { toast } = useToast();
-  const { user, profile, refreshProfile } = useAuth();
+  const { user, profile } = useAuth();
+  const { isSuperAdmin, isVivacityTeam } = useRBAC();
+  const [searchParams, setSearchParams] = useSearchParams();
+  
   const [loading, setLoading] = useState(false);
-  const [uploading, setUploading] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
-  const [tenantInfo, setTenantInfo] = useState<any>(null);
   const [teamUserData, setTeamUserData] = useState<any>(null);
   const [liveTime, setLiveTime] = useState('');
   const [timezoneOptions, setTimezoneOptions] = useState<{ value: string; label: string }[]>([]);
@@ -132,10 +34,28 @@ export default function Settings() {
     job_title: '',
     timezone: 'Australia/Sydney',
     bio: '',
-    currentPassword: '',
     newPassword: '',
     confirmPassword: '',
   });
+
+  // Get current tab from URL, default to 'profile'
+  const currentTab = (searchParams.get('tab') as TabValue) || 'profile';
+
+  // Validate tab value and redirect if invalid
+  useEffect(() => {
+    const tab = searchParams.get('tab');
+    if (tab && !TAB_VALUES.includes(tab as TabValue)) {
+      setSearchParams({ tab: 'profile' });
+    }
+    // Redirect non-SuperAdmins from admin tab
+    if (tab === 'admin' && !isSuperAdmin) {
+      setSearchParams({ tab: 'profile' });
+    }
+  }, [searchParams, isSuperAdmin, setSearchParams]);
+
+  const handleTabChange = (value: string) => {
+    setSearchParams({ tab: value });
+  };
 
   // Fetch timezone options from database
   useEffect(() => {
@@ -156,7 +76,7 @@ export default function Settings() {
     fetchTimezones();
   }, []);
 
-  // Live time update effect - based on user's selected timezone
+  // Live time update effect
   useEffect(() => {
     const updateTime = () => {
       const now = new Date();
@@ -201,7 +121,6 @@ export default function Settings() {
         job_title: userData.job_title || '',
         timezone: userData.timezone || 'Australia/Sydney',
         bio: userData.bio || '',
-        currentPassword: '',
         newPassword: '',
         confirmPassword: '',
       });
@@ -219,116 +138,17 @@ export default function Settings() {
         is_csc: userData.is_csc,
         leave_from: userData.leave_from,
         leave_until: userData.leave_until,
-        away_message: userData.away_message,  // Use the correct away_message column
+        away_message: userData.away_message,
         cover_user_id: userData.cover_user_id,
         user_type: userData.user_type,
         unicorn_role: userData.unicorn_role,
       });
-
-      // Fetch tenant information
-      if (userData.tenant_id) {
-        const { data: tenantData } = await supabase
-          .from('tenants')
-          .select('*, tenant_profile(*)')
-          .eq('id', userData.tenant_id)
-          .single();
-        
-        if (tenantData) {
-          setTenantInfo(tenantData);
-        }
-      }
     } catch (error: any) {
       toast({
         title: 'Error',
         description: error.message,
         variant: 'destructive',
       });
-    }
-  };
-
-  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file || !user) return;
-
-    // Validate file type
-    if (!file.type.startsWith('image/')) {
-      toast({
-        title: 'Invalid file',
-        description: 'Please upload an image file',
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    // Validate file size (5MB limit)
-    if (file.size > 5 * 1024 * 1024) {
-      toast({
-        title: 'File too large',
-        description: 'Please upload an image smaller than 5MB',
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    try {
-      setUploading(true);
-
-      const fileExt = file.name.split('.').pop();
-      const fileName = `profile.${fileExt}`;
-      const filePath = `${user.id}/${fileName}`;
-
-      // First, try to remove old avatar if exists
-      await supabase.storage
-        .from('avatars')
-        .remove([filePath]);
-
-      // Upload new avatar
-      const { error: uploadError } = await supabase.storage
-        .from('avatars')
-        .upload(filePath, file);
-
-      if (uploadError) {
-        const errorMsg = uploadError.message.includes('row-level security') 
-          ? 'Permission denied: Unable to upload avatar. Please contact support.'
-          : uploadError.message || 'Failed to upload avatar';
-        throw new Error(errorMsg);
-      }
-
-      // Get public URL with cache-busting parameter
-      const { data: { publicUrl } } = supabase.storage
-        .from('avatars')
-        .getPublicUrl(filePath);
-
-      // Add cache-busting timestamp to force browser to reload the image
-      const cacheBustedUrl = `${publicUrl}?t=${Date.now()}`;
-
-      // Update avatar_url in users table directly
-      const { error: updateError } = await supabase
-        .from('users')
-        .update({ avatar_url: cacheBustedUrl })
-        .eq('user_uuid', user.id);
-
-      if (updateError) {
-        console.error('Failed to update avatar URL:', updateError);
-      }
-
-      // Immediately update local state to show the new avatar
-      setAvatarUrl(cacheBustedUrl);
-      toast({
-        title: 'Success',
-        description: 'Profile photo updated successfully',
-      });
-
-      // Refresh auth profile to update avatar across the app
-      await refreshProfile();
-    } catch (error: any) {
-      toast({
-        title: 'Error',
-        description: error.message || 'Failed to upload avatar',
-        variant: 'destructive',
-      });
-    } finally {
-      setUploading(false);
     }
   };
 
@@ -367,412 +187,83 @@ export default function Settings() {
     }
   };
 
-  const handleChangePassword = async () => {
-    if (!formData.newPassword || !formData.confirmPassword) {
-      toast({
-        title: 'Error',
-        description: 'Please fill in all password fields',
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    if (formData.newPassword !== formData.confirmPassword) {
-      toast({
-        title: 'Error',
-        description: 'Passwords do not match',
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    if (formData.newPassword.length < 6) {
-      toast({
-        title: 'Error',
-        description: 'Password must be at least 6 characters',
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    try {
-      setLoading(true);
-
-      const { error } = await supabase.auth.updateUser({
-        password: formData.newPassword,
-      });
-
-      if (error) throw error;
-
-      toast({
-        title: 'Success',
-        description: 'Password changed successfully',
-      });
-
-      setFormData({
-        ...formData,
-        currentPassword: '',
-        newPassword: '',
-        confirmPassword: '',
-      });
-    } catch (error: any) {
-      toast({
-        title: 'Error',
-        description: error.message,
-        variant: 'destructive',
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const initials = `${formData.first_name?.[0] || ''}${formData.last_name?.[0] || ''}`.toUpperCase() || 'U';
+  // Check if team profile tab should be shown (Vivacity team members only)
+  const showTeamTab = isVivacityTeam && teamUserData;
 
   return (
     <div className="min-h-screen bg-background animate-fade-in">
-      {/* Header Card */}
       <div className="px-6 pt-6">
-        <Card className="border-0 shadow-lg overflow-hidden">
-          <div className="px-6 py-4 border-b border-white/20" style={{
-            backgroundImage: 'linear-gradient(135deg, rgb(98 33 145) 0%, rgb(213 28 73 / 72%) 100%)'
-          }}>
-            <div className="flex items-center gap-4">
-              <div className="relative">
-                <Avatar className="h-16 w-16 border-2 border-white/30">
-                  <AvatarImage src={avatarUrl || undefined} />
-                  <AvatarFallback className="bg-white/20 text-white text-xl font-semibold">{initials}</AvatarFallback>
-                </Avatar>
-                <label htmlFor="avatar-upload" className="absolute bottom-0 right-0 cursor-pointer">
-                  <div className="bg-white text-primary rounded-full p-1.5 shadow-lg hover:bg-white/90 transition-colors">
-                    <Upload className="h-3 w-3" />
-                  </div>
-                  <input
-                    id="avatar-upload"
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    onChange={handleAvatarUpload}
-                    disabled={uploading}
-                  />
-                </label>
-              </div>
-              <div className="space-y-1 flex-1">
-                <h1 className="text-xl font-semibold text-white">
-                  {formData.first_name} {formData.last_name}
-                </h1>
-                <p className="text-sm text-white/70">{formData.email}</p>
-                <p className="text-xs text-white/50">
-                  Manage your account settings and preferences
-                </p>
-              </div>
-              <div className="text-right">
-                <div className="flex items-center justify-end gap-2 text-sm text-white/80">
-                  <Calendar className="h-4 w-4 -mt-[3px]" />
-                  <span className="font-mono">{liveTime}</span>
-                </div>
-                <p className="text-xs text-white/50 mt-0.5">
-                  {timezoneOptions.find(tz => tz.value === formData.timezone)?.label || formData.timezone}
-                </p>
-              </div>
-            </div>
-          </div>
-        </Card>
-      </div>
-
-      <div className="px-6 py-6 space-y-6">
-        {/* Profile and Password Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Profile Settings */}
-          <Card className="border-0 shadow-lg overflow-hidden animate-scale-in lg:col-span-2">
-            <div className="bg-muted/30 px-6 h-14 border-b border-border/50 flex items-center">
-              <h2 className="font-semibold">Profile Information</h2>
-            </div>
-            <CardContent className="p-6 space-y-6">
-              {/* Form Fields */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-2">
-                  <Label htmlFor="first_name">
-                    <User className="inline h-4 w-4 mr-2" />
-                    First Name
-                  </Label>
-                  <Input
-                    id="first_name"
-                    value={formData.first_name}
-                    onChange={(e) => setFormData({ ...formData, first_name: e.target.value })}
-                    placeholder="First name"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="last_name">
-                    <User className="inline h-4 w-4 mr-2" />
-                    Last Name
-                  </Label>
-                  <Input
-                    id="last_name"
-                    value={formData.last_name}
-                    onChange={(e) => setFormData({ ...formData, last_name: e.target.value })}
-                    placeholder="Last name"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="email">
-                    <Mail className="inline h-4 w-4 mr-2" />
-                    Email
-                  </Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    value={formData.email}
-                    disabled
-                    className="bg-muted"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="phone">
-                    <Phone className="inline h-4 w-4 mr-2" />
-                    Phone Number
-                  </Label>
-                  <Input
-                    id="phone"
-                    value={formData.phone}
-                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                    placeholder="e.g., 0412 345 678"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="job_title">
-                    <Briefcase className="inline h-4 w-4 mr-2" />
-                    Job Title
-                  </Label>
-                  <Input
-                    id="job_title"
-                    value={formData.job_title}
-                    onChange={(e) => setFormData({ ...formData, job_title: e.target.value })}
-                    placeholder="e.g., Compliance Manager"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="timezone">
-                    <Clock className="inline h-4 w-4 mr-2" />
-                    Timezone
-                  </Label>
-                  <Select
-                    value={formData.timezone}
-                    onValueChange={(value) => setFormData({ ...formData, timezone: value })}
-                  >
-                    <SelectTrigger id="timezone" className="w-full h-11 rounded-lg border-0 bg-muted/50 ring-1 ring-border/50 hover:ring-border focus:ring-2 focus:ring-primary/30">
-                      <SelectValue placeholder="Select timezone">
-                        {formData.timezone && (
-                          <div className="flex items-center gap-2">
-                            <MapPin className="h-4 w-4" />
-                            <span>{timezoneOptions.find(tz => tz.value === formData.timezone)?.label || formData.timezone}</span>
-                          </div>
-                        )}
-                      </SelectValue>
-                    </SelectTrigger>
-                    <SelectContent className="bg-background w-[var(--radix-select-trigger-width)]">
-                      {timezoneOptions.map((tz, index) => (
-                        <div key={tz.value}>
-                          <SelectItem 
-                            value={tz.value} 
-                            className="cursor-pointer data-[state=checked]:bg-transparent focus:bg-transparent data-[state=checked]:text-foreground"
-                          >
-                            <div className="flex items-center gap-2">
-                              <MapPin className={`h-4 w-4 ${formData.timezone === tz.value ? 'text-green-500' : 'text-foreground'}`} />
-                              <span className="text-foreground">{tz.label}</span>
-                            </div>
-                          </SelectItem>
-                          {index < timezoneOptions.length - 1 && <SelectSeparator />}
-                        </div>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="bio">
-                  <Globe className="inline h-4 w-4 mr-2" />
-                  Bio
-                </Label>
-                <Textarea
-                  id="bio"
-                  value={formData.bio}
-                  onChange={(e) => setFormData({ ...formData, bio: e.target.value })}
-                  placeholder="Tell us about yourself..."
-                  rows={4}
-                  className="bg-[hsl(188deg_74%_51%_/_8%)]"
-                />
-              </div>
-
-            <div className="flex justify-end">
-              <Button onClick={handleSaveProfile} disabled={loading} className="bg-[hsl(188_74%_51%)] hover:bg-[hsl(188_74%_51%)]/90">
-                <Save className="mr-2 h-4 w-4" />
-                {loading ? 'Saving...' : 'Save Changes'}
-              </Button>
-            </div>
-            </CardContent>
-          </Card>
-
-          {/* Password Settings */}
-          <Card className="border-0 shadow-lg overflow-hidden animate-scale-in h-fit" style={{ animationDelay: '100ms' }}>
-            <div className="bg-muted/30 px-6 h-14 border-b border-border/50 flex items-center">
-              <h2 className="font-semibold">Change Password</h2>
-            </div>
-            <CardContent className="p-6 space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="newPassword">
-                  <Lock className="inline h-4 w-4 mr-2" />
-                  New Password
-                </Label>
-                <Input
-                  id="newPassword"
-                  type="password"
-                  value={formData.newPassword}
-                  onChange={(e) => setFormData({ ...formData, newPassword: e.target.value })}
-                  placeholder="Enter new password"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="confirmPassword">
-                  <Lock className="inline h-4 w-4 mr-2" />
-                  Confirm Password
-                </Label>
-                <Input
-                  id="confirmPassword"
-                  type="password"
-                  value={formData.confirmPassword}
-                  onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
-                  placeholder="Confirm new password"
-                />
-              </div>
-
-              <div className="flex justify-end">
-                <Button onClick={handleChangePassword} disabled={loading} className="bg-[hsl(188_74%_51%)] hover:bg-[hsl(188_74%_51%)]/90">
-                  <Lock className="mr-2 h-4 w-4" />
-                  {loading ? 'Changing...' : 'Change Password'}
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
+        <div className="mb-6">
+          <h1 className="text-2xl font-bold text-foreground">Profile Settings</h1>
+          <p className="text-sm text-muted-foreground">
+            Manage your account settings and preferences
+          </p>
         </div>
 
-        {/* Time Capture Settings */}
-        <TimeCaptureSettingsCard />
+        <Tabs value={currentTab} onValueChange={handleTabChange} className="w-full">
+          <TabsList className="mb-6 bg-muted/50 p-1 h-auto flex-wrap gap-1">
+            <TabsTrigger value="profile" className="gap-2 data-[state=active]:bg-background">
+              <User className="h-4 w-4" />
+              <span className="hidden sm:inline">Profile</span>
+            </TabsTrigger>
+            <TabsTrigger value="time" className="gap-2 data-[state=active]:bg-background">
+              <Clock className="h-4 w-4" />
+              <span className="hidden sm:inline">Time Capture</span>
+            </TabsTrigger>
+            <TabsTrigger value="calendar" className="gap-2 data-[state=active]:bg-background">
+              <Calendar className="h-4 w-4" />
+              <span className="hidden sm:inline">Calendar</span>
+            </TabsTrigger>
+            {showTeamTab && (
+              <TabsTrigger value="team" className="gap-2 data-[state=active]:bg-background">
+                <Users className="h-4 w-4" />
+                <span className="hidden sm:inline">Team Profile</span>
+              </TabsTrigger>
+            )}
+            {isSuperAdmin && (
+              <TabsTrigger value="admin" className="gap-2 data-[state=active]:bg-background text-destructive data-[state=active]:text-destructive">
+                <Shield className="h-4 w-4" />
+                <span className="hidden sm:inline">Admin Actions</span>
+              </TabsTrigger>
+            )}
+          </TabsList>
 
-        {/* Calendar Integration Link - only for team users */}
-        {teamUserData && (
-          <Card className="border-0 shadow-lg overflow-hidden animate-scale-in" style={{ animationDelay: '175ms' }}>
-            <div className="bg-muted/30 px-6 h-14 border-b border-border/50 flex items-center gap-2">
-              <Calendar className="h-5 w-5 text-muted-foreground" />
-              <h2 className="font-semibold">Calendar Integration</h2>
-            </div>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <p className="text-base font-medium">
-                    Microsoft Outlook Calendar
-                  </p>
-                  <p className="text-sm text-muted-foreground">
-                    Connect your calendar to capture time from meetings automatically
-                  </p>
-                </div>
-                <Button variant="outline" asChild>
-                  <Link to="/settings/calendar">
-                    <ExternalLink className="h-4 w-4 mr-2" />
-                    Configure
-                  </Link>
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        )}
+          <TabsContent value="profile" className="mt-0">
+            <ProfileTab
+              formData={formData}
+              setFormData={setFormData}
+              avatarUrl={avatarUrl}
+              setAvatarUrl={setAvatarUrl}
+              timezoneOptions={timezoneOptions}
+              liveTime={liveTime}
+              onSaveProfile={handleSaveProfile}
+              loading={loading}
+            />
+          </TabsContent>
 
-        {/* Team Profile Section - only shows for team users */}
-        {teamUserData && (
-          <TeamProfileFields 
-            user={teamUserData} 
-            canEdit={true} 
-            onSave={fetchUserData}
-          />
-        )}
+          <TabsContent value="time" className="mt-0">
+            <TimeCaptureTab />
+          </TabsContent>
 
-        {/* Tenant Information - only show for tenant users, not team users */}
-        {tenantInfo && !teamUserData && (
-          <Card className="border-0 shadow-lg overflow-hidden animate-scale-in" style={{ animationDelay: '200ms' }}>
-            <div className="bg-muted/30 px-6 h-14 border-b border-border/50 flex items-center">
-              <h2 className="font-semibold">Tenant Information</h2>
-            </div>
-            <CardContent className="p-6 space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Tenant Name</Label>
-                  <Input value={tenantInfo.name || 'N/A'} disabled className="bg-muted" />
-                </div>
+          <TabsContent value="calendar" className="mt-0">
+            <CalendarTab />
+          </TabsContent>
 
-                <div className="space-y-2">
-                  <Label>Tenant ID</Label>
-                  <Input value={tenantInfo.id || 'N/A'} disabled className="bg-muted" />
-                </div>
+          {showTeamTab && (
+            <TabsContent value="team" className="mt-0">
+              <TeamProfileTab 
+                teamUserData={teamUserData} 
+                onSave={fetchUserData}
+              />
+            </TabsContent>
+          )}
 
-                <div className="space-y-2">
-                  <Label>Status</Label>
-                  <Input value={tenantInfo.status || 'N/A'} disabled className="bg-muted" />
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Risk Level</Label>
-                  <Input value={tenantInfo.risk_level || 'N/A'} disabled className="bg-muted" />
-                </div>
-
-                {tenantInfo.tenant_profiles?.[0] && (
-                  <>
-                    {tenantInfo.tenant_profiles[0].legal_name && (
-                      <div className="space-y-2">
-                        <Label>Legal Name</Label>
-                        <Input value={tenantInfo.tenant_profiles[0].legal_name} disabled className="bg-muted" />
-                      </div>
-                    )}
-
-                    {tenantInfo.tenant_profiles[0].abn && (
-                      <div className="space-y-2">
-                        <Label>ABN</Label>
-                        <Input value={tenantInfo.tenant_profiles[0].abn} disabled className="bg-muted" />
-                      </div>
-                    )}
-
-                    {tenantInfo.tenant_profiles[0].street_address && (
-                      <div className="space-y-2 md:col-span-2">
-                        <Label>Address</Label>
-                        <Input value={tenantInfo.tenant_profiles[0].street_address} disabled className="bg-muted" />
-                      </div>
-                    )}
-
-                    {tenantInfo.tenant_profiles[0].state && (
-                      <div className="space-y-2">
-                        <Label>State</Label>
-                        <Input value={tenantInfo.tenant_profiles[0].state} disabled className="bg-muted" />
-                      </div>
-                    )}
-
-                    {tenantInfo.tenant_profiles[0].website && (
-                      <div className="space-y-2">
-                        <Label>Website</Label>
-                        <Input value={tenantInfo.tenant_profiles[0].website} disabled className="bg-muted" />
-                      </div>
-                    )}
-                  </>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        )}
+          {isSuperAdmin && (
+            <TabsContent value="admin" className="mt-0">
+              <AdminActionsTab />
+            </TabsContent>
+          )}
+        </Tabs>
       </div>
     </div>
   );
