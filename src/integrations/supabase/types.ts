@@ -18719,6 +18719,33 @@ export type Database = {
         }
         Relationships: []
       }
+      user_profile_setup_prompts: {
+        Row: {
+          created_at: string
+          dismissed_until: string | null
+          last_shown_at: string | null
+          snoozed_until: string | null
+          updated_at: string
+          user_uuid: string
+        }
+        Insert: {
+          created_at?: string
+          dismissed_until?: string | null
+          last_shown_at?: string | null
+          snoozed_until?: string | null
+          updated_at?: string
+          user_uuid: string
+        }
+        Update: {
+          created_at?: string
+          dismissed_until?: string | null
+          last_shown_at?: string | null
+          snoozed_until?: string | null
+          updated_at?: string
+          user_uuid?: string
+        }
+        Relationships: []
+      }
       user_time_capture_settings: {
         Row: {
           auto_create_meeting_drafts: boolean
