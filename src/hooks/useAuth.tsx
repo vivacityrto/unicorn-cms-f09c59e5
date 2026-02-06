@@ -142,7 +142,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   // RBAC helper functions
   const isSuperAdmin = (): boolean => {
-    return profile?.global_role === 'SuperAdmin';
+    // Check both global_role (legacy) and unicorn_role (current standard)
+    return profile?.global_role === 'SuperAdmin' || profile?.unicorn_role === 'Super Admin';
   };
 
   const hasTenantAccess = (tenantId: number): boolean => {
