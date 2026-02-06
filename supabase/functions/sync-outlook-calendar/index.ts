@@ -26,6 +26,21 @@ interface CalendarEvent {
   sensitivity?: string;
 }
 
+interface OutlookEmail {
+  id: string;
+  subject: string;
+  from: {
+    emailAddress: {
+      name: string;
+      address: string;
+    };
+  };
+  receivedDateTime: string;
+  hasAttachments: boolean;
+  bodyPreview: string;
+  isRead: boolean;
+}
+
 interface TokenRecord {
   access_token: string;
   refresh_token: string;
@@ -57,7 +72,7 @@ async function refreshTokenIfNeeded(
       client_secret: MICROSOFT_CLIENT_SECRET,
       refresh_token: token.refresh_token,
       grant_type: 'refresh_token',
-      scope: 'openid profile email offline_access Calendars.Read'
+      scope: 'openid profile email offline_access Calendars.Read Mail.Read'
     })
   });
 
@@ -122,22 +137,74 @@ async function fetchCalendarEvents(accessToken: string): Promise<CalendarEvent[]
   return data.value || [];
 }
 
+async function fetchEmails(accessToken: string, folder: string, top: number): Promise<OutlookEmail[]> {
+  // Determine the folder path
+  let folderPath = 'inbox';
+  if (folder.toLowerCase() === 'sent') {
+    folderPath = 'sentitems';
+  } else if (folder.toLowerCase() !== 'inbox') {
+    folderPath = folder;
+  }
+
+  const url = new URL(`https://graph.microsoft.com/v1.0/me/mailFolders/${folderPath}/messages`);
+  url.searchParams.set('$select', 'id,subject,from,receivedDateTime,hasAttachments,bodyPreview,isRead');
+  url.searchParams.set('$orderby', 'receivedDateTime desc');
+  url.searchParams.set('$top', String(top));
+
+  console.log('[sync-outlook] Fetching emails from folder:', folderPath);
+
+  const response = await fetch(url.toString(), {
+    headers: { 'Authorization': `Bearer ${accessToken}` }
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    console.error('[sync-outlook] Graph API email error:', {
+      status: response.status,
+      statusText: response.statusText,
+      body: errorText
+    });
+    
+    if (response.status === 401) {
+      throw new Error('Token expired or invalid - user needs to reconnect');
+    }
+    if (response.status === 403) {
+      throw new Error('Insufficient permissions - Mail.Read scope may be missing');
+    }
+    
+    throw new Error(`Graph API error: ${response.status} ${response.statusText}`);
+  }
+
+  const data = await response.json();
+  console.log('[sync-outlook] Fetched', data.value?.length || 0, 'emails from Graph API');
+  return data.value || [];
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
-  console.log('[sync-outlook] Sync request received at:', new Date().toISOString());
+  console.log('[sync-outlook] Request received at:', new Date().toISOString());
 
   try {
     // Parse request body for options
+    let action = 'sync-calendar';
     let includeMeetings = false;
+    let folder = 'inbox';
+    let top = 50;
+    
     try {
       const body = await req.json();
+      action = body?.action || 'sync-calendar';
       includeMeetings = body?.includeMeetings === true;
+      folder = body?.folder || 'inbox';
+      top = body?.top || 50;
     } catch {
       // No body or invalid JSON, use defaults
     }
+
+    console.log('[sync-outlook] Action:', action);
 
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
@@ -163,7 +230,7 @@ serve(async (req) => {
       );
     }
 
-    console.log('[sync-outlook] Syncing for user:', user.id);
+    console.log('[sync-outlook] Processing for user:', user.id);
 
     // Get OAuth token
     const { data: tokenRecord, error: tokenError } = await supabaseAdmin
@@ -195,7 +262,26 @@ serve(async (req) => {
       );
     }
 
-    // Fetch events from Microsoft Graph
+    // Handle get-emails action
+    if (action === 'get-emails') {
+      console.log('[sync-outlook] Fetching emails, folder:', folder, 'top:', top);
+      
+      try {
+        const emails = await fetchEmails(accessToken, folder, top);
+        return new Response(
+          JSON.stringify({ emails }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      } catch (emailError) {
+        console.error('[sync-outlook] Email fetch error:', emailError);
+        return new Response(
+          JSON.stringify({ error: emailError instanceof Error ? emailError.message : 'Failed to fetch emails' }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+    }
+
+    // Default action: sync calendar events
     let events: CalendarEvent[];
     try {
       events = await fetchCalendarEvents(accessToken);
