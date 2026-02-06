@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { checkSeatAvailability, PLAN_NAMES, UPGRADE_PATHS } from '@/hooks/useSeatLimits';
+import { logUpgradeAttempt } from '@/hooks/useBillingSignals';
 import {
   Dialog,
   DialogContent,
@@ -24,6 +25,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Loader2, Shield, User as UserIcon, AlertTriangle, ArrowUpRight, Users } from 'lucide-react';
 import { toast } from 'sonner';
 import type { TenantType } from '@/contexts/TenantTypeContext';
+import { UpgradeModal } from '@/components/billing/UpgradeModal';
 
 interface TenantInviteDialogProps {
   open: boolean;
@@ -59,6 +61,7 @@ export function TenantInviteDialog({
   const [maxUsers, setMaxUsers] = useState<number | null>(null);
   const [seatMessage, setSeatMessage] = useState<string | null>(null);
   const [tenantType, setTenantType] = useState<TenantType | null>(null);
+  const [upgradeModalOpen, setUpgradeModalOpen] = useState(false);
 
   // Check seat availability when dialog opens
   useEffect(() => {
@@ -114,6 +117,16 @@ export function TenantInviteDialog({
     // Double-check seat availability before sending
     const seatCheck = await checkSeatAvailability(tenantId);
     if (!seatCheck.canInvite) {
+      // Log the blocked invite attempt
+      await logUpgradeAttempt({
+        tenantId,
+        fromPlan: tenantType || 'unknown',
+        toPlan: UPGRADE_PATHS[tenantType || 'academy_solo'] || 'unknown',
+        triggerType: 'seat_limit_reached',
+        outcome: 'blocked',
+        failureReason: seatCheck.message,
+      });
+      
       toast.error(seatCheck.message || 'Cannot invite more users - seat limit reached');
       setCanInvite(false);
       setSeatMessage(seatCheck.message || null);
@@ -185,7 +198,12 @@ export function TenantInviteDialog({
                 {seatMessage || `You've used all ${maxUsers} seats in your plan.`}
               </p>
               {nextPlanName && (
-                <Button variant="secondary" size="sm" className="w-full">
+                <Button 
+                  variant="secondary" 
+                  size="sm" 
+                  className="w-full"
+                  onClick={() => setUpgradeModalOpen(true)}
+                >
                   Upgrade to {nextPlanName}
                   <ArrowUpRight className="ml-2 h-4 w-4" />
                 </Button>
@@ -300,6 +318,17 @@ export function TenantInviteDialog({
           )}
         </DialogFooter>
       </DialogContent>
+
+      {/* Upgrade Modal */}
+      {tenantType && (
+        <UpgradeModal
+          open={upgradeModalOpen}
+          onOpenChange={setUpgradeModalOpen}
+          tenantId={tenantId}
+          currentPlan={tenantType}
+          triggerType="seat_limit_reached"
+        />
+      )}
     </Dialog>
   );
 }

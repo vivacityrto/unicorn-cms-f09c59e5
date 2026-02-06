@@ -1974,6 +1974,67 @@ export type Database = {
         }
         Relationships: []
       }
+      audit_upgrade_attempts: {
+        Row: {
+          actor_user_id: string
+          created_at: string
+          failure_reason: string | null
+          from_plan: string
+          id: string
+          metadata: Json | null
+          outcome: string
+          tenant_id: number
+          to_plan: string
+          trigger_type: string
+        }
+        Insert: {
+          actor_user_id: string
+          created_at?: string
+          failure_reason?: string | null
+          from_plan: string
+          id?: string
+          metadata?: Json | null
+          outcome: string
+          tenant_id: number
+          to_plan: string
+          trigger_type: string
+        }
+        Update: {
+          actor_user_id?: string
+          created_at?: string
+          failure_reason?: string | null
+          from_plan?: string
+          id?: string
+          metadata?: Json | null
+          outcome?: string
+          tenant_id?: number
+          to_plan?: string
+          trigger_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "audit_upgrade_attempts_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "audit_upgrade_attempts_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_engagement_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "audit_upgrade_attempts_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_eos_summary"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
       auth_tokens: {
         Row: {
           created_at: string
@@ -15275,12 +15336,19 @@ export type Database = {
       tenants: {
         Row: {
           abn: string | null
+          academy_access_enabled: boolean
           academy_max_users: number | null
           academy_subscription_expires_at: string | null
           accounting_system: string | null
           acn: string | null
+          billing_status: Database["public"]["Enums"]["billing_status"]
+          certificates_issued_count: number
+          compliance_system_enabled: boolean
+          courses_enrolled_count: number
           created_at: string
           cricos_id: string | null
+          document_downloads_count: number
+          documents_enabled: boolean
           id: number
           id_uuid: string | null
           import_id: number
@@ -15292,6 +15360,9 @@ export type Database = {
           package_added_at: string | null
           package_id: number | null
           package_ids: number[] | null
+          plan_code: string | null
+          plan_started_at: string | null
+          resource_hub_enabled: boolean
           risk_level: string | null
           rto_id: string | null
           rto_name: string | null
@@ -15312,12 +15383,19 @@ export type Database = {
         }
         Insert: {
           abn?: string | null
+          academy_access_enabled?: boolean
           academy_max_users?: number | null
           academy_subscription_expires_at?: string | null
           accounting_system?: string | null
           acn?: string | null
+          billing_status?: Database["public"]["Enums"]["billing_status"]
+          certificates_issued_count?: number
+          compliance_system_enabled?: boolean
+          courses_enrolled_count?: number
           created_at?: string
           cricos_id?: string | null
+          document_downloads_count?: number
+          documents_enabled?: boolean
           id: number
           id_uuid?: string | null
           import_id?: number
@@ -15329,6 +15407,9 @@ export type Database = {
           package_added_at?: string | null
           package_id?: number | null
           package_ids?: number[] | null
+          plan_code?: string | null
+          plan_started_at?: string | null
+          resource_hub_enabled?: boolean
           risk_level?: string | null
           rto_id?: string | null
           rto_name?: string | null
@@ -15349,12 +15430,19 @@ export type Database = {
         }
         Update: {
           abn?: string | null
+          academy_access_enabled?: boolean
           academy_max_users?: number | null
           academy_subscription_expires_at?: string | null
           accounting_system?: string | null
           acn?: string | null
+          billing_status?: Database["public"]["Enums"]["billing_status"]
+          certificates_issued_count?: number
+          compliance_system_enabled?: boolean
+          courses_enrolled_count?: number
           created_at?: string
           cricos_id?: string | null
+          document_downloads_count?: number
+          documents_enabled?: boolean
           id?: number
           id_uuid?: string | null
           import_id?: number
@@ -15366,6 +15454,9 @@ export type Database = {
           package_added_at?: string | null
           package_id?: number | null
           package_ids?: number[] | null
+          plan_code?: string | null
+          plan_started_at?: string | null
+          resource_hub_enabled?: boolean
           risk_level?: string | null
           rto_id?: string | null
           rto_name?: string | null
@@ -19866,6 +19957,7 @@ export type Database = {
         | "TAS"
         | "ACT"
         | "NT"
+      billing_status: "trial" | "active" | "overdue" | "suspended" | "cancelled"
       eos_function_type:
         | "leadership"
         | "operations"
@@ -20127,6 +20219,7 @@ export const Constants = {
   public: {
     Enums: {
       australian_state: ["NSW", "VIC", "QLD", "WA", "SA", "TAS", "ACT", "NT"],
+      billing_status: ["trial", "active", "overdue", "suspended", "cancelled"],
       eos_function_type: [
         "leadership",
         "operations",
