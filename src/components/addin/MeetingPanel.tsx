@@ -70,10 +70,17 @@ export function MeetingPanel({ meetingContext, tenantId }: MeetingPanelProps) {
         title: meetingContext.subject,
         starts_at: meetingContext.startTime,
         ends_at: meetingContext.endTime,
-        organiser_email: meetingContext.organizer.email,
+        organiser: {
+          email: meetingContext.organizer.email,
+          name: meetingContext.organizer.name,
+        },
         teams_join_url: meetingContext.teamsJoinUrl,
         location: meetingContext.location,
-        attendees_count: meetingContext.attendeesCount,
+        attendees: meetingContext.attendees?.map(a => ({
+          email: a.email,
+          name: a.name,
+          type: 'required' as const,
+        })),
         link: selectedClientId ? {
           client_id: selectedClientId,
           package_id: selectedPackageId || null,
@@ -82,7 +89,7 @@ export function MeetingPanel({ meetingContext, tenantId }: MeetingPanelProps) {
 
       setLinkResult({
         success: true,
-        deepLink: response.links.open_client_timeline || response.links.open_meetings,
+        deepLink: response.links.open_client || response.links.open_meeting,
       });
 
       toast.success("Meeting linked successfully");
@@ -118,7 +125,7 @@ export function MeetingPanel({ meetingContext, tenantId }: MeetingPanelProps) {
         deepLink: response.links.open_time_inbox,
       });
 
-      toast.success(`Time draft created: ${response.time_draft.minutes} minutes`);
+      toast.success(`Time draft created: ${response.time_entry.minutes} minutes`);
     } catch (error) {
       const message = error instanceof Error ? error.message : "Failed to create time draft";
       toast.error(message);

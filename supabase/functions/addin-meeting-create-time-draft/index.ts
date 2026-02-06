@@ -11,12 +11,19 @@ const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 const ADDIN_JWT_SECRET = Deno.env.get('ADDIN_JWT_SECRET') || Deno.env.get('JWT_SECRET') || SUPABASE_SERVICE_ROLE_KEY;
 
+interface TimeRules {
+  rounding_minutes?: number;
+  min_minutes?: number;
+  max_minutes?: number;
+}
+
 interface CreateTimeDraftRequest {
   external_event_id: string;
   client_id?: string;
   package_id?: string;
-  minutes_override?: number;
+  minutes_override?: number | null;
   notes?: string;
+  rules?: TimeRules;
 }
 
 interface AddinTokenPayload {
@@ -64,6 +71,27 @@ function calculateMinutesFromDuration(startAt: string, endAt: string): number {
   return Math.max(0, Math.round(diffMs / 60000));
 }
 
+function applyTimeRules(minutes: number, rules: TimeRules): number {
+  let result = minutes;
+  
+  // Apply rounding
+  if (rules.rounding_minutes && rules.rounding_minutes > 0) {
+    result = Math.ceil(result / rules.rounding_minutes) * rules.rounding_minutes;
+  }
+  
+  // Apply minimum
+  if (rules.min_minutes && result < rules.min_minutes) {
+    result = rules.min_minutes;
+  }
+  
+  // Apply maximum
+  if (rules.max_minutes && result > rules.max_minutes) {
+    result = rules.max_minutes;
+  }
+  
+  return result;
+}
+
 serve(async (req) => {
   // Handle CORS preflight
   if (req.method === 'OPTIONS') {
@@ -89,6 +117,7 @@ serve(async (req) => {
       external_event_id: body.external_event_id?.substring(0, 20) + '...',
       client_id: body.client_id,
       minutes_override: body.minutes_override,
+      rules: body.rules,
       idempotency_key: idempotencyKey,
     });
 
@@ -137,14 +166,22 @@ serve(async (req) => {
     }
 
     if (existingDraft) {
-      return errorResponse(409, 'DRAFT_ALREADY_EXISTS', 'A time draft already exists for this meeting', {
-        existing_draft_id: existingDraft.id,
+      return errorResponse(409, 'TIME_DRAFT_ALREADY_EXISTS', 'A draft time entry already exists for this meeting.', {
+        meeting_id: meeting.id,
+        time_entry_id: existingDraft.id,
       });
     }
 
-    // Calculate minutes from duration or use override
+    // Calculate minutes from duration
     const calculatedMinutes = calculateMinutesFromDuration(meeting.start_at, meeting.end_at);
-    const minutes = body.minutes_override ?? calculatedMinutes;
+    
+    // Use override if provided, otherwise use calculated
+    let minutes = body.minutes_override ?? calculatedMinutes;
+    
+    // Apply time rules if provided
+    if (body.rules) {
+      minutes = applyTimeRules(minutes, body.rules);
+    }
 
     // Determine client_id and package_id (prefer request, fallback to meeting)
     const clientId = body.client_id ? parseInt(body.client_id, 10) : meeting.client_id;
@@ -166,7 +203,7 @@ serve(async (req) => {
         work_date: workDate,
         notes: body.notes || `Meeting: ${meeting.title}`,
         status: 'draft',
-        source: 'addin',
+        source: 'teams',
       })
       .select('id, minutes, work_date, client_id, package_id, status, created_at')
       .single();
@@ -188,7 +225,8 @@ serve(async (req) => {
         metadata: {
           minutes: minutes,
           calculated_minutes: calculatedMinutes,
-          minutes_override: body.minutes_override || null,
+          minutes_override: body.minutes_override ?? null,
+          rules_applied: body.rules || null,
           client_id: clientId,
           package_id: packageId,
           work_date: workDate,
@@ -204,30 +242,27 @@ serve(async (req) => {
 
     console.log('[addin-meeting-create-time-draft] Time draft created successfully:', draft.id);
 
-    // Return success
+    // Build response links
+    const links: Record<string, string> = {
+      open_time_inbox: '/time-inbox',
+    };
+    if (clientId) {
+      links.open_client = `/clients/${clientId}`;
+    }
+
+    // Return success response matching API contract
     return new Response(
       JSON.stringify({
-        time_draft: {
+        time_entry: {
           id: draft.id,
-          calendar_event_id: meeting.id,
-          minutes: draft.minutes,
-          work_date: draft.work_date,
-          client_id: draft.client_id,
-          package_id: draft.package_id,
           status: draft.status,
-          created_at: draft.created_at,
+          minutes: draft.minutes,
+          source: 'teams',
+          meeting_id: meeting.id,
+          client_id: draft.client_id,
         },
-        meeting: {
-          id: meeting.id,
-          title: meeting.title,
-          starts_at: meeting.start_at,
-          ends_at: meeting.end_at,
-        },
-        calculated_minutes: calculatedMinutes,
         audit_event_id: auditEvent?.id || null,
-        links: {
-          open_time_inbox: '/work/time-inbox',
-        },
+        links,
       }),
       { status: 201, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );

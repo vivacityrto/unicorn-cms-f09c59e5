@@ -6,10 +6,17 @@ export interface CaptureMeetingRequest {
   title: string;
   starts_at: string;
   ends_at: string;
-  organiser_email: string;
+  organiser: {
+    email: string;
+    name?: string;
+  };
   teams_join_url?: string;
   location?: string;
-  attendees_count?: number;
+  attendees?: Array<{
+    email: string;
+    name?: string;
+    type?: 'required' | 'optional' | 'resource';
+  }>;
   link?: {
     client_id?: string | null;
     package_id?: string | null;
@@ -17,48 +24,46 @@ export interface CaptureMeetingRequest {
 }
 
 export interface CaptureMeetingResponse {
-  meeting_record: {
+  meeting: {
     id: string;
     external_event_id: string;
     title: string;
     starts_at: string;
     ends_at: string;
+    teams_join_url: string | null;
     client_id: number | null;
     package_id: number | null;
-    teams_join_url: string | null;
-    captured_at: string;
+    status: string;
   };
-  status: 'created' | 'updated';
+  participants_upserted: number;
   audit_event_id: string | null;
   links: Record<string, string>;
+}
+
+export interface TimeRules {
+  rounding_minutes?: number;
+  min_minutes?: number;
+  max_minutes?: number;
 }
 
 export interface CreateTimeDraftRequest {
   external_event_id: string;
   client_id?: string;
   package_id?: string;
-  minutes_override?: number;
+  minutes_override?: number | null;
   notes?: string;
+  rules?: TimeRules;
 }
 
 export interface CreateTimeDraftResponse {
-  time_draft: {
+  time_entry: {
     id: string;
-    calendar_event_id: string;
-    minutes: number;
-    work_date: string;
-    client_id: number | null;
-    package_id: number | null;
     status: string;
-    created_at: string;
+    minutes: number;
+    source: string;
+    meeting_id: string;
+    client_id: number | null;
   };
-  meeting: {
-    id: string;
-    title: string;
-    starts_at: string;
-    ends_at: string;
-  };
-  calculated_minutes: number;
   audit_event_id: string | null;
   links: Record<string, string>;
 }
