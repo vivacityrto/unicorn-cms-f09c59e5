@@ -22086,7 +22086,15 @@ export type Database = {
         Returns: boolean
       }
       has_tenant_access: { Args: { _tenant_id: number }; Returns: boolean }
+      has_tenant_access_safe: {
+        Args: { p_tenant_id: number; p_user_id: string }
+        Returns: boolean
+      }
       has_tenant_admin: { Args: { _tenant_id: number }; Returns: boolean }
+      has_tenant_admin_safe: {
+        Args: { p_tenant_id: number; p_user_id: string }
+        Returns: boolean
+      }
       increment_rate_limit: {
         Args: { p_action_type: string; p_tenant_id: number }
         Returns: undefined
@@ -22116,6 +22124,7 @@ export type Database = {
       is_super_admin_admin: { Args: never; Returns: boolean }
       is_super_admin_by_role: { Args: never; Returns: boolean }
       is_super_admin_member: { Args: never; Returns: boolean }
+      is_super_admin_safe: { Args: { p_user_id: string }; Returns: boolean }
       is_super_admin_user: { Args: { p_user_id: string }; Returns: boolean }
       is_superadmin: { Args: never; Returns: boolean }
       is_tenant_admin:
