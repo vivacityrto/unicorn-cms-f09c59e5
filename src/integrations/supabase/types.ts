@@ -2896,6 +2896,7 @@ export type Database = {
         Row: {
           attendees: Json
           calendar_id: string
+          client_id: number | null
           created_at: string
           description: string | null
           end_at: string
@@ -2904,11 +2905,13 @@ export type Database = {
           location: string | null
           meeting_url: string | null
           organizer_email: string | null
+          package_id: number | null
           processed_at: string | null
           processed_users: Json
           provider: string
           provider_event_id: string
           raw: Json
+          sensitivity: string | null
           start_at: string
           status: string
           tenant_id: number
@@ -2918,6 +2921,7 @@ export type Database = {
         Insert: {
           attendees?: Json
           calendar_id: string
+          client_id?: number | null
           created_at?: string
           description?: string | null
           end_at: string
@@ -2926,11 +2930,13 @@ export type Database = {
           location?: string | null
           meeting_url?: string | null
           organizer_email?: string | null
+          package_id?: number | null
           processed_at?: string | null
           processed_users?: Json
           provider?: string
           provider_event_id: string
           raw?: Json
+          sensitivity?: string | null
           start_at: string
           status?: string
           tenant_id: number
@@ -2940,6 +2946,7 @@ export type Database = {
         Update: {
           attendees?: Json
           calendar_id?: string
+          client_id?: number | null
           created_at?: string
           description?: string | null
           end_at?: string
@@ -2948,18 +2955,138 @@ export type Database = {
           location?: string | null
           meeting_url?: string | null
           organizer_email?: string | null
+          package_id?: number | null
           processed_at?: string | null
           processed_users?: Json
           provider?: string
           provider_event_id?: string
           raw?: Json
+          sensitivity?: string | null
           start_at?: string
           status?: string
           tenant_id?: number
           title?: string
           user_id?: string
         }
+        Relationships: [
+          {
+            foreignKeyName: "calendar_events_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "calendar_events_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_engagement_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "calendar_events_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_eos_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "calendar_events_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_compliance_entitlements"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "calendar_events_package_id_fkey"
+            columns: ["package_id"]
+            isOneToOne: false
+            referencedRelation: "packages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      calendar_share_audit: {
+        Row: {
+          action: string
+          created_at: string
+          id: string
+          owner_user_uuid: string
+          performed_by: string
+          scope: string | null
+          viewer_user_uuid: string
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          id?: string
+          owner_user_uuid: string
+          performed_by: string
+          scope?: string | null
+          viewer_user_uuid: string
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          id?: string
+          owner_user_uuid?: string
+          performed_by?: string
+          scope?: string | null
+          viewer_user_uuid?: string
+        }
         Relationships: []
+      }
+      calendar_shares: {
+        Row: {
+          created_at: string
+          created_by: string
+          id: string
+          owner_user_uuid: string
+          permission: string
+          scope: string
+          viewer_user_uuid: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          id?: string
+          owner_user_uuid: string
+          permission?: string
+          scope?: string
+          viewer_user_uuid: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          id?: string
+          owner_user_uuid?: string
+          permission?: string
+          scope?: string
+          viewer_user_uuid?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "calendar_shares_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "calendar_shares_owner_user_uuid_fkey"
+            columns: ["owner_user_uuid"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "calendar_shares_viewer_user_uuid_fkey"
+            columns: ["viewer_user_uuid"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["user_uuid"]
+          },
+        ]
       }
       calendar_time_drafts: {
         Row: {
@@ -3046,6 +3173,13 @@ export type Database = {
             columns: ["calendar_event_id"]
             isOneToOne: false
             referencedRelation: "calendar_events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "calendar_time_drafts_calendar_event_id_fkey"
+            columns: ["calendar_event_id"]
+            isOneToOne: false
+            referencedRelation: "calendar_events_shared"
             referencedColumns: ["id"]
           },
           {
@@ -18247,6 +18381,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "time_entries_calendar_event_id_fkey"
+            columns: ["calendar_event_id"]
+            isOneToOne: false
+            referencedRelation: "calendar_events_shared"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "time_entries_stage_id_fkey"
             columns: ["stage_id"]
             isOneToOne: false
@@ -19101,6 +19242,68 @@ export type Database = {
       }
     }
     Views: {
+      calendar_events_shared: {
+        Row: {
+          access_scope: string | null
+          attendees: Json | null
+          calendar_id: string | null
+          client_id: number | null
+          created_at: string | null
+          description: string | null
+          end_at: string | null
+          id: string | null
+          last_synced_at: string | null
+          location: string | null
+          meeting_url: string | null
+          organizer_email: string | null
+          owner_user_uuid: string | null
+          package_id: number | null
+          provider: string | null
+          provider_event_id: string | null
+          sensitivity: string | null
+          start_at: string | null
+          status: string | null
+          tenant_id: number | null
+          title: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "calendar_events_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "calendar_events_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_engagement_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "calendar_events_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_eos_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "calendar_events_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_compliance_entitlements"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "calendar_events_package_id_fkey"
+            columns: ["package_id"]
+            isOneToOne: false
+            referencedRelation: "packages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       dashboard_client_snapshot: {
         Row: {
           at_risk: boolean | null

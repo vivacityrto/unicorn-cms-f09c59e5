@@ -23,6 +23,7 @@ interface CalendarEvent {
   webLink?: string;
   onlineMeeting?: { joinUrl?: string };
   isCancelled?: boolean;
+  sensitivity?: string;
 }
 
 interface TokenRecord {
@@ -88,7 +89,7 @@ async function fetchCalendarEvents(accessToken: string): Promise<CalendarEvent[]
 
   const url = new URL('https://graph.microsoft.com/v1.0/me/events');
   url.searchParams.set('$filter', `start/dateTime ge '${past14Days.toISOString()}' and start/dateTime le '${next60Days.toISOString()}'`);
-  url.searchParams.set('$select', 'id,subject,bodyPreview,start,end,location,organizer,attendees,webLink,onlineMeeting,isCancelled');
+  url.searchParams.set('$select', 'id,subject,bodyPreview,start,end,location,organizer,attendees,webLink,onlineMeeting,isCancelled,sensitivity');
   url.searchParams.set('$orderby', 'start/dateTime');
   url.searchParams.set('$top', '250');
 
@@ -228,6 +229,7 @@ serve(async (req) => {
           end_at: event.end.dateTime + 'Z',
           meeting_url: event.onlineMeeting?.joinUrl || event.webLink,
           status: event.isCancelled ? 'cancelled' : 'confirmed',
+          sensitivity: event.sensitivity || 'normal',
           last_synced_at: new Date().toISOString(),
           raw: event
         }, { 
