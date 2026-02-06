@@ -249,6 +249,16 @@ serve(async (req) => {
 
     console.log('[sync-outlook] Sync complete:', { synced, errors, total: events.length });
 
+    // Update last_synced_at on the token record
+    const { error: updateError } = await supabaseAdmin.from('oauth_tokens').update({
+      last_synced_at: new Date().toISOString(),
+      last_error: errors > 0 ? `${errors} events failed to sync` : null
+    }).eq('user_id', user.id).eq('provider', 'microsoft');
+
+    if (updateError) {
+      console.warn('[sync-outlook] Failed to update token record:', updateError);
+    }
+
     return new Response(
       JSON.stringify({ 
         success: true, 

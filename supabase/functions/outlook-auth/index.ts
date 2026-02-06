@@ -244,6 +244,21 @@ serve(async (req) => {
 
       const expiresAt = new Date(Date.now() + tokens.expires_in * 1000);
 
+      // Fetch user profile from Microsoft Graph to get email
+      let accountEmail: string | null = null;
+      try {
+        const profileResponse = await fetch('https://graph.microsoft.com/v1.0/me', {
+          headers: { 'Authorization': `Bearer ${tokens.access_token}` }
+        });
+        if (profileResponse.ok) {
+          const profile = await profileResponse.json();
+          accountEmail = profile.mail || profile.userPrincipalName || null;
+          console.log('[outlook-auth] Fetched profile email:', accountEmail);
+        }
+      } catch (profileError) {
+        console.warn('[outlook-auth] Failed to fetch profile:', profileError);
+      }
+
       // Store tokens - upsert to handle reconnection
       const { error: upsertError } = await supabaseAdmin.from('oauth_tokens').upsert({
         user_id: stateData.user_id,
@@ -253,6 +268,9 @@ serve(async (req) => {
         refresh_token: tokens.refresh_token,
         expires_at: expiresAt.toISOString(),
         scope: tokens.scope,
+        account_email: accountEmail,
+        last_synced_at: null,
+        last_error: null,
         updated_at: new Date().toISOString()
       }, { onConflict: 'user_id,provider' });
 
@@ -287,7 +305,7 @@ serve(async (req) => {
 
       const { data: token, error: tokenError } = await supabaseAdmin
         .from('oauth_tokens')
-        .select('expires_at, updated_at')
+        .select('expires_at, updated_at, account_email, last_synced_at, last_error')
         .eq('user_id', user.id)
         .eq('provider', 'microsoft')
         .single();
@@ -297,11 +315,17 @@ serve(async (req) => {
         error: tokenError?.message
       });
 
+      const isExpired = token ? new Date(token.expires_at) < new Date() : false;
+
       return new Response(
         JSON.stringify({ 
           connected: !!token,
           expires_at: token?.expires_at,
-          last_updated: token?.updated_at
+          last_updated: token?.updated_at,
+          account_email: token?.account_email,
+          last_synced_at: token?.last_synced_at,
+          last_error: token?.last_error,
+          is_expired: isExpired
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
