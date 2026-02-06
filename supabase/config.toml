@@ -95,3 +95,6 @@ verify_jwt = false
 
 [functions.addin-meeting-create-time-draft]
 verify_jwt = false
+
+[functions.addin-email-link-attachments]
+verify_jwt = false

@@ -21,10 +21,11 @@ import {
   AlertCircle,
   ExternalLink,
   Loader2,
-  Calendar
+  Calendar,
+  Paperclip
 } from 'lucide-react';
 import type { MailContext, AddinUser } from '@/lib/addin/types';
-import { captureEmail, createTaskFromEmail } from '@/lib/addin/emailApi';
+import { captureEmail, createTaskFromEmail, linkEmailAttachments } from '@/lib/addin/emailApi';
 import { useAddinLookups } from '@/hooks/useAddinLookups';
 import { format } from 'date-fns';
 
@@ -34,7 +35,7 @@ interface MailPanelProps {
   tenantId?: number | null;
 }
 
-type ActionMode = 'idle' | 'link' | 'task';
+type ActionMode = 'idle' | 'link' | 'task' | 'attachments';
 type ActionStatus = 'idle' | 'loading' | 'success' | 'error';
 
 export function MailPanel({ mailContext, user, tenantId }: MailPanelProps) {
@@ -123,6 +124,36 @@ export function MailPanel({ mailContext, user, tenantId }: MailPanelProps) {
     } catch (err) {
       setStatus('error');
       setError(err instanceof Error ? err.message : 'Failed to create task');
+    }
+  };
+
+  const handleLinkAttachments = async () => {
+    if (!selectedClientId) {
+      setError('Please select a client');
+      return;
+    }
+
+    if (!mailContext.attachments || mailContext.attachments.length === 0) {
+      setError('No attachments to link');
+      return;
+    }
+
+    setStatus('loading');
+    setError(null);
+
+    try {
+      const result = await linkEmailAttachments(
+        mailContext,
+        selectedClientId,
+        selectedPackageId || undefined
+      );
+
+      setStatus('success');
+      setSuccessMessage(`${result.attachments_linked} attachment(s) linked!`);
+      setDeepLink(result.links.open_client_documents);
+    } catch (err) {
+      setStatus('error');
+      setError(err instanceof Error ? err.message : 'Failed to link attachments');
     }
   };
 
@@ -217,6 +248,18 @@ export function MailPanel({ mailContext, user, tenantId }: MailPanelProps) {
               <ListTodo className="h-4 w-4 mr-2" />
               Create Task
             </Button>
+            {mailContext.attachments && mailContext.attachments.length > 0 && (
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="w-full justify-start"
+                onClick={() => setMode('attachments')}
+                disabled={lookupsLoading}
+              >
+                <Paperclip className="h-4 w-4 mr-2" />
+                Link Attachments ({mailContext.attachments.length})
+              </Button>
+            )}
           </div>
         )}
 
@@ -372,6 +415,94 @@ export function MailPanel({ mailContext, user, tenantId }: MailPanelProps) {
                   <ListTodo className="h-4 w-4 mr-2" />
                 )}
                 Create Task
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {/* Link Attachments Form */}
+        {mode === 'attachments' && status !== 'success' && (
+          <div className="space-y-3">
+            <div className="rounded-lg border p-3 space-y-2 bg-muted/50">
+              <h4 className="text-sm font-medium flex items-center gap-2">
+                <Paperclip className="h-4 w-4" />
+                Attachments to Link
+              </h4>
+              <ul className="text-xs text-muted-foreground space-y-1">
+                {mailContext.attachments?.map((att, idx) => (
+                  <li key={idx} className="flex items-center justify-between">
+                    <span className="truncate">{att.name}</span>
+                    <span className="text-xs opacity-70">
+                      {att.size ? `${Math.round(att.size / 1024)} KB` : ''}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="att-client">Client *</Label>
+              <Select 
+                value={selectedClientId?.toString() || ''} 
+                onValueChange={(v) => {
+                  setSelectedClientId(parseInt(v));
+                  setSelectedPackageId(null);
+                }}
+              >
+                <SelectTrigger id="att-client">
+                  <SelectValue placeholder="Select a client" />
+                </SelectTrigger>
+                <SelectContent>
+                  {clients.map((client) => (
+                    <SelectItem key={client.id} value={client.id.toString()}>
+                      {client.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {selectedClientId && packages.length > 0 && (
+              <div className="space-y-2">
+                <Label htmlFor="att-package">Package (optional)</Label>
+                <Select 
+                  value={selectedPackageId?.toString() || ''} 
+                  onValueChange={(v) => setSelectedPackageId(v ? parseInt(v) : null)}
+                >
+                  <SelectTrigger id="att-package">
+                    <SelectValue placeholder="Select a package" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {packages.map((pkg) => (
+                      <SelectItem key={pkg.id} value={pkg.id.toString()}>
+                        {pkg.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            <div className="flex gap-2">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={resetForm}
+                disabled={status === 'loading'}
+              >
+                Cancel
+              </Button>
+              <Button 
+                size="sm" 
+                onClick={handleLinkAttachments}
+                disabled={status === 'loading' || !selectedClientId}
+              >
+                {status === 'loading' ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <Paperclip className="h-4 w-4 mr-2" />
+                )}
+                Link Attachments
               </Button>
             </div>
           </div>
