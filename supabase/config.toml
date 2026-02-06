@@ -74,3 +74,6 @@ verify_jwt = false
 
 [functions.create-meeting-time-drafts]
 verify_jwt = false
+
+[functions.link-sharepoint-document]
+verify_jwt = false

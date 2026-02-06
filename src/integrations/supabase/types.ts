@@ -5769,6 +5769,203 @@ export type Database = {
           },
         ]
       }
+      document_link_audit: {
+        Row: {
+          action: string
+          created_at: string
+          details: Json | null
+          document_link_id: string | null
+          id: string
+          linked_entity_id: string | null
+          linked_entity_type: string | null
+          user_uuid: string
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          details?: Json | null
+          document_link_id?: string | null
+          id?: string
+          linked_entity_id?: string | null
+          linked_entity_type?: string | null
+          user_uuid: string
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          details?: Json | null
+          document_link_id?: string | null
+          id?: string
+          linked_entity_id?: string | null
+          linked_entity_type?: string | null
+          user_uuid?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "document_link_audit_document_link_id_fkey"
+            columns: ["document_link_id"]
+            isOneToOne: false
+            referencedRelation: "document_links"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      document_links: {
+        Row: {
+          client_id: number | null
+          created_at: string
+          current_version_id: string | null
+          drive_id: string
+          evidence_type: Database["public"]["Enums"]["evidence_type"] | null
+          file_extension: string | null
+          file_name: string | null
+          file_size: number | null
+          id: string
+          item_id: string
+          meeting_id: string | null
+          mime_type: string | null
+          notes: string | null
+          package_id: number | null
+          process_id: string | null
+          provider: string
+          task_id: string | null
+          tenant_id: number
+          updated_at: string
+          user_uuid: string
+          version_confirmed_at: string | null
+          version_id: string | null
+          web_url: string
+        }
+        Insert: {
+          client_id?: number | null
+          created_at?: string
+          current_version_id?: string | null
+          drive_id: string
+          evidence_type?: Database["public"]["Enums"]["evidence_type"] | null
+          file_extension?: string | null
+          file_name?: string | null
+          file_size?: number | null
+          id?: string
+          item_id: string
+          meeting_id?: string | null
+          mime_type?: string | null
+          notes?: string | null
+          package_id?: number | null
+          process_id?: string | null
+          provider?: string
+          task_id?: string | null
+          tenant_id: number
+          updated_at?: string
+          user_uuid: string
+          version_confirmed_at?: string | null
+          version_id?: string | null
+          web_url: string
+        }
+        Update: {
+          client_id?: number | null
+          created_at?: string
+          current_version_id?: string | null
+          drive_id?: string
+          evidence_type?: Database["public"]["Enums"]["evidence_type"] | null
+          file_extension?: string | null
+          file_name?: string | null
+          file_size?: number | null
+          id?: string
+          item_id?: string
+          meeting_id?: string | null
+          mime_type?: string | null
+          notes?: string | null
+          package_id?: number | null
+          process_id?: string | null
+          provider?: string
+          task_id?: string | null
+          tenant_id?: number
+          updated_at?: string
+          user_uuid?: string
+          version_confirmed_at?: string | null
+          version_id?: string | null
+          web_url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "document_links_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "document_links_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_engagement_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "document_links_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_eos_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "document_links_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_compliance_entitlements"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "document_links_meeting_id_fkey"
+            columns: ["meeting_id"]
+            isOneToOne: false
+            referencedRelation: "meetings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "document_links_meeting_id_fkey"
+            columns: ["meeting_id"]
+            isOneToOne: false
+            referencedRelation: "meetings_shared"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "document_links_package_id_fkey"
+            columns: ["package_id"]
+            isOneToOne: false
+            referencedRelation: "packages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "document_links_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "document_links_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_engagement_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "document_links_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_eos_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "document_links_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_compliance_entitlements"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
       document_source_mappings: {
         Row: {
           created_at: string
@@ -22388,6 +22585,13 @@ export type Database = {
         | "IDS"
         | "Conclude"
       eos_todo_status: "Open" | "Complete" | "Cancelled"
+      evidence_type:
+        | "policy"
+        | "procedure"
+        | "record"
+        | "form"
+        | "template"
+        | "other"
       feature_flag: "eos_qc"
       invite_status: "INVITED" | "ACCEPTED" | "REVOKED" | "EXPIRED"
       meeting_attendance_status:
@@ -22657,6 +22861,14 @@ export const Constants = {
         "Conclude",
       ],
       eos_todo_status: ["Open", "Complete", "Cancelled"],
+      evidence_type: [
+        "policy",
+        "procedure",
+        "record",
+        "form",
+        "template",
+        "other",
+      ],
       feature_flag: ["eos_qc"],
       invite_status: ["INVITED", "ACCEPTED", "REVOKED", "EXPIRED"],
       meeting_attendance_status: [
