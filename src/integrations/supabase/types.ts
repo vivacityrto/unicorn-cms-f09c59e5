@@ -20365,6 +20365,54 @@ export type Database = {
       }
     }
     Views: {
+      auth_tokens_safe: {
+        Row: {
+          created_at: string | null
+          email: string | null
+          expires_at: string | null
+          id: string | null
+          ip_issued: string | null
+          ip_used: string | null
+          meta: Json | null
+          token_hash: string | null
+          token_type: string | null
+          ua_issued: string | null
+          ua_used: string | null
+          used_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          email?: string | null
+          expires_at?: string | null
+          id?: string | null
+          ip_issued?: string | null
+          ip_used?: string | null
+          meta?: Json | null
+          token_hash?: never
+          token_type?: string | null
+          ua_issued?: string | null
+          ua_used?: string | null
+          used_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          email?: string | null
+          expires_at?: string | null
+          id?: string | null
+          ip_issued?: string | null
+          ip_used?: string | null
+          meta?: Json | null
+          token_hash?: never
+          token_type?: string | null
+          ua_issued?: string | null
+          ua_used?: string | null
+          used_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       calendar_events_shared: {
         Row: {
           access_scope: string | null
