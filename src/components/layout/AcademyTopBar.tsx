@@ -3,10 +3,7 @@ import { useLocation, Link } from "react-router-dom";
 import {
   Bell,
   Settings,
-  User,
   LogOut,
-  Clock,
-  Calendar,
   Search,
   ChevronRight,
   GraduationCap,
@@ -231,23 +228,9 @@ export function AcademyTopBar() {
 
               {/* Menu Items */}
               <DropdownMenuItem asChild className="cursor-pointer">
-                <Link to="/settings" className="flex items-center">
-                  <User className="mr-2 h-4 w-4" />
-                  <span>View Profile</span>
-                </Link>
-              </DropdownMenuItem>
-
-              <DropdownMenuItem asChild className="cursor-pointer">
-                <Link to="/academy/certificates" className="flex items-center">
-                  <Calendar className="mr-2 h-4 w-4" />
-                  <span>My Certificates</span>
-                </Link>
-              </DropdownMenuItem>
-
-              <DropdownMenuItem asChild className="cursor-pointer">
-                <Link to="/academy/events" className="flex items-center">
-                  <Clock className="mr-2 h-4 w-4" />
-                  <span>Upcoming Events</span>
+                <Link to="/profile" className="flex items-center">
+                  <Settings className="mr-2 h-4 w-4" />
+                  <span>Profile Settings</span>
                 </Link>
               </DropdownMenuItem>
 
