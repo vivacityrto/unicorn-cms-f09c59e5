@@ -6562,6 +6562,47 @@ export type Database = {
           },
         ]
       }
+      email_link_audit: {
+        Row: {
+          action: string
+          created_at: string
+          email_message_id: string | null
+          id: string
+          linked_entity_id: string | null
+          linked_entity_type: string | null
+          metadata: Json | null
+          user_uuid: string
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          email_message_id?: string | null
+          id?: string
+          linked_entity_id?: string | null
+          linked_entity_type?: string | null
+          metadata?: Json | null
+          user_uuid: string
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          email_message_id?: string | null
+          id?: string
+          linked_entity_id?: string | null
+          linked_entity_type?: string | null
+          metadata?: Json | null
+          user_uuid?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_link_audit_email_message_id_fkey"
+            columns: ["email_message_id"]
+            isOneToOne: false
+            referencedRelation: "email_messages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       email_logs: {
         Row: {
           body: string | null
@@ -6615,6 +6656,179 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "system_emails"
             referencedColumns: ["id"]
+          },
+        ]
+      }
+      email_message_attachments: {
+        Row: {
+          created_at: string
+          email_message_id: string
+          file_name: string
+          file_size: number | null
+          id: string
+          mime_type: string | null
+          storage_path: string
+        }
+        Insert: {
+          created_at?: string
+          email_message_id: string
+          file_name: string
+          file_size?: number | null
+          id?: string
+          mime_type?: string | null
+          storage_path: string
+        }
+        Update: {
+          created_at?: string
+          email_message_id?: string
+          file_name?: string
+          file_size?: number | null
+          id?: string
+          mime_type?: string | null
+          storage_path?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_message_attachments_email_message_id_fkey"
+            columns: ["email_message_id"]
+            isOneToOne: false
+            referencedRelation: "email_messages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      email_messages: {
+        Row: {
+          body_preview: string | null
+          client_id: number | null
+          created_at: string
+          external_message_id: string
+          has_attachments: boolean | null
+          id: string
+          package_id: number | null
+          provider: string
+          received_at: string | null
+          sender_email: string | null
+          sender_name: string | null
+          subject: string | null
+          task_id: string | null
+          tenant_id: number
+          updated_at: string
+          user_uuid: string
+        }
+        Insert: {
+          body_preview?: string | null
+          client_id?: number | null
+          created_at?: string
+          external_message_id: string
+          has_attachments?: boolean | null
+          id?: string
+          package_id?: number | null
+          provider?: string
+          received_at?: string | null
+          sender_email?: string | null
+          sender_name?: string | null
+          subject?: string | null
+          task_id?: string | null
+          tenant_id: number
+          updated_at?: string
+          user_uuid: string
+        }
+        Update: {
+          body_preview?: string | null
+          client_id?: number | null
+          created_at?: string
+          external_message_id?: string
+          has_attachments?: boolean | null
+          id?: string
+          package_id?: number | null
+          provider?: string
+          received_at?: string | null
+          sender_email?: string | null
+          sender_name?: string | null
+          subject?: string | null
+          task_id?: string | null
+          tenant_id?: number
+          updated_at?: string
+          user_uuid?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_messages_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "email_messages_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_engagement_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "email_messages_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_eos_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "email_messages_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_compliance_entitlements"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "email_messages_package_id_fkey"
+            columns: ["package_id"]
+            isOneToOne: false
+            referencedRelation: "packages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "email_messages_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "email_messages_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "email_messages_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_engagement_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "email_messages_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_eos_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "email_messages_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_compliance_entitlements"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "email_messages_user_uuid_fkey"
+            columns: ["user_uuid"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["user_uuid"]
           },
         ]
       }
