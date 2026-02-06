@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { QUERY_STALE_TIMES } from '@/lib/queryConfig';
 
 interface TenantUser {
   user_uuid: string;
@@ -31,7 +32,7 @@ export const useTenantUsers = () => {
       return (data || []) as TenantUser[];
     },
     enabled: isSuper || !!profile?.tenant_id,
-    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+    staleTime: QUERY_STALE_TIMES.PROFILE,
   });
 
   // Helper to get user display name by UUID

@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { QUERY_STALE_TIMES } from '@/lib/queryConfig';
 
 /**
  * Tenant Team Users Hook
@@ -63,7 +64,7 @@ export function useTenantTeamUsers() {
       return (data || []) as TenantTeamUser[];
     },
     enabled: !!tenantId || isSuper,
-    staleTime: 5 * 60 * 1000, // 5 minutes
+    staleTime: QUERY_STALE_TIMES.PROFILE,
   });
 }
 

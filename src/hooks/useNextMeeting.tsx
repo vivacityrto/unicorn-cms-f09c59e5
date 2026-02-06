@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { addHours } from 'date-fns';
 import type { NextMeetingData } from '@/components/eos/leadership/NextMeetingCard';
+import { QUERY_STALE_TIMES } from '@/lib/queryConfig';
 
 const VIVACITY_TENANT_ID = 6372;
 
@@ -181,7 +182,7 @@ export function useNextMeeting() {
         visionaryPresent,
       };
     },
-    staleTime: 1000 * 60 * 2, // 2 minutes
+    staleTime: QUERY_STALE_TIMES.LIST,
     refetchInterval: 1000 * 60 * 5, // Refetch every 5 minutes
   });
 }

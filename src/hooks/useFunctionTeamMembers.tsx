@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { VIVACITY_TENANT_ID } from './useVivacityTeamUsers';
 import type { VivacityTeamUser } from './useVivacityTeamUsers';
+import { QUERY_STALE_TIMES } from '@/lib/queryConfig';
 
 /**
  * Team member assigned to a Functional Lead
@@ -69,7 +70,7 @@ export function useFunctionTeamMembers(functionId: string | undefined) {
       }));
     },
     enabled: !!functionId,
-    staleTime: 2 * 60 * 1000, // 2 minutes
+    staleTime: QUERY_STALE_TIMES.LIST,
   });
 
   // Add team member
@@ -216,6 +217,6 @@ export function useAllFunctionTeamMembers(functionIds: string[]) {
       return grouped;
     },
     enabled: functionIds.length > 0,
-    staleTime: 2 * 60 * 1000,
+    staleTime: QUERY_STALE_TIMES.LIST,
   });
 }

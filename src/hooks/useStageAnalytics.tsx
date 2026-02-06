@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { QUERY_STALE_TIMES } from '@/lib/queryConfig';
 
 export interface StageAnalyticsKPIs {
   totalStages: number;
@@ -101,7 +102,7 @@ export function useStageAnalytics(options: UseStageAnalyticsOptions) {
         stagesWithActiveClients
       };
     },
-    staleTime: 30000
+    staleTime: QUERY_STALE_TIMES.REALTIME,
   });
 
   // Top stages by usage
@@ -187,7 +188,7 @@ export function useStageAnalytics(options: UseStageAnalyticsOptions) {
 
       return results.slice(0, 50);
     },
-    staleTime: 30000
+    staleTime: QUERY_STALE_TIMES.REALTIME,
   });
 
   // Certified but unused stages
@@ -243,7 +244,7 @@ export function useStageAnalytics(options: UseStageAnalyticsOptions) {
         updated_at: s.updated_at
       }));
     },
-    staleTime: 30000
+    staleTime: QUERY_STALE_TIMES.REALTIME,
   });
 
   // High-risk stages (edited while active)
@@ -386,7 +387,7 @@ export function useStageAnalytics(options: UseStageAnalyticsOptions) {
 
       return results;
     },
-    staleTime: 30000
+    staleTime: QUERY_STALE_TIMES.REALTIME,
   });
 
   // Stage change activity feed
@@ -441,7 +442,7 @@ export function useStageAnalytics(options: UseStageAnalyticsOptions) {
         details: e.details
       }));
     },
-    staleTime: 30000
+    staleTime: QUERY_STALE_TIMES.REALTIME,
   });
 
   const refetchAll = useCallback(() => {
