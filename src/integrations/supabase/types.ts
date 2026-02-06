@@ -12767,6 +12767,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "portal_documents_linked_package_id_fkey"
+            columns: ["linked_package_id"]
+            isOneToOne: false
+            referencedRelation: "packages"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "portal_documents_linked_support_request_id_fkey"
             columns: ["linked_support_request_id"]
             isOneToOne: false
@@ -20630,6 +20637,10 @@ export type Database = {
       is_tenant_admin_uuid: { Args: { p_tenant_id: string }; Returns: boolean }
       is_tenant_member: { Args: { p_tenant_id: number }; Returns: boolean }
       is_tenant_member_uuid: { Args: { p_tenant_id: string }; Returns: boolean }
+      is_tenant_parent_safe: {
+        Args: { p_tenant_id: number; p_user_id: string }
+        Returns: boolean
+      }
       is_user_super_admin: { Args: { user_id: string }; Returns: boolean }
       is_vivacity: { Args: never; Returns: boolean }
       is_vivacity_member: { Args: { p_user_id: string }; Returns: boolean }
@@ -21172,6 +21183,10 @@ export type Database = {
         Args: { p_stage_id: number }
         Returns: Json
       }
+      tenant_has_any_users_safe: {
+        Args: { p_tenant_id: number }
+        Returns: boolean
+      }
       tenant_has_package: {
         Args: { p_package_id: number; p_tenant_id: number }
         Returns: boolean
@@ -21342,6 +21357,10 @@ export type Database = {
       }
       user_has_tenant_access: {
         Args: { p_tenant_id: number }
+        Returns: boolean
+      }
+      user_has_tenant_access_safe: {
+        Args: { p_tenant_id: number; p_user_id: string }
         Returns: boolean
       }
       user_in_tenant: { Args: { p_tenant_id: number }; Returns: boolean }
