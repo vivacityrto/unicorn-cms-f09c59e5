@@ -1,15 +1,16 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { jwtVerify } from "https://deno.land/x/jose@v5.2.2/index.ts";
+import { 
+  corsHeaders, 
+  errorResponse, 
+  verifyAddinToken, 
+  enforceVivacityTeamRole,
+  verifyClientAccess,
+  createAdminClient,
+  logFailedAction,
+  type AddinTokenPayload 
+} from "../_shared/addin-auth.ts";
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, idempotency-key',
-};
-
-const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
-const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-const ADDIN_JWT_SECRET = Deno.env.get('ADDIN_JWT_SECRET') || Deno.env.get('JWT_SECRET') || SUPABASE_SERVICE_ROLE_KEY;
+const FUNCTION_NAME = 'addin-email-link-attachments';
 
 interface Attachment {
   file_name: string;
@@ -25,44 +26,6 @@ interface LinkAttachmentsRequest {
   package_id?: string;
   evidence_type?: string;
   attachments: Attachment[];
-}
-
-interface AddinTokenPayload {
-  user_uuid: string;
-  email: string;
-  role: string;
-  tenant_id: number | null;
-  purpose: string;
-}
-
-function errorResponse(status: number, code: string, message: string, details: Record<string, unknown> = {}): Response {
-  return new Response(
-    JSON.stringify({ error: { code, message, details } }),
-    { status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-  );
-}
-
-async function verifyAddinToken(authHeader: string | null): Promise<AddinTokenPayload | null> {
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return null;
-  }
-
-  const token = authHeader.substring(7);
-  try {
-    const secret = new TextEncoder().encode(ADDIN_JWT_SECRET);
-    const { payload } = await jwtVerify(token, secret, {
-      issuer: 'unicorn-addin',
-    });
-    
-    if (payload.purpose !== 'addin') {
-      return null;
-    }
-    
-    return payload as unknown as AddinTokenPayload;
-  } catch (error) {
-    console.error('[addin-email-link-attachments] Token verification failed:', error);
-    return null;
-  }
 }
 
 function getFileExtension(fileName: string): string | null {
@@ -83,9 +46,18 @@ serve(async (req) => {
 
   try {
     // Verify add-in JWT token
-    const tokenPayload = await verifyAddinToken(req.headers.get('Authorization'));
-    if (!tokenPayload) {
-      return errorResponse(401, 'UNAUTHORIZED', 'Invalid or missing add-in token');
+    const authResult = await verifyAddinToken(req.headers.get('Authorization'), FUNCTION_NAME);
+    if (!authResult.success || !authResult.payload) {
+      await logFailedAction(FUNCTION_NAME, 'link_attachments', null, authResult.error!.code, authResult.error!.message);
+      return errorResponse(authResult.error!.status, authResult.error!.code, authResult.error!.message);
+    }
+    const tokenPayload = authResult.payload;
+
+    // RBAC: Enforce Vivacity Team role
+    const rbacResult = enforceVivacityTeamRole(tokenPayload);
+    if (!rbacResult.success) {
+      await logFailedAction(FUNCTION_NAME, 'link_attachments', tokenPayload.user_uuid, rbacResult.error!.code, rbacResult.error!.message);
+      return errorResponse(rbacResult.error!.status, rbacResult.error!.code, rbacResult.error!.message, rbacResult.error!.details || {});
     }
 
     const idempotencyKey = req.headers.get('Idempotency-Key');
@@ -93,6 +65,7 @@ serve(async (req) => {
     
     console.log('[addin-email-link-attachments] Request:', {
       user: tokenPayload.email,
+      role: tokenPayload.role,
       external_message_id: body.external_message_id?.substring(0, 20) + '...',
       client_id: body.client_id,
       attachments_count: body.attachments?.length || 0,
@@ -117,9 +90,16 @@ serve(async (req) => {
       }
     }
 
+    // RBAC: Verify user has access to the client
+    const clientAccessResult = await verifyClientAccess(tokenPayload.user_uuid, body.client_id, FUNCTION_NAME);
+    if (!clientAccessResult.success) {
+      await logFailedAction(FUNCTION_NAME, 'link_attachments', tokenPayload.user_uuid, clientAccessResult.error!.code, clientAccessResult.error!.message, { client_id: body.client_id });
+      return errorResponse(clientAccessResult.error!.status, clientAccessResult.error!.code, clientAccessResult.error!.message, clientAccessResult.error!.details || {});
+    }
+
     const evidenceType = body.evidence_type || 'record';
 
-    const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+    const supabaseAdmin = createAdminClient();
 
     // Get user's tenant_id
     const tenantId = tokenPayload.tenant_id;
