@@ -8,6 +8,7 @@ import { AuthProvider } from "./hooks/useAuth";
 import { ViewModeProvider } from "./contexts/ViewModeContext";
 import { FacilitatorModeProvider } from "./contexts/FacilitatorModeContext";
 import { TenantTypeProvider } from "./contexts/TenantTypeContext";
+import { ClientPreviewProvider } from "./contexts/ClientPreviewContext";
  import { ProtectedRoute } from "./components/ProtectedRoute";
  import { LazyLoadFallback } from "./components/LazyLoadFallback";
  
@@ -120,6 +121,10 @@ const AcademyCommunity = lazy(() => import("./pages/academy/AcademyCommunity"));
 const AcademyTeam = lazy(() => import("./pages/academy/AcademyTeam"));
 const AcademySettings = lazy(() => import("./pages/academy/AcademySettings"));
 
+// Client Preview pages
+const ClientPreview = lazy(() => import("./pages/ClientPreview"));
+const ClientPreviewAcademy = lazy(() => import("./pages/ClientPreviewAcademy"));
+
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -130,6 +135,7 @@ const App = () => (
       <BrowserRouter>
         <AuthProvider>
           <TenantTypeProvider>
+          <ClientPreviewProvider>
           <ViewModeProvider>
           <FacilitatorModeProvider>
            <Suspense fallback={<LazyLoadFallback />}>
@@ -821,12 +827,17 @@ const App = () => (
             <Route path="/academy/community" element={<ProtectedRoute><AcademyCommunity /></ProtectedRoute>} />
             <Route path="/academy/team" element={<ProtectedRoute><AcademyTeam /></ProtectedRoute>} />
             <Route path="/academy/settings" element={<ProtectedRoute><AcademySettings /></ProtectedRoute>} />
+            {/* Client Preview Routes */}
+            <Route path="/client-preview" element={<ProtectedRoute><ClientPreview /></ProtectedRoute>} />
+            <Route path="/client-preview/academy" element={<ProtectedRoute><ClientPreviewAcademy /></ProtectedRoute>} />
+
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
            </Suspense>
           </FacilitatorModeProvider>
           </ViewModeProvider>
+          </ClientPreviewProvider>
           </TenantTypeProvider>
         </AuthProvider>
       </BrowserRouter>
