@@ -19422,7 +19422,7 @@ export type Database = {
         Returns: Json
       }
       rpc_check_package_thresholds: {
-        Args: { p_client_id: number; p_client_package_id: string }
+        Args: { p_client_id: number; p_client_package_id: number }
         Returns: Json
       }
       rpc_create_action_item: {
@@ -19514,10 +19514,22 @@ export type Database = {
         Returns: Json
       }
       rpc_get_package_usage: {
-        Args: { p_client_id: number; p_client_package_id: string }
+        Args: { p_client_id: number; p_client_package_id: number }
         Returns: Json
       }
       rpc_get_time_inbox_stats: { Args: never; Returns: Json }
+      rpc_import_meeting_time_to_client: {
+        Args: {
+          p_calendar_event_id: string
+          p_client_id: number
+          p_minutes: number
+          p_notes?: string
+          p_package_id?: number
+          p_save_as_draft?: boolean
+          p_work_date: string
+        }
+        Returns: Json
+      }
       rpc_insert_timeline_event: {
         Args: {
           p_body?: string
