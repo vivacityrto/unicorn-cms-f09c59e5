@@ -10,6 +10,8 @@ import { UtilityFooter } from "@/components/layout/UtilityFooter";
 import { TimeInboxBanner } from "@/components/dashboard/TimeInboxWidget";
 import { FacilitatorModeBanner } from "@/components/eos/FacilitatorModeBanner";
 import { AIChatbot } from "@/components/admin/AIChatbot";
+import { useProfileSetupReminder } from "@/hooks/useProfileSetupReminder";
+import { ProfileSetupReminderModal } from "@/components/profile/ProfileSetupReminderModal";
 
 // ============================================================
 // VIVACITY TEAM SIDEBAR - FINAL AUTHORITY MODEL
@@ -132,6 +134,17 @@ export const DashboardLayout = ({
   const { canAccessAdmin, canAccessAdvanced, isSuperAdmin } = useRBAC();
   const { isViewingAsClient } = useViewMode();
   const navRef = useRef<HTMLElement>(null);
+  
+  // Profile setup reminder for Vivacity Team
+  const {
+    showModal: showProfileSetupModal,
+    setShowModal: setShowProfileSetupModal,
+    missingFields,
+    handleSnooze,
+    handleDismiss,
+    logSettingsOpened,
+    getBestTab,
+  } = useProfileSetupReminder();
 
   // Determine user role
   const userRole = profile?.unicorn_role || "User";
@@ -450,6 +463,17 @@ export const DashboardLayout = ({
         {/* AI Chatbot - SuperAdmin only */}
         <AIChatbot />
       </div>
+
+      {/* Profile Setup Reminder Modal */}
+      <ProfileSetupReminderModal
+        open={showProfileSetupModal}
+        onOpenChange={setShowProfileSetupModal}
+        missingFields={missingFields}
+        onSnooze={handleSnooze}
+        onDismiss={handleDismiss}
+        onGoToSettings={logSettingsOpened}
+        bestTab={getBestTab()}
+      />
     </div>
   );
 };
