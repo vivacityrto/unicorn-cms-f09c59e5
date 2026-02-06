@@ -74,6 +74,13 @@ export type Database = {
             referencedRelation: "v_client_eos_summary"
             referencedColumns: ["tenant_id"]
           },
+          {
+            foreignKeyName: "accountability_chart_versions_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_compliance_entitlements"
+            referencedColumns: ["tenant_id"]
+          },
         ]
       }
       accountability_charts: {
@@ -124,6 +131,13 @@ export type Database = {
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "v_client_eos_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "accountability_charts_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_compliance_entitlements"
             referencedColumns: ["tenant_id"]
           },
         ]
@@ -205,6 +219,13 @@ export type Database = {
             referencedRelation: "v_client_eos_summary"
             referencedColumns: ["tenant_id"]
           },
+          {
+            foreignKeyName: "accountability_functions_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_compliance_entitlements"
+            referencedColumns: ["tenant_id"]
+          },
         ]
       }
       accountability_seat_assignments: {
@@ -284,6 +305,13 @@ export type Database = {
             referencedRelation: "v_client_eos_summary"
             referencedColumns: ["tenant_id"]
           },
+          {
+            foreignKeyName: "accountability_seat_assignments_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_compliance_entitlements"
+            referencedColumns: ["tenant_id"]
+          },
         ]
       }
       accountability_seat_roles: {
@@ -352,6 +380,13 @@ export type Database = {
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "v_client_eos_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "accountability_seat_roles_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_compliance_entitlements"
             referencedColumns: ["tenant_id"]
           },
         ]
@@ -464,6 +499,13 @@ export type Database = {
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "v_client_eos_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "accountability_seats_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_compliance_entitlements"
             referencedColumns: ["tenant_id"]
           },
         ]
@@ -695,6 +737,13 @@ export type Database = {
             columns: ["client_tenant_id"]
             isOneToOne: false
             referencedRelation: "v_client_eos_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "assistant_audit_log_client_tenant_id_fkey"
+            columns: ["client_tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_compliance_entitlements"
             referencedColumns: ["tenant_id"]
           },
           {
@@ -966,6 +1015,13 @@ export type Database = {
             referencedRelation: "v_client_eos_summary"
             referencedColumns: ["tenant_id"]
           },
+          {
+            foreignKeyName: "audit_client_impersonation_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_compliance_entitlements"
+            referencedColumns: ["tenant_id"]
+          },
         ]
       }
       audit_eos_events: {
@@ -1196,6 +1252,13 @@ export type Database = {
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "v_client_eos_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "audit_gwc_trends_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_compliance_entitlements"
             referencedColumns: ["tenant_id"]
           },
         ]
@@ -1450,6 +1513,13 @@ export type Database = {
             referencedRelation: "v_client_eos_summary"
             referencedColumns: ["tenant_id"]
           },
+          {
+            foreignKeyName: "audit_people_analyzer_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_compliance_entitlements"
+            referencedColumns: ["tenant_id"]
+          },
         ]
       }
       audit_question: {
@@ -1645,6 +1715,13 @@ export type Database = {
             referencedRelation: "v_client_eos_summary"
             referencedColumns: ["tenant_id"]
           },
+          {
+            foreignKeyName: "audit_restricted_actions_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_compliance_entitlements"
+            referencedColumns: ["tenant_id"]
+          },
         ]
       }
       audit_seat_health: {
@@ -1729,6 +1806,13 @@ export type Database = {
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "v_client_eos_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "audit_seat_health_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_compliance_entitlements"
             referencedColumns: ["tenant_id"]
           },
         ]
@@ -1837,6 +1921,13 @@ export type Database = {
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "v_client_eos_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "audit_succession_events_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_compliance_entitlements"
             referencedColumns: ["tenant_id"]
           },
         ]
@@ -2031,6 +2122,13 @@ export type Database = {
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "v_client_eos_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "audit_upgrade_attempts_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_compliance_entitlements"
             referencedColumns: ["tenant_id"]
           },
         ]
@@ -3689,6 +3787,13 @@ export type Database = {
             referencedRelation: "v_client_eos_summary"
             referencedColumns: ["tenant_id"]
           },
+          {
+            foreignKeyName: "client_impact_items_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_compliance_entitlements"
+            referencedColumns: ["tenant_id"]
+          },
         ]
       }
       client_impact_reports: {
@@ -3777,6 +3882,13 @@ export type Database = {
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "v_client_eos_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "client_impact_reports_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_compliance_entitlements"
             referencedColumns: ["tenant_id"]
           },
         ]
@@ -4654,6 +4766,69 @@ export type Database = {
           },
         ]
       }
+      compliance_plans: {
+        Row: {
+          code: string
+          created_at: string
+          created_by: string | null
+          default_billable_rate: number | null
+          default_included_hours_month: number
+          default_resolution_sla_id: string | null
+          default_response_sla_id: string | null
+          description: string | null
+          feature_flags: Json
+          id: string
+          limits: Json
+          name: string
+          status: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          created_by?: string | null
+          default_billable_rate?: number | null
+          default_included_hours_month?: number
+          default_resolution_sla_id?: string | null
+          default_response_sla_id?: string | null
+          description?: string | null
+          feature_flags?: Json
+          id?: string
+          limits?: Json
+          name: string
+          status?: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          created_by?: string | null
+          default_billable_rate?: number | null
+          default_included_hours_month?: number
+          default_resolution_sla_id?: string | null
+          default_response_sla_id?: string | null
+          description?: string | null
+          feature_flags?: Json
+          id?: string
+          limits?: Json
+          name?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "compliance_plans_default_resolution_sla_id_fkey"
+            columns: ["default_resolution_sla_id"]
+            isOneToOne: false
+            referencedRelation: "sla_policies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "compliance_plans_default_response_sla_id_fkey"
+            columns: ["default_response_sla_id"]
+            isOneToOne: false
+            referencedRelation: "sla_policies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       connected_tenants: {
         Row: {
           connected_at: string
@@ -4788,6 +4963,94 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "dashboard_client_snapshot"
             referencedColumns: ["id"]
+          },
+        ]
+      }
+      consult_time_entries: {
+        Row: {
+          billing_reason: string | null
+          counts_toward_included_hours: boolean
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          is_billable: boolean
+          minutes: number
+          package_id: number | null
+          support_request_id: string | null
+          tenant_id: number
+          user_id: string
+        }
+        Insert: {
+          billing_reason?: string | null
+          counts_toward_included_hours?: boolean
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_billable?: boolean
+          minutes: number
+          package_id?: number | null
+          support_request_id?: string | null
+          tenant_id: number
+          user_id: string
+        }
+        Update: {
+          billing_reason?: string | null
+          counts_toward_included_hours?: boolean
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_billable?: boolean
+          minutes?: number
+          package_id?: number | null
+          support_request_id?: string | null
+          tenant_id?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "consult_time_entries_support_request_id_fkey"
+            columns: ["support_request_id"]
+            isOneToOne: false
+            referencedRelation: "support_requests"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "consult_time_entries_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "consult_time_entries_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_engagement_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "consult_time_entries_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_eos_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "consult_time_entries_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_compliance_entitlements"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "consult_time_entries_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["user_uuid"]
           },
         ]
       }
@@ -6819,6 +7082,13 @@ export type Database = {
             referencedRelation: "v_client_eos_summary"
             referencedColumns: ["tenant_id"]
           },
+          {
+            foreignKeyName: "eos_alerts_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_compliance_entitlements"
+            referencedColumns: ["tenant_id"]
+          },
         ]
       }
       eos_chart_drafts: {
@@ -7018,6 +7288,13 @@ export type Database = {
             referencedColumns: ["tenant_id"]
           },
           {
+            foreignKeyName: "eos_function_team_members_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_compliance_entitlements"
+            referencedColumns: ["tenant_id"]
+          },
+          {
             foreignKeyName: "eos_function_team_members_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
@@ -7159,6 +7436,13 @@ export type Database = {
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "v_client_eos_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "eos_health_snapshots_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_compliance_entitlements"
             referencedColumns: ["tenant_id"]
           },
         ]
@@ -8754,6 +9038,13 @@ export type Database = {
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "v_client_eos_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "eos_processes_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_compliance_entitlements"
             referencedColumns: ["tenant_id"]
           },
         ]
@@ -11791,6 +12082,13 @@ export type Database = {
             referencedRelation: "v_client_eos_summary"
             referencedColumns: ["tenant_id"]
           },
+          {
+            foreignKeyName: "people_analyzer_entries_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_compliance_entitlements"
+            referencedColumns: ["tenant_id"]
+          },
         ]
       }
       people_analyzer_trends: {
@@ -11907,6 +12205,13 @@ export type Database = {
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "v_client_eos_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "people_analyzer_trends_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_compliance_entitlements"
             referencedColumns: ["tenant_id"]
           },
         ]
@@ -12662,6 +12967,13 @@ export type Database = {
             referencedRelation: "v_client_eos_summary"
             referencedColumns: ["tenant_id"]
           },
+          {
+            foreignKeyName: "rock_outcomes_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_compliance_entitlements"
+            referencedColumns: ["tenant_id"]
+          },
         ]
       }
       rto_cache: {
@@ -13152,6 +13464,13 @@ export type Database = {
             referencedRelation: "v_client_eos_summary"
             referencedColumns: ["tenant_id"]
           },
+          {
+            foreignKeyName: "seat_health_scores_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_compliance_entitlements"
+            referencedColumns: ["tenant_id"]
+          },
         ]
       }
       seat_measurable_entries: {
@@ -13221,6 +13540,13 @@ export type Database = {
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "v_client_eos_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "seat_measurable_entries_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_compliance_entitlements"
             referencedColumns: ["tenant_id"]
           },
         ]
@@ -13297,6 +13623,13 @@ export type Database = {
             referencedRelation: "v_client_eos_summary"
             referencedColumns: ["tenant_id"]
           },
+          {
+            foreignKeyName: "seat_measurables_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_compliance_entitlements"
+            referencedColumns: ["tenant_id"]
+          },
         ]
       }
       seat_meeting_requirements: {
@@ -13365,6 +13698,13 @@ export type Database = {
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "v_client_eos_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "seat_meeting_requirements_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_compliance_entitlements"
             referencedColumns: ["tenant_id"]
           },
         ]
@@ -13494,6 +13834,13 @@ export type Database = {
             referencedRelation: "v_client_eos_summary"
             referencedColumns: ["tenant_id"]
           },
+          {
+            foreignKeyName: "seat_rebalancing_recommendations_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_compliance_entitlements"
+            referencedColumns: ["tenant_id"]
+          },
         ]
       }
       seat_scorecard_versions: {
@@ -13551,6 +13898,13 @@ export type Database = {
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "v_client_eos_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "seat_scorecard_versions_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_compliance_entitlements"
             referencedColumns: ["tenant_id"]
           },
         ]
@@ -13629,6 +13983,13 @@ export type Database = {
             referencedRelation: "v_client_eos_summary"
             referencedColumns: ["tenant_id"]
           },
+          {
+            foreignKeyName: "seat_scorecards_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_compliance_entitlements"
+            referencedColumns: ["tenant_id"]
+          },
         ]
       }
       skillset_cache: {
@@ -13652,6 +14013,54 @@ export type Database = {
           last_updated?: string | null
           rto_id?: string
           skillset_code?: string
+        }
+        Relationships: []
+      }
+      sla_policies: {
+        Row: {
+          business_hours: Json
+          business_hours_only: boolean
+          business_hours_timezone: string
+          code: string
+          created_at: string
+          created_by: string | null
+          exclusions: Json
+          first_response_hours: number
+          id: string
+          name: string
+          severity_overrides: Json
+          target_resolution_hours: number | null
+          update_frequency_hours: number | null
+        }
+        Insert: {
+          business_hours?: Json
+          business_hours_only?: boolean
+          business_hours_timezone?: string
+          code: string
+          created_at?: string
+          created_by?: string | null
+          exclusions?: Json
+          first_response_hours: number
+          id?: string
+          name: string
+          severity_overrides?: Json
+          target_resolution_hours?: number | null
+          update_frequency_hours?: number | null
+        }
+        Update: {
+          business_hours?: Json
+          business_hours_only?: boolean
+          business_hours_timezone?: string
+          code?: string
+          created_at?: string
+          created_by?: string | null
+          exclusions?: Json
+          first_response_hours?: number
+          id?: string
+          name?: string
+          severity_overrides?: Json
+          target_resolution_hours?: number | null
+          update_frequency_hours?: number | null
         }
         Relationships: []
       }
@@ -14403,6 +14812,112 @@ export type Database = {
         }
         Relationships: []
       }
+      support_requests: {
+        Row: {
+          assigned_to_user_id: string | null
+          closed_at: string | null
+          created_at: string
+          created_by: string | null
+          description: string | null
+          first_response_at: string | null
+          first_response_due_at: string | null
+          id: string
+          requested_by_user_id: string
+          resolution_due_at: string | null
+          resolved_at: string | null
+          severity: string
+          sla_breached: boolean
+          source: string
+          status: string
+          tenant_id: number
+          title: string
+          type: string
+        }
+        Insert: {
+          assigned_to_user_id?: string | null
+          closed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          first_response_at?: string | null
+          first_response_due_at?: string | null
+          id?: string
+          requested_by_user_id: string
+          resolution_due_at?: string | null
+          resolved_at?: string | null
+          severity?: string
+          sla_breached?: boolean
+          source?: string
+          status?: string
+          tenant_id: number
+          title: string
+          type: string
+        }
+        Update: {
+          assigned_to_user_id?: string | null
+          closed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          first_response_at?: string | null
+          first_response_due_at?: string | null
+          id?: string
+          requested_by_user_id?: string
+          resolution_due_at?: string | null
+          resolved_at?: string | null
+          severity?: string
+          sla_breached?: boolean
+          source?: string
+          status?: string
+          tenant_id?: number
+          title?: string
+          type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "support_requests_assigned_to_user_id_fkey"
+            columns: ["assigned_to_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "support_requests_requested_by_user_id_fkey"
+            columns: ["requested_by_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "support_requests_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "support_requests_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_engagement_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "support_requests_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_eos_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "support_requests_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_compliance_entitlements"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
       system_emails: {
         Row: {
           body_template: string
@@ -14838,6 +15353,139 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "dd_address_type"
             referencedColumns: ["code"]
+          },
+        ]
+      }
+      tenant_compliance_memberships: {
+        Row: {
+          assigned_csc_user_id: string | null
+          assigned_team_leader_user_id: string | null
+          billable_rate: number | null
+          billing_model: string
+          created_at: string
+          created_by: string | null
+          end_date: string | null
+          feature_flags_override: Json | null
+          id: string
+          included_hours_month: number | null
+          limits_override: Json | null
+          notes_internal: string | null
+          plan_id: string
+          resolution_sla_id: string | null
+          response_sla_id: string | null
+          start_date: string
+          status: string
+          tenant_id: number
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          assigned_csc_user_id?: string | null
+          assigned_team_leader_user_id?: string | null
+          billable_rate?: number | null
+          billing_model?: string
+          created_at?: string
+          created_by?: string | null
+          end_date?: string | null
+          feature_flags_override?: Json | null
+          id?: string
+          included_hours_month?: number | null
+          limits_override?: Json | null
+          notes_internal?: string | null
+          plan_id: string
+          resolution_sla_id?: string | null
+          response_sla_id?: string | null
+          start_date?: string
+          status?: string
+          tenant_id: number
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          assigned_csc_user_id?: string | null
+          assigned_team_leader_user_id?: string | null
+          billable_rate?: number | null
+          billing_model?: string
+          created_at?: string
+          created_by?: string | null
+          end_date?: string | null
+          feature_flags_override?: Json | null
+          id?: string
+          included_hours_month?: number | null
+          limits_override?: Json | null
+          notes_internal?: string | null
+          plan_id?: string
+          resolution_sla_id?: string | null
+          response_sla_id?: string | null
+          start_date?: string
+          status?: string
+          tenant_id?: number
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tenant_compliance_memberships_assigned_csc_user_id_fkey"
+            columns: ["assigned_csc_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "tenant_compliance_memberships_assigned_team_leader_user_id_fkey"
+            columns: ["assigned_team_leader_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "tenant_compliance_memberships_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "compliance_plans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tenant_compliance_memberships_resolution_sla_id_fkey"
+            columns: ["resolution_sla_id"]
+            isOneToOne: false
+            referencedRelation: "sla_policies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tenant_compliance_memberships_response_sla_id_fkey"
+            columns: ["response_sla_id"]
+            isOneToOne: false
+            referencedRelation: "sla_policies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tenant_compliance_memberships_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tenant_compliance_memberships_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_engagement_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "tenant_compliance_memberships_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_eos_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "tenant_compliance_memberships_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_compliance_entitlements"
+            referencedColumns: ["tenant_id"]
           },
         ]
       }
@@ -15300,6 +15948,74 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "documents_stages"
             referencedColumns: ["id"]
+          },
+        ]
+      }
+      tenant_support_inclusions: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          included_hours: number
+          notes: string | null
+          period_end: string
+          period_start: string
+          rollover_expiry_date: string | null
+          rollover_hours: number
+          tenant_id: number
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          included_hours: number
+          notes?: string | null
+          period_end: string
+          period_start: string
+          rollover_expiry_date?: string | null
+          rollover_hours?: number
+          tenant_id: number
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          included_hours?: number
+          notes?: string | null
+          period_end?: string
+          period_start?: string
+          rollover_expiry_date?: string | null
+          rollover_hours?: number
+          tenant_id?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tenant_support_inclusions_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tenant_support_inclusions_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_engagement_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "tenant_support_inclusions_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_eos_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "tenant_support_inclusions_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_compliance_entitlements"
+            referencedColumns: ["tenant_id"]
           },
         ]
       }
@@ -17731,6 +18447,13 @@ export type Database = {
             referencedRelation: "v_client_eos_summary"
             referencedColumns: ["tenant_id"]
           },
+          {
+            foreignKeyName: "users_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_compliance_entitlements"
+            referencedColumns: ["tenant_id"]
+          },
         ]
       }
     }
@@ -18148,6 +18871,13 @@ export type Database = {
             referencedRelation: "v_client_eos_summary"
             referencedColumns: ["tenant_id"]
           },
+          {
+            foreignKeyName: "accountability_seats_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_compliance_entitlements"
+            referencedColumns: ["tenant_id"]
+          },
         ]
       }
       seat_succession_status: {
@@ -18195,6 +18925,13 @@ export type Database = {
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "v_client_eos_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "accountability_seats_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_compliance_entitlements"
             referencedColumns: ["tenant_id"]
           },
         ]
@@ -18361,6 +19098,45 @@ export type Database = {
           title: string | null
         }
         Relationships: []
+      }
+      v_tenant_compliance_entitlements: {
+        Row: {
+          assigned_csc_user_id: string | null
+          assigned_team_leader_user_id: string | null
+          billing_model: string | null
+          effective_billable_rate: number | null
+          effective_feature_flags: Json | null
+          effective_included_hours_month: number | null
+          effective_limits: Json | null
+          effective_plan_code: string | null
+          effective_plan_name: string | null
+          effective_resolution_sla_id: string | null
+          effective_response_sla_id: string | null
+          end_date: string | null
+          membership_status: string | null
+          period_bonus_hours: number | null
+          rollover_hours: number | null
+          start_date: string | null
+          tenant_id: number | null
+          tenant_name: string | null
+          total_available_hours: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tenant_compliance_memberships_assigned_csc_user_id_fkey"
+            columns: ["assigned_csc_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "tenant_compliance_memberships_assigned_team_leader_user_id_fkey"
+            columns: ["assigned_team_leader_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["user_uuid"]
+          },
+        ]
       }
     }
     Functions: {
