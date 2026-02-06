@@ -2,8 +2,8 @@ import { useState, useEffect } from "react";
 import { useLocation, Link } from "react-router-dom";
 import {
   Bell,
-  Settings,
   LogOut,
+  Settings,
   Search,
   ChevronRight,
 } from "lucide-react";
@@ -79,6 +79,7 @@ const routeTitles: Record<string, string> = {
   "/admin/knowledge": "Knowledge Library",
   "/admin/assistant": "AI Assistant",
   "/settings": "Settings",
+  "/settings/calendar": "Calendar Integration",
   "/reports": "Reports",
   "/team-settings": "Team Settings",
   // Academy routes
@@ -226,25 +227,6 @@ export function TopBar({ showSearch = false }: TopBarProps) {
             </TooltipTrigger>
             <TooltipContent>
               <p>Notifications</p>
-            </TooltipContent>
-          </Tooltip>
-
-          {/* Settings */}
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                asChild
-                className="group transition-all duration-200 hover:scale-105"
-              >
-                <Link to="/settings">
-                  <Settings className="h-5 w-5 text-muted-foreground group-hover:text-foreground transition-colors" />
-                </Link>
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>Settings</p>
             </TooltipContent>
           </Tooltip>
 

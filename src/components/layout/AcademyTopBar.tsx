@@ -162,25 +162,6 @@ export function AcademyTopBar() {
             </TooltipContent>
           </Tooltip>
 
-          {/* Settings */}
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                asChild
-                className="group transition-all duration-200 hover:scale-105"
-              >
-                <Link to="/settings">
-                  <Settings className="h-5 w-5 text-muted-foreground group-hover:text-foreground transition-colors" />
-                </Link>
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>Settings</p>
-            </TooltipContent>
-          </Tooltip>
-
           {/* User Avatar Dropdown */}
           <DropdownMenu>
             <Tooltip>
