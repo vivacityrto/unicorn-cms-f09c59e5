@@ -118,6 +118,7 @@ const AcademyCertificates = lazy(() => import("./pages/academy/AcademyCertificat
 const AcademyEvents = lazy(() => import("./pages/academy/AcademyEvents"));
 const AcademyCommunity = lazy(() => import("./pages/academy/AcademyCommunity"));
 const AcademyTeam = lazy(() => import("./pages/academy/AcademyTeam"));
+const AcademySettings = lazy(() => import("./pages/academy/AcademySettings"));
 
 const queryClient = new QueryClient();
 
@@ -819,6 +820,7 @@ const App = () => (
             <Route path="/academy/events" element={<ProtectedRoute><AcademyEvents /></ProtectedRoute>} />
             <Route path="/academy/community" element={<ProtectedRoute><AcademyCommunity /></ProtectedRoute>} />
             <Route path="/academy/team" element={<ProtectedRoute><AcademyTeam /></ProtectedRoute>} />
+            <Route path="/academy/settings" element={<ProtectedRoute><AcademySettings /></ProtectedRoute>} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

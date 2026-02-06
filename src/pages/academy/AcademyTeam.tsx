@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { AcademyLayout } from "@/components/layout/AcademyLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -11,14 +12,20 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { UserPlus, Mail, MoreVertical } from "lucide-react";
+import { UserPlus, MoreVertical } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { useAuth } from "@/hooks/useAuth";
+import { useSeatLimits } from "@/hooks/useSeatLimits";
+import { SeatLimitBanner } from "@/components/academy/SeatLimitBanner";
+import { PlanInfoCard } from "@/components/academy/PlanInfoCard";
+import { TenantInviteDialog } from "@/components/client/TenantInviteDialog";
 
+// Mock data - would be replaced with real data from API
 const teamMembers = [
   {
     id: 1,
@@ -50,9 +57,20 @@ const teamMembers = [
 ];
 
 const AcademyTeam = () => {
+  const { profile } = useAuth();
+  const tenantId = profile?.tenant_id;
+  const [inviteOpen, setInviteOpen] = useState(false);
+  
+  const { currentUsers, maxUsers, canInvite, loading, refresh } = useSeatLimits({ 
+    tenantId: tenantId || undefined 
+  });
+
   return (
     <AcademyLayout>
       <div className="space-y-6">
+        {/* Seat Limit Banner */}
+        {tenantId && <SeatLimitBanner tenantId={tenantId} />}
+
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold text-foreground">Team Members</h1>
@@ -60,11 +78,19 @@ const AcademyTeam = () => {
               Manage your organisation's Academy access
             </p>
           </div>
-          <Button>
+          <Button 
+            onClick={() => setInviteOpen(true)}
+            disabled={!canInvite || loading}
+          >
             <UserPlus className="mr-2 h-4 w-4" />
             Invite Member
           </Button>
         </div>
+
+        {/* Plan Info Card */}
+        {tenantId && (
+          <PlanInfoCard tenantId={tenantId} compact />
+        )}
 
         {/* Team Stats */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -73,8 +99,10 @@ const AcademyTeam = () => {
               <CardTitle className="text-sm font-medium">Team Members</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{teamMembers.length}</div>
-              <p className="text-xs text-muted-foreground">of 10 seats used</p>
+              <div className="text-2xl font-bold">{loading ? "-" : currentUsers}</div>
+              <p className="text-xs text-muted-foreground">
+                {maxUsers ? `of ${maxUsers} seats used` : "Active members"}
+              </p>
             </CardContent>
           </Card>
 
@@ -176,6 +204,17 @@ const AcademyTeam = () => {
           </CardContent>
         </Card>
       </div>
+
+      {/* Invite Dialog */}
+      {tenantId && (
+        <TenantInviteDialog
+          open={inviteOpen}
+          onOpenChange={setInviteOpen}
+          tenantId={tenantId}
+          tenantName="Your Academy"
+          onSuccess={refresh}
+        />
+      )}
     </AcademyLayout>
   );
 };
