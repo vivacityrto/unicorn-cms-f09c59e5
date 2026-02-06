@@ -83,13 +83,16 @@ export function ClientTimeWidget({ tenantId, clientId }: ClientTimeWidgetProps) 
       <div className="flex items-center gap-2">
         {/* Package selector (if multiple) */}
         {hasPackages && packages.length > 1 && (
-          <Select value={selectedPackageId || ''} onValueChange={setSelectedPackageId}>
+          <Select 
+            value={selectedPackageId?.toString() || ''} 
+            onValueChange={(v) => setSelectedPackageId(v ? Number(v) : null)}
+          >
             <SelectTrigger className="w-[140px] h-8 text-xs">
               <SelectValue placeholder="Select package" />
             </SelectTrigger>
             <SelectContent>
               {packages.map(pkg => (
-                <SelectItem key={pkg.id} value={pkg.id}>
+                <SelectItem key={pkg.id} value={pkg.id.toString()}>
                   {pkg.package_name}
                 </SelectItem>
               ))}

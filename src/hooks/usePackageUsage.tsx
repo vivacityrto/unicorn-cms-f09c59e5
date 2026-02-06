@@ -38,7 +38,7 @@ export interface ClientAlert {
 }
 
 export interface ClientPackageInfo {
-  id: string;
+  id: number; // Changed from string to number for RPC compatibility
   package_id: number;
   package_name: string;
   status: string;
@@ -51,7 +51,7 @@ export interface ClientPackageInfo {
 export function usePackageUsage(clientId: number | null) {
   const { toast } = useToast();
   const [packages, setPackages] = useState<ClientPackageInfo[]>([]);
-  const [selectedPackageId, setSelectedPackageId] = useState<string | null>(null);
+  const [selectedPackageId, setSelectedPackageId] = useState<number | null>(null);
   const [usage, setUsage] = useState<PackageUsage | null>(null);
   const [alerts, setAlerts] = useState<ClientAlert[]>([]);
   const [loading, setLoading] = useState(true);
@@ -90,7 +90,7 @@ export function usePackageUsage(clientId: number | null) {
     const mapped = instances.map(inst => {
       const pkg = packageMap.get(inst.package_id);
       return {
-        id: inst.id.toString(),
+        id: inst.id, // Keep as number for RPC compatibility
         package_id: inst.package_id,
         package_name: pkg?.name || 'Unknown Package',
         status: inst.is_complete ? 'closed' : 'active',

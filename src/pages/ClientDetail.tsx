@@ -11,7 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent } from '@/components/ui/card';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
 import { 
   ArrowLeft, 
@@ -21,7 +21,6 @@ import {
   Users, 
   Package2, 
   FileText, 
-  Settings,
   Link2,
   StickyNote,
   Activity,
@@ -40,6 +39,9 @@ import { ClientTimeWidget } from '@/components/client/ClientTimeWidget';
 import { ClientTimeSummaryCard } from '@/components/client/ClientTimeSummaryCard';
 import { RiskLevelBadge } from '@/components/client/RiskLevelBadge';
 import { CSCAssignmentSelector } from '@/components/client/CSCAssignmentSelector';
+import { AddTimeFromMeetingDialog } from '@/components/client/AddTimeFromMeetingDialog';
+import { useTimeTracking } from '@/hooks/useTimeTracking';
+import { usePackageUsage } from '@/hooks/usePackageUsage';
 
 interface TenantBasic {
   id: number;
@@ -58,8 +60,13 @@ export default function ClientDetail() {
   const [profileHasChanges, setProfileHasChanges] = useState(false);
   const [profileSaving, setProfileSaving] = useState(false);
   const [triggerProfileSave, setTriggerProfileSave] = useState<(() => void) | null>(null);
+  const [addTimeFromMeetingOpen, setAddTimeFromMeetingOpen] = useState(false);
 
   const tenantIdNum = tenantId ? parseInt(tenantId) : null;
+  
+  // Time tracking hooks for cache invalidation
+  const { refresh: refreshTimeTracking } = useTimeTracking(tenantIdNum);
+  const { refresh: refreshPackageUsage } = usePackageUsage(tenantIdNum);
   
   const { 
     profile, 
@@ -207,7 +214,7 @@ export default function ClientDetail() {
               <Button 
                 variant="outline" 
                 size="sm"
-                onClick={() => navigate(`/calendar/time-capture?client=${tenantIdNum}`)}
+                onClick={() => setAddTimeFromMeetingOpen(true)}
               >
                 <Calendar className="h-4 w-4 mr-2" />
                 Add time from meeting
@@ -388,6 +395,18 @@ export default function ClientDetail() {
           </TabsContent>
         </Tabs>
       </div>
+
+      {/* Add Time from Meeting Dialog */}
+      <AddTimeFromMeetingDialog
+        open={addTimeFromMeetingOpen}
+        onOpenChange={setAddTimeFromMeetingOpen}
+        clientId={tenantIdNum!}
+        clientName={tenant.name}
+        onSuccess={async () => {
+          await refreshTimeTracking();
+          await refreshPackageUsage();
+        }}
+      />
     </div>
   );
 }
