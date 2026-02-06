@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -21,7 +22,25 @@ import { MailPanel } from '@/components/addin/MailPanel';
 import { MeetingPanel } from '@/components/addin/MeetingPanel';
 import type { AddinUser } from '@/lib/addin/types';
 
-export default function AddinShell() {
+interface AddinShellProps {
+  /** Embed mode: 'outlook' for Outlook add-in, 'teams' for Teams tab */
+  embedMode?: 'outlook' | 'teams';
+  /** View mode: 'default' shows all panels, 'meeting' shows meeting panel only */
+  viewMode?: 'default' | 'meeting';
+}
+
+export default function AddinShell({ embedMode = 'outlook', viewMode: propViewMode }: AddinShellProps) {
+  const [searchParams] = useSearchParams();
+  
+  // Support mode from props (TeamsShell) or query param (?mode=meeting)
+  const queryMode = searchParams.get('mode');
+  const viewMode = propViewMode || (queryMode === 'meeting' ? 'meeting' : 'default');
+  
+  // In meeting mode, hide mail actions
+  const showMailPanel = viewMode !== 'meeting';
+  const showMeetingPanel = true; // Always show meeting panel when context available
+  
+  const isTeamsEmbed = embedMode === 'teams';
   const { user: authUser, session: authSession } = useAuth();
   const isAuthAuthenticated = !!authSession;
   
@@ -67,8 +86,10 @@ export default function AddinShell() {
       surface,
       hasContext,
       isConnected,
+      embedMode,
+      viewMode,
     });
-  }, [isOffice, surface, hasContext, isConnected]);
+  }, [isOffice, surface, hasContext, isConnected, embedMode, viewMode]);
 
   const getContextIcon = () => {
     if (surface === 'outlook_mail') return <Mail className="h-5 w-5" />;
@@ -87,7 +108,9 @@ export default function AddinShell() {
             </div>
             <div>
               <h1 className="font-semibold text-lg leading-none">Unicorn</h1>
-              <p className="text-xs text-muted-foreground">Add-in</p>
+              <p className="text-xs text-muted-foreground">
+                {isTeamsEmbed ? 'Teams' : 'Add-in'}
+              </p>
             </div>
           </div>
           <Badge variant={isOffice ? "default" : "secondary"}>
@@ -143,8 +166,8 @@ export default function AddinShell() {
           </CardContent>
         </Card>
 
-        {/* Mail Panel - show when mail context is detected */}
-        {mailContext && isConnected && (
+        {/* Mail Panel - show when mail context is detected and not in meeting mode */}
+        {showMailPanel && mailContext && isConnected && (
           <MailPanel 
             mailContext={mailContext}
             user={displayUser}
@@ -153,7 +176,7 @@ export default function AddinShell() {
         )}
 
         {/* Meeting Panel - show when meeting context is detected */}
-        {meetingContext && isConnected && tenantId && (
+        {showMeetingPanel && meetingContext && isConnected && tenantId && (
           <MeetingPanel 
             meetingContext={meetingContext}
             tenantId={tenantId}
