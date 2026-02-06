@@ -1,8 +1,8 @@
 project_id = "yxkgdalkbrriasiyyrwk"
 
- [functions.assistant-answer]
- verify_jwt = false
- 
+[functions.assistant-answer]
+verify_jwt = false
+
 [functions.tga-integration]
 verify_jwt = false
 
@@ -67,4 +67,7 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.bulk-user-action]
+verify_jwt = false
+
+[functions.capture-outlook-email]
 verify_jwt = false
