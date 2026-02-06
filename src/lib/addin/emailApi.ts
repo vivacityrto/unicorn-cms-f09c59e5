@@ -59,6 +59,41 @@ export interface CreateTaskResponse {
   deep_link: string;
 }
 
+export interface AttachmentItem {
+  file_name: string;
+  mime_type?: string;
+  size?: number;
+  source_url?: string;
+  provider_item_id?: string;
+}
+
+export interface LinkAttachmentsRequest {
+  external_message_id: string;
+  client_id: string;
+  package_id?: string;
+  attachments: AttachmentItem[];
+}
+
+export interface DocumentLinkResult {
+  id: string;
+  file_name: string;
+  file_extension: string | null;
+  mime_type: string | null;
+  size_bytes: number | null;
+  web_url: string;
+}
+
+export interface LinkAttachmentsResponse {
+  document_links: DocumentLinkResult[];
+  email: {
+    id: string;
+    subject: string;
+  };
+  attachments_linked: number;
+  audit_event_id: string | null;
+  links: Record<string, string>;
+}
+
 export interface AddinApiError {
   error: {
     code: string;
@@ -171,6 +206,36 @@ export async function createTaskFromEmail(
   };
 
   return addinFetch<CreateTaskResponse>('addin-email-create-task', {
+    method: 'POST',
+    body: JSON.stringify(request),
+  });
+}
+
+/**
+ * Link email attachments as document links
+ */
+export async function linkEmailAttachments(
+  mailContext: MailContext,
+  clientId: number,
+  packageId?: number
+): Promise<LinkAttachmentsResponse> {
+  if (!mailContext.attachments || mailContext.attachments.length === 0) {
+    throw new Error('No attachments to link');
+  }
+
+  const request: LinkAttachmentsRequest = {
+    external_message_id: mailContext.messageId,
+    client_id: clientId.toString(),
+    package_id: packageId?.toString(),
+    attachments: mailContext.attachments.map((att) => ({
+      file_name: att.name,
+      mime_type: att.contentType,
+      size: att.size,
+      provider_item_id: att.id,
+    })),
+  };
+
+  return addinFetch<LinkAttachmentsResponse>('addin-email-link-attachments', {
     method: 'POST',
     body: JSON.stringify(request),
   });
