@@ -15223,6 +15223,8 @@ export type Database = {
       tenants: {
         Row: {
           abn: string | null
+          academy_max_users: number | null
+          academy_subscription_expires_at: string | null
           accounting_system: string | null
           acn: string | null
           created_at: string
@@ -15246,6 +15248,7 @@ export type Database = {
           stage_ids: number[] | null
           state: string | null
           status: string
+          tenant_type: Database["public"]["Enums"]["tenant_type"]
           tga_connected_at: string | null
           tga_last_synced_at: string | null
           tga_legal_name: string | null
@@ -15257,6 +15260,8 @@ export type Database = {
         }
         Insert: {
           abn?: string | null
+          academy_max_users?: number | null
+          academy_subscription_expires_at?: string | null
           accounting_system?: string | null
           acn?: string | null
           created_at?: string
@@ -15280,6 +15285,7 @@ export type Database = {
           stage_ids?: number[] | null
           state?: string | null
           status?: string
+          tenant_type?: Database["public"]["Enums"]["tenant_type"]
           tga_connected_at?: string | null
           tga_last_synced_at?: string | null
           tga_legal_name?: string | null
@@ -15291,6 +15297,8 @@ export type Database = {
         }
         Update: {
           abn?: string | null
+          academy_max_users?: number | null
+          academy_subscription_expires_at?: string | null
           accounting_system?: string | null
           acn?: string | null
           created_at?: string
@@ -15314,6 +15322,7 @@ export type Database = {
           stage_ids?: number[] | null
           state?: string | null
           status?: string
+          tenant_type?: Database["public"]["Enums"]["tenant_type"]
           tga_connected_at?: string | null
           tga_last_synced_at?: string | null
           tga_legal_name?: string | null
@@ -19919,6 +19928,11 @@ export type Database = {
         | "CLIENT_ADMIN"
         | "CLIENT_USER"
       tenant_role: "ADMIN" | "GENERAL_USER"
+      tenant_type:
+        | "compliance_system"
+        | "academy_solo"
+        | "academy_team"
+        | "academy_elite"
       unicorn_role:
         | "Super Admin"
         | "Admin"
@@ -20190,6 +20204,12 @@ export const Constants = {
         "CLIENT_USER",
       ],
       tenant_role: ["ADMIN", "GENERAL_USER"],
+      tenant_type: [
+        "compliance_system",
+        "academy_solo",
+        "academy_team",
+        "academy_elite",
+      ],
       unicorn_role: [
         "Super Admin",
         "Admin",
