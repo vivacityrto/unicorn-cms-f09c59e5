@@ -1,5 +1,5 @@
 import { useState, useMemo, useRef, useEffect, useLayoutEffect } from "react";
- import { LayoutDashboard, FileText, BarChart3, Calendar, MessageSquare, Settings, LogOut, Menu, X, Users, Building2, Package2, Wrench, FileCode, Blocks, ScrollText, Flag, AlertTriangle, Heart, ChevronDown, ChevronRight, Bell, Target, TrendingUp, ListTodo, User, Mail, ClipboardCheck, Lightbulb, Home, Sparkles, Library, CheckSquare, ClipboardList, Search, Video, BookOpen, Clock, ShieldCheck, Shield, Briefcase, Inbox, Rocket, Bot, Cog } from "lucide-react";
+import { LayoutDashboard, FileText, BarChart3, Calendar, LogOut, Menu, X, Users, Building2, Package2, Wrench, FileCode, Blocks, ScrollText, Flag, AlertTriangle, Heart, ChevronDown, ChevronRight, Bell, Target, TrendingUp, ListTodo, User, Mail, ClipboardCheck, Lightbulb, Home, Sparkles, Library, CheckSquare, ClipboardList, Search, Video, BookOpen, Clock, ShieldCheck, Shield, Briefcase, Inbox, Rocket, Bot, Cog, Settings } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
@@ -15,290 +15,106 @@ import Footer from "@/components/layout/Footer";
 import { TimeInboxBanner } from "@/components/dashboard/TimeInboxWidget";
 import { FacilitatorModeToggle } from "@/components/eos/FacilitatorModeToggle";
 import { FacilitatorModeBanner } from "@/components/eos/FacilitatorModeBanner";
- import { AIChatbot } from "@/components/admin/AIChatbot";
-const baseMenuItems = [{
-  icon: LayoutDashboard,
-  label: "Dashboard",
-  path: "/dashboard"
-}, {
-  icon: FileText,
-  label: "Documents",
-  path: "/manage-documents"
-}, {
-  icon: BarChart3,
-  label: "Reports",
-  path: "/reports"
-}, {
-  icon: Calendar,
-  label: "Event Calendar",
-  path: "/calendar"
-}, {
-  icon: MessageSquare,
-  label: "Message",
-  path: "/messages"
-}];
-const baseMenuItemsWithoutDocs = [{
-  icon: LayoutDashboard,
-  label: "Dashboard",
-  path: "/dashboard"
-}, {
-  icon: Briefcase,
-  label: "My Work",
-  path: "/my-work"
-}, {
-  icon: Building2,
-  label: "Clients",
-  path: "/manage-tenants"
-}, {
-  icon: Calendar,
-  label: "Event Calendar",
-  path: "/calendar"
-}, {
-  icon: Clock,
-  label: "Time Capture",
-  path: "/calendar/time-capture"
-}, {
-  icon: Inbox,
-  label: "Time Inbox",
-  path: "/time-inbox"
-}, {
-  icon: FileText,
-  label: "Documents",
-  path: "/manage-documents"
-}, {
-  icon: ListTodo,
-  label: "Tasks",
-  path: "/tasks"
-}, {
-  icon: Lightbulb,
-  label: "RTO Tips",
-  path: "/rto-tips"
-}, {
-  icon: Package2,
-  label: "Packages",
-  path: "/manage-packages"
-}];
-// Unified EOS menu - same for all tenant users (visibility is tenant-wide, not role-based)
-const eosMenuItems = [{
-  icon: Target,
-  label: "EOS Overview",
-  path: "/eos"
-}, {
-  icon: ShieldCheck,
-  label: "Leadership Dashboard",
-  path: "/eos/leadership",
-  leadershipOnly: true  // Special flag for Super Admin + Team Leader only
-}, {
-  icon: BarChart3,
-  label: "Scorecard",
-  path: "/eos/scorecard"
-}, {
-  icon: Flag,
-  label: "Mission Control",
-  path: "/eos/vto"
-}, {
-  icon: TrendingUp,
-  label: "Rocks",
-  path: "/eos/rocks"
-}, {
-  icon: Rocket,
-  label: "Flight Plan",
-  path: "/eos/flight-plan"
-}, {
-  icon: Shield,
-  label: "Risks & Opportunities",
-  path: "/eos/risks-opportunities"
-}, {
-  icon: ListTodo,
-  label: "To-Dos",
-  path: "/eos/todos"
-}, {
-  icon: Calendar,
-  label: "Meetings",
-  path: "/eos/meetings"
-}, {
-  icon: Users,
-  label: "Quarterly Conversations",
-  path: "/eos/qc"
-}, {
-  icon: Briefcase,
-  label: "Accountability Chart",
-  path: "/eos/accountability"
-}, {
-  icon: TrendingUp,
-  label: "GWC Trends",
-  path: "/eos/gwc-trends"
-}, {
-  icon: Target,
-  label: "Rock Analysis",
-  path: "/eos/rock-analysis"
-}, {
-  icon: BarChart3,
-  label: "Client Impact",
-  path: "/eos/client-impact"
-}, {
-  icon: FileText,
-  label: "Processes",
-  path: "/processes"
-}];
+import { AIChatbot } from "@/components/admin/AIChatbot";
+
+// ============================================================
+// VIVACITY TEAM SIDEBAR - FINAL AUTHORITY MODEL
+// ============================================================
+
+// 1. WORK Section - All Vivacity Team Roles
+const workMenuItems = [
+  { icon: LayoutDashboard, label: "Dashboard", path: "/dashboard" },
+  { icon: Briefcase, label: "My Work", path: "/my-work" },
+  { icon: ListTodo, label: "Tasks", path: "/tasks" },
+  { icon: Inbox, label: "Time Inbox", path: "/time-inbox" },
+  { icon: Calendar, label: "Event Calendar", path: "/calendar" },
+];
+
+// 2. CLIENTS Section - All Vivacity Team Roles
+const clientsMenuItems = [
+  { icon: Building2, label: "Clients", path: "/manage-tenants" },
+  { icon: Package2, label: "Packages", path: "/manage-packages" },
+  { icon: FileText, label: "Documents", path: "/manage-documents" },
+  { icon: Lightbulb, label: "RTO Tips", path: "/rto-tips" },
+];
+
+// 3. EOS Section - Role-Aware Visibility
+// Super Admin & Team Leader: full access
+// Team Member: hide Leadership Dashboard, Accountability Chart
+const eosMenuItems = [
+  { icon: Target, label: "EOS Overview", path: "/eos" },
+  { icon: ShieldCheck, label: "Leadership Dashboard", path: "/eos/leadership", leadershipOnly: true },
+  { icon: BarChart3, label: "Scorecard", path: "/eos/scorecard" },
+  { icon: Flag, label: "Mission Control", path: "/eos/vto" },
+  { icon: TrendingUp, label: "Rocks", path: "/eos/rocks" },
+  { icon: Rocket, label: "Flight Plan", path: "/eos/flight-plan" },
+  { icon: Shield, label: "Risks & Opportunities", path: "/eos/risks-opportunities" },
+  { icon: ListTodo, label: "To-Dos", path: "/eos/todos" },
+  { icon: Calendar, label: "Meetings", path: "/eos/meetings" },
+  { icon: Users, label: "Quarterly Conversations", path: "/eos/qc" },
+  { icon: Briefcase, label: "Accountability Chart", path: "/eos/accountability", leadershipOnly: true },
+  { icon: TrendingUp, label: "GWC Trends", path: "/eos/gwc-trends" },
+  { icon: Target, label: "Rock Analysis", path: "/eos/rock-analysis" },
+  { icon: BarChart3, label: "Client Impact", path: "/eos/client-impact" },
+  { icon: FileText, label: "Processes", path: "/processes" },
+];
+
+// 4. RESOURCE MANAGEMENT Section - Super Admin & Team Leader only
+// Admin-style management views, not browsing
+const resourceManagementMenuItems = [
+  { icon: Library, label: "Content Dashboard", path: "/resource-hub" },
+  { icon: FileText, label: "Templates Manager", path: "/resource-hub/templates" },
+  { icon: CheckSquare, label: "Checklists Manager", path: "/resource-hub/checklists" },
+  { icon: ClipboardList, label: "Registers & Forms Manager", path: "/resource-hub/registers-forms" },
+  { icon: Search, label: "Audit & Evidence Library", path: "/resource-hub/audit-evidence" },
+  { icon: Video, label: "Training & Webinar Library", path: "/resource-hub/training-webinars" },
+  { icon: BookOpen, label: "Guides & How-To Library", path: "/resource-hub/guides-howto" },
+  { icon: TrendingUp, label: "CI Tools Library", path: "/resource-hub/ci-tools" },
+  { icon: ScrollText, label: "Updates Log Manager", path: "/resource-hub/updates" },
+];
+
+// 5. ADMINISTRATION Section
+// Super Admin: full access
+// Team Leader: read-only access to Team Users and Tenant Users
+// Team Member: hidden
+const administrationMenuItems = [
+  { icon: Shield, label: "Team Users", path: "/admin/team-users" },
+  { icon: Building2, label: "Tenant Users", path: "/admin/tenant-users" },
+  { icon: Mail, label: "Manage Invites", path: "/manage-invites", superAdminOnly: true },
+  { icon: ShieldCheck, label: "User Audit", path: "/admin/user-audit", superAdminOnly: true },
+  { icon: ScrollText, label: "Audit Logs", path: "/audit-logs", superAdminOnly: true },
+  { icon: Mail, label: "Email Templates", path: "/admin/email-templates", superAdminOnly: true },
+];
+
+// 6. SYSTEM CONFIG Section - Super Admin Only
+const systemConfigMenuItems = [
+  { icon: Package2, label: "Manage Packages", path: "/admin/manage-packages" },
+  { icon: Blocks, label: "Manage Phases", path: "/admin/stages" },
+  { icon: Sparkles, label: "Phase Builder", path: "/admin/stage-builder" },
+  { icon: BarChart3, label: "Phase Analytics", path: "/admin/stage-analytics" },
+  { icon: Cog, label: "EOS Processes", path: "/admin/eos-processes" },
+  { icon: Library, label: "Knowledge Library", path: "/admin/knowledge" },
+  { icon: Bot, label: "AI Assistant", path: "/admin/assistant" },
+];
+
+// Client-facing menu items (for Admin/User roles and "View as Client" mode)
+const baseMenuItems = [
+  { icon: LayoutDashboard, label: "Dashboard", path: "/dashboard" },
+  { icon: FileText, label: "Documents", path: "/manage-documents" },
+  { icon: BarChart3, label: "Reports", path: "/reports" },
+  { icon: Calendar, label: "Event Calendar", path: "/calendar" },
+];
 
 // Client menus - NO EOS access (EOS is Vivacity-only)
 const userMenuItems = {
   main: [...baseMenuItems],
-  // NO eos - clients don't see EOS
-};
-const adminMenuItems = {
-  main: [...baseMenuItems],
-  team: [{
-    icon: Users,
-    label: "Manage Team",
-    path: "/team-settings"
-  }],
-  // NO eos - clients don't see EOS
-};
-const superAdminMenuItems = {
-  main: [...baseMenuItemsWithoutDocs],
-  admin: [{
-    icon: Shield,
-    label: "Team Users",
-    path: "/admin/team-users"
-  }, {
-    icon: Building2,
-    label: "Tenant Users",
-    path: "/admin/tenant-users"
-  }, {
-    icon: Mail,
-    label: "Manage Invites",
-    path: "/manage-invites"
-  }, {
-    icon: ClipboardCheck,
-    label: "Manage Audits",
-    path: "/audits"
-  }, {
-    icon: Package2,
-    label: "Manage Packages",
-    path: "/admin/manage-packages"
-  }, {
-    icon: Blocks,
-    label: "Manage Phases",
-    path: "/admin/stages"
-  }, {
-    icon: Sparkles,
-    label: "Phase Builder",
-    path: "/admin/stage-builder"
-  }, {
-    icon: BarChart3,
-    label: "Phase Analytics",
-    path: "/admin/stage-analytics"
-  }, {
-    icon: Mail,
-    label: "Email Templates",
-    path: "/admin/email-templates"
-  }, {
-    icon: ShieldCheck,
-    label: "User Audit",
-    path: "/admin/user-audit"
-}, {
-  icon: Bot,
-  label: "AI Assistant",
-  path: "/admin/assistant"
- }, {
-   icon: Library,
-   label: "Knowledge Library",
-   path: "/admin/knowledge"
- }, {
-   icon: Cog,
-   label: "EOS Processes",
-   path: "/admin/eos-processes"
-  }],
-  eos: eosMenuItems,
-  advanced: [{
-    icon: FileCode,
-    label: "Templates",
-    path: "/templates"
-  }, {
-    icon: Blocks,
-    label: "Frameworks",
-    path: "/frameworks"
-  }, {
-    icon: ScrollText,
-    label: "Audit Logs",
-    path: "/audit-logs"
-  }, {
-    icon: Flag,
-    label: "Flags",
-    path: "/flags"
-  }, {
-    icon: AlertTriangle,
-    label: "Risks",
-    path: "/risks"
-  }, {
-    icon: Heart,
-    label: "Health",
-    path: "/health"
-  }, {
-    icon: Wrench,
-    label: "Tools",
-    path: "/tools"
-  }],
-  resourceHub: [{
-    icon: Library,
-    label: "Dashboard",
-    path: "/resource-hub"
-  }, {
-    icon: FileText,
-    label: "Templates",
-    path: "/resource-hub/templates"
-  }, {
-    icon: CheckSquare,
-    label: "Checklists",
-    path: "/resource-hub/checklists"
-  }, {
-    icon: ClipboardList,
-    label: "Registers & Forms",
-    path: "/resource-hub/registers-forms"
-  }, {
-    icon: Search,
-    label: "Audit & Evidence",
-    path: "/resource-hub/audit-evidence"
-  }, {
-    icon: Video,
-    label: "Training & Webinars",
-    path: "/resource-hub/training-webinars"
-  }, {
-    icon: BookOpen,
-    label: "Guides & How-To",
-    path: "/resource-hub/guides-howto"
-  }, {
-    icon: TrendingUp,
-    label: "CI Tools",
-    path: "/resource-hub/ci-tools"
-  }, {
-    icon: Clock,
-    label: "Recently Added",
-    path: "/resource-hub/recently-added"
-  }, {
-    icon: BarChart3,
-    label: "Most Used",
-    path: "/resource-hub/most-used"
-  }, {
-    icon: Heart,
-    label: "Favourites",
-    path: "/resource-hub/favourites"
-  }, {
-    icon: ScrollText,
-    label: "Updates Log",
-    path: "/resource-hub/updates"
-  }]
 };
 
-// Team Leader/Team Member menu - same as SuperAdmin but WITHOUT admin section
-const vivacityStaffMenuItems = {
-  main: [...baseMenuItemsWithoutDocs],
-  eos: superAdminMenuItems.eos,
-  advanced: superAdminMenuItems.advanced,
-  resourceHub: superAdminMenuItems.resourceHub
+const adminMenuItems = {
+  main: [...baseMenuItems],
+  team: [{ icon: Users, label: "Manage Team", path: "/team-settings" }],
 };
+
 export const DashboardLayout = ({
   children
 }: {
@@ -307,29 +123,29 @@ export const DashboardLayout = ({
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [showScrollIndicator, setShowScrollIndicator] = useState(false);
   const [sectionsOpen, setSectionsOpen] = useState({
+    work: true,
+    clients: true,
+    eos: true,
+    resourceManagement: true,
+    administration: true,
+    systemConfig: true,
+    // Legacy for client view
     main: true,
     team: true,
-    admin: true,
-    eos: true,
-    advanced: false,
-    resourceHub: true
   });
   const location = useLocation();
   const navigate = useNavigate();
-  const {
-    profile,
-    signOut
-  } = useAuth();
-  const {
-    canAccessAdmin,
-    canAccessAdvanced,
-    isSuperAdmin
-  } = useRBAC();
-  const {
-    isViewingAsClient
-  } = useViewMode();
+  const { profile, signOut } = useAuth();
+  const { canAccessAdmin, canAccessAdvanced, isSuperAdmin } = useRBAC();
+  const { isViewingAsClient } = useViewMode();
   const navRef = useRef<HTMLElement>(null);
   const [currentTime, setCurrentTime] = useState<string>('');
+
+  // Determine user role
+  const userRole = profile?.unicorn_role || "User";
+  const isVivacityTeam = ["Super Admin", "Team Leader", "Team Member"].includes(userRole);
+  const isTeamLeader = userRole === "Team Leader";
+  const isTeamMember = userRole === "Team Member";
 
   // Real-time Australian clock
   useEffect(() => {
@@ -352,13 +168,11 @@ export const DashboardLayout = ({
     return () => clearInterval(interval);
   }, []);
 
-  // Scroll active menu item into view on route changes
   // Scroll active menu item into view immediately on route changes
   useLayoutEffect(() => {
     if (navRef.current) {
       const activeItem = navRef.current.querySelector('[data-active="true"]');
       if (activeItem) {
-        // Use requestAnimationFrame to batch with paint, avoiding flash
         requestAnimationFrame(() => {
           activeItem.scrollIntoView({ block: 'center', behavior: 'instant' });
         });
@@ -374,50 +188,36 @@ export const DashboardLayout = ({
     setShowScrollIndicator(hasScroll && !isAtBottom);
   };
 
-  // Determine menu items and groups based on user role (or view mode)
-  const {
-    menuItems,
-    isGrouped,
-    effectiveRole
-  } = useMemo(() => {
-    const role = (profile?.unicorn_role || "User") as any;
+  // Determine if we should show Vivacity Team menu or Client menu
+  const showVivacityMenu = isVivacityTeam && !isViewingAsClient;
 
-    // If Super Admin or Team Leader is viewing as client, show Admin menu
-    if (isViewingAsClient && (role === "Super Admin" || role === "Team Leader" || role === "Team Member")) {
-      return {
-        menuItems: adminMenuItems,
-        isGrouped: true,
-        effectiveRole: "Admin"
-      };
-    }
-    switch (role) {
-      case "Super Admin":
-        return {
-          menuItems: superAdminMenuItems,
-          isGrouped: true,
-          effectiveRole: role
-        };
-      case "Team Leader":
-      case "Team Member":
-        return {
-          menuItems: vivacityStaffMenuItems,
-          isGrouped: true,
-          effectiveRole: role
-        };
-      case "Admin":
-        return {
-          menuItems: adminMenuItems,
-          isGrouped: true,
-          effectiveRole: role
-        };
-      default:
-        return {
-          menuItems: userMenuItems,
-          isGrouped: true,
-          effectiveRole: role
-        };
-    }
-  }, [profile?.unicorn_role, isViewingAsClient]);
+  // Filter EOS items based on role
+  const filteredEosItems = useMemo(() => {
+    return eosMenuItems.filter(item => {
+      if (item.leadershipOnly) {
+        // Only Super Admin and Team Leader can see leadership-only items
+        return isSuperAdmin || isTeamLeader;
+      }
+      return true;
+    });
+  }, [isSuperAdmin, isTeamLeader]);
+
+  // Filter Administration items based on role
+  const filteredAdminItems = useMemo(() => {
+    return administrationMenuItems.filter(item => {
+      if (item.superAdminOnly) {
+        return isSuperAdmin;
+      }
+      return true;
+    });
+  }, [isSuperAdmin]);
+
+  // Legacy menu items for client view
+  const clientMenuItems = useMemo(() => {
+    if (userRole === "Admin") return adminMenuItems;
+    return userMenuItems;
+  }, [userRole]);
+
   const getRoleBadgeColor = (role: string) => {
     switch (role) {
       case "Super Admin":
@@ -428,28 +228,93 @@ export const DashboardLayout = ({
         return "#6B7280";
     }
   };
+
   const getInitials = (email: string) => {
     return email.split("@")[0].substring(0, 2).toUpperCase();
   };
-  return <div className="min-h-screen bg-background">
+
+  // Render menu link
+  const renderMenuItem = (item: { icon: any; label: string; path: string }) => {
+    const Icon = item.icon;
+    const isActive = location.pathname === item.path;
+    return (
+      <Link
+        key={item.path}
+        to={item.path}
+        data-active={isActive}
+        className={`flex items-center gap-2 px-4 mx-2 mb-1 transition-colors text-sm rounded-full ${
+          isActive
+            ? "bg-white/10 border border-white/20 text-white"
+            : "text-white/80 hover:bg-white/10 hover:text-white"
+        }`}
+        style={{ paddingTop: "10px", paddingBottom: "10px" }}
+      >
+        <Icon className="w-4 h-4 flex-shrink-0" />
+        {sidebarOpen && <span className="font-medium">{item.label}</span>}
+      </Link>
+    );
+  };
+
+  // Render section with collapsible header
+  const renderSection = (
+    key: string,
+    title: string,
+    items: { icon: any; label: string; path: string }[],
+    sectionKey: keyof typeof sectionsOpen
+  ) => {
+    if (items.length === 0) return null;
+
+    return (
+      <Collapsible
+        open={sectionsOpen[sectionKey]}
+        onOpenChange={(open) =>
+          setSectionsOpen((prev) => ({ ...prev, [sectionKey]: open }))
+        }
+        className="mt-6"
+      >
+        {sidebarOpen && (
+          <CollapsibleTrigger className="flex items-center justify-between w-full px-4 mb-2 hover:bg-white/5 py-2 rounded transition-colors">
+            <p className="text-xs font-semibold text-white/70 uppercase tracking-wider">
+              {title}
+            </p>
+            {sectionsOpen[sectionKey] ? (
+              <ChevronDown className="w-3 h-3 text-white/70" />
+            ) : (
+              <ChevronRight className="w-3 h-3 text-white/70" />
+            )}
+          </CollapsibleTrigger>
+        )}
+        <CollapsibleContent>{items.map(renderMenuItem)}</CollapsibleContent>
+      </Collapsible>
+    );
+  };
+
+  return (
+    <div className="min-h-screen bg-background">
       {/* Sidebar */}
-      <aside className={`${sidebarOpen ? "w-64" : "w-20"} border-r border-border/20 transition-all duration-300 flex flex-col fixed left-0 top-0 h-screen z-30`} style={{
-      backgroundImage: "linear-gradient(135deg, rgb(97 9 161) 0%, rgb(213 28 73) 100%)"
-    }}>
-        {/* Logo/Brand */}
-        {/* Logo/Brand or User Profile - Show user profile for Admin/User OR when viewing as client */}
-        {sidebarOpen ? <div className="relative px-3 pt-0 pb-6 border-b border-white/10">
+      <aside
+        className={`${sidebarOpen ? "w-64" : "w-20"} border-r border-border/20 transition-all duration-300 flex flex-col fixed left-0 top-0 h-screen z-30`}
+        style={{
+          backgroundImage: "linear-gradient(135deg, rgb(97 9 161) 0%, rgb(213 28 73) 100%)",
+        }}
+      >
+        {/* Logo/Brand or User Profile */}
+        {sidebarOpen ? (
+          <div className="relative px-3 pt-0 pb-6 border-b border-white/10">
             {/* Top bar with version and close button */}
             <div className="flex items-center justify-between pt-3">
               <div className="flex items-center gap-1.5 text-white/60 text-xs">
                 <Sparkles className="h-3 w-3" />
                 <span>Version 2.0</span>
               </div>
-              <button onClick={() => setSidebarOpen(!sidebarOpen)} className="p-1.5 hover:bg-white/10 rounded-full transition-all duration-200 text-white/50 hover:text-white">
+              <button
+                onClick={() => setSidebarOpen(!sidebarOpen)}
+                className="p-1.5 hover:bg-white/10 rounded-full transition-all duration-200 text-white/50 hover:text-white"
+              >
                 <X className="w-4 h-4" />
               </button>
             </div>
-            
+
             {/* Glass card container */}
             <div className="mt-6">
               {/* Avatar section */}
@@ -459,39 +324,53 @@ export const DashboardLayout = ({
                   <div className="absolute -inset-1 rounded-full bg-gradient-to-r from-pink-500 via-purple-500 to-cyan-500 opacity-75 blur-sm group-hover:opacity-100 transition-opacity duration-300"></div>
                   <div className="relative h-20 w-20 rounded-full p-[3px] bg-gradient-to-br from-pink-500 via-purple-400 to-cyan-400">
                     <Avatar className="h-full w-full border-2 border-white/90 shadow-inner">
-                      <AvatarImage src={profile?.avatar_url || ""} alt={profile?.first_name || "User"} className="object-cover" />
+                      <AvatarImage
+                        src={profile?.avatar_url || ""}
+                        alt={profile?.first_name || "User"}
+                        className="object-cover"
+                      />
                       <AvatarFallback className="bg-gradient-to-br from-slate-100 to-slate-200 text-slate-600 font-semibold text-xl">
-                        {profile?.first_name && profile?.last_name ? `${profile.first_name[0]}${profile.last_name[0]}`.toUpperCase() : getInitials(profile?.email || "U")}
+                        {profile?.first_name && profile?.last_name
+                          ? `${profile.first_name[0]}${profile.last_name[0]}`.toUpperCase()
+                          : getInitials(profile?.email || "U")}
                       </AvatarFallback>
                     </Avatar>
                   </div>
                   {/* Online indicator */}
                   <span className="absolute bottom-0.5 right-0.5 h-4 w-4 bg-emerald-400 rounded-full border-[3px] border-white shadow-md"></span>
                 </div>
-                
+
                 {/* User info */}
                 <div className="mt-4 text-center space-y-2">
                   <h3 className="text-lg font-semibold text-white tracking-tight">
-                    {profile?.first_name && profile?.last_name ? `${profile.first_name} ${profile.last_name}` : profile?.email?.split("@")[0] || "User"}
+                    {profile?.first_name && profile?.last_name
+                      ? `${profile.first_name} ${profile.last_name}`
+                      : profile?.email?.split("@")[0] || "User"}
                   </h3>
-                  
+
                   {/* Role badge - modern pill style */}
                   <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/10 border border-white/20">
-                    <span className={`h-1.5 w-1.5 rounded-full ${isViewingAsClient ? 'bg-purple-400' : 'bg-emerald-400'} animate-pulse`}></span>
+                    <span
+                      className={`h-1.5 w-1.5 rounded-full ${
+                        isViewingAsClient ? "bg-purple-400" : "bg-emerald-400"
+                      } animate-pulse`}
+                    ></span>
                     <span className="text-xs font-medium text-white/90 uppercase tracking-wide">
                       {isViewingAsClient ? "Client View" : profile?.unicorn_role || "User"}
                     </span>
                   </div>
-                  
+
                   {/* View as Client indicator */}
-                  {isViewingAsClient && <div className="mt-2 inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-purple-500/20 border border-purple-400/30">
+                  {isViewingAsClient && (
+                    <div className="mt-2 inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-purple-500/20 border border-purple-400/30">
                       <span className="text-[10px] font-medium text-purple-200">
                         Viewing as Admin
                       </span>
-                    </div>}
+                    </div>
+                  )}
                 </div>
               </div>
-              
+
               {/* User email */}
               <div className="mt-4 pt-4 border-t border-white/10 flex justify-center">
                 <div className="flex items-center gap-2 text-white/60 text-xs">
@@ -500,196 +379,167 @@ export const DashboardLayout = ({
                 </div>
               </div>
             </div>
-          </div> : <div className="h-16 flex items-center justify-between px-4 border-b border-white/20">
-            {sidebarOpen ? <div className="flex flex-col gap-1">
-                <h1 className="text-xl font-bold text-white">Unicorn 2.0</h1>
-                <Badge className="px-2 py-0.5 w-fit bg-white border-0" style={{
-            color: getRoleBadgeColor(profile?.unicorn_role || "User"),
-            fontWeight: "bold",
-            fontSize: "11px"
-          }}>
-                  {profile?.unicorn_role || "User"}
-                </Badge>
-              </div> : null}
-            <button onClick={() => setSidebarOpen(!sidebarOpen)} className="p-2 hover:bg-white/10 rounded-lg transition-colors text-white">
-              {sidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+          </div>
+        ) : (
+          <div className="h-16 flex items-center justify-between px-4 border-b border-white/20">
+            <button
+              onClick={() => setSidebarOpen(!sidebarOpen)}
+              className="p-2 hover:bg-white/10 rounded-lg transition-colors text-white"
+            >
+              <Menu className="w-5 h-5" />
             </button>
-          </div>}
+          </div>
+        )}
 
         {/* Menu Items */}
-        <nav ref={navRef} className="flex-1 py-4 overflow-y-auto scrollbar-hide relative" onScroll={checkScrollable}>
-          {isGrouped && typeof menuItems === "object" && "main" in menuItems ? <>
-              {/* Main Section */}
-              <Collapsible open={sectionsOpen.main} onOpenChange={open => setSectionsOpen(prev => ({
-            ...prev,
-            main: open
-          }))}>
-                {sidebarOpen && <CollapsibleTrigger className="flex items-center justify-between w-full px-4 mb-2 hover:bg-white/5 py-2 rounded transition-colors">
-                    <p className="text-xs font-semibold text-white/70 uppercase tracking-wider">Main</p>
-                    {sectionsOpen.main ? <ChevronDown className="w-3 h-3 text-white/70" /> : <ChevronRight className="w-3 h-3 text-white/70" />}
-                  </CollapsibleTrigger>}
+        <nav
+          ref={navRef}
+          className="flex-1 py-4 overflow-y-auto scrollbar-hide relative"
+          onScroll={checkScrollable}
+        >
+          {showVivacityMenu ? (
+            <>
+              {/* 1. WORK Section - All Vivacity Team */}
+              <Collapsible
+                open={sectionsOpen.work}
+                onOpenChange={(open) =>
+                  setSectionsOpen((prev) => ({ ...prev, work: open }))
+                }
+              >
+                {sidebarOpen && (
+                  <CollapsibleTrigger className="flex items-center justify-between w-full px-4 mb-2 hover:bg-white/5 py-2 rounded transition-colors">
+                    <p className="text-xs font-semibold text-white/70 uppercase tracking-wider">
+                      Work
+                    </p>
+                    {sectionsOpen.work ? (
+                      <ChevronDown className="w-3 h-3 text-white/70" />
+                    ) : (
+                      <ChevronRight className="w-3 h-3 text-white/70" />
+                    )}
+                  </CollapsibleTrigger>
+                )}
                 <CollapsibleContent>
-                  {menuItems.main.map(item => {
-                const Icon = item.icon;
-                const isActive = location.pathname === item.path;
-                return <Link key={item.path} to={item.path} data-active={isActive} className={`flex items-center gap-2 px-4 mx-2 mb-1 transition-colors text-sm rounded-full ${isActive ? "bg-white/10 border border-white/20 text-white" : "text-white/80 hover:bg-white/10 hover:text-white"}`} style={{
-                  paddingTop: "10px",
-                  paddingBottom: "10px"
-                }}>
-                        <Icon className="w-4 h-4 flex-shrink-0" />
-                        {sidebarOpen && <span className="font-medium">{item.label}</span>}
-                      </Link>;
-              })}
+                  {workMenuItems.map(renderMenuItem)}
                 </CollapsibleContent>
               </Collapsible>
 
-              {/* Manage Team Section (for Admin) */}
-              {"team" in menuItems && Array.isArray(menuItems.team) && menuItems.team.length > 0 && <Collapsible open={sectionsOpen.team} onOpenChange={open => setSectionsOpen(prev => ({
-            ...prev,
-            team: open
-          }))} className="mt-6">
-                  {sidebarOpen && <CollapsibleTrigger className="flex items-center justify-between w-full px-4 mb-2 hover:bg-white/5 py-2 rounded transition-colors">
-                      <p className="text-xs font-semibold text-white/70 uppercase tracking-wider">Manage Team</p>
-                      {sectionsOpen.team ? <ChevronDown className="w-3 h-3 text-white/70" /> : <ChevronRight className="w-3 h-3 text-white/70" />}
-                    </CollapsibleTrigger>}
-                  <CollapsibleContent>
-                    {menuItems.team.map((item: any) => {
-                const Icon = item.icon;
-                const isActive = location.pathname === item.path;
-                return <Link key={item.path} to={item.path} data-active={isActive} className={`flex items-center gap-2 px-4 mx-2 mb-1 transition-colors text-sm rounded-full ${isActive ? "bg-white/10 border border-white/20 text-white" : "text-white/80 hover:bg-white/10 hover:text-white"}`} style={{
-                  paddingTop: "10px",
-                  paddingBottom: "10px"
-                }}>
-                          <Icon className="w-4 h-4 flex-shrink-0" />
-                          {sidebarOpen && <span className="font-medium">{item.label}</span>}
-                        </Link>;
-              })}
-                  </CollapsibleContent>
-                </Collapsible>}
+              {/* 2. CLIENTS Section - All Vivacity Team */}
+              {renderSection("clients", "Clients", clientsMenuItems, "clients")}
 
-              {/* Admin Section (SuperAdmin only - uses RBAC) */}
-              {"admin" in menuItems && Array.isArray(menuItems.admin) && menuItems.admin.length > 0 && canAccessAdmin() && <Collapsible open={sectionsOpen.admin} onOpenChange={open => setSectionsOpen(prev => ({
-            ...prev,
-            admin: open
-          }))} className="mt-6">
-                    {sidebarOpen && <CollapsibleTrigger className="flex items-center justify-between w-full px-4 mb-2 hover:bg-white/5 py-2 rounded transition-colors">
-                        <p className="text-xs font-semibold text-white/70 uppercase tracking-wider">Administration</p>
-                        {sectionsOpen.admin ? <ChevronDown className="w-3 h-3 text-white/70" /> : <ChevronRight className="w-3 h-3 text-white/70" />}
-                      </CollapsibleTrigger>}
+              {/* 3. EOS Section - Role-Aware */}
+              {renderSection("eos", "EOS", filteredEosItems, "eos")}
+
+              {/* 4. RESOURCE MANAGEMENT Section - Super Admin & Team Leader only */}
+              {(isSuperAdmin || isTeamLeader) &&
+                renderSection(
+                  "resourceManagement",
+                  "Resource Management",
+                  resourceManagementMenuItems,
+                  "resourceManagement"
+                )}
+
+              {/* 5. ADMINISTRATION Section - Super Admin full, Team Leader partial */}
+              {(isSuperAdmin || isTeamLeader) &&
+                renderSection(
+                  "administration",
+                  "Administration",
+                  filteredAdminItems,
+                  "administration"
+                )}
+
+              {/* 6. SYSTEM CONFIG Section - Super Admin Only */}
+              {isSuperAdmin &&
+                renderSection(
+                  "systemConfig",
+                  "System Config",
+                  systemConfigMenuItems,
+                  "systemConfig"
+                )}
+            </>
+          ) : (
+            <>
+              {/* Client Menu - for Admin/User roles or when viewing as client */}
+              <Collapsible
+                open={sectionsOpen.main}
+                onOpenChange={(open) =>
+                  setSectionsOpen((prev) => ({ ...prev, main: open }))
+                }
+              >
+                {sidebarOpen && (
+                  <CollapsibleTrigger className="flex items-center justify-between w-full px-4 mb-2 hover:bg-white/5 py-2 rounded transition-colors">
+                    <p className="text-xs font-semibold text-white/70 uppercase tracking-wider">
+                      Main
+                    </p>
+                    {sectionsOpen.main ? (
+                      <ChevronDown className="w-3 h-3 text-white/70" />
+                    ) : (
+                      <ChevronRight className="w-3 h-3 text-white/70" />
+                    )}
+                  </CollapsibleTrigger>
+                )}
+                <CollapsibleContent>
+                  {clientMenuItems.main.map(renderMenuItem)}
+                </CollapsibleContent>
+              </Collapsible>
+
+              {/* Team Section for Client Admins */}
+              {"team" in clientMenuItems &&
+                Array.isArray(clientMenuItems.team) &&
+                clientMenuItems.team.length > 0 && (
+                  <Collapsible
+                    open={sectionsOpen.team}
+                    onOpenChange={(open) =>
+                      setSectionsOpen((prev) => ({ ...prev, team: open }))
+                    }
+                    className="mt-6"
+                  >
+                    {sidebarOpen && (
+                      <CollapsibleTrigger className="flex items-center justify-between w-full px-4 mb-2 hover:bg-white/5 py-2 rounded transition-colors">
+                        <p className="text-xs font-semibold text-white/70 uppercase tracking-wider">
+                          Manage Team
+                        </p>
+                        {sectionsOpen.team ? (
+                          <ChevronDown className="w-3 h-3 text-white/70" />
+                        ) : (
+                          <ChevronRight className="w-3 h-3 text-white/70" />
+                        )}
+                      </CollapsibleTrigger>
+                    )}
                     <CollapsibleContent>
-                      {menuItems.admin.map((item: any) => {
-                const Icon = item.icon;
-                const isActive = location.pathname === item.path;
-                return <Link key={item.path} to={item.path} data-active={isActive} className={`flex items-center gap-2 px-4 mx-2 mb-1 transition-colors text-sm rounded-full ${isActive ? "bg-white/10 border border-white/20 text-white" : "text-white/80 hover:bg-white/10 hover:text-white"}`} style={{
-                  paddingTop: "10px",
-                  paddingBottom: "10px"
-                }}>
-                            <Icon className="w-4 h-4 flex-shrink-0" />
-                            {sidebarOpen && <span className="font-medium">{item.label}</span>}
-                          </Link>;
-              })}
+                      {clientMenuItems.team.map(renderMenuItem)}
                     </CollapsibleContent>
-                  </Collapsible>}
-
-              {/* EOS Section (visible to all staff with EOS menu items) */}
-              {"eos" in menuItems && Array.isArray(menuItems.eos) && menuItems.eos.length > 0 && <Collapsible open={sectionsOpen.eos} onOpenChange={open => setSectionsOpen(prev => ({
-            ...prev,
-            eos: open
-          }))} className="mt-6">
-                  {sidebarOpen && <CollapsibleTrigger className="flex items-center justify-between w-full px-4 mb-2 hover:bg-white/5 py-2 rounded transition-colors">
-                      <p className="text-xs font-semibold text-white/70 uppercase tracking-wider">EOS</p>
-                      {sectionsOpen.eos ? <ChevronDown className="w-3 h-3 text-white/70" /> : <ChevronRight className="w-3 h-3 text-white/70" />}
-                    </CollapsibleTrigger>}
-                  <CollapsibleContent>
-                    {menuItems.eos
-                      .filter((item: any) => {
-                        // Filter out leadership-only items for Team Members
-                        if (item.leadershipOnly) {
-                          return isSuperAdmin || profile?.unicorn_role === 'Team Leader';
-                        }
-                        return true;
-                      })
-                      .map((item: any) => {
-                const Icon = item.icon;
-                const isActive = location.pathname === item.path;
-                return <Link key={item.path} to={item.path} data-active={isActive} className={`flex items-center gap-2 px-4 mx-2 mb-1 transition-colors text-sm rounded-full ${isActive ? "bg-white/10 border border-white/20 text-white" : "text-white/80 hover:bg-white/10 hover:text-white"}`} style={{
-                  paddingTop: "10px",
-                  paddingBottom: "10px"
-                }}>
-                          <Icon className="w-4 h-4 flex-shrink-0" />
-                          {sidebarOpen && <span className="font-medium">{item.label}</span>}
-                        </Link>;
-              })}
-                  </CollapsibleContent>
-                </Collapsible>}
-
-              {/* Advanced Features Section (SuperAdmin only - uses RBAC) */}
-              {"advanced" in menuItems && Array.isArray(menuItems.advanced) && menuItems.advanced.length > 0 && canAccessAdvanced() && <Collapsible open={sectionsOpen.advanced} onOpenChange={open => setSectionsOpen(prev => ({
-            ...prev,
-            advanced: open
-          }))} className="mt-6">
-                  {sidebarOpen && <CollapsibleTrigger className="flex items-center justify-between w-full px-4 mb-2 hover:bg-white/5 py-2 rounded transition-colors">
-                      <p className="text-xs font-semibold text-white/70 uppercase tracking-wider">Advanced Features</p>
-                      {sectionsOpen.advanced ? <ChevronDown className="w-3 h-3 text-white/70" /> : <ChevronRight className="w-3 h-3 text-white/70" />}
-                    </CollapsibleTrigger>}
-                  <CollapsibleContent>
-                    {menuItems.advanced.map((item: any) => {
-                const Icon = item.icon;
-                const isActive = location.pathname === item.path;
-                return <Link key={item.path} to={item.path} data-active={isActive} className={`flex items-center gap-2 px-4 mx-2 mb-1 transition-colors text-sm rounded-full ${isActive ? "bg-white/10 border border-white/20 text-white" : "text-white/80 hover:bg-white/10 hover:text-white"}`} style={{
-                  paddingTop: "10px",
-                  paddingBottom: "10px"
-                }}>
-                          <Icon className="w-4 h-4 flex-shrink-0" />
-                          {sidebarOpen && <span className="font-medium">{item.label}</span>}
-                        </Link>;
-              })}
-                  </CollapsibleContent>
-                </Collapsible>}
-
-              {/* Resource Hub Section */}
-              {"resourceHub" in menuItems && Array.isArray(menuItems.resourceHub) && menuItems.resourceHub.length > 0 && <Collapsible open={sectionsOpen.resourceHub} onOpenChange={open => setSectionsOpen(prev => ({
-            ...prev,
-            resourceHub: open
-          }))} className="mt-6">
-                  {sidebarOpen && <CollapsibleTrigger className="flex items-center justify-between w-full px-4 mb-2 hover:bg-white/5 py-2 rounded transition-colors">
-                      <p className="text-xs font-semibold text-white/70 uppercase tracking-wider">Resource Hub</p>
-                      {sectionsOpen.resourceHub ? <ChevronDown className="w-3 h-3 text-white/70" /> : <ChevronRight className="w-3 h-3 text-white/70" />}
-                    </CollapsibleTrigger>}
-                  <CollapsibleContent>
-                    {menuItems.resourceHub.map((item: any) => {
-                const Icon = item.icon;
-                const isActive = location.pathname === item.path;
-                return <Link key={item.path} to={item.path} data-active={isActive} className={`flex items-center gap-2 px-4 mx-2 mb-1 transition-colors text-sm rounded-full ${isActive ? "bg-white/10 border border-white/20 text-white" : "text-white/80 hover:bg-white/10 hover:text-white"}`} style={{
-                  paddingTop: "10px",
-                  paddingBottom: "10px"
-                }}>
-                          <Icon className="w-4 h-4 flex-shrink-0" />
-                          {sidebarOpen && <span className="font-medium">{item.label}</span>}
-                        </Link>;
-              })}
-                  </CollapsibleContent>
-                </Collapsible>}
-            </> : null}
+                  </Collapsible>
+                )}
+            </>
+          )}
         </nav>
 
         {/* Scroll Indicator */}
-        {showScrollIndicator && <div className="absolute bottom-20 left-1/2 transform -translate-x-1/2 pointer-events-none animate-bounce">
+        {showScrollIndicator && (
+          <div className="absolute bottom-20 left-1/2 transform -translate-x-1/2 pointer-events-none animate-bounce">
             <ChevronDown className="w-5 h-5 text-white/60" />
-          </div>}
+          </div>
+        )}
 
         {/* Bottom spacing */}
         <div className="pb-4" />
       </aside>
 
       {/* Main Content */}
-      <div className={`${sidebarOpen ? "ml-64" : "ml-20"} flex flex-col min-h-screen transition-all duration-300`}>
+      <div
+        className={`${sidebarOpen ? "ml-64" : "ml-20"} flex flex-col min-h-screen transition-all duration-300`}
+      >
         {/* Top Bar */}
         <header className="h-16 bg-card border-b border-border flex items-center justify-between px-6 sticky top-0 z-20">
           <div className="flex items-center gap-4">
-            <img src={unicornLogo} alt="Unicorn 2.0" className="h-16" width="117" height="64" fetchPriority="high" />
-            {/* Real-time Australian Clock */}
-            
+            <img
+              src={unicornLogo}
+              alt="Unicorn 2.0"
+              className="h-16"
+              width="117"
+              height="64"
+              fetchPriority="high"
+            />
           </div>
 
           <div className="flex items-center gap-4">
@@ -700,50 +550,37 @@ export const DashboardLayout = ({
             <NotificationDropdown />
 
             {/* User Menu with Dropdown */}
-            {profile?.unicorn_role === "Admin" || profile?.unicorn_role === "User" ? <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon" className="group bg-white transition-all duration-200 hover:bg-white hover:scale-105 hover:shadow-md" style={{
-                boxShadow: 'rgba(0, 0, 0, 0.02) 0px 1px 3px 0px, rgba(27, 31, 35, 0.15) 0px 0px 0px 1px'
-              }}>
-                    <Settings className="h-5 w-5 text-foreground animate-[spin_3s_linear_infinite]" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-56">
-                  <Link to="/settings?tab=security">
-                    <DropdownMenuItem className="cursor-pointer">
-                      <User className="mr-2 h-4 w-4" />
-                      <span>My Profile</span>
-                    </DropdownMenuItem>
-                  </Link>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem className="cursor-pointer text-red-500 focus:text-red-500 focus:bg-transparent" onClick={signOut}>
-                    <LogOut className="mr-2 h-4 w-4" />
-                    <span>Logout</span>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="group bg-white transition-all duration-200 hover:bg-white hover:scale-105 hover:shadow-md"
+                  style={{
+                    boxShadow:
+                      "rgba(0, 0, 0, 0.02) 0px 1px 3px 0px, rgba(27, 31, 35, 0.15) 0px 0px 0px 1px",
+                  }}
+                >
+                  <Settings className="h-5 w-5 text-foreground animate-[spin_3s_linear_infinite]" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                <Link to="/settings?tab=security">
+                  <DropdownMenuItem className="cursor-pointer">
+                    <User className="mr-2 h-4 w-4" />
+                    <span>My Profile</span>
                   </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu> : <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon" className="group bg-white transition-all duration-200 hover:bg-white hover:scale-105 hover:shadow-md" style={{
-                boxShadow: 'rgba(0, 0, 0, 0.02) 0px 1px 3px 0px, rgba(27, 31, 35, 0.15) 0px 0px 0px 1px'
-              }}>
-                    <Settings className="h-5 w-5 text-foreground animate-[spin_3s_linear_infinite]" />
-                  </Button>
-                </DropdownMenuTrigger>
-
-                <DropdownMenuContent align="end" className="w-56">
-                  <Link to="/settings?tab=security">
-                    <DropdownMenuItem className="cursor-pointer">
-                      <User className="mr-2 h-4 w-4" />
-                      <span>Profile</span>
-                    </DropdownMenuItem>
-                  </Link>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem className="cursor-pointer text-destructive focus:text-destructive" onClick={signOut}>
-                    <LogOut className="mr-2 h-4 w-4" />
-                    <span>Logout</span>
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>}
+                </Link>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  className="cursor-pointer text-destructive focus:text-destructive"
+                  onClick={signOut}
+                >
+                  <LogOut className="mr-2 h-4 w-4" />
+                  <span>Logout</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </header>
 
@@ -758,9 +595,10 @@ export const DashboardLayout = ({
 
         {/* Footer */}
         <Footer />
-         
-         {/* AI Chatbot - SuperAdmin only */}
-         <AIChatbot />
+
+        {/* AI Chatbot - SuperAdmin only */}
+        <AIChatbot />
       </div>
-    </div>;
+    </div>
+  );
 };
