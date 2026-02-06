@@ -28,8 +28,10 @@ import { ClientPreviewProvider } from "./contexts/ClientPreviewContext";
  const TenantLoginsWrapper = lazy(() => import("./pages/TenantLoginsWrapper"));
  const TenantMembersWrapper = lazy(() => import("./pages/TenantMembersWrapper"));
  const TenantDocumentsWrapper = lazy(() => import("./pages/TenantDocumentsWrapper"));
+ const TenantDocumentsHubWrapper = lazy(() => import("./pages/TenantDocumentsHubWrapper"));
  const TenantDocumentDetailWrapper = lazy(() => import("./pages/TenantDocumentDetailWrapper"));
  const TenantNotesWrapper = lazy(() => import("./pages/TenantNotesWrapper"));
+ const ClientPortalDocumentsWrapper = lazy(() => import("./pages/ClientPortalDocumentsWrapper"));
  const ManagePackagesWrapper = lazy(() => import("./pages/ManagePackagesWrapper"));
  const PackageDetail = lazy(() => import("./pages/PackageDetail"));
  const AdminPackageDetailWrapper = lazy(() => import("./pages/AdminPackageDetailWrapper"));
@@ -325,10 +327,26 @@ const App = () => (
               } 
             />
             <Route 
+              path="/tenant/:tenantId/documents-hub" 
+              element={
+                <ProtectedRoute>
+                  <TenantDocumentsHubWrapper />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
               path="/tenant/:tenantId/document/:documentId" 
               element={
                 <ProtectedRoute>
                   <TenantDocumentDetailWrapper />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/client-portal/:tenantId/documents" 
+              element={
+                <ProtectedRoute>
+                  <ClientPortalDocumentsWrapper />
                 </ProtectedRoute>
               } 
             />
