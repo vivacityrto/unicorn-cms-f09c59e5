@@ -16,6 +16,8 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import TenantProgressTable from "@/components/tenant/TenantProgressTable";
 import { CSCProfileCard } from "@/components/csc/CSCProfileCard";
+import { ViewAsClientButton } from "@/components/client/ViewAsClientButton";
+import type { TenantType } from "@/contexts/TenantTypeContext";
 interface ClientData {
   id: string;
   companyname: string;
@@ -90,6 +92,7 @@ export default function TenantDetail() {
   const [liaisonAvatar, setLiaisonAvatar] = useState<string>("");
   const [liaisonEmail, setLiaisonEmail] = useState<string>("");
   const [tenantStatus, setTenantStatus] = useState<string>("active");
+  const [tenantTypeValue, setTenantTypeValue] = useState<TenantType>("compliance_system");
   const [loading, setLoading] = useState(false);
   const [memberCount, setMemberCount] = useState(0);
   const [documentCount, setDocumentCount] = useState(0);
@@ -214,7 +217,8 @@ export default function TenantDetail() {
           status,
           package_id,
           package_ids,
-          package_added_at
+          package_added_at,
+          tenant_type
         `).eq("id", parseInt(tenantId)).single();
       if (tenantError) throw tenantError;
       if (!tenantData) {
@@ -246,6 +250,7 @@ export default function TenantDetail() {
         activePackage = pkgData;
       }
       setTenantStatus(tenantData.status || "active");
+      setTenantTypeValue((tenantData.tenant_type as TenantType) || "compliance_system");
       const {
         count: memberCountData
       } = await supabase.from("users").select("*", {
@@ -519,6 +524,15 @@ export default function TenantDetail() {
                 </div>
               </div>
               <div className="flex items-center gap-2.5">
+                {/* View as Client Button - Only for Super Admin and Team Leader */}
+                {tenantId && (
+                  <ViewAsClientButton
+                    tenantId={parseInt(tenantId)}
+                    tenantName={clientData.companyname}
+                    tenantType={tenantTypeValue}
+                    compact
+                  />
+                )}
                 <a href="#" className="group relative p-2.5 rounded-full bg-gradient-to-br from-background to-muted border border-border/40 transition-all duration-300 hover:shadow-lg hover:scale-110 hover:border-[#1877F2]/30 cursor-not-allowed" title="Facebook" onClick={e => e.preventDefault()}>
                   <Facebook className="h-4 w-4 text-[#1877F2] group-hover:scale-110 transition-transform" />
                 </a>
