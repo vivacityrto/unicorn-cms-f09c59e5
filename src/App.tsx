@@ -7,6 +7,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "./hooks/useAuth";
 import { ViewModeProvider } from "./contexts/ViewModeContext";
 import { FacilitatorModeProvider } from "./contexts/FacilitatorModeContext";
+import { TenantTypeProvider } from "./contexts/TenantTypeContext";
  import { ProtectedRoute } from "./components/ProtectedRoute";
  import { LazyLoadFallback } from "./components/LazyLoadFallback";
  
@@ -109,6 +110,15 @@ const AdminAssistant = lazy(() => import("./pages/AdminAssistant"));
 const AdminKnowledgeLibrary = lazy(() => import("./pages/AdminKnowledgeLibrary"));
 const AdminEOSProcesses = lazy(() => import("./pages/AdminEOSProcesses"));
 const EosHealthCheck = lazy(() => import("./pages/EosHealthCheck"));
+
+// Academy pages (placeholder)
+const AcademyDashboard = lazy(() => import("./pages/academy/AcademyDashboard"));
+const AcademyCourses = lazy(() => import("./pages/academy/AcademyCourses"));
+const AcademyCertificates = lazy(() => import("./pages/academy/AcademyCertificates"));
+const AcademyEvents = lazy(() => import("./pages/academy/AcademyEvents"));
+const AcademyCommunity = lazy(() => import("./pages/academy/AcademyCommunity"));
+const AcademyTeam = lazy(() => import("./pages/academy/AcademyTeam"));
+
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -118,6 +128,7 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <AuthProvider>
+          <TenantTypeProvider>
           <ViewModeProvider>
           <FacilitatorModeProvider>
            <Suspense fallback={<LazyLoadFallback />}>
@@ -801,12 +812,20 @@ const App = () => (
             <Route path="/admin/assistant" element={<ProtectedRoute requireSuperAdmin><AdminAssistant /></ProtectedRoute>} />
            <Route path="/admin/knowledge" element={<ProtectedRoute requireSuperAdmin><AdminKnowledgeLibrary /></ProtectedRoute>} />
            <Route path="/admin/eos-processes" element={<ProtectedRoute requireSuperAdmin><AdminEOSProcesses /></ProtectedRoute>} />
+            {/* Academy Routes */}
+            <Route path="/academy" element={<ProtectedRoute><AcademyDashboard /></ProtectedRoute>} />
+            <Route path="/academy/courses" element={<ProtectedRoute><AcademyCourses /></ProtectedRoute>} />
+            <Route path="/academy/certificates" element={<ProtectedRoute><AcademyCertificates /></ProtectedRoute>} />
+            <Route path="/academy/events" element={<ProtectedRoute><AcademyEvents /></ProtectedRoute>} />
+            <Route path="/academy/community" element={<ProtectedRoute><AcademyCommunity /></ProtectedRoute>} />
+            <Route path="/academy/team" element={<ProtectedRoute><AcademyTeam /></ProtectedRoute>} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
            </Suspense>
           </FacilitatorModeProvider>
           </ViewModeProvider>
+          </TenantTypeProvider>
         </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>
