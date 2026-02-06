@@ -13,6 +13,7 @@ import { ActivityPanel } from '@/components/profile/ActivityPanel';
 import { CSCProfileFields } from '@/components/profile/CSCProfileFields';
 import { TeamProfileFields } from '@/components/profile/TeamProfileFields';
 import { TimeInboxSettings } from '@/components/profile/TimeInboxSettings';
+import { OutlookIntegration } from '@/components/profile/OutlookIntegration';
 
 interface UserData {
   user_uuid: string;
@@ -279,10 +280,15 @@ export default function UserProfile() {
           )}
         </div>
 
-        {/* Right Column - Activity Panel + Settings */}
+        {/* Right Column - Activity Panel + Settings + Integrations */}
         <div className="space-y-6">
           <ActivityPanel user={user} />
-          {user.user_uuid === currentUser.user_uuid && <TimeInboxSettings />}
+          {user.user_uuid === currentUser.user_uuid && (
+            <>
+              <OutlookIntegration />
+              <TimeInboxSettings />
+            </>
+          )}
         </div>
       </div>
     </div>

@@ -11600,9 +11600,12 @@ export type Database = {
       oauth_tokens: {
         Row: {
           access_token: string
+          account_email: string | null
           created_at: string
           expires_at: string
           id: string
+          last_error: string | null
+          last_synced_at: string | null
           provider: string
           refresh_token: string
           scope: string | null
@@ -11612,9 +11615,12 @@ export type Database = {
         }
         Insert: {
           access_token: string
+          account_email?: string | null
           created_at?: string
           expires_at: string
           id?: string
+          last_error?: string | null
+          last_synced_at?: string | null
           provider?: string
           refresh_token: string
           scope?: string | null
@@ -11624,9 +11630,12 @@ export type Database = {
         }
         Update: {
           access_token?: string
+          account_email?: string | null
           created_at?: string
           expires_at?: string
           id?: string
+          last_error?: string | null
+          last_synced_at?: string | null
           provider?: string
           refresh_token?: string
           scope?: string | null
@@ -19542,6 +19551,51 @@ export type Database = {
             referencedColumns: ["tenant_id"]
           },
         ]
+      }
+      user_outlook_connection_status: {
+        Row: {
+          account_email: string | null
+          connection_status: string | null
+          created_at: string | null
+          expires_at: string | null
+          id: string | null
+          last_error: string | null
+          last_synced_at: string | null
+          provider: string | null
+          tenant_id: number | null
+          token_status: string | null
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          account_email?: string | null
+          connection_status?: never
+          created_at?: string | null
+          expires_at?: string | null
+          id?: string | null
+          last_error?: string | null
+          last_synced_at?: string | null
+          provider?: string | null
+          tenant_id?: number | null
+          token_status?: never
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          account_email?: string | null
+          connection_status?: never
+          created_at?: string | null
+          expires_at?: string | null
+          id?: string | null
+          last_error?: string | null
+          last_synced_at?: string | null
+          provider?: string | null
+          tenant_id?: number | null
+          token_status?: never
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
       }
       v_client_decisions_approvals: {
         Row: {
