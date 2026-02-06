@@ -89,3 +89,9 @@ verify_jwt = false
 
 [functions.addin-email-create-task]
 verify_jwt = false
+
+[functions.addin-meeting-capture]
+verify_jwt = false
+
+[functions.addin-meeting-create-time-draft]
+verify_jwt = false
