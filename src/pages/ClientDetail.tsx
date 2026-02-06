@@ -404,20 +404,36 @@ export default function ClientDetail() {
         clientId={tenantIdNum!}
         clientName={tenant.name}
         onSuccess={async () => {
-          // Invalidate React Query caches for time and package data
+          // Invalidate React Query caches for time and package data with immediate refetch
           if (tenantIdNum) {
-            queryClient.invalidateQueries({ queryKey: timeTrackingKeys.summary(tenantIdNum) });
-            queryClient.invalidateQueries({ queryKey: timeTrackingKeys.entries(tenantIdNum) });
-            queryClient.invalidateQueries({ queryKey: packageUsageKeys.packages(tenantIdNum) });
-            queryClient.invalidateQueries({ 
-              predicate: (query) => {
-                const key = query.queryKey;
-                return Array.isArray(key) && 
-                       key[0] === 'package-usage' && 
-                       key[1] === 'usage' && 
-                       key[2] === tenantIdNum;
-              }
-            });
+            await Promise.all([
+              queryClient.invalidateQueries({ 
+                queryKey: timeTrackingKeys.summary(tenantIdNum),
+                refetchType: 'all'
+              }),
+              queryClient.invalidateQueries({ 
+                queryKey: timeTrackingKeys.entries(tenantIdNum),
+                refetchType: 'all'
+              }),
+              queryClient.invalidateQueries({ 
+                queryKey: packageUsageKeys.packages(tenantIdNum),
+                refetchType: 'all'
+              }),
+              queryClient.invalidateQueries({ 
+                queryKey: packageUsageKeys.alerts(tenantIdNum),
+                refetchType: 'all'
+              }),
+              // Invalidate all package usage queries for this client
+              queryClient.invalidateQueries({ 
+                predicate: (query) => {
+                  const key = query.queryKey;
+                  return Array.isArray(key) && 
+                         key[0] === 'package-usage' && 
+                         key[2] === tenantIdNum;
+                },
+                refetchType: 'all'
+              })
+            ]);
           }
         }}
       />
