@@ -55,9 +55,10 @@ import { ClientPreviewProvider } from "./contexts/ClientPreviewContext";
  const EosMeetingSummary = lazy(() => import("./pages/EosMeetingSummary"));
  const LiveMeetingView = lazy(() => import("./components/eos/LiveMeetingView").then(m => ({ default: m.LiveMeetingView })));
  const ClientEosOverview = lazy(() => import("./pages/ClientEosOverview"));
- const NotificationSettings = lazy(() => import("./pages/NotificationSettings"));
- const IntegrationSettings = lazy(() => import("./pages/IntegrationSettings"));
- const EosCalendar = lazy(() => import("./pages/EosCalendar"));
+const NotificationSettings = lazy(() => import("./pages/NotificationSettings"));
+const IntegrationSettings = lazy(() => import("./pages/IntegrationSettings"));
+const AddinSettings = lazy(() => import("./pages/admin/AddinSettings"));
+const EosCalendar = lazy(() => import("./pages/EosCalendar"));
  const EosQC = lazy(() => import("./pages/EosQC"));
  const EosQCSession = lazy(() => import("./pages/EosQCSession"));
  const EosFlightPlan = lazy(() => import("./pages/EosFlightPlan"));
@@ -871,6 +872,8 @@ const App = () => (
             <Route path="/admin/assistant" element={<ProtectedRoute requireSuperAdmin><AdminAssistant /></ProtectedRoute>} />
            <Route path="/admin/knowledge" element={<ProtectedRoute requireSuperAdmin><AdminKnowledgeLibrary /></ProtectedRoute>} />
            <Route path="/admin/eos-processes" element={<ProtectedRoute requireSuperAdmin><AdminEOSProcesses /></ProtectedRoute>} />
+            {/* Add-in Settings - SuperAdmin only */}
+            <Route path="/admin/addin-settings" element={<ProtectedRoute requireSuperAdmin><AddinSettings /></ProtectedRoute>} />
             {/* Academy Routes */}
             <Route path="/academy" element={<ProtectedRoute><AcademyDashboard /></ProtectedRoute>} />
             <Route path="/academy/courses" element={<ProtectedRoute><AcademyCourses /></ProtectedRoute>} />

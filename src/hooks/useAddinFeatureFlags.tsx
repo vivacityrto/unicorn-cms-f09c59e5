@@ -1,0 +1,100 @@
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+
+export interface AddinFeatureFlags {
+  microsoft_addin_enabled: boolean;
+  addin_outlook_mail_enabled: boolean;
+  addin_meetings_enabled: boolean;
+  addin_documents_enabled: boolean;
+}
+
+const DEFAULT_FLAGS: AddinFeatureFlags = {
+  microsoft_addin_enabled: false,
+  addin_outlook_mail_enabled: false,
+  addin_meetings_enabled: false,
+  addin_documents_enabled: false,
+};
+
+export function useAddinFeatureFlags() {
+  const queryClient = useQueryClient();
+
+  const { data: flags, isLoading, error } = useQuery({
+    queryKey: ["addin-feature-flags"],
+    queryFn: async (): Promise<AddinFeatureFlags> => {
+      const { data, error } = await supabase
+        .from("app_settings")
+        .select("*")
+        .limit(1)
+        .single();
+
+      if (error) {
+        console.error("Error fetching addin flags:", error);
+        return DEFAULT_FLAGS;
+      }
+
+      // Type assertion since types may not be updated yet
+      const settings = data as Record<string, unknown>;
+      
+      return {
+        microsoft_addin_enabled: (settings?.microsoft_addin_enabled as boolean) ?? false,
+        addin_outlook_mail_enabled: (settings?.addin_outlook_mail_enabled as boolean) ?? false,
+        addin_meetings_enabled: (settings?.addin_meetings_enabled as boolean) ?? false,
+        addin_documents_enabled: (settings?.addin_documents_enabled as boolean) ?? false,
+      };
+    },
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  });
+
+  const updateFlagsMutation = useMutation({
+    mutationFn: async (updates: Partial<AddinFeatureFlags>) => {
+      // Get the current settings row id first
+      const { data: current, error: fetchError } = await supabase
+        .from("app_settings")
+        .select("id")
+        .limit(1)
+        .single();
+
+      if (fetchError || !current) {
+        throw new Error("No app_settings row found");
+      }
+
+      // Cast updates to any to bypass type checking since columns may not be in types yet
+      const { error } = await supabase
+        .from("app_settings")
+        .update(updates as Record<string, unknown>)
+        .eq("id", current.id);
+
+      if (error) throw error;
+      return updates;
+    },
+    onSuccess: () => {
+      toast.success("Feature flags updated");
+      queryClient.invalidateQueries({ queryKey: ["addin-feature-flags"] });
+    },
+    onError: (error: Error) => {
+      console.error("Update flags error:", error);
+      toast.error("Failed to update feature flags");
+    },
+  });
+
+  return {
+    flags: flags ?? DEFAULT_FLAGS,
+    isLoading,
+    error,
+    updateFlags: updateFlagsMutation.mutate,
+    isUpdating: updateFlagsMutation.isPending,
+  };
+}
+
+// Helper to check if a specific add-in feature is enabled
+export function useIsAddinFeatureEnabled(feature: keyof AddinFeatureFlags): boolean {
+  const { flags } = useAddinFeatureFlags();
+  
+  // Master flag must be on for any sub-feature to be enabled
+  if (!flags.microsoft_addin_enabled && feature !== 'microsoft_addin_enabled') {
+    return false;
+  }
+  
+  return flags[feature] ?? false;
+}
