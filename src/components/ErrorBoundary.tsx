@@ -1,6 +1,7 @@
 import { Component, ErrorInfo, ReactNode } from 'react';
 import { Button } from '@/components/ui/button';
 import { AlertTriangle, RefreshCw, Home } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
 
 interface Props {
   children: ReactNode;
@@ -37,16 +38,35 @@ export class ErrorBoundary extends Component<Props, State> {
   componentDidCatch(error: Error, errorInfo: ErrorInfo): void {
     this.setState({ errorInfo });
     
-    // Log error for debugging - could be extended to send to audit_events
+    // Log error for debugging
     console.error('ErrorBoundary caught an error:', error, errorInfo);
     
-    // In production, you could log to an audit table here:
-    // supabase.from('audit_events').insert({
-    //   entity: 'error_boundary',
-    //   entity_id: crypto.randomUUID(),
-    //   action: 'render_error',
-    //   details: { message: error.message, stack: error.stack, componentStack: errorInfo.componentStack }
-    // });
+    // Log to audit_events table
+    this.logErrorToAudit(error, errorInfo);
+  }
+
+  private async logErrorToAudit(error: Error, errorInfo: ErrorInfo): Promise<void> {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      await supabase.from('audit_events').insert({
+        entity: 'error_boundary',
+        entity_id: crypto.randomUUID(),
+        action: 'render_error',
+        user_id: user?.id || null,
+        details: {
+          message: error.message,
+          name: error.name,
+          stack: error.stack?.substring(0, 2000), // Limit stack trace length
+          componentStack: errorInfo.componentStack?.substring(0, 2000),
+          url: window.location.href,
+          timestamp: new Date().toISOString(),
+        },
+      });
+    } catch (auditError) {
+      // Silently fail audit logging - don't break error recovery
+      console.error('Failed to log error to audit:', auditError);
+    }
   }
 
   handleReload = (): void => {
