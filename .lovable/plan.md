@@ -1,320 +1,332 @@
 
-# Tenant-Type Based Navigation and Access Control
+# Fix "Add Time from Meeting" Flow
 
-## Summary
+## Problem Summary
 
-Implement a multi-tenant navigation system that differentiates between **Compliance System Members** (full platform access) and **Vivacity Academy Members** (training-focused, limited scope). This includes renaming "Vivacity Training" to "Vivacity Academy" globally and creating separate navigation shells for each tenant type.
+The "Add time from meeting" feature is broken because:
+1. The client ID from the route is not passed to the time capture page
+2. Posted time entries don't update the client page summaries
+3. Database RPC functions have type mismatches (expecting UUID but receiving bigint)
+4. Time summaries include drafts/unposted entries in calculations
 
 ---
 
-## Current State Analysis
+## Root Cause Analysis
 
-### Database Structure
-- The `tenants` table has no `tenant_type` column - this needs to be added
-- User types exist: `Vivacity Team`, `Client Parent`, `Client Child`
-- No Academy-specific user or tenant classification exists
+### Issue 1: Client ID Not Passed
+The "Add time from meeting" button navigates to `/calendar/time-capture?client=7530` but `CalendarTimeCapture.tsx` never reads this parameter. The draft creation flow doesn't auto-populate the client.
 
-### Existing Navigation
-- `DashboardLayout.tsx` handles both Vivacity Team and Client navigation
-- Navigation is role-based (Super Admin, Team Leader, Team Member, Admin, User)
-- No tenant-type filtering currently implemented
+### Issue 2: No Cache Invalidation
+After posting time in `CalendarTimeCapture.tsx`, navigating back to the client page shows stale data because React Query isn't used for these hooks, and there's no mechanism to trigger a refetch.
 
-### Existing Components
-- `TopBar.tsx` - Header with logo, title, breadcrumbs, actions
-- `UtilityFooter.tsx` - Compact footer with tenant name, role, session info, quick links
-- `Footer.tsx` - Static marketing footer (for public pages)
+### Issue 3: RPC Type Mismatch
+Network logs show:
+```
+POST rpc_get_package_usage {"p_client_id":7530,"p_client_package_id":"15134"}
+Status: 400 - "invalid input syntax for type uuid: 15134"
+```
+The `package_instances.id` column is `bigint`, but the RPC expects a `UUID` (from the deprecated `client_packages` table).
+
+### Issue 4: Summary Includes All Entries
+The summary calculation includes all `time_entries` regardless of status, mixing posted and draft entries.
 
 ---
 
 ## Implementation Plan
 
-### Phase 1: Database Schema Changes
+### Phase 1: Database Fixes
 
-**1.1 Create tenant_type enum and add column**
+#### 1.1 Fix RPC Type Signatures
+Create migration to update two RPC functions to accept `bigint` instead of `uuid`:
+- `rpc_get_package_usage(p_client_id bigint, p_client_package_id bigint)`
+- `rpc_check_package_thresholds(p_client_id bigint, p_client_package_id bigint)`
 
+Both functions need to query `package_instances` instead of `client_packages`.
+
+#### 1.2 Add Status Column to time_entries (if not present)
+Verify time_entries has a `status` column for tracking posted vs draft states. From schema review, there is no `status` column - entries are final once created.
+
+The current flow creates drafts in `calendar_time_drafts`, then moves them to `time_entries` when posted. This is correct - no status column needed.
+
+---
+
+### Phase 2: Create Import Function
+
+#### 2.1 New RPC: rpc_import_meeting_time_to_client
 ```sql
--- Create enum for tenant types
-CREATE TYPE public.tenant_type AS ENUM (
-  'compliance_system',      -- Full platform access
-  'academy_solo',           -- Single user, training only
-  'academy_team',           -- Up to 10 users
-  'academy_elite'           -- Up to 30 users
-);
-
--- Add tenant_type column to tenants table
-ALTER TABLE public.tenants 
-ADD COLUMN tenant_type public.tenant_type 
-DEFAULT 'compliance_system' NOT NULL;
-
--- Add index for tenant_type queries
-CREATE INDEX idx_tenants_tenant_type ON public.tenants(tenant_type);
+CREATE OR REPLACE FUNCTION rpc_import_meeting_time_to_client(
+  p_client_id bigint,
+  p_meeting_id uuid,
+  p_minutes integer,
+  p_work_date date,
+  p_notes text DEFAULT NULL,
+  p_package_id bigint DEFAULT NULL,
+  p_save_as_draft boolean DEFAULT false
+) RETURNS jsonb
 ```
 
-**1.2 Add Academy-specific fields to tenants**
+Function responsibilities:
+- Validate calling user has access to the client's tenant
+- Validate meeting exists and belongs to same tenant
+- Create time_entry with explicit `client_id`
+- Return `{ success, time_entry_id, minutes_total }`
+- If `p_save_as_draft = true`, create in drafts table instead
 
+#### 2.2 Create Audit Log Function
 ```sql
--- Academy subscription limits
-ALTER TABLE public.tenants
-ADD COLUMN academy_max_users integer DEFAULT NULL,
-ADD COLUMN academy_subscription_expires_at timestamptz DEFAULT NULL;
+CREATE OR REPLACE FUNCTION rpc_log_time_import_audit(
+  p_client_id bigint,
+  p_meeting_id uuid,
+  p_time_entry_ids uuid[],
+  p_minutes_total integer
+) RETURNS void
 ```
 
----
-
-### Phase 2: Context and Hooks
-
-**2.1 Create TenantTypeContext**
-
-New file: `src/contexts/TenantTypeContext.tsx`
-
-- Provides tenant type information to the entire app
-- Fetches tenant type based on user's primary tenant
-- Exposes helper functions:
-  - `isComplianceMember(): boolean`
-  - `isAcademyMember(): boolean`
-  - `academyTier: 'solo' | 'team' | 'elite' | null`
-
-**2.2 Update useAuth hook**
-
-Extend `UserProfile` interface to include:
-- User's tenant type (fetched via tenant relationship)
-- Academy tier if applicable
+Logs to audit table with:
+- action: 'meeting_time_import'
+- actor_user_id
+- client_id, meeting_id
+- time_entry_ids array
+- minutes_total
+- reason: 'Imported from meeting'
 
 ---
 
-### Phase 3: Navigation Architecture
+### Phase 3: Frontend - Add Time from Meeting Modal
 
-**3.1 Create Separate Menu Configurations**
+#### 3.1 Create AddTimeFromMeetingDialog Component
+New file: `src/components/client/AddTimeFromMeetingDialog.tsx`
 
-New file: `src/config/navigationConfig.ts`
+Features:
+- Opens when clicking "Add time from meeting" on client page
+- Shows list of recent meetings from calendar_events
+- Pre-filters to meetings linked to this tenant
+- Shows meeting duration, attendees, date
+- Allows selecting time segments
+- Checkbox for "Save as draft"
+- Validates meeting has time segments selected
+- Shows clear error if meeting is from another tenant
 
-```text
-COMPLIANCE MEMBER MENU
-----------------------
-SIDEBAR:
-- Dashboard
-- Clients
-- Documents  
-- Resource Hub
-- Vivacity Consultant
-- Vivacity Academy (link to academy)
-- Tasks
-- Events
-
-ACADEMY MEMBER MENU
--------------------
-SIDEBAR:
-- Academy Dashboard
-- My Courses
-- Certificates
-- Events
-- Community
-- Profile
-- Team Members (Academy Team/Elite only)
-```
-
-**3.2 Create Academy Layout Component**
-
-New file: `src/components/layout/AcademyLayout.tsx`
-
-- Separate layout shell for Academy members
-- Learning-platform aesthetic (not CMS-like)
-- Simplified navigation structure
-- Different colour scheme (optional)
-
-**3.3 Create Academy Footer Component**
-
-New file: `src/components/layout/AcademyFooter.tsx`
-
-Footer content:
-- Vivacity Academy branding
-- Help Centre link
-- FAQs link
-- Terms and Conditions link
-- Privacy Policy link
-- Support link
+#### 3.2 Update ClientDetail.tsx
+- Replace navigation button with dialog trigger
+- Pass `clientId` directly to dialog
+- On success: call `refresh()` on useTimeTracking and usePackageUsage hooks
 
 ---
 
-### Phase 4: Layout Switching Logic
+### Phase 4: UI Refresh and Cache Invalidation
 
-**4.1 Update DashboardLayout**
+#### 4.1 Add Refresh Callbacks
+Update `useTimeTracking` and `usePackageUsage` to expose robust refresh methods.
 
-Modify `src/components/DashboardLayout.tsx`:
-
-```text
-Logic flow:
-1. Determine if user is Vivacity Team -> Use existing Vivacity Team menu
-2. Determine tenant type from context
-3. If compliance_system -> Use Compliance Member menu
-4. If academy_* -> Render AcademyLayout instead
-```
-
-**4.2 Create Layout Router Component**
-
-New file: `src/components/layout/AuthenticatedLayout.tsx`
-
-- Wraps route content
-- Selects appropriate layout based on tenant type
-- Handles edge cases (no tenant, loading state)
-
----
-
-### Phase 5: Route Protection
-
-**5.1 Create TenantTypeGuard Component**
-
-New file: `src/components/guards/TenantTypeGuard.tsx`
-
-- Protects routes based on tenant type
-- Redirects Academy members away from compliance routes
-- Shows "access denied" or redirects appropriately
-
-**5.2 Update ProtectedRoute Component**
-
-Add optional `requiredTenantType` prop:
-
-```tsx
-<ProtectedRoute requiredTenantType="compliance_system">
-  <ComplianceOnlyPage />
-</ProtectedRoute>
-```
-
----
-
-### Phase 6: Footer Updates
-
-**6.1 Update Compliance Member Footer**
-
-Modify `src/components/layout/UtilityFooter.tsx`:
-
-Left section:
-- Active RTO name (from tenant)
-- Current package name
-- Assigned Vivacity Consultant
-
-Right section:
-- Help Centre
-- Vivacity Academy link
-- Updates Log
-
-**6.2 Create Academy Footer**
-
-New file: `src/components/layout/AcademyFooter.tsx`:
-
-- Vivacity Academy branding/logo
-- Help Centre
-- FAQs  
-- Terms and Conditions
-- Privacy Policy
-- Support
-
----
-
-### Phase 7: Global Rename
-
-**7.1 Search and Replace**
-
-No instances of "Vivacity Training" found in the codebase. The term does not appear to be in use. However, ensure any future references use "Vivacity Academy".
-
-**7.2 Add Academy Route Titles**
-
-Update `src/components/layout/TopBar.tsx` to include Academy routes:
-
+#### 4.2 Update Post Success Flow
+After posting time from meeting:
 ```typescript
-const routeTitles: Record<string, string> = {
-  // ... existing routes
-  "/academy": "Academy Dashboard",
-  "/academy/courses": "My Courses",
-  "/academy/certificates": "Certificates",
-  "/academy/events": "Events",
-  "/academy/community": "Community",
-  "/academy/team": "Team Members",
-};
-```
+// In AddTimeFromMeetingDialog after successful import
+const result = await importMeetingTime(clientId, meetingId, minutes, date, notes, packageId, saveAsDraft);
 
----
-
-## Technical Details
-
-### Files to Create
-
-| File | Purpose |
-|------|---------|
-| `supabase/migrations/XXXXXX_add_tenant_type.sql` | Database schema changes |
-| `src/contexts/TenantTypeContext.tsx` | Tenant type context provider |
-| `src/config/navigationConfig.ts` | Centralised menu configurations |
-| `src/components/layout/AcademyLayout.tsx` | Academy-specific layout shell |
-| `src/components/layout/AcademyFooter.tsx` | Academy footer component |
-| `src/components/layout/AuthenticatedLayout.tsx` | Layout router/switcher |
-| `src/components/guards/TenantTypeGuard.tsx` | Route protection by tenant type |
-
-### Files to Modify
-
-| File | Changes |
-|------|---------|
-| `src/hooks/useAuth.tsx` | Add tenant type to profile fetch |
-| `src/components/DashboardLayout.tsx` | Add tenant-type-based menu switching |
-| `src/components/layout/TopBar.tsx` | Add Academy route titles |
-| `src/components/layout/UtilityFooter.tsx` | Update for Compliance members |
-| `src/App.tsx` | Wrap with TenantTypeProvider, add Academy routes |
-| `src/integrations/supabase/types.ts` | Add tenant_type to TypeScript types |
-
-### Type Definitions
-
-```typescript
-// Tenant types
-type TenantType = 
-  | 'compliance_system' 
-  | 'academy_solo' 
-  | 'academy_team' 
-  | 'academy_elite';
-
-// Academy tier helpers
-type AcademyTier = 'solo' | 'team' | 'elite';
-
-// Context interface
-interface TenantTypeContextValue {
-  tenantType: TenantType | null;
-  isComplianceMember: boolean;
-  isAcademyMember: boolean;
-  academyTier: AcademyTier | null;
-  loading: boolean;
+if (result.success) {
+  // Immediate UI refresh
+  await refreshTimeTracking();
+  await refreshPackageUsage();
+  
+  toast({
+    title: saveAsDraft 
+      ? `Saved ${formatMinutes(result.minutes_total)} as draft` 
+      : `Posted ${formatMinutes(result.minutes_total)} to ${clientName}`,
+    action: saveAsDraft ? (
+      <Button onClick={() => navigate('/time-inbox')}>Review Draft</Button>
+    ) : undefined
+  });
+  
+  onOpenChange(false);
 }
 ```
 
 ---
 
-## Security Considerations
+### Phase 5: Query Improvements
 
-1. **Route Protection**: Academy members cannot access compliance routes via URL manipulation
-2. **API Filtering**: RLS policies should filter data based on tenant type
-3. **No Feature Leakage**: UI completely hides unavailable features
-4. **Tenant Isolation**: Academy tenants cannot see compliance data and vice versa
+#### 5.1 Fix usePackageUsage Hook
+Update `src/hooks/usePackageUsage.tsx`:
+- Pass `selectedPackageId` as a number (not string) to RPC
+- Remove `.toString()` conversion that breaks type matching
+
+```typescript
+// Before
+const { data, error } = await supabase.rpc('rpc_get_package_usage', {
+  p_client_id: clientId,
+  p_client_package_id: selectedPackageId  // "15134" string
+});
+
+// After  
+const { data, error } = await supabase.rpc('rpc_get_package_usage', {
+  p_client_id: Number(clientId),
+  p_client_package_id: Number(selectedPackageId)
+});
+```
+
+#### 5.2 Fix Package ID Type in State
+Update package fetching to preserve numeric types:
+```typescript
+// In usePackageUsage
+const mapped = instances.map(inst => ({
+  id: inst.id,  // Keep as number, not toString()
+  package_id: inst.package_id,
+  // ...
+}));
+```
 
 ---
 
-## Out of Scope
+### Phase 6: Validation and Feedback
 
-- Academy course content management
-- Academy LMS functionality
-- Payment/subscription integration
-- Academy user onboarding flows
-- Community feature implementation
+#### 6.1 Block Invalid Submissions
+- Disable submit if no time segments selected
+- Show error toast if meeting belongs to different tenant
+- Validate minutes > 0 before calling RPC
 
-These are UI and navigation changes only, as specified in the constraints.
+#### 6.2 Success Message Requirements
+Toast must include:
+- Total minutes added (formatted as Xh Ym)
+- Posted vs draft status
+- Target client name
+
+---
+
+## Files to Create
+
+| File | Purpose |
+|------|---------|
+| `supabase/migrations/XXXXXX_fix_package_usage_rpc.sql` | Fix RPC type signatures |
+| `supabase/migrations/XXXXXX_add_import_meeting_time.sql` | New import function + audit |
+| `src/components/client/AddTimeFromMeetingDialog.tsx` | Modal for importing meeting time |
+| `src/hooks/useImportMeetingTime.tsx` | Hook for import RPC call |
+
+## Files to Modify
+
+| File | Changes |
+|------|---------|
+| `src/pages/ClientDetail.tsx` | Replace nav button with dialog |
+| `src/hooks/usePackageUsage.tsx` | Fix type conversions |
+| `src/hooks/useTimeTracking.tsx` | Add exported refresh function |
+
+---
+
+## Technical Details
+
+### Database Function: rpc_import_meeting_time_to_client
+
+```sql
+CREATE OR REPLACE FUNCTION public.rpc_import_meeting_time_to_client(
+  p_client_id bigint,
+  p_calendar_event_id uuid,
+  p_minutes integer,
+  p_work_date date,
+  p_notes text DEFAULT NULL,
+  p_package_id bigint DEFAULT NULL,
+  p_save_as_draft boolean DEFAULT false
+) RETURNS jsonb
+LANGUAGE plpgsql SECURITY DEFINER
+AS $$
+DECLARE
+  v_user_id uuid;
+  v_tenant_id bigint;
+  v_event_tenant_id bigint;
+  v_time_entry_id uuid;
+  v_draft_id uuid;
+BEGIN
+  v_user_id := auth.uid();
+  
+  -- Get tenant for this client
+  SELECT id INTO v_tenant_id FROM tenants WHERE id = p_client_id;
+  IF v_tenant_id IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'client_not_found');
+  END IF;
+  
+  -- Validate meeting belongs to same tenant (via user's tenant)
+  SELECT tenant_id INTO v_event_tenant_id 
+  FROM calendar_events WHERE id = p_calendar_event_id;
+  
+  -- Validate minutes
+  IF p_minutes <= 0 THEN
+    RETURN jsonb_build_object('success', false, 'error', 'invalid_minutes');
+  END IF;
+  
+  IF p_save_as_draft THEN
+    -- Create as draft
+    INSERT INTO calendar_time_drafts (
+      tenant_id, created_by, calendar_event_id, client_id, package_id,
+      minutes, work_date, notes, status, work_type, is_billable
+    ) VALUES (
+      v_tenant_id, v_user_id, p_calendar_event_id, p_client_id, p_package_id,
+      p_minutes, p_work_date, p_notes, 'draft', 'meeting', true
+    ) RETURNING id INTO v_draft_id;
+    
+    RETURN jsonb_build_object(
+      'success', true,
+      'draft_id', v_draft_id,
+      'minutes_total', p_minutes,
+      'status', 'draft'
+    );
+  ELSE
+    -- Create as posted time entry
+    INSERT INTO time_entries (
+      tenant_id, client_id, package_id, user_id, work_type, is_billable,
+      start_at, duration_minutes, notes, source, calendar_event_id
+    ) VALUES (
+      v_tenant_id, p_client_id, p_package_id, v_user_id, 'meeting', true,
+      p_work_date::timestamptz, p_minutes, p_notes, 'calendar', p_calendar_event_id
+    ) RETURNING id INTO v_time_entry_id;
+    
+    -- Log audit
+    INSERT INTO audit_log (
+      action, actor_user_id, tenant_id, metadata
+    ) VALUES (
+      'meeting_time_import', v_user_id, v_tenant_id,
+      jsonb_build_object(
+        'client_id', p_client_id,
+        'meeting_id', p_calendar_event_id,
+        'time_entry_ids', ARRAY[v_time_entry_id],
+        'minutes_total', p_minutes,
+        'reason', 'Imported from meeting'
+      )
+    );
+    
+    RETURN jsonb_build_object(
+      'success', true,
+      'time_entry_id', v_time_entry_id,
+      'minutes_total', p_minutes,
+      'status', 'posted'
+    );
+  END IF;
+END;
+$$;
+```
+
+---
+
+## Acceptance Criteria
+
+1. From client page, import 30 minutes from a meeting
+   - Result: Time Summary updates immediately, shows +30 minutes
+   
+2. Import time with "Save as draft" checked
+   - Result: Client totals unchanged, toast shows draft count with CTA
+   
+3. Import time when meeting belongs to another tenant
+   - Result: Blocked with clear error message
+   
+4. Import time with no active package
+   - Result: Time saved, burn-down unchanged, message states "Not allocated"
 
 ---
 
 ## Implementation Order
 
-1. Database migration (tenant_type column)
-2. TenantTypeContext creation
-3. Update useAuth to fetch tenant type
-4. Create navigation configuration
-5. Create AcademyLayout and AcademyFooter
-6. Update DashboardLayout with tenant-type switching
-7. Update UtilityFooter for Compliance members
-8. Add TenantTypeGuard for route protection
-9. Add Academy routes to App.tsx
-10. Testing and validation
+1. Fix database RPC type signatures (Phase 1)
+2. Create import meeting time RPC (Phase 2)
+3. Create AddTimeFromMeetingDialog component (Phase 3)
+4. Update ClientDetail to use dialog (Phase 3)
+5. Fix usePackageUsage type handling (Phase 5)
+6. Test end-to-end flow (Phase 6)
