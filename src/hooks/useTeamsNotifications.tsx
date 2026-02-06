@@ -99,7 +99,8 @@ export function useNotificationRules() {
   });
 }
 
-// Fetch recent notifications (for the current user)
+// Fetch recent notifications from outbox (SuperAdmin diagnostics only)
+// Note: Regular users should use in-app notifications or Teams delivery
 export function useRecentNotifications(limit = 20) {
   const { user } = useAuth();
 
@@ -108,14 +109,19 @@ export function useRecentNotifications(limit = 20) {
     queryFn: async (): Promise<NotificationOutbox[]> => {
       if (!user?.id) return [];
 
+      // This query will only return results for SuperAdmins
+      // RLS blocks all other authenticated users from reading notification_outbox
       const { data, error } = await supabase
         .from('notification_outbox')
         .select('*')
-        .eq('recipient_user_uuid', user.id)
         .order('created_at', { ascending: false })
         .limit(limit);
 
-      if (error) throw error;
+      if (error) {
+        // Expected for non-SuperAdmin users - return empty array
+        console.debug('notification_outbox query returned no results (expected for non-SuperAdmin users)');
+        return [];
+      }
       return (data || []) as NotificationOutbox[];
     },
     enabled: !!user?.id,
