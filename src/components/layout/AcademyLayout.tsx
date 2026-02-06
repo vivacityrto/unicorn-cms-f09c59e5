@@ -30,7 +30,7 @@ const academyMainItems = [
 ];
 
 const academyAccountItems = [
-  { icon: User, label: "Profile", path: "/settings" },
+  { icon: User, label: "Settings", path: "/academy/settings" },
 ];
 
 const academyTeamItems = [
