@@ -1,75 +1,86 @@
 
-# RLS Standardization: email_messages Table
+# RLS Standardization: email_message_attachments Table
 
-## Summary
-Migrate the `email_messages` table policies from legacy functions to recursion-safe helper functions, implementing stricter access controls as specified.
+## Clarification
+Your spec references `email_attachments` and `email_records`, but based on the schema:
+
+| Your Spec | Actual Table | Purpose |
+|-----------|--------------|---------|
+| `email_records` | `email_messages` | Captured Outlook emails |
+| `email_attachments` | `email_message_attachments` | Attachments for captured emails |
+
+The existing `email_attachments` table is for **email templates** (linked to `emails`), not user-captured Outlook emails.
 
 ---
 
-## Current State
-- **Table**: `public.email_messages` (not `email_records`)
+## Current State: `email_message_attachments`
 - **RLS**: Already enabled
 - **Existing Policies** (using legacy functions):
-  - `email_messages_select_own` — `user_uuid = auth.uid()`
-  - `email_messages_select_superadmin` — `is_super_admin()`
-  - `email_messages_insert_own` — `user_uuid = auth.uid()`
-  - `email_messages_update_own` — `user_uuid = auth.uid()`
-  - `email_messages_delete_superadmin` — `is_super_admin()`
+  - `email_msg_attachments_select_own` — EXISTS check on parent email ownership
+  - `email_msg_attachments_select_superadmin` — `is_super_admin()` (legacy)
+  - `email_msg_attachments_insert_own` — EXISTS check on parent email ownership
+  - *No UPDATE/DELETE policies*
 
 ---
 
 ## Planned Changes
 
 ### 1. DROP Existing Policies
-Remove all 5 legacy policies to replace with standardized versions.
+Remove 3 legacy policies to replace with standardized versions.
 
 ### 2. CREATE Standardized Policies
 
 | Operation | Policy Name | Logic |
 |-----------|-------------|-------|
-| **SELECT** | `email_messages_select` | Own record OR SuperAdmin |
-| **INSERT** | `email_messages_insert` | Own record AND Vivacity Team AND tenant access |
-| **UPDATE** | `email_messages_update` | Own record only |
-| **DELETE** | `email_messages_delete` | SuperAdmin only |
+| **SELECT** | `email_message_attachments_select` | Own via parent OR SuperAdmin |
+| **INSERT** | `email_message_attachments_insert` | Own via parent only |
+| **UPDATE** | `email_message_attachments_update` | SuperAdmin only |
+| **DELETE** | `email_message_attachments_delete` | SuperAdmin only |
 
 ### 3. Policy Definitions
 
-**SELECT** — Owner or SuperAdmin
+**SELECT** — Owner via parent email or SuperAdmin
 ```sql
-CREATE POLICY "email_messages_select"
-ON public.email_messages
+CREATE POLICY "email_message_attachments_select"
+ON public.email_message_attachments
 FOR SELECT TO authenticated
 USING (
-  user_uuid = auth.uid()
+  EXISTS (
+    SELECT 1 FROM public.email_messages em
+    WHERE em.id = email_message_attachments.email_message_id
+      AND em.user_uuid = auth.uid()
+  )
   OR public.is_super_admin_safe(auth.uid())
 );
 ```
 
-**INSERT** — Vivacity Team with tenant access
+**INSERT** — Only if user owns parent email
 ```sql
-CREATE POLICY "email_messages_insert"
-ON public.email_messages
+CREATE POLICY "email_message_attachments_insert"
+ON public.email_message_attachments
 FOR INSERT TO authenticated
 WITH CHECK (
-  user_uuid = auth.uid()
-  AND public.is_vivacity_team_safe(auth.uid())
-  AND public.has_tenant_access_safe(tenant_id, auth.uid())
+  EXISTS (
+    SELECT 1 FROM public.email_messages em
+    WHERE em.id = email_message_attachments.email_message_id
+      AND em.user_uuid = auth.uid()
+  )
 );
 ```
 
-**UPDATE** — Owner only (linking fields: client_id, package_id, task_id)
+**UPDATE** — SuperAdmin only
 ```sql
-CREATE POLICY "email_messages_update"
-ON public.email_messages
+CREATE POLICY "email_message_attachments_update"
+ON public.email_message_attachments
 FOR UPDATE TO authenticated
-USING (user_uuid = auth.uid())
-WITH CHECK (user_uuid = auth.uid());
+USING (public.is_super_admin_safe(auth.uid()))
+WITH CHECK (public.is_super_admin_safe(auth.uid()));
 ```
 
 **DELETE** — SuperAdmin only
 ```sql
-CREATE POLICY "email_messages_delete"
-ON public.email_messages
+CREATE POLICY "email_message_attachments_delete"
+ON public.email_message_attachments
 FOR DELETE TO authenticated
 USING (public.is_super_admin_safe(auth.uid()));
 ```
@@ -78,33 +89,24 @@ USING (public.is_super_admin_safe(auth.uid()));
 
 ## Technical Details
 
-### Why Stricter INSERT Policy?
-The specification requires:
-1. **user_uuid = auth.uid()** — Must match authenticated user
-2. **Vivacity Team role** — Only Super Admin, Team Leader, Team Member can link emails
-3. **Tenant access** — User must have access to the specified tenant
-
-This prevents clients from linking emails (internal feature only) and ensures proper tenant isolation.
+### Parent Table Access
+The INSERT and SELECT policies use an `EXISTS` subquery to check ownership of the parent `email_messages` record. This is the standard Pattern 4 (Child Tables) from the security helpers reference.
 
 ### Edge Function Compatibility
-The `capture-outlook-email` edge function uses the user's JWT context (line 31-35), so RLS policies apply. The function will correctly enforce:
-- User identity via `user_uuid = auth.uid()`
-- Vivacity Team membership via `is_vivacity_team_safe()`
-- Tenant access via `has_tenant_access_safe()`
-
-### Column-Level UPDATE Restrictions (Optional)
-Your spec mentions restricting UPDATE to linking columns only. This requires SQL GRANT/REVOKE which is outside RLS. The RLS policy enforces ownership; column restrictions would need a separate migration.
+The `capture-outlook-email` edge function creates attachments using the user's JWT context, so the INSERT policy will correctly enforce that the user owns the parent email message.
 
 ---
 
-## Migration File
+## Migration Summary
 A single migration will:
-1. Drop 5 existing policies
-2. Create 4 standardized policies using `*_safe` functions
+1. Drop 3 existing legacy policies
+2. Create 4 standardized policies using `is_super_admin_safe()`
 
 ---
 
-## Impact Assessment
-- **No frontend changes required** — Hook uses same table name
-- **No edge function changes required** — Already uses user JWT context
-- **Access tightened** — Only Vivacity Team can INSERT (was any authenticated user)
+## Also Needed: `email_attachments` (Template Attachments)
+The original `email_attachments` table for email templates has a different access pattern:
+- Currently: One overly permissive policy checking `emails` table exists
+- Should follow Pattern 4 but check `created_by` on parent `emails` table or use staff-only access
+
+Would you like me to include standardization for this table as well?
