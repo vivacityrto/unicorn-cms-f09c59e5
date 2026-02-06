@@ -13123,6 +13123,13 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "processes_approved_by_fkey"
+            columns: ["approved_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["user_uuid"]
+          },
+          {
             foreignKeyName: "processes_owner_user_id_fkey"
             columns: ["owner_user_id"]
             isOneToOne: false
