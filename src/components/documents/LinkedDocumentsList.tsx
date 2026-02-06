@@ -11,7 +11,8 @@ import {
   FileImage,
   Film,
   Archive,
-  Plus
+  Plus,
+  Mail
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -44,9 +45,20 @@ const EVIDENCE_TYPE_LABELS: Record<string, string> = {
   other: "Other",
 };
 
+const SOURCE_TYPE_LABELS: Record<string, { label: string; icon: typeof FileText }> = {
+  sharepoint: { label: "SharePoint", icon: FileText },
+  outlook_attachment: { label: "Email Attachment", icon: Mail },
+  upload: { label: "Upload", icon: FileText },
+};
+
 function getFileIcon(doc: DocumentLink) {
   const ext = doc.file_extension?.toLowerCase();
   const mimeType = doc.mime_type || '';
+
+  // Check if it's an email attachment
+  if (doc.source_type === 'outlook_attachment' || doc.provider === 'outlook_attachment') {
+    return <Mail className="h-5 w-5 text-blue-600" />;
+  }
 
   if (mimeType.includes('spreadsheet') || ['xlsx', 'xls', 'csv'].includes(ext || '')) {
     return <FileSpreadsheet className="h-5 w-5 text-green-600" />;
@@ -198,23 +210,29 @@ export function LinkedDocumentsList({
                   >
                     {getFileIcon(doc)}
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 flex-wrap">
                         <span className="font-medium truncate">{doc.file_name}</span>
                         {doc.evidence_type && (
                           <Badge variant="outline" className="text-xs">
                             {EVIDENCE_TYPE_LABELS[doc.evidence_type] || doc.evidence_type}
                           </Badge>
                         )}
+                        {(doc.source_type === 'outlook_attachment' || doc.provider === 'outlook_attachment') && (
+                          <Badge variant="secondary" className="text-xs">
+                            <Mail className="h-3 w-3 mr-1" />
+                            Email
+                          </Badge>
+                        )}
                         {hasVersionChange && (
-                          <Badge variant="secondary" className="text-xs bg-amber-500/10 text-amber-600 border-amber-500/30">
+                          <Badge variant="destructive" className="text-xs">
                             <AlertTriangle className="h-3 w-3 mr-1" />
-                            Updated in SharePoint
+                            Updated
                           </Badge>
                         )}
                       </div>
                       <div className="flex items-center gap-3 text-sm text-muted-foreground mt-1">
-                        <span>{formatFileSize(doc.file_size)}</span>
-                        <span>•</span>
+                        {doc.file_size ? <span>{formatFileSize(doc.file_size)}</span> : null}
+                        {doc.file_size ? <span>•</span> : null}
                         <span>Linked {format(new Date(doc.created_at), "MMM d, yyyy")}</span>
                       </div>
                     </div>
@@ -245,9 +263,14 @@ export function LinkedDocumentsList({
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => window.open(doc.web_url, '_blank')}>
+                          <DropdownMenuItem 
+                            onClick={() => doc.web_url && doc.web_url !== '#email-attachment' && window.open(doc.web_url, '_blank')}
+                            disabled={!doc.web_url || doc.web_url === '#email-attachment'}
+                          >
                             <ExternalLink className="h-4 w-4 mr-2" />
-                            Open in SharePoint
+                            {doc.source_type === 'outlook_attachment' || doc.provider === 'outlook_attachment'
+                              ? 'Open Source'
+                              : 'Open in SharePoint'}
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>

@@ -5828,6 +5828,8 @@ export type Database = {
           package_id: number | null
           process_id: string | null
           provider: string
+          source_email_id: string | null
+          source_type: string | null
           task_id: string | null
           tenant_id: number
           updated_at: string
@@ -5853,6 +5855,8 @@ export type Database = {
           package_id?: number | null
           process_id?: string | null
           provider?: string
+          source_email_id?: string | null
+          source_type?: string | null
           task_id?: string | null
           tenant_id: number
           updated_at?: string
@@ -5878,6 +5882,8 @@ export type Database = {
           package_id?: number | null
           process_id?: string | null
           provider?: string
+          source_email_id?: string | null
+          source_type?: string | null
           task_id?: string | null
           tenant_id?: number
           updated_at?: string
@@ -5934,6 +5940,13 @@ export type Database = {
             columns: ["package_id"]
             isOneToOne: false
             referencedRelation: "packages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "document_links_source_email_id_fkey"
+            columns: ["source_email_id"]
+            isOneToOne: false
+            referencedRelation: "email_messages"
             referencedColumns: ["id"]
           },
           {

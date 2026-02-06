@@ -34,7 +34,7 @@ interface DriveItem {
 }
 
 interface LinkDocumentRequest {
-  action: 'link' | 'browse-drives' | 'browse-items' | 'search' | 'check-version' | 'confirm-version';
+  action: 'link' | 'browse-drives' | 'browse-items' | 'search' | 'check-version' | 'confirm-version' | 'link-email-attachments';
   drive_id?: string;
   item_id?: string;
   folder_id?: string;
@@ -47,6 +47,18 @@ interface LinkDocumentRequest {
   evidence_type?: string;
   notes?: string;
   document_link_id?: string;
+  // For email attachment linking
+  external_message_id?: string;
+  email_message_id?: string;
+  attachment_list?: EmailAttachmentInput[];
+}
+
+interface EmailAttachmentInput {
+  file_name: string;
+  mime_type?: string;
+  size?: number;
+  source_url?: string;
+  provider_item_id?: string;
 }
 
 async function refreshTokenIfNeeded(
@@ -497,6 +509,113 @@ serve(async (req) => {
 
         return new Response(
           JSON.stringify({ success: true, documentLink: docLink }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      case 'link-email-attachments': {
+        // Link email attachments as document links (metadata only - no file fetching)
+        if (!body.client_id) {
+          return new Response(
+            JSON.stringify({ error: 'client_id is required' }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        if (!body.attachment_list || !Array.isArray(body.attachment_list) || body.attachment_list.length === 0) {
+          return new Response(
+            JSON.stringify({ error: 'attachment_list is required and must be non-empty' }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        console.log('[link-sharepoint] Linking email attachments:', body.attachment_list.length);
+
+        const linkedDocuments: any[] = [];
+        const errors: string[] = [];
+
+        for (const attachment of body.attachment_list) {
+          if (!attachment.file_name) {
+            errors.push('Missing file_name for attachment');
+            continue;
+          }
+
+          // Extract file extension
+          const lastDot = attachment.file_name.lastIndexOf('.');
+          const fileExtension = lastDot > 0 ? attachment.file_name.substring(lastDot + 1).toLowerCase() : null;
+
+          // Create a unique item_id based on email + attachment combo
+          const itemId = body.email_message_id 
+            ? `email-${body.email_message_id}-${attachment.provider_item_id || attachment.file_name}`
+            : `email-attachment-${Date.now()}-${attachment.file_name}`;
+
+          try {
+            const { data: docLink, error: insertError } = await supabaseAdmin
+              .from('document_links')
+              .insert({
+                tenant_id: (tokenRecord as TokenRecord).tenant_id,
+                user_uuid: user.id,
+                provider: 'outlook_attachment',
+                drive_id: 'email',
+                item_id: itemId,
+                file_name: attachment.file_name,
+                file_extension: fileExtension,
+                mime_type: attachment.mime_type,
+                file_size: attachment.size,
+                web_url: attachment.source_url || '#email-attachment',
+                source_type: 'outlook_attachment',
+                source_email_id: body.email_message_id || null,
+                client_id: body.client_id,
+                package_id: body.package_id,
+                task_id: body.task_id,
+                evidence_type: body.evidence_type,
+                notes: body.notes
+              })
+              .select()
+              .single();
+
+            if (insertError) {
+              console.error('[link-sharepoint] Insert attachment error:', insertError);
+              if (insertError.code === '23505') {
+                errors.push(`Attachment "${attachment.file_name}" is already linked`);
+              } else {
+                errors.push(`Failed to link "${attachment.file_name}": ${insertError.message}`);
+              }
+              continue;
+            }
+
+            linkedDocuments.push(docLink);
+
+            // Audit log for each attachment
+            await supabaseAdmin.from('document_link_audit').insert({
+              document_link_id: docLink.id,
+              action: 'document_linked_from_email',
+              user_uuid: user.id,
+              linked_entity_type: 'client',
+              linked_entity_id: String(body.client_id),
+              details: {
+                file_name: attachment.file_name,
+                source: 'email_attachment',
+                email_message_id: body.email_message_id,
+                external_message_id: body.external_message_id
+              }
+            });
+
+          } catch (e) {
+            console.error('[link-sharepoint] Error linking attachment:', e);
+            errors.push(`Failed to link "${attachment.file_name}"`);
+          }
+        }
+
+        console.log('[link-sharepoint] Linked', linkedDocuments.length, 'attachments');
+
+        return new Response(
+          JSON.stringify({ 
+            success: linkedDocuments.length > 0,
+            linkedDocuments,
+            linkedCount: linkedDocuments.length,
+            errors: errors.length > 0 ? errors : undefined
+          }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
