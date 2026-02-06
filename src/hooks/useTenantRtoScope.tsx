@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { QUERY_STALE_TIMES } from '@/lib/queryConfig';
 
 export interface TenantScopeItem {
   id: string;
@@ -45,7 +46,7 @@ export function useTenantRtoScope(tenantId: number | undefined, scopeType?: stri
       return (data as unknown as TenantScopeItem[]) || [];
     },
     enabled: !!tenantId,
-    staleTime: 5 * 60 * 1000,
+    staleTime: QUERY_STALE_TIMES.PROFILE,
   });
 }
 

@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
+import { QUERY_STALE_TIMES } from '@/lib/queryConfig';
 
 export interface TimeEntry {
   id: string;
@@ -113,7 +114,7 @@ export function useTimeSummaryQuery(clientId: number | null) {
       return summary;
     },
     enabled: !!clientId,
-    staleTime: 30 * 1000, // 30 seconds
+    staleTime: QUERY_STALE_TIMES.REALTIME,
   });
 }
 
@@ -134,7 +135,7 @@ export function useTimeEntriesQuery(clientId: number | null) {
       return (data || []) as TimeEntry[];
     },
     enabled: !!clientId,
-    staleTime: 30 * 1000,
+    staleTime: QUERY_STALE_TIMES.REALTIME,
   });
 }
 
@@ -156,7 +157,7 @@ export function useActiveTimerQuery() {
       return data as ActiveTimer | null;
     },
     enabled: !!user?.id,
-    staleTime: 10 * 1000, // 10 seconds for active timer
+    staleTime: QUERY_STALE_TIMES.ACTIVE,
   });
 }
 

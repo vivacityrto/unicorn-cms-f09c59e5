@@ -12,6 +12,7 @@ import {
   DIMENSION_DESCRIPTIONS,
 } from '@/types/eosHealth';
 import { subWeeks, startOfWeek, isAfter, differenceInDays } from 'date-fns';
+import { QUERY_STALE_TIMES } from '@/lib/queryConfig';
 
 /**
  * Hook to calculate EOS Health Score for the current tenant.
@@ -105,7 +106,7 @@ export function useEosHealth() {
       };
     },
     enabled: !!tenantId,
-    staleTime: 1000 * 60 * 5, // Cache for 5 minutes
+    staleTime: QUERY_STALE_TIMES.PROFILE,
   });
 
   return {

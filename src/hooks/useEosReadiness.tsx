@@ -8,6 +8,7 @@ import type {
   OnboardingChecklistItem,
 } from '@/types/eosReadiness';
 import { READINESS_STATE_LABELS, READINESS_STATE_DESCRIPTIONS } from '@/types/eosReadiness';
+import { QUERY_STALE_TIMES } from '@/lib/queryConfig';
 
 interface ReadinessRawData {
   // Foundation
@@ -195,7 +196,7 @@ export function useEosReadiness() {
       };
     },
     enabled: !!tenantId,
-    staleTime: 1000 * 60 * 5, // Cache for 5 minutes
+    staleTime: QUERY_STALE_TIMES.PROFILE,
   });
 
   return {

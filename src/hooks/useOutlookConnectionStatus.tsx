@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
+import { QUERY_STALE_TIMES } from '@/lib/queryConfig';
 
 export interface OutlookConnectionStatus {
   id: string;
@@ -48,7 +49,7 @@ export function useOutlookConnectionStatus() {
       return data as OutlookConnectionStatus | null;
     },
     enabled: !!user,
-    staleTime: 30 * 1000, // 30 seconds
+    staleTime: QUERY_STALE_TIMES.REALTIME,
     refetchOnWindowFocus: true,
   });
 

@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 import { toast } from 'sonner';
+import { QUERY_STALE_TIMES } from '@/lib/queryConfig';
 
 const VIVACITY_TENANT_ID = 6372;
 
@@ -155,7 +156,7 @@ export function useSeatSuccession() {
       });
     },
     enabled: true,
-    staleTime: 1000 * 60 * 2,
+    staleTime: QUERY_STALE_TIMES.LIST,
   });
 
   // Calculate succession risks

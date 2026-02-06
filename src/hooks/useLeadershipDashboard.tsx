@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 import { startOfWeek, subWeeks, subDays } from 'date-fns';
+import { QUERY_STALE_TIMES } from '@/lib/queryConfig';
 
 // Vivacity tenant ID
 const VIVACITY_TENANT_ID = 6372;
@@ -745,7 +746,7 @@ export function useLeadershipDashboard(quarterFilter?: { year: number; quarter: 
       };
     },
     enabled: isSuper || profile?.unicorn_role === 'Team Leader',
-    staleTime: 1000 * 60 * 2,
+    staleTime: QUERY_STALE_TIMES.LIST,
     refetchOnWindowFocus: true,
   });
 }

@@ -2,6 +2,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useState, useCallback } from 'react';
+import { QUERY_STALE_TIMES } from '@/lib/queryConfig';
 
 export interface PackageUsage {
   included_minutes: number;
@@ -94,7 +95,7 @@ export function useClientPackagesQuery(clientId: number | null) {
       });
     },
     enabled: !!clientId,
-    staleTime: 30 * 1000,
+    staleTime: QUERY_STALE_TIMES.REALTIME,
   });
 }
 
@@ -116,7 +117,7 @@ export function usePackageUsageDataQuery(clientId: number | null, packageId: num
       return result;
     },
     enabled: !!clientId && !!packageId,
-    staleTime: 30 * 1000,
+    staleTime: QUERY_STALE_TIMES.REALTIME,
   });
 }
 
@@ -138,7 +139,7 @@ export function useClientAlertsQuery(clientId: number | null) {
       return (data || []) as ClientAlert[];
     },
     enabled: !!clientId,
-    staleTime: 30 * 1000,
+    staleTime: QUERY_STALE_TIMES.REALTIME,
   });
 }
 

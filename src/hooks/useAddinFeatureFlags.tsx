@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { QUERY_STALE_TIMES } from '@/lib/queryConfig';
 
 export interface AddinFeatureFlags {
   microsoft_addin_enabled: boolean;
@@ -43,7 +44,7 @@ export function useAddinFeatureFlags() {
         addin_documents_enabled: (settings?.addin_documents_enabled as boolean) ?? false,
       };
     },
-    staleTime: 5 * 60 * 1000, // 5 minutes
+    staleTime: QUERY_STALE_TIMES.PROFILE,
   });
 
   const updateFlagsMutation = useMutation({

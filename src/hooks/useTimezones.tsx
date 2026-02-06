@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { QUERY_PRESETS } from '@/lib/queryConfig';
 
 interface Timezone {
   tz: string;
@@ -22,8 +23,7 @@ export function useTimezones() {
       
       return (data || []) as Timezone[];
     },
-    staleTime: 1000 * 60 * 60, // Cache for 1 hour
-    gcTime: 1000 * 60 * 60 * 24, // Keep in cache for 24 hours
+    ...QUERY_PRESETS.REFERENCE,
   });
 }
 

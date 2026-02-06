@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { QUERY_PRESETS } from '@/lib/queryConfig';
 
 /**
  * Unified hook for fetching all EOS dropdown options from database views.
@@ -17,10 +18,7 @@ const QUERY_KEYS = {
 } as const;
 
 // Common query config - enum values don't change during runtime
-const STABLE_QUERY_CONFIG = {
-  staleTime: Infinity,
-  gcTime: Infinity,
-} as const;
+const STABLE_QUERY_CONFIG = QUERY_PRESETS.STATIC;
 
 /**
  * Fetch status options from eos_issue_status enum
