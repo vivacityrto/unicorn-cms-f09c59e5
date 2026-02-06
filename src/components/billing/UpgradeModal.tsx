@@ -56,9 +56,20 @@ export function UpgradeModal({
   const nextPlanName = nextPlan ? PLAN_NAMES[nextPlan] : null;
   const nextPlanBenefits = nextPlan ? PLAN_BENEFITS[nextPlan] : [];
 
+  // Check if this is a compliance tenant - they should never see self-service billing
+  const isComplianceTenant = currentPlan === "compliance_system";
   const isVerticalUpgrade = currentPlan.startsWith("academy_") && nextPlan === "compliance_system";
 
   const handleRequestUpgrade = async () => {
+    // Block any self-service actions for compliance tenants
+    if (isComplianceTenant) {
+      toast.error("Billing is managed by Vivacity", {
+        description: "Please contact your Vivacity consultant for billing changes.",
+      });
+      onOpenChange(false);
+      return;
+    }
+
     setIsRequesting(true);
 
     // Log the upgrade attempt
@@ -71,7 +82,7 @@ export function UpgradeModal({
       metadata: { triggerContext },
     });
 
-    // For vertical upgrades, redirect to contact sales
+    // For vertical upgrades to compliance, redirect to contact sales
     if (isVerticalUpgrade) {
       toast.success("Upgrade request submitted", {
         description: "Our team will contact you shortly to discuss upgrading to the Compliance System.",
@@ -100,7 +111,9 @@ export function UpgradeModal({
     onOpenChange(false);
   };
 
-  if (!nextPlan) {
+  // Compliance tenants should never see this modal - they have no upgrade path
+  // and billing is managed externally
+  if (!nextPlan || isComplianceTenant) {
     return null;
   }
 
