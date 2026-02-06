@@ -123,15 +123,15 @@ export const DashboardLayout = ({
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [showScrollIndicator, setShowScrollIndicator] = useState(false);
   const [sectionsOpen, setSectionsOpen] = useState({
-    work: true,
-    clients: true,
-    eos: true,
-    resourceManagement: true,
-    administration: true,
-    systemConfig: true,
+    work: false,
+    clients: false,
+    eos: false,
+    resourceManagement: false,
+    administration: false,
+    systemConfig: false,
     // Legacy for client view
-    main: true,
-    team: true,
+    main: false,
+    team: false,
   });
   const location = useLocation();
   const navigate = useNavigate();
