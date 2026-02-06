@@ -71,3 +71,6 @@ verify_jwt = false
 
 [functions.capture-outlook-email]
 verify_jwt = false
+
+[functions.create-meeting-time-drafts]
+verify_jwt = false

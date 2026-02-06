@@ -11377,6 +11377,379 @@ export type Database = {
         }
         Relationships: []
       }
+      meeting_action_items: {
+        Row: {
+          assigned_to: string | null
+          created_at: string
+          created_by: string
+          description: string
+          due_date: string | null
+          id: string
+          meeting_id: string
+          status: string
+          task_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          assigned_to?: string | null
+          created_at?: string
+          created_by: string
+          description: string
+          due_date?: string | null
+          id?: string
+          meeting_id: string
+          status?: string
+          task_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          assigned_to?: string | null
+          created_at?: string
+          created_by?: string
+          description?: string
+          due_date?: string | null
+          id?: string
+          meeting_id?: string
+          status?: string
+          task_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meeting_action_items_assigned_to_fkey"
+            columns: ["assigned_to"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "meeting_action_items_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "meeting_action_items_meeting_id_fkey"
+            columns: ["meeting_id"]
+            isOneToOne: false
+            referencedRelation: "meetings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "meeting_action_items_meeting_id_fkey"
+            columns: ["meeting_id"]
+            isOneToOne: false
+            referencedRelation: "meetings_shared"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      meeting_notes: {
+        Row: {
+          created_at: string
+          created_by: string
+          id: string
+          meeting_id: string
+          notes: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          id?: string
+          meeting_id: string
+          notes: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          id?: string
+          meeting_id?: string
+          notes?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meeting_notes_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "meeting_notes_meeting_id_fkey"
+            columns: ["meeting_id"]
+            isOneToOne: false
+            referencedRelation: "meetings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "meeting_notes_meeting_id_fkey"
+            columns: ["meeting_id"]
+            isOneToOne: false
+            referencedRelation: "meetings_shared"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      meeting_participants: {
+        Row: {
+          attended: boolean | null
+          created_at: string
+          id: string
+          meeting_id: string
+          participant_email: string
+          participant_name: string | null
+          participant_type: string
+        }
+        Insert: {
+          attended?: boolean | null
+          created_at?: string
+          id?: string
+          meeting_id: string
+          participant_email: string
+          participant_name?: string | null
+          participant_type?: string
+        }
+        Update: {
+          attended?: boolean | null
+          created_at?: string
+          id?: string
+          meeting_id?: string
+          participant_email?: string
+          participant_name?: string | null
+          participant_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meeting_participants_meeting_id_fkey"
+            columns: ["meeting_id"]
+            isOneToOne: false
+            referencedRelation: "meetings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "meeting_participants_meeting_id_fkey"
+            columns: ["meeting_id"]
+            isOneToOne: false
+            referencedRelation: "meetings_shared"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      meeting_sync_audit: {
+        Row: {
+          action: string
+          created_at: string
+          error_message: string | null
+          id: string
+          meetings_created: number | null
+          meetings_skipped: number | null
+          meetings_updated: number | null
+          tenant_id: number
+          user_id: string
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          meetings_created?: number | null
+          meetings_skipped?: number | null
+          meetings_updated?: number | null
+          tenant_id: number
+          user_id: string
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          meetings_created?: number | null
+          meetings_skipped?: number | null
+          meetings_updated?: number | null
+          tenant_id?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meeting_sync_audit_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "meeting_sync_audit_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_engagement_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "meeting_sync_audit_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_eos_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "meeting_sync_audit_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_compliance_entitlements"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
+      meetings: {
+        Row: {
+          client_id: number | null
+          created_at: string
+          ends_at: string
+          external_event_id: string
+          external_meeting_url: string | null
+          id: string
+          is_online: boolean | null
+          is_organizer: boolean | null
+          location: string | null
+          needs_linking: boolean | null
+          owner_user_uuid: string
+          package_id: number | null
+          provider: string
+          provider_payload: Json | null
+          sensitivity: string | null
+          starts_at: string
+          status: string
+          tenant_id: number
+          time_draft_created: boolean | null
+          timezone: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          client_id?: number | null
+          created_at?: string
+          ends_at: string
+          external_event_id: string
+          external_meeting_url?: string | null
+          id?: string
+          is_online?: boolean | null
+          is_organizer?: boolean | null
+          location?: string | null
+          needs_linking?: boolean | null
+          owner_user_uuid: string
+          package_id?: number | null
+          provider?: string
+          provider_payload?: Json | null
+          sensitivity?: string | null
+          starts_at: string
+          status?: string
+          tenant_id: number
+          time_draft_created?: boolean | null
+          timezone?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          client_id?: number | null
+          created_at?: string
+          ends_at?: string
+          external_event_id?: string
+          external_meeting_url?: string | null
+          id?: string
+          is_online?: boolean | null
+          is_organizer?: boolean | null
+          location?: string | null
+          needs_linking?: boolean | null
+          owner_user_uuid?: string
+          package_id?: number | null
+          provider?: string
+          provider_payload?: Json | null
+          sensitivity?: string | null
+          starts_at?: string
+          status?: string
+          tenant_id?: number
+          time_draft_created?: boolean | null
+          timezone?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meetings_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "meetings_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_engagement_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "meetings_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_eos_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "meetings_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_compliance_entitlements"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "meetings_owner_user_uuid_fkey"
+            columns: ["owner_user_uuid"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "meetings_package_id_fkey"
+            columns: ["package_id"]
+            isOneToOne: false
+            referencedRelation: "packages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "meetings_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "meetings_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_engagement_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "meetings_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_eos_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "meetings_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_compliance_entitlements"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
       membership_activity: {
         Row: {
           activity_type: string
@@ -19851,6 +20224,67 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "eos_accountability_chart"
             referencedColumns: ["id"]
+          },
+        ]
+      }
+      meetings_shared: {
+        Row: {
+          access_scope: string | null
+          client_id: number | null
+          created_at: string | null
+          ends_at: string | null
+          external_meeting_url: string | null
+          id: string | null
+          is_online: boolean | null
+          is_organizer: boolean | null
+          location: string | null
+          needs_linking: boolean | null
+          owner_user_uuid: string | null
+          package_id: number | null
+          provider: string | null
+          starts_at: string | null
+          status: string | null
+          tenant_id: number | null
+          time_draft_created: boolean | null
+          timezone: string | null
+          title: string | null
+          updated_at: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meetings_owner_user_uuid_fkey"
+            columns: ["owner_user_uuid"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "meetings_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "meetings_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_engagement_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "meetings_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_eos_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "meetings_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_compliance_entitlements"
+            referencedColumns: ["tenant_id"]
           },
         ]
       }

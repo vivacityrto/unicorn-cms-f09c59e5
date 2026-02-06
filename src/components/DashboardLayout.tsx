@@ -24,6 +24,7 @@ const workMenuItems = [
   { icon: ListTodo, label: "Tasks", path: "/tasks" },
   { icon: Inbox, label: "Time Inbox", path: "/time-inbox" },
   { icon: Calendar, label: "My Calendar", path: "/work/calendar" },
+  { icon: Video, label: "Meetings", path: "/work/meetings" },
   { icon: Calendar, label: "Event Calendar", path: "/calendar" },
 ];
 
