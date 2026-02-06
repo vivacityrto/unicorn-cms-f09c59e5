@@ -6915,6 +6915,7 @@ export type Database = {
           external_message_id: string
           has_attachments: boolean | null
           id: string
+          linked_at: string | null
           package_id: number | null
           provider: string
           received_at: string | null
@@ -6933,6 +6934,7 @@ export type Database = {
           external_message_id: string
           has_attachments?: boolean | null
           id?: string
+          linked_at?: string | null
           package_id?: number | null
           provider?: string
           received_at?: string | null
@@ -6951,6 +6953,7 @@ export type Database = {
           external_message_id?: string
           has_attachments?: boolean | null
           id?: string
+          linked_at?: string | null
           package_id?: number | null
           provider?: string
           received_at?: string | null

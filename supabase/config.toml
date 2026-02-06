@@ -80,3 +80,12 @@ verify_jwt = false
 
 [functions.process-notification-outbox]
 verify_jwt = false
+
+[functions.addin-auth-exchange]
+verify_jwt = false
+
+[functions.addin-email-capture]
+verify_jwt = false
+
+[functions.addin-email-create-task]
+verify_jwt = false
