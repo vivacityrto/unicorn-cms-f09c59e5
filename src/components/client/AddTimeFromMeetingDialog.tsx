@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { useNavigate } from 'react-router-dom';
 import { format, parseISO, differenceInMinutes } from 'date-fns';
@@ -47,6 +48,7 @@ export function AddTimeFromMeetingDialog({
 }: AddTimeFromMeetingDialogProps) {
   const { toast } = useToast();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
@@ -54,9 +56,9 @@ export function AddTimeFromMeetingDialog({
   const [notes, setNotes] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
-  // Fetch recent calendar events when dialog opens
+  // Fetch recent calendar events for the CURRENT USER only
   useEffect(() => {
-    if (!open) return;
+    if (!open || !user?.id) return;
     
     const fetchEvents = async () => {
       setLoading(true);
@@ -64,13 +66,14 @@ export function AddTimeFromMeetingDialog({
       setNotes('');
       setSaveAsDraft(false);
 
-      // Fetch calendar events from the last 30 days
+      // Fetch calendar events from the last 30 days for the current user only
       const thirtyDaysAgo = new Date();
       thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
       
       const { data, error } = await supabase
         .from('calendar_events')
         .select('id, title, start_at, end_at, attendees, tenant_id')
+        .eq('user_id', user.id) // Filter by current user's calendar events only
         .gte('start_at', thirtyDaysAgo.toISOString())
         .lte('start_at', new Date().toISOString())
         .order('start_at', { ascending: false })
@@ -93,7 +96,7 @@ export function AddTimeFromMeetingDialog({
     };
 
     fetchEvents();
-  }, [open]);
+  }, [open, user?.id]);
 
   const selectedEvent = events.find(e => e.id === selectedEventId);
 
