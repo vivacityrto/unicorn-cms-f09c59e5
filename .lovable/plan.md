@@ -1,167 +1,212 @@
 
+# Unicorn 2.0 Optimisation Plan
 
-# RLS Standardization: time_entries Table
+## Executive Summary
 
-## Current State
-- **Table**: `public.time_entries`
-- **RLS**: Already enabled
-- **Existing Policies** (6 total, mix of legacy and standardized):
-
-| Policy Name | Operation | Roles | Logic | Issues |
-|-------------|-----------|-------|-------|--------|
-| `Users view own time entries` | SELECT | public | `user_id = auth.uid()` | Legacy, uses `public` role |
-| `Managers view tenant time entries` | SELECT | public | Team Leader + connected_tenants check | Legacy pattern, uses `public` role |
-| `time_entries_select` | SELECT | authenticated | `*_safe` helpers + tenant access | ✓ Standardized but overlaps with above |
-| `time_entries_insert` | INSERT | authenticated | Owner + tenant access | ✓ Already standardized |
-| `time_entries_update` | UPDATE | authenticated | Owner OR Vivacity team | ⚠️ No WITH CHECK clause |
-| `time_entries_delete` | DELETE | authenticated | SuperAdmin OR owner | ✓ Already standardized |
+This plan addresses six key areas to improve Unicorn 2.0's security posture, performance, reliability, and maintainability. Each phase is designed to be independently deployable with minimal risk.
 
 ---
 
-## Schema Analysis
+## Phase 1: Security — Harden Remaining Permissive RLS Policies
 
-### Existing Columns:
-| Column | Type | Notes |
-|--------|------|-------|
-| `id` | uuid | PK, auto-generated |
-| `tenant_id` | integer | Required |
-| `client_id` | integer | Required |
-| `user_id` | uuid | Required, owner |
-| `duration_minutes` | integer | Required |
-| `work_type` | text | Default 'general' |
-| `is_billable` | boolean | Default true |
-| `source` | text | Default 'manual' |
-| `start_at` / `end_at` | timestamptz | Nullable |
+### Current State
+The security linter identified 40+ policies using `USING (true)` or `WITH CHECK (true)`. These fall into two categories:
 
-### Missing Column:
-The spec references `status = 'draft'` for UPDATE restrictions, but **no `status` column exists**.
+| Category | Tables | Action Required |
+|----------|--------|-----------------|
+| **Lookup/Reference Data** | `packages`, `ctstates`, `dd_status`, `labels`, `timezone_options`, `course_cache`, `qualification_cache`, `rto_cache`, `skillset_cache`, `place_holders`, `dd_address_type`, `dd_document_categories`, `dd_fields`, `package_type_thresholds`, `package_stage_map`, `eos_issue_status_transitions` | **Acceptable** — These are read-only reference tables where `USING (true)` for SELECT is appropriate. Write operations already require SuperAdmin. |
+| **System/Audit Tables** | `email_automation_log`, `oauth_states`, `notification_schedule`, `email_link_audit`, `eos_minutes_audit_log`, `package_workflow_logs` | **Needs Review** — Some permissive INSERT/UPDATE policies exist for system processes. |
 
----
+### Recommended Changes
 
-## Spec vs Current State Analysis
+1. **`email_automation_log`** — Currently allows any authenticated user to INSERT/UPDATE. Restrict to `is_vivacity_team_safe()` or service-role only.
 
-### Your Spec Requirements:
-1. **SELECT**: Own time only (`user_id = auth.uid()`)
-2. **INSERT**: Own drafts with tenant access
-3. **UPDATE**: Own drafts only (`status = 'draft'`)
-4. **DELETE**: Not explicitly defined (recommend owner + SuperAdmin)
+2. **`oauth_states`** — Intentionally permissive for OAuth flow (service-role bypasses RLS anyway). Add documentation comment to clarify this is by design.
 
-### Current Implementation:
-1. **SELECT**: More permissive — includes tenant access and Vivacity team
-2. **INSERT**: Already matches spec ✓
-3. **UPDATE**: No draft restriction (no status column), includes Vivacity team
-4. **DELETE**: Owner OR SuperAdmin ✓
+3. **`notification_schedule`** — `ALL` with `USING (true)` is overly broad. Restrict management to staff.
+
+4. **Audit tables** (`email_link_audit`, `eos_minutes_audit_log`, `package_workflow_logs`) — INSERT with `WITH CHECK (true)` is acceptable for system logging, but add comments documenting the intent.
+
+### Estimated Effort
+2-3 hours (single migration with policy updates)
 
 ---
 
-## Recommendation
+## Phase 2: Performance — Add Database Indexes
 
-Given the current state, I propose a **phased approach**:
+### Current State
+The `document_instances` table has **106,146 rows** but only a primary key index. Common query patterns filter by `tenant_id`, `stage_instance_id`, `status`, and `created_at`.
 
-### Phase A: Clean Up Overlapping Policies (This Migration)
-Remove legacy `public` role policies and consolidate to single standardized policies.
+### Recommended Indexes
 
-### Phase B: Add Status Column (Future, if needed)
-Add `status` enum ('draft', 'posted') to support the draft workflow.
-
----
-
-## Planned Changes (Phase A)
-
-### 1. DROP Legacy Policies
-Remove 2 legacy policies with `public` role that overlap with standardized versions.
-
-### 2. KEEP/MODIFY Standardized Policies
-
-| Operation | Policy Name | Logic |
-|-----------|-------------|-------|
-| **SELECT** | `time_entries_select` | Simplified: Owner OR SuperAdmin OR Vivacity team |
-| **INSERT** | `time_entries_insert` | Keep as-is (already correct) |
-| **UPDATE** | `time_entries_update` | Add WITH CHECK clause for safety |
-| **DELETE** | `time_entries_delete` | Keep as-is (already correct) |
-
-### 3. Policy Definitions
-
-**SELECT** — Simplified per spec (own time + SuperAdmin access)
-```sql
-CREATE POLICY "time_entries_select"
-ON public.time_entries
-FOR SELECT TO authenticated
-USING (
-  user_id = auth.uid()
-  OR public.is_super_admin_safe(auth.uid())
-  OR public.is_vivacity_team_safe(auth.uid())
-);
+```text
+┌─────────────────────────────────────────────────────────────────┐
+│ document_instances                                              │
+├─────────────────────────────────────────────────────────────────┤
+│ idx_document_instances_tenant_id         → tenant_id            │
+│ idx_document_instances_stage_instance    → stage_instance_id    │
+│ idx_document_instances_status            → status               │
+│ idx_document_instances_created_at        → created_at DESC      │
+│ idx_document_instances_tenant_status     → (tenant_id, status)  │
+└─────────────────────────────────────────────────────────────────┘
 ```
 
-Note: Removing `has_tenant_access_safe()` from SELECT aligns with spec's "own time only" requirement. Vivacity team and SuperAdmin access preserved for consulting visibility.
+### Additional Index Candidates
+Review these high-traffic tables for similar patterns:
+- `stage_instances` (tenant_id, status)
+- `client_task_instances` (tenant_id, assigned_to)
+- `time_entries` (user_id, created_at)
 
-**INSERT** — Keep existing (already correct)
-```sql
--- No changes needed
--- user_id = auth.uid() AND has_tenant_access_safe(tenant_id, auth.uid())
-```
-
-**UPDATE** — Add WITH CHECK clause
-```sql
-CREATE POLICY "time_entries_update"
-ON public.time_entries
-FOR UPDATE TO authenticated
-USING (
-  user_id = auth.uid()
-  OR public.is_super_admin_safe(auth.uid())
-  OR public.is_vivacity_team_safe(auth.uid())
-)
-WITH CHECK (
-  user_id = auth.uid()
-  OR public.is_super_admin_safe(auth.uid())
-  OR public.is_vivacity_team_safe(auth.uid())
-);
-```
-
-**DELETE** — Keep existing (already correct)
-```sql
--- No changes needed
--- is_super_admin_safe(auth.uid()) OR user_id = auth.uid()
-```
+### Estimated Effort
+1 hour (migration with CREATE INDEX CONCURRENTLY)
 
 ---
 
-## Technical Details
+## Phase 3: Query Caching — Standardise React Query Configuration
 
-### Draft/Posted Workflow (Deferred)
-Your spec mentions restricting UPDATE to `status = 'draft'` entries only. This requires:
-1. Adding a `time_entry_status` enum with values `draft`, `posted`
-2. Adding a `status` column with default `draft`
-3. Modifying UPDATE policy to include `AND status = 'draft'`
-4. Optional: trigger to prevent status regression
+### Current State
+`staleTime` values are inconsistent across 17+ hooks:
+- `Infinity` for enum/options (correct)
+- `5 minutes` for user lists (reasonable)
+- `30 seconds` for real-time data (reasonable)
+- `2 minutes`, `1 hour`, `10 seconds` scattered inconsistently
 
-This is **not included in this migration** as it's a schema change. If you want this workflow, I can propose a follow-up migration.
+### Recommended Approach
 
-### Tenant Access Removed from SELECT
-Current policy allows anyone with tenant access to see all entries in that tenant. The spec says "own time only" which is more restrictive. This change aligns with:
-- Privacy: Users only see their own time entries
-- Consulting: Vivacity team still sees all for billing/reporting purposes
-- Admin: SuperAdmins retain full visibility
+Create a central configuration file:
 
-### Code Impact
-The `useTimeEntriesQuery` hook filters by `client_id`, but RLS will now additionally filter to only the current user's entries (unless they're Vivacity team/SuperAdmin). This is the correct behavior for compliance.
+```text
+src/lib/queryConfig.ts
+├── QUERY_STALE_TIMES
+│   ├── STATIC       → Infinity     (enums, options, frameworks)
+│   ├── PROFILE      → 5 * 60 * 1000  (user/tenant profiles)
+│   ├── LIST         → 2 * 60 * 1000  (team members, documents)
+│   ├── REALTIME     → 30 * 1000      (timers, notifications)
+│   └── DASHBOARD    → 60 * 1000      (aggregated metrics)
+```
+
+### Migration Strategy
+1. Create `src/lib/queryConfig.ts` with standardised constants
+2. Update existing hooks to import from this file
+3. Document guidelines in a code comment for future hooks
+
+### Estimated Effort
+2-3 hours (create config + update 17 files)
 
 ---
 
-## Migration Summary
-A single migration will:
-1. Drop 2 legacy `public` role policies
-2. Drop and recreate `time_entries_select` with stricter logic
-3. Drop and recreate `time_entries_update` with WITH CHECK clause
-4. Keep INSERT and DELETE policies as-is
+## Phase 4: Reliability — Implement Global Error Boundary
+
+### Current State
+No `ErrorBoundary` component exists. React rendering errors crash the entire application with no recovery path.
+
+### Recommended Implementation
+
+```text
+src/components/ErrorBoundary.tsx
+├── Catches React rendering errors
+├── Displays user-friendly fallback UI
+├── Logs errors to audit_events table (optional)
+├── Provides "Reload" and "Go to Dashboard" recovery options
+└── Shows error details in development mode only
+```
+
+### Integration Point
+
+```text
+App.tsx
+├── QueryClientProvider
+│   └── TooltipProvider
+│       └── BrowserRouter
+│           └── AuthProvider
+│               └── ErrorBoundary  ← NEW (wrap here)
+│                   └── TenantTypeProvider
+│                       └── ... (rest of providers)
+```
+
+### Estimated Effort
+2 hours (component + App.tsx integration)
 
 ---
 
-## Impact Assessment
-- **Stricter SELECT** — Regular users now only see their own time entries
-- **Vivacity team preserved** — Still has full visibility for consulting
-- **WITH CHECK added** — Prevents UPDATE from changing ownership
-- **Legacy cleanup** — No more overlapping policies with `public` role
-- **No code changes needed** — Frontend already filters by client, RLS adds user filter
+## Phase 5: Maintainability — Edge Function Consolidation
+
+### Current State
+- 48 Edge Functions in `supabase/functions/`
+- Shared utilities exist in `_shared/` (3 files: `addin-auth.ts`, `cors.ts`, `graph-client.ts`)
+- CORS headers in `_shared/cors.ts` are missing newer Supabase client headers
+
+### Recommended Improvements
+
+1. **Update CORS headers** in `_shared/cors.ts`:
+```text
+Current:  'authorization, x-client-info, apikey, content-type'
+Updated:  + 'x-supabase-client-platform, x-supabase-client-platform-version, 
+            x-supabase-client-runtime, x-supabase-client-runtime-version'
+```
+
+2. **Consolidate common patterns** into `_shared/`:
+   - `supabase-client.ts` — Standard client initialisation
+   - `auth-helpers.ts` — JWT validation and user extraction
+   - `response-helpers.ts` — Standardised JSON response formatting
+   - `error-handlers.ts` — Consistent error response structure
+
+3. **Audit functions for duplication** — Many functions likely duplicate Supabase client setup and error handling
+
+### Estimated Effort
+4-6 hours (audit + consolidation)
+
+---
+
+## Phase 6: Test Coverage Expansion
+
+### Current State
+Tests exist only in `src/test/eos/` (6 test files covering meetings, rocks, and related EOS functionality). No coverage for:
+- Authentication flows
+- RBAC enforcement
+- Package lifecycle
+- Tenant isolation
+- Edge functions
+
+### Recommended Test Suites
+
+| Suite | Priority | Description |
+|-------|----------|-------------|
+| `src/test/auth/` | High | Login, logout, session persistence, password reset |
+| `src/test/rbac/` | High | Role-based access for SuperAdmin, Team Leader, Team Member, Client Admin, Client User |
+| `src/test/tenant/` | High | Tenant isolation, cross-tenant prevention |
+| `src/test/packages/` | Medium | Package creation, assignment, workflow progression |
+| `supabase/functions/*/index_test.ts` | Medium | Edge function unit tests |
+
+### Estimated Effort
+8-16 hours (depends on depth of coverage)
+
+---
+
+## Implementation Priority
+
+| Priority | Phase | Impact | Effort | Risk |
+|----------|-------|--------|--------|------|
+| 1 | Security (Phase 1) | High | Low | Low |
+| 2 | Performance (Phase 2) | Medium | Low | Low |
+| 3 | Error Boundary (Phase 4) | Medium | Low | Low |
+| 4 | Query Config (Phase 3) | Low | Medium | Low |
+| 5 | Edge Functions (Phase 5) | Medium | Medium | Low |
+| 6 | Test Coverage (Phase 6) | High | High | None |
+
+---
+
+## Technical Notes
+
+### Security Helper Functions Reference
+All RLS policy changes should use the standardised helpers documented in `sql-setup/00-security-helpers-reference.sql`:
+- `is_super_admin_safe(auth.uid())`
+- `is_vivacity_team_safe(auth.uid())`
+- `has_tenant_access_safe(tenant_id, auth.uid())`
+- `has_tenant_admin_safe(tenant_id, auth.uid())`
+
+### Database Migration Safety
+- All index creations should use `CREATE INDEX CONCURRENTLY` to avoid table locks
+- RLS policy changes should drop existing policies before creating new ones
+- Migrations should be tested in a development environment first
 
