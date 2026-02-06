@@ -4,7 +4,7 @@ import { jwtVerify } from "https://deno.land/x/jose@v5.2.2/index.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, idempotency-key',
 };
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
@@ -13,11 +13,14 @@ const ADDIN_JWT_SECRET = Deno.env.get('ADDIN_JWT_SECRET') || Deno.env.get('JWT_S
 
 interface CreateTaskRequest {
   external_message_id: string;
-  client_id: number;
-  title: string;
-  assigned_to: string; // user_uuid
-  due_at?: string;
-  description?: string;
+  client_id: string;
+  task: {
+    title: string;
+    description?: string;
+    assigned_to_user_uuid: string;
+    due_at?: string;
+    priority?: string;
+  };
 }
 
 interface AddinTokenPayload {
@@ -75,12 +78,15 @@ serve(async (req) => {
       return errorResponse(401, 'UNAUTHORIZED', 'Invalid or missing add-in token');
     }
 
+    const idempotencyKey = req.headers.get('Idempotency-Key');
     const body: CreateTaskRequest = await req.json();
+    
     console.log('[addin-email-create-task] Request:', {
       user: tokenPayload.email,
       external_message_id: body.external_message_id?.substring(0, 20) + '...',
       client_id: body.client_id,
-      title: body.title,
+      title: body.task?.title,
+      idempotency_key: idempotencyKey,
     });
 
     // Validate required fields
@@ -90,11 +96,11 @@ serve(async (req) => {
     if (!body.client_id) {
       return errorResponse(400, 'VALIDATION_ERROR', 'client_id is required');
     }
-    if (!body.title) {
-      return errorResponse(400, 'VALIDATION_ERROR', 'title is required');
+    if (!body.task?.title) {
+      return errorResponse(400, 'VALIDATION_ERROR', 'task.title is required');
     }
-    if (!body.assigned_to) {
-      return errorResponse(400, 'VALIDATION_ERROR', 'assigned_to is required');
+    if (!body.task?.assigned_to_user_uuid) {
+      return errorResponse(400, 'VALIDATION_ERROR', 'task.assigned_to_user_uuid is required');
     }
 
     const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
@@ -103,6 +109,23 @@ serve(async (req) => {
     const tenantId = tokenPayload.tenant_id;
     if (!tenantId) {
       return errorResponse(403, 'NO_TENANT', 'User is not associated with any tenant');
+    }
+
+    // Check if email record exists (must be captured first)
+    const { data: existingEmail, error: emailError } = await supabaseAdmin
+      .from('email_messages')
+      .select('id, user_uuid, subject')
+      .eq('external_message_id', body.external_message_id)
+      .eq('user_uuid', tokenPayload.user_uuid)
+      .maybeSingle();
+
+    if (emailError) {
+      console.error('[addin-email-create-task] Email lookup error:', emailError);
+      return errorResponse(500, 'DATABASE_ERROR', 'Failed to lookup email record', { detail: emailError.message });
+    }
+
+    if (!existingEmail) {
+      return errorResponse(404, 'EMAIL_NOT_FOUND', 'Email record not found. Capture the email first.', {});
     }
 
     // Verify client exists
@@ -120,39 +143,26 @@ serve(async (req) => {
     const { data: assignee, error: assigneeError } = await supabaseAdmin
       .from('users')
       .select('user_uuid, email, first_name, last_name')
-      .eq('user_uuid', body.assigned_to)
+      .eq('user_uuid', body.task.assigned_to_user_uuid)
       .single();
 
     if (assigneeError || !assignee) {
-      return errorResponse(404, 'USER_NOT_FOUND', 'Assigned user not found', { assigned_to: body.assigned_to });
-    }
-
-    // Check if email record already exists
-    let emailRecordId: string | null = null;
-    const { data: existingEmail } = await supabaseAdmin
-      .from('email_messages')
-      .select('id')
-      .eq('user_uuid', tokenPayload.user_uuid)
-      .eq('external_message_id', body.external_message_id)
-      .single();
-
-    if (existingEmail) {
-      emailRecordId = existingEmail.id;
+      return errorResponse(404, 'USER_NOT_FOUND', 'Assigned user not found', { assigned_to_user_uuid: body.task.assigned_to_user_uuid });
     }
 
     // Create the task
     const { data: task, error: taskError } = await supabaseAdmin
       .from('tasks')
       .insert({
-        title: body.title,
-        description: body.description || `Created from email`,
+        title: body.task.title,
+        description: body.task.description || `Created from Outlook email. See linked email evidence.`,
         status: 'open',
-        priority: 'medium',
+        priority: body.task.priority || 'medium',
         tenant_id: tenantId,
-        client_id: body.client_id,
-        assigned_to: body.assigned_to,
+        client_id: parseInt(body.client_id, 10),
+        assigned_to: body.task.assigned_to_user_uuid,
         created_by: tokenPayload.user_uuid,
-        due_date: body.due_at || null,
+        due_date: body.task.due_at || null,
         source: 'addin_email',
       })
       .select('id, title, status, priority, assigned_to, due_date, created_at')
@@ -165,59 +175,67 @@ serve(async (req) => {
       });
     }
 
-    // If we have an email record, link it to the task
-    if (emailRecordId) {
-      await supabaseAdmin
-        .from('email_messages')
-        .update({ 
-          task_id: task.id,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', emailRecordId);
+    // Link the email record to the task
+    const { error: updateError } = await supabaseAdmin
+      .from('email_messages')
+      .update({ 
+        task_id: task.id,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', existingEmail.id);
+
+    if (updateError) {
+      console.warn('[addin-email-create-task] Failed to link email to task:', updateError);
     }
 
-    // Log audit event for email linking
-    await supabaseAdmin
+    // Log audit event
+    const { data: auditEvent, error: auditError } = await supabaseAdmin
       .from('email_link_audit')
       .insert({
-        email_id: emailRecordId,
+        email_id: existingEmail.id,
         user_id: tokenPayload.user_uuid,
         action: 'task_created_from_email',
         entity_type: 'task',
         entity_id: task.id,
         metadata: {
-          task_title: body.title,
+          task_title: body.task.title,
           client_id: body.client_id,
-          assigned_to: body.assigned_to,
+          assigned_to_user_uuid: body.task.assigned_to_user_uuid,
           external_message_id: body.external_message_id,
+          idempotency_key: idempotencyKey,
         },
       })
-      .catch(err => console.warn('[addin-email-create-task] Audit log failed:', err));
+      .select('id')
+      .single();
+
+    if (auditError) {
+      console.warn('[addin-email-create-task] Audit log failed:', auditError);
+    }
 
     console.log('[addin-email-create-task] Task created successfully:', task.id);
 
-    // Return success with deep link
+    // Return success with new format
     return new Response(
       JSON.stringify({
-        success: true,
         task: {
           id: task.id,
           title: task.title,
           status: task.status,
-          priority: task.priority,
-          assigned_to: {
-            user_uuid: assignee.user_uuid,
-            email: assignee.email,
-            first_name: assignee.first_name,
-            last_name: assignee.last_name,
-          },
-          due_date: task.due_date,
-          created_at: task.created_at,
+          due_at: task.due_date,
+          assigned_to_user_uuid: task.assigned_to,
+          client_id: body.client_id,
         },
-        email_record_id: emailRecordId,
-        deep_link: `/tasks/${task.id}`,
+        email_record: {
+          id: existingEmail.id,
+          task_id: task.id,
+        },
+        audit_event_id: auditEvent?.id || null,
+        links: {
+          open_task: `/tasks/${task.id}`,
+          open_client: `/clients/${body.client_id}`,
+        },
       }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { status: 201, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 
   } catch (error) {

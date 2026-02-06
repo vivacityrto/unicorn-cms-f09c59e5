@@ -4,7 +4,7 @@ import { jwtVerify } from "https://deno.land/x/jose@v5.2.2/index.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, idempotency-key',
 };
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
@@ -12,16 +12,21 @@ const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 const ADDIN_JWT_SECRET = Deno.env.get('ADDIN_JWT_SECRET') || Deno.env.get('JWT_SECRET') || SUPABASE_SERVICE_ROLE_KEY;
 
 interface CaptureRequest {
+  provider: string;
   external_message_id: string;
-  client_id: number;
-  package_id?: number;
-  task_id?: string;
   subject: string;
-  sender_email: string;
-  sender_name?: string;
+  sender: {
+    email: string;
+    name?: string;
+  };
   received_at: string;
   body_preview?: string;
   has_attachments?: boolean;
+  link: {
+    client_id: string;
+    package_id?: string | null;
+    task_id?: string | null;
+  };
 }
 
 interface AddinTokenPayload {
@@ -79,25 +84,28 @@ serve(async (req) => {
       return errorResponse(401, 'UNAUTHORIZED', 'Invalid or missing add-in token');
     }
 
+    const idempotencyKey = req.headers.get('Idempotency-Key');
     const body: CaptureRequest = await req.json();
+    
     console.log('[addin-email-capture] Request:', {
       user: tokenPayload.email,
       external_message_id: body.external_message_id?.substring(0, 20) + '...',
-      client_id: body.client_id,
+      client_id: body.link?.client_id,
+      idempotency_key: idempotencyKey,
     });
 
     // Validate required fields
     if (!body.external_message_id) {
       return errorResponse(400, 'VALIDATION_ERROR', 'external_message_id is required');
     }
-    if (!body.client_id) {
-      return errorResponse(400, 'VALIDATION_ERROR', 'client_id is required');
+    if (!body.link?.client_id) {
+      return errorResponse(400, 'VALIDATION_ERROR', 'link.client_id is required');
     }
     if (!body.subject) {
       return errorResponse(400, 'VALIDATION_ERROR', 'subject is required');
     }
-    if (!body.sender_email) {
-      return errorResponse(400, 'VALIDATION_ERROR', 'sender_email is required');
+    if (!body.sender?.email) {
+      return errorResponse(400, 'VALIDATION_ERROR', 'sender.email is required');
     }
     if (!body.received_at) {
       return errorResponse(400, 'VALIDATION_ERROR', 'received_at is required');
@@ -105,47 +113,68 @@ serve(async (req) => {
 
     const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
-    // Verify client exists and user has access
-    const { data: client, error: clientError } = await supabaseAdmin
-      .from('tenants')
-      .select('id, name')
-      .eq('id', body.client_id)
-      .single();
-
-    if (clientError || !client) {
-      return errorResponse(404, 'CLIENT_NOT_FOUND', 'Client not found', { client_id: body.client_id });
-    }
-
     // Get user's tenant_id
     const tenantId = tokenPayload.tenant_id;
     if (!tenantId) {
       return errorResponse(403, 'NO_TENANT', 'User is not associated with any tenant');
     }
 
-    // Insert email record (upsert to handle duplicates)
+    // Check if email already exists with a different owner
+    const { data: existingEmail, error: checkError } = await supabaseAdmin
+      .from('email_messages')
+      .select('id, user_uuid')
+      .eq('external_message_id', body.external_message_id)
+      .maybeSingle();
+
+    if (checkError) {
+      console.error('[addin-email-capture] Check error:', checkError);
+      return errorResponse(500, 'DATABASE_ERROR', 'Failed to check existing email', { detail: checkError.message });
+    }
+
+    if (existingEmail && existingEmail.user_uuid !== tokenPayload.user_uuid) {
+      return errorResponse(409, 'EMAIL_ALREADY_LINKED_BY_ANOTHER_USER', 'This email has already been captured by another user.', {});
+    }
+
+    // Verify client exists
+    const { data: client, error: clientError } = await supabaseAdmin
+      .from('tenants')
+      .select('id, name')
+      .eq('id', body.link.client_id)
+      .single();
+
+    if (clientError || !client) {
+      return errorResponse(404, 'CLIENT_NOT_FOUND', 'Client not found', { client_id: body.link.client_id });
+    }
+
+    // Determine if this is an insert or update
+    const isUpdate = !!existingEmail;
+
+    // Insert/update email record
+    const emailData = {
+      user_uuid: tokenPayload.user_uuid,
+      tenant_id: tenantId,
+      provider: body.provider || 'microsoft',
+      external_message_id: body.external_message_id,
+      subject: body.subject,
+      sender_email: body.sender.email,
+      sender_name: body.sender.name || null,
+      received_at: body.received_at,
+      body_preview: body.body_preview || null,
+      has_attachments: body.has_attachments || false,
+      client_id: parseInt(body.link.client_id, 10),
+      package_id: body.link.package_id ? parseInt(body.link.package_id, 10) : null,
+      task_id: body.link.task_id || null,
+      linked_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+
     const { data: emailRecord, error: insertError } = await supabaseAdmin
       .from('email_messages')
-      .upsert({
-        user_uuid: tokenPayload.user_uuid,
-        tenant_id: tenantId,
-        provider: 'outlook',
-        external_message_id: body.external_message_id,
-        subject: body.subject,
-        sender_email: body.sender_email,
-        sender_name: body.sender_name || null,
-        received_at: body.received_at,
-        body_preview: body.body_preview || null,
-        has_attachments: body.has_attachments || false,
-        client_id: body.client_id,
-        package_id: body.package_id || null,
-        task_id: body.task_id || null,
-        linked_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      }, {
+      .upsert(emailData, {
         onConflict: 'user_uuid,external_message_id',
         ignoreDuplicates: false,
       })
-      .select('id, subject, client_id, package_id, task_id, linked_at')
+      .select('id, external_message_id, subject, sender_email, sender_name, received_at, has_attachments, client_id, package_id, task_id')
       .single();
 
     if (insertError) {
@@ -156,39 +185,52 @@ serve(async (req) => {
     }
 
     // Log audit event
-    await supabaseAdmin
+    const { data: auditEvent, error: auditError } = await supabaseAdmin
       .from('email_link_audit')
       .insert({
         email_id: emailRecord.id,
         user_id: tokenPayload.user_uuid,
         action: 'email_linked',
         entity_type: 'client',
-        entity_id: body.client_id.toString(),
+        entity_id: body.link.client_id,
         metadata: {
-          package_id: body.package_id || null,
-          task_id: body.task_id || null,
+          package_id: body.link.package_id || null,
+          task_id: body.link.task_id || null,
           subject: body.subject,
+          idempotency_key: idempotencyKey,
         },
       })
-      .catch(err => console.warn('[addin-email-capture] Audit log failed:', err));
+      .select('id')
+      .single();
+
+    if (auditError) {
+      console.warn('[addin-email-capture] Audit log failed:', auditError);
+    }
 
     console.log('[addin-email-capture] Email captured successfully:', emailRecord.id);
 
-    // Return success with deep link
+    // Return success with new format
     return new Response(
       JSON.stringify({
-        success: true,
         email_record: {
           id: emailRecord.id,
+          external_message_id: emailRecord.external_message_id,
           subject: emailRecord.subject,
+          sender_email: emailRecord.sender_email,
+          sender_name: emailRecord.sender_name,
+          received_at: emailRecord.received_at,
+          has_attachments: emailRecord.has_attachments,
           client_id: emailRecord.client_id,
           package_id: emailRecord.package_id,
           task_id: emailRecord.task_id,
-          linked_at: emailRecord.linked_at,
         },
-        deep_link: `/clients/${body.client_id}/emails`,
+        status: isUpdate ? 'updated' : 'upserted',
+        audit_event_id: auditEvent?.id || null,
+        links: {
+          open_in_unicorn: `/clients/${body.link.client_id}?tab=emails`,
+        },
       }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 
   } catch (error) {
