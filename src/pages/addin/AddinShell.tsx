@@ -17,6 +17,8 @@ import { Button } from '@/components/ui/button';
 import { useAddinContext } from '@/hooks/useAddinContext';
 import { useAddinSession } from '@/hooks/useAddinSession';
 import { useAuth } from '@/hooks/useAuth';
+import { MailPanel } from '@/components/addin/MailPanel';
+import type { AddinUser } from '@/lib/addin/types';
 
 export default function AddinShell() {
   const { user: authUser, session: authSession } = useAuth();
@@ -43,13 +45,16 @@ export default function AddinShell() {
   } = useAddinSession();
 
   // Determine which user to display
-  const displayUser = addinUser || (authUser ? {
+  const displayUser: AddinUser | null = addinUser || (authUser ? {
     user_uuid: authUser.id,
     email: authUser.email || '',
     first_name: (authUser.user_metadata?.first_name as string) || null,
     last_name: (authUser.user_metadata?.last_name as string) || null,
     unicorn_role: 'User',
   } : null);
+
+  // Get tenant ID for lookups
+  const tenantId = addinSession?.user ? (addinSession as { tenant_id?: number }).tenant_id : null;
 
   const isLoading = isContextLoading || isSessionLoading;
   const isConnected = isAddinAuthenticated || isAuthAuthenticated;
@@ -70,17 +75,8 @@ export default function AddinShell() {
     return <Monitor className="h-5 w-5" />;
   };
 
-  const getContextStatus = () => {
-    if (isContextLoading) return 'Loading...';
-    if (hasContext) {
-      if (mailContext) return `Email: ${mailContext.subject}`;
-      if (meetingContext) return `Meeting: ${meetingContext.subject}`;
-    }
-    return 'Context not detected yet';
-  };
-
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background pb-16">
       {/* Header with Unicorn branding */}
       <header className="border-b bg-card px-4 py-3">
         <div className="flex items-center justify-between">
@@ -105,9 +101,9 @@ export default function AddinShell() {
           <CardHeader className="pb-3">
             <CardTitle className="text-sm font-medium flex items-center gap-2">
               {isConnected ? (
-                <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                <CheckCircle2 className="h-4 w-4 text-primary" />
               ) : (
-                <AlertCircle className="h-4 w-4 text-amber-500" />
+                <AlertCircle className="h-4 w-4 text-destructive" />
               )}
               Connection Status
             </CardTitle>
@@ -146,74 +142,75 @@ export default function AddinShell() {
           </CardContent>
         </Card>
 
-        {/* Context Status */}
-        <Card>
-          <CardHeader className="pb-3">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-sm font-medium flex items-center gap-2">
-                {getContextIcon()}
-                Office Context
-              </CardTitle>
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                onClick={refreshContext}
-                disabled={isContextLoading}
-              >
-                <RefreshCw className={`h-4 w-4 ${isContextLoading ? 'animate-spin' : ''}`} />
-              </Button>
-            </div>
-          </CardHeader>
-          <CardContent>
-            {isContextLoading ? (
-              <Skeleton className="h-4 w-48" />
-            ) : contextError ? (
-              <Alert variant="destructive">
-                <AlertCircle className="h-4 w-4" />
-                <AlertDescription>{contextError}</AlertDescription>
-              </Alert>
-            ) : (
-              <div className="space-y-3">
-                <p className="text-sm text-muted-foreground">
-                  {getContextStatus()}
-                </p>
-                
-                {!isOffice && (
-                  <Alert>
-                    <Monitor className="h-4 w-4" />
-                    <AlertDescription className="text-xs">
-                      Running in browser mode. Open this page inside Outlook or Teams to detect context.
-                    </AlertDescription>
-                  </Alert>
-                )}
+        {/* Mail Panel - show when mail context is detected */}
+        {mailContext && isConnected && (
+          <MailPanel 
+            mailContext={mailContext}
+            user={displayUser}
+            tenantId={tenantId}
+          />
+        )}
 
-                {mailContext && (
-                  <div className="rounded-lg border p-3 space-y-2">
-                    <div className="flex items-center gap-2">
-                      <Mail className="h-4 w-4 text-primary" />
-                      <span className="font-medium text-sm">{mailContext.subject}</span>
-                    </div>
-                    <p className="text-xs text-muted-foreground">
-                      From: {mailContext.sender.name} ({mailContext.sender.email})
-                    </p>
-                  </div>
-                )}
-
-                {meetingContext && (
-                  <div className="rounded-lg border p-3 space-y-2">
-                    <div className="flex items-center gap-2">
-                      <Calendar className="h-4 w-4 text-primary" />
-                      <span className="font-medium text-sm">{meetingContext.subject}</span>
-                    </div>
-                    <p className="text-xs text-muted-foreground">
-                      {new Date(meetingContext.startTime).toLocaleString()}
-                    </p>
-                  </div>
-                )}
+        {/* Context Status - show when no mail context */}
+        {!mailContext && (
+          <Card>
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-sm font-medium flex items-center gap-2">
+                  {getContextIcon()}
+                  Office Context
+                </CardTitle>
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={refreshContext}
+                  disabled={isContextLoading}
+                >
+                  <RefreshCw className={`h-4 w-4 ${isContextLoading ? 'animate-spin' : ''}`} />
+                </Button>
               </div>
-            )}
-          </CardContent>
-        </Card>
+            </CardHeader>
+            <CardContent>
+              {isContextLoading ? (
+                <Skeleton className="h-4 w-48" />
+              ) : contextError ? (
+                <Alert variant="destructive">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription>{contextError}</AlertDescription>
+                </Alert>
+              ) : (
+                <div className="space-y-3">
+                  <p className="text-sm text-muted-foreground">
+                    {hasContext 
+                      ? (meetingContext ? `Meeting: ${meetingContext.subject}` : 'Context detected')
+                      : 'Context not detected yet'}
+                  </p>
+                  
+                  {!isOffice && (
+                    <Alert>
+                      <Monitor className="h-4 w-4" />
+                      <AlertDescription className="text-xs">
+                        Running in browser mode. Open this page inside Outlook or Teams to detect context.
+                      </AlertDescription>
+                    </Alert>
+                  )}
+
+                  {meetingContext && (
+                    <div className="rounded-lg border p-3 space-y-2">
+                      <div className="flex items-center gap-2">
+                        <Calendar className="h-4 w-4 text-primary" />
+                        <span className="font-medium text-sm">{meetingContext.subject}</span>
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        {new Date(meetingContext.startTime).toLocaleString()}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
 
         {/* Feature Flags (for debugging) */}
         {features && (
@@ -250,18 +247,6 @@ export default function AddinShell() {
             </Card>
           </>
         )}
-
-        {/* Actions placeholder */}
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium">Quick Actions</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm text-muted-foreground">
-              Actions will appear here based on context.
-            </p>
-          </CardContent>
-        </Card>
       </main>
 
       {/* Footer */}
