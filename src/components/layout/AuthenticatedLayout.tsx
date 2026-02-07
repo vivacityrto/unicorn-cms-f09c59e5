@@ -2,6 +2,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useTenantType } from "@/contexts/TenantTypeContext";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { AcademyLayout } from "@/components/layout/AcademyLayout";
+import { NetworkStatusIndicator } from "@/components/NetworkStatusIndicator";
 import { Loader2 } from "lucide-react";
 
 interface AuthenticatedLayoutProps {
@@ -37,14 +38,29 @@ export const AuthenticatedLayout = ({ children }: AuthenticatedLayoutProps) => {
 
   // Vivacity Team always uses DashboardLayout
   if (isVivacityTeam) {
-    return <DashboardLayout>{children}</DashboardLayout>;
+    return (
+      <>
+        <NetworkStatusIndicator />
+        <DashboardLayout>{children}</DashboardLayout>
+      </>
+    );
   }
 
   // Academy members use AcademyLayout
   if (isAcademyMember) {
-    return <AcademyLayout>{children}</AcademyLayout>;
+    return (
+      <>
+        <NetworkStatusIndicator />
+        <AcademyLayout>{children}</AcademyLayout>
+      </>
+    );
   }
 
   // Default to DashboardLayout (compliance members, client users)
-  return <DashboardLayout>{children}</DashboardLayout>;
+  return (
+    <>
+      <NetworkStatusIndicator />
+      <DashboardLayout>{children}</DashboardLayout>
+    </>
+  );
 };
