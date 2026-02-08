@@ -1,13 +1,13 @@
 /**
  * Compliance Assistant Edge Function
  * 
- * Answers questions using tenant-scoped live Unicorn data.
+ * Answers questions using tenant-scoped live Unicorn data + vector search.
  * Read-only, audit-safe, respects RLS and roles.
  */
 
 import { createServiceClient } from "../_shared/supabase-client.ts";
-import { extractToken, verifyAuth, checkVivacityTeam, checkSuperAdmin, getUserTenantIds, UserProfile } from "../_shared/auth-helpers.ts";
-import { handleCors, jsonOk, jsonError, jsonRaw } from "../_shared/response-helpers.ts";
+import { extractToken, verifyAuth, checkVivacityTeam, checkSuperAdmin, UserProfile } from "../_shared/auth-helpers.ts";
+import { jsonOk, jsonError, jsonRaw } from "../_shared/response-helpers.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -37,11 +37,23 @@ interface RecordAccessed {
   label: string;
 }
 
+interface VectorResult {
+  id: string;
+  source_type: string;
+  record_id: string;
+  record_label: string;
+  chunk_text: string;
+  similarity: number;
+  metadata: Record<string, unknown>;
+}
+
 interface ComplianceResponse {
   answer_markdown: string;
   records_accessed: RecordAccessed[];
   confidence: "high" | "medium" | "low";
   gaps: string[];
+  chunks_used?: number;
+  source_types_used?: string[];
 }
 
 // Data models for retrieval
@@ -141,13 +153,28 @@ Deno.serve(async (req) => {
       return jsonError(403, "FORBIDDEN", "You do not have access to this tenant");
     }
 
-    // Retrieve data
+    // Get API key for vector search
+    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+
+    // Perform vector search if API key is available
+    let vectorResults: VectorResult[] = [];
+    if (LOVABLE_API_KEY) {
+      vectorResults = await performVectorSearch(
+        supabase,
+        tenantId,
+        question,
+        LOVABLE_API_KEY
+      );
+      console.log(`Vector search returned ${vectorResults.length} results`);
+    }
+
+    // Retrieve live data
     const retrievalResult = await retrieveTenantData(supabase, tenantId, context);
     
-    // Generate answer
-    const response = generateComplianceAnswer(question, retrievalResult, context);
+    // Generate answer combining vector results and live data
+    const response = generateComplianceAnswer(question, retrievalResult, context, vectorResults);
 
-    // Log interaction
+    // Log interaction with vector tracking
     await logInteraction(supabase, user.id, tenantId, profile, question, response, context);
 
     return jsonRaw(response);
@@ -183,6 +210,75 @@ async function validateTenantAccess(
     .single();
 
   return !!data;
+}
+
+/**
+ * Perform vector search for the question
+ */
+async function performVectorSearch(
+  supabase: any,
+  tenantId: number,
+  query: string,
+  apiKey: string
+): Promise<VectorResult[]> {
+  try {
+    // Generate query embedding
+    const response = await fetch("https://ai.gateway.lovable.dev/v1/embeddings", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "text-embedding-3-small",
+        input: query,
+      }),
+    });
+
+    if (!response.ok) {
+      console.error("Embedding API error:", response.status);
+      return [];
+    }
+
+    const embeddingData = await response.json();
+    const queryEmbedding = embeddingData.data?.[0]?.embedding;
+    
+    if (!queryEmbedding) {
+      console.error("No embedding returned");
+      return [];
+    }
+
+    // Search vector embeddings
+    const { data: results, error } = await supabase.rpc(
+      "search_vector_embeddings",
+      {
+        p_tenant_id: tenantId,
+        p_query_embedding: queryEmbedding,
+        p_mode: "compliance",
+        p_source_types: null,
+        p_limit: 10,
+        p_similarity_threshold: 0.7,
+      }
+    );
+
+    if (error) {
+      console.error("Vector search error:", error);
+      return [];
+    }
+
+    return (results || []).map((r: any) => ({
+      id: r.id,
+      source_type: r.source_type,
+      record_id: r.record_id,
+      record_label: r.record_label,
+      chunk_text: r.chunk_text,
+      similarity: r.similarity,
+      metadata: r.metadata || {},
+    }));
+  } catch (err) {
+    console.error("Vector search failed:", err);
+    return [];
+  }
 }
 
 /**
@@ -299,16 +395,18 @@ async function retrieveTenantData(
 }
 
 /**
- * Generate a compliance answer based on retrieved data
+ * Generate a compliance answer based on retrieved data and vector results
  */
 function generateComplianceAnswer(
   question: string,
   data: RetrievalResult,
-  context: RequestContext
+  context: RequestContext,
+  vectorResults: VectorResult[] = []
 ): ComplianceResponse {
   const gaps: string[] = [];
   const bullets: string[] = [];
   let confidence: "high" | "medium" | "low" = "medium";
+  const sourceTypesUsed = new Set<string>();
 
   const q = question.toLowerCase();
 
@@ -319,7 +417,39 @@ function generateComplianceAnswer(
       records_accessed: [],
       confidence: "low",
       gaps: ["Tenant data not accessible"],
+      chunks_used: 0,
+      source_types_used: [],
     };
+  }
+
+  // If we have vector results, incorporate them first
+  if (vectorResults.length > 0) {
+    bullets.push("**Relevant Context (from indexed data):**\n");
+    
+    // Group by source type for better organization
+    const bySource = new Map<string, VectorResult[]>();
+    for (const vr of vectorResults.slice(0, 5)) {
+      const existing = bySource.get(vr.source_type) || [];
+      existing.push(vr);
+      bySource.set(vr.source_type, existing);
+      sourceTypesUsed.add(vr.source_type);
+    }
+
+    for (const [sourceType, results] of bySource) {
+      const sourceLabel = sourceType.replace(/_/g, " ").replace(/\b\w/g, l => l.toUpperCase());
+      bullets.push(`**${sourceLabel}:**`);
+      for (const r of results) {
+        bullets.push(`- ${r.record_label}: ${r.chunk_text.slice(0, 150)}${r.chunk_text.length > 150 ? "..." : ""}`);
+        // Add vector result to records accessed
+        data.records.push({
+          table: sourceType,
+          id: r.record_id,
+          label: r.record_label,
+        });
+      }
+    }
+    bullets.push("");
+    confidence = "high"; // Vector matches increase confidence
   }
 
   // Tenant summary
@@ -432,14 +562,19 @@ function generateComplianceAnswer(
     confidence = "medium";
   }
 
-  // Generic summary if no specific pattern matched
-  if (bullets.length <= 4) {
+  // Generic summary if no specific pattern matched and no vector results
+  if (bullets.length <= 4 && vectorResults.length === 0) {
     bullets.push(`\n**Data Overview:**`);
     bullets.push(`- Packages: ${data.packages.length}`);
     bullets.push(`- Documents: ${data.documents.length}`);
     bullets.push(`- Phases: ${data.phases.length}`);
     bullets.push(`- Time entries: ${data.timeEntries.entry_count}`);
     gaps.push("Question may need more specific keywords to provide detailed analysis");
+  }
+
+  // Note about vector search if no results
+  if (vectorResults.length === 0) {
+    gaps.push("No indexed vector data found - using live database queries only");
   }
 
   // Build final answer
@@ -450,6 +585,8 @@ function generateComplianceAnswer(
     records_accessed: data.records,
     confidence,
     gaps,
+    chunks_used: vectorResults.length,
+    source_types_used: Array.from(sourceTypesUsed),
   };
 }
 
@@ -482,6 +619,8 @@ async function logInteraction(
         confidence: response.confidence,
         gaps_count: response.gaps.length,
       },
+      chunks_used: response.chunks_used || 0,
+      source_types_used: response.source_types_used || [],
     });
   } catch (err) {
     console.error("Failed to log interaction:", err);

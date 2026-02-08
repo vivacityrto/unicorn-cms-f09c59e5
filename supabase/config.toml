@@ -104,3 +104,15 @@ verify_jwt = false
 
 [functions.compliance-assistant]
 verify_jwt = false
+
+[functions.vector-index-rebuild]
+verify_jwt = false
+
+[functions.vector-index-update]
+verify_jwt = false
+
+[functions.vector-index-remove]
+verify_jwt = false
+
+[functions.vector-search]
+verify_jwt = false
