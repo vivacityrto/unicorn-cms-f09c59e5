@@ -565,6 +565,7 @@ export type Database = {
       }
       ai_interaction_logs: {
         Row: {
+          chunks_used: number | null
           created_at: string
           id: string
           mode: string
@@ -572,10 +573,12 @@ export type Database = {
           records_accessed: Json
           request_context: Json
           response_text: string
+          source_types_used: string[] | null
           tenant_id: number | null
           user_id: string
         }
         Insert: {
+          chunks_used?: number | null
           created_at?: string
           id?: string
           mode: string
@@ -583,10 +586,12 @@ export type Database = {
           records_accessed?: Json
           request_context?: Json
           response_text: string
+          source_types_used?: string[] | null
           tenant_id?: number | null
           user_id: string
         }
         Update: {
+          chunks_used?: number | null
           created_at?: string
           id?: string
           mode?: string
@@ -594,6 +599,7 @@ export type Database = {
           records_accessed?: Json
           request_context?: Json
           response_text?: string
+          source_types_used?: string[] | null
           tenant_id?: number | null
           user_id?: string
         }
@@ -20438,6 +20444,158 @@ export type Database = {
           },
         ]
       }
+      vector_embeddings: {
+        Row: {
+          chunk_index: number
+          chunk_text: string
+          created_at: string
+          embedding: string | null
+          id: string
+          last_updated_at: string
+          metadata: Json
+          mode_allowed: string
+          namespace_key: string
+          record_id: string
+          record_label: string
+          source_type: string
+          tenant_id: number
+          token_count: number
+        }
+        Insert: {
+          chunk_index?: number
+          chunk_text: string
+          created_at?: string
+          embedding?: string | null
+          id?: string
+          last_updated_at?: string
+          metadata?: Json
+          mode_allowed: string
+          namespace_key: string
+          record_id: string
+          record_label: string
+          source_type: string
+          tenant_id: number
+          token_count?: number
+        }
+        Update: {
+          chunk_index?: number
+          chunk_text?: string
+          created_at?: string
+          embedding?: string | null
+          id?: string
+          last_updated_at?: string
+          metadata?: Json
+          mode_allowed?: string
+          namespace_key?: string
+          record_id?: string
+          record_label?: string
+          source_type?: string
+          tenant_id?: number
+          token_count?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vector_embeddings_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vector_embeddings_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_engagement_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "vector_embeddings_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_eos_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "vector_embeddings_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_compliance_entitlements"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
+      vector_index_logs: {
+        Row: {
+          action: string
+          created_at: string
+          id: string
+          metadata: Json
+          performed_by: string
+          record_id: string | null
+          records_affected: number
+          source_type: string | null
+          tenant_id: number
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          id?: string
+          metadata?: Json
+          performed_by: string
+          record_id?: string | null
+          records_affected?: number
+          source_type?: string | null
+          tenant_id: number
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          id?: string
+          metadata?: Json
+          performed_by?: string
+          record_id?: string | null
+          records_affected?: number
+          source_type?: string | null
+          tenant_id?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vector_index_logs_performed_by_fkey"
+            columns: ["performed_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "vector_index_logs_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vector_index_logs_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_engagement_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "vector_index_logs_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_eos_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "vector_index_logs_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_compliance_entitlements"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
     }
     Views: {
       auth_tokens_safe: {
@@ -22753,6 +22911,27 @@ export type Database = {
           usage_count: number
           version: string
           video_url: string
+        }[]
+      }
+      search_vector_embeddings: {
+        Args: {
+          p_limit?: number
+          p_mode: string
+          p_query_embedding: string
+          p_similarity_threshold?: number
+          p_source_types?: string[]
+          p_tenant_id: number
+        }
+        Returns: {
+          chunk_index: number
+          chunk_text: string
+          id: string
+          metadata: Json
+          record_id: string
+          record_label: string
+          similarity: number
+          source_type: string
+          tenant_id: number
         }[]
       }
       seed_default_meeting_templates: { Args: never; Returns: undefined }
