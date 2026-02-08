@@ -8,6 +8,7 @@
 import { createServiceClient } from "../_shared/supabase-client.ts";
 import { extractToken, verifyAuth, checkVivacityTeam, checkSuperAdmin, UserProfile } from "../_shared/auth-helpers.ts";
 import { jsonOk, jsonError, jsonRaw } from "../_shared/response-helpers.ts";
+import { validateAskVivAccess, askVivAccessDeniedResponse } from "../_shared/ask-viv-access.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -126,6 +127,12 @@ Deno.serve(async (req) => {
     
     if (authError || !user || !profile) {
       return jsonError(401, "UNAUTHORIZED", authError || "Authentication failed");
+    }
+
+    // Validate Ask Viv access - Vivacity internal only
+    const accessCheck = await validateAskVivAccess(supabase, user.id, profile, "compliance-assistant");
+    if (!accessCheck.allowed) {
+      return askVivAccessDeniedResponse(accessCheck.reason);
     }
 
     // Parse request

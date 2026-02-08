@@ -14,6 +14,7 @@ const PERMISSION_REQUIRED_ROLES: Record<Permission, string> = {
   'administration:access': 'Super Admin',
   'advanced_features:access': 'Team Leader or Team Member',
   'eos:access': 'Vivacity Team (Super Admin, Team Leader, or Team Member)',
+  'ask_viv:access': 'Vivacity Team (Super Admin, Team Leader, or Team Member)',
   'vto:edit': 'Team Leader or Team Member',
   'eos_meetings:schedule': 'Team Leader or Super Admin',
   'eos_meetings:edit': 'Team Leader or Super Admin',
