@@ -11,7 +11,7 @@ import { useAuth } from "@/hooks/useAuth";
 export function AskVivFloatingLauncher() {
   const { isOpen, openPanel } = useAskViv();
   const { flags, isLoading } = useAskVivFeatureFlags();
-  const { isSuperAdmin } = useRBAC();
+  const { isSuperAdmin, isVivacityTeam } = useRBAC();
   const { profile, loading: authLoading } = useAuth();
 
   // Wait for auth and flags to load
@@ -19,8 +19,8 @@ export function AskVivFloatingLauncher() {
     return null;
   }
 
-  // Only render for SuperAdmins
-  if (!isSuperAdmin) {
+  // Only render for Vivacity Team (includes SuperAdmins)
+  if (!isSuperAdmin && !isVivacityTeam) {
     return null;
   }
 

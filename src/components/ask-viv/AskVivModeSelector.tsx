@@ -1,6 +1,6 @@
 import { cn } from "@/lib/utils";
 import { useAskViv, AskVivMode } from "@/hooks/useAskViv";
-import { BookOpen, Shield, Lock } from "lucide-react";
+import { BookOpen, Shield } from "lucide-react";
 import {
   Tooltip,
   TooltipContent,
@@ -28,8 +28,8 @@ const modes: ModeOption[] = [
     id: "compliance",
     label: "Compliance",
     icon: Shield,
-    enabled: false,
-    description: "Coming soon",
+    enabled: true,
+    description: "Tenant data + internal knowledge (read-only)",
   },
 ];
 
@@ -67,11 +67,7 @@ export function AskVivModeSelector() {
                     isDisabled && "opacity-50 cursor-not-allowed"
                   )}
                 >
-                  {isDisabled ? (
-                    <Lock className="h-3.5 w-3.5" />
-                  ) : (
-                    <Icon className="h-3.5 w-3.5" />
-                  )}
+                  <Icon className="h-3.5 w-3.5" />
                   <span>{mode.label}</span>
                 </button>
               </TooltipTrigger>

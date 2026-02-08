@@ -101,3 +101,6 @@ verify_jwt = false
 
 [functions.addin-diagnostics-usage]
 verify_jwt = false
+
+[functions.compliance-assistant]
+verify_jwt = false
