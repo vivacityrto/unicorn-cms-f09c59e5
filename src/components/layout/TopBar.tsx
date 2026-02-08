@@ -28,6 +28,7 @@ import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/hooks/useAuth";
 import { NotificationDropdown } from "@/components/NotificationDropdown";
 import { FacilitatorModeToggle } from "@/components/eos/FacilitatorModeToggle";
+import { AskVivButton } from "@/components/ask-viv";
 import unicornLogo from "@/assets/unicorn-logo-login.svg";
 
 // Route to page title mapping
@@ -205,6 +206,9 @@ export function TopBar({ showSearch = false }: TopBarProps) {
       {/* Right: Actions & Avatar */}
       <div className="flex items-center gap-2">
         <TooltipProvider>
+          {/* Ask Viv - Knowledge Assistant (SuperAdmin only) */}
+          <AskVivButton />
+
           {/* Facilitator Mode Toggle */}
           <Tooltip>
             <TooltipTrigger asChild>
