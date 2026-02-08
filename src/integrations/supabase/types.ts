@@ -563,6 +563,72 @@ export type Database = {
           },
         ]
       }
+      ai_interaction_logs: {
+        Row: {
+          created_at: string
+          id: string
+          mode: string
+          prompt_text: string
+          response_text: string
+          tenant_id: number | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          mode: string
+          prompt_text: string
+          response_text: string
+          tenant_id?: number | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          mode?: string
+          prompt_text?: string
+          response_text?: string
+          tenant_id?: number | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_interaction_logs_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_interaction_logs_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_engagement_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "ai_interaction_logs_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_eos_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "ai_interaction_logs_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_compliance_entitlements"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "ai_interaction_logs_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["user_uuid"]
+          },
+        ]
+      }
       ai_suggestions: {
         Row: {
           acted_entity_id: string | null
@@ -646,6 +712,7 @@ export type Database = {
       }
       app_settings: {
         Row: {
+          ask_viv_floating_launcher_enabled: boolean
           clickup_enabled: boolean
           email_sending_enabled: boolean | null
           generation_enabled: boolean | null
@@ -656,6 +723,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          ask_viv_floating_launcher_enabled?: boolean
           clickup_enabled?: boolean
           email_sending_enabled?: boolean | null
           generation_enabled?: boolean | null
@@ -666,6 +734,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          ask_viv_floating_launcher_enabled?: boolean
           clickup_enabled?: boolean
           email_sending_enabled?: boolean | null
           generation_enabled?: boolean | null

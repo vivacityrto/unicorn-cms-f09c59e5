@@ -1,8 +1,13 @@
- import { useState, useEffect, useRef, useCallback } from 'react';
- import { supabase } from '@/integrations/supabase/client';
- import { useAuth } from '@/hooks/useAuth';
- import { useRBAC } from '@/hooks/useRBAC';
- import { Button } from '@/components/ui/button';
+/**
+ * @deprecated This component has been replaced by Ask Viv.
+ * Use AskVivPanel and AskVivButton from '@/components/ask-viv' instead.
+ * This file is kept for reference only.
+ */
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
+import { useRBAC } from '@/hooks/useRBAC';
+import { Button } from '@/components/ui/button';
  import { Input } from '@/components/ui/input';
  import { ScrollArea } from '@/components/ui/scroll-area';
  import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';

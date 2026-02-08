@@ -9,7 +9,7 @@ import { TopBar } from "@/components/layout/TopBar";
 import { UtilityFooter } from "@/components/layout/UtilityFooter";
 import { TimeInboxBanner } from "@/components/dashboard/TimeInboxWidget";
 import { FacilitatorModeBanner } from "@/components/eos/FacilitatorModeBanner";
-import { AIChatbot } from "@/components/admin/AIChatbot";
+import { AskVivPanel, AskVivFloatingLauncher } from "@/components/ask-viv";
 import { useProfileSetupReminder } from "@/hooks/useProfileSetupReminder";
 import { ProfileSetupReminderModal } from "@/components/profile/ProfileSetupReminderModal";
 
@@ -463,8 +463,9 @@ export const DashboardLayout = ({
         {/* Utility Footer */}
         <UtilityFooter />
 
-        {/* AI Chatbot - SuperAdmin only */}
-        <AIChatbot />
+        {/* Ask Viv - Knowledge Assistant (SuperAdmin only) */}
+        <AskVivPanel />
+        <AskVivFloatingLauncher />
       </div>
 
       {/* Profile Setup Reminder Modal */}
