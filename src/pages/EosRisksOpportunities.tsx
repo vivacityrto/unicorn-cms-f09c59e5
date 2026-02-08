@@ -222,15 +222,17 @@ function RisksOpportunitiesContent() {
                 Add Item
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-lg">
-              <DialogHeader>
+            <DialogContent className="max-w-lg max-h-[90vh] flex flex-col">
+              <DialogHeader className="flex-shrink-0">
                 <DialogTitle>Add Risk or Opportunity</DialogTitle>
               </DialogHeader>
-              <RiskOpportunityForm
-                onSubmit={handleCreate}
-                onCancel={() => setIsCreateOpen(false)}
-                isSubmitting={createItem.isPending}
-              />
+              <div className="flex-1 overflow-y-auto min-h-0">
+                <RiskOpportunityForm
+                  onSubmit={handleCreate}
+                  onCancel={() => setIsCreateOpen(false)}
+                  isSubmitting={createItem.isPending}
+                />
+              </div>
             </DialogContent>
           </Dialog>
         </PermissionTooltip>
@@ -240,35 +242,37 @@ function RisksOpportunitiesContent() {
           setIsEditOpen(open);
           if (!open) setEditingItem(null);
         }}>
-          <DialogContent className="max-w-lg">
-            <DialogHeader>
+          <DialogContent className="max-w-lg max-h-[90vh] flex flex-col">
+            <DialogHeader className="flex-shrink-0">
               <DialogTitle>Edit {editingItem?.item_type === 'risk' ? 'Risk' : 'Opportunity'}</DialogTitle>
             </DialogHeader>
-            {editingItem && (
-              <RiskOpportunityForm
-                onSubmit={handleUpdate}
-                onCancel={() => {
-                  setIsEditOpen(false);
-                  setEditingItem(null);
-                }}
-                isSubmitting={updateItem.isPending}
-                initialValues={{
-                  item_type: editingItem.item_type,
-                  title: editingItem.title,
-                  description: editingItem.description || '',
-                  why_it_matters: editingItem.why_it_matters || '',
-                  category: editingItem.category || null,
-                  impact: editingItem.impact || null,
-                  status: editingItem.status,
-                  quarter_number: editingItem.quarter_number,
-                  quarter_year: editingItem.quarter_year,
-                  linked_rock_id: editingItem.linked_rock_id || null,
-                }}
-                submitLabel="Save Changes"
-                showStatusSelector
-                currentStatus={editingItem.status}
-              />
-            )}
+            <div className="flex-1 overflow-y-auto min-h-0">
+              {editingItem && (
+                <RiskOpportunityForm
+                  onSubmit={handleUpdate}
+                  onCancel={() => {
+                    setIsEditOpen(false);
+                    setEditingItem(null);
+                  }}
+                  isSubmitting={updateItem.isPending}
+                  initialValues={{
+                    item_type: editingItem.item_type,
+                    title: editingItem.title,
+                    description: editingItem.description || '',
+                    why_it_matters: editingItem.why_it_matters || '',
+                    category: editingItem.category || null,
+                    impact: editingItem.impact || null,
+                    status: editingItem.status,
+                    quarter_number: editingItem.quarter_number,
+                    quarter_year: editingItem.quarter_year,
+                    linked_rock_id: editingItem.linked_rock_id || null,
+                  }}
+                  submitLabel="Save Changes"
+                  showStatusSelector
+                  currentStatus={editingItem.status}
+                />
+              )}
+            </div>
           </DialogContent>
         </Dialog>
       </div>
