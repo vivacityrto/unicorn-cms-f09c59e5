@@ -1,9 +1,15 @@
 /**
  * Compliance Assistant Edge Function
  * 
- * V2: Integrated with AI Brain architecture.
- * Uses structured facts, tiered reasoning, and governance controls.
+ * V3: Integrated with Ask Viv Fact Builder service.
+ * Uses deterministic facts, tiered reasoning, and governance controls.
  * Read-only, audit-safe, respects RLS and roles.
+ * 
+ * Key changes in V3:
+ * - Uses buildAskVivFacts() as the ONLY source of facts
+ * - No raw DB results passed to LLM
+ * - Full audit trail with records_accessed
+ * - Scope inference for missing IDs
  */
 
 import { createServiceClient } from "../_shared/supabase-client.ts";
@@ -11,7 +17,7 @@ import { extractToken, verifyAuth, checkVivacityTeam, checkSuperAdmin, UserProfi
 import { jsonOk, jsonError, jsonRaw } from "../_shared/response-helpers.ts";
 import { validateAskVivAccess, askVivAccessDeniedResponse } from "../_shared/ask-viv-access.ts";
 
-// AI Brain imports
+// AI Brain imports (for reasoning engine)
 import {
   processAIBrainInput,
   buildSourceCitations,
@@ -29,6 +35,16 @@ import {
   type EvidenceData,
   type RiskData,
 } from "../_shared/ai-brain/index.ts";
+
+// Fact Builder imports (V3)
+import {
+  buildAskVivFacts,
+  factsToRecordsAccessed,
+  formatFactsForLLM,
+  type AskVivFactBuilderInput,
+  type AskVivFactsResult,
+  type DerivedFact,
+} from "../_shared/ask-viv-fact-builder/index.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -160,10 +176,34 @@ Deno.serve(async (req) => {
       console.log(`Vector search returned ${vectorResults.length} results`);
     }
 
-    // Retrieve data for AI Brain
-    const dataForFacts = await retrieveDataForFacts(supabase, tenantId, context);
+    // V3: Use Fact Builder service as the ONLY source of facts
+    const factBuilderInput: AskVivFactBuilderInput = {
+      user_id: user.id,
+      tenant_id: tenantId,
+      role: profile.unicorn_role || "unknown",
+      scope: {
+        client_id: context.client_id?.toString() || null,
+        package_id: context.package_id?.toString() || null,
+        phase_id: context.phase_id?.toString() || null,
+      },
+      now_iso: new Date().toISOString(),
+      timezone: "Australia/Sydney",
+      question: question,
+    };
+
+    let factsResult: AskVivFactsResult;
+    try {
+      factsResult = await buildAskVivFacts(supabase, factBuilderInput);
+      console.log(`Fact Builder returned ${factsResult.facts.length} facts, ${factsResult.gaps.length} gaps`);
+    } catch (factError) {
+      console.error("Fact Builder error:", factError);
+      return jsonError(500, "FACT_BUILDER_ERROR", "Failed to build facts for response");
+    }
+
+    // Convert facts to DataForFacts format for AI Brain compatibility
+    const dataForFacts = convertFactsToDataForFacts(factsResult);
     
-    // Process through AI Brain pipeline
+    // Process through AI Brain pipeline (for reasoning engine)
     const brainResult = processAIBrainInput({
       user: { id: user.id },
       profile,
@@ -182,15 +222,16 @@ Deno.serve(async (req) => {
       data: dataForFacts,
     });
 
-    // Generate answer combining AI Brain reasoning, vector results, and question
-    const response = generateBrainPoweredAnswer(
+    // Generate answer using facts (not raw DB results)
+    const response = generateFactBasedAnswer(
       question, 
+      factsResult,
       brainResult,
       vectorResults,
       context
     );
 
-    // Log interaction with enhanced tracking
+    // Log interaction with enhanced audit trail
     await logInteraction(
       supabase, 
       user.id, 
@@ -199,6 +240,7 @@ Deno.serve(async (req) => {
       question, 
       response, 
       context,
+      factsResult,
       brainResult
     );
 
@@ -307,111 +349,51 @@ async function performVectorSearch(
 }
 
 /**
- * Retrieve data formatted for AI Brain fact builder
+ * V3: Convert AskVivFactsResult to DataForFacts format for AI Brain compatibility
  */
-async function retrieveDataForFacts(
-  supabase: any,
-  tenantId: number,
-  context: RequestContext
-): Promise<DataForFacts> {
-  // Fetch tenant
-  const { data: tenant } = await supabase
-    .from("tenants")
-    .select("id, name, status, rto_id, risk_level, package_ids, updated_at")
-    .eq("id", tenantId)
-    .single();
+function convertFactsToDataForFacts(factsResult: AskVivFactsResult): DataForFacts {
+  // Extract tenant/client info from facts
+  const tenantNameFact = factsResult.facts.find(f => f.key === "tenant_name");
+  const tenantStatusFact = factsResult.facts.find(f => f.key === "tenant_status");
+  const rtoIdFact = factsResult.facts.find(f => f.key === "tenant_rto_id");
+  const riskLevelFact = factsResult.facts.find(f => f.key === "tenant_risk_level");
 
-  const client: ClientData | undefined = tenant ? {
-    id: tenant.id,
-    name: tenant.name,
-    status: tenant.status || "unknown",
-    rto_id: tenant.rto_id,
-    risk_level: tenant.risk_level,
-    updated_at: tenant.updated_at,
+  const client: ClientData | undefined = tenantNameFact ? {
+    id: factsResult.context.tenant_id,
+    name: String(tenantNameFact.value),
+    status: String(tenantStatusFact?.value || "unknown"),
+    rto_id: rtoIdFact ? String(rtoIdFact.value) : null,
+    risk_level: riskLevelFact ? String(riskLevelFact.value) : null,
   } : undefined;
 
-  // Fetch packages
-  const packageIds = tenant?.package_ids || [];
-  let packages: PackageData[] = [];
-  if (packageIds.length > 0) {
-    const { data: pkgs } = await supabase
-      .from("packages")
-      .select("id, name, status, package_type, total_hours, used_hours, updated_at")
-      .in("id", packageIds)
-      .limit(20);
-    
-    packages = (pkgs || []).map((p: any) => ({
-      id: p.id,
-      name: p.name,
-      status: p.status,
-      package_type: p.package_type,
-      total_hours: p.total_hours,
-      used_hours: p.used_hours,
-      updated_at: p.updated_at,
-    }));
-  }
+  // Extract packages from facts
+  const packageFacts = factsResult.facts.filter(f => f.key === "package_status");
+  const packages: PackageData[] = packageFacts.map(f => {
+    const val = f.value as { id: number; name: string; status: string; type?: string };
+    return {
+      id: val.id,
+      name: val.name,
+      status: val.status,
+      package_type: val.type,
+    };
+  });
 
-  // Fetch phases (stages)
-  const { data: stagesData } = await supabase
-    .from("documents_stages")
-    .select("id, title, status, stage_type, due_date, updated_at")
-    .limit(30);
-  
-  const phases: PhaseData[] = (stagesData || []).map((s: any) => ({
-    id: s.id,
-    title: s.title,
-    status: s.status,
-    stage_type: s.stage_type,
-    due_date: s.due_date,
-    updated_at: s.updated_at,
-  }));
+  // Extract phases from facts
+  const phaseFacts = factsResult.facts.filter(f => f.key === "phase_status");
+  const phases: PhaseData[] = phaseFacts.map(f => {
+    const val = f.value as { id: number; title: string; status: string; stage_type?: string };
+    return {
+      id: val.id,
+      title: val.title,
+      status: val.status,
+      stage_type: val.stage_type,
+    };
+  });
 
-  // Fetch tasks
-  const { data: tasksData } = await supabase
-    .from("tasks")
-    .select("id, task_name, status, priority, due_date_text, updated_at")
-    .limit(50);
-  
-  const tasks: TaskData[] = (tasksData || []).slice(0, 20).map((t: any) => ({
-    id: t.id,
-    task_name: t.task_name,
-    status: t.status,
-    priority: t.priority,
-    due_date: t.due_date_text,
-    updated_at: t.updated_at,
-  }));
-
-  // Fetch documents (evidence)
-  const { data: docsData } = await supabase
-    .from("documents")
-    .select("id, title, category, is_released, updated_at")
-    .eq("tenant_id", tenantId)
-    .limit(50);
-  
-  const evidence: EvidenceData[] = (docsData || []).map((d: any) => ({
-    id: d.id,
-    title: d.title,
-    status: d.category || "unknown",
-    is_released: d.is_released,
-    updated_at: d.updated_at,
-  }));
-
-  // Fetch risks/opportunities
-  const { data: risksData } = await supabase
-    .from("eos_issues")
-    .select("id, item_type, title, status, impact, category")
-    .eq("tenant_id", tenantId)
-    .is("deleted_at", null)
-    .limit(20);
-  
-  const risks: RiskData[] = (risksData || []).map((r: any) => ({
-    id: r.id,
-    item_type: r.item_type,
-    title: r.title,
-    status: r.status,
-    impact: r.impact,
-    category: r.category,
-  }));
+  // We don't expose raw task/evidence data - only derived facts
+  const tasks: TaskData[] = [];
+  const evidence: EvidenceData[] = [];
+  const risks: RiskData[] = [];
 
   return {
     client,
@@ -424,7 +406,254 @@ async function retrieveDataForFacts(
 }
 
 /**
- * Generate answer using AI Brain reasoning
+ * V3: Generate answer using Fact Builder results
+ * Uses derived facts only - never raw DB rows
+ */
+function generateFactBasedAnswer(
+  question: string,
+  factsResult: AskVivFactsResult,
+  brainResult: {
+    context: AIContext;
+    factSet: FactSet;
+    reasoning: ReasoningOutput;
+    confidence: ConfidenceResult;
+    contextPrompt: string;
+    factsPrompt: string;
+    reasoningPrompt: string;
+  },
+  vectorResults: VectorResult[],
+  context: RequestContext
+): ComplianceResponse {
+  const gaps: string[] = [...factsResult.gaps];
+  const bullets: string[] = [];
+  const sourceTypesUsed = new Set<string>();
+  
+  const q = question.toLowerCase();
+  const { reasoning, confidence } = brainResult;
+
+  // Build governance info
+  const governance = buildGovernanceInfo(confidence, reasoning.escalation_triggers);
+
+  // Add caution banner if needed
+  if (governance.caution_banners.length > 0) {
+    bullets.push(...governance.caution_banners.map(b => `**${b}**`));
+    bullets.push("");
+  }
+
+  // V3: Use facts from Fact Builder for tenant context
+  const tenantNameFact = factsResult.facts.find(f => f.key === "tenant_name");
+  const tenantStatusFact = factsResult.facts.find(f => f.key === "tenant_status");
+  const rtoIdFact = factsResult.facts.find(f => f.key === "tenant_rto_id");
+  const riskLevelFact = factsResult.facts.find(f => f.key === "tenant_risk_level");
+
+  if (tenantNameFact) {
+    bullets.push(`**Tenant:** ${tenantNameFact.value}`);
+    if (tenantStatusFact) bullets.push(`**Status:** ${tenantStatusFact.value}`);
+    if (rtoIdFact) bullets.push(`**RTO ID:** ${rtoIdFact.value}`);
+    if (riskLevelFact) bullets.push(`**Risk Level:** ${riskLevelFact.value}`);
+    bullets.push("");
+  }
+
+  // Include vector results if available
+  if (vectorResults.length > 0) {
+    bullets.push("**Relevant Context (indexed):**");
+    const bySource = new Map<string, VectorResult[]>();
+    for (const vr of vectorResults.slice(0, 5)) {
+      const existing = bySource.get(vr.source_type) || [];
+      existing.push(vr);
+      bySource.set(vr.source_type, existing);
+      sourceTypesUsed.add(vr.source_type);
+    }
+
+    for (const [sourceType, results] of bySource) {
+      const sourceLabel = sourceType.replace(/_/g, " ").replace(/\b\w/g, l => l.toUpperCase());
+      bullets.push(`*${sourceLabel}:*`);
+      for (const r of results) {
+        bullets.push(`- ${r.record_label}: ${r.chunk_text.slice(0, 100)}...`);
+      }
+    }
+    bullets.push("");
+  }
+
+  // V3: Use derived facts for status/summary
+  if (q.includes("status") || q.includes("overview") || q.includes("summary")) {
+    bullets.push("**Current Status:**");
+    
+    // Package status from facts
+    const packageCountFact = factsResult.facts.find(f => f.key === "package_count");
+    if (packageCountFact) {
+      const val = packageCountFact.value as { total: number; active: number };
+      bullets.push(`- ${val.total} packages (${val.active} active)`);
+    }
+
+    // Task status from facts
+    const incompleteTasksFact = factsResult.facts.find(f => f.key === "tasks_incomplete_count");
+    const overdueTasksFact = factsResult.facts.find(f => f.key === "tasks_overdue_count");
+    if (incompleteTasksFact) {
+      bullets.push(`- ${incompleteTasksFact.value} incomplete tasks`);
+    }
+    if (overdueTasksFact && (overdueTasksFact.value as number) > 0) {
+      bullets.push(`- ⚠️ ${overdueTasksFact.value} overdue tasks`);
+    }
+
+    // Evidence status from facts
+    const unreleasedFact = factsResult.facts.find(f => f.key === "evidence_unreleased_count");
+    if (unreleasedFact) {
+      bullets.push(`- ${unreleasedFact.value} documents pending release`);
+    }
+
+    // Consult hours from facts
+    const consultHoursFact = factsResult.facts.find(f => f.key === "consult_hours_30d");
+    const consultCountFact = factsResult.facts.find(f => f.key === "consult_count_30d");
+    if (consultHoursFact) {
+      bullets.push(`- ${consultHoursFact.value}h consultation logged (last 30 days)`);
+    }
+    if (consultCountFact) {
+      bullets.push(`- ${consultCountFact.value} consultation sessions`);
+    }
+
+    bullets.push("");
+  }
+
+  // V3: Use phase_blockers fact for blockers
+  if (q.includes("blocker") || q.includes("block") || q.includes("stuck")) {
+    bullets.push("**Blockers:**");
+    const blockerFact = factsResult.facts.find(f => f.key === "phase_blockers");
+    
+    if (blockerFact && Array.isArray(blockerFact.value)) {
+      const blockers = blockerFact.value as Array<{ type: string; label: string; count: number }>;
+      for (const blocker of blockers) {
+        const icon = blocker.type === "hours_exceeded" ? "🔴" : "⚠️";
+        bullets.push(`${icon} ${blocker.label} (${blocker.count})`);
+      }
+    } else {
+      bullets.push("✅ No active blockers detected");
+    }
+    bullets.push("");
+  }
+
+  // Risk assessment from reasoning engine
+  if (q.includes("risk") || q.includes("audit") || q.includes("compliance")) {
+    bullets.push("**Risk Assessment:**");
+    const riskTier = reasoning.tiers.find(t => t.tier === "risk");
+    if (riskTier && riskTier.findings.length > 0) {
+      for (const finding of riskTier.findings) {
+        const icon = finding.severity === "critical" ? "🔴" : "⚠️";
+        bullets.push(`${icon} ${finding.summary}`);
+      }
+    } else {
+      bullets.push("✅ No elevated risk indicators");
+    }
+    bullets.push("");
+  }
+
+  // Next actions from reasoning engine
+  if (q.includes("action") || q.includes("next") || q.includes("do")) {
+    bullets.push("**Suggested Next Steps:**");
+    
+    // Use next due task from facts
+    const nextTaskFact = factsResult.facts.find(f => f.key === "next_due_task");
+    if (nextTaskFact) {
+      const val = nextTaskFact.value as { label: string; due_date: string };
+      bullets.push(`→ Complete "${val.label}" (due: ${val.due_date})`);
+    }
+
+    const actionTier = reasoning.tiers.find(t => t.tier === "actions");
+    if (actionTier && actionTier.findings.length > 0) {
+      for (const finding of actionTier.findings) {
+        bullets.push(`→ ${finding.summary}`);
+      }
+    }
+    
+    if (!nextTaskFact && (!actionTier || actionTier.findings.length === 0)) {
+      bullets.push("No immediate actions required");
+    }
+    bullets.push("");
+  }
+
+  // Add escalations if present
+  if (reasoning.escalation_triggers.length > 0) {
+    bullets.push("**⚠️ Escalation Alerts:**");
+    for (const trigger of reasoning.escalation_triggers) {
+      const icon = trigger.severity === "critical" ? "🚨" : "⚠️";
+      bullets.push(`${icon} ${trigger.message}`);
+      bullets.push(`  Action: ${trigger.suggested_action}`);
+    }
+    bullets.push("");
+  }
+
+  // Generic summary if no specific pattern matched
+  if (bullets.length <= 6 && vectorResults.length === 0) {
+    bullets.push("**Summary:**");
+    bullets.push(reasoning.final_summary);
+    
+    // Add key facts summary
+    bullets.push("");
+    bullets.push("**Key Facts:**");
+    const formattedFacts = formatFactsForLLM(factsResult.facts.slice(0, 10));
+    bullets.push(formattedFacts);
+    bullets.push("");
+  }
+
+  // Confidence and review reminders
+  bullets.push(`*Confidence: ${confidence.level.toUpperCase()}*`);
+  if (governance.review_reminders.length > 0) {
+    for (const reminder of governance.review_reminders) {
+      bullets.push(`📋 ${reminder}`);
+    }
+  }
+
+  // Add inference decisions info if any
+  if (factsResult.audit.inference_decisions.length > 0) {
+    const inferred = factsResult.audit.inference_decisions.filter(d => d.action === "inferred");
+    if (inferred.length > 0) {
+      bullets.push(`*Scope inferred: ${inferred.map(d => d.field).join(", ")}*`);
+    }
+  }
+
+  // Gaps from confidence and fact builder
+  if (confidence.level !== "high") {
+    gaps.push(confidence.explanation);
+  }
+  if (vectorResults.length === 0) {
+    gaps.push("No indexed vector data - using live database only");
+  }
+
+  // V3: Build records from Fact Builder result (not raw DB)
+  const records: RecordAccessed[] = factsToRecordsAccessed(factsResult.facts);
+
+  // Add vector results to records
+  for (const vr of vectorResults) {
+    records.push({
+      table: vr.source_type,
+      id: vr.record_id,
+      label: vr.record_label,
+    });
+  }
+
+  return {
+    answer_markdown: bullets.join("\n"),
+    records_accessed: records,
+    confidence: confidence.level,
+    gaps,
+    chunks_used: vectorResults.length,
+    source_types_used: Array.from(sourceTypesUsed),
+    reasoning_tiers: reasoning.tiers.map(t => ({
+      tier: t.tier,
+      finding_count: t.findings.length,
+      critical_count: t.findings.filter(f => f.severity === "critical").length,
+    })),
+    escalation_count: reasoning.escalation_triggers.length,
+    governance: {
+      read_only: true,
+      human_action_required: governance.human_action_required,
+      caution_banners: governance.caution_banners,
+    },
+  };
+}
+
+/**
+ * Legacy: Generate answer using AI Brain reasoning (kept for compatibility)
  */
 function generateBrainPoweredAnswer(
   question: string,
@@ -614,7 +843,7 @@ function generateBrainPoweredAnswer(
 }
 
 /**
- * Log the interaction to ai_interaction_logs
+ * V3: Log the interaction to ai_interaction_logs with full audit trail
  */
 async function logInteraction(
   supabase: any,
@@ -624,6 +853,7 @@ async function logInteraction(
   question: string,
   response: ComplianceResponse,
   context: RequestContext,
+  factsResult?: AskVivFactsResult,
   brainResult?: {
     context: AIContext;
     factSet: FactSet;
@@ -632,13 +862,20 @@ async function logInteraction(
   }
 ): Promise<void> {
   try {
+    // V3: Build records_accessed from Fact Builder audit data
+    const recordsAccessed = factsResult 
+      ? factsResult.audit.record_ids_accessed.flatMap(({ table, ids }) => 
+          ids.map(id => ({ table, id, label: `${table}:${id}` }))
+        )
+      : response.records_accessed;
+
     await supabase.from("ai_interaction_logs").insert({
       user_id: userId,
       tenant_id: tenantId,
       mode: "compliance",
       prompt_text: question,
       response_text: response.answer_markdown,
-      records_accessed: response.records_accessed,
+      records_accessed: recordsAccessed,
       request_context: {
         tenant_id: tenantId,
         client_id: context.client_id || null,
@@ -647,12 +884,18 @@ async function logInteraction(
         user_role: profile.unicorn_role,
         confidence: response.confidence,
         gaps_count: response.gaps.length,
-        // V2: AI Brain tracking
-        ai_brain_version: "2.0",
+        // V3: Fact Builder tracking
+        ai_brain_version: "3.0",
+        fact_builder_version: "1.0",
         reasoning_tiers: response.reasoning_tiers,
         escalation_count: response.escalation_count,
-        fact_count: brainResult?.factSet.fact_count || 0,
+        fact_count: factsResult?.facts.length || brainResult?.factSet.fact_count || 0,
         categories_analyzed: brainResult?.factSet.categories || [],
+        // V3: Audit trail from Fact Builder
+        tables_queried: factsResult?.audit.tables_queried || [],
+        inference_decisions: factsResult?.audit.inference_decisions || [],
+        query_duration_ms: factsResult?.audit.duration_ms || 0,
+        gaps: factsResult?.gaps || [],
       },
       chunks_used: response.chunks_used || 0,
       source_types_used: response.source_types_used || [],
