@@ -1,7 +1,8 @@
 /**
  * Compliance Assistant Edge Function
  * 
- * Answers questions using tenant-scoped live Unicorn data + vector search.
+ * V2: Integrated with AI Brain architecture.
+ * Uses structured facts, tiered reasoning, and governance controls.
  * Read-only, audit-safe, respects RLS and roles.
  */
 
@@ -9,6 +10,25 @@ import { createServiceClient } from "../_shared/supabase-client.ts";
 import { extractToken, verifyAuth, checkVivacityTeam, checkSuperAdmin, UserProfile } from "../_shared/auth-helpers.ts";
 import { jsonOk, jsonError, jsonRaw } from "../_shared/response-helpers.ts";
 import { validateAskVivAccess, askVivAccessDeniedResponse } from "../_shared/ask-viv-access.ts";
+
+// AI Brain imports
+import {
+  processAIBrainInput,
+  buildSourceCitations,
+  buildGovernanceInfo,
+  formatEscalationsForPrompt,
+  type AIContext,
+  type FactSet,
+  type ReasoningOutput,
+  type ConfidenceResult,
+  type DataForFacts,
+  type ClientData,
+  type PackageData,
+  type PhaseData,
+  type TaskData,
+  type EvidenceData,
+  type RiskData,
+} from "../_shared/ai-brain/index.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -55,53 +75,18 @@ interface ComplianceResponse {
   gaps: string[];
   chunks_used?: number;
   source_types_used?: string[];
-}
-
-// Data models for retrieval
-interface TenantSummary {
-  id: number;
-  name: string;
-  status: string;
-  rto_id: string | null;
-  risk_level: string | null;
-  package_ids: number[];
-}
-
-interface PackageSummary {
-  id: number;
-  name: string;
-  status: string;
-  package_type: string | null;
-  total_hours: number | null;
-}
-
-interface DocumentSummary {
-  id: number;
-  title: string;
-  category: string | null;
-  is_released: boolean;
-  stage: number | null;
-  due_date: string | null;
-}
-
-interface PhaseSummary {
-  id: number;
-  title: string;
-  status: string;
-  stage_type: string | null;
-}
-
-interface TaskSummary {
-  id: string;
-  task_name: string;
-  status: string;
-  due_date_text: string | null;
-}
-
-interface TimeEntrySummary {
-  total_hours: number;
-  billable_hours: number;
-  entry_count: number;
+  // V2: AI Brain additions
+  reasoning_tiers?: {
+    tier: string;
+    finding_count: number;
+    critical_count: number;
+  }[];
+  escalation_count?: number;
+  governance?: {
+    read_only: boolean;
+    human_action_required: boolean;
+    caution_banners: string[];
+  };
 }
 
 // Main handler
@@ -175,14 +160,47 @@ Deno.serve(async (req) => {
       console.log(`Vector search returned ${vectorResults.length} results`);
     }
 
-    // Retrieve live data
-    const retrievalResult = await retrieveTenantData(supabase, tenantId, context);
+    // Retrieve data for AI Brain
+    const dataForFacts = await retrieveDataForFacts(supabase, tenantId, context);
     
-    // Generate answer combining vector results and live data
-    const response = generateComplianceAnswer(question, retrievalResult, context, vectorResults);
+    // Process through AI Brain pipeline
+    const brainResult = processAIBrainInput({
+      user: { id: user.id },
+      profile,
+      tenant: dataForFacts.client ? {
+        id: tenantId,
+        name: dataForFacts.client.name,
+        status: dataForFacts.client.status,
+        rto_id: dataForFacts.client.rto_id,
+        risk_level: dataForFacts.client.risk_level,
+      } : null,
+      scope: {
+        client_id: context.client_id,
+        package_id: context.package_id,
+        phase_id: context.phase_id,
+      },
+      data: dataForFacts,
+    });
 
-    // Log interaction with vector tracking
-    await logInteraction(supabase, user.id, tenantId, profile, question, response, context);
+    // Generate answer combining AI Brain reasoning, vector results, and question
+    const response = generateBrainPoweredAnswer(
+      question, 
+      brainResult,
+      vectorResults,
+      context
+    );
+
+    // Log interaction with enhanced tracking
+    await logInteraction(
+      supabase, 
+      user.id, 
+      tenantId, 
+      profile, 
+      question, 
+      response, 
+      context,
+      brainResult
+    );
 
     return jsonRaw(response);
 
@@ -289,151 +307,168 @@ async function performVectorSearch(
 }
 
 /**
- * Retrieve tenant-scoped data for answering the question
+ * Retrieve data formatted for AI Brain fact builder
  */
-interface RetrievalResult {
-  tenant: TenantSummary | null;
-  packages: PackageSummary[];
-  documents: DocumentSummary[];
-  phases: PhaseSummary[];
-  tasks: TaskSummary[];
-  timeEntries: TimeEntrySummary;
-  records: RecordAccessed[];
-}
-
-async function retrieveTenantData(
+async function retrieveDataForFacts(
   supabase: any,
   tenantId: number,
   context: RequestContext
-): Promise<RetrievalResult> {
-  const records: RecordAccessed[] = [];
-  
+): Promise<DataForFacts> {
   // Fetch tenant
   const { data: tenant } = await supabase
     .from("tenants")
-    .select("id, name, status, rto_id, risk_level, package_ids")
+    .select("id, name, status, rto_id, risk_level, package_ids, updated_at")
     .eq("id", tenantId)
     .single();
 
-  if (tenant) {
-    records.push({ table: "tenants", id: tenant.id, label: tenant.name || `Tenant ${tenant.id}` });
-  }
+  const client: ClientData | undefined = tenant ? {
+    id: tenant.id,
+    name: tenant.name,
+    status: tenant.status || "unknown",
+    rto_id: tenant.rto_id,
+    risk_level: tenant.risk_level,
+    updated_at: tenant.updated_at,
+  } : undefined;
 
-  // Fetch packages for tenant
+  // Fetch packages
   const packageIds = tenant?.package_ids || [];
-  let packages: PackageSummary[] = [];
+  let packages: PackageData[] = [];
   if (packageIds.length > 0) {
     const { data: pkgs } = await supabase
       .from("packages")
-      .select("id, name, status, package_type, total_hours")
+      .select("id, name, status, package_type, total_hours, used_hours, updated_at")
       .in("id", packageIds)
       .limit(20);
     
-    packages = pkgs || [];
-    packages.forEach(p => records.push({ table: "packages", id: p.id, label: p.name }));
+    packages = (pkgs || []).map((p: any) => ({
+      id: p.id,
+      name: p.name,
+      status: p.status,
+      package_type: p.package_type,
+      total_hours: p.total_hours,
+      used_hours: p.used_hours,
+      updated_at: p.updated_at,
+    }));
   }
 
-  // Fetch documents for tenant
-  const { data: documents } = await supabase
+  // Fetch phases (stages)
+  const { data: stagesData } = await supabase
+    .from("documents_stages")
+    .select("id, title, status, stage_type, due_date, updated_at")
+    .limit(30);
+  
+  const phases: PhaseData[] = (stagesData || []).map((s: any) => ({
+    id: s.id,
+    title: s.title,
+    status: s.status,
+    stage_type: s.stage_type,
+    due_date: s.due_date,
+    updated_at: s.updated_at,
+  }));
+
+  // Fetch tasks
+  const { data: tasksData } = await supabase
+    .from("tasks")
+    .select("id, task_name, status, priority, due_date_text, updated_at")
+    .limit(50);
+  
+  const tasks: TaskData[] = (tasksData || []).slice(0, 20).map((t: any) => ({
+    id: t.id,
+    task_name: t.task_name,
+    status: t.status,
+    priority: t.priority,
+    due_date: t.due_date_text,
+    updated_at: t.updated_at,
+  }));
+
+  // Fetch documents (evidence)
+  const { data: docsData } = await supabase
     .from("documents")
-    .select("id, title, category, is_released, stage, due_date")
+    .select("id, title, category, is_released, updated_at")
     .eq("tenant_id", tenantId)
     .limit(50);
   
-  const docs: DocumentSummary[] = documents || [];
-  docs.forEach(d => records.push({ table: "documents", id: d.id, label: d.title }));
+  const evidence: EvidenceData[] = (docsData || []).map((d: any) => ({
+    id: d.id,
+    title: d.title,
+    status: d.category || "unknown",
+    is_released: d.is_released,
+    updated_at: d.updated_at,
+  }));
 
-  // Fetch phases (stages) - get from stage_ids on tenant or document stages
-  let phases: PhaseSummary[] = [];
-  const stageIds = tenant?.stage_ids || [];
-  if (stageIds.length > 0) {
-    const { data: stgs } = await supabase
-      .from("documents_stages")
-      .select("id, title, status, stage_type")
-      .in("id", stageIds)
-      .limit(30);
-    
-    phases = stgs || [];
-    phases.forEach(p => records.push({ table: "documents_stages", id: p.id, label: p.title }));
-  }
-
-  // Fetch tasks - using time_entries to get task context for this tenant
-  let tasks: TaskSummary[] = [];
-  const { data: taskData } = await supabase
-    .from("tasks")
-    .select("id, task_name, status, due_date_text")
-    .limit(50);
+  // Fetch risks/opportunities
+  const { data: risksData } = await supabase
+    .from("eos_issues")
+    .select("id, item_type, title, status, impact, category")
+    .eq("tenant_id", tenantId)
+    .is("deleted_at", null)
+    .limit(20);
   
-  // Note: tasks table doesn't have tenant_id directly, we'll need to filter differently
-  // For v1, we'll just sample tasks that are relevant via time_entries
-  tasks = taskData || [];
-  tasks.slice(0, 20).forEach(t => records.push({ table: "tasks", id: t.id, label: t.task_name }));
-
-  // Fetch time entries summary for tenant
-  const { data: timeData } = await supabase
-    .from("time_entries")
-    .select("duration_minutes, is_billable")
-    .eq("tenant_id", tenantId);
-
-  let timeEntries: TimeEntrySummary = { total_hours: 0, billable_hours: 0, entry_count: 0 };
-  if (timeData && timeData.length > 0) {
-    const totalMinutes = timeData.reduce((sum: number, t: any) => sum + (t.duration_minutes || 0), 0);
-    const billableMinutes = timeData
-      .filter((t: any) => t.is_billable)
-      .reduce((sum: number, t: any) => sum + (t.duration_minutes || 0), 0);
-    
-    timeEntries = {
-      total_hours: Math.round(totalMinutes / 60 * 10) / 10,
-      billable_hours: Math.round(billableMinutes / 60 * 10) / 10,
-      entry_count: timeData.length,
-    };
-    records.push({ table: "time_entries", id: tenantId, label: `${timeEntries.entry_count} entries` });
-  }
+  const risks: RiskData[] = (risksData || []).map((r: any) => ({
+    id: r.id,
+    item_type: r.item_type,
+    title: r.title,
+    status: r.status,
+    impact: r.impact,
+    category: r.category,
+  }));
 
   return {
-    tenant: tenant as TenantSummary | null,
+    client,
     packages,
-    documents: docs,
     phases,
-    tasks: tasks.slice(0, 20),
-    timeEntries,
-    records,
+    tasks,
+    evidence,
+    risks,
   };
 }
 
 /**
- * Generate a compliance answer based on retrieved data and vector results
+ * Generate answer using AI Brain reasoning
  */
-function generateComplianceAnswer(
+function generateBrainPoweredAnswer(
   question: string,
-  data: RetrievalResult,
-  context: RequestContext,
-  vectorResults: VectorResult[] = []
+  brainResult: {
+    context: AIContext;
+    factSet: FactSet;
+    reasoning: ReasoningOutput;
+    confidence: ConfidenceResult;
+    contextPrompt: string;
+    factsPrompt: string;
+    reasoningPrompt: string;
+  },
+  vectorResults: VectorResult[],
+  context: RequestContext
 ): ComplianceResponse {
   const gaps: string[] = [];
   const bullets: string[] = [];
-  let confidence: "high" | "medium" | "low" = "medium";
   const sourceTypesUsed = new Set<string>();
-
+  
   const q = question.toLowerCase();
+  const { factSet, reasoning, confidence } = brainResult;
 
-  // Check for empty data
-  if (!data.tenant) {
-    return {
-      answer_markdown: "**No accessible data found for this request.**\n\nThe specified tenant could not be found or you may not have access.\n\n*Suggestion: Verify the tenant ID and your access permissions.*",
-      records_accessed: [],
-      confidence: "low",
-      gaps: ["Tenant data not accessible"],
-      chunks_used: 0,
-      source_types_used: [],
-    };
+  // Build governance info
+  const governance = buildGovernanceInfo(confidence, reasoning.escalation_triggers);
+
+  // Add caution banner if needed
+  if (governance.caution_banners.length > 0) {
+    bullets.push(...governance.caution_banners.map(b => `**${b}**`));
+    bullets.push("");
   }
 
-  // If we have vector results, incorporate them first
+  // Tenant context
+  if (brainResult.context.tenant) {
+    const t = brainResult.context.tenant;
+    bullets.push(`**Tenant:** ${t.name}`);
+    bullets.push(`**Status:** ${t.status}`);
+    if (t.rto_id) bullets.push(`**RTO ID:** ${t.rto_id}`);
+    if (t.risk_level) bullets.push(`**Risk Level:** ${t.risk_level}`);
+    bullets.push("");
+  }
+
+  // Include vector results if available
   if (vectorResults.length > 0) {
-    bullets.push("**Relevant Context (from indexed data):**\n");
-    
-    // Group by source type for better organization
+    bullets.push("**Relevant Context (indexed):**");
     const bySource = new Map<string, VectorResult[]>();
     for (const vr of vectorResults.slice(0, 5)) {
       const existing = bySource.get(vr.source_type) || [];
@@ -444,156 +479,137 @@ function generateComplianceAnswer(
 
     for (const [sourceType, results] of bySource) {
       const sourceLabel = sourceType.replace(/_/g, " ").replace(/\b\w/g, l => l.toUpperCase());
-      bullets.push(`**${sourceLabel}:**`);
+      bullets.push(`*${sourceLabel}:*`);
       for (const r of results) {
-        bullets.push(`- ${r.record_label}: ${r.chunk_text.slice(0, 150)}${r.chunk_text.length > 150 ? "..." : ""}`);
-        // Add vector result to records accessed
-        data.records.push({
-          table: sourceType,
-          id: r.record_id,
-          label: r.record_label,
-        });
+        bullets.push(`- ${r.record_label}: ${r.chunk_text.slice(0, 100)}...`);
       }
     }
     bullets.push("");
-    confidence = "high"; // Vector matches increase confidence
   }
 
-  // Tenant summary
-  bullets.push(`**Tenant:** ${data.tenant.name}`);
-  bullets.push(`**Status:** ${data.tenant.status || "Unknown"}`);
-  if (data.tenant.rto_id) bullets.push(`**RTO ID:** ${data.tenant.rto_id}`);
-  if (data.tenant.risk_level) bullets.push(`**Risk Level:** ${data.tenant.risk_level}`);
-
-  // Handle specific question patterns
-  if (q.includes("package") || q.includes("subscription")) {
-    if (data.packages.length === 0) {
-      bullets.push("\n**Packages:** No packages found");
-      gaps.push("No package data available");
-    } else {
-      bullets.push(`\n**Packages (${data.packages.length}):**`);
-      data.packages.forEach(p => {
-        bullets.push(`- ${p.name}: ${p.status}${p.total_hours ? ` (${p.total_hours}h allocated)` : ""}`);
-      });
-    }
-    confidence = data.packages.length > 0 ? "high" : "low";
-  }
-
-  if (q.includes("document") || q.includes("evidence") || q.includes("file")) {
-    if (data.documents.length === 0) {
-      bullets.push("\n**Documents:** No documents found");
-      gaps.push("No document data available");
-    } else {
-      const released = data.documents.filter(d => d.is_released).length;
-      const draft = data.documents.filter(d => !d.is_released).length;
-      const overdue = data.documents.filter(d => d.due_date && new Date(d.due_date) < new Date()).length;
-      
-      bullets.push(`\n**Documents Summary:**`);
-      bullets.push(`- Total: ${data.documents.length}`);
-      bullets.push(`- Released: ${released}`);
-      bullets.push(`- Draft: ${draft}`);
-      if (overdue > 0) bullets.push(`- ⚠️ Overdue: ${overdue}`);
-    }
-    confidence = data.documents.length > 0 ? "high" : "low";
-  }
-
-  if (q.includes("phase") || q.includes("stage") || q.includes("progress")) {
-    if (data.phases.length === 0) {
-      bullets.push("\n**Phases:** No phases found");
-      gaps.push("No phase/stage data available");
-    } else {
-      bullets.push(`\n**Phases (${data.phases.length}):**`);
-      data.phases.slice(0, 10).forEach(p => {
-        bullets.push(`- ${p.title}: ${p.status}`);
-      });
-      if (data.phases.length > 10) {
-        bullets.push(`- ... and ${data.phases.length - 10} more`);
+  // Tier-based responses
+  if (q.includes("status") || q.includes("overview") || q.includes("summary")) {
+    bullets.push("**Current Status:**");
+    const statusTier = reasoning.tiers.find(t => t.tier === "status");
+    if (statusTier) {
+      for (const finding of statusTier.findings.slice(0, 10)) {
+        bullets.push(`- ${finding.summary}`);
       }
     }
+    bullets.push("");
   }
 
-  if (q.includes("time") || q.includes("hour") || q.includes("consult") || q.includes("billable")) {
-    bullets.push(`\n**Time Tracking:**`);
-    bullets.push(`- Total logged: ${data.timeEntries.total_hours}h`);
-    bullets.push(`- Billable: ${data.timeEntries.billable_hours}h`);
-    bullets.push(`- Entries: ${data.timeEntries.entry_count}`);
-    
-    // Check for package hour limits
-    const totalPackageHours = data.packages.reduce((sum, p) => sum + (p.total_hours || 0), 0);
-    if (totalPackageHours > 0) {
-      const utilization = Math.round((data.timeEntries.billable_hours / totalPackageHours) * 100);
-      bullets.push(`- Package allocation: ${totalPackageHours}h`);
-      bullets.push(`- Utilization: ${utilization}%`);
-      
-      if (data.timeEntries.billable_hours > totalPackageHours) {
-        bullets.push(`\n⚠️ **Blocker:** Consult hours (${data.timeEntries.billable_hours}h) exceed package allowance (${totalPackageHours}h)`);
+  if (q.includes("blocker") || q.includes("block") || q.includes("stuck")) {
+    bullets.push("**Blockers:**");
+    const blockerTier = reasoning.tiers.find(t => t.tier === "blockers");
+    if (blockerTier && blockerTier.findings.length > 0) {
+      for (const finding of blockerTier.findings) {
+        const icon = finding.severity === "critical" ? "🔴" : "⚠️";
+        bullets.push(`${icon} ${finding.summary}`);
+        if (finding.details) bullets.push(`  └─ ${finding.details}`);
       }
+    } else {
+      bullets.push("✅ No active blockers detected");
     }
-    confidence = "high";
+    bullets.push("");
   }
 
-  if (q.includes("blocker") || q.includes("issue") || q.includes("risk") || q.includes("problem")) {
-    bullets.push(`\n**Potential Blockers:**`);
-    let blockerCount = 0;
-
-    // Check for overdue documents
-    const overdueDocsCount = data.documents.filter(d => d.due_date && new Date(d.due_date) < new Date()).length;
-    if (overdueDocsCount > 0) {
-      bullets.push(`- ⚠️ ${overdueDocsCount} overdue document(s)`);
-      blockerCount++;
+  if (q.includes("risk") || q.includes("audit") || q.includes("compliance")) {
+    bullets.push("**Risk Assessment:**");
+    const riskTier = reasoning.tiers.find(t => t.tier === "risk");
+    if (riskTier && riskTier.findings.length > 0) {
+      for (const finding of riskTier.findings) {
+        const icon = finding.severity === "critical" ? "🔴" : "⚠️";
+        bullets.push(`${icon} ${finding.summary}`);
+      }
+    } else {
+      bullets.push("✅ No elevated risk indicators");
     }
-
-    // Check for missing documents in phases
-    if (data.phases.length > 0 && data.documents.length === 0) {
-      bullets.push(`- ⚠️ Phases exist but no documents uploaded`);
-      blockerCount++;
-    }
-
-    // Check hours utilization
-    const totalPackageHours = data.packages.reduce((sum, p) => sum + (p.total_hours || 0), 0);
-    if (totalPackageHours > 0 && data.timeEntries.billable_hours > totalPackageHours) {
-      bullets.push(`- ⚠️ Hours exceeded package allowance`);
-      blockerCount++;
-    }
-
-    // Risk level check
-    if (data.tenant.risk_level === "high" || data.tenant.risk_level === "critical") {
-      bullets.push(`- ⚠️ Tenant flagged as ${data.tenant.risk_level} risk`);
-      blockerCount++;
-    }
-
-    if (blockerCount === 0) {
-      bullets.push(`- ✓ No major blockers identified`);
-    }
-
-    confidence = "medium";
+    bullets.push("");
   }
 
-  // Generic summary if no specific pattern matched and no vector results
-  if (bullets.length <= 4 && vectorResults.length === 0) {
-    bullets.push(`\n**Data Overview:**`);
-    bullets.push(`- Packages: ${data.packages.length}`);
-    bullets.push(`- Documents: ${data.documents.length}`);
-    bullets.push(`- Phases: ${data.phases.length}`);
-    bullets.push(`- Time entries: ${data.timeEntries.entry_count}`);
-    gaps.push("Question may need more specific keywords to provide detailed analysis");
+  if (q.includes("action") || q.includes("next") || q.includes("do")) {
+    bullets.push("**Suggested Next Steps:**");
+    const actionTier = reasoning.tiers.find(t => t.tier === "actions");
+    if (actionTier && actionTier.findings.length > 0) {
+      for (const finding of actionTier.findings) {
+        bullets.push(`→ ${finding.summary}`);
+      }
+    } else {
+      bullets.push("No immediate actions required");
+    }
+    bullets.push("");
   }
 
-  // Note about vector search if no results
+  // Add escalations if present
+  if (reasoning.escalation_triggers.length > 0) {
+    bullets.push("**⚠️ Escalation Alerts:**");
+    for (const trigger of reasoning.escalation_triggers) {
+      const icon = trigger.severity === "critical" ? "🚨" : "⚠️";
+      bullets.push(`${icon} ${trigger.message}`);
+      bullets.push(`  Action: ${trigger.suggested_action}`);
+    }
+    bullets.push("");
+  }
+
+  // Generic summary if no specific pattern matched
+  if (bullets.length <= 6 && vectorResults.length === 0) {
+    bullets.push("**Summary:**");
+    bullets.push(reasoning.final_summary);
+    bullets.push("");
+  }
+
+  // Confidence and review reminders
+  bullets.push(`*Confidence: ${confidence.level.toUpperCase()}*`);
+  if (governance.review_reminders.length > 0) {
+    for (const reminder of governance.review_reminders) {
+      bullets.push(`📋 ${reminder}`);
+    }
+  }
+
+  // Gaps
+  if (confidence.level !== "high") {
+    gaps.push(confidence.explanation);
+  }
   if (vectorResults.length === 0) {
-    gaps.push("No indexed vector data found - using live database queries only");
+    gaps.push("No indexed vector data - using live database only");
   }
 
-  // Build final answer
-  const answer = bullets.join("\n");
+  // Build source citations
+  const citations = buildSourceCitations(factSet);
+  const records: RecordAccessed[] = citations.map(c => ({
+    table: c.table,
+    id: c.id,
+    label: c.label,
+  }));
+
+  // Add vector results to records
+  for (const vr of vectorResults) {
+    records.push({
+      table: vr.source_type,
+      id: vr.record_id,
+      label: vr.record_label,
+    });
+  }
 
   return {
-    answer_markdown: answer,
-    records_accessed: data.records,
-    confidence,
+    answer_markdown: bullets.join("\n"),
+    records_accessed: records,
+    confidence: confidence.level,
     gaps,
     chunks_used: vectorResults.length,
     source_types_used: Array.from(sourceTypesUsed),
+    reasoning_tiers: reasoning.tiers.map(t => ({
+      tier: t.tier,
+      finding_count: t.findings.length,
+      critical_count: t.findings.filter(f => f.severity === "critical").length,
+    })),
+    escalation_count: reasoning.escalation_triggers.length,
+    governance: {
+      read_only: true,
+      human_action_required: governance.human_action_required,
+      caution_banners: governance.caution_banners,
+    },
   };
 }
 
@@ -607,7 +623,13 @@ async function logInteraction(
   profile: UserProfile,
   question: string,
   response: ComplianceResponse,
-  context: RequestContext
+  context: RequestContext,
+  brainResult?: {
+    context: AIContext;
+    factSet: FactSet;
+    reasoning: ReasoningOutput;
+    confidence: ConfidenceResult;
+  }
 ): Promise<void> {
   try {
     await supabase.from("ai_interaction_logs").insert({
@@ -625,6 +647,12 @@ async function logInteraction(
         user_role: profile.unicorn_role,
         confidence: response.confidence,
         gaps_count: response.gaps.length,
+        // V2: AI Brain tracking
+        ai_brain_version: "2.0",
+        reasoning_tiers: response.reasoning_tiers,
+        escalation_count: response.escalation_count,
+        fact_count: brainResult?.factSet.fact_count || 0,
+        categories_analyzed: brainResult?.factSet.categories || [],
       },
       chunks_used: response.chunks_used || 0,
       source_types_used: response.source_types_used || [],
