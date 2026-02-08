@@ -9,15 +9,15 @@ import { useAskViv } from "@/hooks/useAskViv";
 import { useRBAC } from "@/hooks/useRBAC";
 
 /**
- * AskVivButton - Top menu bar entry point for Ask Viv Knowledge Assistant
- * Only visible to SuperAdmins
+ * AskVivButton - Top menu bar entry point for Ask Viv
+ * Visible to SuperAdmins and Vivacity Team members
  */
 export function AskVivButton() {
   const { isOpen, openPanel } = useAskViv();
-  const { isSuperAdmin } = useRBAC();
+  const { isSuperAdmin, isVivacityTeam } = useRBAC();
 
-  // Only render for SuperAdmins
-  if (!isSuperAdmin) {
+  // Only render for Vivacity Team (includes SuperAdmins)
+  if (!isSuperAdmin && !isVivacityTeam) {
     return null;
   }
 

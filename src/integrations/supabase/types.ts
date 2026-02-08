@@ -569,6 +569,8 @@ export type Database = {
           id: string
           mode: string
           prompt_text: string
+          records_accessed: Json
+          request_context: Json
           response_text: string
           tenant_id: number | null
           user_id: string
@@ -578,6 +580,8 @@ export type Database = {
           id?: string
           mode: string
           prompt_text: string
+          records_accessed?: Json
+          request_context?: Json
           response_text: string
           tenant_id?: number | null
           user_id: string
@@ -587,6 +591,8 @@ export type Database = {
           id?: string
           mode?: string
           prompt_text?: string
+          records_accessed?: Json
+          request_context?: Json
           response_text?: string
           tenant_id?: number | null
           user_id?: string
