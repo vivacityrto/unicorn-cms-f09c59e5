@@ -94,13 +94,29 @@
        );
      }
  
-     const isSuperAdmin = userData.unicorn_role === 'Super Admin' || userData.global_role === 'SuperAdmin';
-     if (!isSuperAdmin) {
-       return new Response(
-         JSON.stringify({ error: 'Not authorised. SuperAdmin access required.' }),
-         { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-       );
-     }
+      // Check for Vivacity internal access (Super Admin, Team Leader, Team Member)
+      const isVivacityInternal = ['Super Admin', 'Team Leader', 'Team Member'].includes(userData.unicorn_role || '') 
+        || userData.global_role === 'SuperAdmin';
+      
+      if (!isVivacityInternal) {
+        // Log denied access
+        const serviceClient = createClient(supabaseUrl, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
+        await serviceClient.from('audit_ask_viv_access_denied').insert({
+          user_id: userId,
+          user_role: userData.unicorn_role || userData.global_role || 'unknown',
+          endpoint: 'assistant-answer',
+          reason: 'not_vivacity_internal',
+        });
+        
+        return new Response(
+          JSON.stringify({ 
+            error: 'FORBIDDEN',
+            code: 'ASK_VIV_ACCESS_DENIED',
+            message: 'Ask Viv is restricted to Vivacity Team members.' 
+          }),
+          { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
  
      // Parse request body
      const body = await req.json();

@@ -11,6 +11,7 @@
 import { createServiceClient } from "../_shared/supabase-client.ts";
 import { extractToken, verifyAuth, checkSuperAdmin, checkVivacityTeam } from "../_shared/auth-helpers.ts";
 import { jsonOk, jsonError } from "../_shared/response-helpers.ts";
+import { validateAskVivAccess, askVivAccessDeniedResponse } from "../_shared/ask-viv-access.ts";
 import {
   buildClientSummary,
   buildPhaseSummary,
@@ -57,6 +58,12 @@ Deno.serve(async (req) => {
     
     if (authError || !user || !profile) {
       return jsonError(401, "UNAUTHORIZED", authError || "Authentication failed");
+    }
+
+    // Validate Ask Viv access - Vivacity internal only
+    const accessCheck = await validateAskVivAccess(supabase, user.id, profile, "vector-index-update");
+    if (!accessCheck.allowed) {
+      return askVivAccessDeniedResponse(accessCheck.reason);
     }
 
     // Only SuperAdmins and Vivacity Team can update indexes

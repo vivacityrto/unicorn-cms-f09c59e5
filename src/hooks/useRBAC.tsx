@@ -4,7 +4,8 @@ import { useAuth } from './useAuth';
 export type Permission = 
   | 'administration:access'
   | 'advanced_features:access'
-  | 'eos:access'  // NEW: EOS access permission
+  | 'eos:access'  // EOS access permission
+  | 'ask_viv:access'  // Ask Viv access - Vivacity internal only
   | 'vto:edit'
   | 'eos_meetings:schedule'
   | 'eos_meetings:edit'
@@ -22,11 +23,12 @@ export type Permission =
 
 // Role-based permission mappings
 const ROLE_PERMISSIONS: Record<string, Permission[]> = {
-  // SuperAdmin has all permissions including administration and EOS
+  // SuperAdmin has all permissions including administration, EOS, and Ask Viv
   'SuperAdmin': [
     'administration:access',
     'advanced_features:access',
     'eos:access',
+    'ask_viv:access',
     'vto:edit',
     'eos_meetings:schedule',
     'eos_meetings:edit',
@@ -47,6 +49,7 @@ const ROLE_PERMISSIONS: Record<string, Permission[]> = {
     'administration:access',
     'advanced_features:access',
     'eos:access',
+    'ask_viv:access',
     'vto:edit',
     'eos_meetings:schedule',
     'eos_meetings:edit',
@@ -62,10 +65,11 @@ const ROLE_PERMISSIONS: Record<string, Permission[]> = {
     'risks:close_critical',
     'agenda_templates:manage',
   ],
-  // Team Leader - Vivacity staff, sees everything EXCEPT administration, HAS EOS access
+  // Team Leader - Vivacity staff, sees everything EXCEPT administration, HAS EOS and Ask Viv access
   'Team Leader': [
     'advanced_features:access',
     'eos:access',
+    'ask_viv:access',
     'vto:edit',
     'eos_meetings:schedule',
     'eos_meetings:edit',
@@ -79,10 +83,11 @@ const ROLE_PERMISSIONS: Record<string, Permission[]> = {
     'risks:create',
     'risks:escalate',
   ],
-  // Team Member - Vivacity staff, limited escalation abilities, HAS EOS access
+  // Team Member - Vivacity staff, limited escalation abilities, HAS EOS and Ask Viv access
   'Team Member': [
     'advanced_features:access',
     'eos:access',
+    'ask_viv:access',
     'vto:edit',
     'qc:edit',
     'qc:view_all',
@@ -91,17 +96,20 @@ const ROLE_PERMISSIONS: Record<string, Permission[]> = {
     'rocks:edit_own',
     'risks:create',
   ],
-  // Admin - Client tenant admin, NO EOS access (clients don't use EOS)
+  // Admin - Client tenant admin, NO EOS or Ask Viv access (clients don't use these)
   'Admin': [
     // NO eos:access - EOS is Vivacity-only
+    // NO ask_viv:access - Ask Viv is Vivacity-only
   ],
-  // User - Client tenant user, NO EOS access
+  // User - Client tenant user, NO EOS or Ask Viv access
   'User': [
     // NO eos:access - EOS is Vivacity-only
+    // NO ask_viv:access - Ask Viv is Vivacity-only
   ],
-  // General User - NO EOS access
+  // General User - NO EOS or Ask Viv access
   'General User': [
     // NO eos:access - EOS is Vivacity-only
+    // NO ask_viv:access - Ask Viv is Vivacity-only
   ],
 };
 
@@ -226,6 +234,14 @@ export const useRBAC = () => {
    */
   const canAccessEOS = (): boolean => {
     return hasPermission('eos:access');
+  };
+
+  /**
+   * Check if current user can access Ask Viv features
+   * Ask Viv is Vivacity-only - no client access under any circumstances
+   */
+  const canAccessAskViv = (): boolean => {
+    return hasPermission('ask_viv:access');
   };
 
   /**
@@ -355,6 +371,7 @@ export const useRBAC = () => {
     canAccessAdmin,
     canAccessAdvanced,
     canAccessEOS,
+    canAccessAskViv,
     canEditVTO,
     canScheduleMeetings,
     canEditMeetings,

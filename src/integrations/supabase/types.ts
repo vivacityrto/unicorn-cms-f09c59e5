@@ -1025,6 +1025,36 @@ export type Database = {
           },
         ]
       }
+      audit_ask_viv_access_denied: {
+        Row: {
+          created_at: string
+          endpoint: string
+          id: string
+          reason: string
+          request_context: Json | null
+          user_id: string
+          user_role: string | null
+        }
+        Insert: {
+          created_at?: string
+          endpoint: string
+          id?: string
+          reason?: string
+          request_context?: Json | null
+          user_id: string
+          user_role?: string | null
+        }
+        Update: {
+          created_at?: string
+          endpoint?: string
+          id?: string
+          reason?: string
+          request_context?: Json | null
+          user_id?: string
+          user_role?: string | null
+        }
+        Relationships: []
+      }
       audit_avatars: {
         Row: {
           created_at: string | null
@@ -20182,6 +20212,7 @@ export type Database = {
           head_office_address: string | null
           is_csc: boolean | null
           is_team: boolean | null
+          is_vivacity_internal: boolean
           job_title: string | null
           keap_url: string | null
           last_name: string
@@ -20262,6 +20293,7 @@ export type Database = {
           head_office_address?: string | null
           is_csc?: boolean | null
           is_team?: boolean | null
+          is_vivacity_internal?: boolean
           job_title?: string | null
           keap_url?: string | null
           last_name: string
@@ -20342,6 +20374,7 @@ export type Database = {
           head_office_address?: string | null
           is_csc?: boolean | null
           is_team?: boolean | null
+          is_vivacity_internal?: boolean
           job_title?: string | null
           keap_url?: string | null
           last_name?: string
@@ -22420,6 +22453,10 @@ export type Database = {
       }
       is_user_super_admin: { Args: { user_id: string }; Returns: boolean }
       is_vivacity: { Args: never; Returns: boolean }
+      is_vivacity_internal_safe: {
+        Args: { p_user_id: string }
+        Returns: boolean
+      }
       is_vivacity_member: { Args: { p_user_id: string }; Returns: boolean }
       is_vivacity_super_admin: { Args: never; Returns: boolean }
       is_vivacity_team:
