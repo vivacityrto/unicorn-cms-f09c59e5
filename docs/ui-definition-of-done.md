@@ -5,11 +5,13 @@ Every UI change must pass this checklist before merge. This ensures responsive l
 ## Quick Links
 
 - **QA Harness**: `/admin/qa/responsive` — Use this to test layouts at all breakpoints
+- **QA Smoke Test**: `/admin/qa/smoke` — Role-based screen testing
 - **Responsive Standards**: `docs/ui/responsive-standards.md`
 - **Modal/Drawer System**: `docs/ui/modal-drawer-system.md`
 - **Responsive Tables**: `docs/ui/responsive-tables.md`
 - **Form Layout Standards**: `docs/ui/form-layout-standards.md`
 - **Text Overflow Standards**: `docs/ui/text-overflow-standards.md`
+- **Print/PDF Standards**: `docs/ui/print-pdf-standards.md`
 
 ---
 
@@ -195,6 +197,35 @@ Before requesting review:
 - [ ] I have tested all modals/drawers on mobile width
 - [ ] I have tested with long/edge-case data
 - [ ] I have run the QA Harness checks
+- [ ] If printable/exportable: I have tested print preview
+
+---
+
+## 🖨️ Print/PDF Testing (If Applicable)
+
+If the screen supports print or PDF export:
+
+| Check | Description |
+|-------|-------------|
+| ☐ | Browser print preview shows clean content |
+| ☐ | No navigation, sidebar, or action bars visible |
+| ☐ | Tables print with repeated headers |
+| ☐ | No rows cut in half across pages |
+| ☐ | Status badges readable as text (not color-only) |
+| ☐ | Export includes tenant name and timestamp |
+| ☐ | Links show URLs where appropriate |
+
+**Required for:**
+- Reports and summaries
+- Meeting minutes
+- Audit logs
+- Compliance documents
+- Any screen with a "Print" or "Export" button
+
+**Components:**
+```tsx
+import { PrintHeader, PrintWrapper, PrintStatusBadge } from "@/components/ui/print";
+```
 
 ---
 
@@ -203,4 +234,5 @@ Before requesting review:
 - [Responsive Standards](./ui/responsive-standards.md)
 - [Modal & Drawer System](./ui/modal-drawer-system.md)
 - [Responsive Tables](./ui/responsive-tables.md)
+- [Print/PDF Standards](./ui/print-pdf-standards.md)
 - [CONTRIBUTING.md](../CONTRIBUTING.md)

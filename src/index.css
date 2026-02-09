@@ -392,3 +392,291 @@
   }
 }
 
+/* ============================================================
+   PRINT STYLES - Audit-Ready Export Formatting
+   ============================================================ */
+
+@media print {
+  /* Reset to clean print defaults */
+  *,
+  *::before,
+  *::after {
+    background: transparent !important;
+    color: #000 !important;
+    box-shadow: none !important;
+    text-shadow: none !important;
+  }
+
+  /* Page setup */
+  @page {
+    margin: 1.5cm 2cm;
+    size: A4 portrait;
+  }
+
+  /* Base typography for print */
+  html {
+    font-size: 11pt;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  body {
+    font-family: 'Georgia', 'Times New Roman', serif;
+    line-height: 1.5;
+    background: white !important;
+    color: black !important;
+    margin: 0;
+    padding: 0;
+  }
+
+  /* Hide non-essential UI elements */
+  [data-print="hide"],
+  nav,
+  aside,
+  header:not([data-print="show"]),
+  footer:not([data-print="show"]),
+  .sidebar,
+  .no-print,
+  [role="navigation"],
+  [role="banner"]:not([data-print="show"]),
+  [role="complementary"],
+  [aria-hidden="true"],
+  button:not([data-print="show"]),
+  .toast,
+  .sonner-toaster,
+  [data-sonner-toaster],
+  .fixed:not([data-print="show"]),
+  .sticky:not([data-print="show"]) {
+    display: none !important;
+  }
+
+  /* Hide modal overlays and backdrops */
+  [role="dialog"],
+  [data-state="open"][role="dialog"],
+  .modal-backdrop,
+  [data-radix-portal],
+  [data-overlay] {
+    display: none !important;
+  }
+
+  /* Show main content full width */
+  [data-print="content"],
+  main,
+  .print-content {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  /* Headings */
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Arial', 'Helvetica', sans-serif;
+    page-break-after: avoid;
+    break-after: avoid;
+    orphans: 3;
+    widows: 3;
+  }
+
+  h1 { font-size: 18pt; margin-bottom: 12pt; }
+  h2 { font-size: 14pt; margin-bottom: 10pt; }
+  h3 { font-size: 12pt; margin-bottom: 8pt; }
+
+  /* Paragraphs and text blocks */
+  p, li, dd {
+    orphans: 3;
+    widows: 3;
+    max-width: 100%;
+  }
+
+  /* Links - show URL for important links */
+  a[href^="http"]:after {
+    content: " (" attr(href) ")";
+    font-size: 9pt;
+    color: #666 !important;
+    word-break: break-all;
+  }
+
+  a[href^="#"]:after,
+  a[href^="javascript"]:after,
+  a[data-print="no-url"]:after {
+    content: none;
+  }
+
+  /* Images */
+  img {
+    max-width: 100% !important;
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+
+  /* ============================================================
+     TABLE PRINT STYLES
+     ============================================================ */
+
+  table {
+    width: 100% !important;
+    border-collapse: collapse;
+    font-size: 10pt;
+    page-break-inside: auto;
+  }
+
+  thead {
+    display: table-header-group; /* Repeat header on each page */
+  }
+
+  tbody {
+    display: table-row-group;
+  }
+
+  tr {
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+
+  th, td {
+    border: 1px solid #ccc !important;
+    padding: 6pt 8pt;
+    text-align: left;
+    vertical-align: top;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+  }
+
+  th {
+    background: #f5f5f5 !important;
+    font-weight: bold;
+    font-size: 10pt;
+  }
+
+  /* Remove sticky behavior in print */
+  thead th,
+  .sticky {
+    position: static !important;
+  }
+
+  /* ============================================================
+     CARDS AND CONTAINERS
+     ============================================================ */
+
+  .card,
+  [data-print="card"] {
+    border: 1px solid #ddd !important;
+    padding: 12pt;
+    margin-bottom: 12pt;
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+
+  /* ============================================================
+     BADGES AND STATUS INDICATORS
+     ============================================================ */
+
+  /* Convert color-only badges to text with border */
+  .badge,
+  [data-print="badge"] {
+    background: transparent !important;
+    border: 1px solid #666 !important;
+    color: #000 !important;
+    padding: 2pt 6pt;
+    font-size: 9pt;
+    border-radius: 3pt;
+  }
+
+  /* Status-specific text indicators */
+  [data-status="success"]::before { content: "✓ "; }
+  [data-status="warning"]::before { content: "⚠ "; }
+  [data-status="error"]::before { content: "✗ "; }
+  [data-status="info"]::before { content: "ℹ "; }
+
+  /* ============================================================
+     PRINT HEADER (Evidence Block)
+     ============================================================ */
+
+  .print-header {
+    display: block !important;
+    border-bottom: 2pt solid #000;
+    padding-bottom: 12pt;
+    margin-bottom: 16pt;
+    page-break-after: avoid;
+  }
+
+  .print-header-title {
+    font-size: 16pt;
+    font-weight: bold;
+    margin-bottom: 8pt;
+  }
+
+  .print-header-meta {
+    font-size: 9pt;
+    color: #444 !important;
+  }
+
+  .print-header-meta span {
+    display: inline-block;
+    margin-right: 16pt;
+  }
+
+  /* ============================================================
+     PAGE BREAK CONTROLS
+     ============================================================ */
+
+  .page-break-before {
+    page-break-before: always;
+    break-before: page;
+  }
+
+  .page-break-after {
+    page-break-after: always;
+    break-after: page;
+  }
+
+  .no-page-break {
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+
+  /* ============================================================
+     FORM PRINT STYLES
+     ============================================================ */
+
+  input, select, textarea {
+    border: 1px solid #ccc !important;
+    padding: 4pt;
+    background: white !important;
+  }
+
+  /* Show checkbox/radio state as text */
+  input[type="checkbox"]:checked::after { content: " [✓]"; }
+  input[type="checkbox"]:not(:checked)::after { content: " [ ]"; }
+  input[type="radio"]:checked::after { content: " (●)"; }
+  input[type="radio"]:not(:checked)::after { content: " (○)"; }
+
+  /* ============================================================
+     UTILITY CLASSES FOR PRINT
+     ============================================================ */
+
+  .print-only {
+    display: block !important;
+  }
+
+  .screen-only,
+  .no-print {
+    display: none !important;
+  }
+
+  /* Force background colors for specific elements */
+  .print-bg-gray {
+    background: #f5f5f5 !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+}
+
+/* Hide print-only elements on screen */
+@media screen {
+  .print-only {
+    display: none !important;
+  }
+}
+
