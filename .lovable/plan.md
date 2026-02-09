@@ -1,130 +1,160 @@
 
 
-## Client Calendar UI, Notification Centre, and View-as-Client Guards
+## Notification Generation Rules and Scheduled Jobs
 
-### Summary
+### Overview
 
-This plan adds three new client-facing routes and updates the client sidebar and View-as-Client preview page. No legacy tables are modified. All data comes from existing views and tables.
+Create a single edge function (`generate-notifications`) that scans tasks, meetings, and obligation calendar entries, then inserts deduplicated rows into `user_notifications`. Schedule it via `pg_cron` + `pg_net`.
 
 ---
 
-### Part A: Client Calendar Page (`/client/calendar`)
+### Database Changes
 
-**New files:**
+**1. Add dedupe_key column to user_notifications**
+
+```sql
+ALTER TABLE public.user_notifications
+ADD COLUMN IF NOT EXISTS dedupe_key text;
+
+CREATE UNIQUE INDEX IF NOT EXISTS user_notifications_dedupe_key_uq
+ON public.user_notifications (dedupe_key);
+```
+
+This prevents duplicate notifications when the function runs multiple times. The unique index means an `INSERT ... ON CONFLICT (dedupe_key) DO NOTHING` pattern works cleanly.
+
+**2. Enable pg_cron and pg_net extensions**
+
+```sql
+CREATE EXTENSION IF NOT EXISTS pg_cron;
+CREATE EXTENSION IF NOT EXISTS pg_net;
+```
+
+Required for scheduled HTTP calls to edge functions.
+
+**3. Create two cron schedules**
+
+- **Hourly** (meetings): `0 * * * *` -- calls the edge function with `{ "scope": "meetings" }`
+- **Daily** (tasks + obligations): `5 0 * * *` (00:05 UTC) -- calls with `{ "scope": "tasks_obligations" }`
+
+Both use `net.http_post` to invoke the edge function with the service role key.
+
+**4. Add performance index**
+
+```sql
+CREATE INDEX IF NOT EXISTS idx_tasks_tenants_due_date
+ON public.tasks_tenants (due_date)
+WHERE due_date IS NOT NULL AND (completed IS NULL OR completed = false);
+```
+
+---
+
+### Edge Function: `generate-notifications`
+
+**File:** `supabase/functions/generate-notifications/index.ts`
+
+**Config:** Add `[functions.generate-notifications] verify_jwt = false` to `supabase/config.toml`
+
+**Logic by scope:**
+
+#### Tasks (scope = "tasks_obligations")
+
+Query `tasks_tenants` where `due_date IS NOT NULL` and not completed, matching these windows:
+- `due_date = current_date + 7` -- window: `7d`
+- `due_date = current_date + 1` -- window: `1d`  
+- `due_date = current_date` -- window: `today`
+- `due_date BETWEEN current_date - 3 AND current_date - 1` -- window: `overdue_N`
+
+Recipient: `created_by` (no `assigned_to` column exists).
+
+Dedupe key: `task_due:<task_id>:<window>`
+
+Notification fields:
+- `type`: `task_due`
+- `title`: e.g. "Task due in 7 days: <task_name>"
+- `message`: status and due date info
+- `link`: `/client/tasks?task_id=<id>`
+
+#### Meetings (scope = "meetings")
+
+Query `meetings` where `starts_at` falls within:
+- 24h window: `BETWEEN now() + interval '23h45m' AND now() + interval '24h15m'`
+- 1h window: `BETWEEN now() + interval '50m' AND now() + interval '70m'`
+
+Recipients: 
+- Meeting owner: `meetings.owner_user_uuid`
+- Attendees: `meeting_participants` joined to `users` on `lower(email) = lower(participant_email)` to get `user_uuid`
+
+Dedupe key: `meeting_upcoming:<meeting_id>:<window>:<user_uuid>`
+
+Notification fields:
+- `type`: `meeting_upcoming`
+- `title`: e.g. "Meeting in 1 hour: <title>"
+- `link`: `/client/calendar?tab=reminders&meeting_id=<id>`
+
+#### Obligations (scope = "tasks_obligations")
+
+Query `calendar_entries` where:
+- `title ILIKE '[OBLIGATION]%' OR description ILIKE '%type=obligation%'`
+- `entry_date` matches: +30d, +7d, +1d, today, or -1d (overdue)
+
+Recipient: `created_by`
+
+Dedupe key: `obligation_due:<entry_id>:<window>`
+
+Notification fields:
+- `type`: `obligation_due`
+- `title`: e.g. "Obligation due in 7 days: <title>"
+- `link`: `/client/calendar?tab=reminders&reminder_id=<id>`
+
+#### Insert pattern
+
+All inserts use service role client with `ON CONFLICT (dedupe_key) DO NOTHING` via raw `.rpc()` call or upsert:
+
+```typescript
+await supabase
+  .from('user_notifications')
+  .upsert(rows, { onConflict: 'dedupe_key', ignoreDuplicates: true });
+```
+
+#### Response
+
+Returns JSON summary: `{ tasks_created, meetings_created, obligations_created, duplicates_skipped }`.
+
+---
+
+### Overdue Notification Cap
+
+For tasks and obligations, the overdue window generates at most 3 notifications (overdue_1, overdue_2, overdue_3) by checking `current_date - due_date` and capping at 3. The dedupe key includes the day offset, so each overdue day is a separate notification.
+
+---
+
+### Files Created
 
 | File | Purpose |
 |---|---|
-| `src/pages/ClientCalendar.tsx` | Main page with two tabs: Events and My Reminders |
-| `src/pages/ClientCalendarWrapper.tsx` | Wraps in DashboardLayout |
-| `src/components/client/ClientRemindersCalendar.tsx` | Month/Week/Agenda calendar rendering reminders data |
-| `src/components/client/ReminderDetailDrawer.tsx` | Sheet/drawer showing item details on click |
-| `src/hooks/useClientReminders.tsx` | Hook querying `my_client_reminders` or `tenant_client_reminders` based on role |
+| `supabase/functions/generate-notifications/index.ts` | Edge function with all generation logic |
+| Migration SQL | dedupe_key column, extensions, cron jobs, index |
 
-**Events tab:** Reuses the existing AddEvent embed from `Calendar.tsx` (same script loading and `addeventstc` links). Extracted into a shared `AddEventEmbed` component.
-
-**My Reminders tab:**
-- Uses `useClientReminders` hook which checks the user's role via `useRBAC`:
-  - ClientUser (General User) queries `my_client_reminders`
-  - ClientAdmin (Admin) queries `tenant_client_reminders`
-- Default view: Month grid. Toggle buttons for Month / Week / Agenda.
-- Items rendered with colour-coded badges by `item_type` (task, meeting, reminder).
-- Clicking an item opens `ReminderDetailDrawer` showing title, datetime, type badge, and context fields from `meta` (location, meeting_url, status, description).
-- Deep link actions: meeting_url opens in new tab; task links to task route if available.
-
-**Route registration:** Add `/client/calendar` to `App.tsx` with lazy import and `ProtectedRoute`.
-
----
-
-### Part B: Notification Centre (`/client/notifications`)
-
-**New files:**
-
-| File | Purpose |
-|---|---|
-| `src/pages/ClientNotifications.tsx` | Full notification list page with grouping and filters |
-| `src/pages/ClientNotificationsWrapper.tsx` | Wraps in DashboardLayout |
-| `src/hooks/useClientNotifications.tsx` | Hook querying `user_notifications` table scoped to `auth.uid()` |
-
-**Data source:** `user_notifications` table (columns: id, user_id, tenant_id, type, title, message, link, is_read, created_by, created_at, updated_at).
-
-**UI:**
-- Grouped by: Today, This Week, Older (using `date-fns` comparisons on `created_at`).
-- Filter tabs: All, Events, Tasks, Meetings, Obligations (filtering on `type` column).
-- Unread indicator: highlight row + "New" badge.
-- Actions: "Mark as read" per item, "Mark all as read" button.
-- Clicking a notification with a `link` value navigates to that route.
-
-**Mark as read:** Updates `is_read` via Supabase client scoped to `user_id = auth.uid()` (RLS-safe).
-
-**Route registration:** Add `/client/notifications` to `App.tsx`.
-
----
-
-### Part C: View-as-Client Guards and Routing
-
-**Changes to existing files:**
+### Files Modified
 
 | File | Change |
 |---|---|
-| `src/pages/ClientPreview.tsx` | Add sidebar navigation for client portal routes (Home, Calendar, Notifications). Add routing within the preview to navigate between client pages while maintaining impersonation banner. |
-| `src/components/client/ImpersonationBanner.tsx` | No changes needed -- already functional. |
-| `src/components/client/ViewAsClientButton.tsx` | No changes needed -- already navigates to `/client-preview`. |
+| `supabase/config.toml` | Add `[functions.generate-notifications] verify_jwt = false` |
 
-**Guard logic:** The existing `ClientPreviewContext` already provides `isPreviewMode` and `previewTenant`. Client pages will check:
-1. If in preview mode, use `previewTenant.id` as tenant context.
-2. If not in preview mode, use the user's own `tenant_id` from profile.
-3. Internal-only UI (notes, risk, time logging) is hidden when `isPreviewMode` is true (already handled by existing view mode).
+### No Legacy Table Changes
 
----
+- No `ALTER TABLE` on tasks_tenants, meetings, calendar_entries, users, tenant_users
+- Only `ALTER TABLE user_notifications ADD COLUMN dedupe_key` (new table, not legacy)
+- Only `CREATE INDEX` on tasks_tenants (safe, no data change)
 
-### Part D: Sidebar Updates
+### Acceptance Criteria
 
-**File:** `src/components/DashboardLayout.tsx`
-
-Update the client-facing `baseMenuItems` / `userMenuItems` / `adminMenuItems` arrays:
-
-```text
-Client sidebar items (when isViewingAsClient or client role):
-- Home          -> /dashboard
-- Documents     -> /manage-documents
-- Calendar      -> /client/calendar
-- Notifications -> /client/notifications  (with unread badge)
-- Reports       -> /reports
-- Settings      -> /settings
-```
-
-Admin additions:
-- Users -> /team-settings (already present as "Manage Team")
-
-**Unread badge:** The sidebar Notifications item will use `useNotifications` (or a lightweight count query) to show unread count badge.
-
----
-
-### Part E: Shared Component Extraction
-
-Extract the AddEvent embed logic from `src/pages/Calendar.tsx` into a reusable `src/components/calendar/AddEventEmbed.tsx` so both the internal Event Calendar page and the Client Calendar Events tab can use the same component without duplicating script loading.
-
----
-
-### Files Created (new)
-
-1. `src/pages/ClientCalendar.tsx`
-2. `src/pages/ClientCalendarWrapper.tsx`
-3. `src/components/client/ClientRemindersCalendar.tsx`
-4. `src/components/client/ReminderDetailDrawer.tsx`
-5. `src/hooks/useClientReminders.tsx`
-6. `src/pages/ClientNotifications.tsx`
-7. `src/pages/ClientNotificationsWrapper.tsx`
-8. `src/hooks/useClientNotifications.tsx`
-9. `src/components/calendar/AddEventEmbed.tsx`
-
-### Files Modified (existing)
-
-1. `src/App.tsx` -- add 2 new lazy imports and routes
-2. `src/components/DashboardLayout.tsx` -- update client sidebar items with Calendar, Notifications, unread badge
-3. `src/pages/Calendar.tsx` -- refactor to use shared `AddEventEmbed`
-
-### No Database Changes
-
-All queries use existing views (`my_client_reminders`, `tenant_client_reminders`) and tables (`user_notifications`). No migrations needed.
+| Criteria | How |
+|---|---|
+| No duplicates on re-run | dedupe_key unique index + upsert with ignoreDuplicates |
+| ClientUser sees own notifications only | user_notifications RLS scopes by user_id = auth.uid() |
+| Meeting attendees notified | join meeting_participants to users on email |
+| Task recipients notified | uses created_by as recipient |
+| Obligation reminders for tagged entries | ILIKE filter on title/description |
+| Cron schedules running | pg_cron + pg_net call the function hourly and daily |
 
