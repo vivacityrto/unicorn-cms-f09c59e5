@@ -28,7 +28,7 @@ import {
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
-import { Users, UserCheck, UserX, Search, ArrowUpDown, Edit, Trash2, UserX as UserXIcon, Save, UserPlus, Building2, ChevronLeft, ChevronRight, Filter, UsersRound, UserMinus } from 'lucide-react';
+import { Users, UserCheck, UserX, Search, ArrowUpDown, Edit, Trash2, UserX as UserXIcon, Save, UserPlus, Building2, ChevronLeft, ChevronRight, Filter, UsersRound, UserMinus, MoreHorizontal } from 'lucide-react';
 import { Combobox } from '@/components/ui/combobox';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
@@ -45,6 +45,13 @@ import { InviteUserDialog } from '@/components/InviteUserDialog';
 import { AdminInviteUserDialog } from '@/components/AdminInviteUserDialog';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useAuth } from '@/hooks/useAuth';
+import { ResponsiveTableShell, ResponsiveListCard, ResponsiveListCards, columnVisibility } from '@/components/ui/responsive-table';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 
 interface User {
@@ -621,23 +628,23 @@ export default function ManageUsers() {
         </div>
       </div>
 
-      {/* Statistics Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      {/* Statistics Cards - Responsive grid */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
         <div 
           onClick={() => {
             setStatusFilter('all');
             setUserTypeFilter('all');
           }}
-          className="p-4 rounded-lg border bg-card hover:shadow-md transition-all cursor-pointer group animate-scale-in"
+          className="p-3 md:p-4 rounded-lg border bg-card hover:shadow-md transition-all cursor-pointer group animate-scale-in"
         >
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-sm font-medium text-muted-foreground">Total Users</span>
-            <div className="p-2 bg-blue-500/10 rounded-lg group-hover:bg-blue-500/20 transition-colors">
-              <Users className="h-5 w-5 text-blue-500" />
+          <div className="flex items-center justify-between mb-1 md:mb-2">
+            <span className="text-xs md:text-sm font-medium text-muted-foreground">Total Users</span>
+            <div className="p-1.5 md:p-2 bg-blue-500/10 rounded-lg group-hover:bg-blue-500/20 transition-colors">
+              <Users className="h-4 w-4 md:h-5 md:w-5 text-blue-500" />
             </div>
           </div>
-          <p className="text-2xl font-bold mb-1">{totalUsers}</p>
-          <p className="text-xs text-muted-foreground">Registered users</p>
+          <p className="text-xl md:text-2xl font-bold mb-0.5 md:mb-1">{totalUsers}</p>
+          <p className="text-[10px] md:text-xs text-muted-foreground">Registered users</p>
         </div>
 
         <div 
@@ -764,13 +771,48 @@ export default function ManageUsers() {
         </Popover>
       </div>
 
-      {/* Users Table */}
-      <div className="rounded-lg border-0 bg-card shadow-lg overflow-hidden">
+      {/* Mobile Card View */}
+      <div className="md:hidden">
+        <ResponsiveListCards isEmpty={filteredUsers.length === 0} emptyState="No users found">
+          {filteredUsers.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage).map((user) => (
+            <ResponsiveListCard
+              key={user.user_uuid}
+              title={`${user.first_name} ${user.last_name}`.trim() || 'Unnamed User'}
+              subtitle={user.email}
+              status={
+                user.disabled || user.archived ? (
+                  <Badge variant="outline" className="text-destructive border-destructive bg-destructive/10">
+                    Inactive
+                  </Badge>
+                ) : (
+                  <Badge variant="outline" className="text-green-600 border-green-600 bg-green-600/10">
+                    Active
+                  </Badge>
+                )
+              }
+              onClick={() => navigate(`/user-profile/${user.user_uuid}`)}
+              fields={[
+                { label: 'Role', value: <Badge variant={getRoleBadgeVariant(user.unicorn_role)}>{user.unicorn_role}</Badge>, priority: 'primary' },
+                { label: 'Type', value: <Badge variant={getUserTypeBadgeVariant(user.user_type)}>{user.user_type}</Badge>, priority: 'primary' },
+                { label: 'Tenant', value: user.tenant_name || '—', priority: 'secondary' },
+                { label: 'Mobile', value: user.mobile_phone || '—', priority: 'secondary' },
+              ]}
+              actions={[
+                { label: 'Edit', icon: <Edit className="h-4 w-4" />, onClick: () => handleEditUser(user) },
+                { label: 'Delete', icon: <Trash2 className="h-4 w-4" />, onClick: () => handleDeleteUser(user.user_uuid, `${user.first_name} ${user.last_name}`.trim()), variant: 'destructive' },
+              ]}
+            />
+          ))}
+        </ResponsiveListCards>
+      </div>
+
+      {/* Desktop Table View */}
+      <ResponsiveTableShell className="hidden md:block shadow-lg border-0">
         <Table>
           <TableHeader>
             <TableRow className="border-b-2 hover:bg-transparent">
-              <TableHead className="font-semibold bg-muted/30 text-foreground h-14 whitespace-nowrap border-r">Role</TableHead>
-              <TableHead className="font-semibold bg-muted/30 text-foreground h-14 whitespace-nowrap border-r">
+              <TableHead className="font-semibold bg-muted/30 text-foreground h-14 border-r">Role</TableHead>
+              <TableHead className="font-semibold bg-muted/30 text-foreground h-14 border-r">
                 <Button
                   variant="ghost"
                   size="sm"
@@ -781,7 +823,7 @@ export default function ManageUsers() {
                   <ArrowUpDown className="ml-2 h-4 w-4" />
                 </Button>
               </TableHead>
-              <TableHead className="font-semibold bg-muted/30 text-foreground h-14 whitespace-nowrap border-r">
+              <TableHead className={cn("font-semibold bg-muted/30 text-foreground h-14 border-r", columnVisibility.lg)}>
                 <Button
                   variant="ghost"
                   size="sm"
@@ -792,8 +834,8 @@ export default function ManageUsers() {
                   <ArrowUpDown className="ml-2 h-4 w-4" />
                 </Button>
               </TableHead>
-              <TableHead className="font-semibold bg-muted/30 text-foreground h-14 whitespace-nowrap border-r">Tenant</TableHead>
-              <TableHead className="font-semibold bg-muted/30 text-foreground h-14 whitespace-nowrap border-r">
+              <TableHead className={cn("font-semibold bg-muted/30 text-foreground h-14 border-r", columnVisibility.xl)}>Tenant</TableHead>
+              <TableHead className="font-semibold bg-muted/30 text-foreground h-14 border-r">
                 <Button
                   variant="ghost"
                   size="sm"
@@ -804,7 +846,7 @@ export default function ManageUsers() {
                   <ArrowUpDown className="ml-2 h-4 w-4" />
                 </Button>
               </TableHead>
-              <TableHead className="font-semibold bg-muted/30 text-foreground h-14 whitespace-nowrap border-r">
+              <TableHead className={cn("font-semibold bg-muted/30 text-foreground h-14 border-r", columnVisibility.xl)}>
                 <Button
                   variant="ghost"
                   size="sm"
@@ -815,8 +857,8 @@ export default function ManageUsers() {
                   <ArrowUpDown className="ml-2 h-4 w-4" />
                 </Button>
               </TableHead>
-              <TableHead className="font-semibold bg-muted/30 text-foreground h-14 whitespace-nowrap border-r">Status</TableHead>
-              <TableHead className="font-semibold bg-muted/30 text-foreground h-14 whitespace-nowrap text-right">Actions</TableHead>
+              <TableHead className="font-semibold bg-muted/30 text-foreground h-14 border-r">Status</TableHead>
+              <TableHead className="font-semibold bg-muted/30 text-foreground h-14 text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -860,10 +902,10 @@ export default function ManageUsers() {
                   <TableCell className="font-semibold text-foreground whitespace-nowrap py-6 border-r border-border/50">
                     {user.first_name || user.last_name ? `${user.first_name} ${user.last_name}`.trim() : ''}
                   </TableCell>
-                  <TableCell className="text-muted-foreground text-sm py-6 border-r border-border/50">
-                    {user.email}
+                  <TableCell className={cn("text-muted-foreground text-sm py-6 border-r border-border/50", columnVisibility.lg)}>
+                    <span className="break-all">{user.email}</span>
                   </TableCell>
-                  <TableCell className="text-muted-foreground text-sm py-6 border-r border-border/50">
+                  <TableCell className={cn("text-muted-foreground text-sm py-6 border-r border-border/50", columnVisibility.xl)}>
                     <div className="truncate max-w-[200px]">{user.tenant_name || '—'}</div>
                   </TableCell>
                   <TableCell className="py-6 border-r border-border/50">
@@ -871,7 +913,7 @@ export default function ManageUsers() {
                       {user.user_type}
                     </Badge>
                   </TableCell>
-                  <TableCell className="text-muted-foreground text-sm py-6 border-r border-border/50">
+                  <TableCell className={cn("text-muted-foreground text-sm py-6 border-r border-border/50", columnVisibility.xl)}>
                     {user.mobile_phone || '—'}
                   </TableCell>
                   <TableCell className="py-6 border-r border-border/50">
@@ -934,11 +976,11 @@ export default function ManageUsers() {
             )}
           </TableBody>
         </Table>
-      </div>
+      </ResponsiveTableShell>
 
-      {/* Empty State */}
+      {/* Empty State - Only shown when no data on both views */}
       {filteredUsers.length === 0 && (
-        <div className="rounded-lg border-0 bg-card shadow-lg p-8 text-center">
+        <div className="rounded-lg border-0 bg-card shadow-lg p-8 text-center hidden md:block">
           <p className="text-muted-foreground">No users found</p>
         </div>
       )}

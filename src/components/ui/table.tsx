@@ -2,17 +2,42 @@ import * as React from "react";
 
 import { cn } from "@/lib/utils";
 
+/**
+ * Table component with built-in responsive wrapper
+ * - Horizontal scroll is contained inside the table region
+ * - Never causes page-level horizontal scroll
+ */
 const Table = React.forwardRef<HTMLTableElement, React.HTMLAttributes<HTMLTableElement>>(
   ({ className, ...props }, ref) => (
-    <div className="relative w-full overflow-auto">
-      <table ref={ref} className={cn("w-full caption-bottom text-sm", className)} {...props} />
+    <div className="relative w-full overflow-x-auto overscroll-x-contain">
+      <table 
+        ref={ref} 
+        className={cn(
+          "w-full caption-bottom text-sm",
+          // Minimum width to prevent squishing
+          "min-w-[600px]",
+          className
+        )} 
+        {...props} 
+      />
     </div>
   ),
 );
 Table.displayName = "Table";
 
 const TableHeader = React.forwardRef<HTMLTableSectionElement, React.HTMLAttributes<HTMLTableSectionElement>>(
-  ({ className, ...props }, ref) => <thead ref={ref} className={cn("[&_tr]:border-b", className)} {...props} />,
+  ({ className, ...props }, ref) => (
+    <thead 
+      ref={ref} 
+      className={cn(
+        "[&_tr]:border-b",
+        // Sticky header support
+        "bg-background",
+        className
+      )} 
+      {...props} 
+    />
+  ),
 );
 TableHeader.displayName = "TableHeader";
 
@@ -46,7 +71,9 @@ const TableHead = React.forwardRef<HTMLTableCellElement, React.ThHTMLAttributes<
     <th
       ref={ref}
       className={cn(
-        "h-12 px-4 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0",
+        "h-12 px-3 md:px-4 text-left align-middle font-medium text-muted-foreground",
+        "whitespace-nowrap",
+        "[&:has([role=checkbox])]:pr-0",
         className,
       )}
       {...props}
@@ -57,7 +84,15 @@ TableHead.displayName = "TableHead";
 
 const TableCell = React.forwardRef<HTMLTableCellElement, React.TdHTMLAttributes<HTMLTableCellElement>>(
   ({ className, ...props }, ref) => (
-    <td ref={ref} className={cn("p-4 align-middle [&:has([role=checkbox])]:pr-0", className)} {...props} />
+    <td 
+      ref={ref} 
+      className={cn(
+        "p-3 md:p-4 align-middle",
+        "[&:has([role=checkbox])]:pr-0",
+        className
+      )} 
+      {...props} 
+    />
   ),
 );
 TableCell.displayName = "TableCell";
