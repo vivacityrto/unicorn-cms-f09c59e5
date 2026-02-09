@@ -1,160 +1,112 @@
 
 
-## Notification Generation Rules and Scheduled Jobs
+## Notification Preferences for Client Portal
 
-### Overview
+### Current State
 
-Create a single edge function (`generate-notifications`) that scans tasks, meetings, and obligation calendar entries, then inserts deduplicated rows into `user_notifications`. Schedule it via `pg_cron` + `pg_net`.
+The infrastructure is already in place:
+
+- **Table**: `user_notification_prefs` exists with RLS enabled and select/insert/update policies
+- **Columns**: `id`, `user_id`, `tenant_id`, `email_enabled`, `inapp_enabled`, `digest_enabled`, `quiet_hours` (jsonb), `event_settings` (jsonb), `created_at`, `updated_at`
+- **RPCs**: `get_user_notification_prefs` (lazy-creates row with defaults), `update_user_notification_prefs` (upserts all fields including `event_settings`)
+- **No database changes needed** -- we store category preferences inside the `event_settings` JSONB column
+
+### Preference Storage Convention
+
+Store per-category toggles in `event_settings`:
+
+```json
+{
+  "categories": {
+    "tasks": true,
+    "meetings": true,
+    "obligations": true,
+    "events": true
+  }
+}
+```
+
+Default: all `true`. The existing `update_user_notification_prefs` RPC already handles `event_settings` as a JSONB field.
 
 ---
 
-### Database Changes
+### Changes
 
-**1. Add dedupe_key column to user_notifications**
+#### 1. New Hook: `src/hooks/useNotificationPrefs.ts`
 
-```sql
-ALTER TABLE public.user_notifications
-ADD COLUMN IF NOT EXISTS dedupe_key text;
+- Calls `get_user_notification_prefs` RPC on mount (lazy-creates row)
+- Parses `event_settings.categories` with defaults (all true)
+- Exposes `prefs` object and `updateCategory(key, enabled)` function
+- `updateCategory` calls `update_user_notification_prefs` RPC, merging the updated category into existing `event_settings`
+- Uses React Query for caching and invalidation
 
-CREATE UNIQUE INDEX IF NOT EXISTS user_notifications_dedupe_key_uq
-ON public.user_notifications (dedupe_key);
-```
+#### 2. New Component: `src/components/settings/NotificationPrefsTab.tsx`
 
-This prevents duplicate notifications when the function runs multiple times. The unique index means an `INSERT ... ON CONFLICT (dedupe_key) DO NOTHING` pattern works cleanly.
+A settings tab with four toggle switches:
 
-**2. Enable pg_cron and pg_net extensions**
+| Toggle | Key | Helper text |
+|---|---|---|
+| Task reminders | `tasks` | "Receive reminders for upcoming and overdue tasks" |
+| Meeting reminders | `meetings` | "Receive reminders before meetings start" |
+| Obligation reminders | `obligations` | "Receive reminders for compliance obligations" |
+| Event notifications | `events` | "Receive notifications for calendar events" |
 
-```sql
-CREATE EXTENSION IF NOT EXISTS pg_cron;
-CREATE EXTENSION IF NOT EXISTS pg_net;
-```
+Each toggle saves inline (no Save button needed) via the hook. Shows toast on success/error.
 
-Required for scheduled HTTP calls to edge functions.
+#### 3. Modified: `src/pages/Settings.tsx`
 
-**3. Create two cron schedules**
+- Import `NotificationPrefsTab` and add a "Notifications" tab (Bell icon) to the tab list
+- Available to all users (not restricted to SuperAdmin/Vivacity)
+- Add `'notifications'` to `TAB_VALUES`
 
-- **Hourly** (meetings): `0 * * * *` -- calls the edge function with `{ "scope": "meetings" }`
-- **Daily** (tasks + obligations): `5 0 * * *` (00:05 UTC) -- calls with `{ "scope": "tasks_obligations" }`
+#### 4. Modified: `src/pages/ClientNotifications.tsx`
 
-Both use `net.http_post` to invoke the edge function with the service role key.
+- Import `useNotificationPrefs` hook
+- When filtering notifications, additionally check if the category is enabled in prefs
+- If a category is disabled, those notification items are hidden from the list (not deleted from DB)
+- Add a subtle info banner: "Some notification types are hidden based on your preferences"
 
-**4. Add performance index**
+#### 5. Modified: `supabase/functions/generate-notifications/index.ts`
 
-```sql
-CREATE INDEX IF NOT EXISTS idx_tasks_tenants_due_date
-ON public.tasks_tenants (due_date)
-WHERE due_date IS NOT NULL AND (completed IS NULL OR completed = false);
-```
-
----
-
-### Edge Function: `generate-notifications`
-
-**File:** `supabase/functions/generate-notifications/index.ts`
-
-**Config:** Add `[functions.generate-notifications] verify_jwt = false` to `supabase/config.toml`
-
-**Logic by scope:**
-
-#### Tasks (scope = "tasks_obligations")
-
-Query `tasks_tenants` where `due_date IS NOT NULL` and not completed, matching these windows:
-- `due_date = current_date + 7` -- window: `7d`
-- `due_date = current_date + 1` -- window: `1d`  
-- `due_date = current_date` -- window: `today`
-- `due_date BETWEEN current_date - 3 AND current_date - 1` -- window: `overdue_N`
-
-Recipient: `created_by` (no `assigned_to` column exists).
-
-Dedupe key: `task_due:<task_id>:<window>`
-
-Notification fields:
-- `type`: `task_due`
-- `title`: e.g. "Task due in 7 days: <task_name>"
-- `message`: status and due date info
-- `link`: `/client/tasks?task_id=<id>`
-
-#### Meetings (scope = "meetings")
-
-Query `meetings` where `starts_at` falls within:
-- 24h window: `BETWEEN now() + interval '23h45m' AND now() + interval '24h15m'`
-- 1h window: `BETWEEN now() + interval '50m' AND now() + interval '70m'`
-
-Recipients: 
-- Meeting owner: `meetings.owner_user_uuid`
-- Attendees: `meeting_participants` joined to `users` on `lower(email) = lower(participant_email)` to get `user_uuid`
-
-Dedupe key: `meeting_upcoming:<meeting_id>:<window>:<user_uuid>`
-
-Notification fields:
-- `type`: `meeting_upcoming`
-- `title`: e.g. "Meeting in 1 hour: <title>"
-- `link`: `/client/calendar?tab=reminders&meeting_id=<id>`
-
-#### Obligations (scope = "tasks_obligations")
-
-Query `calendar_entries` where:
-- `title ILIKE '[OBLIGATION]%' OR description ILIKE '%type=obligation%'`
-- `entry_date` matches: +30d, +7d, +1d, today, or -1d (overdue)
-
-Recipient: `created_by`
-
-Dedupe key: `obligation_due:<entry_id>:<window>`
-
-Notification fields:
-- `type`: `obligation_due`
-- `title`: e.g. "Obligation due in 7 days: <title>"
-- `link`: `/client/calendar?tab=reminders&reminder_id=<id>`
-
-#### Insert pattern
-
-All inserts use service role client with `ON CONFLICT (dedupe_key) DO NOTHING` via raw `.rpc()` call or upsert:
-
-```typescript
-await supabase
-  .from('user_notifications')
-  .upsert(rows, { onConflict: 'dedupe_key', ignoreDuplicates: true });
-```
-
-#### Response
-
-Returns JSON summary: `{ tasks_created, meetings_created, obligations_created, duplicates_skipped }`.
+- Before inserting notifications, batch-fetch `user_notification_prefs` for all recipient user IDs in the current run
+- Parse `event_settings.categories` for each user
+- Skip inserting a notification if the user has disabled that category:
+  - `task_due` checks `categories.tasks`
+  - `meeting_upcoming` checks `categories.meetings`
+  - `obligation_due` checks `categories.obligations`
+- Cache prefs per user per run to avoid repeated queries (single bulk fetch at start of each scope handler)
 
 ---
 
-### Overdue Notification Cap
+### No Database Changes
 
-For tasks and obligations, the overdue window generates at most 3 notifications (overdue_1, overdue_2, overdue_3) by checking `current_date - due_date` and capping at 3. The dedupe key includes the day offset, so each overdue day is a separate notification.
-
----
+- No `ALTER TABLE` on any table
+- No new tables or columns
+- No migration needed
+- Uses existing `event_settings` JSONB column and existing RPCs
 
 ### Files Created
 
 | File | Purpose |
 |---|---|
-| `supabase/functions/generate-notifications/index.ts` | Edge function with all generation logic |
-| Migration SQL | dedupe_key column, extensions, cron jobs, index |
+| `src/hooks/useNotificationPrefs.ts` | Hook wrapping get/update RPCs for category preferences |
+| `src/components/settings/NotificationPrefsTab.tsx` | Toggle UI for four notification categories |
 
 ### Files Modified
 
 | File | Change |
 |---|---|
-| `supabase/config.toml` | Add `[functions.generate-notifications] verify_jwt = false` |
-
-### No Legacy Table Changes
-
-- No `ALTER TABLE` on tasks_tenants, meetings, calendar_entries, users, tenant_users
-- Only `ALTER TABLE user_notifications ADD COLUMN dedupe_key` (new table, not legacy)
-- Only `CREATE INDEX` on tasks_tenants (safe, no data change)
+| `src/pages/Settings.tsx` | Add Notifications tab |
+| `src/pages/ClientNotifications.tsx` | Filter out disabled categories |
+| `supabase/functions/generate-notifications/index.ts` | Check prefs before inserting notifications |
 
 ### Acceptance Criteria
 
 | Criteria | How |
 |---|---|
-| No duplicates on re-run | dedupe_key unique index + upsert with ignoreDuplicates |
-| ClientUser sees own notifications only | user_notifications RLS scopes by user_id = auth.uid() |
-| Meeting attendees notified | join meeting_participants to users on email |
-| Task recipients notified | uses created_by as recipient |
-| Obligation reminders for tagged entries | ILIKE filter on title/description |
-| Cron schedules running | pg_cron + pg_net call the function hourly and daily |
+| User can toggle categories and changes persist | `update_user_notification_prefs` RPC upserts `event_settings` |
+| Disabled categories skip notification generation | Edge function checks prefs before insert |
+| Disabled categories hidden in Notification Centre | Client-side filter in `ClientNotifications.tsx` |
+| RLS prevents cross-user access | Existing policies on `user_notification_prefs` |
+| No legacy tables modified | Only reads from existing RPCs and `event_settings` column |
 
