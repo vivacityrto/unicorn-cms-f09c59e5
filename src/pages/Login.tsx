@@ -183,6 +183,7 @@ const Login = () => {
                     <Input
                       id="email"
                       type="email"
+                      autoComplete="email"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       placeholder="Enter your email address"
@@ -198,6 +199,7 @@ const Login = () => {
                     <Input
                       id="password"
                       type="password"
+                      autoComplete="current-password"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       placeholder="Enter your password"
@@ -221,9 +223,10 @@ const Login = () => {
                     </label>
                   </div>
 
+
                   <Button
                     type="submit"
-                    className="w-full h-11 rounded-lg bg-[hsl(188_74%_51%)] hover:bg-[hsl(188_74%_51%)]/90 text-white font-semibold"
+                    className="w-full h-11 rounded-lg font-semibold"
                     disabled={isLoading}
                   >
                     {isLoading ? "Signing in..." : "Log In"}
@@ -235,7 +238,7 @@ const Login = () => {
                   <Button
                     type="button"
                     variant="ghost"
-                    className="flex-1 text-[hsl(188_74%_51%)] hover:text-[hsl(188_74%_41%)] hover:bg-transparent font-semibold text-sm"
+                    className="flex-1 font-semibold text-sm"
                     onClick={() => setShowForgotPassword(true)}
                   >
                     Forgot Password?
@@ -243,12 +246,13 @@ const Login = () => {
                   <Button
                     type="button"
                     variant="ghost"
-                    className="flex-1 text-[hsl(188_74%_51%)] hover:text-[hsl(188_74%_41%)] hover:bg-transparent font-semibold text-sm"
+                    className="flex-1 font-semibold text-sm"
                     onClick={() => setShowMagicLink(true)}
                   >
                     Send Magic Link
                   </Button>
                 </div>
+
 
               </>
             ) : showForgotPassword ? (
