@@ -1,22 +1,23 @@
 import { useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link, useLocation } from "react-router-dom";
 import { useClientPreview } from "@/contexts/ClientPreviewContext";
 import { ImpersonationBanner } from "@/components/client/ImpersonationBanner";
-import { Loader2 } from "lucide-react";
-
-// Import client layouts
-import { AcademyLayout } from "@/components/layout/AcademyLayout";
+import { Loader2, FileText, BookOpen, Users, Calendar, Bell, LayoutDashboard, BarChart3 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { FileText, BookOpen, Users, Calendar, HelpCircle, Bell } from "lucide-react";
 
-/**
- * Client Portal Preview - Shows the compliance system client experience
- */
+const clientNavItems = [
+  { icon: LayoutDashboard, label: "Home", path: "/client-preview" },
+  { icon: FileText, label: "Documents", path: "/manage-documents" },
+  { icon: Calendar, label: "Calendar", path: "/client/calendar" },
+  { icon: Bell, label: "Notifications", path: "/client/notifications" },
+  { icon: BarChart3, label: "Reports", path: "/reports" },
+];
+
 const ClientPreview = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { isPreviewMode, previewTenant, loading } = useClientPreview();
 
-  // Redirect if not in preview mode
   useEffect(() => {
     if (!loading && !isPreviewMode) {
       navigate("/dashboard");
@@ -35,14 +36,35 @@ const ClientPreview = () => {
     return null;
   }
 
-  // For compliance system, show a simplified client portal preview
   return (
     <div className="min-h-screen bg-background">
-      {/* Impersonation Banner */}
       <ImpersonationBanner />
 
-      {/* Add top padding to account for banner */}
       <div className="pt-12">
+        {/* Client portal nav */}
+        <nav className="border-b bg-card">
+          <div className="max-w-7xl mx-auto px-6 flex items-center gap-1 overflow-x-auto">
+            {clientNavItems.map((item) => {
+              const Icon = item.icon;
+              const isActive = location.pathname === item.path;
+              return (
+                <Link
+                  key={item.path}
+                  to={item.path}
+                  className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
+                    isActive
+                      ? "border-primary text-primary"
+                      : "border-transparent text-muted-foreground hover:text-foreground hover:border-border"
+                  }`}
+                >
+                  <Icon className="h-4 w-4" />
+                  {item.label}
+                </Link>
+              );
+            })}
+          </div>
+        </nav>
+
         <div className="p-6 max-w-7xl mx-auto space-y-6">
           {/* Header */}
           <div className="space-y-2">
@@ -109,7 +131,6 @@ const ClientPreview = () => {
 
           {/* Main Content */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Recent Documents */}
             <Card className="lg:col-span-2">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
@@ -128,11 +149,10 @@ const ClientPreview = () => {
               </CardContent>
             </Card>
 
-            {/* Quick Links */}
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <HelpCircle className="h-5 w-5" />
+                  <Calendar className="h-5 w-5" />
                   Quick Links
                 </CardTitle>
                 <CardDescription>
@@ -140,14 +160,14 @@ const ClientPreview = () => {
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-3">
-                <div className="p-3 rounded-lg border hover:bg-muted/50 cursor-pointer transition-colors">
-                  <p className="font-medium">Resource Hub</p>
-                  <p className="text-sm text-muted-foreground">Access templates and guides</p>
-                </div>
-                <div className="p-3 rounded-lg border hover:bg-muted/50 cursor-pointer transition-colors">
-                  <p className="font-medium">Vivacity Academy</p>
-                  <p className="text-sm text-muted-foreground">Training courses and certificates</p>
-                </div>
+                <Link to="/client/calendar" className="block p-3 rounded-lg border hover:bg-muted/50 cursor-pointer transition-colors">
+                  <p className="font-medium">Calendar</p>
+                  <p className="text-sm text-muted-foreground">Events & reminders</p>
+                </Link>
+                <Link to="/client/notifications" className="block p-3 rounded-lg border hover:bg-muted/50 cursor-pointer transition-colors">
+                  <p className="font-medium">Notifications</p>
+                  <p className="text-sm text-muted-foreground">Updates and alerts</p>
+                </Link>
                 <div className="p-3 rounded-lg border hover:bg-muted/50 cursor-pointer transition-colors">
                   <p className="font-medium">Contact Consultant</p>
                   <p className="text-sm text-muted-foreground">Get help from your consultant</p>
@@ -155,25 +175,6 @@ const ClientPreview = () => {
               </CardContent>
             </Card>
           </div>
-
-          {/* Upcoming Events */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Calendar className="h-5 w-5" />
-                Upcoming Events
-              </CardTitle>
-              <CardDescription>
-                Scheduled training sessions and webinars
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="text-center py-8 text-muted-foreground">
-                <Calendar className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                <p>Event calendar would appear here in the actual client portal</p>
-              </div>
-            </CardContent>
-          </Card>
         </div>
       </div>
     </div>
