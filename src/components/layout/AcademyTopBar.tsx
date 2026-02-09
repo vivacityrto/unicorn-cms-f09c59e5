@@ -101,18 +101,18 @@ export function AcademyTopBar() {
 
   return (
     <header className="h-16 bg-card border-b border-border flex items-center justify-between px-6 sticky top-0 z-20">
-      {/* Left: Logo, Page Title & Breadcrumbs */}
-      <div className="flex items-center gap-4">
-        <div className="flex items-center gap-2">
+      {/* Left: Logo, Page Title & Breadcrumbs - shrinks to accommodate right side */}
+      <div className="flex items-center gap-4 flex-1 min-w-0">
+        <div className="flex items-center gap-2 flex-shrink-0">
           <div className="flex items-center justify-center h-8 w-8 rounded-lg bg-gradient-to-br from-primary to-primary/70">
             <GraduationCap className="h-4 w-4 text-primary-foreground" />
           </div>
           <span className="font-bold text-lg text-foreground">Academy</span>
         </div>
 
-        <div className="h-8 w-px bg-border" />
+        <div className="h-8 w-px bg-border flex-shrink-0" />
 
-        <div className="flex flex-col">
+        <div className="flex flex-col min-w-0">
           {showBreadcrumbs && (
             <nav className="flex items-center gap-1 text-xs text-muted-foreground">
               {breadcrumbs.slice(0, -1).map((crumb) => (
@@ -128,15 +128,15 @@ export function AcademyTopBar() {
               ))}
             </nav>
           )}
-          <h1 className="text-lg font-semibold text-foreground truncate max-w-[300px]">
+          <h1 className="text-lg font-semibold text-foreground truncate max-w-[120px] sm:max-w-[180px] md:max-w-[250px] lg:max-w-[300px]">
             {pageTitle}
           </h1>
         </div>
       </div>
 
-      {/* Center: Course Search */}
-      <div className="flex-1 max-w-md mx-8">
-        <div className="relative">
+      {/* Center: Course Search - hidden on smaller screens to preserve avatar */}
+      <div className="hidden lg:flex flex-1 max-w-md mx-8">
+        <div className="relative w-full">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder="Search courses..."
@@ -147,8 +147,8 @@ export function AcademyTopBar() {
         </div>
       </div>
 
-      {/* Right: Actions & Avatar */}
-      <div className="flex items-center gap-2">
+      {/* Right: Actions & Avatar - never pushed off-screen */}
+      <div className="flex items-center gap-2 flex-shrink-0 ml-2">
         <TooltipProvider>
           {/* Notifications */}
           <Tooltip>

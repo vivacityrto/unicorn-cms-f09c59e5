@@ -153,8 +153,8 @@ export function TopBar({ showSearch = false }: TopBarProps) {
 
   return (
     <header className="h-16 bg-card border-b border-border flex items-center justify-between px-6 sticky top-0 z-20">
-      {/* Left: Logo, Page Title & Breadcrumbs */}
-      <div className="flex items-center gap-4 flex-shrink min-w-0">
+      {/* Left: Logo, Page Title & Breadcrumbs - shrinks to accommodate right side */}
+      <div className="flex items-center gap-4 flex-1 min-w-0">
         <img
           src={unicornLogo}
           alt="Unicorn 2.0"
@@ -203,8 +203,8 @@ export function TopBar({ showSearch = false }: TopBarProps) {
         </div>
       )}
 
-      {/* Right: Actions & Avatar */}
-      <div className="flex items-center gap-2 flex-shrink-0">
+      {/* Right: Actions & Avatar - never pushed off-screen */}
+      <div className="flex items-center gap-2 flex-shrink-0 ml-2">
         <TooltipProvider>
           {/* Ask Viv - Knowledge Assistant (SuperAdmin only) */}
           <AskVivButton />
