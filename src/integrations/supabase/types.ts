@@ -20219,6 +20219,7 @@ export type Database = {
         Row: {
           created_at: string
           created_by: string | null
+          dedupe_key: string | null
           id: string
           is_read: boolean
           link: string | null
@@ -20232,6 +20233,7 @@ export type Database = {
         Insert: {
           created_at?: string
           created_by?: string | null
+          dedupe_key?: string | null
           id?: string
           is_read?: boolean
           link?: string | null
@@ -20245,6 +20247,7 @@ export type Database = {
         Update: {
           created_at?: string
           created_by?: string | null
+          dedupe_key?: string | null
           id?: string
           is_read?: boolean
           link?: string | null
