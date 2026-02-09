@@ -3,6 +3,7 @@ import { useTenantType } from "@/contexts/TenantTypeContext";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { AcademyLayout } from "@/components/layout/AcademyLayout";
 import { NetworkStatusIndicator } from "@/components/NetworkStatusIndicator";
+import { useDevOverflowWarning } from "@/hooks/useDevOverflowWarning";
 import { Loader2 } from "lucide-react";
 
 interface AuthenticatedLayoutProps {
@@ -20,6 +21,9 @@ interface AuthenticatedLayoutProps {
 export const AuthenticatedLayout = ({ children }: AuthenticatedLayoutProps) => {
   const { profile, loading: authLoading } = useAuth();
   const { isAcademyMember, loading: tenantLoading } = useTenantType();
+
+  // Dev-only: Warn about page overflow issues
+  useDevOverflowWarning();
 
   const loading = authLoading || tenantLoading;
 
