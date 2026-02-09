@@ -27,11 +27,11 @@ export function FacilitatorModeToggle() {
     <TooltipProvider>
       <Tooltip>
         <TooltipTrigger asChild>
-          <div className="flex items-center gap-2 px-2 lg:px-3 py-1.5 rounded-lg border border-border/50 bg-background/50 backdrop-blur-sm">
+          <div className="flex items-center gap-2 px-2 xl:px-3 py-1.5 rounded-lg border border-border/50 bg-background/50 backdrop-blur-sm min-w-0 max-w-[200px]">
             <Users className="h-4 w-4 text-muted-foreground flex-shrink-0" />
             <Label 
               htmlFor="facilitator-mode" 
-              className="text-sm font-medium cursor-pointer select-none hidden lg:inline"
+              className="text-sm font-medium cursor-pointer select-none hidden xl:inline truncate max-w-[100px]"
             >
               Facilitator Mode
             </Label>
@@ -42,7 +42,7 @@ export function FacilitatorModeToggle() {
               className="data-[state=checked]:bg-primary flex-shrink-0"
             />
             {isFacilitatorMode && (
-              <Badge variant="secondary" className="text-xs bg-primary/10 text-primary border-primary/20 hidden md:inline-flex">
+              <Badge variant="secondary" className="text-xs bg-primary/10 text-primary border-primary/20 hidden xl:inline-flex flex-shrink-0">
                 Active
               </Badge>
             )}
