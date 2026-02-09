@@ -128,8 +128,9 @@ export const ADMIN_ROUTES = [
   '/admin/team-users',
   '/admin/tenant-users',
   '/admin/assistant',
-   '/admin/knowledge',
-   '/admin/eos-processes',
+  '/admin/knowledge',
+  '/admin/eos-processes',
+  '/admin/qa/responsive',
 ];
 
 // Advanced Features routes that require SuperAdmin

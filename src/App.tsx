@@ -120,6 +120,7 @@ const AdminAssistant = lazy(() => import("./pages/AdminAssistant"));
 const AdminKnowledgeLibrary = lazy(() => import("./pages/AdminKnowledgeLibrary"));
 const AdminEOSProcesses = lazy(() => import("./pages/AdminEOSProcesses"));
 const EosHealthCheck = lazy(() => import("./pages/EosHealthCheck"));
+const QAResponsiveHarness = lazy(() => import("./pages/admin/QAResponsiveHarness"));
 
 // Academy pages (placeholder)
 const AcademyDashboard = lazy(() => import("./pages/academy/AcademyDashboard"));
@@ -877,6 +878,8 @@ const App = () => (
             <Route path="/admin/assistant" element={<ProtectedRoute requireSuperAdmin><AdminAssistant /></ProtectedRoute>} />
            <Route path="/admin/knowledge" element={<ProtectedRoute requireSuperAdmin><AdminKnowledgeLibrary /></ProtectedRoute>} />
            <Route path="/admin/eos-processes" element={<ProtectedRoute requireSuperAdmin><AdminEOSProcesses /></ProtectedRoute>} />
+            {/* QA Responsive Harness - SuperAdmin/VivacityTeam only */}
+            <Route path="/admin/qa/responsive" element={<ProtectedRoute requireSuperAdmin><QAResponsiveHarness /></ProtectedRoute>} />
             {/* Add-in Settings - SuperAdmin only */}
             <Route path="/admin/addin-settings" element={<ProtectedRoute requireSuperAdmin><AddinSettings /></ProtectedRoute>} />
             <Route path="/admin/addin-diagnostics" element={<ProtectedRoute requireSuperAdmin><AddinDiagnostics /></ProtectedRoute>} />
