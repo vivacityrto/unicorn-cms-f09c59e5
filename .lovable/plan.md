@@ -1,91 +1,66 @@
 
 
-## Client Page Cleanup and "View as Client" Integration
+## Fix: Production Layout Clipping Caused by PurgeCSS Stripping Critical Classes
 
-This plan restructures the Client Detail page (`/clients/:tenantId`) into clearly separated zones and integrates the existing "View as Client" button into the page header.
+### Root Cause
 
----
+The **PurgeCSS plugin** in `vite.config.ts` is stripping the responsive padding classes `md:pl-64` and `md:pl-20` from the production CSS bundle. These classes are used dynamically in `DashboardLayout.tsx`:
 
-### Part A: Header Restructure
+```tsx
+sidebarOpen ? "md:pl-64" : "md:pl-20"
+```
 
-**Current state:** The header mixes identity info (name, slug, CSC), operational controls (time widget, timer, package selector, risk badge, "Add time from meeting" button), and a package counter all in one horizontal row. This creates visual density.
+PurgeCSS scans source files for class names but can fail to detect classes inside ternary expressions or template strings passed through utility functions like `cn()`. The result: the classes exist in the source code but get removed from the production CSS, causing the main content to render at `pl-0` (no left padding) and overlap with or hide behind the fixed sidebar.
 
-**Changes to `ClientDetail.tsx` header section (lines 156-236):**
+This is why the Lovable preview (which runs in development mode without PurgeCSS) looks correct, but the published production site on `unicorn-cms.au` does not.
 
-1. **Primary header row** -- Organisation Name + Status badge + Risk badge + CSC assignment + action buttons only
-   - Keep `tenant.name` as `h1`
-   - Keep Status badge (active/inactive)
-   - Keep `RiskLevelBadge` inline with badges
-   - Keep `CSCAssignmentSelector` below the name
-   - **Add `ViewAsClientButton`** next to Save Changes (top-right)
-   - **De-emphasise slug**: Change from `<p>` to a small `text-xs text-muted-foreground` tooltip or inline metadata: `slug: {tenant.slug}` in muted small text
+### Fix
 
-2. **Remove from header row:**
-   - `ClientTimeWidget` (timer, month total, package usage badge, package selector)
-   - "Add time from meeting" button
-   - Package count `div`
+Add the critical sidebar layout classes to the PurgeCSS safelist in `vite.config.ts`.
 
-These controls move into the page body as part of the Engagement Snapshot or remain accessible via the Overview tab.
+**File: `vite.config.ts`** -- Add to the `safelist.standard` array:
 
----
+```
+/^md:pl-/
+/^pl-/
+/^md:p-/
+/^p-4/
+```
 
-### Part B: Four-Zone Page Body
+This ensures all padding-left variants used by the layout contract (and responsive content padding) survive the PurgeCSS pass.
 
-Restructure the Overview tab content into clear card-based sections:
+Additionally, add `min-w-0` and `overflow-x-hidden` patterns since these are also part of the layout contract and could be stripped:
 
-#### Zone 1: Identity and Registration (read-only card)
-- Existing `ClientProfileForm` already covers RTO number, CRICOS, legal name, trading name, ABN, ACN, org type
-- Existing `ClientAddressSection` below it
-- No changes needed here, already well structured
+```
+/^min-w-/
+/^overflow-/
+/^flex-1/
+/^flex-col/
+/^w-full/
+/^min-h-/
+```
 
-#### Zone 2: Engagement Snapshot (new summary section on Overview)
-- Move `ClientTimeSummaryCard` to sit at top of Overview (already does this)
-- Move `ClientTimeWidget` (timer controls) into a compact bar above or within the time summary card
-- Move "Add time from meeting" button into the time summary area
-- Move package count into the engagement snapshot area
-- **Conditionally hide** the Package Burn-down card when no active package has included hours (already handled -- shows "No active package" message, but we can hide the entire card)
+### Secondary Fix: Remove Stale `App.css` Constraint
 
-#### Zone 3: Work Tabs (keep existing, minor cleanup)
-- Keep all existing tabs: Overview, Packages, Documents, Users, Notes, Actions, Emails, SharePoint, Timeline, Integrations
-- No structural changes to tab content
+The file `src/App.css` contains a legacy Vite boilerplate rule:
 
-#### Zone 4: Internal-Only Controls (visual separation)
-- Wrap the Notes tab content and risk/internal actions with a subtle "Vivacity Internal" label or border treatment
-- The Notes tab already is internal-only by nature -- just add a small indicator badge on the tab
+```css
+#root {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 2rem;
+}
+```
 
----
+While this file is not currently imported (so it should not be active), it is a risk if anyone re-imports it. The `max-width: 1280px` and `padding: 2rem` would constrain the root element and break the full-width layout. This file should be cleaned up to remove the dangerous rules, keeping only the icon-related styles if needed, or deleted entirely.
 
-### Part C: "View as Client" Button in Header
+### Changes Summary
 
-**Current state:** `ViewAsClientButton.tsx` already exists with full functionality -- dropdown for portal vs academy, reason dialog, audit logging, navigation to `/client-preview`.
+| File | Change |
+|---|---|
+| `vite.config.ts` | Add layout-critical class patterns to PurgeCSS safelist |
+| `src/App.css` | Remove `#root` constraint rules (or delete file) |
 
-**Changes:**
-1. Import `ViewAsClientButton` into `ClientDetail.tsx`
-2. Place it in the header actions area (top-right), next to the Save Changes button
-3. Pass required props: `tenantId`, `tenantName`, tenant type from profile or tenant data
-4. The button already handles its own visibility check (`canUsePreview` from `ClientPreviewContext`)
+### After Publishing
 
-The existing `ImpersonationBanner` component already provides the fixed "Viewing as Client" banner with exit button when preview mode is active.
-
----
-
-### Technical Details
-
-**Files to modify:**
-- `src/pages/ClientDetail.tsx` -- Main restructure:
-  - Import `ViewAsClientButton`
-  - Restructure header: name + badges + CSC on left, ViewAsClient + Save on right
-  - De-emphasise slug to `text-xs` metadata
-  - Move time widget, package count, and "Add time from meeting" out of header into Overview tab body
-  - Add an "Engagement Controls" bar at top of Overview tab with timer widget + add time button + package count
-
-**Files unchanged:**
-- `ViewAsClientButton.tsx` -- Already complete
-- `ImpersonationBanner.tsx` -- Already complete
-- `ClientPreviewContext.tsx` -- Already complete
-- `ClientProfileForm.tsx` -- Already correct for Zone 1
-- `ClientTimeSummaryCard.tsx` -- Already correct for Zone 2
-- No database/schema changes required
-
-**Estimated scope:** Single file edit (`ClientDetail.tsx`), approximately 50-80 lines restructured.
-
+Once these changes are deployed, ask your team to hard-refresh (Ctrl+Shift+R). The sidebar padding will be preserved in the production CSS and the content will no longer clip behind the sidebar.
