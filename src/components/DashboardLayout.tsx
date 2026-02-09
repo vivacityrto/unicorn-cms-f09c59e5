@@ -102,6 +102,7 @@ const systemConfigMenuItems = [
 const baseMenuItems = [
   { icon: LayoutDashboard, label: "Home", path: "/dashboard" },
   { icon: FileText, label: "Documents", path: "/manage-documents" },
+  { icon: Library, label: "Resource Hub", path: "/resource-hub" },
   { icon: Calendar, label: "Calendar", path: "/client/calendar" },
   { icon: Bell, label: "Notifications", path: "/client/notifications" },
   { icon: BarChart3, label: "Reports", path: "/reports" },
