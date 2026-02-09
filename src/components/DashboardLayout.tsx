@@ -1,5 +1,5 @@
 import { useState, useMemo, useRef, useLayoutEffect } from "react";
-import { LayoutDashboard, FileText, BarChart3, Calendar, Menu, X, Users, Building2, Package2, Blocks, ScrollText, Flag, ChevronDown, ChevronRight, Target, TrendingUp, ListTodo, Lightbulb, Sparkles, Library, CheckSquare, ClipboardList, Search, Video, BookOpen, ShieldCheck, Shield, Briefcase, Inbox, Rocket, Bot, Cog, Mail, Puzzle } from "lucide-react";
+import { LayoutDashboard, FileText, BarChart3, Calendar, Menu, X, Users, Building2, Package2, Blocks, ScrollText, Flag, ChevronDown, ChevronRight, Target, TrendingUp, ListTodo, Lightbulb, Sparkles, Library, CheckSquare, ClipboardList, Search, Video, BookOpen, ShieldCheck, Shield, Briefcase, Inbox, Rocket, Bot, Cog, Mail, Puzzle, Bell } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
@@ -99,10 +99,11 @@ const systemConfigMenuItems = [
 
 // Client-facing menu items (for Admin/User roles and "View as Client" mode)
 const baseMenuItems = [
-  { icon: LayoutDashboard, label: "Dashboard", path: "/dashboard" },
+  { icon: LayoutDashboard, label: "Home", path: "/dashboard" },
   { icon: FileText, label: "Documents", path: "/manage-documents" },
+  { icon: Calendar, label: "Calendar", path: "/client/calendar" },
+  { icon: Bell, label: "Notifications", path: "/client/notifications" },
   { icon: BarChart3, label: "Reports", path: "/reports" },
-  { icon: Calendar, label: "Event Calendar", path: "/calendar" },
 ];
 
 // Client menus - NO EOS access (EOS is Vivacity-only)

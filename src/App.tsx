@@ -136,6 +136,8 @@ const AcademySettings = lazy(() => import("./pages/academy/AcademySettings"));
 // Client Preview pages
 const ClientPreview = lazy(() => import("./pages/ClientPreview"));
 const ClientPreviewAcademy = lazy(() => import("./pages/ClientPreviewAcademy"));
+const ClientCalendarWrapper = lazy(() => import("./pages/ClientCalendarWrapper"));
+const ClientNotificationsWrapper = lazy(() => import("./pages/ClientNotificationsWrapper"));
 
 const queryClient = new QueryClient();
 
@@ -900,6 +902,9 @@ const App = () => (
             {/* Client Preview Routes */}
             <Route path="/client-preview" element={<ProtectedRoute><ClientPreview /></ProtectedRoute>} />
             <Route path="/client-preview/academy" element={<ProtectedRoute><ClientPreviewAcademy /></ProtectedRoute>} />
+            {/* Client Portal Routes */}
+            <Route path="/client/calendar" element={<ProtectedRoute><ClientCalendarWrapper /></ProtectedRoute>} />
+            <Route path="/client/notifications" element={<ProtectedRoute><ClientNotificationsWrapper /></ProtectedRoute>} />
             
             {/* Add-in Shell Route - works without full auth for add-in JWT holders */}
             <Route path="/addin" element={<AddinShell />} />
