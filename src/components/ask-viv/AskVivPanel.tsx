@@ -23,6 +23,7 @@ import { AskVivExplainPanel, type ExplainPayload } from "./AskVivExplainPanel";
 import { AskVivScopeBanner, type ScopeLock } from "./AskVivScopeBanner";
 import { AskVivScopeSelectorModal, type SelectedScope } from "./AskVivScopeSelectorModal";
 import { AskVivFreshnessChip } from "./AskVivFreshnessChip";
+import { AskVivMicroExplain, type MicroExplainPayload } from "./AskVivMicroExplain";
 import {
   X,
   Send,
@@ -63,6 +64,7 @@ interface Message {
   explain?: ExplainPayload;
   scope_lock?: ScopeLock;
   freshness?: FreshnessData;
+  micro_explain?: MicroExplainPayload;
   created_at: string;
 }
 
@@ -315,6 +317,7 @@ export function AskVivPanel() {
       explain: result.explain,
       scope_lock: result.scope_lock,
       freshness: result.freshness,
+      micro_explain: result.micro_explain,
     };
   }
 
@@ -389,6 +392,7 @@ export function AskVivPanel() {
           explain: result.explain,
           scope_lock: result.scope_lock,
           freshness: result.freshness,
+          micro_explain: result.micro_explain,
           created_at: new Date().toISOString(),
         };
       }
@@ -641,6 +645,14 @@ export function AskVivPanel() {
                     <div className="mb-2">
                       <AskVivFreshnessChip freshness={message.freshness} />
                     </div>
+                  )}
+
+                  {/* Micro-Explain - shows when response is blocked */}
+                  {message.role === "assistant" && message.micro_explain && (
+                    <AskVivMicroExplain
+                      payload={message.micro_explain}
+                      className="mb-2"
+                    />
                   )}
 
                   <div
