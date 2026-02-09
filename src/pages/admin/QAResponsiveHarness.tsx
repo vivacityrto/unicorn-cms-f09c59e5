@@ -33,6 +33,7 @@ import {
   FieldHint,
   FieldError,
 } from '@/components/ui/form-primitives';
+import { Text, TruncatedText, CopyableId, textUtils } from '@/components/ui/text';
 import {
   AppModal,
   AppModalContent,
@@ -436,7 +437,53 @@ export default function QAResponsiveHarness() {
               </div>
             </section>
 
-            {/* Section 6: Torture Block */}
+            {/* Section 6: Text Overflow Tests */}
+            <section>
+              <h2 className="text-sm font-medium text-muted-foreground mb-3 uppercase tracking-wide">Text Overflow Components</h2>
+              <Card>
+                <CardContent className="pt-6 space-y-4">
+                  {/* Text Component Modes */}
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div className="space-y-2">
+                      <Label className="text-xs text-muted-foreground">Text (wrap - default)</Label>
+                      <div className="p-2 border rounded bg-muted/30">
+                        <Text as="p">{MOCK_DATA.longDescription}</Text>
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-xs text-muted-foreground">TruncatedText (with tooltip)</Label>
+                      <div className="p-2 border rounded bg-muted/30">
+                        <TruncatedText maxWidth="max-w-full">{MOCK_DATA.longDescription}</TruncatedText>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div className="space-y-2">
+                      <Label className="text-xs text-muted-foreground">TruncatedText lines=2</Label>
+                      <div className="p-2 border rounded bg-muted/30">
+                        <TruncatedText lines={2}>{MOCK_DATA.longDescription}</TruncatedText>
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-xs text-muted-foreground">CopyableId (mono + copy)</Label>
+                      <div className="p-2 border rounded bg-muted/30">
+                        <CopyableId>abc123-def456-ghi789-jkl012-mno345-pqr678</CopyableId>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label className="text-xs text-muted-foreground">Long Email with Copy</Label>
+                    <div className="p-2 border rounded bg-muted/30">
+                      <Text overflow="truncate" copyable className="max-w-full">{MOCK_DATA.longEmail}</Text>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </section>
+
+            {/* Section 7: Torture Block */}
             <section>
               <h2 className="text-sm font-medium text-muted-foreground mb-3 uppercase tracking-wide">Torture Block (Overflow Tests)</h2>
               <Card>
@@ -452,9 +499,9 @@ export default function QAResponsiveHarness() {
                   {/* Long URL */}
                   <div>
                     <Label className="text-xs text-muted-foreground">Long URL</Label>
-                    <p className="text-sm break-all text-primary">
+                    <Text overflow="mono" as="p" className="text-primary">
                       https://www.example-domain.com.au/very/long/path/to/some/resource/that/might/cause/overflow/issues/in/narrow/viewports?param1=value1&param2=value2&param3=value3
-                    </p>
+                    </Text>
                   </div>
 
                   {/* Bullet list */}
@@ -463,24 +510,24 @@ export default function QAResponsiveHarness() {
                     <ul className="list-disc list-inside text-sm space-y-1 ml-2">
                       <li>Short item</li>
                       <li>This is a medium length item that wraps</li>
-                      <li>This is an extremely long list item that should wrap properly across multiple lines without causing horizontal scroll issues on any screen size</li>
-                      <li>{MOCK_DATA.longTenant}</li>
+                      <li className="whitespace-normal break-words">This is an extremely long list item that should wrap properly across multiple lines without causing horizontal scroll issues on any screen size</li>
+                      <li className="whitespace-normal break-words">{MOCK_DATA.longTenant}</li>
                     </ul>
                   </div>
 
-          {/* Inline buttons */}
-          <div>
-            <Label className="text-xs text-muted-foreground">Inline Buttons (Wrap Test)</Label>
-            <div className="flex flex-wrap gap-2 mt-1">
-              <Button size="sm">Save</Button>
-              <Button size="sm" variant="outline">Cancel</Button>
-              <Button size="sm" variant="secondary">Save as Draft</Button>
-              <Button size="sm" variant="ghost">Reset Form</Button>
-              <Button size="sm" variant="destructive">Delete Everything</Button>
-            </div>
-          </div>
+                  {/* Inline buttons */}
+                  <div>
+                    <Label className="text-xs text-muted-foreground">Inline Buttons (Wrap Test)</Label>
+                    <div className="flex flex-wrap gap-2 mt-1">
+                      <Button size="sm">Save</Button>
+                      <Button size="sm" variant="outline">Cancel</Button>
+                      <Button size="sm" variant="secondary">Save as Draft</Button>
+                      <Button size="sm" variant="ghost">Reset Form</Button>
+                      <Button size="sm" variant="destructive">Delete Everything</Button>
+                    </div>
+                  </div>
 
-                  {/* Tags/Chips */}
+                  {/* Tags/Chips with truncation */}
                   <div>
                     <Label className="text-xs text-muted-foreground">Tags/Chips Wrap Test</Label>
                     <div className="flex flex-wrap gap-1 mt-1">
@@ -490,9 +537,9 @@ export default function QAResponsiveHarness() {
                       <Badge variant="secondary">Compliance</Badge>
                       <Badge variant="secondary">Training</Badge>
                       <Badge variant="secondary">Assessment</Badge>
-                      <Badge variant="secondary">Vocational Education</Badge>
-                      <Badge variant="secondary">Australian Skills Quality Authority</Badge>
-                      <Badge variant="secondary">{MOCK_DATA.longStatus}</Badge>
+                      <Badge variant="secondary" className="max-w-[200px] truncate" title="Vocational Education and Training">Vocational Education and Training</Badge>
+                      <Badge variant="secondary" className="max-w-[200px] truncate" title="Australian Skills Quality Authority">Australian Skills Quality Authority</Badge>
+                      <Badge variant="secondary" className="max-w-[180px] truncate" title={MOCK_DATA.longStatus}>{MOCK_DATA.longStatus}</Badge>
                     </div>
                   </div>
                 </CardContent>

@@ -49,13 +49,97 @@
     overflow: hidden;
   }
 
-  /* Text truncation utilities */
+  /* ============================================================
+     TEXT OVERFLOW UTILITIES
+     ============================================================ */
+
+  /* Text wrapping - default for headings, paragraphs */
+  .text-wrap-normal {
+    white-space: normal;
+    word-break: break-word;
+    overflow-wrap: break-word;
+  }
+
+  /* Safe truncation - requires tooltip/reveal method */
+  .text-truncate-safe {
+    @apply truncate;
+  }
+
+  /* Multi-line clamp utilities */
+  .text-clamp-2 {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .text-clamp-3 {
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  /* Monospace for IDs, codes - uses break-all */
+  .text-mono-id {
+    @apply font-mono text-xs;
+    word-break: break-all;
+  }
+
+  /* Prevent long unbroken strings from breaking layout */
+  .text-break-word {
+    word-break: break-word;
+    overflow-wrap: break-word;
+  }
+
+  /* Force break anywhere - use sparingly (IDs, API keys) */
+  .text-break-all {
+    word-break: break-all;
+  }
+
+  /* Text balance and pretty */
   .text-balance {
     text-wrap: balance;
   }
 
   .text-pretty {
     text-wrap: pretty;
+  }
+
+  /* ============================================================
+     COMPONENT-SPECIFIC TEXT RULES
+     ============================================================ */
+
+  /* Table cell text - wrap by default */
+  .table-cell-text {
+    white-space: normal;
+    word-break: break-word;
+    overflow-wrap: break-word;
+  }
+
+  /* Table cell truncate - only with tooltip/reveal */
+  .table-cell-truncate {
+    @apply truncate;
+    max-width: 200px;
+  }
+
+  /* Badge/chip text - truncate with max-width */
+  .badge-text {
+    @apply truncate;
+    max-width: 100%;
+  }
+
+  /* Sidebar item text - truncate with tooltip */
+  .sidebar-item-text {
+    @apply truncate;
+    max-width: 100%;
+  }
+
+  /* Toast/notification text - wrap, viewport safe */
+  .toast-text {
+    white-space: normal;
+    word-break: break-word;
+    overflow-wrap: break-word;
   }
 
   /* Minimum touch target size (44x44px WCAG) */
