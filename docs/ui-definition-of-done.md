@@ -8,6 +8,7 @@ Every UI change must pass this checklist before merge. This ensures responsive l
 - **Responsive Standards**: `docs/ui/responsive-standards.md`
 - **Modal/Drawer System**: `docs/ui/modal-drawer-system.md`
 - **Responsive Tables**: `docs/ui/responsive-tables.md`
+- **Form Layout Standards**: `docs/ui/form-layout-standards.md`
 
 ---
 
@@ -67,6 +68,36 @@ Every UI change must pass this checklist before merge. This ensures responsive l
 import { ResponsiveTableShell, ResponsiveListCards, ResponsiveListCard } from "@/components/ui/responsive-table";
 import { PageContainer, Section, ResponsiveGrid } from "@/components/layout";
 ```
+
+---
+
+### 3a. Form Layout
+
+| Check | Description |
+|-------|-------------|
+| ☐ | Uses form primitives (`FormSection`, `FieldRow`, `FieldGroup`) |
+| ☐ | Fields stack on mobile (single column below md) |
+| ☐ | Labels wrap properly (`whitespace-normal break-words`) |
+| ☐ | Hints wrap properly (no clipping) |
+| ☐ | Error messages wrap properly and include icon |
+| ☐ | Input minimum height is `h-10` (40px) |
+| ☐ | Textarea minimum height is `min-h-24` (96px) |
+| ☐ | Required fields show consistent indicator (*) |
+
+**Required imports:**
+```tsx
+import {
+  FormSection,
+  FieldRow,
+  FieldGroup,
+  FormActions,
+} from "@/components/ui/form-primitives";
+```
+
+**Form spacing rules:**
+- Between fields: `space-y-4 md:space-y-5`
+- Between label and input: `gap-1.5`
+- Between sections: `mt-6 md:mt-8`
 
 ---
 
