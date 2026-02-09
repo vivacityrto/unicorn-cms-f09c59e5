@@ -13,6 +13,7 @@ import { type AskVivMode } from "./types.ts";
  * Validator version for audit tracking
  */
 export const RESPONSE_VALIDATOR_VERSION = "v1";
+export const VALIDATOR_VERSION = RESPONSE_VALIDATOR_VERSION; // Alias for pipeline
 
 /**
  * Record reference for validation
