@@ -8,6 +8,7 @@
 import { type AskVivMode } from "./types.ts";
 import { type PhraseFilterResult, PHRASE_FILTER_VERSION } from "./phrase-filter.ts";
 import { type ValidationResult, RESPONSE_VALIDATOR_VERSION } from "./response-validator-v2.ts";
+import { type SafetyPipelineResult } from "./askVivSafetyPipeline.ts";
 
 /**
  * Fact preview for explain panel - safe, small previews only
@@ -162,6 +163,17 @@ export function buildExplainSafety(
       repaired: repaired ?? false,
       version: RESPONSE_VALIDATOR_VERSION,
     },
+  };
+}
+
+/**
+ * Build safety summary directly from safety pipeline result
+ * Preferred method when using the unified safety pipeline
+ */
+export function buildExplainSafetyFromPipeline(result: SafetyPipelineResult): ExplainSafety {
+  return {
+    phrase_filter: result.phrase_filter,
+    validator: result.validator,
   };
 }
 

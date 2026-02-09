@@ -3972,6 +3972,33 @@ export type Database = {
           },
         ]
       }
+      client_fields: {
+        Row: {
+          client_id: number
+          created_at: string
+          created_by: string
+          field_id: number
+          id: number
+          value: string | null
+        }
+        Insert: {
+          client_id: number
+          created_at?: string
+          created_by: string
+          field_id: number
+          id: number
+          value?: string | null
+        }
+        Update: {
+          client_id?: number
+          created_at?: string
+          created_by?: string
+          field_id?: number
+          id?: number
+          value?: string | null
+        }
+        Relationships: []
+      }
       client_impact_items: {
         Row: {
           category: string | null
