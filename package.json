@@ -70,7 +70,6 @@
     "tailwind-merge": "^2.6.0",
     "tailwindcss-animate": "^1.0.7",
     "vaul": "^0.9.9",
-    "vite-plugin-purgecss": "^0.2.13",
     "vitest": "^3.2.4",
     "zod": "^3.25.76",
     "zustand": "^5.0.11"
