@@ -2,21 +2,26 @@ import { useEffect } from "react";
 import { useNavigate, Link, useLocation } from "react-router-dom";
 import { useClientPreview } from "@/contexts/ClientPreviewContext";
 import { ImpersonationBanner } from "@/components/client/ImpersonationBanner";
-import { Loader2, FileText, BookOpen, Users, Calendar, Bell, LayoutDashboard, BarChart3 } from "lucide-react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { ClientFooter } from "@/components/client/ClientFooter";
+import { HelpCenterProvider, HelpCenterDrawer, useHelpCenter } from "@/components/help-center";
+import { ClientHomePage } from "@/components/client/ClientHomePage";
+import { Loader2, FileText, Calendar, Bell, LayoutDashboard, BarChart3, HelpCircle, Library } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 const clientNavItems = [
   { icon: LayoutDashboard, label: "Home", path: "/client-preview" },
   { icon: FileText, label: "Documents", path: "/manage-documents" },
+  { icon: Library, label: "Resource Hub", path: "/resource-hub" },
   { icon: Calendar, label: "Calendar", path: "/client/calendar" },
   { icon: Bell, label: "Notifications", path: "/client/notifications" },
   { icon: BarChart3, label: "Reports", path: "/reports" },
 ];
 
-const ClientPreview = () => {
+function ClientPreviewContent() {
   const navigate = useNavigate();
   const location = useLocation();
   const { isPreviewMode, previewTenant, loading } = useClientPreview();
+  const { openHelpCenter } = useHelpCenter();
 
   useEffect(() => {
     if (!loading && !isPreviewMode) {
@@ -37,10 +42,10 @@ const ClientPreview = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background flex flex-col">
       <ImpersonationBanner />
 
-      <div className="pt-12">
+      <div className="pt-12 flex-1 flex flex-col">
         {/* Client portal nav */}
         <nav className="border-b border-border bg-card">
           <div className="max-w-7xl mx-auto px-6 flex items-center gap-1 overflow-x-auto">
@@ -62,122 +67,44 @@ const ClientPreview = () => {
                 </Link>
               );
             })}
+            {/* Help button in nav */}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => openHelpCenter("chatbot")}
+              className="ml-auto flex-shrink-0 gap-1.5"
+            >
+              <HelpCircle className="h-4 w-4" />
+              Help
+            </Button>
           </div>
         </nav>
 
-        <div className="p-6 max-w-7xl mx-auto space-y-6">
+        <div className="p-6 max-w-7xl mx-auto flex-1 w-full">
           {/* Header */}
-          <div className="space-y-2">
+          <div className="space-y-2 mb-6">
             <h1 className="text-2xl font-bold text-secondary">Welcome to {previewTenant.name}</h1>
             <p className="text-muted-foreground">
               This is a preview of the client portal experience.
             </p>
           </div>
 
-          {/* Quick Stats */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium flex items-center gap-2">
-                  <FileText className="h-4 w-4 text-primary" />
-                  Documents
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">--</div>
-                <p className="text-xs text-muted-foreground">Available documents</p>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium flex items-center gap-2">
-                  <BookOpen className="h-4 w-4 text-primary" />
-                  Courses
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">--</div>
-                <p className="text-xs text-muted-foreground">Active courses</p>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium flex items-center gap-2">
-                  <Users className="h-4 w-4 text-primary" />
-                  Team Members
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">--</div>
-                <p className="text-xs text-muted-foreground">Active users</p>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium flex items-center gap-2">
-                  <Bell className="h-4 w-4 text-primary" />
-                  Notifications
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">--</div>
-                <p className="text-xs text-muted-foreground">Unread</p>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Main Content */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <Card className="lg:col-span-2">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <FileText className="h-5 w-5" />
-                  Recent Documents
-                </CardTitle>
-                <CardDescription>
-                  Latest compliance documents and resources
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="text-center py-8 text-muted-foreground">
-                  <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                  <p>Document list would appear here in the actual client portal</p>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Calendar className="h-5 w-5" />
-                  Quick Links
-                </CardTitle>
-                <CardDescription>
-                  Helpful resources and support
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <Link to="/client/calendar" className="block p-3 rounded-lg border hover:bg-muted/50 cursor-pointer transition-colors">
-                  <p className="font-medium">Calendar</p>
-                  <p className="text-sm text-muted-foreground">Events & reminders</p>
-                </Link>
-                <Link to="/client/notifications" className="block p-3 rounded-lg border hover:bg-muted/50 cursor-pointer transition-colors">
-                  <p className="font-medium">Notifications</p>
-                  <p className="text-sm text-muted-foreground">Updates and alerts</p>
-                </Link>
-                <div className="p-3 rounded-lg border hover:bg-muted/50 cursor-pointer transition-colors">
-                  <p className="font-medium">Contact Consultant</p>
-                  <p className="text-sm text-muted-foreground">Get help from your consultant</p>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+          <ClientHomePage />
         </div>
+
+        <ClientFooter />
       </div>
+
+      <HelpCenterDrawer />
     </div>
+  );
+}
+
+const ClientPreview = () => {
+  return (
+    <HelpCenterProvider>
+      <ClientPreviewContent />
+    </HelpCenterProvider>
   );
 };
 

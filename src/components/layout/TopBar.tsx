@@ -29,7 +29,9 @@ import { useAuth } from "@/hooks/useAuth";
 import { NotificationDropdown } from "@/components/NotificationDropdown";
 import { FacilitatorModeToggle } from "@/components/eos/FacilitatorModeToggle";
 import { AskVivButton } from "@/components/ask-viv";
+import { useHelpCenter } from "@/components/help-center";
 import unicornLogo from "@/assets/unicorn-logo-login.svg";
+import { HelpCircle } from "lucide-react";
 
 // Route to page title mapping
 const routeTitles: Record<string, string> = {
@@ -117,12 +119,15 @@ export function TopBar({ showSearch = false }: TopBarProps) {
   const location = useLocation();
   const { profile, signOut } = useAuth();
   const [searchQuery, setSearchQuery] = useState("");
+  const helpCenter = useHelpCenter();
+
+  const userRole = profile?.unicorn_role || "User";
+  const isClientRole = userRole === "Admin" || userRole === "User";
 
   const pageTitle = routeTitles[location.pathname] || "Page";
   const breadcrumbs = getBreadcrumbs(location.pathname);
   const showBreadcrumbs = breadcrumbs.length > 1;
 
-  const userRole = profile?.unicorn_role || "User";
 
   const getInitials = (email: string) => {
     if (profile?.first_name && profile?.last_name) {
@@ -206,6 +211,25 @@ export function TopBar({ showSearch = false }: TopBarProps) {
       {/* Right: Actions & Avatar - never pushed off-screen */}
       <div className="flex items-center gap-2 flex-shrink-0 ml-2">
         <TooltipProvider>
+          {/* Help Center button - Client roles only */}
+          {isClientRole && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => helpCenter.openHelpCenter("chatbot")}
+                  className="h-10 w-10"
+                >
+                  <HelpCircle className="h-5 w-5" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Help Center</p>
+              </TooltipContent>
+            </Tooltip>
+          )}
+
           {/* Ask Viv - Knowledge Assistant (SuperAdmin only) */}
           <AskVivButton />
 

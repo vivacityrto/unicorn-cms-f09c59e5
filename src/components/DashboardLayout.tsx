@@ -11,6 +11,7 @@ import { ClientFooter } from "@/components/client/ClientFooter";
 import { TimeInboxBanner } from "@/components/dashboard/TimeInboxWidget";
 import { FacilitatorModeBanner } from "@/components/eos/FacilitatorModeBanner";
 import { AskVivPanel, AskVivFloatingLauncher } from "@/components/ask-viv";
+import { HelpCenterProvider, HelpCenterDrawer } from "@/components/help-center";
 import { useProfileSetupReminder } from "@/hooks/useProfileSetupReminder";
 import { ProfileSetupReminderModal } from "@/components/profile/ProfileSetupReminderModal";
 import { cn } from "@/lib/utils";
@@ -300,6 +301,7 @@ export const DashboardLayout = ({
   };
 
   return (
+    <HelpCenterProvider>
     <div className="min-h-screen bg-background overflow-x-hidden">
       {/* Mobile sidebar toggle - visible only on mobile when sidebar is closed */}
       <button
@@ -549,6 +551,9 @@ export const DashboardLayout = ({
         {/* Ask Viv - Knowledge Assistant (SuperAdmin only) */}
         <AskVivPanel />
         <AskVivFloatingLauncher />
+
+        {/* Help Center Drawer (available for client roles) */}
+        <HelpCenterDrawer />
       </div>
 
       {/* Profile Setup Reminder Modal */}
@@ -562,5 +567,6 @@ export const DashboardLayout = ({
         bestTab={getBestTab()}
       />
     </div>
+    </HelpCenterProvider>
   );
 };
