@@ -1,155 +1,91 @@
 
-## Fix Plan: Switch, Checkbox, and Radio Shape Regressions
 
-### Problem Identified
-A global CSS rule in `src/index.css` (lines 329-336) applies `min-height: 2.75rem` (44px) to `button`, `[role="button"]`, `input[type="checkbox"]`, and `input[type="radio"]`:
+## Client Page Cleanup and "View as Client" Integration
 
-```css
-button, 
-[role="button"],
-input[type="checkbox"],
-input[type="radio"],
-select {
-  min-height: 2.75rem; /* 44px at base font size */
-}
-```
-
-Radix UI's Checkbox, Switch, and RadioGroup components use `<button>` elements internally (not native inputs). This global rule forces them to 44px height, distorting:
-- **Checkbox**: Stretched into a tall pill instead of a 16x16 square
-- **Switch**: Track height forced to 44px, breaking the pill shape
-- **Radio**: Distorted into an oval instead of a circle
+This plan restructures the Client Detail page (`/clients/:tenantId`) into clearly separated zones and integrates the existing "View as Client" button into the page header.
 
 ---
 
-### Solution Overview
+### Part A: Header Restructure
 
-**Strategy**: Remove the overly broad global rule and apply touch-target sizing only where appropriate.
+**Current state:** The header mixes identity info (name, slug, CSC), operational controls (time widget, timer, package selector, risk badge, "Add time from meeting" button), and a package counter all in one horizontal row. This creates visual density.
 
----
+**Changes to `ClientDetail.tsx` header section (lines 156-236):**
 
-### Technical Changes
+1. **Primary header row** -- Organisation Name + Status badge + Risk badge + CSC assignment + action buttons only
+   - Keep `tenant.name` as `h1`
+   - Keep Status badge (active/inactive)
+   - Keep `RiskLevelBadge` inline with badges
+   - Keep `CSCAssignmentSelector` below the name
+   - **Add `ViewAsClientButton`** next to Save Changes (top-right)
+   - **De-emphasise slug**: Change from `<p>` to a small `text-xs text-muted-foreground` tooltip or inline metadata: `slug: {tenant.slug}` in muted small text
 
-#### 1. Update `src/index.css` - Remove Problematic Global Rule
+2. **Remove from header row:**
+   - `ClientTimeWidget` (timer, month total, package usage badge, package selector)
+   - "Add time from meeting" button
+   - Package count `div`
 
-Replace the current global min-height rule with a more targeted approach:
-
-**Before (lines 329-336):**
-```css
-button, 
-[role="button"],
-input[type="checkbox"],
-input[type="radio"],
-select {
-  min-height: 2.75rem; /* 44px at base font size */
-}
-```
-
-**After:**
-```css
-/* Touch-target sizing for text inputs and selects only */
-input[type="text"],
-input[type="email"],
-input[type="password"],
-input[type="search"],
-input[type="tel"],
-input[type="url"],
-input[type="number"],
-input[type="date"],
-input[type="time"],
-input[type="datetime-local"],
-textarea,
-select {
-  min-height: 2.75rem; /* 44px at base font size */
-}
-
-/* Note: Buttons, checkboxes, switches, and radios handle their own sizing.
-   Touch targets for these are managed by component-level padding/spacing. */
-```
+These controls move into the page body as part of the Engagement Snapshot or remain accessible via the Overview tab.
 
 ---
 
-#### 2. Update `src/components/ui/switch.tsx` - Restore Standard Dimensions
+### Part B: Four-Zone Page Body
 
-The Switch component was previously modified. Restore to shadcn/Radix defaults:
+Restructure the Overview tab content into clear card-based sections:
 
-**Current (broken):**
-```tsx
-// Root: h-5 w-9
-// Thumb: h-4 w-4, translate-x-4
-```
+#### Zone 1: Identity and Registration (read-only card)
+- Existing `ClientProfileForm` already covers RTO number, CRICOS, legal name, trading name, ABN, ACN, org type
+- Existing `ClientAddressSection` below it
+- No changes needed here, already well structured
 
-**Fixed:**
-```tsx
-// Root: h-6 w-11 rounded-full
-// Thumb: h-5 w-5 rounded-full, translate-x-5
-```
+#### Zone 2: Engagement Snapshot (new summary section on Overview)
+- Move `ClientTimeSummaryCard` to sit at top of Overview (already does this)
+- Move `ClientTimeWidget` (timer controls) into a compact bar above or within the time summary card
+- Move "Add time from meeting" button into the time summary area
+- Move package count into the engagement snapshot area
+- **Conditionally hide** the Package Burn-down card when no active package has included hours (already handled -- shows "No active package" message, but we can hide the entire card)
 
-Full component update:
-```tsx
-<SwitchPrimitives.Root
-  className={cn(
-    "peer inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-50 data-[state=checked]:bg-primary data-[state=unchecked]:bg-input",
-    className,
-  )}
-  {...props}
-  ref={ref}
->
-  <SwitchPrimitives.Thumb
-    className={cn(
-      "pointer-events-none block h-5 w-5 rounded-full bg-background shadow-lg ring-0 transition-transform data-[state=checked]:translate-x-5 data-[state=unchecked]:translate-x-0",
-    )}
-  />
-</SwitchPrimitives.Root>
-```
+#### Zone 3: Work Tabs (keep existing, minor cleanup)
+- Keep all existing tabs: Overview, Packages, Documents, Users, Notes, Actions, Emails, SharePoint, Timeline, Integrations
+- No structural changes to tab content
+
+#### Zone 4: Internal-Only Controls (visual separation)
+- Wrap the Notes tab content and risk/internal actions with a subtle "Vivacity Internal" label or border treatment
+- The Notes tab already is internal-only by nature -- just add a small indicator badge on the tab
 
 ---
 
-#### 3. Verify `src/components/ui/checkbox.tsx` - Already Correct
+### Part C: "View as Client" Button in Header
 
-Current code is correct (h-4 w-4 rounded-sm):
-```tsx
-"peer h-4 w-4 shrink-0 rounded-sm border border-primary bg-background ..."
-```
+**Current state:** `ViewAsClientButton.tsx` already exists with full functionality -- dropdown for portal vs academy, reason dialog, audit logging, navigation to `/client-preview`.
 
-No changes needed once the global CSS is fixed.
+**Changes:**
+1. Import `ViewAsClientButton` into `ClientDetail.tsx`
+2. Place it in the header actions area (top-right), next to the Save Changes button
+3. Pass required props: `tenantId`, `tenantName`, tenant type from profile or tenant data
+4. The button already handles its own visibility check (`canUsePreview` from `ClientPreviewContext`)
 
----
-
-#### 4. Verify `src/components/ui/radio-group.tsx` - Already Correct
-
-Current code is correct (h-4 w-4 rounded-full):
-```tsx
-"aspect-square h-4 w-4 rounded-full border border-primary ..."
-```
-
-No changes needed once the global CSS is fixed.
+The existing `ImpersonationBanner` component already provides the fixed "Viewing as Client" banner with exit button when preview mode is active.
 
 ---
 
-### Files To Modify
+### Technical Details
 
-| File | Change |
-|------|--------|
-| `src/index.css` | Replace broad min-height rule with text-input-only targeting |
-| `src/components/ui/switch.tsx` | Restore h-6 w-11 track, h-5 w-5 thumb, translate-x-5 |
+**Files to modify:**
+- `src/pages/ClientDetail.tsx` -- Main restructure:
+  - Import `ViewAsClientButton`
+  - Restructure header: name + badges + CSC on left, ViewAsClient + Save on right
+  - De-emphasise slug to `text-xs` metadata
+  - Move time widget, package count, and "Add time from meeting" out of header into Overview tab body
+  - Add an "Engagement Controls" bar at top of Overview tab with timer widget + add time button + package count
 
----
+**Files unchanged:**
+- `ViewAsClientButton.tsx` -- Already complete
+- `ImpersonationBanner.tsx` -- Already complete
+- `ClientPreviewContext.tsx` -- Already complete
+- `ClientProfileForm.tsx` -- Already correct for Zone 1
+- `ClientTimeSummaryCard.tsx` -- Already correct for Zone 2
+- No database/schema changes required
 
-### Expected Results
+**Estimated scope:** Single file edit (`ClientDetail.tsx`), approximately 50-80 lines restructured.
 
-After these changes:
-- **Checkbox**: 16x16px square with rounded-sm corners
-- **Switch**: 44x24px pill track with 20x20px circular thumb
-- **Radio**: 16x16px perfect circle
-- **Text inputs/selects**: Still maintain 44px min-height for touch accessibility
-
----
-
-### Testing Checklist
-
-1. **Login page** - Verify "Remember me" checkbox is square and aligned
-2. **Settings page** - Verify account active switch is pill-shaped with circular thumb
-3. **Any radio groups** - Verify radio buttons are circular
-4. Toggle states (checked/unchecked) - Verify no resizing occurs
-5. Test at 375px, 768px, and 1280px widths
-6. Verify no horizontal scrollbar or clipping
