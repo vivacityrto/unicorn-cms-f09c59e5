@@ -25,6 +25,15 @@ import {
   columnVisibility,
 } from '@/components/ui/responsive-table';
 import {
+  FormSection,
+  FieldRow,
+  FieldGroup,
+  FormGrid,
+  FormActions,
+  FieldHint,
+  FieldError,
+} from '@/components/ui/form-primitives';
+import {
   AppModal,
   AppModalContent,
   AppModalHeader,
@@ -260,42 +269,89 @@ export default function QAResponsiveHarness() {
               </div>
             </section>
 
-            {/* Section 3: Standard Form */}
+            {/* Section 3: Standardized Form Primitives */}
             <section>
-              <h2 className="text-sm font-medium text-muted-foreground mb-3 uppercase tracking-wide">Standard Form (Short + Long Labels)</h2>
+              <h2 className="text-sm font-medium text-muted-foreground mb-3 uppercase tracking-wide">Standardized Form (Form Primitives)</h2>
               <Card>
-                <CardHeader>
-                  <CardTitle className="text-base">User Details</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="grid gap-4 sm:grid-cols-2">
-                    <div className="space-y-2">
-                      <Label>First Name</Label>
-                      <Input defaultValue="Alexandria" />
+                <CardContent className="pt-6">
+                  <FormSection title="Personal Information" description="Enter your contact details" first>
+                    <FieldRow>
+                      <FieldGroup label="First Name" htmlFor="fname" required>
+                        <Input id="fname" defaultValue="Alexandria" />
+                      </FieldGroup>
+                      <FieldGroup 
+                        label="Last Name (Including Suffixes and Honorifics)" 
+                        htmlFor="lname" 
+                        required
+                        hint="Include any titles or suffixes"
+                      >
+                        <Input id="lname" defaultValue="Bartholomew-Smithington III" />
+                      </FieldGroup>
+                    </FieldRow>
+                  </FormSection>
+
+                  <FormSection title="Contact Details">
+                    <FieldGroup 
+                      label="Email Address (Primary Contact for All Communications)" 
+                      htmlFor="email"
+                      required
+                      hint="We'll use this for all account notifications and correspondence"
+                      error=""
+                    >
+                      <Input id="email" type="email" defaultValue={MOCK_DATA.longEmail} />
+                    </FieldGroup>
+
+                    <FieldGroup 
+                      label="Organisation / Tenant (Registered Training Organisation Name)" 
+                      htmlFor="org"
+                      hint="The full legal name of the organisation"
+                    >
+                      <Input id="org" defaultValue={MOCK_DATA.longTenant} />
+                    </FieldGroup>
+                  </FormSection>
+
+                  <FormSection title="Additional Information">
+                    <FieldGroup 
+                      label="Notes" 
+                      htmlFor="notes"
+                      hint="Any additional information (max 500 characters)"
+                    >
+                      <Textarea id="notes" defaultValue={MOCK_DATA.longDescription} rows={3} />
+                    </FieldGroup>
+
+                    <div className="flex items-start gap-2">
+                      <Checkbox id="consent" />
+                      <Label htmlFor="consent" className="text-sm leading-relaxed whitespace-normal">
+                        I acknowledge that this user will receive access to compliance documentation and training materials as per their assigned role and permissions.
+                      </Label>
                     </div>
-                    <div className="space-y-2">
-                      <Label>Last Name (Including Suffixes and Honorifics)</Label>
-                      <Input defaultValue="Bartholomew-Smithington III" />
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Email Address (Primary Contact for All Communications)</Label>
-                    <Input defaultValue={MOCK_DATA.longEmail} />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Organisation / Tenant (Registered Training Organisation Name)</Label>
-                    <Input defaultValue={MOCK_DATA.longTenant} />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Additional Notes</Label>
-                    <Textarea defaultValue={MOCK_DATA.longDescription} rows={3} />
-                  </div>
-                  <div className="flex items-start gap-2">
-                    <Checkbox id="consent" />
-                    <Label htmlFor="consent" className="text-sm leading-relaxed">
-                      I acknowledge that this user will receive access to compliance documentation and training materials as per their assigned role and permissions.
-                    </Label>
-                  </div>
+                  </FormSection>
+
+                  {/* Validation Examples */}
+                  <FormSection title="Validation States">
+                    <FieldRow>
+                      <FieldGroup 
+                        label="Field with Error" 
+                        htmlFor="error-field"
+                        required
+                        error="This field is required and must be at least 10 characters long to meet the validation requirements"
+                      >
+                        <Input id="error-field" className="border-destructive" defaultValue="" />
+                      </FieldGroup>
+                      <FieldGroup 
+                        label="Field with Long Hint" 
+                        htmlFor="hint-field"
+                        hint="This is a very long hint that explains exactly what this field is for and provides additional context about the expected input format and any validation rules that apply"
+                      >
+                        <Input id="hint-field" defaultValue="Valid input" />
+                      </FieldGroup>
+                    </FieldRow>
+                  </FormSection>
+
+                  <FormActions>
+                    <Button variant="outline" type="button">Cancel</Button>
+                    <Button type="submit">Save Changes</Button>
+                  </FormActions>
                 </CardContent>
               </Card>
             </section>
