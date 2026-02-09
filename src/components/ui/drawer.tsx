@@ -46,7 +46,7 @@ const DrawerContent = React.forwardRef<
       {/* Drag handle - always visible */}
       <div className="mx-auto mt-4 h-2 w-[100px] shrink-0 rounded-full bg-muted" />
       {/* Scrollable content area */}
-      <div className="flex-1 overflow-y-auto overscroll-contain">
+      <div className="flex-1 overflow-y-auto overscroll-contain px-4 pb-4 md:px-6 md:pb-6">
         {children}
       </div>
     </DrawerPrimitive.Content>

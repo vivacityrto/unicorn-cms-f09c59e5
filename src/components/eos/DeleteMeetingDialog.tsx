@@ -1,13 +1,4 @@
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 
 interface DeleteMeetingDialogProps {
   open: boolean;
@@ -25,25 +16,16 @@ export function DeleteMeetingDialog({
   isDeleting,
 }: DeleteMeetingDialogProps) {
   return (
-    <AlertDialog open={open} onOpenChange={onOpenChange}>
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle>Delete Meeting</AlertDialogTitle>
-          <AlertDialogDescription>
-            Are you sure you want to delete "{meetingTitle}"? This action cannot be undone and will remove all associated data including agenda items, notes, and segments.
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
-          <AlertDialogAction
-            onClick={onConfirm}
-            disabled={isDeleting}
-            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-          >
-            {isDeleting ? 'Deleting...' : 'Delete Meeting'}
-          </AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
+    <ConfirmDialog
+      open={open}
+      onOpenChange={onOpenChange}
+      title="Delete Meeting"
+      description="Are you sure you want to delete this meeting? This action cannot be undone and will remove all associated data including agenda items, notes, and segments."
+      itemName={meetingTitle}
+      onConfirm={onConfirm}
+      confirmText={isDeleting ? 'Deleting...' : 'Delete Meeting'}
+      isLoading={isDeleting}
+      variant="destructive"
+    />
   );
 }

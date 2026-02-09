@@ -1,7 +1,15 @@
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { AlertTriangle, Copy, Edit2 } from 'lucide-react';
+import { Copy, Edit2 } from 'lucide-react';
+import {
+  AppModal,
+  AppModalContent,
+  AppModalHeader,
+  AppModalTitle,
+  AppModalDescription,
+  AppModalBody,
+  AppModalFooter,
+} from '@/components/ui/app-modal';
 
 interface DocumentReuseWarningDialogProps {
   open: boolean;
@@ -23,21 +31,20 @@ export function DocumentReuseWarningDialog({
   onDuplicate
 }: DocumentReuseWarningDialogProps) {
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-amber-600">
-            <AlertTriangle className="h-5 w-5" />
+    <AppModal open={open} onOpenChange={onOpenChange}>
+      <AppModalContent size="sm">
+        <AppModalHeader>
+          <AppModalTitle className="text-amber-600">
             Document Used in Multiple Stages
-          </DialogTitle>
-          <DialogDescription>
+          </AppModalTitle>
+          <AppModalDescription>
             This document is linked to {stageCount} stage{stageCount !== 1 ? 's' : ''}. 
             Changes will affect all linked stages.
-          </DialogDescription>
-        </DialogHeader>
+          </AppModalDescription>
+        </AppModalHeader>
 
-        <div className="py-4">
-          <p className="text-sm font-medium mb-2">{documentTitle}</p>
+        <AppModalBody>
+          <p className="text-sm font-medium">{documentTitle}</p>
           <div className="flex flex-wrap gap-1">
             {stageNames.slice(0, 5).map((name, idx) => (
               <Badge key={idx} variant="secondary" className="text-xs">
@@ -50,9 +57,9 @@ export function DocumentReuseWarningDialog({
               </Badge>
             )}
           </div>
-        </div>
+        </AppModalBody>
 
-        <DialogFooter className="flex-col sm:flex-row gap-2">
+        <AppModalFooter className="flex-col sm:flex-row gap-2">
           <Button variant="outline" onClick={() => onOpenChange(false)} className="w-full sm:w-auto">
             Cancel
           </Button>
@@ -72,8 +79,8 @@ export function DocumentReuseWarningDialog({
             <Edit2 className="h-4 w-4 mr-2" />
             Edit Anyway
           </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        </AppModalFooter>
+      </AppModalContent>
+    </AppModal>
   );
 }
