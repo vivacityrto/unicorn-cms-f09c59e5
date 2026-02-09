@@ -24,6 +24,7 @@ import { AskVivScopeBanner, type ScopeLock } from "./AskVivScopeBanner";
 import { AskVivScopeSelectorModal, type SelectedScope } from "./AskVivScopeSelectorModal";
 import { AskVivFreshnessChip } from "./AskVivFreshnessChip";
 import { AskVivMicroExplain, type MicroExplainPayload } from "./AskVivMicroExplain";
+import { AskVivFlagButton } from "./AskVivFlagButton";
 import {
   X,
   Send,
@@ -65,6 +66,7 @@ interface Message {
   scope_lock?: ScopeLock;
   freshness?: FreshnessData;
   micro_explain?: MicroExplainPayload;
+  ai_interaction_log_id?: string | null;
   created_at: string;
 }
 
@@ -318,6 +320,7 @@ export function AskVivPanel() {
       scope_lock: result.scope_lock,
       freshness: result.freshness,
       micro_explain: result.micro_explain,
+      ai_interaction_log_id: result.ai_interaction_log_id,
     };
   }
 
@@ -393,6 +396,7 @@ export function AskVivPanel() {
           scope_lock: result.scope_lock,
           freshness: result.freshness,
           micro_explain: result.micro_explain,
+          ai_interaction_log_id: result.ai_interaction_log_id,
           created_at: new Date().toISOString(),
         };
       }
@@ -723,6 +727,16 @@ export function AskVivPanel() {
                       {/* Explain sources panel */}
                       {explainSourcesEnabled && message.explain && (
                         <AskVivExplainPanel explain={message.explain} />
+                      )}
+
+                      {/* Flag for CSC review button */}
+                      {message.scope_lock && context.tenant_id && (
+                        <AskVivFlagButton
+                          scopeLock={message.scope_lock}
+                          aiInteractionLogId={message.ai_interaction_log_id ?? null}
+                          tenantId={context.tenant_id}
+                          className="mt-2"
+                        />
                       )}
                     </div>
                   )}
