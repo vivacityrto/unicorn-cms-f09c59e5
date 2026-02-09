@@ -1,133 +1,130 @@
 
 
-## Client Reminders Calendar -- Implementation Plan
+## Client Calendar UI, Notification Centre, and View-as-Client Guards
 
-### Current State
+### Summary
 
-All three views (`client_reminders_feed`, `my_client_reminders`, `tenant_client_reminders`) already exist in the database but have gaps that need fixing:
-
-1. **No attendee expansion for meetings** -- currently only the meeting owner appears; attendees from `meeting_participants` are not included
-2. **`meetings_shared` is a view, not a table** -- the original spec references `meetings_shared.user_id` which does not exist. The actual attendee data lives in `meeting_participants` (columns: `meeting_id`, `participant_email`, `participant_name`)
-3. **No `security_invoker = true`** on any of the three views -- meaning RLS on the underlying tables is bypassed when querying through these views via PostgREST
-4. **Missing composite index** `idx_meetings_tenant_starts_at` for performance
-
-### Attendee Matching Challenge
-
-`meeting_participants` stores `participant_email` (text), not `user_id` (uuid). To match attendees to users for the reminders feed, we need to join through the `users` table on email. This means a meeting will appear for an attendee only if their `participant_email` matches a `users.email` record. This is a reasonable convention and avoids creating new tables.
+This plan adds three new client-facing routes and updates the client sidebar and View-as-Client preview page. No legacy tables are modified. All data comes from existing views and tables.
 
 ---
 
-### Database Changes (Migration)
+### Part A: Client Calendar Page (`/client/calendar`)
 
-**Step 1 -- Replace `client_reminders_feed`**
+**New files:**
 
-Recreate with `security_invoker = true` and add a second meeting UNION leg that expands `meeting_participants` into per-user rows:
+| File | Purpose |
+|---|---|
+| `src/pages/ClientCalendar.tsx` | Main page with two tabs: Events and My Reminders |
+| `src/pages/ClientCalendarWrapper.tsx` | Wraps in DashboardLayout |
+| `src/components/client/ClientRemindersCalendar.tsx` | Month/Week/Agenda calendar rendering reminders data |
+| `src/components/client/ReminderDetailDrawer.tsx` | Sheet/drawer showing item details on click |
+| `src/hooks/useClientReminders.tsx` | Hook querying `my_client_reminders` or `tenant_client_reminders` based on role |
+
+**Events tab:** Reuses the existing AddEvent embed from `Calendar.tsx` (same script loading and `addeventstc` links). Extracted into a shared `AddEventEmbed` component.
+
+**My Reminders tab:**
+- Uses `useClientReminders` hook which checks the user's role via `useRBAC`:
+  - ClientUser (General User) queries `my_client_reminders`
+  - ClientAdmin (Admin) queries `tenant_client_reminders`
+- Default view: Month grid. Toggle buttons for Month / Week / Agenda.
+- Items rendered with colour-coded badges by `item_type` (task, meeting, reminder).
+- Clicking an item opens `ReminderDetailDrawer` showing title, datetime, type badge, and context fields from `meta` (location, meeting_url, status, description).
+- Deep link actions: meeting_url opens in new tab; task links to task route if available.
+
+**Route registration:** Add `/client/calendar` to `App.tsx` with lazy import and `ProtectedRoute`.
+
+---
+
+### Part B: Notification Centre (`/client/notifications`)
+
+**New files:**
+
+| File | Purpose |
+|---|---|
+| `src/pages/ClientNotifications.tsx` | Full notification list page with grouping and filters |
+| `src/pages/ClientNotificationsWrapper.tsx` | Wraps in DashboardLayout |
+| `src/hooks/useClientNotifications.tsx` | Hook querying `user_notifications` table scoped to `auth.uid()` |
+
+**Data source:** `user_notifications` table (columns: id, user_id, tenant_id, type, title, message, link, is_read, created_by, created_at, updated_at).
+
+**UI:**
+- Grouped by: Today, This Week, Older (using `date-fns` comparisons on `created_at`).
+- Filter tabs: All, Events, Tasks, Meetings, Obligations (filtering on `type` column).
+- Unread indicator: highlight row + "New" badge.
+- Actions: "Mark as read" per item, "Mark all as read" button.
+- Clicking a notification with a `link` value navigates to that route.
+
+**Mark as read:** Updates `is_read` via Supabase client scoped to `user_id = auth.uid()` (RLS-safe).
+
+**Route registration:** Add `/client/notifications` to `App.tsx`.
+
+---
+
+### Part C: View-as-Client Guards and Routing
+
+**Changes to existing files:**
+
+| File | Change |
+|---|---|
+| `src/pages/ClientPreview.tsx` | Add sidebar navigation for client portal routes (Home, Calendar, Notifications). Add routing within the preview to navigate between client pages while maintaining impersonation banner. |
+| `src/components/client/ImpersonationBanner.tsx` | No changes needed -- already functional. |
+| `src/components/client/ViewAsClientButton.tsx` | No changes needed -- already navigates to `/client-preview`. |
+
+**Guard logic:** The existing `ClientPreviewContext` already provides `isPreviewMode` and `previewTenant`. Client pages will check:
+1. If in preview mode, use `previewTenant.id` as tenant context.
+2. If not in preview mode, use the user's own `tenant_id` from profile.
+3. Internal-only UI (notes, risk, time logging) is hidden when `isPreviewMode` is true (already handled by existing view mode).
+
+---
+
+### Part D: Sidebar Updates
+
+**File:** `src/components/DashboardLayout.tsx`
+
+Update the client-facing `baseMenuItems` / `userMenuItems` / `adminMenuItems` arrays:
 
 ```text
-Tasks (from tasks_tenants, unchanged)
-  UNION ALL
-Meetings -- owner row (from meetings, owner_user_uuid)
-  UNION ALL
-Meetings -- attendee rows (meetings JOIN meeting_participants JOIN users ON email)
-  UNION ALL
-Reminders (from calendar_entries, unchanged)
+Client sidebar items (when isViewingAsClient or client role):
+- Home          -> /dashboard
+- Documents     -> /manage-documents
+- Calendar      -> /client/calendar
+- Notifications -> /client/notifications  (with unread badge)
+- Reports       -> /reports
+- Settings      -> /settings
 ```
 
-The attendee leg will use:
-- `meeting_participants.participant_email` joined to `users.email`
-- Output `users.id` as `owner_user_id` (so each attendee gets their own row)
-- A `WHERE` guard to exclude the owner (avoids duplicates since the owner already has their own row)
+Admin additions:
+- Users -> /team-settings (already present as "Manage Team")
 
-**Step 2 -- Replace `my_client_reminders`**
-
-Recreate with `security_invoker = true`. Logic unchanged (tenant membership + `owner_user_id = auth.uid()`).
-
-**Step 3 -- Replace `tenant_client_reminders`**
-
-Recreate with `security_invoker = true`. Logic unchanged (tenant membership only, all users visible to ClientAdmin).
-
-**Step 4 -- Add composite index**
-
-```sql
-CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_meetings_tenant_starts_at
-  ON public.meetings (tenant_id, starts_at);
-```
-
-Note: `CONCURRENTLY` cannot run inside a transaction, so this will be a separate migration step.
-
-**Step 5 -- Add index on `meeting_participants`**
-
-The existing indexes cover `meeting_id` and `participant_email` individually, which is sufficient for the join pattern.
+**Unread badge:** The sidebar Notifications item will use `useNotifications` (or a lightweight count query) to show unread count badge.
 
 ---
 
-### No Legacy Table Changes
+### Part E: Shared Component Extraction
 
-- No `ALTER TABLE` on any existing table
-- No `UPDATE` or `DELETE` on existing data
-- Only `CREATE OR REPLACE VIEW` and `CREATE INDEX`
+Extract the AddEvent embed logic from `src/pages/Calendar.tsx` into a reusable `src/components/calendar/AddEventEmbed.tsx` so both the internal Event Calendar page and the Client Calendar Events tab can use the same component without duplicating script loading.
 
 ---
 
-### No Frontend Changes in This Migration
+### Files Created (new)
 
-The views are already registered in the Supabase types. Once recreated, they will be queryable from the frontend via `supabase.from('my_client_reminders').select('*')`. Frontend components (Client Reminders Calendar UI) can be built in a follow-up step.
+1. `src/pages/ClientCalendar.tsx`
+2. `src/pages/ClientCalendarWrapper.tsx`
+3. `src/components/client/ClientRemindersCalendar.tsx`
+4. `src/components/client/ReminderDetailDrawer.tsx`
+5. `src/hooks/useClientReminders.tsx`
+6. `src/pages/ClientNotifications.tsx`
+7. `src/pages/ClientNotificationsWrapper.tsx`
+8. `src/hooks/useClientNotifications.tsx`
+9. `src/components/calendar/AddEventEmbed.tsx`
 
----
+### Files Modified (existing)
 
-### Technical Detail: View SQL
+1. `src/App.tsx` -- add 2 new lazy imports and routes
+2. `src/components/DashboardLayout.tsx` -- update client sidebar items with Calendar, Notifications, unread badge
+3. `src/pages/Calendar.tsx` -- refactor to use shared `AddEventEmbed`
 
-**client_reminders_feed** (key change -- attendee expansion):
+### No Database Changes
 
-```sql
-CREATE OR REPLACE VIEW public.client_reminders_feed
-WITH (security_invoker = true) AS
+All queries use existing views (`my_client_reminders`, `tenant_client_reminders`) and tables (`user_notifications`). No migrations needed.
 
--- Tasks
-SELECT 'task'::text AS item_type, ...
-FROM tasks_tenants tt WHERE tt.due_date IS NOT NULL
-
-UNION ALL
-
--- Meetings: owner row
-SELECT 'meeting'::text AS item_type,
-  m.id::text AS item_id, m.tenant_id, m.title, m.starts_at, m.ends_at,
-  m.owner_user_uuid AS owner_user_id,
-  jsonb_build_object(..., 'role', 'owner') AS meta
-FROM meetings m WHERE m.starts_at IS NOT NULL
-
-UNION ALL
-
--- Meetings: attendee rows (matched via email)
-SELECT 'meeting'::text AS item_type,
-  m.id::text AS item_id, m.tenant_id, m.title, m.starts_at, m.ends_at,
-  u.id AS owner_user_id,
-  jsonb_build_object(..., 'role', 'attendee') AS meta
-FROM meetings m
-JOIN meeting_participants mp ON mp.meeting_id = m.id
-JOIN users u ON lower(u.email) = lower(mp.participant_email)
-WHERE m.starts_at IS NOT NULL
-  AND u.id IS DISTINCT FROM m.owner_user_uuid
-
-UNION ALL
-
--- Calendar entry reminders
-SELECT 'reminder'::text AS item_type, ...
-FROM calendar_entries ce WHERE ce.entry_date IS NOT NULL;
-```
-
-**my_client_reminders** and **tenant_client_reminders** retain their existing filter logic, just rebuilt with `security_invoker = true`.
-
----
-
-### Acceptance Criteria Covered
-
-| Criteria | Status |
-|---|---|
-| Views exist and compile | Will be recreated |
-| ClientUser scoping (owner_user_id = auth.uid()) | Preserved in my_client_reminders |
-| ClientAdmin scoping (all tenant items) | Preserved in tenant_client_reminders |
-| Meeting attendee expansion | New: via meeting_participants + users join |
-| No legacy table changes | Confirmed: views and indexes only |
-| security_invoker enabled | New: added to all three views |
-| Composite index on meetings | New: (tenant_id, starts_at) |
