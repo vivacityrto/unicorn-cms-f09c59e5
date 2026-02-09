@@ -50,15 +50,22 @@ const maxWidthClasses = {
  * </PageContainer>
  */
 export const PageContainer = React.forwardRef<HTMLDivElement, PageContainerProps>(
-  ({ className, maxWidth = "xl", noPadding = false, children, ...props }, ref) => {
+  ({ className, maxWidth = "full", noPadding = false, children, ...props }, ref) => {
+    // When maxWidth is "full", don't apply mx-auto or max-width constraints
+    // This prevents layout collapse issues
+    const isFullWidth = maxWidth === "full";
+    
     return (
       <div
         ref={ref}
         className={cn(
-          "w-full mx-auto",
-          maxWidthClasses[maxWidth],
-          // Responsive padding: px-4 py-4 → md:px-6 md:py-6 → lg:px-8 lg:py-8
-          !noPadding && "px-4 py-4 md:px-6 md:py-6 lg:px-8 lg:py-8",
+          // Core layout contract: always w-full, min-w-0 to prevent collapse
+          "w-full min-w-0",
+          // Only apply max-width and centering when explicitly constrained
+          !isFullWidth && maxWidthClasses[maxWidth],
+          !isFullWidth && "mx-auto",
+          // Responsive padding: only on non-full containers or when explicitly set
+          !noPadding && "py-4 md:py-6 lg:py-8",
           className
         )}
         {...props}
