@@ -5,6 +5,8 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
+import { PageHeader } from '@/components/ui/page-header';
+import { PageContainer, Section, ResponsiveGrid } from '@/components/layout';
 import { 
   Plus, 
   Target, 
@@ -158,128 +160,127 @@ function RocksHierarchyContent() {
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex justify-between items-start">
-        <div>
-          <h1 className="text-3xl font-bold flex items-center gap-2">
-            <Target className="w-8 h-8" />
-            Rocks (90-Day Goals)
-          </h1>
-          <p className="text-muted-foreground mt-2">
-            Company → Team → Individual rock hierarchy
-          </p>
-        </div>
-        <PermissionTooltip permission="rocks:create" action="create rocks">
-          <Button 
-            onClick={() => setShowCompanyDialog(true)}
-            disabled={!canCreateRocks()}
-          >
-            <Plus className="w-4 h-4 mr-2" />
-            Add Company Rock
-          </Button>
-        </PermissionTooltip>
-      </div>
+    <div className="space-y-4 md:space-y-6">
+      {/* Header - using PageHeader for responsive typography */}
+      <PageHeader
+        title="Rocks (90-Day Goals)"
+        description="Company → Team → Individual rock hierarchy"
+        icon={Target}
+        actions={
+          <PermissionTooltip permission="rocks:create" action="create rocks">
+            <Button 
+              onClick={() => setShowCompanyDialog(true)}
+              disabled={!canCreateRocks()}
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              <span className="hidden sm:inline">Add Company Rock</span>
+              <span className="sm:hidden">Add Rock</span>
+            </Button>
+          </PermissionTooltip>
+        }
+      />
 
-      {/* Stats Cards */}
-      <div className="grid gap-4 md:grid-cols-4">
+      {/* Stats Cards - responsive grid */}
+      <ResponsiveGrid cols={{ default: 2, md: 4 }} gap="md">
         <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => setStatusFilter('all')}>
-          <CardContent className="p-6">
+          <CardContent className="p-4 md:p-6">
             <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Total Rocks</p>
-                <p className="text-2xl font-bold">{stats.total}</p>
+              <div className="min-w-0 flex-1">
+                <p className="text-xs md:text-sm font-medium text-muted-foreground truncate">Total Rocks</p>
+                <p className="text-xl md:text-2xl font-bold">{stats.total}</p>
               </div>
-              <Target className="w-8 h-8 text-muted-foreground" />
+              <Target className="w-6 h-6 md:w-8 md:h-8 text-muted-foreground flex-shrink-0" />
             </div>
           </CardContent>
         </Card>
 
         <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => setStatusFilter('on_track')}>
-          <CardContent className="p-6">
+          <CardContent className="p-4 md:p-6">
             <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">On Track</p>
-                <p className="text-2xl font-bold text-green-600">{stats.onTrack}</p>
+              <div className="min-w-0 flex-1">
+                <p className="text-xs md:text-sm font-medium text-muted-foreground truncate">On Track</p>
+                <p className="text-xl md:text-2xl font-bold text-green-600">{stats.onTrack}</p>
               </div>
-              <TrendingUp className="w-8 h-8 text-green-600" />
+              <TrendingUp className="w-6 h-6 md:w-8 md:h-8 text-green-600 flex-shrink-0" />
             </div>
           </CardContent>
         </Card>
 
         <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => setStatusFilter('off_track')}>
-          <CardContent className="p-6">
+          <CardContent className="p-4 md:p-6">
             <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Off Track</p>
-                <p className="text-2xl font-bold text-red-600">{stats.offTrack}</p>
+              <div className="min-w-0 flex-1">
+                <p className="text-xs md:text-sm font-medium text-muted-foreground truncate">Off Track</p>
+                <p className="text-xl md:text-2xl font-bold text-red-600">{stats.offTrack}</p>
               </div>
-              <TrendingDown className="w-8 h-8 text-red-600" />
+              <TrendingDown className="w-6 h-6 md:w-8 md:h-8 text-red-600 flex-shrink-0" />
             </div>
           </CardContent>
         </Card>
 
         <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => setStatusFilter('complete')}>
-          <CardContent className="p-6">
+          <CardContent className="p-4 md:p-6">
             <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Complete</p>
-                <p className="text-2xl font-bold text-blue-600">{stats.complete}</p>
+              <div className="min-w-0 flex-1">
+                <p className="text-xs md:text-sm font-medium text-muted-foreground truncate">Complete</p>
+                <p className="text-xl md:text-2xl font-bold text-blue-600">{stats.complete}</p>
               </div>
-              <CheckCircle className="w-8 h-8 text-blue-600" />
+              <CheckCircle className="w-6 h-6 md:w-8 md:h-8 text-blue-600 flex-shrink-0" />
             </div>
           </CardContent>
         </Card>
-      </div>
+      </ResponsiveGrid>
 
-      {/* Filters */}
-      <div className="flex items-center gap-4 flex-wrap">
+      {/* Filters - responsive wrap */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:flex-wrap">
         <div className="flex items-center gap-2">
           <Filter className="w-4 h-4 text-muted-foreground" />
           <span className="text-sm font-medium">Filters:</span>
         </div>
 
-        {/* Quarter selector */}
-        <Select 
-          value={`${quarterYear}-${quarterNumber}`} 
-          onValueChange={(v) => {
-            const [y, q] = v.split('-').map(Number);
-            setQuarterYear(y);
-            setQuarterNumber(q);
-          }}
-        >
-          <SelectTrigger className="w-32">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {[-1, 0, 1, 2].map(offset => {
-              const q = currentQuarter.quarter + offset;
-              const adjustedQ = ((q - 1) % 4 + 4) % 4 + 1;
-              const adjustedY = currentQuarter.year + Math.floor((currentQuarter.quarter + offset - 1) / 4);
-              return (
-                <SelectItem key={`${adjustedY}-${adjustedQ}`} value={`${adjustedY}-${adjustedQ}`}>
-                  Q{adjustedQ} {adjustedY}
-                </SelectItem>
-              );
-            })}
-          </SelectContent>
-        </Select>
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+          {/* Quarter selector */}
+          <Select 
+            value={`${quarterYear}-${quarterNumber}`} 
+            onValueChange={(v) => {
+              const [y, q] = v.split('-').map(Number);
+              setQuarterYear(y);
+              setQuarterNumber(q);
+            }}
+          >
+            <SelectTrigger className="w-28 sm:w-32">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {[-1, 0, 1, 2].map(offset => {
+                const q = currentQuarter.quarter + offset;
+                const adjustedQ = ((q - 1) % 4 + 4) % 4 + 1;
+                const adjustedY = currentQuarter.year + Math.floor((currentQuarter.quarter + offset - 1) / 4);
+                return (
+                  <SelectItem key={`${adjustedY}-${adjustedQ}`} value={`${adjustedY}-${adjustedQ}`}>
+                    Q{adjustedQ} {adjustedY}
+                  </SelectItem>
+                );
+              })}
+            </SelectContent>
+          </Select>
 
-        {/* Status filter */}
-        <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-36">
-            <SelectValue placeholder="Status" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Statuses</SelectItem>
-            <SelectItem value="on_track">On Track</SelectItem>
-            <SelectItem value="off_track">Off Track</SelectItem>
-            <SelectItem value="complete">Complete</SelectItem>
-          </SelectContent>
-        </Select>
+          {/* Status filter */}
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger className="w-28 sm:w-36">
+              <SelectValue placeholder="Status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Statuses</SelectItem>
+              <SelectItem value="on_track">On Track</SelectItem>
+              <SelectItem value="off_track">Off Track</SelectItem>
+              <SelectItem value="complete">Complete</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
 
-        {/* Search */}
-        <div className="relative flex-1 max-w-xs">
+        {/* Search - full width on mobile */}
+        <div className="relative w-full sm:flex-1 sm:max-w-xs">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder="Search rocks..."
@@ -297,35 +298,38 @@ function RocksHierarchyContent() {
               setStatusFilter('all');
               setSearchQuery('');
             }}
+            className="self-start sm:self-auto"
           >
             Clear filters
           </Button>
         )}
       </div>
 
-      {/* Tabs */}
+      {/* Tabs - responsive */}
       <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)}>
-        <TabsList className="grid w-full max-w-lg grid-cols-4">
-          <TabsTrigger value="company" className="flex items-center gap-2">
-            <Building2 className="h-4 w-4" />
-            Company
-            <Badge variant="secondary" className="text-xs">{filteredCompanyRocks.length}</Badge>
-          </TabsTrigger>
-          <TabsTrigger value="team" className="flex items-center gap-2">
-            <Users className="h-4 w-4" />
-            Team
-            <Badge variant="secondary" className="text-xs">{filteredTeamRocks.length}</Badge>
-          </TabsTrigger>
-          <TabsTrigger value="individual" className="flex items-center gap-2">
-            <User className="h-4 w-4" />
-            Individual
-            <Badge variant="secondary" className="text-xs">{filteredIndividualRocks.length}</Badge>
-          </TabsTrigger>
-          <TabsTrigger value="cascade" className="flex items-center gap-2">
-            <GitBranch className="h-4 w-4" />
-            Cascade
-          </TabsTrigger>
-        </TabsList>
+        <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
+          <TabsList className="inline-flex w-auto min-w-full sm:grid sm:w-full sm:max-w-lg sm:grid-cols-4">
+            <TabsTrigger value="company" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm whitespace-nowrap">
+              <Building2 className="h-3 w-3 sm:h-4 sm:w-4" />
+              <span className="hidden xs:inline">Company</span>
+              <Badge variant="secondary" className="text-xs ml-1">{filteredCompanyRocks.length}</Badge>
+            </TabsTrigger>
+            <TabsTrigger value="team" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm whitespace-nowrap">
+              <Users className="h-3 w-3 sm:h-4 sm:w-4" />
+              <span className="hidden xs:inline">Team</span>
+              <Badge variant="secondary" className="text-xs ml-1">{filteredTeamRocks.length}</Badge>
+            </TabsTrigger>
+            <TabsTrigger value="individual" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm whitespace-nowrap">
+              <User className="h-3 w-3 sm:h-4 sm:w-4" />
+              <span className="hidden xs:inline">Individual</span>
+              <Badge variant="secondary" className="text-xs ml-1">{filteredIndividualRocks.length}</Badge>
+            </TabsTrigger>
+            <TabsTrigger value="cascade" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm whitespace-nowrap">
+              <GitBranch className="h-3 w-3 sm:h-4 sm:w-4" />
+              <span className="hidden xs:inline">Cascade</span>
+            </TabsTrigger>
+          </TabsList>
+        </div>
 
         {/* Company Rocks Tab */}
         <TabsContent value="company" className="mt-6">
