@@ -326,14 +326,24 @@
     display: none;
   }
   
-  /* Interactive elements - minimum touch target */
-  button, 
-  [role="button"],
-  input[type="checkbox"],
-  input[type="radio"],
+  /* Touch-target sizing for text inputs and selects only */
+  input[type="text"],
+  input[type="email"],
+  input[type="password"],
+  input[type="search"],
+  input[type="tel"],
+  input[type="url"],
+  input[type="number"],
+  input[type="date"],
+  input[type="time"],
+  input[type="datetime-local"],
+  textarea,
   select {
     min-height: 2.75rem; /* 44px at base font size */
   }
+
+  /* Note: Buttons, checkboxes, switches, and radios handle their own sizing.
+     Touch targets for these are managed by component-level padding/spacing. */
   
   /* Focus styles for accessibility */
   :focus-visible {
