@@ -154,19 +154,19 @@ export function TopBar({ showSearch = false }: TopBarProps) {
   return (
     <header className="h-16 bg-card border-b border-border flex items-center justify-between px-6 sticky top-0 z-20">
       {/* Left: Logo, Page Title & Breadcrumbs */}
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-4 flex-shrink min-w-0">
         <img
           src={unicornLogo}
           alt="Unicorn 2.0"
-          className="h-16"
+          className="h-16 flex-shrink-0"
           width="117"
           height="64"
           loading="eager"
         />
         
-        <div className="h-8 w-px bg-border" />
+        <div className="h-8 w-px bg-border flex-shrink-0" />
         
-        <div className="flex flex-col">
+        <div className="flex flex-col min-w-0">
           {showBreadcrumbs && (
             <nav className="flex items-center gap-1 text-xs text-muted-foreground">
               {breadcrumbs.slice(0, -1).map((crumb, index) => (
@@ -182,7 +182,7 @@ export function TopBar({ showSearch = false }: TopBarProps) {
               ))}
             </nav>
           )}
-          <h1 className="text-lg font-semibold text-foreground truncate max-w-[300px]">
+          <h1 className="text-lg font-semibold text-foreground truncate max-w-[120px] sm:max-w-[180px] md:max-w-[250px] lg:max-w-[300px]">
             {pageTitle}
           </h1>
         </div>
@@ -204,7 +204,7 @@ export function TopBar({ showSearch = false }: TopBarProps) {
       )}
 
       {/* Right: Actions & Avatar */}
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 flex-shrink-0">
         <TooltipProvider>
           {/* Ask Viv - Knowledge Assistant (SuperAdmin only) */}
           <AskVivButton />
