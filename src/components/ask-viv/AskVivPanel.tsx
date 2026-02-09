@@ -17,6 +17,8 @@ import { toast } from "@/hooks/use-toast";
 import { AskVivModeSelector } from "./AskVivModeSelector";
 import { AskVivCapabilitiesBanner } from "./AskVivCapabilitiesBanner";
 import { AskVivContextChips, AskVivContext } from "./AskVivContextChips";
+import { AskVivExplainSourcesToggle } from "./AskVivExplainSourcesToggle";
+import { AskVivExplainPanel, type ExplainPayload } from "./AskVivExplainPanel";
 import {
   X,
   Send,
@@ -36,6 +38,9 @@ import {
 import { cn } from "@/lib/utils";
 import { Link } from "react-router-dom";
 
+// Local storage key for explain sources toggle
+const EXPLAIN_SOURCES_STORAGE_KEY = "ask_viv_explain_sources_enabled";
+
 interface Message {
   id: string;
   role: "user" | "assistant" | "system";
@@ -44,6 +49,7 @@ interface Message {
   records_accessed?: any[];
   confidence?: "high" | "medium" | "low";
   gaps?: string[];
+  explain?: ExplainPayload;
   created_at: string;
 }
 
@@ -68,6 +74,25 @@ export function AskVivPanel() {
   const [inputMessage, setInputMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [context, setContext] = useState<AskVivContext>({ tenant_id: null });
+  
+  // Explain sources toggle - persisted in localStorage
+  const [explainSourcesEnabled, setExplainSourcesEnabled] = useState(() => {
+    try {
+      const stored = localStorage.getItem(EXPLAIN_SOURCES_STORAGE_KEY);
+      return stored === "true";
+    } catch {
+      return false;
+    }
+  });
+
+  const handleExplainSourcesToggle = (enabled: boolean) => {
+    setExplainSourcesEnabled(enabled);
+    try {
+      localStorage.setItem(EXPLAIN_SOURCES_STORAGE_KEY, String(enabled));
+    } catch (e) {
+      console.error("Failed to persist explain sources setting:", e);
+    }
+  };
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -253,6 +278,7 @@ export function AskVivPanel() {
       records_accessed: result.records_accessed,
       confidence: result.confidence,
       gaps: result.gaps,
+      explain: result.explain, // Include explain payload if present
     };
   }
 
@@ -324,6 +350,7 @@ export function AskVivPanel() {
           records_accessed: result.records_accessed,
           confidence: result.confidence,
           gaps: result.gaps,
+          explain: result.explain,
           created_at: new Date().toISOString(),
         };
       }
@@ -444,9 +471,18 @@ export function AskVivPanel() {
         </div>
       </div>
 
-      {/* Mode Selector */}
+      {/* Mode Selector + Explain Toggle */}
       <div className="px-4 py-2 border-b border-border bg-muted/20">
-        <AskVivModeSelector />
+        <div className="flex items-center justify-between gap-2">
+          <AskVivModeSelector />
+          {/* Explain sources toggle - only for compliance mode and Vivacity internal */}
+          {isComplianceMode && flags.explainSourcesEnabled && (
+            <AskVivExplainSourcesToggle
+              enabled={explainSourcesEnabled}
+              onToggle={handleExplainSourcesToggle}
+            />
+          )}
+        </div>
       </div>
 
       {/* Capabilities Banner & Context */}
@@ -591,6 +627,11 @@ export function AskVivPanel() {
                             </div>
                           </CollapsibleContent>
                         </Collapsible>
+                      )}
+
+                      {/* Explain sources panel */}
+                      {explainSourcesEnabled && message.explain && (
+                        <AskVivExplainPanel explain={message.explain} />
                       )}
                     </div>
                   )}

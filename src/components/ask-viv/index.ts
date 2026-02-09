@@ -4,4 +4,7 @@ export { AskVivFloatingLauncher } from './AskVivFloatingLauncher';
 export { AskVivModeSelector } from './AskVivModeSelector';
 export { AskVivCapabilitiesBanner } from './AskVivCapabilitiesBanner';
 export { AskVivContextChips } from './AskVivContextChips';
+export { AskVivExplainSourcesToggle } from './AskVivExplainSourcesToggle';
+export { AskVivExplainPanel } from './AskVivExplainPanel';
 export type { AskVivContext } from './AskVivContextChips';
+export type { ExplainPayload } from './AskVivExplainPanel';
