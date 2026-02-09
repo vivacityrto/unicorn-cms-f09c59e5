@@ -1,104 +1,155 @@
 
-## Goal
-Make the TopBar’s right-side controls (Ask Viv + Facilitator Mode + Notifications + Avatar) always remain visible (never clipped) even when the parent wrapper uses `overflow-x-hidden`.
+## Fix Plan: Switch, Checkbox, and Radio Shape Regressions
 
-## What’s happening (confirmed from screenshot + current code)
-- `DashboardLayout` wraps the entire content area in `overflow-x-hidden`.
-- `TopBar` uses `justify-between`. If the combined width of left + right clusters exceeds the available width, the overflow is clipped (no horizontal scroll), so the avatar can disappear off the right edge.
-- The previous fix set the right cluster to `flex-shrink-0`, which prevents it from shrinking; this can still cause clipping when the cluster is wider than the available space.
+### Problem Identified
+A global CSS rule in `src/index.css` (lines 329-336) applies `min-height: 2.75rem` (44px) to `button`, `[role="button"]`, `input[type="checkbox"]`, and `input[type="radio"]`:
 
-## Strategy
-Instead of forcing the right cluster to never shrink, we will:
-1. Guarantee the avatar remains visible by **constraining and shrinking the “wide” item (Facilitator Mode pill)** and, when needed, **collapsing labels earlier** (e.g., show label only on larger breakpoints).
-2. Ensure the flex layout has the correct `min-w-0` and shrinking rules so that truncation happens inside components, not by pushing items off-canvas.
-3. Apply the same approach to `AcademyTopBar` for consistency.
+```css
+button, 
+[role="button"],
+input[type="checkbox"],
+input[type="radio"],
+select {
+  min-height: 2.75rem; /* 44px at base font size */
+}
+```
 
----
-
-## Planned code changes
-
-### A) `src/components/layout/TopBar.tsx`
-**1) Make left side shrink correctly**
-- Change the left container to take remaining space and allow shrink:
-  - Add `flex-1 min-w-0` so it becomes the “shrinkable” side.
-- Ensure the title already truncates (it does), but it needs the parent `min-w-0` (already added in your diff) plus left cluster being allowed to shrink (we’ll strengthen this).
-
-**2) Make right side fit without pushing avatar off-screen**
-- Replace the current `flex-shrink-0` on the right cluster with a safer approach:
-  - Use `flex items-center gap-2 min-w-0` for the right container.
-  - Ensure each item has predictable sizing:
-    - AskVivButton: fixed icon button (already).
-    - NotificationDropdown: icon button (already).
-    - Avatar button: fixed 40px (already).
-    - FacilitatorModeToggle: this is the “expanding” item; we will constrain it via its own component (see section B).
-
-**Expected outcome**
-- When space is tight, the Facilitator Mode label truncates/collapses, not the avatar.
+Radix UI's Checkbox, Switch, and RadioGroup components use `<button>` elements internally (not native inputs). This global rule forces them to 44px height, distorting:
+- **Checkbox**: Stretched into a tall pill instead of a 16x16 square
+- **Switch**: Track height forced to 44px, breaking the pill shape
+- **Radio**: Distorted into an oval instead of a circle
 
 ---
 
-### B) `src/components/eos/FacilitatorModeToggle.tsx`
-This component is currently the main width risk. We’ll make it “self-contained” width-wise.
+### Solution Overview
 
-**1) Constrain the toggle pill width**
-- Add `min-w-0` to the outer pill container.
-- Add a `max-w-*` so it cannot grow indefinitely and force overflow.
-  - Example intent: cap it around ~180–220px on desktop, smaller on mid screens.
-
-**2) Truncate label inside the toggle**
-- Wrap the label text with:
-  - `truncate` and a `max-w-*` so “Facilitator Mode” becomes “Facilitator…” instead of pushing the avatar away.
-- Change breakpoints so the label shows later:
-  - Instead of `hidden lg:inline`, use `hidden xl:inline` (or even `2xl:inline` if needed).
-  - This matches the reality that `lg` can still be tight once the sidebar is open.
-
-**3) Keep switch/icon non-shrinking**
-- Keep `flex-shrink-0` on the icon and switch (good from your diff).
-- Ensure the label is the only shrink/truncate element.
-
-**Expected outcome**
-- On widths like 1280–1440 with sidebar open, the label won’t expand enough to clip the avatar.
+**Strategy**: Remove the overly broad global rule and apply touch-target sizing only where appropriate.
 
 ---
 
-### C) `src/components/layout/AcademyTopBar.tsx`
-Currently it still has the “old” layout behavior:
-- Left container lacks `min-w-0` / shrink rules.
-- Center search is always visible and can steal width from the right.
+### Technical Changes
 
-**Changes**
-1. Make left container shrinkable:
-   - Add `flex-shrink min-w-0` (and/or `flex-1 min-w-0`) similar to TopBar.
-2. Hide or reduce center search earlier:
-   - `hidden lg:flex` (or `hidden md:flex`) depending on what you want, but the goal is to preserve the avatar.
-3. Ensure right container stays visible:
-   - Same approach as TopBar: `min-w-0`, and right items fixed where appropriate.
+#### 1. Update `src/index.css` - Remove Problematic Global Rule
+
+Replace the current global min-height rule with a more targeted approach:
+
+**Before (lines 329-336):**
+```css
+button, 
+[role="button"],
+input[type="checkbox"],
+input[type="radio"],
+select {
+  min-height: 2.75rem; /* 44px at base font size */
+}
+```
+
+**After:**
+```css
+/* Touch-target sizing for text inputs and selects only */
+input[type="text"],
+input[type="email"],
+input[type="password"],
+input[type="search"],
+input[type="tel"],
+input[type="url"],
+input[type="number"],
+input[type="date"],
+input[type="time"],
+input[type="datetime-local"],
+textarea,
+select {
+  min-height: 2.75rem; /* 44px at base font size */
+}
+
+/* Note: Buttons, checkboxes, switches, and radios handle their own sizing.
+   Touch targets for these are managed by component-level padding/spacing. */
+```
 
 ---
 
-## Implementation sequence (minimal-risk)
-1. Update `FacilitatorModeToggle.tsx` first (it’s the main source of width pressure).
-2. Update `TopBar.tsx` flex rules and remove the “right cluster must never shrink” approach.
-3. Update `AcademyTopBar.tsx` to match the same layout contract.
-4. Verify no regressions on other pages that use the TopBar.
+#### 2. Update `src/components/ui/switch.tsx` - Restore Standard Dimensions
+
+The Switch component was previously modified. Restore to shadcn/Radix defaults:
+
+**Current (broken):**
+```tsx
+// Root: h-5 w-9
+// Thumb: h-4 w-4, translate-x-4
+```
+
+**Fixed:**
+```tsx
+// Root: h-6 w-11 rounded-full
+// Thumb: h-5 w-5 rounded-full, translate-x-5
+```
+
+Full component update:
+```tsx
+<SwitchPrimitives.Root
+  className={cn(
+    "peer inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-50 data-[state=checked]:bg-primary data-[state=unchecked]:bg-input",
+    className,
+  )}
+  {...props}
+  ref={ref}
+>
+  <SwitchPrimitives.Thumb
+    className={cn(
+      "pointer-events-none block h-5 w-5 rounded-full bg-background shadow-lg ring-0 transition-transform data-[state=checked]:translate-x-5 data-[state=unchecked]:translate-x-0",
+    )}
+  />
+</SwitchPrimitives.Root>
+```
 
 ---
 
-## Testing / Acceptance checklist
-Test with sidebar open and closed at:
-- 1024px, 1280px, 1366px, 1440px, 1920px.
+#### 3. Verify `src/components/ui/checkbox.tsx` - Already Correct
 
-Confirm:
-- Avatar is always visible and clickable (dropdown opens).
-- Facilitator Mode pill:
-  - Shows icon+switch on smaller widths.
-  - Shows truncated label on larger widths without pushing avatar off-screen.
-- No horizontal scrollbar appears.
-- No content is clipped in the TopBar area.
+Current code is correct (h-4 w-4 rounded-sm):
+```tsx
+"peer h-4 w-4 shrink-0 rounded-sm border border-primary bg-background ..."
+```
+
+No changes needed once the global CSS is fixed.
 
 ---
 
-## Files that will be changed
-- `src/components/layout/TopBar.tsx`
-- `src/components/eos/FacilitatorModeToggle.tsx`
-- `src/components/layout/AcademyTopBar.tsx`
+#### 4. Verify `src/components/ui/radio-group.tsx` - Already Correct
+
+Current code is correct (h-4 w-4 rounded-full):
+```tsx
+"aspect-square h-4 w-4 rounded-full border border-primary ..."
+```
+
+No changes needed once the global CSS is fixed.
+
+---
+
+### Files To Modify
+
+| File | Change |
+|------|--------|
+| `src/index.css` | Replace broad min-height rule with text-input-only targeting |
+| `src/components/ui/switch.tsx` | Restore h-6 w-11 track, h-5 w-5 thumb, translate-x-5 |
+
+---
+
+### Expected Results
+
+After these changes:
+- **Checkbox**: 16x16px square with rounded-sm corners
+- **Switch**: 44x24px pill track with 20x20px circular thumb
+- **Radio**: 16x16px perfect circle
+- **Text inputs/selects**: Still maintain 44px min-height for touch accessibility
+
+---
+
+### Testing Checklist
+
+1. **Login page** - Verify "Remember me" checkbox is square and aligned
+2. **Settings page** - Verify account active switch is pill-shaped with circular thumb
+3. **Any radio groups** - Verify radio buttons are circular
+4. Toggle states (checked/unchecked) - Verify no resizing occurs
+5. Test at 375px, 768px, and 1280px widths
+6. Verify no horizontal scrollbar or clipping
