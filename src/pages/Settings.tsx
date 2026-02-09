@@ -5,15 +5,16 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { useRBAC } from '@/hooks/useRBAC';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { User, Clock, Calendar, Users, Shield } from 'lucide-react';
+import { User, Clock, Calendar, Users, Shield, Bell } from 'lucide-react';
 import { ProfileBanner } from '@/components/settings/ProfileBanner';
 import { ProfileTab } from '@/components/settings/ProfileTab';
 import { TimeCaptureTab } from '@/components/settings/TimeCaptureTab';
 import { CalendarTab } from '@/components/settings/CalendarTab';
 import { TeamProfileTab } from '@/components/settings/TeamProfileTab';
 import { AdminActionsTab } from '@/components/settings/AdminActionsTab';
+import { NotificationPrefsTab } from '@/components/settings/NotificationPrefsTab';
 
-const TAB_VALUES = ['profile', 'time', 'calendar', 'team', 'admin'] as const;
+const TAB_VALUES = ['profile', 'time', 'calendar', 'notifications', 'team', 'admin'] as const;
 type TabValue = typeof TAB_VALUES[number];
 
 export default function Settings() {
@@ -217,6 +218,10 @@ export default function Settings() {
               <Calendar className="h-4 w-4" />
               <span className="hidden sm:inline">Calendar</span>
             </TabsTrigger>
+            <TabsTrigger value="notifications" className="gap-2 data-[state=active]:bg-background">
+              <Bell className="h-4 w-4" />
+              <span className="hidden sm:inline">Notifications</span>
+            </TabsTrigger>
             {showTeamTab && (
               <TabsTrigger value="team" className="gap-2 data-[state=active]:bg-background">
                 <Users className="h-4 w-4" />
@@ -247,6 +252,10 @@ export default function Settings() {
 
           <TabsContent value="calendar" className="mt-0">
             <CalendarTab />
+          </TabsContent>
+
+          <TabsContent value="notifications" className="mt-0">
+            <NotificationPrefsTab />
           </TabsContent>
 
           {showTeamTab && (

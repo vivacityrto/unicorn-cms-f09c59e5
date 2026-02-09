@@ -23,6 +23,13 @@ interface NotificationRow {
   dedupe_key: string;
 }
 
+interface CategoryPrefs {
+  tasks: boolean;
+  meetings: boolean;
+  obligations: boolean;
+  events: boolean;
+}
+
 // ── helpers ────────────────────────────────────────────────────────
 
 function taskWindow(dueDate: string, today: string): { window: string; label: string } | null {
@@ -61,9 +68,7 @@ function meetingWindow(startsAt: string): { window: string; label: string } | nu
   const now = Date.now();
   const diffMin = (start - now) / 60_000;
 
-  // 24h window: 23h45m – 24h15m  → 1425–1455 min
   if (diffMin >= 1425 && diffMin <= 1455) return { window: "24h", label: "in 24 hours" };
-  // 1h window: 50m – 70m
   if (diffMin >= 50 && diffMin <= 70) return { window: "1h", label: "in 1 hour" };
   return null;
 }
@@ -72,13 +77,71 @@ function todayUTC(): string {
   return new Date().toISOString().slice(0, 10);
 }
 
+// ── prefs helper ──────────────────────────────────────────────────
+
+function parseUserCategoryPrefs(eventSettings: unknown): CategoryPrefs {
+  const defaults: CategoryPrefs = { tasks: true, meetings: true, obligations: true, events: true };
+  if (typeof eventSettings === "object" && eventSettings !== null) {
+    const es = eventSettings as Record<string, unknown>;
+    if (typeof es.categories === "object" && es.categories !== null) {
+      const cats = es.categories as Record<string, unknown>;
+      return {
+        tasks: cats.tasks !== false,
+        meetings: cats.meetings !== false,
+        obligations: cats.obligations !== false,
+        events: cats.events !== false,
+      };
+    }
+  }
+  return defaults;
+}
+
+/**
+ * Batch-fetch notification prefs for a set of user IDs.
+ * Returns a map from user_id → CategoryPrefs.
+ * Users without prefs get all-true defaults.
+ */
+async function fetchUserPrefs(
+  supabase: ReturnType<typeof createServiceClient>,
+  userIds: string[]
+): Promise<Map<string, CategoryPrefs>> {
+  const prefsMap = new Map<string, CategoryPrefs>();
+  const defaults: CategoryPrefs = { tasks: true, meetings: true, obligations: true, events: true };
+
+  if (!userIds.length) return prefsMap;
+
+  const uniqueIds = [...new Set(userIds)];
+  const { data, error } = await supabase
+    .from("user_notification_prefs")
+    .select("user_id, event_settings")
+    .in("user_id", uniqueIds);
+
+  if (error) {
+    console.error("Prefs fetch error:", error.message);
+    // Default to all-enabled on error
+    for (const uid of uniqueIds) prefsMap.set(uid, { ...defaults });
+    return prefsMap;
+  }
+
+  const fetched = new Set<string>();
+  for (const row of data || []) {
+    prefsMap.set(row.user_id, parseUserCategoryPrefs(row.event_settings));
+    fetched.add(row.user_id);
+  }
+  // Users without prefs row get defaults
+  for (const uid of uniqueIds) {
+    if (!fetched.has(uid)) prefsMap.set(uid, { ...defaults });
+  }
+
+  return prefsMap;
+}
+
 // ── scope handlers ─────────────────────────────────────────────────
 
 async function generateTaskNotifications(supabase: ReturnType<typeof createServiceClient>): Promise<number> {
   const today = todayUTC();
   const todayDate = new Date(today + "T00:00:00Z");
 
-  // Fetch tasks due within relevant windows
   const minDate = new Date(todayDate.getTime() - 3 * 86_400_000).toISOString().slice(0, 10);
   const maxDate = new Date(todayDate.getTime() + 7 * 86_400_000).toISOString().slice(0, 10);
 
@@ -96,9 +159,18 @@ async function generateTaskNotifications(supabase: ReturnType<typeof createServi
   }
   if (!tasks?.length) return 0;
 
+  // Collect recipient IDs and fetch their prefs
+  const recipientIds = tasks.map((t) => t.created_by).filter(Boolean) as string[];
+  const prefsMap = await fetchUserPrefs(supabase, recipientIds);
+
   const rows: NotificationRow[] = [];
   for (const t of tasks) {
     if (!t.created_by || !t.due_date) continue;
+
+    // Check user prefs
+    const userPrefs = prefsMap.get(t.created_by);
+    if (userPrefs && !userPrefs.tasks) continue;
+
     const w = taskWindow(t.due_date, today);
     if (!w) continue;
 
@@ -129,7 +201,6 @@ async function generateTaskNotifications(supabase: ReturnType<typeof createServi
 }
 
 async function generateMeetingNotifications(supabase: ReturnType<typeof createServiceClient>): Promise<number> {
-  // Fetch meetings starting within the 24h and 1h windows
   const now = new Date();
   const min1h = new Date(now.getTime() + 50 * 60_000).toISOString();
   const max24h = new Date(now.getTime() + 24.25 * 3_600_000).toISOString();
@@ -147,14 +218,12 @@ async function generateMeetingNotifications(supabase: ReturnType<typeof createSe
   }
   if (!meetings?.length) return 0;
 
-  // Get participants for these meetings
   const meetingIds = meetings.map((m) => m.id);
   const { data: participants } = await supabase
     .from("meeting_participants")
     .select("meeting_id, participant_email")
     .in("meeting_id", meetingIds);
 
-  // Map participant emails to user_uuids
   const emails = [...new Set((participants || []).map((p) => p.participant_email?.toLowerCase()).filter(Boolean))];
   let emailToUser: Record<string, string> = {};
   if (emails.length) {
@@ -169,13 +238,23 @@ async function generateMeetingNotifications(supabase: ReturnType<typeof createSe
     }
   }
 
+  // Collect all potential recipient IDs and fetch prefs
+  const allRecipientIds = new Set<string>();
+  for (const m of meetings) {
+    if (m.owner_user_uuid) allRecipientIds.add(m.owner_user_uuid);
+  }
+  for (const p of participants || []) {
+    const uid = emailToUser[p.participant_email?.toLowerCase()];
+    if (uid) allRecipientIds.add(uid);
+  }
+  const prefsMap = await fetchUserPrefs(supabase, [...allRecipientIds]);
+
   const rows: NotificationRow[] = [];
 
   for (const m of meetings) {
     const w = meetingWindow(m.starts_at);
     if (!w) continue;
 
-    // Collect unique recipients
     const recipientSet = new Set<string>();
     if (m.owner_user_uuid) recipientSet.add(m.owner_user_uuid);
 
@@ -186,6 +265,10 @@ async function generateMeetingNotifications(supabase: ReturnType<typeof createSe
     }
 
     for (const userId of recipientSet) {
+      // Check user prefs
+      const userPrefs = prefsMap.get(userId);
+      if (userPrefs && !userPrefs.meetings) continue;
+
       rows.push({
         tenant_id: m.tenant_id,
         user_id: userId,
@@ -220,7 +303,6 @@ async function generateObligationNotifications(supabase: ReturnType<typeof creat
   const minDate = new Date(todayDate.getTime() - 3 * 86_400_000).toISOString().slice(0, 10);
   const maxDate = new Date(todayDate.getTime() + 30 * 86_400_000).toISOString().slice(0, 10);
 
-  // Fetch obligation calendar entries
   const { data: entries, error } = await supabase
     .from("calendar_entries")
     .select("id, tenant_id, title, description, entry_date, created_by")
@@ -235,9 +317,18 @@ async function generateObligationNotifications(supabase: ReturnType<typeof creat
   }
   if (!entries?.length) return 0;
 
+  // Collect recipient IDs and fetch prefs
+  const recipientIds = entries.map((e) => e.created_by).filter(Boolean) as string[];
+  const prefsMap = await fetchUserPrefs(supabase, recipientIds);
+
   const rows: NotificationRow[] = [];
   for (const e of entries) {
     if (!e.created_by || !e.entry_date) continue;
+
+    // Check user prefs
+    const userPrefs = prefsMap.get(e.created_by);
+    if (userPrefs && !userPrefs.obligations) continue;
+
     const w = obligationWindow(e.entry_date, today);
     if (!w) continue;
 

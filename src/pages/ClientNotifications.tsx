@@ -8,8 +8,18 @@ import { Bell, CheckCheck, ExternalLink } from "lucide-react";
 import { isToday, isThisWeek, format } from "date-fns";
 import { useNavigate } from "react-router-dom";
 import { useClientNotifications, type ClientNotification } from "@/hooks/useClientNotifications";
+import { useNotificationPrefs, type CategoryPrefs } from "@/hooks/useNotificationPrefs";
+import { Info } from "lucide-react";
 
 type FilterType = "all" | "events" | "tasks" | "meetings" | "obligations";
+
+const TYPE_TO_CATEGORY: Record<string, keyof CategoryPrefs> = {
+  task_due: "tasks",
+  meeting_upcoming: "meetings",
+  obligation_due: "obligations",
+  events: "events",
+  event: "events",
+};
 
 function groupNotifications(notifications: ClientNotification[]) {
   const today: ClientNotification[] = [];
@@ -29,13 +39,23 @@ function groupNotifications(notifications: ClientNotification[]) {
 export default function ClientNotifications() {
   const { notifications, unreadCount, isLoading, markAsRead, markAllAsRead } =
     useClientNotifications();
+  const { categories: prefs } = useNotificationPrefs();
   const [filter, setFilter] = useState<FilterType>("all");
   const navigate = useNavigate();
 
+  const hasHiddenCategories = Object.values(prefs).some((v) => !v);
+
   const filtered = useMemo(() => {
-    if (filter === "all") return notifications;
-    return notifications.filter((n) => n.type === filter || n.type?.toLowerCase() === filter);
-  }, [notifications, filter]);
+    let items = notifications.filter((n) => {
+      const cat = TYPE_TO_CATEGORY[n.type || ""];
+      if (cat && !prefs[cat]) return false;
+      return true;
+    });
+    if (filter !== "all") {
+      items = items.filter((n) => n.type === filter || n.type?.toLowerCase() === filter);
+    }
+    return items;
+  }, [notifications, filter, prefs]);
 
   const groups = useMemo(() => groupNotifications(filtered), [filtered]);
 
@@ -127,6 +147,14 @@ export default function ClientNotifications() {
           <TabsTrigger value="obligations">Obligations</TabsTrigger>
         </TabsList>
       </Tabs>
+
+      {/* Hidden prefs banner */}
+      {hasHiddenCategories && (
+        <div className="flex items-center gap-2 text-xs text-muted-foreground bg-muted/50 rounded-md px-3 py-2">
+          <Info className="h-3.5 w-3.5 flex-shrink-0" />
+          Some notification types are hidden based on your preferences.
+        </div>
+      )}
 
       {/* Grouped list */}
       <div className="space-y-6">
