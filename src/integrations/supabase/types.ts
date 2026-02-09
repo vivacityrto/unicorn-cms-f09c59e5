@@ -641,6 +641,69 @@ export type Database = {
           },
         ]
       }
+      ai_quality_events: {
+        Row: {
+          ai_interaction_log_id: string | null
+          block_categories: string[]
+          blocked: boolean
+          confidence: string | null
+          gap_keys: string[]
+          id: string
+          intent: string | null
+          meta: Json
+          mode: string
+          occurred_at: string
+          repaired: boolean
+          tenant_id: number | null
+          user_id: string
+        }
+        Insert: {
+          ai_interaction_log_id?: string | null
+          block_categories?: string[]
+          blocked?: boolean
+          confidence?: string | null
+          gap_keys?: string[]
+          id?: string
+          intent?: string | null
+          meta?: Json
+          mode: string
+          occurred_at?: string
+          repaired?: boolean
+          tenant_id?: number | null
+          user_id: string
+        }
+        Update: {
+          ai_interaction_log_id?: string | null
+          block_categories?: string[]
+          blocked?: boolean
+          confidence?: string | null
+          gap_keys?: string[]
+          id?: string
+          intent?: string | null
+          meta?: Json
+          mode?: string
+          occurred_at?: string
+          repaired?: boolean
+          tenant_id?: number | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_quality_events_ai_interaction_log_id_fkey"
+            columns: ["ai_interaction_log_id"]
+            isOneToOne: false
+            referencedRelation: "ai_interaction_logs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_quality_events_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["user_uuid"]
+          },
+        ]
+      }
       ai_review_flags: {
         Row: {
           ai_interaction_log_id: string
