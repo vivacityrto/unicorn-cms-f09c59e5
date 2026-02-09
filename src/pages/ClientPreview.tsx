@@ -42,7 +42,7 @@ const ClientPreview = () => {
 
       <div className="pt-12">
         {/* Client portal nav */}
-        <nav className="border-b bg-card">
+        <nav className="border-b border-border bg-card">
           <div className="max-w-7xl mx-auto px-6 flex items-center gap-1 overflow-x-auto">
             {clientNavItems.map((item) => {
               const Icon = item.icon;
@@ -53,11 +53,11 @@ const ClientPreview = () => {
                   to={item.path}
                   className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
                     isActive
-                      ? "border-primary text-primary"
+                      ? "border-brand-fuchsia text-brand-fuchsia"
                       : "border-transparent text-muted-foreground hover:text-foreground hover:border-border"
                   }`}
                 >
-                  <Icon className="h-4 w-4" />
+                  <Icon className={`h-4 w-4 ${isActive ? "text-brand-fuchsia" : "text-secondary"}`} />
                   {item.label}
                 </Link>
               );
@@ -68,7 +68,7 @@ const ClientPreview = () => {
         <div className="p-6 max-w-7xl mx-auto space-y-6">
           {/* Header */}
           <div className="space-y-2">
-            <h1 className="text-2xl font-bold">Welcome to {previewTenant.name}</h1>
+            <h1 className="text-2xl font-bold text-secondary">Welcome to {previewTenant.name}</h1>
             <p className="text-muted-foreground">
               This is a preview of the client portal experience.
             </p>

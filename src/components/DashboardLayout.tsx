@@ -7,6 +7,7 @@ import { useRBAC } from "@/hooks/useRBAC";
 import { useViewMode } from "@/contexts/ViewModeContext";
 import { TopBar } from "@/components/layout/TopBar";
 import { UtilityFooter } from "@/components/layout/UtilityFooter";
+import { ClientFooter } from "@/components/client/ClientFooter";
 import { TimeInboxBanner } from "@/components/dashboard/TimeInboxWidget";
 import { FacilitatorModeBanner } from "@/components/eos/FacilitatorModeBanner";
 import { AskVivPanel, AskVivFloatingLauncher } from "@/components/ask-viv";
@@ -211,6 +212,32 @@ export const DashboardLayout = ({
   const renderMenuItem = (item: { icon: any; label: string; path: string }) => {
     const Icon = item.icon;
     const isActive = location.pathname === item.path;
+
+    if (showVivacityMenu) {
+      // Vivacity team: keep gradient sidebar with white text
+      return (
+        <Link
+          key={item.path}
+          to={item.path}
+          data-active={isActive}
+          className={`flex items-center gap-2 px-4 mx-2 mb-1 transition-colors text-sm rounded-full min-h-[44px] ${
+            isActive
+              ? "bg-white/10 border border-white/20 text-white"
+              : "text-white/80 hover:bg-white/10 hover:text-white"
+          }`}
+          style={{ paddingTop: "10px", paddingBottom: "10px" }}
+        >
+          <Icon className="w-4 h-4 flex-shrink-0" />
+          {sidebarOpen && (
+            <span className="font-medium leading-snug break-words hyphens-auto">
+              {item.label}
+            </span>
+          )}
+        </Link>
+      );
+    }
+
+    // Client view: white sidebar with brand-colored text
     return (
       <Link
         key={item.path}
@@ -218,12 +245,12 @@ export const DashboardLayout = ({
         data-active={isActive}
         className={`flex items-center gap-2 px-4 mx-2 mb-1 transition-colors text-sm rounded-full min-h-[44px] ${
           isActive
-            ? "bg-white/10 border border-white/20 text-white"
-            : "text-white/80 hover:bg-white/10 hover:text-white"
+            ? "bg-muted/40 border border-border text-brand-fuchsia"
+            : "text-foreground hover:bg-muted/30 hover:text-brand-fuchsia"
         }`}
         style={{ paddingTop: "10px", paddingBottom: "10px" }}
       >
-        <Icon className="w-4 h-4 flex-shrink-0" />
+        <Icon className={`w-4 h-4 flex-shrink-0 ${isActive ? "text-brand-fuchsia" : "text-secondary"}`} />
         {sidebarOpen && (
           <span className="font-medium leading-snug break-words hyphens-auto">
             {item.label}
@@ -251,14 +278,18 @@ export const DashboardLayout = ({
         className="mt-6"
       >
         {sidebarOpen && (
-          <CollapsibleTrigger className="flex items-center justify-between w-full px-4 mb-2 hover:bg-white/5 py-2 rounded transition-colors">
-            <p className="text-xs font-semibold text-white/70 uppercase tracking-wider">
+          <CollapsibleTrigger className={`flex items-center justify-between w-full px-4 mb-2 py-2 rounded transition-colors ${
+            showVivacityMenu ? "hover:bg-white/5" : "hover:bg-muted/20"
+          }`}>
+            <p className={`text-xs font-semibold uppercase tracking-wider ${
+              showVivacityMenu ? "text-white/70" : "text-secondary"
+            }`}>
               {title}
             </p>
             {sectionsOpen[sectionKey] ? (
-              <ChevronDown className="w-3 h-3 text-white/70" />
+              <ChevronDown className={`w-3 h-3 ${showVivacityMenu ? "text-white/70" : "text-secondary/50"}`} />
             ) : (
-              <ChevronRight className="w-3 h-3 text-white/70" />
+              <ChevronRight className={`w-3 h-3 ${showVivacityMenu ? "text-white/70" : "text-secondary/50"}`} />
             )}
           </CollapsibleTrigger>
         )}
@@ -291,29 +322,37 @@ export const DashboardLayout = ({
       <aside
         className={cn(
           // Base styles
-          "border-r border-border/20 transition-all duration-300 flex flex-col fixed left-0 top-0 h-screen z-30",
+          "transition-all duration-300 flex flex-col fixed left-0 top-0 h-screen z-30",
           // Responsive width
           sidebarOpen ? "w-64" : "w-20",
           // Mobile: slide in/out, hidden by default
           "max-md:translate-x-0 max-md:w-[85vw] max-md:max-w-72",
-          !sidebarOpen && "max-md:-translate-x-full"
+          !sidebarOpen && "max-md:-translate-x-full",
+          // White-first for client, gradient for Vivacity team
+          showVivacityMenu
+            ? "border-r border-border/20"
+            : "bg-card border-r border-border"
         )}
-        style={{
+        style={showVivacityMenu ? {
           backgroundImage: "linear-gradient(135deg, rgb(97 9 161) 0%, rgb(213 28 73) 100%)",
-        }}
+        } : undefined}
       >
         {/* Sidebar Header */}
         {sidebarOpen ? (
-          <div className="relative px-3 pt-0 pb-4 border-b border-white/10">
+          <div className={`relative px-3 pt-0 pb-4 border-b ${showVivacityMenu ? "border-white/10" : "border-border"}`}>
             {/* Top bar with version and close button */}
             <div className="flex items-center justify-between pt-3">
-              <div className="flex items-center gap-1.5 text-white/60 text-xs">
+              <div className={`flex items-center gap-1.5 text-xs ${showVivacityMenu ? "text-white/60" : "text-secondary/60"}`}>
                 <Sparkles className="h-3 w-3" />
                 <span>Version 2.0</span>
               </div>
               <button
                 onClick={() => setSidebarOpen(!sidebarOpen)}
-                className="p-1.5 hover:bg-white/10 rounded-full transition-all duration-200 text-white/50 hover:text-white"
+                className={`p-1.5 rounded-full transition-all duration-200 ${
+                  showVivacityMenu
+                    ? "hover:bg-white/10 text-white/50 hover:text-white"
+                    : "hover:bg-muted/30 text-secondary/50 hover:text-secondary"
+                }`}
               >
                 <X className="w-4 h-4" />
               </button>
@@ -322,9 +361,9 @@ export const DashboardLayout = ({
             {/* View mode indicator - only when viewing as client */}
             {isViewingAsClient && (
               <div className="mt-4 flex justify-center">
-                <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/10 border border-white/20">
-                  <span className="h-1.5 w-1.5 rounded-full bg-brand-purple animate-pulse" />
-                  <span className="text-xs font-medium text-white/90 uppercase tracking-wide">
+                <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-muted border border-border">
+                  <span className="h-1.5 w-1.5 rounded-full bg-brand-fuchsia animate-pulse" />
+                  <span className="text-xs font-medium text-secondary uppercase tracking-wide">
                     Client View
                   </span>
                 </div>
@@ -332,10 +371,10 @@ export const DashboardLayout = ({
             )}
           </div>
         ) : (
-          <div className="h-16 flex items-center justify-between px-4 border-b border-white/20">
+          <div className={`h-16 flex items-center justify-between px-4 border-b ${showVivacityMenu ? "border-white/20" : "border-border"}`}>
             <button
               onClick={() => setSidebarOpen(!sidebarOpen)}
-              className="p-2 hover:bg-white/10 rounded-lg transition-colors text-white"
+              className={`p-2 rounded-lg transition-colors ${showVivacityMenu ? "hover:bg-white/10 text-white" : "hover:bg-muted/30 text-secondary"}`}
             >
               <Menu className="w-5 h-5" />
             </button>
@@ -358,14 +397,18 @@ export const DashboardLayout = ({
                 }
               >
                 {sidebarOpen && (
-                  <CollapsibleTrigger className="flex items-center justify-between w-full px-4 mb-2 hover:bg-white/5 py-2 rounded transition-colors">
-                    <p className="text-xs font-semibold text-white/70 uppercase tracking-wider">
+                  <CollapsibleTrigger className={`flex items-center justify-between w-full px-4 mb-2 py-2 rounded transition-colors ${
+                    showVivacityMenu ? "hover:bg-white/5" : "hover:bg-muted/20"
+                  }`}>
+                    <p className={`text-xs font-semibold uppercase tracking-wider ${
+                      showVivacityMenu ? "text-white/70" : "text-secondary"
+                    }`}>
                       Work
                     </p>
                     {sectionsOpen.work ? (
-                      <ChevronDown className="w-3 h-3 text-white/70" />
+                      <ChevronDown className={`w-3 h-3 ${showVivacityMenu ? "text-white/70" : "text-secondary/50"}`} />
                     ) : (
-                      <ChevronRight className="w-3 h-3 text-white/70" />
+                      <ChevronRight className={`w-3 h-3 ${showVivacityMenu ? "text-white/70" : "text-secondary/50"}`} />
                     )}
                   </CollapsibleTrigger>
                 )}
@@ -417,14 +460,14 @@ export const DashboardLayout = ({
                 }
               >
                 {sidebarOpen && (
-                  <CollapsibleTrigger className="flex items-center justify-between w-full px-4 mb-2 hover:bg-white/5 py-2 rounded transition-colors">
-                    <p className="text-xs font-semibold text-white/70 uppercase tracking-wider">
+                  <CollapsibleTrigger className="flex items-center justify-between w-full px-4 mb-2 hover:bg-muted/20 py-2 rounded transition-colors">
+                    <p className="text-xs font-semibold text-secondary uppercase tracking-wider">
                       Main
                     </p>
                     {sectionsOpen.main ? (
-                      <ChevronDown className="w-3 h-3 text-white/70" />
+                      <ChevronDown className="w-3 h-3 text-secondary/50" />
                     ) : (
-                      <ChevronRight className="w-3 h-3 text-white/70" />
+                      <ChevronRight className="w-3 h-3 text-secondary/50" />
                     )}
                   </CollapsibleTrigger>
                 )}
@@ -445,14 +488,14 @@ export const DashboardLayout = ({
                     className="mt-6"
                   >
                     {sidebarOpen && (
-                      <CollapsibleTrigger className="flex items-center justify-between w-full px-4 mb-2 hover:bg-white/5 py-2 rounded transition-colors">
-                        <p className="text-xs font-semibold text-white/70 uppercase tracking-wider">
+                      <CollapsibleTrigger className="flex items-center justify-between w-full px-4 mb-2 hover:bg-muted/20 py-2 rounded transition-colors">
+                        <p className="text-xs font-semibold text-secondary uppercase tracking-wider">
                           Manage Team
                         </p>
                         {sectionsOpen.team ? (
-                          <ChevronDown className="w-3 h-3 text-white/70" />
+                          <ChevronDown className="w-3 h-3 text-secondary/50" />
                         ) : (
-                          <ChevronRight className="w-3 h-3 text-white/70" />
+                          <ChevronRight className="w-3 h-3 text-secondary/50" />
                         )}
                       </CollapsibleTrigger>
                     )}
@@ -468,7 +511,7 @@ export const DashboardLayout = ({
         {/* Scroll Indicator */}
         {showScrollIndicator && (
           <div className="absolute bottom-20 left-1/2 transform -translate-x-1/2 pointer-events-none animate-bounce">
-            <ChevronDown className="w-5 h-5 text-white/60" />
+            <ChevronDown className={`w-5 h-5 ${showVivacityMenu ? "text-white/60" : "text-secondary/40"}`} />
           </div>
         )}
 
@@ -499,8 +542,8 @@ export const DashboardLayout = ({
         {/* Page Content - w-full min-w-0 prevents content collapse */}
         <main className="flex-1 w-full min-w-0 p-4 md:p-6 overflow-y-auto">{children}</main>
 
-        {/* Utility Footer */}
-        <UtilityFooter />
+        {/* Footer: Client footer for client view, Utility footer for Vivacity team */}
+        {showVivacityMenu ? <UtilityFooter /> : <ClientFooter />}
 
         {/* Ask Viv - Knowledge Assistant (SuperAdmin only) */}
         <AskVivPanel />

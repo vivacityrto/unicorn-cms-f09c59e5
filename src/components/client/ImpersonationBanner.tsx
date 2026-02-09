@@ -17,43 +17,40 @@ export function ImpersonationBanner() {
 
   const handleExit = async () => {
     await endPreview();
-    // Navigate back to the tenant detail page
     navigate(`/tenant/${previewTenant.id}`);
   };
 
-  // Determine display text based on tenant type
   const tenantTypeLabel = previewTenant.tenant_type.startsWith("academy_")
     ? "Academy"
     : "Compliance System";
 
   return (
-    <div className="fixed top-0 left-0 right-0 z-[100] bg-warning text-warning-foreground px-4 py-2 shadow-md">
+    <div className="fixed top-0 left-0 right-0 z-[100] bg-muted text-foreground px-4 py-2 shadow-md">
       <div className="max-w-screen-2xl mx-auto flex items-center justify-between gap-4">
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2">
-            <Eye className="h-5 w-5" />
-            <span className="font-semibold">Impersonating Client View</span>
+            <Eye className="h-5 w-5 text-brand-fuchsia" />
+            <span className="font-semibold text-secondary">Impersonating Client View</span>
           </div>
-          <Badge variant="secondary" className="bg-white/20 text-inherit border-white/30">
+          <Badge variant="secondary" className="bg-card text-secondary border-border">
             <Building2 className="h-3 w-3 mr-1" />
             {previewTenant.name}
           </Badge>
-          <Badge variant="outline" className="border-white/30 text-inherit">
+          <Badge variant="outline" className="border-border text-foreground">
             {tenantTypeLabel}
           </Badge>
         </div>
 
         <div className="flex items-center gap-3">
-          <div className="hidden sm:flex items-center gap-2 text-sm opacity-80">
+          <div className="hidden sm:flex items-center gap-2 text-sm text-muted-foreground">
             <Shield className="h-4 w-4" />
             <span>Read-only preview mode</span>
           </div>
           <Button
-            variant="secondary"
             size="sm"
             onClick={handleExit}
             disabled={loading}
-            className="bg-white/20 hover:bg-white/30 border-white/30 text-inherit"
+            className="bg-primary hover:bg-primary/90 text-primary-foreground"
           >
             <X className="h-4 w-4 mr-1" />
             Exit Preview
