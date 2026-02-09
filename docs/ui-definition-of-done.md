@@ -9,6 +9,7 @@ Every UI change must pass this checklist before merge. This ensures responsive l
 - **Modal/Drawer System**: `docs/ui/modal-drawer-system.md`
 - **Responsive Tables**: `docs/ui/responsive-tables.md`
 - **Form Layout Standards**: `docs/ui/form-layout-standards.md`
+- **Text Overflow Standards**: `docs/ui/text-overflow-standards.md`
 
 ---
 
