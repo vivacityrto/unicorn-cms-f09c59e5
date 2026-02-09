@@ -480,10 +480,10 @@ export const DashboardLayout = ({
         className={cn(
           // Critical layout contract: flex-1 w-full min-w-0 for proper content sizing
           "flex flex-col min-h-screen w-full min-w-0 transition-all duration-300 overflow-x-hidden",
-          // Desktop margin based on sidebar state
-          sidebarOpen ? "md:ml-64" : "md:ml-20",
-          // Mobile: no margin, full width
-          "ml-0"
+          // Use padding-left (not margin-left) because sidebar is fixed; prevents content shifting off-canvas
+          sidebarOpen ? "md:pl-64" : "md:pl-20",
+          // Mobile: no padding, full width
+          "pl-0"
         )}
       >
         {/* Top Bar */}
