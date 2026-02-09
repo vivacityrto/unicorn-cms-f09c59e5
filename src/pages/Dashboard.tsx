@@ -4,6 +4,7 @@ import { DashboardLayout } from "@/components/DashboardLayout";
 import { useAuth } from "@/hooks/useAuth";
 import { Loader2 } from "lucide-react";
 import MembershipDashboard from "./MembershipDashboard";
+import { ClientHomePage } from "@/components/client/ClientHomePage";
 
 const Dashboard = () => {
   const { profile } = useAuth();
@@ -11,13 +12,6 @@ const Dashboard = () => {
   const isSuperAdmin = profile?.unicorn_role === "Super Admin";
   const isTeamLeader = profile?.unicorn_role === "Team Leader";
   const isAdminOrUser = profile?.unicorn_role === "Admin" || profile?.unicorn_role === "User";
-
-  // Redirect Admin/User roles to their tenant detail page
-  useEffect(() => {
-    if (isAdminOrUser && profile?.tenant_id) {
-      navigate(`/tenant/${profile.tenant_id}`, { replace: true });
-    }
-  }, [isAdminOrUser, profile?.tenant_id, navigate]);
 
   // Show Membership Dashboard for Super Admin and Team Leader
   if (isSuperAdmin || isTeamLeader) {
@@ -28,7 +22,16 @@ const Dashboard = () => {
     );
   }
 
-  // Admin/User - show loading while redirecting to tenant detail page
+  // Client Home Page for Admin/User roles
+  if (isAdminOrUser) {
+    return (
+      <DashboardLayout>
+        <ClientHomePage />
+      </DashboardLayout>
+    );
+  }
+
+  // Fallback loading
   return (
     <DashboardLayout>
       <div className="flex items-center justify-center h-96">
