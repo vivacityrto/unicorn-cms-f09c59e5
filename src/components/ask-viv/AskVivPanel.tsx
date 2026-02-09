@@ -43,6 +43,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Link } from "react-router-dom";
+import vivIcon from "@/assets/viv-icon.png";
 
 // Local storage key for explain sources toggle
 const EXPLAIN_SOURCES_STORAGE_KEY = "ask_viv_explain_sources_enabled";
@@ -499,18 +500,11 @@ export function AskVivPanel() {
           : "bg-gradient-to-r from-primary/10 to-purple-500/10"
       )}>
         <div className="flex items-center gap-3">
-          <div className={cn(
-            "h-10 w-10 rounded-full flex items-center justify-center",
-            isComplianceMode
-              ? "bg-gradient-to-br from-blue-500 to-blue-600"
-              : "bg-gradient-to-br from-primary to-purple-600"
-          )}>
-            {isComplianceMode ? (
-              <Shield className="h-5 w-5 text-primary-foreground" />
-            ) : (
-              <Sparkles className="h-5 w-5 text-primary-foreground" />
-            )}
-          </div>
+          <img 
+            src={vivIcon} 
+            alt="Viv" 
+            className="h-10 w-10 rounded-full object-contain"
+          />
           <div>
             <h3 className="font-semibold text-foreground">Ask Viv</h3>
             <p className="text-xs text-muted-foreground">{headerSubtitle}</p>
