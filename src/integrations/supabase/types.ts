@@ -20904,6 +20904,19 @@ export type Database = {
           },
         ]
       }
+      client_reminders_feed: {
+        Row: {
+          ends_at: string | null
+          item_id: string | null
+          item_type: string | null
+          meta: Json | null
+          owner_user_id: string | null
+          starts_at: string | null
+          tenant_id: number | null
+          title: string | null
+        }
+        Relationships: []
+      }
       dashboard_client_snapshot: {
         Row: {
           at_risk: boolean | null
@@ -21301,6 +21314,19 @@ export type Database = {
           },
         ]
       }
+      my_client_reminders: {
+        Row: {
+          ends_at: string | null
+          item_id: string | null
+          item_type: string | null
+          meta: Json | null
+          owner_user_id: string | null
+          starts_at: string | null
+          tenant_id: number | null
+          title: string | null
+        }
+        Relationships: []
+      }
       oauth_tokens_safe: {
         Row: {
           access_token_status: string | null
@@ -21442,6 +21468,19 @@ export type Database = {
             referencedColumns: ["tenant_id"]
           },
         ]
+      }
+      tenant_client_reminders: {
+        Row: {
+          ends_at: string | null
+          item_id: string | null
+          item_type: string | null
+          meta: Json | null
+          owner_user_id: string | null
+          starts_at: string | null
+          tenant_id: number | null
+          title: string | null
+        }
+        Relationships: []
       }
       user_outlook_connection_status: {
         Row: {
