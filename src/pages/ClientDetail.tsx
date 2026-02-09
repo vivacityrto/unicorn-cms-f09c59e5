@@ -31,7 +31,8 @@ import {
   Save,
   Loader2,
   Mail,
-  Cloud
+  Cloud,
+  ShieldAlert
 } from 'lucide-react';
 import { ClientProfileForm } from '@/components/client/ClientProfileForm';
 import { ClientAddressSection } from '@/components/client/ClientAddressSection';
@@ -44,6 +45,7 @@ import { ClientTimeSummaryCard } from '@/components/client/ClientTimeSummaryCard
 import { RiskLevelBadge } from '@/components/client/RiskLevelBadge';
 import { CSCAssignmentSelector } from '@/components/client/CSCAssignmentSelector';
 import { AddTimeFromMeetingDialog } from '@/components/client/AddTimeFromMeetingDialog';
+import { ViewAsClientButton } from '@/components/client/ViewAsClientButton';
 import { useInvalidateTimeTracking, timeTrackingKeys } from '@/hooks/useTimeTrackingQuery';
 import { useInvalidatePackageUsage, packageUsageKeys } from '@/hooks/usePackageUsageQuery';
 import { useQueryClient } from '@tanstack/react-query';
@@ -192,8 +194,15 @@ export default function ClientDetail() {
                     )}
                     {tenant.status}
                   </Badge>
+                  <RiskLevelBadge
+                    riskLevel={profile?.risk_level}
+                    onUpdate={async (newLevel) => {
+                      await saveProfile({ risk_level: newLevel });
+                    }}
+                    disabled={!canEdit}
+                  />
                 </div>
-                <p className="text-muted-foreground mt-1">/{tenant.slug}</p>
+                <p className="text-xs text-muted-foreground mt-1">slug: {tenant.slug}</p>
                 
                 {/* CSC Assignment */}
                 <div className="mt-2">
@@ -206,37 +215,37 @@ export default function ClientDetail() {
               </div>
             </div>
 
-            {/* Time Widget + Quick Stats */}
-            <div className="flex items-center gap-4">
-              <RiskLevelBadge
-                riskLevel={profile?.risk_level}
-                onUpdate={async (newLevel) => {
-                  await saveProfile({ risk_level: newLevel });
-                }}
-                disabled={!canEdit}
+            {/* Action Buttons */}
+            <div className="flex items-center gap-2">
+              <ViewAsClientButton
+                tenantId={tenantIdNum!}
+                tenantName={tenant.name}
               />
-              <Button 
-                variant="outline" 
-                size="sm"
-                onClick={() => setAddTimeFromMeetingOpen(true)}
-              >
-                <Calendar className="h-4 w-4 mr-2" />
-                Add time from meeting
-              </Button>
-              <ClientTimeWidget 
-                tenantId={tenantIdNum!} 
-                clientId={tenantIdNum!}
-              />
-              <div className="text-center border-l pl-4">
-                <p className="text-2xl font-bold">{packages.length}</p>
-                <p className="text-xs text-muted-foreground">Packages</p>
-              </div>
+              {activeTab === 'overview' && canEdit && (
+                <Button
+                  onClick={() => triggerProfileSave?.()}
+                  disabled={!profileHasChanges || profileSaving || profileLoading}
+                  className="min-w-[140px]"
+                >
+                  {profileSaving ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Saving...
+                    </>
+                  ) : (
+                    <>
+                      <Save className="h-4 w-4 mr-2" />
+                      Save Changes
+                    </>
+                  )}
+                </Button>
+              )}
             </div>
           </div>
         </div>
 
-        {/* Tabs with Save Button */}
-        <div className="flex items-center justify-between">
+        {/* Tabs */}
+        <div className="px-6">
           <Tabs value={activeTab} onValueChange={setActiveTab}>
             <TabsList className="bg-transparent border-b-0 h-auto p-0 gap-4">
               <TabsTrigger
@@ -273,6 +282,10 @@ export default function ClientDetail() {
               >
                 <StickyNote className="h-4 w-4 mr-2" />
                 Notes
+                <Badge variant="outline" className="ml-1.5 text-[10px] px-1.5 py-0 h-4 border-amber-500/50 text-amber-600">
+                  <ShieldAlert className="h-2.5 w-2.5 mr-0.5" />
+                  Internal
+                </Badge>
               </TabsTrigger>
               <TabsTrigger
                 value="actions"
@@ -311,27 +324,6 @@ export default function ClientDetail() {
               </TabsTrigger>
             </TabsList>
           </Tabs>
-          
-          {/* Save Changes Button */}
-          {activeTab === 'overview' && canEdit && (
-            <Button
-              onClick={() => triggerProfileSave?.()}
-              disabled={!profileHasChanges || profileSaving || profileLoading}
-              className="min-w-[140px]"
-            >
-              {profileSaving ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Saving...
-                </>
-              ) : (
-                <>
-                  <Save className="h-4 w-4 mr-2" />
-                  Save Changes
-                </>
-              )}
-            </Button>
-          )}
         </div>
       </div>
 
@@ -339,6 +331,32 @@ export default function ClientDetail() {
       <div className="p-6">
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsContent value="overview" className="mt-0 space-y-6">
+            {/* Engagement Controls Bar */}
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between gap-4">
+                  <div className="flex items-center gap-4">
+                    <ClientTimeWidget 
+                      tenantId={tenantIdNum!} 
+                      clientId={tenantIdNum!}
+                    />
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => setAddTimeFromMeetingOpen(true)}
+                    >
+                      <Calendar className="h-4 w-4 mr-2" />
+                      Add time from meeting
+                    </Button>
+                  </div>
+                  <div className="text-center border-l border-border pl-4">
+                    <p className="text-2xl font-bold">{packages.length}</p>
+                    <p className="text-xs text-muted-foreground">Packages</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
             {/* Time Summary Card */}
             <ClientTimeSummaryCard clientId={tenantIdNum!} />
             
