@@ -71,6 +71,13 @@ interface ExplainSafety {
   };
 }
 
+interface ExplainFreshness {
+  last_activity_at: string | null;
+  days_since_activity: number | null;
+  status: "fresh" | "aging" | "stale";
+  confidence_downgraded: boolean;
+}
+
 export interface ExplainPayload {
   context: ExplainContext;
   tables_queried: string[];
@@ -78,6 +85,7 @@ export interface ExplainPayload {
   facts_used: FactPreview[];
   gaps: string[];
   safety: ExplainSafety;
+  freshness?: ExplainFreshness;
 }
 
 interface AskVivExplainPanelProps {
@@ -366,6 +374,62 @@ export function AskVivExplainPanel({ explain, className }: AskVivExplainPanelPro
             </div>
           </AccordionContent>
         </AccordionItem>
+
+        {/* Freshness Section - only shows when freshness data is present */}
+        {explain.freshness && (
+          <AccordionItem value="freshness" className="border-none">
+            <AccordionTrigger className="py-2 px-2 text-xs hover:no-underline">
+              <div className="flex items-center gap-2">
+                <Clock className="h-3.5 w-3.5 text-muted-foreground" />
+                <span>Data Freshness</span>
+                {explain.freshness.status === "fresh" && (
+                  <CheckCircle className="h-3 w-3 text-[hsl(var(--success,142_76%_36%))]" />
+                )}
+                {explain.freshness.status === "aging" && (
+                  <AlertTriangle className="h-3 w-3 text-[hsl(var(--warning,38_92%_50%))]" />
+                )}
+                {explain.freshness.status === "stale" && (
+                  <XCircle className="h-3 w-3 text-destructive" />
+                )}
+              </div>
+            </AccordionTrigger>
+            <AccordionContent className="px-2 pb-3">
+              <div className="space-y-2 text-xs">
+                <div className="flex items-center gap-2">
+                  <span className="font-medium">Status:</span>
+                  <Badge
+                    variant={
+                      explain.freshness.status === "stale"
+                        ? "destructive"
+                        : explain.freshness.status === "aging"
+                        ? "secondary"
+                        : "secondary"
+                    }
+                    className="text-[9px]"
+                  >
+                    {explain.freshness.status.charAt(0).toUpperCase() + explain.freshness.status.slice(1)}
+                  </Badge>
+                </div>
+                {explain.freshness.days_since_activity !== null && (
+                  <div className="text-muted-foreground">
+                    Last activity: {explain.freshness.days_since_activity} days ago
+                  </div>
+                )}
+                {explain.freshness.last_activity_at && (
+                  <div className="text-muted-foreground">
+                    Date: {formatTimestamp(explain.freshness.last_activity_at)}
+                  </div>
+                )}
+                {explain.freshness.confidence_downgraded && (
+                  <div className="flex items-center gap-1.5 text-[hsl(var(--warning,38_92%_50%))]">
+                    <AlertTriangle className="h-3 w-3" />
+                    <span>Confidence was downgraded due to data age</span>
+                  </div>
+                )}
+              </div>
+            </AccordionContent>
+          </AccordionItem>
+        )}
       </Accordion>
     </div>
   );

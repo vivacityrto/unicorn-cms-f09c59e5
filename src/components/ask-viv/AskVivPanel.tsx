@@ -22,6 +22,7 @@ import { AskVivExplainSourcesToggle } from "./AskVivExplainSourcesToggle";
 import { AskVivExplainPanel, type ExplainPayload } from "./AskVivExplainPanel";
 import { AskVivScopeBanner, type ScopeLock } from "./AskVivScopeBanner";
 import { AskVivScopeSelectorModal, type SelectedScope } from "./AskVivScopeSelectorModal";
+import { AskVivFreshnessChip } from "./AskVivFreshnessChip";
 import {
   X,
   Send,
@@ -44,6 +45,13 @@ import { Link } from "react-router-dom";
 // Local storage key for explain sources toggle
 const EXPLAIN_SOURCES_STORAGE_KEY = "ask_viv_explain_sources_enabled";
 
+interface FreshnessData {
+  last_activity_at: string | null;
+  days_since_activity: number | null;
+  status: "fresh" | "aging" | "stale";
+  derived_at: string;
+}
+
 interface Message {
   id: string;
   role: "user" | "assistant" | "system";
@@ -54,6 +62,7 @@ interface Message {
   gaps?: string[];
   explain?: ExplainPayload;
   scope_lock?: ScopeLock;
+  freshness?: FreshnessData;
   created_at: string;
 }
 
@@ -305,6 +314,7 @@ export function AskVivPanel() {
       gaps: result.gaps,
       explain: result.explain,
       scope_lock: result.scope_lock,
+      freshness: result.freshness,
     };
   }
 
@@ -378,6 +388,7 @@ export function AskVivPanel() {
           gaps: result.gaps,
           explain: result.explain,
           scope_lock: result.scope_lock,
+          freshness: result.freshness,
           created_at: new Date().toISOString(),
         };
       }
@@ -623,6 +634,13 @@ export function AskVivPanel() {
                       isConfirmed={scopeConfirmed}
                       className="mb-2"
                     />
+                  )}
+
+                  {/* Freshness Warning Chip - shows for aging/stale data */}
+                  {message.role === "assistant" && isComplianceMode && message.freshness && (
+                    <div className="mb-2">
+                      <AskVivFreshnessChip freshness={message.freshness} />
+                    </div>
                   )}
 
                   <div
