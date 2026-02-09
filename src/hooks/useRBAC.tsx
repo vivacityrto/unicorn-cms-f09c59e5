@@ -131,6 +131,7 @@ export const ADMIN_ROUTES = [
   '/admin/knowledge',
   '/admin/eos-processes',
   '/admin/qa/responsive',
+  '/admin/qa/smoke',
 ];
 
 // Advanced Features routes that require SuperAdmin
