@@ -6,5 +6,7 @@ export { AskVivCapabilitiesBanner } from './AskVivCapabilitiesBanner';
 export { AskVivContextChips } from './AskVivContextChips';
 export { AskVivExplainSourcesToggle } from './AskVivExplainSourcesToggle';
 export { AskVivExplainPanel } from './AskVivExplainPanel';
+export { AskVivBlockedIntentBanner } from './AskVivBlockedIntentBanner';
 export type { AskVivContext } from './AskVivContextChips';
 export type { ExplainPayload } from './AskVivExplainPanel';
+export type { BlockedIntentInfo } from './AskVivBlockedIntentBanner';
