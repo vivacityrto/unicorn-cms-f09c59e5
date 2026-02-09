@@ -641,6 +641,79 @@ export type Database = {
           },
         ]
       }
+      ai_review_flags: {
+        Row: {
+          ai_interaction_log_id: string
+          client_id: number
+          created_at: string
+          flagged_by: string
+          flagged_reason: string | null
+          id: string
+          package_id: number | null
+          phase_id: number | null
+          resolution_note: string | null
+          resolved_at: string | null
+          resolved_by: string | null
+          status: string
+          tenant_id: number
+          updated_at: string
+        }
+        Insert: {
+          ai_interaction_log_id: string
+          client_id: number
+          created_at?: string
+          flagged_by: string
+          flagged_reason?: string | null
+          id?: string
+          package_id?: number | null
+          phase_id?: number | null
+          resolution_note?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          status?: string
+          tenant_id: number
+          updated_at?: string
+        }
+        Update: {
+          ai_interaction_log_id?: string
+          client_id?: number
+          created_at?: string
+          flagged_by?: string
+          flagged_reason?: string | null
+          id?: string
+          package_id?: number | null
+          phase_id?: number | null
+          resolution_note?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          status?: string
+          tenant_id?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_review_flags_ai_interaction_log_id_fkey"
+            columns: ["ai_interaction_log_id"]
+            isOneToOne: false
+            referencedRelation: "ai_interaction_logs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_review_flags_flagged_by_fkey"
+            columns: ["flagged_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "ai_review_flags_resolved_by_fkey"
+            columns: ["resolved_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["user_uuid"]
+          },
+        ]
+      }
       ai_suggestions: {
         Row: {
           acted_entity_id: string | null

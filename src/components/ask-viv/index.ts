@@ -11,6 +11,8 @@ export { AskVivScopeBanner } from './AskVivScopeBanner';
 export { AskVivScopeSelectorModal } from './AskVivScopeSelectorModal';
 export { AskVivFreshnessChip } from './AskVivFreshnessChip';
 export { AskVivMicroExplain } from './AskVivMicroExplain';
+export { AskVivFlagButton } from './AskVivFlagButton';
+export { AskVivFlagModal } from './AskVivFlagModal';
 export type { AskVivContext } from './AskVivContextChips';
 export type { ExplainPayload } from './AskVivExplainPanel';
 export type { BlockedIntentInfo } from './AskVivBlockedIntentBanner';

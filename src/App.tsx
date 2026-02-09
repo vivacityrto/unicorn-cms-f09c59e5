@@ -122,6 +122,7 @@ const AdminEOSProcesses = lazy(() => import("./pages/AdminEOSProcesses"));
 const EosHealthCheck = lazy(() => import("./pages/EosHealthCheck"));
 const QAResponsiveHarness = lazy(() => import("./pages/admin/QAResponsiveHarness"));
 const QASmokeTest = lazy(() => import("./pages/admin/QASmokeTest"));
+const AskVivFlags = lazy(() => import("./pages/internal/AskVivFlags"));
 
 // Academy pages (placeholder)
 const AcademyDashboard = lazy(() => import("./pages/academy/AcademyDashboard"));
@@ -886,6 +887,8 @@ const App = () => (
             {/* Add-in Settings - SuperAdmin only */}
             <Route path="/admin/addin-settings" element={<ProtectedRoute requireSuperAdmin><AddinSettings /></ProtectedRoute>} />
             <Route path="/admin/addin-diagnostics" element={<ProtectedRoute requireSuperAdmin><AddinDiagnostics /></ProtectedRoute>} />
+            {/* Internal Ask Viv Flags - Vivacity Team only */}
+            <Route path="/internal/ask-viv/flags" element={<ProtectedRoute requireSuperAdmin><AskVivFlags /></ProtectedRoute>} />
             {/* Academy Routes */}
             <Route path="/academy" element={<ProtectedRoute><AcademyDashboard /></ProtectedRoute>} />
             <Route path="/academy/courses" element={<ProtectedRoute><AcademyCourses /></ProtectedRoute>} />
