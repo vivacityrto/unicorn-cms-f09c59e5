@@ -2,7 +2,6 @@ import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react-swc";
 import path from "path";
 import { componentTagger } from "lovable-tagger";
-import purgecss from "vite-plugin-purgecss";
 import type { PluginOption } from "vite";
 // @ts-ignore - critters types issue with package.json exports
 import Critters from "critters"; 
@@ -54,69 +53,6 @@ export default defineConfig(({ mode }) => ({
   plugins: [
     react(),
     mode === "development" && componentTagger(),
-    mode === "production" && (purgecss({
-      content: [
-        "./index.html",
-        "./src/**/*.{js,ts,jsx,tsx}",
-      ],
-      safelist: {
-        standard: [
-          /^data-/,
-          /^aria-/,
-          /^::/,
-          /dark/,
-          /animate-/,
-          /transition-/,
-          /transform/,
-          /scale-/,
-          /opacity-/,
-          /translate-/,
-          /rotate-/,
-          /skew-/,
-          /origin-/,
-          /duration-/,
-          /ease-/,
-          /delay-/,
-          /^text-white/,
-          /^bg-white/,
-          /^border-white/,
-          /^hover:text-/,
-          /^hover:bg-/,
-          /^md:pl-/,
-          /^pl-/,
-          /^md:p-/,
-          /^p-4/,
-          /^min-w-/,
-          /^overflow-/,
-          /^flex-/,
-          /^w-/,
-          /^min-h-/,
-          /^grid/,
-          /^col-span/,
-          /^md:grid-/,
-          /^lg:grid-/,
-          /^lg:col-/,
-          /^md:col-/,
-          /^gap-/,
-          /^space-/,
-          /^p-/,
-          /^px-/,
-          /^py-/,
-          /^max-w-/,
-        ],
-        deep: [
-          /radix/,
-          /cmdk/,
-          /sonner/,
-          /vaul/,
-        ],
-        greedy: [
-          /\[data-state/,
-          /\[data-side/,
-          /\[data-orientation/,
-        ],
-      },
-    }) as PluginOption),
     mode === "production" && criticalCssPlugin(),
   ].filter(Boolean) as PluginOption[],
   resolve: {
