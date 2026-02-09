@@ -12,6 +12,7 @@ import { FacilitatorModeBanner } from "@/components/eos/FacilitatorModeBanner";
 import { AskVivPanel, AskVivFloatingLauncher } from "@/components/ask-viv";
 import { useProfileSetupReminder } from "@/hooks/useProfileSetupReminder";
 import { ProfileSetupReminderModal } from "@/components/profile/ProfileSetupReminderModal";
+import { cn } from "@/lib/utils";
 
 // ============================================================
 // VIVACITY TEAM SIDEBAR - FINAL AUTHORITY MODEL
@@ -214,7 +215,7 @@ export const DashboardLayout = ({
         key={item.path}
         to={item.path}
         data-active={isActive}
-        className={`flex items-center gap-2 px-4 mx-2 mb-1 transition-colors text-sm rounded-full ${
+        className={`flex items-center gap-2 px-4 mx-2 mb-1 transition-colors text-sm rounded-full min-h-[44px] ${
           isActive
             ? "bg-white/10 border border-white/20 text-white"
             : "text-white/80 hover:bg-white/10 hover:text-white"
@@ -222,7 +223,11 @@ export const DashboardLayout = ({
         style={{ paddingTop: "10px", paddingBottom: "10px" }}
       >
         <Icon className="w-4 h-4 flex-shrink-0" />
-        {sidebarOpen && <span className="font-medium">{item.label}</span>}
+        {sidebarOpen && (
+          <span className="font-medium leading-snug break-words hyphens-auto">
+            {item.label}
+          </span>
+        )}
       </Link>
     );
   };
@@ -262,10 +267,36 @@ export const DashboardLayout = ({
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background overflow-x-hidden">
+      {/* Mobile sidebar toggle - visible only on mobile when sidebar is closed */}
+      <button
+        onClick={() => setSidebarOpen(true)}
+        className={`fixed top-4 left-4 z-40 p-2 rounded-lg bg-primary text-primary-foreground shadow-lg md:hidden ${sidebarOpen ? 'hidden' : 'flex'} items-center justify-center min-w-[44px] min-h-[44px]`}
+        aria-label="Open sidebar"
+      >
+        <Menu className="w-5 h-5" />
+      </button>
+      
+      {/* Sidebar Overlay - mobile only */}
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 bg-black/50 z-20 md:hidden"
+          onClick={() => setSidebarOpen(false)}
+          aria-hidden="true"
+        />
+      )}
+      
       {/* Sidebar */}
       <aside
-        className={`${sidebarOpen ? "w-64" : "w-20"} border-r border-border/20 transition-all duration-300 flex flex-col fixed left-0 top-0 h-screen z-30`}
+        className={cn(
+          // Base styles
+          "border-r border-border/20 transition-all duration-300 flex flex-col fixed left-0 top-0 h-screen z-30",
+          // Responsive width
+          sidebarOpen ? "w-64" : "w-20",
+          // Mobile: slide in/out, hidden by default
+          "max-md:translate-x-0 max-md:w-[85vw] max-md:max-w-72",
+          !sidebarOpen && "max-md:-translate-x-full"
+        )}
         style={{
           backgroundImage: "linear-gradient(135deg, rgb(97 9 161) 0%, rgb(213 28 73) 100%)",
         }}
@@ -291,7 +322,7 @@ export const DashboardLayout = ({
             {isViewingAsClient && (
               <div className="mt-4 flex justify-center">
                 <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/10 border border-white/20">
-                  <span className="h-1.5 w-1.5 rounded-full bg-purple-400 animate-pulse" />
+                  <span className="h-1.5 w-1.5 rounded-full bg-brand-purple animate-pulse" />
                   <span className="text-xs font-medium text-white/90 uppercase tracking-wide">
                     Client View
                   </span>
@@ -446,7 +477,13 @@ export const DashboardLayout = ({
 
       {/* Main Content */}
       <div
-        className={`${sidebarOpen ? "ml-64" : "ml-20"} flex flex-col min-h-screen transition-all duration-300`}
+        className={cn(
+          "flex flex-col min-h-screen transition-all duration-300 overflow-x-hidden",
+          // Desktop margin based on sidebar state
+          sidebarOpen ? "md:ml-64" : "md:ml-20",
+          // Mobile: no margin, full width
+          "ml-0"
+        )}
       >
         {/* Top Bar */}
         <TopBar />
