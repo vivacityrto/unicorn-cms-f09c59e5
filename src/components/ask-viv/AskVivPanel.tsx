@@ -4,6 +4,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useRBAC } from "@/hooks/useRBAC";
 import { useAskViv } from "@/hooks/useAskViv";
 import { useAskVivFeatureFlags } from "@/hooks/useAskVivFeatureFlags";
+import { useAskVivSessionScope, getEffectiveScope } from "@/hooks/useAskVivSessionScope";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -19,6 +20,8 @@ import { AskVivCapabilitiesBanner } from "./AskVivCapabilitiesBanner";
 import { AskVivContextChips, AskVivContext } from "./AskVivContextChips";
 import { AskVivExplainSourcesToggle } from "./AskVivExplainSourcesToggle";
 import { AskVivExplainPanel, type ExplainPayload } from "./AskVivExplainPanel";
+import { AskVivScopeBanner, type ScopeLock } from "./AskVivScopeBanner";
+import { AskVivScopeSelectorModal, type SelectedScope } from "./AskVivScopeSelectorModal";
 import {
   X,
   Send,
@@ -50,6 +53,7 @@ interface Message {
   confidence?: "high" | "medium" | "low";
   gaps?: string[];
   explain?: ExplainPayload;
+  scope_lock?: ScopeLock;
   created_at: string;
 }
 
@@ -74,6 +78,17 @@ export function AskVivPanel() {
   const [inputMessage, setInputMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [context, setContext] = useState<AskVivContext>({ tenant_id: null });
+  const [scopeSelectorOpen, setScopeSelectorOpen] = useState(false);
+  
+  // Session scope management
+  const { 
+    sessionScope, 
+    scopeConfirmed, 
+    confirmScope, 
+    setSessionScope,
+    clearSessionScope,
+    logScopeConfirmation 
+  } = useAskVivSessionScope();
   
   // Explain sources toggle - persisted in localStorage
   const [explainSourcesEnabled, setExplainSourcesEnabled] = useState(() => {
@@ -254,15 +269,25 @@ export function AskVivPanel() {
       throw new Error("No tenant context available. Please select a tenant first.");
     }
 
-    const { data: session } = await supabase.auth.getSession();
+    // Use session scope if confirmed, otherwise use context
+    const effectiveScope = getEffectiveScope(
+      sessionScope,
+      scopeConfirmed,
+      {
+        client_id: context.client_id,
+        package_id: context.package_id,
+        phase_id: context.phase_id,
+      }
+    );
+
     const response = await supabase.functions.invoke("compliance-assistant", {
       body: {
         question: userMessage,
         context: {
           tenant_id: context.tenant_id,
-          client_id: context.client_id || null,
-          package_id: context.package_id || null,
-          phase_id: context.phase_id || null,
+          client_id: effectiveScope.client_id ? parseInt(effectiveScope.client_id, 10) : null,
+          package_id: effectiveScope.package_id ? parseInt(effectiveScope.package_id, 10) : null,
+          phase_id: effectiveScope.phase_id ? parseInt(effectiveScope.phase_id, 10) : null,
         },
       },
     });
@@ -278,7 +303,8 @@ export function AskVivPanel() {
       records_accessed: result.records_accessed,
       confidence: result.confidence,
       gaps: result.gaps,
-      explain: result.explain, // Include explain payload if present
+      explain: result.explain,
+      scope_lock: result.scope_lock,
     };
   }
 
@@ -351,6 +377,7 @@ export function AskVivPanel() {
           confidence: result.confidence,
           gaps: result.gaps,
           explain: result.explain,
+          scope_lock: result.scope_lock,
           created_at: new Date().toISOString(),
         };
       }
@@ -384,10 +411,33 @@ export function AskVivPanel() {
   function startNewChat() {
     setCurrentThread(null);
     setMessages([]);
+    clearSessionScope();
   }
 
   function clearContext() {
     setContext({ tenant_id: null });
+    clearSessionScope();
+  }
+
+  function handleConfirmScope(scopeLock: ScopeLock) {
+    confirmScope(scopeLock);
+    if (user?.id) {
+      logScopeConfirmation(user.id, scopeLock);
+    }
+  }
+
+  function handleScopeChange(newScope: SelectedScope) {
+    setSessionScope(newScope);
+    // Update context to reflect new scope for UI display
+    setContext((prev) => ({
+      ...prev,
+      client_id: newScope.client_id ? parseInt(newScope.client_id, 10) : undefined,
+      client_name: newScope.client_name ?? undefined,
+      package_id: newScope.package_id ? parseInt(newScope.package_id, 10) : undefined,
+      package_name: newScope.package_name ?? undefined,
+      phase_id: newScope.phase_id ? parseInt(newScope.phase_id, 10) : undefined,
+      phase_name: newScope.phase_name ?? undefined,
+    }));
   }
 
   const getConfidenceIcon = (confidence?: string) => {
@@ -564,6 +614,17 @@ export function AskVivPanel() {
                     message.role === "user" && "order-first"
                   )}
                 >
+                  {/* Scope Lock Banner - shows before response for compliance mode */}
+                  {message.role === "assistant" && isComplianceMode && message.scope_lock && (
+                    <AskVivScopeBanner
+                      scopeLock={message.scope_lock}
+                      onConfirmScope={() => handleConfirmScope(message.scope_lock!)}
+                      onChangeScope={() => setScopeSelectorOpen(true)}
+                      isConfirmed={scopeConfirmed}
+                      className="mb-2"
+                    />
+                  )}
+
                   <div
                     className={cn(
                       "rounded-2xl px-4 py-2.5 text-sm",
@@ -733,6 +794,22 @@ export function AskVivPanel() {
           </Button>
         </div>
       </div>
+
+      {/* Scope Selector Modal */}
+      <AskVivScopeSelectorModal
+        open={scopeSelectorOpen}
+        onOpenChange={setScopeSelectorOpen}
+        tenantId={context.tenant_id}
+        currentScope={{
+          client_id: sessionScope.client_id,
+          client_name: sessionScope.client_name,
+          package_id: sessionScope.package_id,
+          package_name: sessionScope.package_name,
+          phase_id: sessionScope.phase_id,
+          phase_name: sessionScope.phase_name,
+        }}
+        onScopeChange={handleScopeChange}
+      />
     </div>
   );
 }
