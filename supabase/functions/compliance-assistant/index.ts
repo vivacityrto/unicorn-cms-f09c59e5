@@ -1,15 +1,17 @@
 /**
  * Compliance Assistant Edge Function
  * 
- * V3: Integrated with Ask Viv Fact Builder service.
+ * V4: Integrated with Ask Viv Fact Builder and Tiered Prompt System.
  * Uses deterministic facts, tiered reasoning, and governance controls.
  * Read-only, audit-safe, respects RLS and roles.
  * 
- * Key changes in V3:
+ * Key changes in V4:
  * - Uses buildAskVivFacts() as the ONLY source of facts
  * - No raw DB results passed to LLM
  * - Full audit trail with records_accessed
  * - Scope inference for missing IDs
+ * - Tiered prompt system with validation
+ * - Response validation for banned phrases and required sections
  */
 
 import { createServiceClient } from "../_shared/supabase-client.ts";
@@ -45,6 +47,17 @@ import {
   type AskVivFactsResult,
   type DerivedFact,
 } from "../_shared/ask-viv-fact-builder/index.ts";
+
+// V4: Tiered Prompt System imports
+import {
+  buildFullPrompt,
+  buildPromptPack,
+  validateResponse,
+  sanitizeResponse,
+  COMPLIANCE_SYSTEM_PROMPT,
+  COMPLIANCE_DEVELOPER_PROMPT,
+  GLOBAL_SYSTEM_PROMPT,
+} from "../_shared/ask-viv-prompts/index.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -102,6 +115,12 @@ interface ComplianceResponse {
     read_only: boolean;
     human_action_required: boolean;
     caution_banners: string[];
+  };
+  // V4: Validation metadata
+  validation?: {
+    valid: boolean;
+    warnings: number;
+    sanitized: boolean;
   };
 }
 
@@ -406,8 +425,9 @@ function convertFactsToDataForFacts(factsResult: AskVivFactsResult): DataForFact
 }
 
 /**
- * V3: Generate answer using Fact Builder results
+ * V4: Generate answer using Fact Builder results with tiered prompt system
  * Uses derived facts only - never raw DB rows
+ * Validates response against tier compliance rules
  */
 function generateFactBasedAnswer(
   question: string,
@@ -429,6 +449,15 @@ function generateFactBasedAnswer(
   const sourceTypesUsed = new Set<string>();
   
   const q = question.toLowerCase();
+
+  // V4: Build the full tier-enforced prompt for logging/debug
+  const fullPrompt = buildFullPrompt("compliance", {
+    facts: factsResult.facts,
+    record_links: factsResult.record_links,
+    gaps: factsResult.gaps,
+    question: question,
+  });
+  console.log("V4: Using tier-enforced prompt system");
   const { reasoning, confidence } = brainResult;
 
   // Build governance info
@@ -619,7 +648,7 @@ function generateFactBasedAnswer(
     gaps.push("No indexed vector data - using live database only");
   }
 
-  // V3: Build records from Fact Builder result (not raw DB)
+  // V4: Build records from Fact Builder result (not raw DB)
   const records: RecordAccessed[] = factsToRecordsAccessed(factsResult.facts);
 
   // Add vector results to records
@@ -631,8 +660,35 @@ function generateFactBasedAnswer(
     });
   }
 
+  // V4: Build tier-formatted response following required sections
+  const responseMarkdown = buildTierFormattedResponse(
+    bullets,
+    records,
+    confidence.level,
+    gaps,
+    reasoning
+  );
+
+  // V4: Validate response against tier compliance rules
+  const validationResult = validateResponse(
+    responseMarkdown,
+    "compliance",
+    records,
+    gaps
+  );
+
+  if (!validationResult.valid) {
+    console.warn("V4: Response validation warnings:", validationResult.errors);
+  }
+
+  // V4: Sanitize response to ensure no banned phrases slip through
+  const { sanitized, modifications } = sanitizeResponse(responseMarkdown);
+  if (modifications.length > 0) {
+    console.log("V4: Response sanitized:", modifications);
+  }
+
   return {
-    answer_markdown: bullets.join("\n"),
+    answer_markdown: sanitized,
     records_accessed: records,
     confidence: confidence.level,
     gaps,
@@ -649,7 +705,85 @@ function generateFactBasedAnswer(
       human_action_required: governance.human_action_required,
       caution_banners: governance.caution_banners,
     },
+    // V4: Add validation metadata
+    validation: {
+      valid: validationResult.valid,
+      warnings: validationResult.warnings.length,
+      sanitized: modifications.length > 0,
+    },
   };
+}
+
+/**
+ * V4: Build tier-formatted response following required sections
+ */
+function buildTierFormattedResponse(
+  answerBullets: string[],
+  records: RecordAccessed[],
+  confidence: "high" | "medium" | "low",
+  gaps: string[],
+  reasoning: ReasoningOutput
+): string {
+  const sections: string[] = [];
+
+  // Section 1: Answer
+  sections.push("## Answer");
+  if (answerBullets.length > 0) {
+    sections.push(answerBullets.slice(0, 8).join("\n")); // Max 8 bullets
+  } else {
+    sections.push("- No specific findings for this query");
+  }
+  sections.push("");
+
+  // Section 2: Key records used
+  sections.push("## Key records used");
+  if (records.length > 0) {
+    for (const r of records.slice(0, 10)) {
+      sections.push(`- ${r.label} (${r.table}:${r.id})`);
+    }
+  } else {
+    sections.push("- None");
+  }
+  sections.push("");
+
+  // Section 3: Confidence
+  sections.push("## Confidence");
+  sections.push(`**${confidence.charAt(0).toUpperCase() + confidence.slice(1)}**`);
+  // Add brief explanation based on level
+  if (confidence === "high") {
+    sections.push("Facts cover the question and gaps are minimal.");
+  } else if (confidence === "medium") {
+    sections.push("Partial facts available. Some gaps limit precision.");
+  } else {
+    sections.push("Significant gaps or ambiguity. Review source records.");
+  }
+  sections.push("");
+
+  // Section 4: Gaps
+  sections.push("## Gaps");
+  if (gaps.length > 0) {
+    for (const gap of gaps.slice(0, 5)) {
+      sections.push(`- ${gap}`);
+    }
+  } else {
+    sections.push("- None");
+  }
+  sections.push("");
+
+  // Section 5: Next safe actions
+  sections.push("## Next safe actions");
+  const actionTier = reasoning.tiers.find(t => t.tier === "actions");
+  if (actionTier && actionTier.findings.length > 0) {
+    for (const finding of actionTier.findings.slice(0, 6)) {
+      sections.push(`- ${finding.summary}`);
+    }
+  } else {
+    // Default safe actions
+    sections.push("- Review linked records for current status");
+    sections.push("- Verify data completeness in source systems");
+  }
+
+  return sections.join("\n");
 }
 
 /**
