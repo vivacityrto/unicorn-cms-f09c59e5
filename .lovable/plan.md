@@ -1,66 +1,41 @@
 
 
-## Fix: Production Layout Clipping Caused by PurgeCSS Stripping Critical Classes
+## Fix: Remove Redundant PurgeCSS Plugin
+
+### Problem
+
+Every time we fix one set of missing classes on production, another set breaks. This is because PurgeCSS runs **after** Tailwind's own purging, and it does not understand Tailwind's class generation — it strips classes that Tailwind correctly included.
+
+Examples currently broken on production:
+- `sm:inline` (tab labels show as icons only, no text)
+- `lg:grid-cols-3` / `lg:col-span-2` (form layout breaks to single column)
+- `h-fit`, `h-auto`, `flex-wrap` (minor layout issues)
 
 ### Root Cause
 
-The **PurgeCSS plugin** in `vite.config.ts` is stripping the responsive padding classes `md:pl-64` and `md:pl-20` from the production CSS bundle. These classes are used dynamically in `DashboardLayout.tsx`:
+Tailwind CSS already removes unused classes based on the `content` paths in your Tailwind config. The PurgeCSS Vite plugin is a second, conflicting pass that does not understand Tailwind's dynamic class patterns. No matter how large the safelist grows, new classes will keep getting stripped.
 
-```tsx
-sidebarOpen ? "md:pl-64" : "md:pl-20"
-```
+### Solution
 
-PurgeCSS scans source files for class names but can fail to detect classes inside ternary expressions or template strings passed through utility functions like `cn()`. The result: the classes exist in the source code but get removed from the production CSS, causing the main content to render at `pl-0` (no left padding) and overlap with or hide behind the fixed sidebar.
+Remove the `vite-plugin-purgecss` plugin from the production build. Tailwind's built-in purging is sufficient and handles all responsive prefixes (`sm:`, `md:`, `lg:`) and dynamic classes correctly.
 
-This is why the Lovable preview (which runs in development mode without PurgeCSS) looks correct, but the published production site on `unicorn-cms.au` does not.
+### Changes
 
-### Fix
+**File: `vite.config.ts`**
 
-Add the critical sidebar layout classes to the PurgeCSS safelist in `vite.config.ts`.
+1. Remove the `purgecss` import
+2. Remove the entire PurgeCSS plugin block (including the safelist) from the plugins array
+3. Keep the Critical CSS plugin (it inlines above-the-fold CSS, which is a separate optimisation)
 
-**File: `vite.config.ts`** -- Add to the `safelist.standard` array:
+**No other files change.**
 
-```
-/^md:pl-/
-/^pl-/
-/^md:p-/
-/^p-4/
-```
+### Technical Detail
 
-This ensures all padding-left variants used by the layout contract (and responsive content padding) survive the PurgeCSS pass.
+The PurgeCSS block to remove spans approximately 60 lines (the `purgecss({...})` call with its content paths and safelist). The import `import purgecss from "vite-plugin-purgecss"` is also removed.
 
-Additionally, add `min-w-0` and `overflow-x-hidden` patterns since these are also part of the layout contract and could be stripped:
-
-```
-/^min-w-/
-/^overflow-/
-/^flex-1/
-/^flex-col/
-/^w-full/
-/^min-h-/
-```
-
-### Secondary Fix: Remove Stale `App.css` Constraint
-
-The file `src/App.css` contains a legacy Vite boilerplate rule:
-
-```css
-#root {
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 2rem;
-}
-```
-
-While this file is not currently imported (so it should not be active), it is a risk if anyone re-imports it. The `max-width: 1280px` and `padding: 2rem` would constrain the root element and break the full-width layout. This file should be cleaned up to remove the dangerous rules, keeping only the icon-related styles if needed, or deleted entirely.
-
-### Changes Summary
-
-| File | Change |
-|---|---|
-| `vite.config.ts` | Add layout-critical class patterns to PurgeCSS safelist |
-| `src/App.css` | Remove `#root` constraint rules (or delete file) |
+The `critters` / critical CSS plugin is unrelated and stays — it inlines critical CSS for faster first paint, it does not remove classes.
 
 ### After Publishing
 
-Once these changes are deployed, ask your team to hard-refresh (Ctrl+Shift+R). The sidebar padding will be preserved in the production CSS and the content will no longer clip behind the sidebar.
+Once deployed, all Tailwind utility classes used in the source code will be present in the production CSS bundle. The tab labels, grid layouts, and responsive breakpoints will work identically to the developer preview.
+
