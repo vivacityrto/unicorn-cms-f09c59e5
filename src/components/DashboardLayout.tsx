@@ -478,7 +478,8 @@ export const DashboardLayout = ({
       {/* Main Content */}
       <div
         className={cn(
-          "flex flex-col min-h-screen transition-all duration-300 overflow-x-hidden",
+          // Critical layout contract: flex-1 w-full min-w-0 for proper content sizing
+          "flex flex-col min-h-screen w-full min-w-0 transition-all duration-300 overflow-x-hidden",
           // Desktop margin based on sidebar state
           sidebarOpen ? "md:ml-64" : "md:ml-20",
           // Mobile: no margin, full width
@@ -494,8 +495,8 @@ export const DashboardLayout = ({
         {/* Time Inbox Banner */}
         <TimeInboxBanner />
 
-        {/* Page Content */}
-        <main className="flex-1 p-6 overflow-y-auto">{children}</main>
+        {/* Page Content - w-full min-w-0 prevents content collapse */}
+        <main className="flex-1 w-full min-w-0 p-4 md:p-6 overflow-y-auto">{children}</main>
 
         {/* Utility Footer */}
         <UtilityFooter />

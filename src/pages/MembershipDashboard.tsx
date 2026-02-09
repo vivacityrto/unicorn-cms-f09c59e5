@@ -79,25 +79,25 @@ export default function MembershipDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="w-full min-w-0 min-h-full bg-background">
       {/* Header */}
       <div className="border-b bg-card/50 backdrop-blur-sm sticky top-0 z-20">
-        <div className="px-6 py-4">
-          <div className="flex items-center justify-between">
+        <div className="px-4 md:px-6 py-4">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
+              <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center shrink-0">
                 <Sparkles className="h-5 w-5 text-white" />
               </div>
-              <div>
-                <h1 className="text-xl font-bold text-foreground">Clients Dashboard</h1>
-                <p className="text-sm text-muted-foreground">
-                  Manage all clients • {memberships.length} active packages across clients
+              <div className="min-w-0">
+                <h1 className="text-lg md:text-xl font-bold text-foreground truncate">Clients Dashboard</h1>
+                <p className="text-sm text-muted-foreground truncate">
+                  Manage all clients • {memberships.length} active packages
                 </p>
               </div>
             </div>
             
-            <div className="flex items-center gap-3">
-              <Badge variant="outline" className="text-xs">
+            <div className="flex items-center gap-3 shrink-0">
+              <Badge variant="outline" className="text-xs hidden sm:inline-flex">
                 {profile?.first_name} {profile?.last_name}
               </Badge>
               <Button variant="outline" size="sm" onClick={refresh} className="gap-1.5">
@@ -109,10 +109,10 @@ export default function MembershipDashboard() {
         </div>
       </div>
 
-      {/* Main Content */}
-      <div className="flex">
+      {/* Main Content - responsive layout */}
+      <div className="flex flex-col lg:flex-row w-full min-w-0">
         {/* Left Panel - Main Dashboard */}
-        <div className="flex-1 p-6 space-y-6">
+        <div className="flex-1 min-w-0 p-4 md:p-6 space-y-6">
           {/* KPI Tiles */}
           <MembershipKPITiles 
             stats={kpiStats} 
@@ -156,8 +156,8 @@ export default function MembershipDashboard() {
           />
         </div>
 
-        {/* Right Panel - Activity Feed */}
-        <div className="w-80 border-l bg-muted/20 p-4">
+        {/* Right Panel - Activity Feed - hidden on mobile, fixed width on desktop */}
+        <div className="hidden lg:block w-80 shrink-0 border-l bg-muted/20 p-4">
           <MembershipActivityFeed
             activities={activities}
             tasks={tasks}

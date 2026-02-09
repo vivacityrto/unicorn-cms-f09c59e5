@@ -127,18 +127,54 @@ className="lg:hidden"
 className="lg:ml-64"
 ```
 
+## Main Layout Contract (Critical)
+
+The app shell (DashboardLayout) enforces a strict layout contract to prevent content collapse:
+
+### Sidebar Container
+- Fixed width (w-64 when open, w-20 when collapsed)
+- Does NOT affect main content width calculation
+
+### Main Content Wrapper
+Required classes (non-negotiable):
+```tsx
+className="flex-1 w-full min-w-0 overflow-x-hidden"
+```
+- `flex-1`: Fills remaining space
+- `w-full`: Takes full available width
+- `min-w-0`: Prevents flex children from overflowing
+- `overflow-x-hidden`: Prevents horizontal scroll
+
+### Page Root Rules
+Every routed page must use:
+```tsx
+className="w-full min-w-0 min-h-full"
+```
+
+**DO NOT** apply to outer page containers:
+- `max-w-*` (use only on inner content sections)
+- `mx-auto` (unless with explicit max-width on inner sections)
+- `items-center` on page-level flex containers
+- `h-screen` on nested containers
+
 ## Layout Primitives
 
 ### PageContainer
 
-Primary page wrapper with responsive padding:
+Primary page wrapper - now defaults to `maxWidth="full"` to prevent collapse:
 
 ```tsx
 import { PageContainer } from '@/components/layout';
 
-<PageContainer maxWidth="xl">
+// Default: full width, no centering (recommended for page roots)
+<PageContainer>
   <PageHeader title="My Page" />
   <Section>Content</Section>
+</PageContainer>
+
+// Constrained: use for inner content that needs centering
+<PageContainer maxWidth="xl">
+  <Form />
 </PageContainer>
 ```
 
