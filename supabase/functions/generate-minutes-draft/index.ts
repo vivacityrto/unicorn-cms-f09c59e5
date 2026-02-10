@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { emitTimelineEvent } from "../_shared/emit-timeline-event.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -746,6 +747,27 @@ Deno.serve(async (req) => {
       }
       minutesId = newMinutes.id;
     }
+
+    // Emit timeline event
+    await emitTimelineEvent(supabase, {
+      tenant_id: meeting.tenant_id,
+      client_id: String(meeting.tenant_id),
+      event_type: "minutes_draft_created",
+      title: `Minutes draft created for "${meeting.title || "Meeting"}"`,
+      body: `${attendees.length} attendees${recapText ? ", Copilot recap included" : ""}`,
+      source: "microsoft",
+      entity_type: "meeting",
+      entity_id: meeting_id,
+      metadata: {
+        minutes_id: minutesId,
+        meeting_id,
+        version,
+        attendees_count: attendees.length,
+        recap_found: !!recapText,
+        recap_source: recapSource,
+      },
+      created_by: user.id,
+    });
 
     return new Response(
       JSON.stringify({

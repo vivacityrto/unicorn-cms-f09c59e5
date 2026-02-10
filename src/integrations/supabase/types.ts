@@ -5515,6 +5515,7 @@ export type Database = {
           id: string
           metadata: Json
           occurred_at: string
+          package_id: number | null
           source: string
           tenant_id: number
           title: string
@@ -5530,6 +5531,7 @@ export type Database = {
           id?: string
           metadata?: Json
           occurred_at?: string
+          package_id?: number | null
           source: string
           tenant_id: number
           title: string
@@ -5545,6 +5547,7 @@ export type Database = {
           id?: string
           metadata?: Json
           occurred_at?: string
+          package_id?: number | null
           source?: string
           tenant_id?: number
           title?: string
@@ -24947,7 +24950,9 @@ export type Database = {
           p_from_date?: string
           p_limit?: number
           p_offset?: number
+          p_package_id?: number
           p_search?: string
+          p_source?: string
           p_tenant_id: number
           p_to_date?: string
         }
@@ -24962,6 +24967,7 @@ export type Database = {
           id: string
           metadata: Json
           occurred_at: string
+          package_id: number
           source: string
           tenant_id: number
           title: string

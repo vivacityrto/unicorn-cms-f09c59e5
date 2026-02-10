@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useClientTimeline, TimelineEvent, PinnedNote } from '@/hooks/useClientManagementData';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -11,7 +12,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { 
   Activity, FileText, Mail, CheckSquare, StickyNote, 
   Clock, Loader2, RefreshCw, Calendar, Timer, Search,
-  Plus, X, ChevronDown, ChevronUp, FileDown, Pin, PinOff, Download
+  Plus, X, ChevronDown, ChevronUp, FileDown, Pin, PinOff, Download,
+  Link2, AlertTriangle, ExternalLink, RotateCcw, ListTodo, FileCheck,
 } from 'lucide-react';
 import { formatDistanceToNow, format } from 'date-fns';
 import { TimelineExportDialog } from './TimelineExportDialog';
@@ -28,14 +30,22 @@ const EVENT_ICONS: Record<string, React.ElementType> = {
   time_ignored: Timer,
   email_sent: Mail,
   email_failed: Mail,
+  email_linked: Mail,
+  email_attachment_saved: FileCheck,
   document_uploaded: FileText,
   document_downloaded: FileDown,
   task_completed_team: CheckSquare,
   task_completed_client: CheckSquare,
+  tasks_created_from_minutes: ListTodo,
   note_added: StickyNote,
   note_created: StickyNote,
   note_pinned: Pin,
-  note_unpinned: PinOff
+  note_unpinned: PinOff,
+  sharepoint_doc_linked: Link2,
+  sharepoint_root_configured: Link2,
+  minutes_draft_created: FileText,
+  minutes_published_pdf: FileCheck,
+  microsoft_sync_failed: AlertTriangle,
 };
 
 const EVENT_COLORS: Record<string, string> = {
@@ -44,14 +54,22 @@ const EVENT_COLORS: Record<string, string> = {
   time_ignored: 'bg-muted text-muted-foreground',
   email_sent: 'bg-cyan-100 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-400',
   email_failed: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
+  email_linked: 'bg-cyan-100 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-400',
+  email_attachment_saved: 'bg-cyan-100 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-400',
   document_uploaded: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
   document_downloaded: 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400',
   task_completed_team: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400',
   task_completed_client: 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400',
+  tasks_created_from_minutes: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400',
   note_added: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400',
   note_created: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400',
   note_pinned: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
-  note_unpinned: 'bg-muted text-muted-foreground'
+  note_unpinned: 'bg-muted text-muted-foreground',
+  sharepoint_doc_linked: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
+  sharepoint_root_configured: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
+  minutes_draft_created: 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400',
+  minutes_published_pdf: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
+  microsoft_sync_failed: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
 };
 
 const FILTER_OPTIONS = [
@@ -61,10 +79,41 @@ const FILTER_OPTIONS = [
   { value: 'emails', label: 'Emails', icon: Mail },
   { value: 'docs', label: 'Documents', icon: FileText },
   { value: 'tasks', label: 'Tasks', icon: CheckSquare },
-  { value: 'notes', label: 'Notes', icon: StickyNote }
+  { value: 'notes', label: 'Notes', icon: StickyNote },
+  { value: 'microsoft', label: 'Microsoft', icon: Link2 },
 ];
 
+/** Resolve a deep-link path for a timeline event, or null if not linkable */
+function getDeepLink(event: TimelineEvent): string | null {
+  const meta = event.metadata as Record<string, unknown>;
+  switch (event.event_type) {
+    case 'meeting_synced':
+    case 'minutes_draft_created':
+    case 'minutes_published_pdf':
+    case 'tasks_created_from_minutes':
+      if (event.entity_id) return `/meetings/${event.entity_id}`;
+      if (meta?.meeting_id) return `/meetings/${meta.meeting_id}`;
+      return null;
+    case 'email_linked':
+    case 'email_attachment_saved':
+      if (event.entity_id) return `/emails/${event.entity_id}`;
+      return null;
+    case 'sharepoint_doc_linked':
+    case 'sharepoint_root_configured':
+      // Link to client SharePoint tab
+      if (meta?.tenant_id) return `/clients/${meta.tenant_id}?tab=documents`;
+      return null;
+    case 'document_uploaded':
+    case 'document_downloaded':
+      if (event.entity_id) return `/documents/${event.entity_id}`;
+      return null;
+    default:
+      return null;
+  }
+}
+
 export function ClientTimelineTab({ tenantId, clientId, clientName }: ClientTimelineTabProps) {
+  const navigate = useNavigate();
   const { 
     events, 
     pinnedNotes,
@@ -464,6 +513,36 @@ export function ClientTimelineTab({ tenantId, clientId, clientName }: ClientTime
                               <Badge variant="secondary" className="text-[10px] h-4">
                                 System
                               </Badge>
+                            )}
+                            {event.source === 'microsoft' && (
+                              <Badge variant="outline" className="text-[10px] h-4">
+                                Microsoft
+                              </Badge>
+                            )}
+                            {/* Deep-link button */}
+                            {(() => {
+                              const link = getDeepLink(event);
+                              return link ? (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-5 px-1 text-[10px] gap-0.5"
+                                  onClick={() => navigate(link)}
+                                >
+                                  <ExternalLink className="h-2.5 w-2.5" /> View
+                                </Button>
+                              ) : null;
+                            })()}
+                            {/* Retry action for sync failures */}
+                            {event.event_type === 'microsoft_sync_failed' && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-5 px-1 text-[10px] gap-0.5 text-destructive"
+                                onClick={() => navigate('/settings?tab=calendar')}
+                              >
+                                <RotateCcw className="h-2.5 w-2.5" /> Retry sync
+                              </Button>
                             )}
                           </div>
                         </div>
