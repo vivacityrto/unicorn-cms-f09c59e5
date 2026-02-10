@@ -8,7 +8,7 @@ import { ClientLoginHistoryTab } from '@/components/client/ClientLoginHistoryTab
 import { ClientStructuredNotesTab } from '@/components/client/ClientStructuredNotesTab';
 import { ClientActionItemsTab } from '@/components/client/ClientActionItemsTab';
 import { ClientEmailsTab } from '@/components/client/ClientEmailsTab';
-import { ClientSharePointDocumentsTab } from '@/components/client/ClientSharePointDocumentsTab';
+import { ClientFilesTab } from '@/components/client/ClientFilesTab';
 import { useClientProfile, useClientPackages } from '@/hooks/useClientManagement';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -33,7 +33,7 @@ import {
   Save,
   Loader2,
   Mail,
-  Cloud,
+  FolderOpen,
   ShieldAlert
 } from 'lucide-react';
 import { ClientProfileForm } from '@/components/client/ClientProfileForm';
@@ -307,8 +307,8 @@ export default function ClientDetail() {
                 value="sharepoint"
                 className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none bg-transparent px-1 pb-3"
               >
-                <Cloud className="h-4 w-4 mr-2" />
-                SharePoint
+                <FolderOpen className="h-4 w-4 mr-2" />
+                Client Files
               </TabsTrigger>
               <TabsTrigger
                 value="timeline"
@@ -429,7 +429,7 @@ export default function ClientDetail() {
           </TabsContent>
 
           <TabsContent value="sharepoint" className="mt-0">
-            <ClientSharePointDocumentsTab tenantId={tenantIdNum!} clientName={tenant.name} />
+            <ClientFilesTab tenantId={tenantIdNum!} clientName={tenant.name} />
           </TabsContent>
 
           <TabsContent value="timeline" className="mt-0">
