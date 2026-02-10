@@ -43,6 +43,7 @@ import { ClientFooter } from "@/components/client/ClientFooter";
 import { ImpersonationBanner } from "@/components/client/ImpersonationBanner";
 import { FloatingChatbot } from "@/components/help-center/FloatingChatbot";
 import { cn } from "@/lib/utils";
+import vivacityLogo from "@/assets/vivacity-logo.svg";
 
 const clientMenuItems = [
   { icon: LayoutDashboard, label: "Home", path: "/client/home" },
@@ -234,20 +235,7 @@ function ClientLayoutInner({ children }: { children: React.ReactNode }) {
         >
           {/* Left: Tenant name + plan pill */}
           <div className="flex items-center gap-3 min-w-0 flex-shrink-0">
-            {tenantName && (
-              <h1 className="text-sm font-semibold truncate max-w-[180px]" style={{ color: "hsl(270 47% 26%)" }}>
-                {tenantName}
-              </h1>
-            )}
-            <Badge
-              className="hidden sm:inline-flex text-xs font-medium border-0"
-              style={{
-                backgroundColor: "hsl(270 20% 88%)",
-                color: "hsl(270 55% 41%)",
-              }}
-            >
-              Client
-            </Badge>
+            <img src={vivacityLogo} alt="Vivacity" className="h-7 w-auto" />
           </div>
 
           {/* Center: Search */}
