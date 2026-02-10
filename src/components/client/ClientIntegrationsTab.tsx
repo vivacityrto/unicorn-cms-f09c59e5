@@ -13,7 +13,8 @@ import {
   ExternalLink, 
   RefreshCw, 
   CheckCircle2, 
-  AlertCircle, 
+  AlertCircle,
+  AlertTriangle,
   Clock,
   Unlink,
   Loader2,
@@ -695,6 +696,21 @@ export function ClientIntegrationsTab({
                     Packages ({tgaData.trainingPackages.length})
                   </TabsTrigger>
                 </TabsList>
+
+                {/* Mismatch warning banner */}
+                {tgaData.scopeMismatch?.hasMismatch && (
+                  <div className="mt-2 rounded-md border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive flex items-start gap-2">
+                    <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
+                    <div>
+                      <p className="font-medium">TGA data incomplete</p>
+                      <p className="text-xs mt-1">
+                        {tgaData.scopeMismatch.details.map((d: any) =>
+                          `Loaded ${d.loaded} of ${d.stored} ${d.type}s`
+                        ).join('. ')}. Refresh or report.
+                      </p>
+                    </div>
+                  </div>
+                )}
 
                 <TabsContent value="summary" className="mt-4">
                   <SummaryTab 
