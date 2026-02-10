@@ -52,7 +52,7 @@ export default function TenantDocumentsHub() {
       {/* Back Button */}
       <Button 
         variant="ghost" 
-        onClick={() => navigate(`/clients/${tenantId}`)}
+        onClick={() => navigate(`/tenant/${tenantId}`)}
         className="gap-2 hover:bg-accent"
       >
         <ArrowLeft className="h-4 w-4" />

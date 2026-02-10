@@ -25,7 +25,7 @@ import { ErrorBoundary } from "./components/ErrorBoundary";
  const ManageStagesWrapper = lazy(() => import("./pages/ManageStagesWrapper"));
  const ManageFieldsWrapper = lazy(() => import("./pages/ManageFieldsWrapper"));
  const UserProfileWrapper = lazy(() => import("./pages/UserProfileWrapper"));
- const TenantDetailWrapper = lazy(() => import("./pages/TenantDetailWrapper"));
+ // TenantDetailWrapper removed — consolidated into ClientDetailWrapper
  const TenantLoginsWrapper = lazy(() => import("./pages/TenantLoginsWrapper"));
  const TenantMembersWrapper = lazy(() => import("./pages/TenantMembersWrapper"));
  const TenantDocumentsWrapper = lazy(() => import("./pages/TenantDocumentsWrapper"));
@@ -340,7 +340,7 @@ const App = () => (
               path="/tenant/:tenantId" 
               element={
                 <ProtectedRoute>
-                  <TenantDetailWrapper />
+                  <ClientDetailWrapper />
                 </ProtectedRoute>
               } 
             />
@@ -404,7 +404,7 @@ const App = () => (
               path="/tenant-detail/:tenantId"
               element={
                 <ProtectedRoute>
-                  <TenantDetailWrapper />
+                  <ClientDetailWrapper />
                 </ProtectedRoute>
               } 
             />
@@ -696,7 +696,7 @@ const App = () => (
               } 
             />
             <Route 
-              path="/clients/:clientId/impact" 
+              path="/tenant/:clientId/impact" 
               element={
                 <ProtectedRoute>
                   <ClientImpactPage />
@@ -874,8 +874,7 @@ const App = () => (
             <Route path="/resource-hub/updates" element={<ProtectedRoute><ResourceUpdatesLog /></ProtectedRoute>} />
             {/* Membership Dashboard */}
             <Route path="/membership-dashboard" element={<ProtectedRoute><MembershipDashboardWrapper /></ProtectedRoute>} />
-            {/* Client Detail (new client-first view) */}
-            <Route path="/clients/:tenantId" element={<ProtectedRoute><ClientDetailWrapper /></ProtectedRoute>} />
+            {/* Client Detail route removed — consolidated into /tenant/:tenantId above */}
             {/* Admin Integrations */}
             <Route path="/admin/integrations/tga" element={<ProtectedRoute><AdminTgaIntegrationWrapper /></ProtectedRoute>} />
             {/* Admin User Audit */}
