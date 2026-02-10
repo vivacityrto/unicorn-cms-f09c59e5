@@ -12,24 +12,63 @@ const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
 
 const PAGE_SIZE = 500;
 
-// Status normalisation helpers
-const normStatus = (s: any) => String(s ?? "").trim().toLowerCase();
+// ── Normalisation & classification helpers ──────────────────────────
+const norm = (v: any) => String(v ?? "").trim().toLowerCase();
 
-// Classify scope state: current, teach_out (superseded with future endDate), or null (drop)
-function classifyScopeState(item: any): "current" | "teach_out" | null {
-  const usage = normStatus(item.usageRecommendation ?? item.status);
-  const endDateStr = item.endDate ?? null;
+const getUsage = (item: any) =>
+  item.usageRecommendation ??
+  item.usage_recommendation ??
+  item.tga_data?.usageRecommendation ??
+  item.tga_data?.usage_recommendation ??
+  item.scope?.usageRecommendation ??
+  item.scope?.usage_recommendation ??
+  null;
 
-  if (usage === "current") return "current";
+const getEndDate = (item: any) =>
+  item.endDate ??
+  item.end_date ??
+  item.tga_data?.endDate ??
+  item.tga_data?.end_date ??
+  item.scope?.endDate ??
+  item.scope?.end_date ??
+  null;
 
-  if (usage === "superseded" && endDateStr) {
-    const endDate = new Date(endDateStr);
-    if (!isNaN(endDate.getTime()) && endDate >= new Date()) {
-      return "teach_out";
-    }
+const toDate = (v: any): Date | null => {
+  if (!v) return null;
+  const d = new Date(v);
+  return Number.isNaN(d.getTime()) ? null : d;
+};
+
+const isSameOrAfterToday = (d: Date) => {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const dd = new Date(d);
+  dd.setHours(0, 0, 0, 0);
+  return dd.getTime() >= today.getTime();
+};
+
+interface ClassifyResult {
+  include: boolean;
+  scope_state: "current" | "teach_out" | null;
+  endRaw: string | null;
+  usageRaw: string | null;
+}
+
+function classify(item: any): ClassifyResult {
+  const usageRaw = getUsage(item);
+  const usage = norm(usageRaw);
+  const endRaw = getEndDate(item);
+  const endDate = toDate(endRaw);
+
+  if (usage === "current") {
+    return { include: true, scope_state: "current", endRaw, usageRaw };
   }
 
-  return null; // drop this item
+  if (usage === "superseded" && endDate && isSameOrAfterToday(endDate)) {
+    return { include: true, scope_state: "teach_out", endRaw, usageRaw };
+  }
+
+  return { include: false, scope_state: null, endRaw, usageRaw };
 }
 
 // Compute SHA256 hash of a string using Web Crypto API
@@ -168,11 +207,11 @@ function categoriseScope(items: any[]): Record<string, any[]> {
 }
 
 // fetchAllScope now uses the unfiltered approach
-async function fetchAllScope(rtoId: string): Promise<{ categorised: Record<string, any[]>; urls: string[]; error?: string }> {
+async function fetchAllScope(rtoId: string): Promise<{ categorised: Record<string, any[]>; urls: string[]; error?: string; stateCounts?: Record<string, { current: number; teach_out: number; dropped: number; total: number }> }> {
   const result = await fetchAllScopeUnfiltered(rtoId);
   
   if (result.error) {
-    return { categorised: { qualification: [], unit: [], skillSet: [], accreditedCourse: [] }, urls: result.urls, error: result.error };
+    return { categorised: { qualification: [], unit: [], skillSet: [], accreditedCourse: [], trainingPackage: [] }, urls: result.urls, error: result.error };
   }
   
   // Include ALL scope items — implicit items are inherited from training packages but are
@@ -181,41 +220,53 @@ async function fetchAllScope(rtoId: string): Promise<{ categorised: Record<strin
   
   log('info', `Total scope items: ${result.items.length} (all included, no implicit filter)`);
   
-  // Log sample items to understand structure
+  // Log sample item fields for debugging usageRecommendation / endDate access
   if (result.items.length > 0) {
-    const sample = result.items[0];
-    log('info', 'Sample scope item structure', { 
-      keys: Object.keys(sample).join(','),
-      componentType: sample.componentType,
-      type: sample.type,
-      status: sample.status,
-      statusLabel: sample.statusLabel,
-      isImplicit: sample.isImplicit,
-      code: sample.code,
+    const s = result.items[0];
+    log('info', 'Sample item field check', {
+      usageRecommendation: s.usageRecommendation,
+      status: s.status,
+      endDate: s.endDate,
+      keys: Object.keys(s).join(','),
     });
   }
-  
+
   const categorised = categoriseScope(explicitItems);
 
-  // Classify each item: keep Current + teach-out (superseded with future endDate), drop the rest
+  // ── Classify each item: keep Current + teach-out, drop the rest ──
+  const stateCounts: Record<string, { current: number; teach_out: number; dropped: number; total: number }> = {};
+
   for (const [type, items] of Object.entries(categorised)) {
-    const before = items.length;
     const kept: any[] = [];
+    let currentCount = 0;
+    let teachOutCount = 0;
+    let droppedCount = 0;
+
     for (const item of items) {
-      const scopeState = classifyScopeState(item);
-      if (scopeState) {
-        // Inject scope_state into the item so it lands in tga_data
-        item.scope_state = scopeState;
+      const result = classify(item);
+      if (result.include && result.scope_state) {
+        // Inject classification metadata into the item so it lands in tga_data
+        item.scope_state = result.scope_state;
+        item.usageRecommendation_raw = result.usageRaw;
+        item.endDate_raw = result.endRaw;
         kept.push(item);
+
+        if (result.scope_state === "current") currentCount++;
+        else teachOutCount++;
+      } else {
+        droppedCount++;
       }
     }
+
     categorised[type] = kept;
-    const dropped = before - kept.length;
-    if (dropped > 0) log('info', `Filtered ${type}: kept ${kept.length} (${kept.filter((i: any) => i.scope_state === 'teach_out').length} teach-out), dropped ${dropped}`);
+    stateCounts[type] = { current: currentCount, teach_out: teachOutCount, dropped: droppedCount, total: items.length };
+
+    if (droppedCount > 0) {
+      log('info', `Filtered ${type}: kept ${kept.length} (${currentCount} current, ${teachOutCount} teach-out), dropped ${droppedCount}`);
+    }
   }
-  
+
   const keptTotal = Object.values(categorised).reduce((sum, arr) => sum + arr.length, 0);
-  const teachOutTotal = Object.values(categorised).reduce((sum, arr) => sum + arr.filter((i: any) => i.scope_state === 'teach_out').length, 0);
   log('info', `Categorised scope (Current + teach-out)`, {
     qualification: categorised.qualification.length,
     unit: categorised.unit.length,
@@ -223,11 +274,11 @@ async function fetchAllScope(rtoId: string): Promise<{ categorised: Record<strin
     accreditedCourse: categorised.accreditedCourse.length,
     trainingPackage: categorised.trainingPackage.length,
     total: keptTotal,
-    teachOut: teachOutTotal,
     droppedFromTotal: explicitItems.length - keptTotal,
+    stateCounts,
   });
-  
-  return { categorised, urls: result.urls };
+
+  return { categorised, urls: result.urls, stateCounts };
 }
 
 // Fetch organization details from REST API
@@ -450,12 +501,14 @@ serve(async (req) => {
       trainingPackage: 'trainingPackage',
     };
 
-    // Persist each category using full-replace strategy (delete all existing, insert Current-only)
+    // Persist each category using full-replace strategy (delete all existing, insert fresh set)
     progress.stage = 'persisting_scope';
+    const scopeStateCounts = scopeResult.stateCounts || {};
+
     for (const [apiType, items] of Object.entries(scopeResult.categorised)) {
       const dbType = dbTypeMap[apiType] || apiType;
       
-      // Delete ALL existing rows for this tenant + scope_type before inserting fresh Current-only set
+      // Delete ALL existing rows for this tenant + scope_type before inserting fresh set
       const { error: deleteError } = await supabaseAdmin
         .from('tenant_rto_scope')
         .delete()
@@ -481,15 +534,23 @@ serve(async (req) => {
           scopeCounts[apiType] = 0;
         } else {
           const persisted = (persistResult as any)?.items_persisted || items.length;
-          log('info', `Persisted ${persisted} Current ${apiType}(s)`, { dbType });
+          const sc = scopeStateCounts[apiType];
+          log('info', `Persisted ${persisted} ${apiType}(s)`, { dbType, current: sc?.current || 0, teach_out: sc?.teach_out || 0 });
           scopeCounts[apiType] = persisted;
         }
       } else {
         scopeCounts[apiType] = 0;
-        log('info', `No Current ${apiType} items to persist`);
+        const sc = scopeStateCounts[apiType];
+        if (sc && sc.total > 0) {
+          log('warn', `${apiType}: TGA returned ${sc.total} items but ALL were dropped (${sc.dropped} non-current/expired)`);
+          scopeErrors[apiType] = `All ${sc.total} items dropped: none matched current or teach-out criteria`;
+        } else {
+          log('info', `No ${apiType} items from TGA`);
+        }
       }
     }
     progress.scope_counts = scopeCounts;
+    progress.scope_state_counts = scopeStateCounts;
 
     // 5. Update tenants row with TGA status
     progress.stage = 'updating_tenant';
@@ -757,6 +818,7 @@ serve(async (req) => {
         snapshot_id: snapshotId,
         job_id: jobId,
         counts: scopeCounts,
+        state_counts: scopeStateCounts,
         contacts_count: contactRows.length,
         addresses_count: addressRows.length,
         delivery_locations_count: deliveryRows.length,
