@@ -24,8 +24,13 @@ function ClientLayoutInner({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="min-h-screen bg-background overflow-x-hidden">
-      {/* Impersonation Banner */}
-      {isPreview && <ImpersonationBanner />}
+      {/* Impersonation Banner (in flow, not fixed) */}
+      {isPreview && (
+        <>
+          <ImpersonationBanner />
+          <div className="h-12" /> {/* Spacer for fixed banner */}
+        </>
+      )}
 
       {/* Sidebar */}
       <ClientSidebar

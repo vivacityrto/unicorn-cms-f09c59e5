@@ -29,12 +29,6 @@ const ClientPreview = () => {
 
   return (
     <ClientLayout>
-      <div className="space-y-2 mb-6">
-        <h1 className="text-2xl font-bold text-secondary">Welcome to {previewTenant.name}</h1>
-        <p className="text-muted-foreground">
-          This is a preview of the client portal experience.
-        </p>
-      </div>
       <ClientHomePage />
     </ClientLayout>
   );
