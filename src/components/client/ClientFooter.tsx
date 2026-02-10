@@ -1,9 +1,11 @@
 import { Link } from "react-router-dom";
 import { useHelpCenter } from "@/components/help-center";
+import { useOpenDocumentRequest } from "@/components/layout/ClientLayout";
 
 export function ClientFooter() {
   const currentYear = new Date().getFullYear();
   const { openHelpCenter } = useHelpCenter();
+  const openDocumentRequest = useOpenDocumentRequest();
 
   return (
     <footer className="w-full" style={{ backgroundColor: "hsl(270 47% 26%)" }}>
@@ -53,7 +55,7 @@ export function ClientFooter() {
               </li>
               <li>
                 <button
-                  onClick={() => openHelpCenter("csc")}
+                  onClick={() => openDocumentRequest()}
                   className="text-sm text-white hover:text-white/80 transition-colors"
                 >
                   Message your CSC

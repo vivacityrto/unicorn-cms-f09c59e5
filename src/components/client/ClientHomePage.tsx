@@ -4,10 +4,12 @@ import { Button } from "@/components/ui/button";
 import { useHelpCenter } from "@/components/help-center";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
+import { useOpenDocumentRequest } from "@/components/layout/ClientLayout";
 
 export function ClientHomePage() {
   const { openHelpCenter } = useHelpCenter();
   const { profile } = useAuth();
+  const openDocumentRequest = useOpenDocumentRequest();
 
   return (
     <div className="space-y-8 max-w-5xl">
@@ -39,20 +41,20 @@ export function ClientHomePage() {
           </CardContent>
         </Card>
 
-        {/* Message CSC - Secondary */}
+        {/* Request a document - replaces Message CSC */}
         <Card className="hover:border-secondary/30 transition-colors">
           <CardContent className="p-5 flex flex-col items-start gap-3">
             <div className="h-10 w-10 rounded-full bg-secondary/10 flex items-center justify-center">
-              <MessageCircle className="h-5 w-5 text-secondary" />
+              <FileText className="h-5 w-5 text-secondary" />
             </div>
             <div>
-              <h3 className="font-semibold text-foreground">Message your CSC</h3>
+              <h3 className="font-semibold text-foreground">Request a document</h3>
               <p className="text-sm text-muted-foreground mt-1">
-                Send a message. We reply in Unicorn.
+                Ask Vivacity to share or create a document. Logged to your account.
               </p>
             </div>
-            <Button variant="outline" onClick={() => openHelpCenter("csc")} className="mt-auto w-full">
-              Send message
+            <Button variant="outline" onClick={() => openDocumentRequest()} className="mt-auto w-full">
+              Create request
             </Button>
           </CardContent>
         </Card>
@@ -126,8 +128,8 @@ export function ClientHomePage() {
               <Library className="h-3.5 w-3.5 mr-1" /> Resource Hub
             </Link>
           </Button>
-          <Button variant="outline" size="sm" onClick={() => openHelpCenter("csc")}>
-            <MessageCircle className="h-3.5 w-3.5 mr-1" /> Contact CSC
+          <Button variant="outline" size="sm" onClick={() => openDocumentRequest()}>
+            <FileText className="h-3.5 w-3.5 mr-1" /> Request a document
           </Button>
           <Button variant="outline" size="sm" onClick={() => openHelpCenter("chatbot")}>
             <Bot className="h-3.5 w-3.5 mr-1" /> Ask Chatbot

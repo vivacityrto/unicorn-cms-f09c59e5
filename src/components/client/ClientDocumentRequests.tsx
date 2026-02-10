@@ -3,21 +3,10 @@ import { useClientTenant } from "@/contexts/ClientTenantContext";
 import { useAuth } from "@/hooks/useAuth";
 import {
   useDocumentRequests,
-  useCreateDocumentRequest,
   useCancelDocumentRequest,
   type DocumentRequest,
 } from "@/hooks/useDocumentRequests";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-} from "@/components/ui/select";
-import {
-  Dialog, DialogContent, DialogDescription, DialogFooter,
-  DialogHeader, DialogTitle, DialogTrigger,
-} from "@/components/ui/dialog";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
@@ -27,10 +16,9 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader,
   AlertDialogTitle, AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { Plus, Loader2, Inbox, XCircle, Eye, CalendarIcon } from "lucide-react";
+import { DocumentRequestModal } from "@/components/client/DocumentRequestModal";
+import { Plus, Loader2, Inbox, XCircle } from "lucide-react";
 import { format } from "date-fns";
-
-const CATEGORIES = ["Compliance", "Evidence", "Admin", "Other"];
 
 const statusConfig: Record<string, { label: string; color: string; bg: string }> = {
   open: { label: "Open", color: "hsl(189 74% 50%)", bg: "hsl(189 74% 95%)" },
@@ -54,15 +42,10 @@ function StatusBadge({ status }: { status: string }) {
 
 export function ClientDocumentRequests() {
   const [createOpen, setCreateOpen] = useState(false);
-  const [title, setTitle] = useState("");
-  const [details, setDetails] = useState("");
-  const [category, setCategory] = useState("");
-  const [dueAt, setDueAt] = useState("");
 
   const { activeTenantId, isReadOnly } = useClientTenant();
   const { user } = useAuth();
   const requests = useDocumentRequests(activeTenantId);
-  const createMutation = useCreateDocumentRequest();
   const cancelMutation = useCancelDocumentRequest();
 
   // Sort: open/in_progress first, then by created_at desc
@@ -72,32 +55,6 @@ export function ClientDocumentRequests() {
     if (p !== 0) return p;
     return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
   });
-
-  const resetForm = () => {
-    setTitle("");
-    setDetails("");
-    setCategory("");
-    setDueAt("");
-  };
-
-  const handleCreate = () => {
-    if (!activeTenantId || !title.trim() || !details.trim()) return;
-    createMutation.mutate(
-      {
-        tenantId: activeTenantId,
-        title: title.trim(),
-        details: details.trim(),
-        category: category || null,
-        dueAt: dueAt || null,
-      },
-      {
-        onSuccess: () => {
-          resetForm();
-          setCreateOpen(false);
-        },
-      }
-    );
-  };
 
   if (requests.isLoading) {
     return (
@@ -120,91 +77,21 @@ export function ClientDocumentRequests() {
           </p>
         </div>
         {!isReadOnly ? (
-          <Dialog open={createOpen} onOpenChange={setCreateOpen}>
-            <DialogTrigger asChild>
-              <Button
-                size="sm"
-                className="text-xs font-medium"
-                style={{
-                  backgroundColor: "hsl(189 74% 50%)",
-                  color: "hsl(270 47% 26%)",
-                }}
-              >
-                <Plus className="h-3.5 w-3.5 mr-1.5" />
-                New request
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-md">
-              <DialogHeader>
-                <DialogTitle>New document request</DialogTitle>
-                <DialogDescription>
-                  Describe what you need. Your Vivacity consultant will be notified.
-                </DialogDescription>
-              </DialogHeader>
-              <div className="space-y-4 py-2">
-                <div>
-                  <Label htmlFor="req-title">Request title *</Label>
-                  <Input
-                    id="req-title"
-                    value={title}
-                    onChange={(e) => setTitle(e.target.value)}
-                    placeholder="e.g. Compliance manual 2025"
-                    className="mt-1"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="req-details">Details *</Label>
-                  <Textarea
-                    id="req-details"
-                    value={details}
-                    onChange={(e) => setDetails(e.target.value)}
-                    placeholder="Describe what you need and why…"
-                    className="mt-1"
-                    rows={3}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="req-category">Category (optional)</Label>
-                  <Select value={category} onValueChange={setCategory}>
-                    <SelectTrigger className="mt-1">
-                      <SelectValue placeholder="Select category" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {CATEGORIES.map((c) => (
-                        <SelectItem key={c} value={c}>{c}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label htmlFor="req-due">Due date (optional)</Label>
-                  <Input
-                    id="req-due"
-                    type="date"
-                    value={dueAt}
-                    onChange={(e) => setDueAt(e.target.value)}
-                    className="mt-1"
-                  />
-                </div>
-              </div>
-              <DialogFooter>
-                <Button variant="outline" onClick={() => { resetForm(); setCreateOpen(false); }}>
-                  Cancel
-                </Button>
-                <Button
-                  onClick={handleCreate}
-                  disabled={!title.trim() || !details.trim() || createMutation.isPending}
-                  style={{
-                    backgroundColor: "hsl(189 74% 50%)",
-                    color: "hsl(270 47% 26%)",
-                  }}
-                >
-                  {createMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                  Create request
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
+          <>
+            <Button
+              size="sm"
+              className="text-xs font-medium"
+              style={{
+                backgroundColor: "hsl(189 74% 50%)",
+                color: "hsl(270 47% 26%)",
+              }}
+              onClick={() => setCreateOpen(true)}
+            >
+              <Plus className="h-3.5 w-3.5 mr-1.5" />
+              New request
+            </Button>
+            <DocumentRequestModal open={createOpen} onOpenChange={setCreateOpen} />
+          </>
         ) : (
           <Badge variant="outline" className="text-xs text-muted-foreground">
             Read-only preview
