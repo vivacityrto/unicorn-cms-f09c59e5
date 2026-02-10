@@ -12,6 +12,10 @@ const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
 
 const PAGE_SIZE = 500;
 
+// Status normalisation helpers — keep only Current scope items
+const normStatus = (s: any) => String(s ?? "").trim().toLowerCase();
+const isCurrent = (item: any) => normStatus(item.status) === "current";
+
 // Compute SHA256 hash of a string using Web Crypto API
 async function computeSha256(text: string): Promise<string> {
   const encoder = new TextEncoder();
@@ -176,13 +180,24 @@ async function fetchAllScope(rtoId: string): Promise<{ categorised: Record<strin
   }
   
   const categorised = categoriseScope(explicitItems);
+
+  // Filter to Current-only before persistence — drop Superseded/Deleted/Non-current
+  for (const [type, items] of Object.entries(categorised)) {
+    const before = items.length;
+    categorised[type] = items.filter(isCurrent);
+    const dropped = before - categorised[type].length;
+    if (dropped > 0) log('info', `Filtered ${type}: kept ${categorised[type].length}, dropped ${dropped} non-current`);
+  }
   
-  log('info', `Categorised scope`, {
+  const currentTotal = Object.values(categorised).reduce((sum, arr) => sum + arr.length, 0);
+  log('info', `Categorised scope (Current-only)`, {
     qualification: categorised.qualification.length,
     unit: categorised.unit.length,
     skillSet: categorised.skillSet.length,
     accreditedCourse: categorised.accreditedCourse.length,
-    total: explicitItems.length,
+    trainingPackage: categorised.trainingPackage.length,
+    total: currentTotal,
+    droppedFromTotal: explicitItems.length - currentTotal,
   });
   
   return { categorised, urls: result.urls };
@@ -408,10 +423,23 @@ serve(async (req) => {
       trainingPackage: 'trainingPackage',
     };
 
-    // Persist each category
+    // Persist each category using full-replace strategy (delete all existing, insert Current-only)
     progress.stage = 'persisting_scope';
     for (const [apiType, items] of Object.entries(scopeResult.categorised)) {
       const dbType = dbTypeMap[apiType] || apiType;
+      
+      // Delete ALL existing rows for this tenant + scope_type before inserting fresh Current-only set
+      const { error: deleteError } = await supabaseAdmin
+        .from('tenant_rto_scope')
+        .delete()
+        .eq('tenant_id', tenantIdNum)
+        .eq('scope_type', dbType);
+      
+      if (deleteError) {
+        log('warn', `Failed to delete existing ${dbType} rows`, { error: deleteError.message });
+      } else {
+        log('info', `Deleted existing ${dbType} rows for tenant ${tenantIdNum}`);
+      }
       
       if (items.length > 0) {
         const { data: persistResult, error: persistError } = await supabaseAdmin.rpc('persist_tga_scope_items', {
@@ -426,11 +454,12 @@ serve(async (req) => {
           scopeCounts[apiType] = 0;
         } else {
           const persisted = (persistResult as any)?.items_persisted || items.length;
-          log('info', `Persisted ${persisted} ${apiType}(s)`, { dbType });
+          log('info', `Persisted ${persisted} Current ${apiType}(s)`, { dbType });
           scopeCounts[apiType] = persisted;
         }
       } else {
         scopeCounts[apiType] = 0;
+        log('info', `No Current ${apiType} items to persist`);
       }
     }
     progress.scope_counts = scopeCounts;
