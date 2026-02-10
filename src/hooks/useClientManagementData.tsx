@@ -13,13 +13,14 @@ export interface TimelineEvent {
   created_at: string;
   occurred_at: string;
   created_by: string | null;
-  source: 'system' | 'user';
+  source: 'system' | 'user' | 'microsoft';
   event_type: string;
   title: string;
   body: string | null;
   entity_type: string | null;
   entity_id: string | null;
   metadata: Record<string, unknown>;
+  package_id: number | null;
   creator?: {
     first_name: string;
     last_name: string;
@@ -86,12 +87,17 @@ export interface ActionItem {
 
 const EVENT_TYPE_FILTERS: Record<string, string[]> = {
   all: [],
-  meetings: ['meeting_synced'],
+  meetings: ['meeting_synced', 'minutes_draft_created', 'minutes_published_pdf'],
   time: ['time_posted', 'time_ignored'],
-  tasks: ['task_completed_team', 'task_completed_client'],
-  emails: ['email_sent', 'email_failed'],
-  docs: ['document_uploaded', 'document_downloaded'],
-  notes: ['note_added', 'note_created', 'note_pinned', 'note_unpinned']
+  tasks: ['task_completed_team', 'task_completed_client', 'tasks_created_from_minutes'],
+  emails: ['email_sent', 'email_failed', 'email_linked', 'email_attachment_saved'],
+  docs: ['document_uploaded', 'document_downloaded', 'sharepoint_doc_linked', 'sharepoint_root_configured'],
+  notes: ['note_added', 'note_created', 'note_pinned', 'note_unpinned'],
+  microsoft: [
+    'sharepoint_doc_linked', 'sharepoint_root_configured', 'meeting_synced',
+    'minutes_draft_created', 'minutes_published_pdf', 'tasks_created_from_minutes',
+    'email_linked', 'email_attachment_saved', 'microsoft_sync_failed',
+  ],
 };
 
 export interface PinnedNote {
@@ -169,16 +175,20 @@ export function useClientTimeline(tenantId: number | null, clientId: string | nu
     setLoading(true);
     try {
       const eventTypes = filter !== 'all' ? EVENT_TYPE_FILTERS[filter] || null : null;
+      // For 'microsoft' filter, also pass source filter
+      const sourceFilter = filter === 'microsoft' ? 'microsoft' : null;
       
       const { data, error } = await supabase.rpc('rpc_search_timeline_events', {
-        p_tenant_id: tenantId,
-        p_client_id: parseInt(clientId),
+        p_tenant_id: Number(tenantId),
+        p_client_id: Number(clientId),
         p_search: search || null,
         p_event_types: eventTypes,
         p_limit: limit,
         p_offset: offset,
         p_from_date: dateRange.from?.toISOString() || null,
-        p_to_date: dateRange.to?.toISOString() || null
+        p_to_date: dateRange.to?.toISOString() || null,
+        p_source: sourceFilter,
+        p_package_id: null
       });
 
       if (error) throw error;

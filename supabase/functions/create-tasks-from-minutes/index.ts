@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { emitTimelineEvent } from "../_shared/emit-timeline-event.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -203,10 +204,32 @@ Deno.serve(async (req) => {
         .eq("id", minutes_id);
     }
 
+    // Emit timeline event for tasks created
+    const tasksCreatedCount = createdTasks.length - skippedActions.length;
+    if (tasksCreatedCount > 0) {
+      await emitTimelineEvent(supabase, {
+        tenant_id: minutes.tenant_id,
+        client_id: String(minutes.tenant_id),
+        event_type: "tasks_created_from_minutes",
+        title: `${tasksCreatedCount} task${tasksCreatedCount > 1 ? "s" : ""} created from "${meetingTitle}" minutes`,
+        body: `Actions converted to tasks from meeting on ${meetingDate}`,
+        source: "microsoft",
+        entity_type: "meeting",
+        entity_id: minutes.meeting_id,
+        metadata: {
+          meeting_id: minutes.meeting_id,
+          minutes_id: minutes.id,
+          tasks_created: tasksCreatedCount,
+          tasks_skipped: skippedActions.length,
+        },
+        created_by: user.id,
+      });
+    }
+
     return new Response(
       JSON.stringify({
         success: true,
-        created: createdTasks.length - skippedActions.length,
+        created: tasksCreatedCount,
         skipped: skippedActions.length,
         total: createdTasks.length,
         tasks: createdTasks,

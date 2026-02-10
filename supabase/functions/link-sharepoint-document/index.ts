@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { emitTimelineEvent } from "../_shared/emit-timeline-event.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -507,6 +508,26 @@ serve(async (req) => {
         });
 
         console.log('[link-sharepoint] Document linked:', docLink.id);
+
+        // Emit timeline event
+        if (body.tenant_id) {
+          await emitTimelineEvent(supabaseAdmin, {
+            tenant_id: Number(body.tenant_id),
+            client_id: String(body.tenant_id),
+            event_type: "sharepoint_doc_linked",
+            title: `SharePoint document linked: ${fileMetadata.name || "File"}`,
+            source: "microsoft",
+            entity_type: linkedEntityType || "document_link",
+            entity_id: linkedEntityId || docLink.id,
+            metadata: {
+              document_link_id: docLink.id,
+              file_name: fileMetadata.name,
+              linked_entity_type: linkedEntityType,
+              linked_entity_id: linkedEntityId,
+            },
+            created_by: user.id,
+          });
+        }
 
         return new Response(
           JSON.stringify({ success: true, documentLink: docLink }),
