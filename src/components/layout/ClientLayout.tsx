@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, createContext, useContext } from "react";
 import { Link, useLocation } from "react-router-dom";
 import {
   LayoutDashboard,
@@ -42,7 +42,15 @@ import { HelpCenterProvider, HelpCenterDrawer, useHelpCenter } from "@/component
 import { ClientFooter } from "@/components/client/ClientFooter";
 import { ImpersonationBanner } from "@/components/client/ImpersonationBanner";
 import { FloatingChatbot } from "@/components/help-center/FloatingChatbot";
+import { DocumentRequestModal } from "@/components/client/DocumentRequestModal";
+import { useClientRequestActions } from "@/hooks/useClientRequestActions";
+import type { DocumentRequestPrefill } from "@/components/client/DocumentRequestModal";
 import { cn } from "@/lib/utils";
+
+// Context so children (e.g. ClientHomePage) can open the request modal
+type OpenDocRequestFn = (prefill?: Partial<DocumentRequestPrefill>) => void;
+const ClientRequestContext = createContext<OpenDocRequestFn>(() => {});
+export const useOpenDocumentRequest = () => useContext(ClientRequestContext);
 
 
 const clientMenuItems = [
@@ -69,6 +77,7 @@ function ClientLayoutInner({ children }: { children: React.ReactNode }) {
   const { tenantName, isPreview } = useClientTenant();
   const { openHelpCenter } = useHelpCenter();
   const { unreadCount, notifications } = useNotifications();
+  const { requestModalOpen, setRequestModalOpen, prefill, openDocumentRequest } = useClientRequestActions();
 
   const getInitials = () => {
     if (profile?.first_name && profile?.last_name) {
@@ -198,22 +207,39 @@ function ClientLayoutInner({ children }: { children: React.ReactNode }) {
 
         {/* Sidebar Footer Actions */}
         <div className="border-t border-white/15 py-3 px-2 space-y-1">
-          {sidebarFooterItems.map((item) => {
-            const Icon = item.icon;
-            return (
-              <button
-                key={item.tab}
-                onClick={() => openHelpCenter(item.tab)}
-                className={cn(
-                  "flex items-center gap-3 w-full transition-colors text-sm rounded-lg min-h-[40px] text-white/70 hover:bg-white/10 hover:text-white",
-                  sidebarOpen ? "px-4" : "px-0 justify-center"
-                )}
-              >
-                <Icon className="w-[18px] h-[18px] flex-shrink-0" />
-                {sidebarOpen && <span>{item.label}</span>}
-              </button>
-            );
-          })}
+          {/* Help */}
+          <button
+            onClick={() => openHelpCenter("chatbot")}
+            className={cn(
+              "flex items-center gap-3 w-full transition-colors text-sm rounded-lg min-h-[40px] text-white/70 hover:bg-white/10 hover:text-white",
+              sidebarOpen ? "px-4" : "px-0 justify-center"
+            )}
+          >
+            <Bot className="w-[18px] h-[18px] flex-shrink-0" />
+            {sidebarOpen && <span>Help</span>}
+          </button>
+          {/* Message CSC → opens Document Request modal */}
+          <button
+            onClick={() => openDocumentRequest()}
+            className={cn(
+              "flex items-center gap-3 w-full transition-colors text-sm rounded-lg min-h-[40px] text-white/70 hover:bg-white/10 hover:text-white",
+              sidebarOpen ? "px-4" : "px-0 justify-center"
+            )}
+          >
+            <MessageCircle className="w-[18px] h-[18px] flex-shrink-0" />
+            {sidebarOpen && <span>Message CSC</span>}
+          </button>
+          {/* Support */}
+          <button
+            onClick={() => openHelpCenter("support")}
+            className={cn(
+              "flex items-center gap-3 w-full transition-colors text-sm rounded-lg min-h-[40px] text-white/70 hover:bg-white/10 hover:text-white",
+              sidebarOpen ? "px-4" : "px-0 justify-center"
+            )}
+          >
+            <Headphones className="w-[18px] h-[18px] flex-shrink-0" />
+            {sidebarOpen && <span>Support</span>}
+          </button>
         </div>
       </aside>
 
@@ -367,20 +393,29 @@ function ClientLayoutInner({ children }: { children: React.ReactNode }) {
           </div>
         </header>
 
-        {/* Page Content */}
-        <main className="flex-1 w-full min-w-0 p-4 md:p-6 overflow-y-auto">
-          {children}
-        </main>
+        <ClientRequestContext.Provider value={openDocumentRequest}>
+          {/* Page Content */}
+          <main className="flex-1 w-full min-w-0 p-4 md:p-6 overflow-y-auto">
+            {children}
+          </main>
 
-        {/* Footer */}
-        <ClientFooter />
+          {/* Footer */}
+          <ClientFooter />
 
-        {/* Floating Chatbot */}
-        <FloatingChatbot />
+          {/* Floating Chatbot */}
+          <FloatingChatbot />
+        </ClientRequestContext.Provider>
       </div>
 
       {/* Help Center Drawer */}
       <HelpCenterDrawer />
+
+      {/* Document Request Modal (shared) */}
+      <DocumentRequestModal
+        open={requestModalOpen}
+        onOpenChange={setRequestModalOpen}
+        prefill={prefill}
+      />
     </div>
   );
 }
