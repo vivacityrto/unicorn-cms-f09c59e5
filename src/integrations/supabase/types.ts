@@ -3919,7 +3919,7 @@ export type Database = {
         }
         Relationships: []
       }
-      clickup_tasks_260010: {
+      clickup_tasks_260110: {
         Row: {
           assigned_comments: Json | null
           assignees: Json | null
