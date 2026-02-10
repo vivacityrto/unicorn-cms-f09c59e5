@@ -21,6 +21,7 @@ export interface TimelineEvent {
   entity_id: string | null;
   metadata: Record<string, unknown>;
   package_id: number | null;
+  visibility: 'internal' | 'client';
   creator?: {
     first_name: string;
     last_name: string;
@@ -188,7 +189,8 @@ export function useClientTimeline(tenantId: number | null, clientId: string | nu
         p_from_date: dateRange.from?.toISOString() || null,
         p_to_date: dateRange.to?.toISOString() || null,
         p_source: sourceFilter,
-        p_package_id: null
+        p_package_id: null,
+        p_visibility: null  // RLS handles visibility; null = return all allowed rows
       });
 
       if (error) throw error;

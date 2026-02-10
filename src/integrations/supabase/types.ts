@@ -5519,6 +5519,7 @@ export type Database = {
           source: string
           tenant_id: number
           title: string
+          visibility: string
         }
         Insert: {
           body?: string | null
@@ -5535,6 +5536,7 @@ export type Database = {
           source: string
           tenant_id: number
           title: string
+          visibility?: string
         }
         Update: {
           body?: string | null
@@ -5551,6 +5553,7 @@ export type Database = {
           source?: string
           tenant_id?: number
           title?: string
+          visibility?: string
         }
         Relationships: []
       }
@@ -24955,6 +24958,7 @@ export type Database = {
           p_source?: string
           p_tenant_id: number
           p_to_date?: string
+          p_visibility?: string
         }
         Returns: {
           body: string
@@ -24971,6 +24975,7 @@ export type Database = {
           source: string
           tenant_id: number
           title: string
+          visibility: string
         }[]
       }
       rpc_set_action_item_status: {
