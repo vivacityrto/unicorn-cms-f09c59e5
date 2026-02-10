@@ -33,7 +33,7 @@ export interface UserProfile {
   email: string | null;
   first_name: string | null;
   last_name: string | null;
-  status: string | null;
+  state: string | null;
 }
 
 /**
@@ -99,7 +99,7 @@ export async function verifyAuth(
     // Fetch the user's profile
     const { data: profile, error: profileError } = await supabase
       .from("users")
-      .select("user_uuid, unicorn_role, email, first_name, last_name, status")
+      .select("user_uuid, unicorn_role, email, first_name, last_name, state")
       .eq("user_uuid", user.id)
       .single();
 
@@ -113,7 +113,7 @@ export async function verifyAuth(
     }
 
     // Check if user is active
-    if (profile.status === "inactive" || profile.status === "suspended") {
+    if (profile.state === "inactive" || profile.state === "suspended") {
       return {
         user: null,
         profile: null,
