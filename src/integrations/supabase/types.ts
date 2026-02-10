@@ -17773,6 +17773,150 @@ export type Database = {
           },
         ]
       }
+      tenant_document_request_attachments: {
+        Row: {
+          created_at: string
+          id: string
+          portal_document_id: string
+          request_id: string
+          tenant_id: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          portal_document_id: string
+          request_id: string
+          tenant_id: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          portal_document_id?: string
+          request_id?: string
+          tenant_id?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tenant_document_request_attachments_portal_document_id_fkey"
+            columns: ["portal_document_id"]
+            isOneToOne: false
+            referencedRelation: "portal_documents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tenant_document_request_attachments_request_id_fkey"
+            columns: ["request_id"]
+            isOneToOne: false
+            referencedRelation: "tenant_document_requests"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tenant_document_request_attachments_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tenant_document_request_attachments_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_engagement_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "tenant_document_request_attachments_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_eos_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "tenant_document_request_attachments_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_compliance_entitlements"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
+      tenant_document_requests: {
+        Row: {
+          assigned_to_user_id: string | null
+          category: string | null
+          closed_at: string | null
+          created_at: string
+          created_by_user_id: string
+          details: string
+          due_at: string | null
+          id: string
+          related_package_id: number | null
+          status: string
+          tenant_id: number
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          assigned_to_user_id?: string | null
+          category?: string | null
+          closed_at?: string | null
+          created_at?: string
+          created_by_user_id: string
+          details: string
+          due_at?: string | null
+          id?: string
+          related_package_id?: number | null
+          status?: string
+          tenant_id: number
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          assigned_to_user_id?: string | null
+          category?: string | null
+          closed_at?: string | null
+          created_at?: string
+          created_by_user_id?: string
+          details?: string
+          due_at?: string | null
+          id?: string
+          related_package_id?: number | null
+          status?: string
+          tenant_id?: number
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tenant_document_requests_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tenant_document_requests_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_engagement_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "tenant_document_requests_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_eos_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "tenant_document_requests_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_compliance_entitlements"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
       tenant_documents: {
         Row: {
           category: string | null
@@ -23708,6 +23852,7 @@ export type Database = {
         | "package_threshold_95"
         | "package_threshold_100"
         | "meeting_action_created"
+        | "document_request_created"
       notification_integration_status: "connected" | "disconnected" | "error"
       notification_status: "queued" | "sent" | "failed" | "skipped"
       rock_type: "company" | "team" | "individual"
@@ -23999,6 +24144,7 @@ export const Constants = {
         "package_threshold_95",
         "package_threshold_100",
         "meeting_action_created",
+        "document_request_created",
       ],
       notification_integration_status: ["connected", "disconnected", "error"],
       notification_status: ["queued", "sent", "failed", "skipped"],

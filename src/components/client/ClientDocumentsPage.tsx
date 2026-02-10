@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import { useClientTenant } from "@/contexts/ClientTenantContext";
 import { useHelpCenter } from "@/components/help-center";
 import {
@@ -24,9 +25,10 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Upload, Download, Eye, FileText, Loader2, MessageCircle, Inbox } from "lucide-react";
+import { Upload, Download, Eye, FileText, Loader2, MessageCircle, Inbox, ClipboardList } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
+import { ClientDocumentRequests } from "./ClientDocumentRequests";
 
 const CATEGORIES = ["Compliance", "Evidence", "Admin", "Other"];
 
@@ -117,8 +119,10 @@ function DocumentTable({
 }
 
 export function ClientDocumentsPage() {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [uploadOpen, setUploadOpen] = useState(false);
-  const [tab, setTab] = useState("shared");
+  const tab = searchParams.get("tab") || "shared";
+  const setTab = (t: string) => setSearchParams({ tab: t }, { replace: true });
   const [file, setFile] = useState<File | null>(null);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -298,6 +302,10 @@ export function ClientDocumentsPage() {
         <TabsList>
           <TabsTrigger value="shared">Shared with you</TabsTrigger>
           <TabsTrigger value="uploaded">Uploaded by you</TabsTrigger>
+          <TabsTrigger value="requests">
+            <ClipboardList className="h-3.5 w-3.5 mr-1.5" />
+            Requests
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="shared" className="mt-4">
@@ -322,6 +330,10 @@ export function ClientDocumentsPage() {
           ) : (
             <DocumentTable docs={uploaded.data} tenantId={activeTenantId} onView={handleView} />
           )}
+        </TabsContent>
+
+        <TabsContent value="requests" className="mt-4">
+          <ClientDocumentRequests />
         </TabsContent>
       </Tabs>
 
