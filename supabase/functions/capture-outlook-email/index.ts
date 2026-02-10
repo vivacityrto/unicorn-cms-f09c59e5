@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { emitTimelineEvent } from "../_shared/emit-timeline-event.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -247,6 +248,27 @@ Deno.serve(async (req) => {
     });
 
     console.log("Audit log created");
+
+    // Emit timeline event: email_linked
+    if (tenant_id && emailRecord) {
+      await emitTimelineEvent(serviceClient, {
+        tenant_id: parseInt(tenant_id),
+        client_id: client_id || String(tenant_id),
+        event_type: "email_linked",
+        title: `Email linked: ${(emailData.subject || "").substring(0, 60)}`,
+        source: "microsoft",
+        visibility: "internal",
+        entity_type: "email_message",
+        entity_id: emailRecord.id,
+        package_id: package_id ? parseInt(package_id) : null,
+        metadata: {
+          subject: (emailData.subject || "").substring(0, 100),
+          from: emailData.from?.emailAddress?.address,
+        },
+        created_by: userId as string,
+        dedupe_key: `email_link:${emailRecord.id}`,
+      });
+    }
 
     return new Response(
       JSON.stringify({

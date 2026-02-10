@@ -1,6 +1,8 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { buildScopeString, type SurfaceFlags } from "../_shared/microsoft-scopes.ts";
+import { emitTimelineEvent } from "../_shared/emit-timeline-event.ts";
+import { buildScopeString, type SurfaceFlags } from "../_shared/microsoft-scopes.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -293,6 +295,25 @@ serve(async (req) => {
 
       console.log('[outlook-auth] Tokens stored successfully for user:', stateData.user_id);
 
+      // Emit timeline event: microsoft_connected
+      await emitTimelineEvent(supabaseAdmin, {
+        tenant_id: stateData.tenant_id,
+        client_id: String(stateData.tenant_id),
+        event_type: "microsoft_connected",
+        title: "Microsoft account connected",
+        body: accountEmail ? `Connected as ${accountEmail}` : null,
+        source: "microsoft",
+        visibility: "internal",
+        entity_type: "user",
+        entity_id: stateData.user_id,
+        metadata: {
+          scopes: tokens.scope,
+          account_email: accountEmail,
+        },
+        created_by: stateData.user_id,
+        dedupe_key: `ms_connected:${stateData.user_id}:${new Date().toISOString().split('T')[0]}`,
+      });
+
       return new Response(
         JSON.stringify({ success: true }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -349,6 +370,13 @@ serve(async (req) => {
 
       console.log('[outlook-auth] Disconnecting user:', user.id);
 
+      // Get tenant_id before deleting
+      const { data: tokenRow } = await supabaseAdmin.from('oauth_tokens')
+        .select('tenant_id')
+        .eq('user_id', user.id)
+        .eq('provider', 'microsoft')
+        .maybeSingle();
+
       await supabaseAdmin.from('oauth_tokens').delete()
         .eq('user_id', user.id)
         .eq('provider', 'microsoft');
@@ -357,6 +385,21 @@ serve(async (req) => {
       await supabaseAdmin.from('calendar_events').delete()
         .eq('user_id', user.id)
         .eq('provider', 'outlook');
+
+      // Emit timeline event: microsoft_disconnected
+      if (tokenRow?.tenant_id) {
+        await emitTimelineEvent(supabaseAdmin, {
+          tenant_id: tokenRow.tenant_id,
+          client_id: String(tokenRow.tenant_id),
+          event_type: "microsoft_disconnected",
+          title: "Microsoft account disconnected",
+          source: "microsoft",
+          visibility: "internal",
+          entity_type: "user",
+          entity_id: user.id,
+          created_by: user.id,
+        });
+      }
 
       console.log('[outlook-auth] User disconnected:', user.id);
 

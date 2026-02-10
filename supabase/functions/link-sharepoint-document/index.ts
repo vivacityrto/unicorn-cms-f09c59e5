@@ -517,8 +517,10 @@ serve(async (req) => {
             event_type: "sharepoint_doc_linked",
             title: `SharePoint document linked: ${fileMetadata.name || "File"}`,
             source: "microsoft",
+            visibility: "internal",
             entity_type: linkedEntityType || "document_link",
             entity_id: linkedEntityId || docLink.id,
+            package_id: body.package_id || null,
             metadata: {
               document_link_id: docLink.id,
               file_name: fileMetadata.name,
@@ -526,6 +528,7 @@ serve(async (req) => {
               linked_entity_id: linkedEntityId,
             },
             created_by: user.id,
+            dedupe_key: `sp_link:${docLink.id}`,
           });
         }
 

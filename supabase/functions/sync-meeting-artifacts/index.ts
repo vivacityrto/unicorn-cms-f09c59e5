@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient, SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { emitTimelineEvent } from "../_shared/emit-timeline-event.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -647,14 +648,67 @@ serve(async (req) => {
       },
     });
 
-    console.log('[sync-artifacts] Complete:', {
-      artifacts_found: allArtifacts.length,
-      artifacts_created: artifactsCreated,
-      errors: artifactErrors.length,
-      has_recording: hasRecording,
-      has_transcript: hasTranscript,
-      minutes_draft_created: minutesDraftCreated,
+    // ── Timeline events ──────────────────────────────────────────────
+    const syncRunId = crypto.randomUUID();
+
+    // meeting_synced
+    await emitTimelineEvent(supabaseAdmin, {
+      tenant_id: meeting.tenant_id,
+      client_id: String(meeting.tenant_id),
+      event_type: "meeting_synced",
+      title: `Meeting synced: ${meeting.title || "Meeting"}`,
+      body: `${attendees.length} attendees, ${allArtifacts.length} artifacts`,
+      source: "microsoft",
+      visibility: "internal",
+      entity_type: "meeting",
+      entity_id: meetingId,
+      package_id: meeting.package_id || null,
+      metadata: {
+        subject: graphEvent.subject,
+        attendee_count: attendees.length,
+        artifacts_count: allArtifacts.length,
+      },
+      created_by: user.id,
+      dedupe_key: `meeting_synced:${meetingId}:${syncRunId}`,
     });
+
+    // meeting_artifacts_captured (if any found)
+    if (allArtifacts.length > 0) {
+      await emitTimelineEvent(supabaseAdmin, {
+        tenant_id: meeting.tenant_id,
+        client_id: String(meeting.tenant_id),
+        event_type: "meeting_artifacts_captured",
+        title: `${allArtifacts.length} artifact${allArtifacts.length > 1 ? 's' : ''} captured`,
+        source: "microsoft",
+        visibility: "internal",
+        entity_type: "meeting",
+        entity_id: meetingId,
+        metadata: {
+          recording_found: hasRecording,
+          transcript_found: hasTranscript,
+          shared_files_count: allArtifacts.filter(a => a.artifact_type === 'shared_file').length,
+        },
+        created_by: user.id,
+        dedupe_key: `artifacts:${meetingId}:${syncRunId}`,
+      });
+    }
+
+    // minutes_draft_created (if auto-created)
+    if (minutesDraftCreated) {
+      await emitTimelineEvent(supabaseAdmin, {
+        tenant_id: meeting.tenant_id,
+        client_id: String(meeting.tenant_id),
+        event_type: "minutes_draft_created",
+        title: `Minutes draft auto-created for "${meeting.title || "Meeting"}"`,
+        source: "microsoft",
+        visibility: "internal",
+        entity_type: "meeting",
+        entity_id: meetingId,
+        metadata: { source: "auto_sync" },
+        created_by: user.id,
+        dedupe_key: `minutes_draft:${meetingId}:${syncRunId}`,
+      });
+    }
 
     return new Response(
       JSON.stringify({

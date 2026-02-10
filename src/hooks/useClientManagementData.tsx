@@ -88,16 +88,20 @@ export interface ActionItem {
 
 const EVENT_TYPE_FILTERS: Record<string, string[]> = {
   all: [],
-  meetings: ['meeting_synced', 'minutes_draft_created', 'minutes_published_pdf'],
+  meetings: ['meeting_synced', 'meeting_artifacts_captured', 'minutes_draft_created', 'minutes_draft_updated', 'minutes_published_pdf'],
   time: ['time_posted', 'time_ignored'],
   tasks: ['task_completed_team', 'task_completed_client', 'tasks_created_from_minutes'],
   emails: ['email_sent', 'email_failed', 'email_linked', 'email_attachment_saved'],
-  docs: ['document_uploaded', 'document_downloaded', 'sharepoint_doc_linked', 'sharepoint_root_configured'],
+  docs: ['document_uploaded', 'document_downloaded', 'document_shared_to_client', 'sharepoint_doc_linked', 'sharepoint_root_configured', 'sharepoint_root_invalid'],
   notes: ['note_added', 'note_created', 'note_pinned', 'note_unpinned'],
   microsoft: [
-    'sharepoint_doc_linked', 'sharepoint_root_configured', 'meeting_synced',
-    'minutes_draft_created', 'minutes_published_pdf', 'tasks_created_from_minutes',
-    'email_linked', 'email_attachment_saved', 'microsoft_sync_failed',
+    'microsoft_connected', 'microsoft_disconnected',
+    'sharepoint_doc_linked', 'sharepoint_root_configured', 'sharepoint_root_invalid',
+    'meeting_synced', 'meeting_artifacts_captured',
+    'minutes_draft_created', 'minutes_draft_updated', 'minutes_published_pdf',
+    'tasks_created_from_minutes',
+    'email_linked', 'email_attachment_saved',
+    'microsoft_sync_failed',
   ],
 };
 

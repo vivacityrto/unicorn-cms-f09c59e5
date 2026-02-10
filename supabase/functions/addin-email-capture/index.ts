@@ -14,6 +14,7 @@ import {
   fetchEmailFromGraph,
   type GraphEmailDetails,
 } from "../_shared/graph-client.ts";
+import { emitTimelineEvent } from "../_shared/emit-timeline-event.ts";
 
 const FUNCTION_NAME = 'addin-email-capture';
 
@@ -260,6 +261,26 @@ serve(async (req) => {
     }
 
     console.log('[addin-email-capture] Email captured successfully:', emailRecord.id, { graph_enriched: graphEnriched });
+
+    // Emit timeline event: email_linked
+    await emitTimelineEvent(supabaseAdmin, {
+      tenant_id: tenantId,
+      client_id: body.link.client_id,
+      event_type: "email_linked",
+      title: `Email linked: ${body.subject.substring(0, 60)}`,
+      source: "microsoft",
+      visibility: "internal",
+      entity_type: "email_message",
+      entity_id: emailRecord.id,
+      package_id: body.link.package_id ? parseInt(body.link.package_id, 10) : null,
+      metadata: {
+        subject: body.subject.substring(0, 100),
+        from: body.sender.email,
+        received_at: body.received_at,
+      },
+      created_by: tokenPayload.user_uuid,
+      dedupe_key: `email_link:${emailRecord.id}`,
+    });
 
     // Build attachments array for response (from Graph or empty)
     const attachmentsResponse: AttachmentResponse[] = graphEnriched && graphEnrichment?.attachments 

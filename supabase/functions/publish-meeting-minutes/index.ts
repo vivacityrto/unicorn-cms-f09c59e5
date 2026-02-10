@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { emitTimelineEvent } from "../_shared/emit-timeline-event.ts";
+import { emitPublishEvents } from "../_shared/emit-timeline-event.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -399,25 +399,32 @@ serve(async (req) => {
 
     console.log(`[publish-minutes] ${auditAction}:`, { minutesId, portalDocId, version: newVersion });
 
-    // Emit timeline event
+    // Emit dual timeline events (internal + client-visible)
     const supabaseService = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
-    await emitTimelineEvent(supabaseService, {
-      tenant_id: minutes.tenant_id,
-      client_id: String(minutes.tenant_id),
-      event_type: "minutes_published_pdf",
-      title: `Minutes published: ${minutes.title}`,
-      body: isRegenerate ? `Regenerated as v${newVersion}` : `Published as v${newVersion}`,
-      source: "microsoft",
-      entity_type: "meeting",
-      entity_id: minutes.meeting_id,
-      metadata: {
-        minutes_id: minutesId,
-        meeting_id: minutes.meeting_id,
-        version: newVersion,
-        regenerated: isRegenerate,
+    await emitPublishEvents(
+      supabaseService,
+      {
+        tenant_id: minutes.tenant_id,
+        client_id: String(minutes.tenant_id),
+        event_type: "minutes_published_pdf",
+        title: `Minutes published: ${minutes.title}`,
+        body: isRegenerate ? `Regenerated as v${newVersion}` : `Published as v${newVersion}`,
+        source: "unicorn",
+        entity_type: "meeting_minutes",
+        entity_id: minutesId,
+        metadata: {
+          minutes_id: minutesId,
+          meeting_id: minutes.meeting_id,
+          version: newVersion,
+          regenerated: isRegenerate,
+          portal_document_id: portalDocId,
+        },
+        created_by: user.id,
+        dedupe_key: `minutes_pub:${minutesId}:v${newVersion}`,
       },
-      created_by: user.id,
-    });
+      `Meeting minutes published: ${minutes.title}`, // client title
+      `Version ${newVersion} is now available`, // client body
+    );
 
     return new Response(
       JSON.stringify({
