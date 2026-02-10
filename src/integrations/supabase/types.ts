@@ -6231,6 +6231,33 @@ export type Database = {
         }
         Relationships: []
       }
+      dd_note_tags: {
+        Row: {
+          code: string
+          description: string | null
+          id: number
+          is_active: boolean
+          label: string
+          sort_order: number
+        }
+        Insert: {
+          code: string
+          description?: string | null
+          id?: number
+          is_active?: boolean
+          label: string
+          sort_order?: number
+        }
+        Update: {
+          code?: string
+          description?: string | null
+          id?: number
+          is_active?: boolean
+          label?: string
+          sort_order?: number
+        }
+        Relationships: []
+      }
       dd_status: {
         Row: {
           code: number
