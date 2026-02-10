@@ -262,7 +262,7 @@ export default function MyWork() {
                     </TableCell>
                     <TableCell>
                       <button
-                        onClick={() => navigate(`/clients/${item.tenant_id}`)}
+                        onClick={() => navigate(`/tenant/${item.tenant_id}`)}
                         className="text-sm text-primary hover:underline"
                       >
                         {item.client_name}
@@ -296,7 +296,7 @@ export default function MyWork() {
                         variant="ghost"
                         size="icon"
                         className="h-7 w-7"
-                        onClick={() => navigate(`/clients/${item.tenant_id}?tab=actions`)}
+                        onClick={() => navigate(`/tenant/${item.tenant_id}?tab=actions`)}
                       >
                         <ExternalLink className="h-3.5 w-3.5" />
                       </Button>

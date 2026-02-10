@@ -99,7 +99,7 @@ function ActionItemRow({
         </div>
         <div className="flex items-center gap-2 mt-0.5">
           <button
-            onClick={() => navigate(`/clients/${item.tenant_id}`)}
+            onClick={() => navigate(`/tenant/${item.tenant_id}`)}
             className="text-xs text-primary hover:underline truncate max-w-[150px]"
           >
             {item.client_name}
@@ -130,7 +130,7 @@ function ActionItemRow({
         variant="ghost"
         size="icon"
         className="h-7 w-7 shrink-0"
-        onClick={() => navigate(`/clients/${item.tenant_id}?tab=actions`)}
+        onClick={() => navigate(`/tenant/${item.tenant_id}?tab=actions`)}
       >
         <ExternalLink className="h-3.5 w-3.5 text-muted-foreground" />
       </Button>

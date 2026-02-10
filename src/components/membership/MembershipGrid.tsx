@@ -191,7 +191,7 @@ export function MembershipGrid({ memberships, onSelectMembership, onCSCChange, s
                         className="font-medium text-foreground hover:text-primary cursor-pointer flex items-center gap-2"
                         onClick={(e) => {
                           e.stopPropagation();
-                          navigate(`/clients/${group.tenant_id}`);
+                          navigate(`/tenant/${group.tenant_id}`);
                         }}
                       >
                         <Building2 className="h-4 w-4 text-muted-foreground" />
@@ -266,7 +266,7 @@ export function MembershipGrid({ memberships, onSelectMembership, onCSCChange, s
                         className="h-7 text-xs"
                         onClick={(e) => {
                           e.stopPropagation();
-                          navigate(`/clients/${group.tenant_id}`);
+                          navigate(`/tenant/${group.tenant_id}`);
                         }}
                       >
                         View
@@ -358,7 +358,7 @@ export function MembershipGrid({ memberships, onSelectMembership, onCSCChange, s
                               size="sm" 
                               variant="outline" 
                               className="text-xs h-7"
-                              onClick={() => navigate(`/clients/${group.tenant_id}`)}
+                              onClick={() => navigate(`/tenant/${group.tenant_id}`)}
                             >
                               View Client Details
                             </Button>

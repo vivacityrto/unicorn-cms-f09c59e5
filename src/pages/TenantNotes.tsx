@@ -338,7 +338,7 @@ export default function TenantNotes() {
     <div className="min-h-screen bg-background">
       <div className="p-6 space-y-6">
         {/* Back Button */}
-        <Button variant="ghost" onClick={() => navigate(`/clients/${tenantId}`)} className="gap-2 hover:bg-[hsl(196deg_100%_93.53%)] hover:text-black" style={{ boxShadow: "var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow)", border: "1px solid #00000052" }}>
+        <Button variant="ghost" onClick={() => navigate(`/tenant/${tenantId}`)} className="gap-2 hover:bg-[hsl(196deg_100%_93.53%)] hover:text-black" style={{ boxShadow: "var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow)", border: "1px solid #00000052" }}>
           <ArrowLeft className="h-4 w-4" />Back
         </Button>
 

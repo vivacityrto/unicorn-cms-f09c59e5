@@ -215,7 +215,7 @@ export function useMissingMergeFields(tenantId: number | null) {
             type: 'merge_data_updated',
             title: notificationTitle,
             message: notificationMessage,
-            link: `/clients/${tenantId}`,
+            link: `/tenant/${tenantId}`,
             is_read: false,
             created_by: user.id
           });
