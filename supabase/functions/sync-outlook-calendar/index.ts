@@ -46,6 +46,7 @@ interface TokenRecord {
   refresh_token: string;
   expires_at: string;
   tenant_id: number;
+  scope?: string;
 }
 
 async function refreshTokenIfNeeded(
@@ -72,7 +73,7 @@ async function refreshTokenIfNeeded(
       client_secret: MICROSOFT_CLIENT_SECRET,
       refresh_token: token.refresh_token,
       grant_type: 'refresh_token',
-      scope: 'openid profile email offline_access Calendars.Read Mail.Read'
+      scope: token.scope || 'openid profile email offline_access Calendars.Read'
     })
   });
 

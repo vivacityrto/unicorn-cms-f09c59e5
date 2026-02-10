@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { QUERY_STALE_TIMES } from '@/lib/queryConfig';
+import { useAddinFeatureFlags } from '@/hooks/useAddinFeatureFlags';
 
 export interface OutlookConnectionStatus {
   id: string;
@@ -28,6 +29,7 @@ export function useOutlookConnectionStatus() {
   const { user, profile } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { flags } = useAddinFeatureFlags();
 
   // Query connection status from the secure view
   const { data: connectionStatus, isLoading, error, refetch } = useQuery({
@@ -83,7 +85,12 @@ export function useOutlookConnectionStatus() {
         body: { 
           action: 'get-auth-url',
           redirect_uri: redirectUri,
-          tenant_id: profile.tenant_id
+          tenant_id: profile.tenant_id,
+          surfaces: {
+            mail: flags.addin_outlook_mail_enabled,
+            calendar: flags.addin_meetings_enabled,
+            documents: flags.addin_documents_enabled,
+          }
         }
       });
 

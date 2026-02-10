@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { buildScopeString, type SurfaceFlags } from "../_shared/microsoft-scopes.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -67,11 +68,14 @@ serve(async (req) => {
 
       const redirectUri = body.redirect_uri as string;
       const tenantId = body.tenant_id as number;
+      const surfaces = (body.surfaces as SurfaceFlags) || { mail: false, calendar: true, documents: false };
+      const scopeString = buildScopeString(surfaces);
 
       console.log('[outlook-auth] get-auth-url:', {
         userId: user.id,
         tenantId,
-        redirectUri
+        redirectUri,
+        scopeString
       });
 
       if (!redirectUri) {
@@ -87,6 +91,7 @@ serve(async (req) => {
         user_id: user.id,
         tenant_id: tenantId,
         redirect_uri: redirectUri,
+        scope: scopeString,
         created_at: new Date().toISOString()
       };
 
@@ -109,7 +114,7 @@ serve(async (req) => {
       authUrl.searchParams.set('client_id', MICROSOFT_CLIENT_ID);
       authUrl.searchParams.set('response_type', 'code');
       authUrl.searchParams.set('redirect_uri', redirectUri);
-      authUrl.searchParams.set('scope', 'openid profile email offline_access Calendars.Read');
+      authUrl.searchParams.set('scope', scopeString);
       authUrl.searchParams.set('state', state);
       authUrl.searchParams.set('response_mode', 'query');
 
@@ -175,11 +180,12 @@ serve(async (req) => {
       const stateData = stateRecord.data as { 
         user_id: string; 
         tenant_id: number; 
-        redirect_uri: string 
+        redirect_uri: string;
+        scope?: string;
       };
 
-      // Use the redirect_uri from the stored state (canonical)
       const canonicalRedirectUri = stateData.redirect_uri;
+      const exchangeScope = stateData.scope || 'openid profile email offline_access Calendars.Read';
 
       console.log('[outlook-auth] Exchanging code:', {
         userId: stateData.user_id,
@@ -198,7 +204,7 @@ serve(async (req) => {
           code,
           redirect_uri: canonicalRedirectUri, // Use the URI from when auth was initiated
           grant_type: 'authorization_code',
-          scope: 'openid profile email offline_access Calendars.Read'
+          scope: exchangeScope
         })
       });
 
