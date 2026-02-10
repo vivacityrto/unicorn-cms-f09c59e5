@@ -19047,6 +19047,54 @@ export type Database = {
         }
         Relationships: []
       }
+      tenant_rto_scope_staging: {
+        Row: {
+          code: string
+          created_at: string | null
+          id: string
+          is_superseded: boolean | null
+          last_refreshed_at: string | null
+          scope_type: string
+          status: string | null
+          superseded_by: string | null
+          sync_run_id: string
+          tenant_id: number
+          tga_data: Json | null
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          code: string
+          created_at?: string | null
+          id?: string
+          is_superseded?: boolean | null
+          last_refreshed_at?: string | null
+          scope_type: string
+          status?: string | null
+          superseded_by?: string | null
+          sync_run_id: string
+          tenant_id: number
+          tga_data?: Json | null
+          title?: string
+          updated_at?: string | null
+        }
+        Update: {
+          code?: string
+          created_at?: string | null
+          id?: string
+          is_superseded?: boolean | null
+          last_refreshed_at?: string | null
+          scope_type?: string
+          status?: string | null
+          superseded_by?: string | null
+          sync_run_id?: string
+          tenant_id?: number
+          tga_data?: Json | null
+          title?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       tenant_stages: {
         Row: {
           client_tasks: Json | null
@@ -24534,6 +24582,10 @@ export type Database = {
           p_tenant_id: number
           p_triggered_by?: string
         }
+        Returns: Json
+      }
+      tga_swap_scope_from_staging: {
+        Args: { p_sync_run_id: string; p_tenant_id: number }
         Returns: Json
       }
       tga_sync_client: {

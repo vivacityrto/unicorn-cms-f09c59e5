@@ -337,7 +337,7 @@ export function ClientIntegrationsTab({
   const [tenantStatus, setTenantStatus] = useState<{ status: string; mergedInto?: number } | null>(null);
   const [tgaLinkRow, setTgaLinkRow] = useState<{ last_sync_at: string | null; last_sync_status: string | null; last_sync_error: string | null } | null>(null);
   const [debugInfo, setDebugInfo] = useState<{
-    lastSyncRun?: { id: string; status: string; created_at: string; stage?: string; last_error?: string | null; payload_meta?: unknown } | null;
+    lastSyncRun?: { id: string; status: string; created_at: string; stage?: string; last_error?: string | null; payload_meta?: unknown; payload?: any } | null;
     debugPayload?: { record_count: number; fetched_at: string; endpoint?: string; http_status?: number | null; payload?: any } | null;
     stageJobs?: Array<{ stage: string; status: string; count?: number; reason?: string }>;
   } | null>(null);
@@ -398,7 +398,7 @@ export function ClientIntegrationsTab({
     const fetchDebugInfo = async () => {
       const [runRes, payloadRes] = await Promise.all([
         supabase.from('tga_rest_sync_jobs')
-          .select('id, status, created_at, rto_id, scope_counts, last_error')
+          .select('id, status, created_at, rto_id, scope_counts, last_error, payload')
           .eq('tenant_id', profile.tenant_id)
           .order('created_at', { ascending: false })
           .limit(1)
@@ -1170,6 +1170,42 @@ export function ClientIntegrationsTab({
                       </Table>
                     </CollapsibleContent>
                   </Collapsible>
+                </div>
+              )}
+
+              {/* Last Sync Diagnostics from job payload */}
+              {debugInfo?.lastSyncRun?.payload?.diagnostics && (
+                <div className="rounded-md border p-3 space-y-2">
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Last Sync Diagnostics</p>
+                  {debugInfo.lastSyncRun.payload.raw_total !== undefined && (
+                    <p className="text-xs">TGA raw total: <span className="font-mono font-semibold">{debugInfo.lastSyncRun.payload.raw_total}</span> → Kept: <span className="font-mono font-semibold">{debugInfo.lastSyncRun.payload.kept_total ?? '?'}</span></p>
+                  )}
+                  <div className="grid grid-cols-5 gap-2 text-xs">
+                    {Object.entries(debugInfo.lastSyncRun.payload.diagnostics as Record<string, any>).map(([type, diag]: [string, any]) => (
+                      <div key={type} className="rounded border p-2">
+                        <p className="font-semibold">{type}</p>
+                        <p className="font-mono">{diag.raw_total} raw</p>
+                        <p className="text-green-600">{diag.current} current</p>
+                        <p className="text-amber-600">{diag.teach_out} teach-out</p>
+                        <p className="text-destructive">{diag.dropped} dropped</p>
+                        {diag.drop_reasons && Object.entries(diag.drop_reasons).filter(([_, v]) => (v as number) > 0).map(([reason, count]) => (
+                          <p key={reason} className="text-[10px] text-muted-foreground">{reason}: {count as number}</p>
+                        ))}
+                        {diag.sample_item && (
+                          <div className="mt-1 border-t pt-1 text-[10px]">
+                            <p className="font-mono">{diag.sample_item.code}</p>
+                            <p>usage: {diag.sample_item.usageRaw ?? '—'}</p>
+                            <p>end: {diag.sample_item.endRaw ?? '—'}</p>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                  {debugInfo.lastSyncRun.payload.swap_result && (
+                    <p className="text-xs text-muted-foreground">
+                      Swap: deleted {debugInfo.lastSyncRun.payload.swap_result.deleted_old} old → inserted {debugInfo.lastSyncRun.payload.swap_result.inserted_new} new
+                    </p>
+                  )}
                 </div>
               )}
 
