@@ -319,13 +319,10 @@ export function useTgaRtoData(tenantId: number | null, rtoCode: string | null, c
         
         // Map unified scope data to legacy format
         const scopeItems = scopeRes.data || [];
-        const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
-        
-        // Only show items currently on scope (end date >= today or no end date)
+        // Show items based on TGA status, not endDate (endDate is metadata, not expiry)
         const isOnScope = (item: any) => {
-          const endDate = item.tga_data?.endDate;
-          if (!endDate) return true; // no end date = still on scope
-          return endDate >= today;
+          const status = (item.status || '').toLowerCase();
+          return status === 'current' || status === 'superseded';
         };
         
         const quals = scopeItems
