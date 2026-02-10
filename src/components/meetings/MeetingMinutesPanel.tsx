@@ -20,7 +20,7 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import { useTeamsMeetingMinutes, MinutesContent, AiProposedMinutes, CopilotExtracted } from '@/hooks/useTeamsMeetingMinutes';
+import { useTeamsMeetingMinutes, MinutesContent, AiProposedMinutes, CopilotExtracted, EMPTY_CONTENT } from '@/hooks/useTeamsMeetingMinutes';
 
 interface MeetingMinutesPanelProps {
   meetingId: string;
@@ -314,7 +314,45 @@ export function MeetingMinutesPanel({ meetingId, isVivacityTeam }: MeetingMinute
             </Button>
 
             {/* After draft generated, show Copilot modal */}
-            {draftResult?.needs_copilot_input && (
+            {/* Auto-fetched recap: show preview directly */}
+            {draftResult?.recap_found && draftResult?.extracted && (
+              <div className="mt-4 space-y-3 text-left">
+                <div className="flex items-center gap-2">
+                  <CheckCircle2 className="h-4 w-4 text-primary" />
+                  <span className="text-sm font-medium">
+                    Draft auto-generated with {draftResult.attendees_count} attendees and Copilot recap
+                  </span>
+                  <Badge variant="outline" className="text-[10px]">Auto-fetched</Badge>
+                </div>
+                {draftResult.warnings?.map((w, i) => (
+                  <Alert key={i}>
+                    <AlertTriangle className="h-4 w-4" />
+                    <AlertDescription className="text-xs">{w}</AlertDescription>
+                  </Alert>
+                ))}
+                <CopilotPreviewPanel
+                  extracted={draftResult.extracted}
+                  onApply={() => {
+                    if (draftResult.extracted) {
+                      applyCopilotContent(
+                        draftResult.minutes_id,
+                        draftResult.extracted,
+                        { ...EMPTY_CONTENT },
+                        false,
+                      );
+                    }
+                    resetDraftResult();
+                  }}
+                  onDiscard={() => {
+                    discardCopilotContent(draftResult.minutes_id);
+                    resetDraftResult();
+                  }}
+                />
+              </div>
+            )}
+
+            {/* Recap not found: show paste fallback */}
+            {draftResult?.needs_copilot_input && !draftResult?.recap_found && (
               <div className="mt-4 space-y-3 text-left border rounded-lg p-4 bg-muted/30">
                 <div className="flex items-center gap-2">
                   <CheckCircle2 className="h-4 w-4 text-primary" />
@@ -322,12 +360,12 @@ export function MeetingMinutesPanel({ meetingId, isVivacityTeam }: MeetingMinute
                     Draft created with {draftResult.attendees_count} attendees
                   </span>
                 </div>
-                {draftResult.warning && (
-                  <Alert>
+                {draftResult.warnings?.map((w, i) => (
+                  <Alert key={i}>
                     <AlertTriangle className="h-4 w-4" />
-                    <AlertDescription className="text-xs">{draftResult.warning}</AlertDescription>
+                    <AlertDescription className="text-xs">{w}</AlertDescription>
                   </Alert>
-                )}
+                ))}
                 <Separator />
                 <div className="space-y-2">
                   <Label className="text-xs font-medium">Paste Copilot recap to populate summary, decisions & actions</Label>
@@ -364,6 +402,27 @@ export function MeetingMinutesPanel({ meetingId, isVivacityTeam }: MeetingMinute
                     </Button>
                   </div>
                 </div>
+              </div>
+            )}
+
+            {/* Draft created but no copilot needed (recap already applied or paste disabled) */}
+            {draftResult && !draftResult.needs_copilot_input && !draftResult.recap_found && (
+              <div className="mt-4 space-y-3 text-left border rounded-lg p-4 bg-muted/30">
+                <div className="flex items-center gap-2">
+                  <CheckCircle2 className="h-4 w-4 text-primary" />
+                  <span className="text-sm font-medium">
+                    Draft created with {draftResult.attendees_count} attendees
+                  </span>
+                </div>
+                {draftResult.warnings?.map((w, i) => (
+                  <Alert key={i}>
+                    <AlertTriangle className="h-4 w-4" />
+                    <AlertDescription className="text-xs">{w}</AlertDescription>
+                  </Alert>
+                ))}
+                <Button size="sm" variant="outline" onClick={() => resetDraftResult()}>
+                  Continue to editor
+                </Button>
               </div>
             )}
           </>

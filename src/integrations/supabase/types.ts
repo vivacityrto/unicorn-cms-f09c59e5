@@ -873,6 +873,8 @@ export type Database = {
           microsoft_addin_enabled: boolean
           minutes_ai_enabled: boolean
           minutes_ai_require_review: boolean
+          minutes_copilot_auto_fetch_enabled: boolean
+          minutes_copilot_auto_fetch_fallback_to_paste: boolean
           minutes_store_raw_copilot_input: boolean
           review_required_before_release: boolean
           updated_at: string
@@ -891,6 +893,8 @@ export type Database = {
           microsoft_addin_enabled?: boolean
           minutes_ai_enabled?: boolean
           minutes_ai_require_review?: boolean
+          minutes_copilot_auto_fetch_enabled?: boolean
+          minutes_copilot_auto_fetch_fallback_to_paste?: boolean
           minutes_store_raw_copilot_input?: boolean
           review_required_before_release?: boolean
           updated_at?: string
@@ -909,6 +913,8 @@ export type Database = {
           microsoft_addin_enabled?: boolean
           minutes_ai_enabled?: boolean
           minutes_ai_require_review?: boolean
+          minutes_copilot_auto_fetch_enabled?: boolean
+          minutes_copilot_auto_fetch_fallback_to_paste?: boolean
           minutes_store_raw_copilot_input?: boolean
           review_required_before_release?: boolean
           updated_at?: string
