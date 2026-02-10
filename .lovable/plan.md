@@ -1,44 +1,23 @@
 
+## Fix: Re-sync Tenant 7512 to Pull All Current Scope Items
 
-## Fix: TGA Scope Sync Missing Current Training Products
+### Problem
 
-### Root Cause
+Tenant 7512 (RTO 91110) was last synced **before** the `isImplicit` filter was removed. The database only contains 33 old superseded qualifications (all with end dates before 2017). The current training products were never stored because they were classified as "implicit" by the TGA API.
 
-The edge function filters scope items using `item.isImplicit !== true`, which removes **902 out of 925 items** -- including all current qualifications like BSB40920, CHC30125, CHC33021, etc.
+The edge function fix is already deployed -- it now keeps all scope items. This tenant simply needs a fresh sync.
 
-In the TGA API, `isImplicit` means the item is inherited from a training package on the RTO's scope. However, training.gov.au **still displays these items** on the RTO's scope page. They are legitimate scope items that clients need to see.
+### What Needs to Happen
 
-The current result: only 23 non-implicit (all old/superseded) items are kept, while 902 items including all current qualifications are discarded.
+1. **Trigger a re-sync** for tenant 7512 (RTO 91110) using the already-fixed edge function
+2. **Verify** the data now includes current qualifications with future end dates
+3. **Confirm** the UI shows the correct mix of Current and Superseded items (only those still on scope, i.e., end date >= today)
 
-### Fix
+### No Code Changes Required
 
-**File: `supabase/functions/tga-rto-sync/index.ts` (~line 155-159)**
+The edge function and display logic are already correct:
+- Edge function: includes all items (implicit filter removed)
+- Display filter: shows items with end date >= today or no end date
+- Status colours: green for Current, red for Superseded (already implemented)
 
-Remove the `isImplicit` filter so all scope items are persisted. The database already stores `tga_data` (the full raw item) so the implicit flag is preserved for reference if needed.
-
-Change:
-```text
-const explicitItems = result.items.filter((item: any) => item.isImplicit !== true);
-```
-
-To:
-```text
-const explicitItems = result.items;
-```
-
-Update the log message accordingly to reflect that all items are now included.
-
-### Expected Result
-
-After re-syncing RTO 1915:
-- All 925 scope items will be persisted (was 23)
-- Current qualifications (BSB40920, BSB50820, CHC30125, CHC30221, CHC33021, etc.) will appear
-- Status values will correctly show "Current", "Superseded", and "Non-current" as returned by TGA
-- Matches what training.gov.au displays
-
-### Post-Fix Steps
-
-1. Deploy the updated edge function
-2. Trigger a re-sync for tenant 7500 (RTO 1915) to pull all items
-3. Verify the Quals tab shows the correct mix of Current and Superseded items
-
+This is a data issue, not a code issue. The sync just needs to be re-run.
