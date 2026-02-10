@@ -26,6 +26,13 @@ export interface Meeting {
   access_scope: 'owner' | 'busy_only' | 'details' | 'none';
   created_at: string;
   updated_at: string;
+  // Microsoft artifact sync fields
+  ms_ical_uid?: string | null;
+  ms_join_url?: string | null;
+  ms_organizer_email?: string | null;
+  ms_last_synced_at?: string | null;
+  ms_sync_status?: string | null;
+  ms_sync_error?: string | null;
 }
 
 export interface MeetingParticipant {
