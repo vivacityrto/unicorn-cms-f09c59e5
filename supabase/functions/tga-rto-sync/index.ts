@@ -444,25 +444,32 @@ serve(async (req) => {
         continue;
       }
 
-      // Build staging rows
-      const stagingRows = items.map((item: any) => ({
-        tenant_id: tenantIdNum,
-        code: item.code || item.trainingComponentCode || 'UNKNOWN',
-        title: item.title || item.name || '',
-        scope_type: dbType,
-        status: item.usageRecommendation || item.status || 'Current',
-        is_superseded: item.scope_state === 'teach_out',
-        superseded_by: item.supersededBy || null,
-        tga_data: {
-          ...item,
-          scope_state: item.scope_state,
-          usageRecommendation_raw: item.usageRecommendation_raw,
-          status_raw: item.status_raw,
-          endDate_raw: item.endDate_raw,
-        },
-        last_refreshed_at: now,
-        sync_run_id: syncRunId,
-      }));
+      // Build staging rows, deduplicating by code (TGA can return same code as explicit + implicit)
+      const seenCodes = new Set<string>();
+      const stagingRows: any[] = [];
+      for (const item of items) {
+        const code = item.code || item.trainingComponentCode || 'UNKNOWN';
+        if (seenCodes.has(code)) continue;
+        seenCodes.add(code);
+        stagingRows.push({
+          tenant_id: tenantIdNum,
+          code,
+          title: item.title || item.name || '',
+          scope_type: dbType,
+          status: item.usageRecommendation || item.status || 'Current',
+          is_superseded: item.scope_state === 'teach_out',
+          superseded_by: item.supersededBy || null,
+          tga_data: {
+            ...item,
+            scope_state: item.scope_state,
+            usageRecommendation_raw: item.usageRecommendation_raw,
+            status_raw: item.status_raw,
+            endDate_raw: item.endDate_raw,
+          },
+          last_refreshed_at: now,
+          sync_run_id: syncRunId,
+        });
+      }
 
       // Insert in batches of 500
       for (let i = 0; i < stagingRows.length; i += 500) {
