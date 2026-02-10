@@ -400,6 +400,10 @@ export function useTgaRtoData(tenantId: number | null, rtoCode: string | null, c
           return status === 'current';
         };
         
+        // Helper: resolve TGA end date with priority: end_date column > endDate_raw > endDate
+        const resolveEndDate = (item: any) =>
+          item.end_date ?? item.tga_data?.endDate_raw ?? item.tga_data?.endDate ?? null;
+
         const quals = scopeItems
           .filter((item: any) => item.scope_type === 'qualification' && isOnScope(item))
           .map((item: any) => ({
@@ -409,11 +413,13 @@ export function useTgaRtoData(tenantId: number | null, rtoCode: string | null, c
             training_package_code: item.tga_data?.trainingPackageCode || null,
             status: item.status,
             status_label: item.tga_data?.statusLabel || item.status || null,
-            is_current: item.status === 'Current' || item.status === 'current',
+            is_current: item.tga_data?.scope_state === 'current',
             start_date: item.tga_data?.startDate || null,
-            end_date: item.tga_data?.endDate || null,
+            end_date: resolveEndDate(item),
             extent_label: item.tga_data?.extentLabel || null,
             scope_state: item.tga_data?.scope_state || null,
+            usageRecommendation_raw: item.tga_data?.usageRecommendation_raw || null,
+            endDate_raw: item.tga_data?.endDate_raw || null,
           }));
         setQualifications(quals);
 
@@ -426,11 +432,13 @@ export function useTgaRtoData(tenantId: number | null, rtoCode: string | null, c
             training_package_code: item.tga_data?.trainingPackageCode || null,
             status: item.status,
             status_label: item.tga_data?.statusLabel || item.status || null,
-            is_current: item.status === 'Current' || item.status === 'current',
+            is_current: item.tga_data?.scope_state === 'current',
             start_date: item.tga_data?.startDate || null,
-            end_date: item.tga_data?.endDate || null,
+            end_date: resolveEndDate(item),
             extent_label: item.tga_data?.extentLabel || null,
             scope_state: item.tga_data?.scope_state || null,
+            usageRecommendation_raw: item.tga_data?.usageRecommendation_raw || null,
+            endDate_raw: item.tga_data?.endDate_raw || null,
           }));
         setUnits(unitItems);
 
@@ -443,11 +451,13 @@ export function useTgaRtoData(tenantId: number | null, rtoCode: string | null, c
             training_package_code: item.tga_data?.trainingPackageCode || null,
             status: item.status,
             status_label: item.tga_data?.statusLabel || item.status || null,
-            is_current: item.status === 'Current' || item.status === 'current',
+            is_current: item.tga_data?.scope_state === 'current',
             start_date: item.tga_data?.startDate || null,
-            end_date: item.tga_data?.endDate || null,
+            end_date: resolveEndDate(item),
             extent_label: item.tga_data?.extentLabel || null,
             scope_state: item.tga_data?.scope_state || null,
+            usageRecommendation_raw: item.tga_data?.usageRecommendation_raw || null,
+            endDate_raw: item.tga_data?.endDate_raw || null,
           }));
         setSkillsets(skillItems);
 
@@ -459,11 +469,13 @@ export function useTgaRtoData(tenantId: number | null, rtoCode: string | null, c
             course_title: item.title,
             status: item.status,
             status_label: item.tga_data?.statusLabel || item.status || null,
-            is_current: item.status === 'Current' || item.status === 'current',
+            is_current: item.tga_data?.scope_state === 'current',
             start_date: item.tga_data?.startDate || null,
-            end_date: item.tga_data?.endDate || null,
+            end_date: resolveEndDate(item),
             extent_label: item.tga_data?.extentLabel || null,
             scope_state: item.tga_data?.scope_state || null,
+            usageRecommendation_raw: item.tga_data?.usageRecommendation_raw || null,
+            endDate_raw: item.tga_data?.endDate_raw || null,
           }));
         setCourses(courseItems);
 
@@ -475,10 +487,12 @@ export function useTgaRtoData(tenantId: number | null, rtoCode: string | null, c
             package_title: item.title,
             status: item.status,
             status_label: item.tga_data?.statusLabel || item.status || null,
-            is_current: item.status === 'Current' || item.status === 'current',
+            is_current: item.tga_data?.scope_state === 'current',
             start_date: item.tga_data?.startDate || null,
-            end_date: item.tga_data?.endDate || null,
+            end_date: resolveEndDate(item),
             scope_state: item.tga_data?.scope_state || null,
+            usageRecommendation_raw: item.tga_data?.usageRecommendation_raw || null,
+            endDate_raw: item.tga_data?.endDate_raw || null,
           }));
         setTrainingPackages(tpItems);
         

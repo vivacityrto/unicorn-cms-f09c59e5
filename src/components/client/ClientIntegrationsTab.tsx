@@ -702,11 +702,11 @@ export function ClientIntegrationsTab({
                   <div className="mt-2 rounded-md border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive flex items-start gap-2">
                     <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
                     <div>
-                      <p className="font-medium">TGA data incomplete</p>
+                      <p className="font-medium">TGA data mismatch</p>
                       <p className="text-xs mt-1">
                         {tgaData.scopeMismatch.details.map((d: any) =>
                           `Loaded ${d.loaded} of ${d.stored} ${d.type}s`
-                        ).join('. ')}. Refresh or report.
+                        ).join('. ')}. Refresh. If persists, report.
                       </p>
                     </div>
                   </div>
@@ -842,7 +842,10 @@ export function ClientIntegrationsTab({
                                   {qual.status_label || qual.status || '-'}
                                 </span>
                                 {(qual as any).scope_state === 'teach_out' && (
-                                  <span className="inline-flex items-center px-2 py-0.5 rounded-sm text-xs font-medium bg-amber-100 text-amber-800 border border-amber-300">
+                                  <span
+                                    className="inline-flex items-center px-2 py-0.5 rounded-sm text-xs font-medium bg-amber-100 text-amber-800 border border-amber-300 cursor-help"
+                                    title="Superseded. Delivery allowed until End date. No new enrolments."
+                                  >
                                     Teach-out
                                   </span>
                                 )}
@@ -895,7 +898,10 @@ export function ClientIntegrationsTab({
                                   {skill.status_label || skill.status || '-'}
                                 </span>
                                 {(skill as any).scope_state === 'teach_out' && (
-                                  <span className="inline-flex items-center px-2 py-0.5 rounded-sm text-xs font-medium bg-amber-100 text-amber-800 border border-amber-300">
+                                  <span
+                                    className="inline-flex items-center px-2 py-0.5 rounded-sm text-xs font-medium bg-amber-100 text-amber-800 border border-amber-300 cursor-help"
+                                    title="Superseded. Delivery allowed until End date. No new enrolments."
+                                  >
                                     Teach-out
                                   </span>
                                 )}
@@ -947,7 +953,10 @@ export function ClientIntegrationsTab({
                                   {unit.status_label || unit.status || '-'}
                                 </span>
                                 {(unit as any).scope_state === 'teach_out' && (
-                                  <span className="inline-flex items-center px-2 py-0.5 rounded-sm text-xs font-medium bg-amber-100 text-amber-800 border border-amber-300">
+                                  <span
+                                    className="inline-flex items-center px-2 py-0.5 rounded-sm text-xs font-medium bg-amber-100 text-amber-800 border border-amber-300 cursor-help"
+                                    title="Superseded. Delivery allowed until End date. No new enrolments."
+                                  >
                                     Teach-out
                                   </span>
                                 )}
@@ -998,7 +1007,10 @@ export function ClientIntegrationsTab({
                                   {course.status_label || course.status || '-'}
                                 </span>
                                 {(course as any).scope_state === 'teach_out' && (
-                                  <span className="inline-flex items-center px-2 py-0.5 rounded-sm text-xs font-medium bg-amber-100 text-amber-800 border border-amber-300">
+                                  <span
+                                    className="inline-flex items-center px-2 py-0.5 rounded-sm text-xs font-medium bg-amber-100 text-amber-800 border border-amber-300 cursor-help"
+                                    title="Superseded. Delivery allowed until End date. No new enrolments."
+                                  >
                                     Teach-out
                                   </span>
                                 )}
@@ -1048,7 +1060,10 @@ export function ClientIntegrationsTab({
                                   {tp.status_label || tp.status || '-'}
                                 </span>
                                 {(tp as any).scope_state === 'teach_out' && (
-                                  <span className="inline-flex items-center px-2 py-0.5 rounded-sm text-xs font-medium bg-amber-100 text-amber-800 border border-amber-300">
+                                  <span
+                                    className="inline-flex items-center px-2 py-0.5 rounded-sm text-xs font-medium bg-amber-100 text-amber-800 border border-amber-300 cursor-help"
+                                    title="Superseded. Delivery allowed until End date. No new enrolments."
+                                  >
                                     Teach-out
                                   </span>
                                 )}
@@ -1095,7 +1110,69 @@ export function ClientIntegrationsTab({
             </div>
           </CardHeader>
           {showDebug && (
-            <CardContent className="pt-0">
+            <CardContent className="pt-0 space-y-4">
+              {/* Scope Proof Summary */}
+              {isLinked && tgaData.hasData && (
+                <div className="rounded-md border p-3 space-y-2">
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Scope Proof (UI arrays)</p>
+                  <div className="grid grid-cols-5 gap-2 text-xs">
+                    {[
+                      { label: 'Quals', items: tgaData.qualifications },
+                      { label: 'Skills', items: tgaData.skillsets },
+                      { label: 'Units', items: tgaData.units },
+                      { label: 'Courses', items: tgaData.courses },
+                      { label: 'Packages', items: tgaData.trainingPackages },
+                    ].map(({ label, items }) => {
+                      const current = items.filter((i: any) => i.scope_state === 'current').length;
+                      const teachOut = items.filter((i: any) => i.scope_state === 'teach_out').length;
+                      return (
+                        <div key={label} className="rounded border p-2">
+                          <p className="font-semibold">{label}</p>
+                          <p className="font-mono">{items.length} total</p>
+                          <p className="text-green-600">{current} current</p>
+                          <p className="text-amber-600">{teachOut} teach-out</p>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  {/* Sample rows */}
+                  <Collapsible>
+                    <CollapsibleTrigger asChild>
+                      <Button variant="ghost" size="sm" className="w-full justify-between">
+                        <span className="text-muted-foreground">Sample rows (first 5 quals)</span>
+                        <ChevronDown className="h-4 w-4" />
+                      </Button>
+                    </CollapsibleTrigger>
+                    <CollapsibleContent>
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead className="text-xs">Code</TableHead>
+                            <TableHead className="text-xs">usageRec_raw</TableHead>
+                            <TableHead className="text-xs">endDate_raw</TableHead>
+                            <TableHead className="text-xs">scope_state</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {tgaData.qualifications.slice(0, 5).map((q: any) => (
+                            <TableRow key={q.id}>
+                              <TableCell className="font-mono text-xs">{q.qualification_code}</TableCell>
+                              <TableCell className="text-xs">{q.usageRecommendation_raw ?? '—'}</TableCell>
+                              <TableCell className="text-xs">{q.endDate_raw ?? '—'}</TableCell>
+                              <TableCell className="text-xs">
+                                <Badge variant={q.scope_state === 'current' ? 'default' : q.scope_state === 'teach_out' ? 'secondary' : 'outline'} className="text-[10px]">
+                                  {q.scope_state ?? 'none'}
+                                </Badge>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </CollapsibleContent>
+                  </Collapsible>
+                </div>
+              )}
+
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
                   <p className="text-muted-foreground">Tenant ID</p>
