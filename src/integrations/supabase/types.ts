@@ -3456,6 +3456,202 @@ export type Database = {
           },
         ]
       }
+      chat_escalations: {
+        Row: {
+          conversation_id: string | null
+          created_at: string
+          id: string
+          reason: string | null
+          session_id: string
+          tenant_id: number
+        }
+        Insert: {
+          conversation_id?: string | null
+          created_at?: string
+          id?: string
+          reason?: string | null
+          session_id: string
+          tenant_id: number
+        }
+        Update: {
+          conversation_id?: string | null
+          created_at?: string
+          id?: string
+          reason?: string | null
+          session_id?: string
+          tenant_id?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chat_escalations_conversation_fk"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "tenant_conversations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "chat_escalations_session_fk"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "chat_sessions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "chat_escalations_tenant_fk"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "chat_escalations_tenant_fk"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_engagement_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "chat_escalations_tenant_fk"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_eos_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "chat_escalations_tenant_fk"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_compliance_entitlements"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
+      chat_messages: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          role: string
+          session_id: string
+          sources: Json | null
+          tenant_id: number
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          role: string
+          session_id: string
+          sources?: Json | null
+          tenant_id: number
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          role?: string
+          session_id?: string
+          sources?: Json | null
+          tenant_id?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chat_messages_session_fk"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "chat_sessions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "chat_messages_tenant_fk"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "chat_messages_tenant_fk"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_engagement_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "chat_messages_tenant_fk"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_eos_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "chat_messages_tenant_fk"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_compliance_entitlements"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
+      chat_sessions: {
+        Row: {
+          context: string
+          created_at: string
+          id: string
+          tenant_id: number
+          user_uuid: string
+        }
+        Insert: {
+          context: string
+          created_at?: string
+          id?: string
+          tenant_id: number
+          user_uuid: string
+        }
+        Update: {
+          context?: string
+          created_at?: string
+          id?: string
+          tenant_id?: number
+          user_uuid?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chat_sessions_tenant_fk"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "chat_sessions_tenant_fk"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_engagement_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "chat_sessions_tenant_fk"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_eos_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "chat_sessions_tenant_fk"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_compliance_entitlements"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "chat_sessions_user_fk"
+            columns: ["user_uuid"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["user_uuid"]
+          },
+        ]
+      }
       clickup_integration: {
         Row: {
           access_token: string
@@ -4057,6 +4253,225 @@ export type Database = {
         }
         Relationships: []
       }
+      client_document_requests: {
+        Row: {
+          assigned_to_user_uuid: string | null
+          created_at: string
+          details: string | null
+          fulfilled_document_id: string | null
+          id: string
+          requested_by_user_uuid: string
+          status: string
+          tenant_id: number
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          assigned_to_user_uuid?: string | null
+          created_at?: string
+          details?: string | null
+          fulfilled_document_id?: string | null
+          id?: string
+          requested_by_user_uuid: string
+          status?: string
+          tenant_id: number
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          assigned_to_user_uuid?: string | null
+          created_at?: string
+          details?: string | null
+          fulfilled_document_id?: string | null
+          id?: string
+          requested_by_user_uuid?: string
+          status?: string
+          tenant_id?: number
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_document_requests_assigned_to_user_fk"
+            columns: ["assigned_to_user_uuid"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "client_document_requests_fulfilled_doc_fk"
+            columns: ["fulfilled_document_id"]
+            isOneToOne: false
+            referencedRelation: "client_documents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_document_requests_requested_by_user_fk"
+            columns: ["requested_by_user_uuid"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "client_document_requests_tenant_fk"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_document_requests_tenant_fk"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_engagement_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "client_document_requests_tenant_fk"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_eos_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "client_document_requests_tenant_fk"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_compliance_entitlements"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
+      client_document_shares: {
+        Row: {
+          client_document_id: string
+          created_at: string
+          id: string
+          shared_by_user_uuid: string
+          shared_with_user_uuid: string
+        }
+        Insert: {
+          client_document_id: string
+          created_at?: string
+          id?: string
+          shared_by_user_uuid: string
+          shared_with_user_uuid: string
+        }
+        Update: {
+          client_document_id?: string
+          created_at?: string
+          id?: string
+          shared_by_user_uuid?: string
+          shared_with_user_uuid?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_document_shares_doc_fk"
+            columns: ["client_document_id"]
+            isOneToOne: false
+            referencedRelation: "client_documents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_document_shares_shared_by_user_fk"
+            columns: ["shared_by_user_uuid"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "client_document_shares_shared_with_user_fk"
+            columns: ["shared_with_user_uuid"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["user_uuid"]
+          },
+        ]
+      }
+      client_documents: {
+        Row: {
+          created_at: string
+          description: string | null
+          direction: string
+          file_size: number | null
+          filename: string | null
+          id: string
+          mime_type: string | null
+          storage_path: string
+          tenant_id: number
+          title: string
+          updated_at: string
+          uploaded_by_user_uuid: string
+          visibility: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          direction: string
+          file_size?: number | null
+          filename?: string | null
+          id?: string
+          mime_type?: string | null
+          storage_path: string
+          tenant_id: number
+          title: string
+          updated_at?: string
+          uploaded_by_user_uuid: string
+          visibility?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          direction?: string
+          file_size?: number | null
+          filename?: string | null
+          id?: string
+          mime_type?: string | null
+          storage_path?: string
+          tenant_id?: number
+          title?: string
+          updated_at?: string
+          uploaded_by_user_uuid?: string
+          visibility?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_documents_tenant_fk"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_documents_tenant_fk"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_engagement_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "client_documents_tenant_fk"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_eos_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "client_documents_tenant_fk"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_compliance_entitlements"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "client_documents_uploaded_by_user_fk"
+            columns: ["uploaded_by_user_uuid"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["user_uuid"]
+          },
+        ]
+      }
       client_email_queue: {
         Row: {
           client_package_stage_id: string
@@ -4577,6 +4992,76 @@ export type Database = {
           tenant_id?: number
         }
         Relationships: []
+      }
+      client_portal_sessions: {
+        Row: {
+          acting_user_uuid: string
+          created_at: string
+          id: string
+          mode: string
+          tenant_id: number
+          viewer_user_uuid: string | null
+        }
+        Insert: {
+          acting_user_uuid: string
+          created_at?: string
+          id?: string
+          mode: string
+          tenant_id: number
+          viewer_user_uuid?: string | null
+        }
+        Update: {
+          acting_user_uuid?: string
+          created_at?: string
+          id?: string
+          mode?: string
+          tenant_id?: number
+          viewer_user_uuid?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_portal_sessions_acting_user_fk"
+            columns: ["acting_user_uuid"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "client_portal_sessions_tenant_fk"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_portal_sessions_tenant_fk"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_engagement_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "client_portal_sessions_tenant_fk"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_eos_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "client_portal_sessions_tenant_fk"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_compliance_entitlements"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "client_portal_sessions_viewer_user_fk"
+            columns: ["viewer_user_uuid"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["user_uuid"]
+          },
+        ]
       }
       client_stage_documents: {
         Row: {
@@ -17739,6 +18224,82 @@ export type Database = {
           },
         ]
       }
+      tenant_conversations: {
+        Row: {
+          assigned_to_user_uuid: string | null
+          created_at: string
+          created_by_user_uuid: string
+          id: string
+          status: string
+          tenant_id: number
+          topic: string
+          updated_at: string
+        }
+        Insert: {
+          assigned_to_user_uuid?: string | null
+          created_at?: string
+          created_by_user_uuid: string
+          id?: string
+          status?: string
+          tenant_id: number
+          topic: string
+          updated_at?: string
+        }
+        Update: {
+          assigned_to_user_uuid?: string | null
+          created_at?: string
+          created_by_user_uuid?: string
+          id?: string
+          status?: string
+          tenant_id?: number
+          topic?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tenant_conversations_assigned_to_user_fk"
+            columns: ["assigned_to_user_uuid"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "tenant_conversations_created_by_user_fk"
+            columns: ["created_by_user_uuid"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "tenant_conversations_tenant_fk"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tenant_conversations_tenant_fk"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_engagement_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "tenant_conversations_tenant_fk"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_eos_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "tenant_conversations_tenant_fk"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_compliance_entitlements"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
       tenant_csc_assignments: {
         Row: {
           assigned_since: string
@@ -18149,6 +18710,120 @@ export type Database = {
           updated_by?: string | null
         }
         Relationships: []
+      }
+      tenant_message_attachments: {
+        Row: {
+          created_at: string
+          file_size: number | null
+          filename: string | null
+          id: string
+          message_id: string
+          mime_type: string | null
+          storage_path: string
+        }
+        Insert: {
+          created_at?: string
+          file_size?: number | null
+          filename?: string | null
+          id?: string
+          message_id: string
+          mime_type?: string | null
+          storage_path: string
+        }
+        Update: {
+          created_at?: string
+          file_size?: number | null
+          filename?: string | null
+          id?: string
+          message_id?: string
+          mime_type?: string | null
+          storage_path?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tenant_message_attachments_message_fk"
+            columns: ["message_id"]
+            isOneToOne: false
+            referencedRelation: "tenant_messages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tenant_messages: {
+        Row: {
+          body: string
+          conversation_id: string
+          created_at: string
+          id: string
+          meta: Json | null
+          sender_type: string
+          sender_user_uuid: string
+          tenant_id: number
+        }
+        Insert: {
+          body: string
+          conversation_id: string
+          created_at?: string
+          id?: string
+          meta?: Json | null
+          sender_type: string
+          sender_user_uuid: string
+          tenant_id: number
+        }
+        Update: {
+          body?: string
+          conversation_id?: string
+          created_at?: string
+          id?: string
+          meta?: Json | null
+          sender_type?: string
+          sender_user_uuid?: string
+          tenant_id?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tenant_messages_conversation_fk"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "tenant_conversations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tenant_messages_sender_user_fk"
+            columns: ["sender_user_uuid"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "tenant_messages_tenant_fk"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tenant_messages_tenant_fk"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_engagement_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "tenant_messages_tenant_fk"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_eos_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "tenant_messages_tenant_fk"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_compliance_entitlements"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
       }
       tenant_notes: {
         Row: {
@@ -19077,6 +19752,76 @@ export type Database = {
         }
         Relationships: []
       }
+      tga_rto_acknowledgements: {
+        Row: {
+          ack_by_user_uuid: string
+          ack_note: string | null
+          created_at: string
+          id: string
+          snapshot_id: string
+          tenant_id: number
+        }
+        Insert: {
+          ack_by_user_uuid: string
+          ack_note?: string | null
+          created_at?: string
+          id?: string
+          snapshot_id: string
+          tenant_id: number
+        }
+        Update: {
+          ack_by_user_uuid?: string
+          ack_note?: string | null
+          created_at?: string
+          id?: string
+          snapshot_id?: string
+          tenant_id?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tga_rto_acknowledgements_ack_by_user_fk"
+            columns: ["ack_by_user_uuid"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "tga_rto_acknowledgements_snapshot_fk"
+            columns: ["snapshot_id"]
+            isOneToOne: false
+            referencedRelation: "tga_rto_snapshots"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tga_rto_acknowledgements_tenant_fk"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tga_rto_acknowledgements_tenant_fk"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_engagement_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "tga_rto_acknowledgements_tenant_fk"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_eos_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "tga_rto_acknowledgements_tenant_fk"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_compliance_entitlements"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
       tga_rto_addresses: {
         Row: {
           address_line_1: string | null
@@ -19241,6 +19986,68 @@ export type Database = {
           tenant_id?: number
         }
         Relationships: []
+      }
+      tga_rto_flags: {
+        Row: {
+          created_at: string
+          details: string | null
+          flag_type: string
+          id: string
+          severity: string
+          status: string
+          tenant_id: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          details?: string | null
+          flag_type: string
+          id?: string
+          severity?: string
+          status?: string
+          tenant_id: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          details?: string | null
+          flag_type?: string
+          id?: string
+          severity?: string
+          status?: string
+          tenant_id?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tga_rto_flags_tenant_fk"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tga_rto_flags_tenant_fk"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_engagement_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "tga_rto_flags_tenant_fk"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_eos_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "tga_rto_flags_tenant_fk"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_compliance_entitlements"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
       }
       tga_rto_import_jobs: {
         Row: {
