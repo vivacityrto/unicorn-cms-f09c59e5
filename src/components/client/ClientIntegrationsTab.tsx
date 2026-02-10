@@ -799,8 +799,11 @@ export function ClientIntegrationsTab({
                         <TableRow>
                           <TableHead>Code</TableHead>
                           <TableHead>Title</TableHead>
-                          <TableHead>Package</TableHead>
                           <TableHead>Status</TableHead>
+                          <TableHead>Extent</TableHead>
+                          <TableHead>Start Date</TableHead>
+                          <TableHead>End Date</TableHead>
+                          <TableHead>Delivery Notification</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -808,12 +811,19 @@ export function ClientIntegrationsTab({
                           <TableRow key={qual.id}>
                             <TableCell className="font-mono text-sm">{qual.qualification_code}</TableCell>
                             <TableCell className="font-medium">{qual.qualification_title || '-'}</TableCell>
-                            <TableCell>{qual.training_package_code || '-'}</TableCell>
                             <TableCell>
-                              <Badge variant={qual.is_current ? 'default' : 'secondary'}>
-                                {qual.status || (qual.is_current ? 'Current' : 'Not Current')}
-                              </Badge>
+                              <span className={`inline-flex items-center px-2.5 py-0.5 rounded-sm text-xs font-medium ${
+                                qual.status_label === 'Current' ? 'bg-green-100 text-green-800 border border-green-300' :
+                                qual.status_label === 'Superseded' ? 'bg-red-100 text-red-800 border border-red-300' :
+                                'bg-gray-100 text-gray-800 border border-gray-300'
+                              }`}>
+                                {qual.status_label || qual.status || '-'}
+                              </span>
                             </TableCell>
+                            <TableCell className="text-sm">{qual.extent_label || '-'}</TableCell>
+                            <TableCell className="text-sm">{qual.start_date ? new Date(qual.start_date).toLocaleDateString('en-AU', { day: '2-digit', month: 'short', year: 'numeric' }) : '-'}</TableCell>
+                            <TableCell className="text-sm">{qual.end_date ? new Date(qual.end_date).toLocaleDateString('en-AU', { day: '2-digit', month: 'short', year: 'numeric' }) : '-'}</TableCell>
+                            <TableCell className="text-sm">{qual.extent_label ? 'WA' : '-'}</TableCell>
                           </TableRow>
                         ))}
                       </TableBody>
@@ -836,8 +846,10 @@ export function ClientIntegrationsTab({
                         <TableRow>
                           <TableHead>Code</TableHead>
                           <TableHead>Title</TableHead>
-                          <TableHead>Package</TableHead>
                           <TableHead>Status</TableHead>
+                          <TableHead>Extent</TableHead>
+                          <TableHead>Start Date</TableHead>
+                          <TableHead>End Date</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -845,12 +857,18 @@ export function ClientIntegrationsTab({
                           <TableRow key={skill.id}>
                             <TableCell className="font-mono text-sm">{skill.skillset_code}</TableCell>
                             <TableCell className="font-medium">{skill.skillset_title || '-'}</TableCell>
-                            <TableCell>{skill.training_package_code || '-'}</TableCell>
                             <TableCell>
-                              <Badge variant={skill.is_current ? 'default' : 'secondary'}>
-                                {skill.status || (skill.is_current ? 'Current' : 'Not Current')}
-                              </Badge>
+                              <span className={`inline-flex items-center px-2.5 py-0.5 rounded-sm text-xs font-medium ${
+                                skill.status_label === 'Current' ? 'bg-green-100 text-green-800 border border-green-300' :
+                                skill.status_label === 'Superseded' ? 'bg-red-100 text-red-800 border border-red-300' :
+                                'bg-gray-100 text-gray-800 border border-gray-300'
+                              }`}>
+                                {skill.status_label || skill.status || '-'}
+                              </span>
                             </TableCell>
+                            <TableCell className="text-sm">{skill.extent_label || '-'}</TableCell>
+                            <TableCell className="text-sm">{skill.start_date ? new Date(skill.start_date).toLocaleDateString('en-AU', { day: '2-digit', month: 'short', year: 'numeric' }) : '-'}</TableCell>
+                            <TableCell className="text-sm">{skill.end_date ? new Date(skill.end_date).toLocaleDateString('en-AU', { day: '2-digit', month: 'short', year: 'numeric' }) : '-'}</TableCell>
                           </TableRow>
                         ))}
                       </TableBody>
@@ -873,8 +891,10 @@ export function ClientIntegrationsTab({
                         <TableRow>
                           <TableHead>Code</TableHead>
                           <TableHead>Title</TableHead>
-                          <TableHead>Package</TableHead>
                           <TableHead>Status</TableHead>
+                          <TableHead>Extent</TableHead>
+                          <TableHead>Start Date</TableHead>
+                          <TableHead>End Date</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -882,12 +902,18 @@ export function ClientIntegrationsTab({
                           <TableRow key={unit.id}>
                             <TableCell className="font-mono text-sm">{unit.unit_code}</TableCell>
                             <TableCell className="font-medium">{unit.unit_title || '-'}</TableCell>
-                            <TableCell>{unit.training_package_code || '-'}</TableCell>
                             <TableCell>
-                              <Badge variant={unit.is_current ? 'default' : 'secondary'}>
-                                {unit.status || (unit.is_current ? 'Current' : 'Not Current')}
-                              </Badge>
+                              <span className={`inline-flex items-center px-2.5 py-0.5 rounded-sm text-xs font-medium ${
+                                unit.status_label === 'Current' ? 'bg-green-100 text-green-800 border border-green-300' :
+                                unit.status_label === 'Superseded' ? 'bg-red-100 text-red-800 border border-red-300' :
+                                'bg-gray-100 text-gray-800 border border-gray-300'
+                              }`}>
+                                {unit.status_label || unit.status || '-'}
+                              </span>
                             </TableCell>
+                            <TableCell className="text-sm">{unit.extent_label || '-'}</TableCell>
+                            <TableCell className="text-sm">{unit.start_date ? new Date(unit.start_date).toLocaleDateString('en-AU', { day: '2-digit', month: 'short', year: 'numeric' }) : '-'}</TableCell>
+                            <TableCell className="text-sm">{unit.end_date ? new Date(unit.end_date).toLocaleDateString('en-AU', { day: '2-digit', month: 'short', year: 'numeric' }) : '-'}</TableCell>
                           </TableRow>
                         ))}
                       </TableBody>
@@ -911,6 +937,8 @@ export function ClientIntegrationsTab({
                           <TableHead>Code</TableHead>
                           <TableHead>Title</TableHead>
                           <TableHead>Status</TableHead>
+                          <TableHead>Start Date</TableHead>
+                          <TableHead>End Date</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -919,10 +947,16 @@ export function ClientIntegrationsTab({
                             <TableCell className="font-mono text-sm">{course.course_code}</TableCell>
                             <TableCell className="font-medium">{course.course_title || '-'}</TableCell>
                             <TableCell>
-                              <Badge variant={course.is_current ? 'default' : 'secondary'}>
-                                {course.status || (course.is_current ? 'Current' : 'Not Current')}
-                              </Badge>
+                              <span className={`inline-flex items-center px-2.5 py-0.5 rounded-sm text-xs font-medium ${
+                                course.status_label === 'Current' ? 'bg-green-100 text-green-800 border border-green-300' :
+                                course.status_label === 'Superseded' ? 'bg-red-100 text-red-800 border border-red-300' :
+                                'bg-gray-100 text-gray-800 border border-gray-300'
+                              }`}>
+                                {course.status_label || course.status || '-'}
+                              </span>
                             </TableCell>
+                            <TableCell className="text-sm">{course.start_date ? new Date(course.start_date).toLocaleDateString('en-AU', { day: '2-digit', month: 'short', year: 'numeric' }) : '-'}</TableCell>
+                            <TableCell className="text-sm">{course.end_date ? new Date(course.end_date).toLocaleDateString('en-AU', { day: '2-digit', month: 'short', year: 'numeric' }) : '-'}</TableCell>
                           </TableRow>
                         ))}
                       </TableBody>

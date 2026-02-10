@@ -101,7 +101,11 @@ export interface TGAQualification {
   qualification_title: string | null;
   training_package_code: string | null;
   status: string | null;
+  status_label: string | null;
   is_current: boolean;
+  start_date: string | null;
+  end_date: string | null;
+  extent_label: string | null;
 }
 
 export interface TGASkillset {
@@ -110,7 +114,11 @@ export interface TGASkillset {
   skillset_title: string | null;
   training_package_code: string | null;
   status: string | null;
+  status_label: string | null;
   is_current: boolean;
+  start_date: string | null;
+  end_date: string | null;
+  extent_label: string | null;
 }
 
 export interface TGAUnit {
@@ -119,7 +127,11 @@ export interface TGAUnit {
   unit_title: string | null;
   training_package_code: string | null;
   status: string | null;
+  status_label: string | null;
   is_current: boolean;
+  start_date: string | null;
+  end_date: string | null;
+  extent_label: string | null;
 }
 
 export interface TGACourse {
@@ -127,7 +139,11 @@ export interface TGACourse {
   course_code: string;
   course_title: string | null;
   status: string | null;
+  status_label: string | null;
   is_current: boolean;
+  start_date: string | null;
+  end_date: string | null;
+  extent_label: string | null;
 }
 
 export interface TGAImportJob {
@@ -208,7 +224,11 @@ export function useTgaRtoData(tenantId: number | null, rtoCode: string | null, c
                   qualification_title: item.title,
                   training_package_code: null,
                   status: item.status,
+                  status_label: item.status || null,
                   is_current: item.status === 'current',
+                  start_date: null,
+                  end_date: null,
+                  extent_label: null,
                 }));
               setQualifications(quals);
 
@@ -220,7 +240,11 @@ export function useTgaRtoData(tenantId: number | null, rtoCode: string | null, c
                   unit_title: item.title,
                   training_package_code: null,
                   status: item.status,
+                  status_label: item.status || null,
                   is_current: item.status === 'current',
+                  start_date: null,
+                  end_date: null,
+                  extent_label: null,
                 }));
               setUnits(unitItems);
 
@@ -232,7 +256,11 @@ export function useTgaRtoData(tenantId: number | null, rtoCode: string | null, c
                   skillset_title: item.title,
                   training_package_code: null,
                   status: item.status,
+                  status_label: item.status || null,
                   is_current: item.status === 'current',
+                  start_date: null,
+                  end_date: null,
+                  extent_label: null,
                 }));
               setSkillsets(skillItems);
 
@@ -243,7 +271,11 @@ export function useTgaRtoData(tenantId: number | null, rtoCode: string | null, c
                   course_code: item.code,
                   course_title: item.title,
                   status: item.status,
+                  status_label: item.status || null,
                   is_current: item.status === 'current',
+                  start_date: null,
+                  end_date: null,
+                  extent_label: null,
                 }));
               setCourses(courseItems);
             }
@@ -284,7 +316,11 @@ export function useTgaRtoData(tenantId: number | null, rtoCode: string | null, c
             qualification_title: item.title,
             training_package_code: item.tga_data?.trainingPackageCode || null,
             status: item.status,
-            is_current: item.status === 'current',
+            status_label: item.tga_data?.statusLabel || item.status || null,
+            is_current: item.status === 'Current' || item.status === 'current',
+            start_date: item.tga_data?.startDate || null,
+            end_date: item.tga_data?.endDate || null,
+            extent_label: item.tga_data?.extentLabel || null,
           }));
         setQualifications(quals);
 
@@ -296,7 +332,11 @@ export function useTgaRtoData(tenantId: number | null, rtoCode: string | null, c
             unit_title: item.title,
             training_package_code: item.tga_data?.trainingPackageCode || null,
             status: item.status,
-            is_current: item.status === 'current',
+            status_label: item.tga_data?.statusLabel || item.status || null,
+            is_current: item.status === 'Current' || item.status === 'current',
+            start_date: item.tga_data?.startDate || null,
+            end_date: item.tga_data?.endDate || null,
+            extent_label: item.tga_data?.extentLabel || null,
           }));
         setUnits(unitItems);
 
@@ -308,7 +348,11 @@ export function useTgaRtoData(tenantId: number | null, rtoCode: string | null, c
             skillset_title: item.title,
             training_package_code: item.tga_data?.trainingPackageCode || null,
             status: item.status,
-            is_current: item.status === 'current',
+            status_label: item.tga_data?.statusLabel || item.status || null,
+            is_current: item.status === 'Current' || item.status === 'current',
+            start_date: item.tga_data?.startDate || null,
+            end_date: item.tga_data?.endDate || null,
+            extent_label: item.tga_data?.extentLabel || null,
           }));
         setSkillsets(skillItems);
 
@@ -319,7 +363,11 @@ export function useTgaRtoData(tenantId: number | null, rtoCode: string | null, c
             course_code: item.code,
             course_title: item.title,
             status: item.status,
-            is_current: item.status === 'current',
+            status_label: item.tga_data?.statusLabel || item.status || null,
+            is_current: item.status === 'Current' || item.status === 'current',
+            start_date: item.tga_data?.startDate || null,
+            end_date: item.tga_data?.endDate || null,
+            extent_label: item.tga_data?.extentLabel || null,
           }));
         setCourses(courseItems);
         
