@@ -860,6 +860,9 @@ export type Database = {
       }
       app_settings: {
         Row: {
+          addin_documents_enabled: boolean
+          addin_meetings_enabled: boolean
+          addin_outlook_mail_enabled: boolean
           ask_viv_floating_launcher_enabled: boolean
           clickup_enabled: boolean
           email_sending_enabled: boolean | null
@@ -867,10 +870,14 @@ export type Database = {
           generation_rate_limit_per_hour: number | null
           id: number
           max_generation_retries: number | null
+          microsoft_addin_enabled: boolean
           review_required_before_release: boolean
           updated_at: string
         }
         Insert: {
+          addin_documents_enabled?: boolean
+          addin_meetings_enabled?: boolean
+          addin_outlook_mail_enabled?: boolean
           ask_viv_floating_launcher_enabled?: boolean
           clickup_enabled?: boolean
           email_sending_enabled?: boolean | null
@@ -878,10 +885,14 @@ export type Database = {
           generation_rate_limit_per_hour?: number | null
           id?: never
           max_generation_retries?: number | null
+          microsoft_addin_enabled?: boolean
           review_required_before_release?: boolean
           updated_at?: string
         }
         Update: {
+          addin_documents_enabled?: boolean
+          addin_meetings_enabled?: boolean
+          addin_outlook_mail_enabled?: boolean
           ask_viv_floating_launcher_enabled?: boolean
           clickup_enabled?: boolean
           email_sending_enabled?: boolean | null
@@ -889,6 +900,7 @@ export type Database = {
           generation_rate_limit_per_hour?: number | null
           id?: never
           max_generation_retries?: number | null
+          microsoft_addin_enabled?: boolean
           review_required_before_release?: boolean
           updated_at?: string
         }
@@ -3907,7 +3919,7 @@ export type Database = {
         }
         Relationships: []
       }
-      clickup_tasks_260129: {
+      clickup_tasks_260010: {
         Row: {
           assigned_comments: Json | null
           assignees: Json | null
