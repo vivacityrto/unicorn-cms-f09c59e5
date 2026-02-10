@@ -6,7 +6,10 @@ export interface MinutesContent {
   meeting_title: string;
   meeting_date: string;
   meeting_time: string;
+  meeting_type: string;
   duration_minutes: number;
+  facilitator: string;
+  minute_taker: string;
   attendees: string[];
   apologies: string[];
   agenda_items: string[];
@@ -16,6 +19,7 @@ export interface MinutesContent {
     action: string;
     owner: string;
     due_date: string;
+    status: string;
   }>;
   next_meeting: string;
 }
@@ -41,7 +45,10 @@ const EMPTY_CONTENT: MinutesContent = {
   meeting_title: '',
   meeting_date: '',
   meeting_time: '',
+  meeting_type: '',
   duration_minutes: 0,
+  facilitator: '',
+  minute_taker: '',
   attendees: [],
   apologies: [],
   agenda_items: [],
@@ -64,25 +71,6 @@ async function fetchFromTable(table: string, params: Record<string, string>, tok
     },
   });
   if (!res.ok) throw new Error(`Failed to fetch ${table}: ${res.statusText}`);
-  return res.json();
-}
-
-async function upsertToTable(table: string, data: Record<string, unknown>, token: string) {
-  const url = `${(supabase as any).supabaseUrl}/rest/v1/${table}`;
-  const res = await fetch(url, {
-    method: 'POST',
-    headers: {
-      'apikey': (supabase as any).supabaseKey,
-      'Authorization': `Bearer ${token}`,
-      'Content-Type': 'application/json',
-      'Prefer': 'return=representation,resolution=merge-duplicates',
-    },
-    body: JSON.stringify(data),
-  });
-  if (!res.ok) {
-    const errText = await res.text();
-    throw new Error(`Failed to upsert ${table}: ${errText}`);
-  }
   return res.json();
 }
 
@@ -123,9 +111,11 @@ export function useTeamsMeetingMinutes(meetingId: string | null) {
 
       if (!rows || rows.length === 0) return null;
       const row = rows[0];
+      // Merge with EMPTY_CONTENT to ensure all fields exist
+      const content = typeof row.content === 'string' ? JSON.parse(row.content) : (row.content || {});
       return {
         ...row,
-        content: typeof row.content === 'string' ? JSON.parse(row.content) : (row.content || EMPTY_CONTENT),
+        content: { ...EMPTY_CONTENT, ...content },
       } as MeetingMinutes;
     },
     enabled: !!meetingId,
@@ -167,8 +157,11 @@ export function useTeamsMeetingMinutes(meetingId: string | null) {
       if (data && 'error' in data) throw new Error((data as any).error);
       return data;
     },
-    onSuccess: () => {
-      toast.success('Minutes published as PDF to client portal');
+    onSuccess: (data: any) => {
+      const msg = data?.regenerated
+        ? `Minutes regenerated (v${data.version}) and published to client portal`
+        : 'Minutes published to client portal';
+      toast.success(msg);
       queryClient.invalidateQueries({ queryKey: ['meeting-minutes', meetingId] });
     },
     onError: (error) => {
