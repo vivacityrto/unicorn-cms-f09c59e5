@@ -1,83 +1,62 @@
 
-# Tag Management System for Notes
+
+# Add Tag Filter to Notes Tab
 
 ## Overview
-Create a `dd_note_tags` lookup table following the existing `dd_` code table pattern, allow SuperAdmins to manage tags, and replace the free-text tag input in notes with a controlled dropdown selector.
+Add a tag filter alongside the existing "All Notes / Client Notes / Package Notes" filter so users can quickly narrow down notes by one or more tags from the `dd_note_tags` lookup table.
 
 ---
 
-## Step 1: Create the `dd_note_tags` Table
+## What Changes
 
-Create a new lookup table matching the pattern used by `dd_address_type` and other `dd_` tables:
+### 1. Add Tag Filter State (ClientStructuredNotesTab.tsx)
 
-- **Columns**: `id` (serial PK), `code` (text, unique, not null), `label` (text, not null), `description` (text, nullable), `is_active` (boolean, default true), `sort_order` (integer, default 0)
-- **RLS**: SELECT open to all authenticated users (needed for dropdowns app-wide). INSERT/UPDATE/DELETE restricted to Super Admins via `is_super_admin_safe(auth.uid())`.
-- Seed with any existing tags already in use across notes data.
+Add a new `selectedTagFilter` state (array of strings) next to the existing `parentTypeFilter` state at line 58.
 
-## Step 2: Migrate Existing Free-Text Tags
+### 2. Add Tag Filter Dropdown in the Header
 
-Run a query to extract all distinct tags currently stored in `notes.tags` arrays and insert them into `dd_note_tags` so no existing data is orphaned.
+Place a multi-select-style tag filter next to the existing parent type filter (around lines 259-272). This will be a `Popover` with checkboxes for each active tag from `dd_note_tags`, similar to common filter patterns. It will show:
+- A trigger button with a `Tag` icon and count of selected tags (e.g., "Tags (2)")
+- A popover listing all active tags as checkable items
+- A "Clear" button to reset the filter
 
-## Step 3: Add SuperAdmin Management UI
+The `useNoteTags` hook is already imported and available in the component.
 
-Add `dd_note_tags` to the existing SuperAdmin code tables management interface so it can be discovered and managed (CRUD) through the same pattern used for other `dd_` tables. This means:
+### 3. Apply Tag Filter to Notes List
 
-- The table will appear in the SuperAdmin code tables list automatically (since it follows the `dd_` prefix convention).
-- SuperAdmins can add, edit, deactivate, and soft-delete tags from there.
+Update the `filteredNotes` logic at line 225 to also filter by selected tags. A note matches if it contains **any** of the selected tags (OR logic), so selecting multiple tags widens the results.
 
-## Step 4: Replace Free-Text Tag Input with Dropdown
+### 4. Update Empty State Message
 
-In `ClientStructuredNotesTab.tsx`, replace the current free-text `Input` + "Add" button for tags with a multi-select dropdown that:
-
-- Fetches active tags from `dd_note_tags` (ordered by `sort_order`, then `label`).
-- Allows selecting multiple tags from the list.
-- Displays selected tags as removable badges (keeping the current badge UI).
-- Stores the tag `code` values in the `notes.tags` array (consistent with existing data format).
+Adjust the empty state text (lines 281-295) to mention tag filters when active.
 
 ---
 
 ## Technical Details
 
-### Database Migration SQL
-```sql
-CREATE TABLE public.dd_note_tags (
-  id SERIAL PRIMARY KEY,
-  code TEXT UNIQUE NOT NULL,
-  label TEXT NOT NULL,
-  description TEXT,
-  is_active BOOLEAN NOT NULL DEFAULT true,
-  sort_order INTEGER NOT NULL DEFAULT 0
-);
-
-ALTER TABLE public.dd_note_tags ENABLE ROW LEVEL SECURITY;
-
--- All authenticated users can read (for dropdowns)
-CREATE POLICY "dd_note_tags_select" ON public.dd_note_tags
-  FOR SELECT TO authenticated USING (true);
-
--- Only Super Admins can manage
-CREATE POLICY "dd_note_tags_manage" ON public.dd_note_tags
-  FOR ALL TO authenticated
-  USING (public.is_super_admin_safe(auth.uid()))
-  WITH CHECK (public.is_super_admin_safe(auth.uid()));
+### New State
+```
+const [selectedTagFilter, setSelectedTagFilter] = useState<string[]>([]);
 ```
 
-### Seed Existing Tags
-```sql
-INSERT INTO public.dd_note_tags (code, label)
-SELECT DISTINCT unnest(tags) AS code, unnest(tags) AS label
-FROM public.notes
-WHERE tags IS NOT NULL AND array_length(tags, 1) > 0
-ON CONFLICT (code) DO NOTHING;
+### Updated Filter Logic
+```
+const filteredNotes = notes
+  .filter(note => parentTypeFilter === 'all' || note.parent_type === parentTypeFilter)
+  .filter(note => selectedTagFilter.length === 0 || note.tags.some(t => selectedTagFilter.includes(t)));
 ```
 
-### Frontend Changes
-- **New hook** `useNoteTags()` -- fetches active tags from `dd_note_tags`, returns `{ tags, loading }`.
-- **`ClientStructuredNotesTab.tsx`** -- replace the tag `Input`+`Add` block (lines 582-608) with a multi-select dropdown powered by the hook. Selected tags render as removable badges. The rest of the form logic (saving `tags` array) stays the same.
+### Tag Filter UI
+A `Popover` component (already available via Radix) with a list of `Checkbox` items for each tag from `availableNoteTags`. The trigger shows a badge count when filters are active. Includes a "Clear all" action.
 
-### Files to Create/Modify
-| File | Action |
+### Files Modified
+| File | Change |
 |------|--------|
-| Database migration | Create `dd_note_tags` table + RLS + seed |
-| `src/hooks/useNoteTags.ts` | New -- fetch active tags from `dd_note_tags` |
-| `src/components/client/ClientStructuredNotesTab.tsx` | Modify -- replace free-text tag input with dropdown selector |
+| `src/components/client/ClientStructuredNotesTab.tsx` | Add tag filter state, popover UI, and updated filter logic |
+
+### Imports Needed
+- `Popover, PopoverContent, PopoverTrigger` from `@/components/ui/popover`
+- `Checkbox` from `@/components/ui/checkbox`
+
+No new files or database changes required -- this builds entirely on the existing `useNoteTags` hook and `dd_note_tags` table.
+
