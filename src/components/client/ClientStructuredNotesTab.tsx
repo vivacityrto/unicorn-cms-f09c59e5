@@ -59,6 +59,7 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isConvertDialogOpen, setIsConvertDialogOpen] = useState(false);
+  const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
   const [selectedNote, setSelectedNote] = useState<Note | null>(null);
   const [saving, setSaving] = useState(false);
   const [selectedPackageInfo, setSelectedPackageInfo] = useState<PackageInfo | null>(null);
@@ -306,7 +307,7 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
                   return (
                     <div 
                       key={note.id} 
-                      className={`p-4 rounded-lg border transition-colors ${
+                      className={`p-4 rounded-lg border transition-colors cursor-pointer ${
                         note.is_pinned 
                           ? 'border-primary/50 bg-primary/5' 
                           : isTenantNote 
@@ -315,6 +316,10 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
                               ? 'bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-800 hover:bg-blue-100 dark:hover:bg-blue-900/40'
                               : 'bg-card hover:bg-muted/30'
                       }`}
+                      onClick={() => {
+                        setSelectedNote(note);
+                        setIsViewDialogOpen(true);
+                      }}
                     >
                       <div className="flex items-start justify-between gap-3">
                         <div className="flex items-start gap-3 flex-1 min-w-0">
@@ -382,7 +387,12 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
                         
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0">
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              className="h-8 w-8 shrink-0"
+                              onClick={(e) => e.stopPropagation()}
+                            >
                               <MoreHorizontal className="h-4 w-4" />
                             </Button>
                           </DropdownMenuTrigger>
@@ -416,6 +426,85 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
           )}
         </CardContent>
       </Card>
+
+      {/* View Note Dialog */}
+      <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
+        <DialogContent className="max-w-lg max-h-[85vh] flex flex-col">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              {selectedNote && (() => {
+                const tc = getNoteTypeConfig(selectedNote.note_type);
+                const TIcon = tc.icon;
+                return (
+                  <>
+                    <div className={`p-1.5 rounded ${tc.color}`}>
+                      <TIcon className="h-4 w-4" />
+                    </div>
+                    {selectedNote.title || tc.label + ' Note'}
+                  </>
+                );
+              })()}
+            </DialogTitle>
+            {selectedNote && (
+              <DialogDescription asChild>
+                <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
+                  {selectedNote.creator && (
+                    <span className="flex items-center gap-1">
+                      <Avatar className="h-4 w-4">
+                        <AvatarImage src={selectedNote.creator.avatar_url || undefined} />
+                        <AvatarFallback className="text-[8px]">
+                          {selectedNote.creator.first_name?.[0]}{selectedNote.creator.last_name?.[0]}
+                        </AvatarFallback>
+                      </Avatar>
+                      {selectedNote.creator.first_name} {selectedNote.creator.last_name}
+                    </span>
+                  )}
+                  <span>{format(new Date(selectedNote.created_at), 'dd MMM yyyy, h:mm a')}</span>
+                  <Badge variant="outline" className="text-xs">
+                    {selectedNote.parent_type === 'tenant' ? 'Client' : 'Package'}
+                  </Badge>
+                </div>
+              </DialogDescription>
+            )}
+          </DialogHeader>
+          
+          {selectedNote && (
+            <ScrollArea className="flex-1 min-h-0">
+              <div className="space-y-4 pr-2">
+                {/* Tags */}
+                {selectedNote.tags.length > 0 && (
+                  <div className="flex items-center gap-1 flex-wrap">
+                    <Tag className="h-3 w-3 text-muted-foreground" />
+                    {selectedNote.tags.map(tag => (
+                      <Badge key={tag} variant="secondary" className="text-xs">
+                        {tag}
+                      </Badge>
+                    ))}
+                  </div>
+                )}
+                
+                {/* Full note content */}
+                <div className="text-sm whitespace-pre-wrap leading-relaxed">
+                  {selectedNote.note_details}
+                </div>
+              </div>
+            </ScrollArea>
+          )}
+          
+          <DialogFooter>
+            <Button variant="outline" size="sm" onClick={() => {
+              setIsViewDialogOpen(false);
+              if (selectedNote) handleOpenEdit(selectedNote);
+            }}>
+              <Edit className="h-4 w-4 mr-1" />
+              Edit
+            </Button>
+            <Button variant="outline" onClick={() => setIsViewDialogOpen(false)}>
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Add/Edit Note Dialog */}
       <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
