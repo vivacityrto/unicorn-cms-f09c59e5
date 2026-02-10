@@ -12707,6 +12707,109 @@ export type Database = {
           },
         ]
       }
+      meeting_action_tasks: {
+        Row: {
+          action_id: string
+          assigned_to_role: string | null
+          assigned_to_user_uuid: string | null
+          confidence: string | null
+          created_at: string
+          created_by: string
+          description: string | null
+          due_date: string | null
+          id: string
+          meeting_id: string
+          minutes_id: string
+          package_id: number | null
+          source_type: string
+          status: string
+          tenant_id: number
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          action_id: string
+          assigned_to_role?: string | null
+          assigned_to_user_uuid?: string | null
+          confidence?: string | null
+          created_at?: string
+          created_by: string
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          meeting_id: string
+          minutes_id: string
+          package_id?: number | null
+          source_type?: string
+          status?: string
+          tenant_id: number
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          action_id?: string
+          assigned_to_role?: string | null
+          assigned_to_user_uuid?: string | null
+          confidence?: string | null
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          meeting_id?: string
+          minutes_id?: string
+          package_id?: number | null
+          source_type?: string
+          status?: string
+          tenant_id?: number
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meeting_action_tasks_assigned_to_user_uuid_fkey"
+            columns: ["assigned_to_user_uuid"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "meeting_action_tasks_minutes_id_fkey"
+            columns: ["minutes_id"]
+            isOneToOne: false
+            referencedRelation: "meeting_minutes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "meeting_action_tasks_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "meeting_action_tasks_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_engagement_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "meeting_action_tasks_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_eos_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "meeting_action_tasks_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_compliance_entitlements"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
       meeting_artifacts: {
         Row: {
           artifact_type: string

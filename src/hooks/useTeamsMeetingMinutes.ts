@@ -16,10 +16,16 @@ export interface MinutesContent {
   discussion_notes: string;
   decisions: string[];
   actions: Array<{
+    action_id?: string;
     action: string;
     owner: string;
     due_date: string;
     status: string;
+    task_id?: string;
+    package_id?: number | null;
+    assigned_to_user_uuid?: string | null;
+    assigned_to_role?: string | null;
+    confidence?: string;
   }>;
   next_meeting: string;
   // AI metadata
@@ -328,6 +334,69 @@ export function useTeamsMeetingMinutes(meetingId: string | null) {
     toast.info('AI draft discarded');
   };
 
+  // ── Task creation from minutes actions ──────────────────────────────
+  const createTasksMutation = useMutation({
+    mutationFn: async ({ minutesId, actions }: { minutesId: string; actions: MinutesContent['actions'] }) => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) throw new Error('Not authenticated');
+
+      // Ensure each action has a stable action_id
+      const actionsWithIds = actions.map((a, idx) => ({
+        ...a,
+        action_id: a.action_id || `action-${idx}-${Date.now()}`,
+      }));
+
+      const { data, error } = await supabase.functions.invoke('create-tasks-from-minutes', {
+        headers: { Authorization: `Bearer ${session.access_token}` },
+        body: { minutes_id: minutesId, actions: actionsWithIds },
+      });
+
+      if (error) throw new Error(error.message);
+      if (data && 'error' in data) throw new Error((data as any).error);
+      return data as { success: boolean; created: number; skipped: number; total: number; tasks: Array<{ task_id: string; action_id: string }>; errors: Array<{ action_id: string; error: string }> };
+    },
+    onSuccess: (data) => {
+      if (data.created > 0) {
+        toast.success(`${data.created} task${data.created > 1 ? 's' : ''} created`);
+      }
+      if (data.skipped > 0) {
+        toast.info(`${data.skipped} task${data.skipped > 1 ? 's' : ''} already existed`);
+      }
+      if (data.errors?.length > 0) {
+        toast.error(`${data.errors.length} task${data.errors.length > 1 ? 's' : ''} failed`);
+      }
+      queryClient.invalidateQueries({ queryKey: ['meeting-minutes', meetingId] });
+      queryClient.invalidateQueries({ queryKey: ['meeting-action-tasks', meetingId] });
+    },
+    onError: (error) => {
+      toast.error(error instanceof Error ? error.message : 'Task creation failed');
+    },
+  });
+
+  // Query existing action tasks
+  const { data: actionTasks } = useQuery({
+    queryKey: ['meeting-action-tasks', meetingId],
+    queryFn: async () => {
+      if (!meetingId) return [];
+      const { data } = await supabase
+        .from('meeting_action_tasks' as any)
+        .select('*')
+        .eq('meeting_id', meetingId)
+        .order('created_at', { ascending: true });
+      return ((data as unknown) || []) as Array<{
+        id: string;
+        action_id: string;
+        title: string;
+        status: string;
+        due_date: string | null;
+        assigned_to_user_uuid: string | null;
+        assigned_to_role: string | null;
+        package_id: number | null;
+      }>;
+    },
+    enabled: !!meetingId,
+  });
+
   // ── Copilot extraction ─────────────────────────────────────────────
   const extractCopilotMutation = useMutation({
     mutationFn: async (pastedText: string) => {
@@ -445,5 +514,9 @@ export function useTeamsMeetingMinutes(meetingId: string | null) {
     applyCopilotContent,
     discardCopilotContent,
     resetCopilotExtraction: extractCopilotMutation.reset,
+    // Task creation
+    createTasks: createTasksMutation.mutate,
+    isCreatingTasks: createTasksMutation.isPending,
+    actionTasks: actionTasks ?? [],
   };
 }
