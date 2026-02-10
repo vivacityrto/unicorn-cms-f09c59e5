@@ -45,6 +45,7 @@ import { FloatingChatbot } from "@/components/help-center/FloatingChatbot";
 import { DocumentRequestModal } from "@/components/client/DocumentRequestModal";
 import { useClientRequestActions } from "@/hooks/useClientRequestActions";
 import type { DocumentRequestPrefill } from "@/components/client/DocumentRequestModal";
+import vivacityLogo from "@/assets/vivacity-logo.svg";
 import { cn } from "@/lib/utils";
 
 // Context so children (e.g. ClientHomePage) can open the request modal
@@ -259,22 +260,9 @@ function ClientLayoutInner({ children }: { children: React.ReactNode }) {
             borderColor: "hsl(270 20% 88%)",
           }}
         >
-          {/* Left: Tenant name + Client badge */}
+          {/* Left: Vivacity logo */}
           <div className="flex items-center gap-3 min-w-0 flex-shrink-0">
-            {tenantName && (
-              <h1 className="text-sm font-semibold truncate max-w-[220px]" style={{ color: "hsl(270 47% 26%)" }}>
-                {tenantName}
-              </h1>
-            )}
-            <Badge
-              className="hidden sm:inline-flex text-xs font-medium border-0 flex-shrink-0"
-              style={{
-                backgroundColor: "hsl(270 20% 88%)",
-                color: "hsl(270 55% 41%)",
-              }}
-            >
-              Client
-            </Badge>
+            <img src={vivacityLogo} alt="Vivacity" className="h-7 w-auto" />
           </div>
 
           {/* Center: Search */}
