@@ -429,7 +429,7 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
 
       {/* View Note Dialog */}
       <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
-        <DialogContent className="max-w-lg max-h-[85vh] flex flex-col">
+        <DialogContent className="max-w-lg max-h-[85vh] flex flex-col overflow-hidden">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               {selectedNote && (() => {
@@ -469,7 +469,7 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
           </DialogHeader>
           
           {selectedNote && (
-            <ScrollArea className="flex-1 min-h-0">
+            <ScrollArea className="flex-1 min-h-0 max-h-[55vh]">
               <div className="space-y-4 pr-2">
                 {/* Tags */}
                 {selectedNote.tags.length > 0 && (
