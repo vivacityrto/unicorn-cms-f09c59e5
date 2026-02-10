@@ -6,6 +6,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
@@ -56,6 +58,7 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
   
   // Filter state
   const [parentTypeFilter, setParentTypeFilter] = useState<string>('all');
+  const [selectedTagFilter, setSelectedTagFilter] = useState<string[]>([]);
   
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -221,10 +224,10 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
     return NOTE_TYPES.find(t => t.value === type) || NOTE_TYPES[0];
   };
 
-  // Filter notes by parent type
-  const filteredNotes = parentTypeFilter === 'all' 
-    ? notes 
-    : notes.filter(note => note.parent_type === parentTypeFilter);
+  // Filter notes by parent type and tags
+  const filteredNotes = notes
+    .filter(note => parentTypeFilter === 'all' || note.parent_type === parentTypeFilter)
+    .filter(note => selectedTagFilter.length === 0 || note.tags.some(t => selectedTagFilter.includes(t)));
 
   if (loading && notes.length === 0) {
     return (
@@ -270,6 +273,47 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
                   <SelectItem value="package_instance">Package Notes</SelectItem>
                 </SelectContent>
               </Select>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" size="sm" className="h-9 gap-1.5">
+                    <Tag className="h-4 w-4" />
+                    Tags
+                    {selectedTagFilter.length > 0 && (
+                      <Badge variant="default" className="ml-1 h-5 w-5 rounded-full p-0 flex items-center justify-center text-[10px]">
+                        {selectedTagFilter.length}
+                      </Badge>
+                    )}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-56 p-3 bg-popover" align="end">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm font-medium">Filter by tags</span>
+                    {selectedTagFilter.length > 0 && (
+                      <Button variant="ghost" size="sm" className="h-6 px-2 text-xs" onClick={() => setSelectedTagFilter([])}>
+                        Clear
+                      </Button>
+                    )}
+                  </div>
+                  <div className="space-y-1.5 max-h-[240px] overflow-y-auto">
+                    {availableNoteTags.map(tag => (
+                      <label key={tag.code} className="flex items-center gap-2 rounded-md px-2 py-1.5 hover:bg-muted cursor-pointer text-sm">
+                        <Checkbox
+                          checked={selectedTagFilter.includes(tag.code)}
+                          onCheckedChange={(checked) => {
+                            setSelectedTagFilter(prev =>
+                              checked ? [...prev, tag.code] : prev.filter(t => t !== tag.code)
+                            );
+                          }}
+                        />
+                        {tag.label}
+                      </label>
+                    ))}
+                    {availableNoteTags.length === 0 && (
+                      <p className="text-xs text-muted-foreground py-2 text-center">No tags available</p>
+                    )}
+                  </div>
+                </PopoverContent>
+              </Popover>
               <Button size="sm" onClick={handleOpenAdd}>
                 <Plus className="h-4 w-4 mr-1" />
                 Add Note
@@ -285,7 +329,9 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
               <p className="text-sm mt-1">
                 {notes.length === 0 
                   ? 'Create notes to track meetings, decisions, and follow-ups'
-                  : 'Try changing the filter to see more notes'}
+                  : selectedTagFilter.length > 0
+                    ? 'Try removing some tag filters or changing the note type filter'
+                    : 'Try changing the filter to see more notes'}
               </p>
               {notes.length === 0 && (
                 <Button size="sm" className="mt-4" onClick={handleOpenAdd}>
