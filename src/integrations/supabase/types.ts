@@ -17773,6 +17773,83 @@ export type Database = {
           },
         ]
       }
+      tenant_documents: {
+        Row: {
+          category: string | null
+          created_at: string
+          description: string | null
+          file_size: number | null
+          id: string
+          mime_type: string | null
+          source: string
+          storage_path: string
+          tenant_id: number
+          title: string
+          updated_at: string
+          uploaded_by_role: string
+          uploaded_by_user_id: string
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string
+          description?: string | null
+          file_size?: number | null
+          id?: string
+          mime_type?: string | null
+          source: string
+          storage_path: string
+          tenant_id: number
+          title: string
+          updated_at?: string
+          uploaded_by_role: string
+          uploaded_by_user_id: string
+        }
+        Update: {
+          category?: string | null
+          created_at?: string
+          description?: string | null
+          file_size?: number | null
+          id?: string
+          mime_type?: string | null
+          source?: string
+          storage_path?: string
+          tenant_id?: number
+          title?: string
+          updated_at?: string
+          uploaded_by_role?: string
+          uploaded_by_user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tenant_documents_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tenant_documents_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_engagement_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "tenant_documents_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_eos_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "tenant_documents_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_compliance_entitlements"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
       tenant_members: {
         Row: {
           created_at: string
