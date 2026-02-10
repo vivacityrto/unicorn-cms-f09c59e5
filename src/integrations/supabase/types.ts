@@ -19587,15 +19587,22 @@ export type Database = {
       }
       tenant_sharepoint_settings: {
         Row: {
+          base_path: string | null
+          client_access_enabled: boolean
           created_at: string
           created_by: string
           drive_id: string | null
+          folder_name: string | null
+          folder_path: string | null
           id: string
           is_enabled: boolean
           last_validated_at: string | null
-          root_folder_url: string
+          provisioning_error: string | null
+          provisioning_status: string
+          root_folder_url: string | null
           root_item_id: string | null
           root_name: string | null
+          site_id: string | null
           tenant_id: number
           updated_at: string
           updated_by: string | null
@@ -19603,15 +19610,22 @@ export type Database = {
           validation_status: string
         }
         Insert: {
+          base_path?: string | null
+          client_access_enabled?: boolean
           created_at?: string
           created_by: string
           drive_id?: string | null
+          folder_name?: string | null
+          folder_path?: string | null
           id?: string
           is_enabled?: boolean
           last_validated_at?: string | null
-          root_folder_url: string
+          provisioning_error?: string | null
+          provisioning_status?: string
+          root_folder_url?: string | null
           root_item_id?: string | null
           root_name?: string | null
+          site_id?: string | null
           tenant_id: number
           updated_at?: string
           updated_by?: string | null
@@ -19619,15 +19633,22 @@ export type Database = {
           validation_status?: string
         }
         Update: {
+          base_path?: string | null
+          client_access_enabled?: boolean
           created_at?: string
           created_by?: string
           drive_id?: string | null
+          folder_name?: string | null
+          folder_path?: string | null
           id?: string
           is_enabled?: boolean
           last_validated_at?: string | null
-          root_folder_url?: string
+          provisioning_error?: string | null
+          provisioning_status?: string
+          root_folder_url?: string | null
           root_item_id?: string | null
           root_name?: string | null
+          site_id?: string | null
           tenant_id?: number
           updated_at?: string
           updated_by?: string | null
