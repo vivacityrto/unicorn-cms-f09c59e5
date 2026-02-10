@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Separator } from "@/components/ui/separator";
+import { DashboardLayout } from "@/components/DashboardLayout";
 import { 
   Puzzle, 
   Mail, 
@@ -24,18 +25,21 @@ export default function AddinSettings() {
 
   if (isLoading) {
     return (
-      <div className="container mx-auto py-8 space-y-6">
-        <div className="space-y-2">
-          <Skeleton className="h-8 w-64" />
-          <Skeleton className="h-4 w-96" />
+      <DashboardLayout>
+        <div className="p-6 space-y-6">
+          <div className="space-y-2">
+            <Skeleton className="h-8 w-64" />
+            <Skeleton className="h-4 w-96" />
+          </div>
+          <Skeleton className="h-64 w-full" />
         </div>
-        <Skeleton className="h-64 w-full" />
-      </div>
+      </DashboardLayout>
     );
   }
 
   return (
-    <div className="container mx-auto py-8 space-y-6">
+    <DashboardLayout>
+      <div className="p-6 space-y-6">
       <div>
         <h1 className="text-3xl font-bold flex items-center gap-3">
           <Puzzle className="h-8 w-8" />
@@ -210,6 +214,7 @@ export default function AddinSettings() {
           </div>
         </CardContent>
       </Card>
-    </div>
+      </div>
+    </DashboardLayout>
   );
 }
