@@ -11967,6 +11967,35 @@ export type Database = {
         }
         Relationships: []
       }
+      legacy_login_snapshot: {
+        Row: {
+          id: string
+          last_sign_in_at: string | null
+          migrated_at: string
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          last_sign_in_at?: string | null
+          migrated_at?: string
+          user_id: string
+        }
+        Update: {
+          id?: string
+          last_sign_in_at?: string | null
+          migrated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "legacy_login_snapshot_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "users"
+            referencedColumns: ["user_uuid"]
+          },
+        ]
+      }
       lookup_list_items: {
         Row: {
           created_at: string
@@ -20384,8 +20413,11 @@ export type Database = {
           docs_downloaded: number | null
           id: string
           login_date: string
+          logout_date: string | null
           messages_sent: number | null
+          session_id: string | null
           tasks_created: number | null
+          tenant_id: number | null
           user_id: string
         }
         Insert: {
@@ -20393,8 +20425,11 @@ export type Database = {
           docs_downloaded?: number | null
           id?: string
           login_date: string
+          logout_date?: string | null
           messages_sent?: number | null
+          session_id?: string | null
           tasks_created?: number | null
+          tenant_id?: number | null
           user_id: string
         }
         Update: {
@@ -20402,11 +20437,43 @@ export type Database = {
           docs_downloaded?: number | null
           id?: string
           login_date?: string
+          logout_date?: string | null
           messages_sent?: number | null
+          session_id?: string | null
           tasks_created?: number | null
+          tenant_id?: number | null
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "user_activity_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_activity_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_engagement_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "user_activity_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_eos_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "user_activity_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_compliance_entitlements"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
       }
       user_invitations: {
         Row: {

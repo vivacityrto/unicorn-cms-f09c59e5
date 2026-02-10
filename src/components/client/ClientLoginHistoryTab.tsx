@@ -1,5 +1,5 @@
 import { format, formatDistanceToNow } from 'date-fns';
-import { LogIn, Clock, FileText, MessageSquare, CheckSquare, Users } from 'lucide-react';
+import { LogIn, Clock, FileText, MessageSquare, CheckSquare, Users, History } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -54,6 +54,7 @@ export function ClientLoginHistoryTab({ tenantId }: ClientLoginHistoryTabProps) 
                   <TableHead>User</TableHead>
                   <TableHead>Role</TableHead>
                   <TableHead>Last Sign In</TableHead>
+                  <TableHead>Legacy Sign In</TableHead>
                   <TableHead className="text-right">Total Logins</TableHead>
                 </TableRow>
               </TableHeader>
@@ -87,6 +88,23 @@ export function ClientLoginHistoryTab({ tenantId }: ClientLoginHistoryTabProps) 
                         <span className="text-xs text-muted-foreground">Never</span>
                       )}
                     </TableCell>
+                    <TableCell>
+                      {user.legacy_last_sign_in_at ? (
+                        <div className="flex items-center gap-2">
+                          <div>
+                            <p className="text-sm">
+                              {format(new Date(user.legacy_last_sign_in_at), 'dd MMM yyyy, h:mm a')}
+                            </p>
+                          </div>
+                          <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
+                            <History className="h-2.5 w-2.5 mr-0.5" />
+                            Legacy
+                          </Badge>
+                        </div>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">—</span>
+                      )}
+                    </TableCell>
                     <TableCell className="text-right font-medium">
                       {user.login_count}
                     </TableCell>
@@ -115,7 +133,7 @@ export function ClientLoginHistoryTab({ tenantId }: ClientLoginHistoryTabProps) 
               <Clock className="h-10 w-10 mx-auto text-muted-foreground/40 mb-3" />
               <p className="text-sm font-medium">No login activity recorded yet</p>
               <p className="text-xs text-muted-foreground mt-1">
-                Login events will appear here as users sign in to the platform.
+                Login events will appear here automatically as users sign in to the platform.
               </p>
             </div>
           ) : (
@@ -124,6 +142,7 @@ export function ClientLoginHistoryTab({ tenantId }: ClientLoginHistoryTabProps) 
                 <TableRow>
                   <TableHead>User</TableHead>
                   <TableHead>Login Date</TableHead>
+                  <TableHead>Duration</TableHead>
                   <TableHead className="text-center">
                     <div className="flex items-center justify-center gap-1">
                       <FileText className="h-3 w-3" />
@@ -156,6 +175,20 @@ export function ClientLoginHistoryTab({ tenantId }: ClientLoginHistoryTabProps) 
                       <p className="text-sm">
                         {format(new Date(entry.login_date), 'dd MMM yyyy, h:mm a')}
                       </p>
+                    </TableCell>
+                    <TableCell>
+                      {entry.logout_date ? (
+                        <span className="text-sm">
+                          {formatDistanceToNow(new Date(entry.login_date), {
+                            includeSeconds: false,
+                          }).replace(
+                            /about |over |almost |less than /g,
+                            ''
+                          )}
+                        </span>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">—</span>
+                      )}
                     </TableCell>
                     <TableCell className="text-center text-sm">
                       {entry.docs_downloaded ?? 0}
