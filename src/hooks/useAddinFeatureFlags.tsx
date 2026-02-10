@@ -49,6 +49,14 @@ export function useAddinFeatureFlags() {
 
   const updateFlagsMutation = useMutation({
     mutationFn: async (updates: Partial<AddinFeatureFlags>) => {
+      const normalized = { ...updates };
+
+      if ("microsoft_addin_enabled" in normalized && normalized.microsoft_addin_enabled === false) {
+        normalized.addin_outlook_mail_enabled = false;
+        normalized.addin_meetings_enabled = false;
+        normalized.addin_documents_enabled = false;
+      }
+
       // Get the current settings row id first
       const { data: current, error: fetchError } = await supabase
         .from("app_settings")
@@ -62,7 +70,7 @@ export function useAddinFeatureFlags() {
 
       const { data: updated, error } = await supabase
         .from("app_settings")
-        .update(updates as Record<string, unknown>)
+        .update(normalized as Record<string, unknown>)
         .eq("id", current.id)
         .select("*")
         .single();
