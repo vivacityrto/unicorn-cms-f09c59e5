@@ -35,29 +35,55 @@ const pick = (obj: any, paths: string[]): any => {
 };
 
 const getUsage = (item: any) => pick(item, [
-  "usageRecommendation",
-  "usage_recommendation",
-  "tga_data.usageRecommendation",
-  "tga_data.usage_recommendation",
+  // Scope-level usage recommendation (what TGA displays)
   "scope.usageRecommendation",
   "scope.usage_recommendation",
+  "scope.usageRecommendationCode",
+  "scope.usage_recommendation_code",
+  // Flattened
+  "usageRecommendation",
+  "usage_recommendation",
+  "usageRecommendationCode",
+  "usage_recommendation_code",
+  // Lower priority fallbacks
   "trainingProduct.usageRecommendation",
+  "trainingProduct.usage_recommendation",
+  "tga_data.usageRecommendation",
+  "tga_data.usage_recommendation",
 ]);
 
 const getStatus = (item: any) => pick(item, [
-  "status",
-  "tga_data.status",
   "scope.status",
+  "scope.statusCode",
+  "status",
+  "statusCode",
   "trainingProduct.status",
+  "trainingProduct.statusCode",
+  "tga_data.status",
 ]);
 
 const getEndDate = (item: any) => pick(item, [
+  // Scope-level end dates (what TGA displays in the table)
+  "scope.endDate",
+  "scope.end_date",
+  "scope.scopeEndDate",
+  "scope.scope_end_date",
+  "scope.registrationEndDate",
+  "scope.registration_end_date",
+  "scope.rtoEndDate",
+  "scope.rto_end_date",
+  // Flattened scope fields
+  "scopeEndDate",
+  "scope_end_date",
+  "registrationEndDate",
+  "registration_end_date",
+  "rtoEndDate",
+  "rto_end_date",
+  // Fallbacks (lowest priority)
   "endDate",
   "end_date",
   "tga_data.endDate",
   "tga_data.end_date",
-  "scope.endDate",
-  "scope.end_date",
 ]);
 
 const toDate = (v: any): Date | null => {
@@ -262,14 +288,18 @@ function classifyAndFilter(categorised: Record<string, any[]>): {
         else diag.teach_out++;
 
         if (!diag.sample_item) {
-          diag.sample_item = { code: item.code, usageRaw: result.usageRaw, statusRaw: result.statusRaw, endRaw: result.endRaw, scope_state: result.scope_state };
+          const scopeEnd = pick(item, ["scope.endDate","scope.scopeEndDate","scope.registrationEndDate"]);
+          const productEnd = pick(item, ["endDate","trainingProduct.endDate"]);
+          diag.sample_item = { code: item.code, usageRaw: result.usageRaw, statusRaw: result.statusRaw, endRaw: result.endRaw, scope_state: result.scope_state, scope_endDate_candidate: scopeEnd, product_endDate_candidate: productEnd };
         }
       } else {
         diag.dropped++;
         const reason = result.dropReason || "unknown";
         diag.drop_reasons[reason] = (diag.drop_reasons[reason] || 0) + 1;
         if (!diag.sample_dropped) {
-          diag.sample_dropped = { code: item.code, usageRaw: result.usageRaw, statusRaw: result.statusRaw, endRaw: result.endRaw, dropReason: result.dropReason || null };
+          const scopeEnd = pick(item, ["scope.endDate","scope.scopeEndDate","scope.registrationEndDate"]);
+          const productEnd = pick(item, ["endDate","trainingProduct.endDate"]);
+          diag.sample_dropped = { code: item.code, usageRaw: result.usageRaw, statusRaw: result.statusRaw, endRaw: result.endRaw, dropReason: result.dropReason || null, scope_endDate_candidate: scopeEnd, product_endDate_candidate: productEnd };
         }
       }
     }
