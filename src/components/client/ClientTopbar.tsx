@@ -39,21 +39,21 @@ export function ClientTopbar({ isPreview }: ClientTopbarProps) {
   const { profile, signOut } = useAuth();
   const { openHelpCenter } = useHelpCenter();
   const { unreadCount, notifications } = useNotifications();
-  const { actingUser } = useClientActingUser();
+  const { actingUser, isLoading: actingUserLoading } = useClientActingUser();
 
-  // Use acting user (parent account in preview mode) for avatar display
-  const displayUser = actingUser || profile;
+  // In preview/impersonation mode, always show the parent account — never fall back to the SuperAdmin profile
+  const displayUser = isPreview ? actingUser : (actingUser || profile);
 
   const getInitials = () => {
-    const fn = actingUser?.first_name || profile?.first_name;
-    const ln = actingUser?.last_name || profile?.last_name;
+    const fn = displayUser?.first_name;
+    const ln = displayUser?.last_name;
     if (fn && ln) return `${fn[0]}${ln[0]}`.toUpperCase();
     return (displayUser?.email?.split("@")[0] || "U").substring(0, 2).toUpperCase();
   };
 
   const getUserDisplayName = () => {
-    const fn = actingUser?.first_name || profile?.first_name;
-    const ln = actingUser?.last_name || profile?.last_name;
+    const fn = displayUser?.first_name;
+    const ln = displayUser?.last_name;
     if (fn && ln) return `${fn} ${ln}`;
     return displayUser?.email?.split("@")[0] || "User";
   };
@@ -149,7 +149,7 @@ export function ClientTopbar({ isPreview }: ClientTopbarProps) {
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" className="relative h-9 w-9 rounded-full p-0 ml-1">
               <Avatar className="h-8 w-8 border-2" style={{ borderColor: "hsl(270 20% 88%)" }}>
-                <AvatarImage src={actingUser?.avatar_url || profile?.avatar_url || ""} alt={getUserDisplayName()} />
+                <AvatarImage src={displayUser?.avatar_url || ""} alt={getUserDisplayName()} />
                 <AvatarFallback
                   className="text-xs font-semibold"
                   style={{
