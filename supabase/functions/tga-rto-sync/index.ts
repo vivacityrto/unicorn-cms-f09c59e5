@@ -44,6 +44,13 @@ const getUsage = (item: any) => pick(item, [
   "trainingProduct.usageRecommendation",
 ]);
 
+const getStatus = (item: any) => pick(item, [
+  "status",
+  "tga_data.status",
+  "scope.status",
+  "trainingProduct.status",
+]);
+
 const getEndDate = (item: any) => pick(item, [
   "endDate",
   "end_date",
@@ -66,41 +73,49 @@ const today0 = () => {
 };
 
 // ── Drop reason tracking ────────────────────────────────────────────
-type DropReason = "missing_usage" | "superseded_no_end_date" | "superseded_expired" | "unknown_usage";
+type DropReason = "missing_usage_and_status" | "superseded_no_end_date" | "superseded_expired" | "unknown_effective";
 
 interface ClassifyResult {
   include: boolean;
   scope_state: "current" | "teach_out" | null;
   endRaw: string | null;
   usageRaw: string | null;
+  statusRaw: string | null;
   dropReason?: DropReason;
+  dropDetail?: string;
 }
 
 function classify(item: any): ClassifyResult {
   const usageRaw = getUsage(item);
-  const usage = norm(usageRaw).toLowerCase();
+  const statusRaw = getStatus(item);
   const endRaw = getEndDate(item);
   const endDate = toDate(endRaw);
 
-  if (!usageRaw || usage === "") {
-    return { include: false, scope_state: null, endRaw, usageRaw, dropReason: "missing_usage" };
+  const usage = norm(usageRaw).toLowerCase();
+  const status = norm(statusRaw).toLowerCase();
+
+  // Prefer usageRecommendation. Fall back to status.
+  const effective = usage || status;
+
+  if (effective === "current") {
+    return { include: true, scope_state: "current", endRaw, usageRaw, statusRaw };
   }
 
-  if (usage === "current") {
-    return { include: true, scope_state: "current", endRaw, usageRaw };
-  }
-
-  if (usage === "superseded" || usage === "deleted") {
+  if (effective === "superseded" || effective === "deleted") {
     if (!endDate) {
-      return { include: false, scope_state: null, endRaw, usageRaw, dropReason: "superseded_no_end_date" };
+      return { include: false, scope_state: null, endRaw, usageRaw, statusRaw, dropReason: "superseded_no_end_date" };
     }
     if (endDate.getTime() >= today0().getTime()) {
-      return { include: true, scope_state: "teach_out", endRaw, usageRaw };
+      return { include: true, scope_state: "teach_out", endRaw, usageRaw, statusRaw };
     }
-    return { include: false, scope_state: null, endRaw, usageRaw, dropReason: "superseded_expired" };
+    return { include: false, scope_state: null, endRaw, usageRaw, statusRaw, dropReason: "superseded_expired" };
   }
 
-  return { include: false, scope_state: null, endRaw, usageRaw, dropReason: "unknown_usage" };
+  if (!effective) {
+    return { include: false, scope_state: null, endRaw, usageRaw, statusRaw, dropReason: "missing_usage_and_status" };
+  }
+
+  return { include: false, scope_state: null, endRaw, usageRaw, statusRaw, dropReason: "unknown_effective", dropDetail: effective };
 }
 
 // Compute SHA256 hash
@@ -201,8 +216,9 @@ interface TypeDiagnostics {
   current: number;
   teach_out: number;
   dropped: number;
-  drop_reasons: Record<DropReason, number>;
-  sample_item?: { code: string; usageRaw: string | null; endRaw: string | null; scope_state: string | null };
+  drop_reasons: Record<string, number>;
+  sample_item?: { code: string; usageRaw: string | null; statusRaw: string | null; endRaw: string | null; scope_state: string | null };
+  sample_dropped?: { code: string; usageRaw: string | null; statusRaw: string | null; endRaw: string | null; dropReason: string | null };
 }
 
 // Classify + categorise, returning diagnostics
@@ -215,25 +231,29 @@ function classifyAndFilter(categorised: Record<string, any[]>): {
 
   for (const [type, items] of Object.entries(categorised)) {
     const kept: any[] = [];
-    const diag: TypeDiagnostics = { raw_total: items.length, kept: 0, current: 0, teach_out: 0, dropped: 0, drop_reasons: { missing_usage: 0, superseded_no_end_date: 0, superseded_expired: 0, unknown_usage: 0 } };
+    const diag: TypeDiagnostics = { raw_total: items.length, kept: 0, current: 0, teach_out: 0, dropped: 0, drop_reasons: {} };
 
     for (const item of items) {
       const result = classify(item);
       if (result.include && result.scope_state) {
         item.scope_state = result.scope_state;
         item.usageRecommendation_raw = result.usageRaw;
+        item.status_raw = result.statusRaw;
         item.endDate_raw = result.endRaw;
         kept.push(item);
         if (result.scope_state === "current") diag.current++;
         else diag.teach_out++;
 
-        // Capture first item as sample
         if (!diag.sample_item) {
-          diag.sample_item = { code: item.code, usageRaw: result.usageRaw, endRaw: result.endRaw, scope_state: result.scope_state };
+          diag.sample_item = { code: item.code, usageRaw: result.usageRaw, statusRaw: result.statusRaw, endRaw: result.endRaw, scope_state: result.scope_state };
         }
       } else {
         diag.dropped++;
-        if (result.dropReason) diag.drop_reasons[result.dropReason]++;
+        const reason = result.dropReason || "unknown";
+        diag.drop_reasons[reason] = (diag.drop_reasons[reason] || 0) + 1;
+        if (!diag.sample_dropped) {
+          diag.sample_dropped = { code: item.code, usageRaw: result.usageRaw, statusRaw: result.statusRaw, endRaw: result.endRaw, dropReason: result.dropReason || null };
+        }
       }
     }
     diag.kept = kept.length;
@@ -437,6 +457,7 @@ serve(async (req) => {
           ...item,
           scope_state: item.scope_state,
           usageRecommendation_raw: item.usageRecommendation_raw,
+          status_raw: item.status_raw,
           endDate_raw: item.endDate_raw,
         },
         last_refreshed_at: now,
