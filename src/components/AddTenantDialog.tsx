@@ -85,6 +85,21 @@ export function AddTenantDialog({ open, onOpenChange, onSuccess, preSelectedPack
         description: 'Tenant created successfully',
       });
 
+      // Auto-provision SharePoint folder (fire and forget)
+      try {
+        supabase.functions.invoke('provision-tenant-sharepoint-folder', {
+          body: { tenant_id: (await supabase.from('tenants').select('id').eq('slug', tenantSlug).single()).data?.id }
+        }).then(({ data, error: provError }) => {
+          if (provError || !data?.success) {
+            console.warn('[AddTenant] SharePoint provisioning failed:', provError?.message || data?.error);
+          } else {
+            console.log('[AddTenant] SharePoint folder provisioned:', data.folder_name);
+          }
+        });
+      } catch (provErr) {
+        console.warn('[AddTenant] SharePoint provisioning error:', provErr);
+      }
+
       resetForm();
       onOpenChange(false);
       onSuccess?.();
