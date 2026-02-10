@@ -24,7 +24,8 @@ import {
   Layers,
   BookOpen,
   Award,
-  Bug
+  Bug,
+  Package
 } from 'lucide-react';
 import { ClientProfile, RegistryLink } from '@/hooks/useClientManagement';
 import { useTgaRtoData } from '@/hooks/useTgaRtoData';
@@ -689,6 +690,10 @@ export function ClientIntegrationsTab({
                     <Award className="h-3 w-3 mr-1" />
                     Courses ({tgaData.courses.length})
                   </TabsTrigger>
+                  <TabsTrigger value="training-packages" className="text-xs">
+                    <Package className="h-3 w-3 mr-1" />
+                    Packages ({tgaData.trainingPackages.length})
+                  </TabsTrigger>
                 </TabsList>
 
                 <TabsContent value="summary" className="mt-4">
@@ -967,6 +972,49 @@ export function ClientIntegrationsTab({
                       <AlertTitle>No accredited courses data</AlertTitle>
                       <AlertDescription>
                         TGA did not return accredited courses scope for this RTO. This may be normal — not all RTOs have scope data published via the web service.
+                      </AlertDescription>
+                    </Alert>
+                  )}
+                </TabsContent>
+
+                <TabsContent value="training-packages" className="mt-4">
+                  {tgaData.trainingPackages.length > 0 ? (
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Code</TableHead>
+                          <TableHead>Title</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead>Start Date</TableHead>
+                          <TableHead>End Date</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {tgaData.trainingPackages.map((tp) => (
+                          <TableRow key={tp.id}>
+                            <TableCell className="font-mono text-sm">{tp.package_code}</TableCell>
+                            <TableCell className="font-medium">{tp.package_title || '-'}</TableCell>
+                            <TableCell>
+                              <span className={`inline-flex items-center px-2.5 py-0.5 rounded-sm text-xs font-medium ${
+                                tp.status_label === 'Current' ? 'bg-green-100 text-green-800 border border-green-300' :
+                                tp.status_label === 'Superseded' ? 'bg-red-100 text-red-800 border border-red-300' :
+                                'bg-gray-100 text-gray-800 border border-gray-300'
+                              }`}>
+                                {tp.status_label || tp.status || '-'}
+                              </span>
+                            </TableCell>
+                            <TableCell className="text-sm">{tp.start_date ? new Date(tp.start_date).toLocaleDateString('en-AU', { day: '2-digit', month: 'short', year: 'numeric' }) : '-'}</TableCell>
+                            <TableCell className="text-sm">{tp.end_date ? new Date(tp.end_date).toLocaleDateString('en-AU', { day: '2-digit', month: 'short', year: 'numeric' }) : '-'}</TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  ) : (
+                    <Alert>
+                      <AlertCircle className="h-4 w-4" />
+                      <AlertTitle>No training packages data</AlertTitle>
+                      <AlertDescription>
+                        TGA did not return training packages scope for this RTO.
                       </AlertDescription>
                     </Alert>
                   )}

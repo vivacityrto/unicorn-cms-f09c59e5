@@ -146,6 +146,17 @@ export interface TGACourse {
   extent_label: string | null;
 }
 
+export interface TGATrainingPackage {
+  id: string;
+  package_code: string;
+  package_title: string | null;
+  status: string | null;
+  status_label: string | null;
+  is_current: boolean;
+  start_date: string | null;
+  end_date: string | null;
+}
+
 export interface TGAImportJob {
   id: string;
   status: string;
@@ -169,6 +180,7 @@ export function useTgaRtoData(tenantId: number | null, rtoCode: string | null, c
   const [skillsets, setSkillsets] = useState<TGASkillset[]>([]);
   const [units, setUnits] = useState<TGAUnit[]>([]);
   const [courses, setCourses] = useState<TGACourse[]>([]);
+  const [trainingPackages, setTrainingPackages] = useState<TGATrainingPackage[]>([]);
   const [latestJob, setLatestJob] = useState<TGAImportJob | null>(null);
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
@@ -378,6 +390,20 @@ export function useTgaRtoData(tenantId: number | null, rtoCode: string | null, c
             extent_label: item.tga_data?.extentLabel || null,
           }));
         setCourses(courseItems);
+
+        const tpItems = scopeItems
+          .filter((item: any) => item.scope_type === 'trainingPackage' && isOnScope(item))
+          .map((item: any) => ({
+            id: item.id,
+            package_code: item.code,
+            package_title: item.title,
+            status: item.status,
+            status_label: item.tga_data?.statusLabel || item.status || null,
+            is_current: item.status === 'Current' || item.status === 'current',
+            start_date: item.tga_data?.startDate || null,
+            end_date: item.tga_data?.endDate || null,
+          }));
+        setTrainingPackages(tpItems);
         
         // Map job to legacy format
         if (jobRes.data) {
@@ -522,6 +548,7 @@ export function useTgaRtoData(tenantId: number | null, rtoCode: string | null, c
     skillsets,
     units,
     courses,
+    trainingPackages,
     latestJob,
     loading,
     syncing,

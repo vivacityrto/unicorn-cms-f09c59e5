@@ -114,6 +114,7 @@ function categoriseScope(items: any[]): Record<string, any[]> {
     unit: [],
     skillSet: [],
     accreditedCourse: [],
+    trainingPackage: [],
   };
   
   for (const item of items) {
@@ -128,6 +129,8 @@ function categoriseScope(items: any[]): Record<string, any[]> {
       result.skillSet.push(item);
     } else if (ctLower === 'accreditedcourse' || ctLower === 'course') {
       result.accreditedCourse.push(item);
+    } else if (ctLower === 'trainingpackage' || ctLower === 'training package') {
+      result.trainingPackage.push(item);
     } else {
       // Unknown type - log and try to include based on code pattern
       log('warn', `Unknown componentType: ${ct}`, { code: item.code, title: item.title });
@@ -402,6 +405,7 @@ serve(async (req) => {
       unit: 'unit',
       skillSet: 'skillset',
       accreditedCourse: 'accreditedCourse',
+      trainingPackage: 'trainingPackage',
     };
 
     // Persist each category

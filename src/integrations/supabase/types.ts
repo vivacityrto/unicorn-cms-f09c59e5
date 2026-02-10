@@ -23753,20 +23753,44 @@ export type Database = {
           working_hours: Json
         }[]
       }
-      get_tenant_scope_items: {
-        Args: { p_scope_type?: string; p_tenant_id: number }
-        Returns: {
-          code: string
-          id: string
-          is_superseded: boolean
-          last_refreshed_at: string
-          scope_type: string
-          status: string
-          superseded_by: string
-          tga_data: Json
-          title: string
-        }[]
-      }
+      get_tenant_scope_items:
+        | {
+            Args: { p_scope_type?: string; p_tenant_id: number }
+            Returns: {
+              code: string
+              id: string
+              is_superseded: boolean
+              last_refreshed_at: string
+              scope_type: string
+              status: string
+              superseded_by: string
+              tga_data: Json
+              title: string
+            }[]
+          }
+        | {
+            Args: { p_scope_type?: string; p_tenant_id: number }
+            Returns: {
+              code: string
+              created_at: string | null
+              id: string
+              is_superseded: boolean | null
+              last_refreshed_at: string | null
+              scope_type: string
+              status: string | null
+              superseded_by: string | null
+              tenant_id: number
+              tga_data: Json | null
+              title: string
+              updated_at: string | null
+            }[]
+            SetofOptions: {
+              from: "*"
+              to: "tenant_rto_scope"
+              isOneToOne: false
+              isSetofReturn: true
+            }
+          }
       get_tenant_scope_sync_status: {
         Args: { p_tenant_id: number }
         Returns: Json
