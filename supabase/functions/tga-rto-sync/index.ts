@@ -66,7 +66,7 @@ async function fetchAllScopeUnfiltered(rtoId: string): Promise<{ items: any[]; u
   
   while (hasMore) {
     // Fetch without filters first; fall back to filtered if unfiltered also fails
-    const url = `https://training.gov.au/api/organisation/${encodeURIComponent(rtoId)}/scope?api-version=1.0&offset=${offset}&pageSize=${PAGE_SIZE}`;
+    const url = `https://training.gov.au/api/organisation/${encodeURIComponent(rtoId)}/scope?api-version=1.0&includeImplicitItems=true&offset=${offset}&pageSize=${PAGE_SIZE}`;
     urls.push(url);
     
     log('info', `Fetching scope at offset ${offset}`, { url });
