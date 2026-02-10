@@ -2,6 +2,7 @@ import { Link, useLocation } from "react-router-dom";
 import {
   LayoutDashboard,
   FileText,
+  FolderOpen,
   Library,
   Calendar,
   Bell,
@@ -21,6 +22,7 @@ import { cn } from "@/lib/utils";
 const clientMenuItems = [
   { icon: LayoutDashboard, label: "Home", path: "/client/home" },
   { icon: FileText, label: "Documents", path: "/client/documents" },
+  { icon: FolderOpen, label: "Files", path: "/client/files" },
   { icon: Library, label: "Resource Hub", path: "/client/resource-hub" },
   { icon: Calendar, label: "Calendar", path: "/client/calendar" },
   { icon: Bell, label: "Notifications", path: "/client/notifications" },

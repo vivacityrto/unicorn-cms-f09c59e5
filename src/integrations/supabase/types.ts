@@ -17217,6 +17217,75 @@ export type Database = {
           },
         ]
       }
+      sharepoint_folder_templates: {
+        Row: {
+          base_subfolders: Json
+          created_at: string
+          id: string
+          is_active: boolean
+          name: string
+          seed_rules: Json
+          updated_at: string
+        }
+        Insert: {
+          base_subfolders?: Json
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name: string
+          seed_rules?: Json
+          updated_at?: string
+        }
+        Update: {
+          base_subfolders?: Json
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          seed_rules?: Json
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      sharepoint_shared_sources: {
+        Row: {
+          active: boolean
+          content_mode: string
+          created_at: string
+          drive_id: string | null
+          id: string
+          item_id: string | null
+          label: string
+          site_id: string | null
+          updated_at: string
+          web_url: string
+        }
+        Insert: {
+          active?: boolean
+          content_mode?: string
+          created_at?: string
+          drive_id?: string | null
+          id?: string
+          item_id?: string | null
+          label: string
+          site_id?: string | null
+          updated_at?: string
+          web_url: string
+        }
+        Update: {
+          active?: boolean
+          content_mode?: string
+          created_at?: string
+          drive_id?: string | null
+          id?: string
+          item_id?: string | null
+          label?: string
+          site_id?: string | null
+          updated_at?: string
+          web_url?: string
+        }
+        Relationships: []
+      }
       skillset_cache: {
         Row: {
           data: Json
@@ -19585,6 +19654,156 @@ export type Database = {
         }
         Relationships: []
       }
+      tenant_sharepoint_reference_links: {
+        Row: {
+          created_at: string
+          id: string
+          label: string
+          sort_order: number
+          source_shared_id: string | null
+          tenant_id: number
+          visibility: string
+          web_url: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          label: string
+          sort_order?: number
+          source_shared_id?: string | null
+          tenant_id: number
+          visibility?: string
+          web_url: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          label?: string
+          sort_order?: number
+          source_shared_id?: string | null
+          tenant_id?: number
+          visibility?: string
+          web_url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tenant_sharepoint_reference_links_source_shared_id_fkey"
+            columns: ["source_shared_id"]
+            isOneToOne: false
+            referencedRelation: "sharepoint_shared_sources"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tenant_sharepoint_reference_links_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tenant_sharepoint_reference_links_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_engagement_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "tenant_sharepoint_reference_links_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_eos_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "tenant_sharepoint_reference_links_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_compliance_entitlements"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
+      tenant_sharepoint_seed_runs: {
+        Row: {
+          completed_at: string | null
+          created_by: string | null
+          errors: Json
+          files_copied: number
+          id: string
+          links_created: number
+          started_at: string
+          status: string
+          subfolders_created: number
+          template_id: string | null
+          template_version: string
+          tenant_id: number
+        }
+        Insert: {
+          completed_at?: string | null
+          created_by?: string | null
+          errors?: Json
+          files_copied?: number
+          id?: string
+          links_created?: number
+          started_at?: string
+          status?: string
+          subfolders_created?: number
+          template_id?: string | null
+          template_version?: string
+          tenant_id: number
+        }
+        Update: {
+          completed_at?: string | null
+          created_by?: string | null
+          errors?: Json
+          files_copied?: number
+          id?: string
+          links_created?: number
+          started_at?: string
+          status?: string
+          subfolders_created?: number
+          template_id?: string | null
+          template_version?: string
+          tenant_id?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tenant_sharepoint_seed_runs_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "sharepoint_folder_templates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tenant_sharepoint_seed_runs_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tenant_sharepoint_seed_runs_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_engagement_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "tenant_sharepoint_seed_runs_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_eos_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "tenant_sharepoint_seed_runs_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_compliance_entitlements"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
       tenant_sharepoint_settings: {
         Row: {
           base_path: string | null
@@ -19603,6 +19822,7 @@ export type Database = {
           root_item_id: string | null
           root_name: string | null
           site_id: string | null
+          template_id: string | null
           tenant_id: number
           updated_at: string
           updated_by: string | null
@@ -19626,6 +19846,7 @@ export type Database = {
           root_item_id?: string | null
           root_name?: string | null
           site_id?: string | null
+          template_id?: string | null
           tenant_id: number
           updated_at?: string
           updated_by?: string | null
@@ -19649,6 +19870,7 @@ export type Database = {
           root_item_id?: string | null
           root_name?: string | null
           site_id?: string | null
+          template_id?: string | null
           tenant_id?: number
           updated_at?: string
           updated_by?: string | null
@@ -19656,6 +19878,13 @@ export type Database = {
           validation_status?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "tenant_sharepoint_settings_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "sharepoint_folder_templates"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "tenant_sharepoint_settings_tenant_id_fkey"
             columns: ["tenant_id"]
