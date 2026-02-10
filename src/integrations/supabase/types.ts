@@ -5509,6 +5509,7 @@ export type Database = {
           client_id: string
           created_at: string
           created_by: string | null
+          dedupe_key: string | null
           entity_id: string | null
           entity_type: string | null
           event_type: string
@@ -5526,6 +5527,7 @@ export type Database = {
           client_id: string
           created_at?: string
           created_by?: string | null
+          dedupe_key?: string | null
           entity_id?: string | null
           entity_type?: string | null
           event_type: string
@@ -5543,6 +5545,7 @@ export type Database = {
           client_id?: string
           created_at?: string
           created_by?: string | null
+          dedupe_key?: string | null
           entity_id?: string | null
           entity_type?: string | null
           event_type?: string

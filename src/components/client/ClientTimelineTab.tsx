@@ -27,6 +27,7 @@ interface ClientTimelineTabProps {
 
 const EVENT_ICONS: Record<string, React.ElementType> = {
   meeting_synced: Calendar,
+  meeting_artifacts_captured: FileCheck,
   time_posted: Timer,
   time_ignored: Timer,
   email_sent: Mail,
@@ -35,6 +36,7 @@ const EVENT_ICONS: Record<string, React.ElementType> = {
   email_attachment_saved: FileCheck,
   document_uploaded: FileText,
   document_downloaded: FileDown,
+  document_shared_to_client: FileText,
   task_completed_team: CheckSquare,
   task_completed_client: CheckSquare,
   tasks_created_from_minutes: ListTodo,
@@ -44,13 +46,18 @@ const EVENT_ICONS: Record<string, React.ElementType> = {
   note_unpinned: PinOff,
   sharepoint_doc_linked: Link2,
   sharepoint_root_configured: Link2,
+  sharepoint_root_invalid: AlertTriangle,
   minutes_draft_created: FileText,
+  minutes_draft_updated: FileText,
   minutes_published_pdf: FileCheck,
   microsoft_sync_failed: AlertTriangle,
+  microsoft_connected: Link2,
+  microsoft_disconnected: AlertTriangle,
 };
 
 const EVENT_COLORS: Record<string, string> = {
   meeting_synced: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
+  meeting_artifacts_captured: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
   time_posted: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
   time_ignored: 'bg-muted text-muted-foreground',
   email_sent: 'bg-cyan-100 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-400',
@@ -59,6 +66,7 @@ const EVENT_COLORS: Record<string, string> = {
   email_attachment_saved: 'bg-cyan-100 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-400',
   document_uploaded: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
   document_downloaded: 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400',
+  document_shared_to_client: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
   task_completed_team: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400',
   task_completed_client: 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400',
   tasks_created_from_minutes: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400',
@@ -68,9 +76,13 @@ const EVENT_COLORS: Record<string, string> = {
   note_unpinned: 'bg-muted text-muted-foreground',
   sharepoint_doc_linked: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
   sharepoint_root_configured: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
+  sharepoint_root_invalid: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
   minutes_draft_created: 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400',
+  minutes_draft_updated: 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400',
   minutes_published_pdf: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
   microsoft_sync_failed: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
+  microsoft_connected: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
+  microsoft_disconnected: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
 };
 
 const FILTER_OPTIONS = [

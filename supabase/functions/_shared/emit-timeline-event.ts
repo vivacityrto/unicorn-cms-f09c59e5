@@ -24,6 +24,7 @@ export interface TimelineEventInput {
   metadata?: Record<string, unknown>;
   created_by?: string | null;
   occurred_at?: string; // ISO timestamp, defaults to now
+  dedupe_key?: string | null; // Prevents duplicate events when not null
 }
 
 /**
@@ -31,7 +32,7 @@ export interface TimelineEventInput {
  * 
  * @param supabase - Service role client (bypasses RLS)
  * @param event - The event to emit
- * @returns The created event ID, or null on failure
+ * @returns The created event ID, or null on failure (including dedupe conflicts)
  */
 export async function emitTimelineEvent(
   supabase: SupabaseClient,
@@ -57,11 +58,17 @@ export async function emitTimelineEvent(
         metadata: safeMetadata,
         created_by: event.created_by || null,
         occurred_at: event.occurred_at || new Date().toISOString(),
+        dedupe_key: event.dedupe_key || null,
       })
       .select("id")
       .single();
 
     if (error) {
+      // Dedupe conflict is expected — not an error
+      if (error.code === "23505" && event.dedupe_key) {
+        console.log("Timeline event deduped:", event.dedupe_key);
+        return null;
+      }
       console.error("Failed to emit timeline event:", error.message);
       return null;
     }
@@ -77,9 +84,11 @@ export async function emitTimelineEvent(
         client_id: event.client_id,
         event_type: event.event_type,
         source: event.source,
+        visibility: event.visibility || "internal",
         entity_type: event.entity_type,
         entity_id: event.entity_id,
         package_id: event.package_id,
+        dedupe_key: event.dedupe_key || null,
       },
     }).then(() => {});
 
@@ -88,6 +97,41 @@ export async function emitTimelineEvent(
     console.error("emitTimelineEvent exception:", err);
     return null;
   }
+}
+
+/**
+ * Emit both an internal and client-visible event for published outputs.
+ * Used for actions like publishing minutes PDF where Vivacity sees the internal
+ * event and clients see a sanitised client-visible event.
+ */
+export async function emitPublishEvents(
+  supabase: SupabaseClient,
+  event: Omit<TimelineEventInput, "visibility">,
+  clientTitle?: string,
+  clientBody?: string,
+): Promise<{ internalId: string | null; clientId: string | null }> {
+  const [internalId, clientId] = await Promise.all([
+    emitTimelineEvent(supabase, {
+      ...event,
+      visibility: "internal",
+      dedupe_key: event.dedupe_key ? `int_${event.dedupe_key}` : null,
+    }),
+    emitTimelineEvent(supabase, {
+      ...event,
+      visibility: "client",
+      source: "unicorn", // Client events always show as Unicorn source
+      title: clientTitle || event.title,
+      body: clientBody || event.body,
+      // Strip internal metadata for client event
+      metadata: {
+        entity_type: event.entity_type,
+        entity_id: event.entity_id,
+      },
+      dedupe_key: event.dedupe_key ? `cli_${event.dedupe_key}` : null,
+    }),
+  ]);
+
+  return { internalId, clientId };
 }
 
 /**

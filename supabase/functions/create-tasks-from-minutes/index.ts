@@ -214,8 +214,9 @@ Deno.serve(async (req) => {
         title: `${tasksCreatedCount} task${tasksCreatedCount > 1 ? "s" : ""} created from "${meetingTitle}" minutes`,
         body: `Actions converted to tasks from meeting on ${meetingDate}`,
         source: "microsoft",
-        entity_type: "meeting",
-        entity_id: minutes.meeting_id,
+        visibility: "internal",
+        entity_type: "meeting_minutes",
+        entity_id: minutes.id,
         metadata: {
           meeting_id: minutes.meeting_id,
           minutes_id: minutes.id,
@@ -223,6 +224,7 @@ Deno.serve(async (req) => {
           tasks_skipped: skippedActions.length,
         },
         created_by: user.id,
+        dedupe_key: `tasks_from_min:${minutes.id}:${crypto.randomUUID().substring(0, 8)}`,
       });
     }
 

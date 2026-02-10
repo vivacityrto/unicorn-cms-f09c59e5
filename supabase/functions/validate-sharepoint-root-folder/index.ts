@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { emitTimelineEvent } from "../_shared/emit-timeline-event.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -242,6 +243,24 @@ serve(async (req) => {
       root_name: rootName,
       validation_error: null,
       last_validated_at: new Date().toISOString(),
+    });
+
+    // Emit timeline event: sharepoint_root_configured
+    await emitTimelineEvent(supabaseAdmin, {
+      tenant_id: tenant_id,
+      client_id: String(tenant_id),
+      event_type: "sharepoint_root_configured",
+      title: `SharePoint root folder configured: ${rootName}`,
+      source: "microsoft",
+      visibility: "internal",
+      entity_type: "tenant_sharepoint_settings",
+      metadata: {
+        root_name: rootName,
+        drive_id: driveId,
+        root_item_id: rootItemId,
+      },
+      created_by: user.id,
+      dedupe_key: `sp_root:${tenant_id}:${new Date().toISOString().split('T')[0]}`,
     });
 
     return new Response(

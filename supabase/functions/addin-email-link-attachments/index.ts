@@ -9,6 +9,7 @@ import {
   logFailedAction,
   type AddinTokenPayload 
 } from "../_shared/addin-auth.ts";
+import { emitTimelineEvent } from "../_shared/emit-timeline-event.ts";
 
 const FUNCTION_NAME = 'addin-email-link-attachments';
 
@@ -192,6 +193,27 @@ serve(async (req) => {
     }
 
     console.log('[addin-email-link-attachments] Document links created:', insertedLinks?.length || 0);
+
+    // Emit timeline event: email_attachment_saved
+    if (insertedLinks && insertedLinks.length > 0) {
+      await emitTimelineEvent(supabaseAdmin, {
+        tenant_id: tenantId,
+        client_id: body.client_id,
+        event_type: "email_attachment_saved",
+        title: `${insertedLinks.length} email attachment${insertedLinks.length > 1 ? 's' : ''} saved`,
+        source: "microsoft",
+        visibility: "internal",
+        entity_type: "email_message",
+        entity_id: emailMessage.id,
+        package_id: packageId ? parseInt(String(packageId), 10) : null,
+        metadata: {
+          filenames: body.attachments.map(a => a.file_name),
+          count: insertedLinks.length,
+        },
+        created_by: tokenPayload.user_uuid,
+        dedupe_key: `email_att:${emailMessage.id}:${insertedLinks.length}`,
+      });
+    }
 
     // Build response matching API contract
     const linked = insertedLinks?.map(link => ({

@@ -749,24 +749,27 @@ Deno.serve(async (req) => {
     }
 
     // Emit timeline event
+    const isUpdate = existingMinutes && existingMinutes.length > 0;
     await emitTimelineEvent(supabase, {
       tenant_id: meeting.tenant_id,
       client_id: String(meeting.tenant_id),
-      event_type: "minutes_draft_created",
-      title: `Minutes draft created for "${meeting.title || "Meeting"}"`,
+      event_type: isUpdate ? "minutes_draft_updated" : "minutes_draft_created",
+      title: `Minutes draft ${isUpdate ? "updated" : "created"} for "${meeting.title || "Meeting"}"`,
       body: `${attendees.length} attendees${recapText ? ", Copilot recap included" : ""}`,
       source: "microsoft",
-      entity_type: "meeting",
-      entity_id: meeting_id,
+      visibility: "internal",
+      entity_type: "meeting_minutes",
+      entity_id: minutesId,
       metadata: {
         minutes_id: minutesId,
-        meeting_id,
+        meeting_id: meeting_id,
         version,
         attendees_count: attendees.length,
         recap_found: !!recapText,
-        recap_source: recapSource,
+        source: recapText ? "copilot" : "manual",
       },
       created_by: user.id,
+      dedupe_key: `min_draft:${minutesId}:v${version}`,
     });
 
     return new Response(
