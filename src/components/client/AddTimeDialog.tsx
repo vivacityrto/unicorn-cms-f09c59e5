@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -21,11 +21,19 @@ import {
 } from '@/components/ui/select';
 import { useTimeTracking } from '@/hooks/useTimeTracking';
 
+interface PackageOption {
+  id: number;
+  package_id: number;
+  package_name: string;
+}
+
 interface AddTimeDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   tenantId: number;
   clientId: number;
+  defaultPackageId?: number | null;
+  packages?: PackageOption[];
 }
 
 const WORK_TYPES = [
@@ -38,7 +46,7 @@ const WORK_TYPES = [
   { value: 'admin', label: 'Admin' }
 ];
 
-export function AddTimeDialog({ open, onOpenChange, tenantId, clientId }: AddTimeDialogProps) {
+export function AddTimeDialog({ open, onOpenChange, tenantId, clientId, defaultPackageId, packages = [] }: AddTimeDialogProps) {
   const { addTimeEntry } = useTimeTracking(clientId);
   const [hours, setHours] = useState('0');
   const [minutes, setMinutes] = useState('30');
@@ -47,20 +55,30 @@ export function AddTimeDialog({ open, onOpenChange, tenantId, clientId }: AddTim
   const [notes, setNotes] = useState('');
   const [isBillable, setIsBillable] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [selectedPackageId, setSelectedPackageId] = useState<number | null>(defaultPackageId || null);
+
+  // Sync default when dialog opens
+  useEffect(() => {
+    if (open) {
+      setSelectedPackageId(defaultPackageId || null);
+    }
+  }, [open, defaultPackageId]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     const totalMinutes = (parseInt(hours) || 0) * 60 + (parseInt(minutes) || 0);
-    
     if (totalMinutes <= 0) return;
+
+    // Require package if packages exist
+    if (packages.length > 0 && !selectedPackageId) return;
     
     setSaving(true);
     const result = await addTimeEntry(
       tenantId,
       totalMinutes,
       date,
-      null,
+      selectedPackageId,
       null,
       null,
       workType,
@@ -82,7 +100,10 @@ export function AddTimeDialog({ open, onOpenChange, tenantId, clientId }: AddTim
     setWorkType('general');
     setNotes('');
     setIsBillable(true);
+    setSelectedPackageId(defaultPackageId || null);
   };
+
+  const needsPackage = packages.length > 0 && !selectedPackageId;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -95,6 +116,32 @@ export function AddTimeDialog({ open, onOpenChange, tenantId, clientId }: AddTim
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Package selector */}
+          {packages.length > 0 && (
+            <div className="space-y-2">
+              <Label htmlFor="package">Package *</Label>
+              {packages.length === 1 ? (
+                <div className="text-sm font-medium py-2">{packages[0].package_name}</div>
+              ) : (
+                <Select
+                  value={selectedPackageId?.toString() || ''}
+                  onValueChange={(v) => setSelectedPackageId(v ? Number(v) : null)}
+                >
+                  <SelectTrigger id="package">
+                    <SelectValue placeholder="Select package" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {packages.map(pkg => (
+                      <SelectItem key={pkg.id} value={pkg.id.toString()}>
+                        {pkg.package_name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            </div>
+          )}
+
           {/* Duration */}
           <div className="space-y-2">
             <Label>Duration</Label>
@@ -182,7 +229,7 @@ export function AddTimeDialog({ open, onOpenChange, tenantId, clientId }: AddTim
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
-            <Button type="submit" disabled={saving}>
+            <Button type="submit" disabled={saving || needsPackage}>
               {saving ? 'Saving...' : 'Add Time'}
             </Button>
           </DialogFooter>
