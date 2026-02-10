@@ -2,7 +2,7 @@ import { useState, useRef } from 'react';
 import { format } from 'date-fns';
 import {
   FileText, Save, Send, Loader2, CheckCircle2, Plus, Trash2, Download,
-  RefreshCw, Sparkles, AlertTriangle, Check, X, ClipboardPaste,
+  RefreshCw, Sparkles, AlertTriangle, Check, X, ClipboardPaste, ListTodo, Link2, Unlink,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -271,6 +271,7 @@ export function MeetingMinutesPanel({ meetingId, isVivacityTeam }: MeetingMinute
     copilotExtracted, copilotStoreRaw,
     applyCopilotContent, discardCopilotContent, resetCopilotExtraction,
     generateDraft, isGeneratingDraft, draftResult, resetDraftResult,
+    createTasks, isCreatingTasks, actionTasks,
   } = useTeamsMeetingMinutes(meetingId);
 
   const [isEditing, setIsEditing] = useState(false);
@@ -775,7 +776,28 @@ export function MeetingMinutesPanel({ meetingId, isVivacityTeam }: MeetingMinute
 
         {content.actions?.length > 0 && (
           <div>
-            <div className="text-xs font-medium text-muted-foreground mb-1">Actions</div>
+            <div className="flex items-center justify-between mb-1">
+              <div className="text-xs font-medium text-muted-foreground">Actions</div>
+              {isVivacityTeam && !isPublished && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-6 px-2 text-xs gap-1"
+                  disabled={isCreatingTasks || content.actions.length === 0}
+                  onClick={() => {
+                    // Ensure all actions have action_ids
+                    const actionsWithIds = content.actions.map((a, idx) => ({
+                      ...a,
+                      action_id: a.action_id || `action-${idx}-${Date.now()}`,
+                    }));
+                    createTasks({ minutesId: minutes.id, actions: actionsWithIds });
+                  }}
+                >
+                  {isCreatingTasks ? <Loader2 className="h-3 w-3 animate-spin" /> : <ListTodo className="h-3 w-3" />}
+                  Create all tasks
+                </Button>
+              )}
+            </div>
             <div className="border rounded overflow-hidden">
               <table className="w-full text-xs">
                 <thead className="bg-muted/50">
@@ -784,20 +806,58 @@ export function MeetingMinutesPanel({ meetingId, isVivacityTeam }: MeetingMinute
                     <th className="text-left p-1.5 font-medium w-20">Owner</th>
                     <th className="text-left p-1.5 font-medium w-20">Due</th>
                     <th className="text-left p-1.5 font-medium w-16">Status</th>
+                    {isVivacityTeam && <th className="text-left p-1.5 font-medium w-16">Task</th>}
                   </tr>
                 </thead>
                 <tbody>
-                  {content.actions.map((a, i) => (
-                    <tr key={i} className="border-t">
-                      <td className="p-1.5">{a.action}</td>
-                      <td className="p-1.5">{a.owner}</td>
-                      <td className="p-1.5">{a.due_date}</td>
-                      <td className="p-1.5">{a.status || 'Open'}</td>
-                    </tr>
-                  ))}
+                  {content.actions.map((a, i) => {
+                    const linkedTask = actionTasks.find(
+                      (t) => t.action_id === a.action_id
+                    );
+                    return (
+                      <tr key={i} className="border-t">
+                        <td className="p-1.5">{a.action}</td>
+                        <td className="p-1.5">{a.owner}</td>
+                        <td className="p-1.5">{a.due_date}</td>
+                        <td className="p-1.5">{linkedTask?.status || a.status || 'Open'}</td>
+                        {isVivacityTeam && (
+                          <td className="p-1.5">
+                            {linkedTask ? (
+                              <Badge variant="outline" className="text-[9px] gap-0.5">
+                                <Link2 className="h-2.5 w-2.5" /> Linked
+                              </Badge>
+                            ) : (
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="h-5 px-1 text-[10px]"
+                                disabled={isCreatingTasks}
+                                onClick={() => {
+                                  const actionWithId = {
+                                    ...a,
+                                    action_id: a.action_id || `action-${i}-${Date.now()}`,
+                                  };
+                                  createTasks({ minutesId: minutes.id, actions: [actionWithId] });
+                                }}
+                              >
+                                <Plus className="h-2.5 w-2.5" /> Task
+                              </Button>
+                            )}
+                          </td>
+                        )}
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
+
+            {/* Task summary */}
+            {isVivacityTeam && actionTasks.length > 0 && (
+              <div className="mt-2 text-xs text-muted-foreground">
+                {actionTasks.length} task{actionTasks.length !== 1 ? 's' : ''} linked
+              </div>
+            )}
           </div>
         )}
 

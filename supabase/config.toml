@@ -143,3 +143,6 @@ verify_jwt = false
 
 [functions.generate-minutes-draft]
 verify_jwt = false
+
+[functions.create-tasks-from-minutes]
+verify_jwt = false
