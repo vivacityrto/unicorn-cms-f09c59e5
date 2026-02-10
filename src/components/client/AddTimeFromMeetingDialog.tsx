@@ -19,6 +19,13 @@ import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Calendar, Clock, Users, Check, AlertTriangle, FileText } from 'lucide-react';
 
 interface CalendarEvent {
@@ -31,11 +38,19 @@ interface CalendarEvent {
   tenant_id: number | null;
 }
 
+interface PackageOption {
+  id: number;
+  package_id: number;
+  package_name: string;
+}
+
 interface AddTimeFromMeetingDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   clientId: number;
   clientName: string;
+  defaultPackageId?: number | null;
+  packages?: PackageOption[];
   onSuccess?: () => Promise<void>;
 }
 
@@ -44,6 +59,8 @@ export function AddTimeFromMeetingDialog({
   onOpenChange,
   clientId,
   clientName,
+  defaultPackageId,
+  packages = [],
   onSuccess
 }: AddTimeFromMeetingDialogProps) {
   const { toast } = useToast();
@@ -55,6 +72,14 @@ export function AddTimeFromMeetingDialog({
   const [saveAsDraft, setSaveAsDraft] = useState(false);
   const [notes, setNotes] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [selectedPackageId, setSelectedPackageId] = useState<number | null>(defaultPackageId || null);
+
+  // Sync default package when dialog opens
+  useEffect(() => {
+    if (open) {
+      setSelectedPackageId(defaultPackageId || null);
+    }
+  }, [open, defaultPackageId]);
 
   // Fetch recent calendar events for the CURRENT USER only
   useEffect(() => {
@@ -66,14 +91,13 @@ export function AddTimeFromMeetingDialog({
       setNotes('');
       setSaveAsDraft(false);
 
-      // Fetch calendar events from the last 30 days for the current user only
       const thirtyDaysAgo = new Date();
       thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
       
       const { data, error } = await supabase
         .from('calendar_events')
         .select('id, title, start_at, end_at, attendees, tenant_id')
-        .eq('user_id', user.id) // Filter by current user's calendar events only
+        .eq('user_id', user.id)
         .gte('start_at', thirtyDaysAgo.toISOString())
         .lte('start_at', new Date().toISOString())
         .order('start_at', { ascending: false })
@@ -83,7 +107,6 @@ export function AddTimeFromMeetingDialog({
         console.error('Error fetching events:', error);
         setEvents([]);
       } else {
-        // Calculate duration for each event
         const eventsWithDuration = (data || []).map(e => ({
           ...e,
           duration_minutes: e.end_at && e.start_at 
@@ -102,20 +125,18 @@ export function AddTimeFromMeetingDialog({
 
   const handleSubmit = async () => {
     if (!selectedEvent) {
-      toast({
-        title: 'No meeting selected',
-        description: 'Please select a meeting to import time from.',
-        variant: 'destructive'
-      });
+      toast({ title: 'No meeting selected', description: 'Please select a meeting to import time from.', variant: 'destructive' });
       return;
     }
 
     if (selectedEvent.duration_minutes <= 0) {
-      toast({
-        title: 'Invalid meeting duration',
-        description: 'This meeting has no recorded duration.',
-        variant: 'destructive'
-      });
+      toast({ title: 'Invalid meeting duration', description: 'This meeting has no recorded duration.', variant: 'destructive' });
+      return;
+    }
+
+    // Require package if packages exist
+    if (packages.length > 0 && !selectedPackageId) {
+      toast({ title: 'Select a package', description: 'Choose a package before importing time.', variant: 'destructive' });
       return;
     }
 
@@ -130,7 +151,7 @@ export function AddTimeFromMeetingDialog({
         p_minutes: selectedEvent.duration_minutes,
         p_work_date: workDate,
         p_notes: notes || `Imported from meeting: ${selectedEvent.title}`,
-        p_package_id: null, // Let the function find an active package
+        p_package_id: selectedPackageId || null,
         p_save_as_draft: saveAsDraft
       });
 
@@ -149,45 +170,33 @@ export function AddTimeFromMeetingDialog({
         throw new Error(result.error || 'Import failed');
       }
 
-      // Format time for display
       const hours = Math.floor((result.minutes_total || 0) / 60);
       const mins = (result.minutes_total || 0) % 60;
       const timeStr = hours > 0 ? `${hours}h ${mins}m` : `${mins}m`;
 
-      // Success toast
       toast({
         title: saveAsDraft 
           ? `Saved ${timeStr} as draft`
           : `Posted ${timeStr} to ${clientName}`,
         description: !result.package_allocated ? 'Not allocated to a package' : undefined,
         action: saveAsDraft ? (
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={() => navigate('/time-inbox')}
-          >
+          <Button variant="outline" size="sm" onClick={() => navigate('/time-inbox')}>
             Review Draft
           </Button>
         ) : undefined
       });
 
-      // Trigger refresh callback
-      if (onSuccess) {
-        await onSuccess();
-      }
-
+      if (onSuccess) await onSuccess();
       onOpenChange(false);
     } catch (err: unknown) {
       console.error('Import error:', err);
-      toast({
-        title: 'Failed to import time',
-        description: err instanceof Error ? err.message : 'An error occurred',
-        variant: 'destructive'
-      });
+      toast({ title: 'Failed to import time', description: err instanceof Error ? err.message : 'An error occurred', variant: 'destructive' });
     } finally {
       setSubmitting(false);
     }
   };
+
+  const needsPackage = packages.length > 0 && !selectedPackageId;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -216,7 +225,7 @@ export function AddTimeFromMeetingDialog({
               <p className="text-sm">Meetings from the last 30 days will appear here</p>
             </div>
           ) : (
-            <ScrollArea className="h-[350px] pr-4">
+            <ScrollArea className="h-[300px] pr-4">
               <div className="space-y-2">
                 {events.map(event => {
                   const isSelected = selectedEventId === event.id;
@@ -239,9 +248,7 @@ export function AddTimeFromMeetingDialog({
                       <div className="flex items-start justify-between gap-2">
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2">
-                            {isSelected && (
-                              <Check className="h-4 w-4 text-primary shrink-0" />
-                            )}
+                            {isSelected && <Check className="h-4 w-4 text-primary shrink-0" />}
                             <p className="font-medium truncate">{event.title}</p>
                           </div>
                           <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
@@ -279,9 +286,31 @@ export function AddTimeFromMeetingDialog({
           )}
         </div>
 
-        {/* Notes input */}
+        {/* Options area */}
         {selectedEvent && (
           <div className="space-y-3 pt-4 border-t">
+            {/* Package selector */}
+            {packages.length > 1 && (
+              <div className="space-y-2">
+                <Label htmlFor="meeting-package" className="text-sm">Package *</Label>
+                <Select
+                  value={selectedPackageId?.toString() || ''}
+                  onValueChange={(v) => setSelectedPackageId(v ? Number(v) : null)}
+                >
+                  <SelectTrigger id="meeting-package">
+                    <SelectValue placeholder="Select package" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {packages.map(pkg => (
+                      <SelectItem key={pkg.id} value={pkg.id.toString()}>
+                        {pkg.package_name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
             <div className="space-y-2">
               <Label htmlFor="notes" className="text-sm flex items-center gap-1">
                 <FileText className="h-3.5 w-3.5" />
@@ -303,10 +332,7 @@ export function AddTimeFromMeetingDialog({
                 checked={saveAsDraft}
                 onCheckedChange={(checked) => setSaveAsDraft(checked === true)}
               />
-              <Label 
-                htmlFor="saveAsDraft" 
-                className="text-sm font-normal cursor-pointer"
-              >
+              <Label htmlFor="saveAsDraft" className="text-sm font-normal cursor-pointer">
                 Save as draft (review before posting)
               </Label>
             </div>
@@ -326,7 +352,7 @@ export function AddTimeFromMeetingDialog({
           </Button>
           <Button 
             onClick={handleSubmit}
-            disabled={!selectedEvent || submitting}
+            disabled={!selectedEvent || submitting || needsPackage}
           >
             {submitting ? 'Importing...' : saveAsDraft ? 'Save as Draft' : 'Post Time'}
           </Button>

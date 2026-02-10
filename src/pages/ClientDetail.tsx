@@ -29,7 +29,7 @@ import {
   Activity,
   LogIn,
   CheckSquare,
-  Calendar,
+  
   Save,
   Loader2,
   Mail,
@@ -42,15 +42,11 @@ import { ClientPackagesTab } from '@/components/client/ClientPackagesTab';
 import { ClientIntegrationsTab } from '@/components/client/ClientIntegrationsTab';
 import { DocumentsHub } from '@/components/documents/DocumentsHub';
 import { TenantUsersTab } from '@/components/client/TenantUsersTab';
-import { ClientTimeWidget } from '@/components/client/ClientTimeWidget';
+import { TenantTimeTrackerBar } from '@/components/client/TenantTimeTrackerBar';
 import { ClientTimeSummaryCard } from '@/components/client/ClientTimeSummaryCard';
 import { RiskLevelBadge } from '@/components/client/RiskLevelBadge';
 import { CSCAssignmentSelector } from '@/components/client/CSCAssignmentSelector';
-import { AddTimeFromMeetingDialog } from '@/components/client/AddTimeFromMeetingDialog';
 import { ViewAsClientButton } from '@/components/client/ViewAsClientButton';
-import { useInvalidateTimeTracking, timeTrackingKeys } from '@/hooks/useTimeTrackingQuery';
-import { useInvalidatePackageUsage, packageUsageKeys } from '@/hooks/usePackageUsageQuery';
-import { useQueryClient } from '@tanstack/react-query';
 
 interface TenantBasic {
   id: number;
@@ -69,12 +65,8 @@ export default function ClientDetail() {
   const [profileHasChanges, setProfileHasChanges] = useState(false);
   const [profileSaving, setProfileSaving] = useState(false);
   const [triggerProfileSave, setTriggerProfileSave] = useState<(() => void) | null>(null);
-  const [addTimeFromMeetingOpen, setAddTimeFromMeetingOpen] = useState(false);
 
   const tenantIdNum = tenantId ? parseInt(tenantId) : null;
-  
-  // React Query client for cache invalidation
-  const queryClient = useQueryClient();
   
   const { 
     profile, 
@@ -336,36 +328,13 @@ export default function ClientDetail() {
         </div>
       </div>
 
+      {/* Sticky Time Tracker Bar */}
+      <TenantTimeTrackerBar tenantId={tenantIdNum!} tenantName={tenant.name} />
+
       {/* Tab Content */}
       <div className="p-6">
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsContent value="overview" className="mt-0 space-y-6">
-            {/* Engagement Controls Bar */}
-            <Card>
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between gap-4">
-                  <div className="flex items-center gap-4">
-                    <ClientTimeWidget 
-                      tenantId={tenantIdNum!} 
-                      clientId={tenantIdNum!}
-                    />
-                    <Button 
-                      variant="outline" 
-                      size="sm"
-                      onClick={() => setAddTimeFromMeetingOpen(true)}
-                    >
-                      <Calendar className="h-4 w-4 mr-2" />
-                      Add time from meeting
-                    </Button>
-                  </div>
-                  <div className="text-center border-l border-border pl-4">
-                    <p className="text-2xl font-bold">{packages.length}</p>
-                    <p className="text-xs text-muted-foreground">Packages</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
             {/* Time Summary Card */}
             <ClientTimeSummaryCard clientId={tenantIdNum!} />
             
@@ -454,46 +423,6 @@ export default function ClientDetail() {
         </Tabs>
       </div>
 
-      {/* Add Time from Meeting Dialog */}
-      <AddTimeFromMeetingDialog
-        open={addTimeFromMeetingOpen}
-        onOpenChange={setAddTimeFromMeetingOpen}
-        clientId={tenantIdNum!}
-        clientName={tenant.name}
-        onSuccess={async () => {
-          // Invalidate React Query caches for time and package data with immediate refetch
-          if (tenantIdNum) {
-            await Promise.all([
-              queryClient.invalidateQueries({ 
-                queryKey: timeTrackingKeys.summary(tenantIdNum),
-                refetchType: 'all'
-              }),
-              queryClient.invalidateQueries({ 
-                queryKey: timeTrackingKeys.entries(tenantIdNum),
-                refetchType: 'all'
-              }),
-              queryClient.invalidateQueries({ 
-                queryKey: packageUsageKeys.packages(tenantIdNum),
-                refetchType: 'all'
-              }),
-              queryClient.invalidateQueries({ 
-                queryKey: packageUsageKeys.alerts(tenantIdNum),
-                refetchType: 'all'
-              }),
-              // Invalidate all package usage queries for this client
-              queryClient.invalidateQueries({ 
-                predicate: (query) => {
-                  const key = query.queryKey;
-                  return Array.isArray(key) && 
-                         key[0] === 'package-usage' && 
-                         key[2] === tenantIdNum;
-                },
-                refetchType: 'all'
-              })
-            ]);
-          }
-        }}
-      />
     </div>
   );
 }
