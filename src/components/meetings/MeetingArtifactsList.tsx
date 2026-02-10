@@ -117,7 +117,7 @@ export function MeetingArtifactsList({
           {artifacts.map((artifact) => {
             const Icon = artifactIcons[artifact.artifact_type] || File;
             const label = artifactLabels[artifact.artifact_type] || artifact.artifact_type;
-            const isShared = artifact.visibility === 'client';
+            const isShared = artifact.visibility === 'shared_with_client';
 
             return (
               <div

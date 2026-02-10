@@ -12834,61 +12834,67 @@ export type Database = {
           },
         ]
       }
-      meeting_minutes_drafts: {
+      meeting_minutes: {
         Row: {
-          content: string
+          content: Json
           created_at: string
           created_by: string
           id: string
           meeting_id: string
-          portal_document_id: string | null
+          pdf_document_id: string | null
+          pdf_storage_path: string | null
           published_at: string | null
           published_by: string | null
           status: string
           tenant_id: number
           title: string
           updated_at: string
+          version: number
         }
         Insert: {
-          content?: string
+          content?: Json
           created_at?: string
           created_by: string
           id?: string
           meeting_id: string
-          portal_document_id?: string | null
+          pdf_document_id?: string | null
+          pdf_storage_path?: string | null
           published_at?: string | null
           published_by?: string | null
           status?: string
           tenant_id: number
           title: string
           updated_at?: string
+          version?: number
         }
         Update: {
-          content?: string
+          content?: Json
           created_at?: string
           created_by?: string
           id?: string
           meeting_id?: string
-          portal_document_id?: string | null
+          pdf_document_id?: string | null
+          pdf_storage_path?: string | null
           published_at?: string | null
           published_by?: string | null
           status?: string
           tenant_id?: number
           title?: string
           updated_at?: string
+          version?: number
         }
         Relationships: [
           {
-            foreignKeyName: "meeting_minutes_drafts_meeting_id_fkey"
+            foreignKeyName: "meeting_minutes_meeting_id_fkey"
             columns: ["meeting_id"]
-            isOneToOne: true
+            isOneToOne: false
             referencedRelation: "meetings"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "meeting_minutes_drafts_meeting_id_fkey"
+            foreignKeyName: "meeting_minutes_meeting_id_fkey"
             columns: ["meeting_id"]
-            isOneToOne: true
+            isOneToOne: false
             referencedRelation: "meetings_shared"
             referencedColumns: ["id"]
           },

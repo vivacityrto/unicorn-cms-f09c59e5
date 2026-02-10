@@ -565,18 +565,18 @@ serve(async (req) => {
       }
     }
 
-    // ── Auto-create minutes draft ───────────────────────────────────
+    // ── Auto-create structured meeting_minutes draft ────────────────
 
     let minutesDraftCreated = false;
     try {
-      // Check if draft already exists
-      const { data: existingDraft } = await supabaseAdmin
-        .from('meeting_minutes_drafts')
+      // Check if minutes already exist
+      const { data: existingMinutes } = await supabaseAdmin
+        .from('meeting_minutes')
         .select('id')
         .eq('meeting_id', meetingId)
         .maybeSingle();
 
-      if (!existingDraft) {
+      if (!existingMinutes) {
         const startTime = graphEvent.start?.dateTime
           ? new Date(graphEvent.start.dateTime + 'Z')
           : new Date(meeting.starts_at);
@@ -589,40 +589,38 @@ serve(async (req) => {
           .map((a: any) => a.emailAddress?.name || a.emailAddress?.address)
           .filter(Boolean);
 
-        const draftContent = [
-          `Meeting: ${meeting.title}`,
-          `Date: ${startTime.toISOString().split('T')[0]}`,
-          `Duration: ${durationMins} minutes`,
-          attendeeNames.length > 0 ? `Attendees: ${attendeeNames.join(', ')}` : '',
-          '',
-          '---',
-          '',
-          'Key Discussion Points:',
-          '',
-          '',
-          'Decisions Made:',
-          '',
-          '',
-          'Action Items:',
-          '',
-          '',
-        ].filter(line => line !== undefined).join('\n');
+        const dateStr = startTime.toISOString().split('T')[0];
+        const timeStr = startTime.toISOString().split('T')[1]?.substring(0, 5) || '';
 
-        const { error: draftError } = await supabaseAdmin
-          .from('meeting_minutes_drafts')
+        const structuredContent = {
+          meeting_title: meeting.title,
+          meeting_date: dateStr,
+          meeting_time: timeStr,
+          duration_minutes: durationMins,
+          attendees: attendeeNames,
+          apologies: [],
+          agenda_items: [],
+          discussion_notes: '',
+          decisions: [],
+          actions: [],
+          next_meeting: '',
+        };
+
+        const { error: minutesError } = await supabaseAdmin
+          .from('meeting_minutes')
           .insert({
             tenant_id: meeting.tenant_id,
             meeting_id: meetingId,
-            title: `Minutes - ${meeting.title}`,
-            content: draftContent,
+            title: `Meeting Minutes - ${meeting.title} - ${dateStr}`,
+            content: structuredContent,
             created_by: user.id,
           });
 
-        if (draftError) {
-          console.warn('[sync-artifacts] Minutes draft creation failed:', draftError);
+        if (minutesError) {
+          console.warn('[sync-artifacts] Minutes creation failed:', minutesError);
         } else {
           minutesDraftCreated = true;
-          console.log('[sync-artifacts] Minutes draft auto-created');
+          console.log('[sync-artifacts] Structured minutes draft auto-created');
         }
       }
     } catch (draftErr) {
