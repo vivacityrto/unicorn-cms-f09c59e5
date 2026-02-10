@@ -469,8 +469,8 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
           </DialogHeader>
           
           {selectedNote && (
-            <ScrollArea className="flex-1 min-h-0 max-h-[55vh]">
-              <div className="space-y-4 pr-2">
+            <div className="flex-1 min-h-0 overflow-y-auto max-h-[60vh] border rounded-md p-4">
+              <div className="space-y-4">
                 {/* Tags */}
                 {selectedNote.tags.length > 0 && (
                   <div className="flex items-center gap-1 flex-wrap">
@@ -488,17 +488,10 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
                   {selectedNote.note_details}
                 </div>
               </div>
-            </ScrollArea>
+            </div>
           )}
           
           <DialogFooter>
-            <Button variant="outline" size="sm" onClick={() => {
-              setIsViewDialogOpen(false);
-              if (selectedNote) handleOpenEdit(selectedNote);
-            }}>
-              <Edit className="h-4 w-4 mr-1" />
-              Edit
-            </Button>
             <Button variant="outline" onClick={() => setIsViewDialogOpen(false)}>
               Close
             </Button>
