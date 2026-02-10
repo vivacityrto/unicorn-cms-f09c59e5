@@ -16,6 +16,8 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Meeting, MeetingParticipant, MeetingNote, MeetingActionItem, useMeetings } from '@/hooks/useMeetings';
 import { useMeetingArtifacts } from '@/hooks/useMeetingArtifacts';
 import { MeetingArtifactsList } from '@/components/meetings/MeetingArtifactsList';
+import { MeetingMinutesDraftPanel } from '@/components/meetings/MeetingMinutesDraftPanel';
+import { useRBAC } from '@/hooks/useRBAC';
 import { useQuery } from '@tanstack/react-query';
 import { cn } from '@/lib/utils';
 
@@ -44,12 +46,16 @@ export function MeetingDetailDrawer({
     updateActionItem 
   } = useMeetings();
 
+  const { isVivacityTeam } = useRBAC();
+
   const {
     artifacts,
     isLoading: loadingArtifacts,
     isSyncing,
     syncArtifacts,
     lastSyncResult,
+    shareArtifact,
+    isSharingArtifact,
   } = useMeetingArtifacts(open ? meeting?.id ?? null : null);
 
   const [activeTab, setActiveTab] = useState('details');
@@ -91,6 +97,11 @@ export function MeetingDetailDrawer({
     ? `${hours}h ${minutes > 0 ? `${minutes}m` : ''}`
     : `${minutes}m`;
 
+  // Vivacity team sees artifacts tab; clients do not
+  const showArtifactsTab = isVivacityTeam && isOwner;
+  // Vivacity team sees minutes tab; clients do not see it at all
+  const showMinutesTab = isVivacityTeam && isOwner;
+
   const handleAddNote = async () => {
     if (!meeting.id || !newNote.trim()) return;
     setIsSavingNote(true);
@@ -114,6 +125,10 @@ export function MeetingDetailDrawer({
     const newStatus = item.status === 'completed' ? 'open' : 'completed';
     await updateActionItem({ itemId: item.id, status: newStatus });
     refetchActionItems();
+  };
+
+  const handleShareToggle = (artifactId: string, share: boolean) => {
+    shareArtifact({ artifactId, share });
   };
 
   return (
@@ -175,15 +190,23 @@ export function MeetingDetailDrawer({
               <>
                 <TabsTrigger value="notes">Notes</TabsTrigger>
                 <TabsTrigger value="actions">Actions</TabsTrigger>
-                <TabsTrigger value="artifacts" className="gap-1">
-                  <Paperclip className="h-3 w-3" />
-                  Artifacts
-                  {artifacts.length > 0 && (
-                    <Badge variant="secondary" className="h-4 px-1 text-[10px] ml-1">
-                      {artifacts.length}
-                    </Badge>
-                  )}
-                </TabsTrigger>
+                {showArtifactsTab && (
+                  <TabsTrigger value="artifacts" className="gap-1">
+                    <Paperclip className="h-3 w-3" />
+                    Artifacts
+                    {artifacts.length > 0 && (
+                      <Badge variant="secondary" className="h-4 px-1 text-[10px] ml-1">
+                        {artifacts.length}
+                      </Badge>
+                    )}
+                  </TabsTrigger>
+                )}
+                {showMinutesTab && (
+                  <TabsTrigger value="minutes" className="gap-1">
+                    <FileText className="h-3 w-3" />
+                    Minutes
+                  </TabsTrigger>
+                )}
               </>
             )}
           </TabsList>
@@ -391,18 +414,31 @@ export function MeetingDetailDrawer({
               )}
             </TabsContent>
 
-            <TabsContent value="artifacts" className="p-6 pt-4 mt-0">
-              <MeetingArtifactsList
-                artifacts={artifacts}
-                isLoading={loadingArtifacts}
-                isSyncing={isSyncing}
-                lastSyncResult={lastSyncResult}
-                onSync={() => meeting?.id && syncArtifacts(meeting.id)}
-                meetingMsSyncStatus={(meeting as any)?.ms_sync_status}
-                meetingMsSyncError={(meeting as any)?.ms_sync_error}
-                meetingMsLastSyncedAt={(meeting as any)?.ms_last_synced_at}
-              />
-            </TabsContent>
+            {showArtifactsTab && (
+              <TabsContent value="artifacts" className="p-6 pt-4 mt-0">
+                <MeetingArtifactsList
+                  artifacts={artifacts}
+                  isLoading={loadingArtifacts}
+                  isSyncing={isSyncing}
+                  lastSyncResult={lastSyncResult}
+                  onSync={() => meeting?.id && syncArtifacts(meeting.id)}
+                  onShareToggle={handleShareToggle}
+                  isSharingArtifact={isSharingArtifact}
+                  meetingMsSyncStatus={(meeting as any)?.ms_sync_status}
+                  meetingMsSyncError={(meeting as any)?.ms_sync_error}
+                  meetingMsLastSyncedAt={(meeting as any)?.ms_last_synced_at}
+                />
+              </TabsContent>
+            )}
+
+            {showMinutesTab && (
+              <TabsContent value="minutes" className="p-6 pt-4 mt-0">
+                <MeetingMinutesDraftPanel
+                  meetingId={meeting.id}
+                  isVivacityTeam={isVivacityTeam}
+                />
+              </TabsContent>
+            )}
           </ScrollArea>
         </Tabs>
       </SheetContent>

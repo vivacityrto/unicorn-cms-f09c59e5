@@ -15,6 +15,9 @@ export interface MeetingArtifact {
   captured_at: string;
   captured_by: string;
   metadata: Record<string, unknown>;
+  visibility: 'internal' | 'client';
+  shared_at: string | null;
+  shared_by: string | null;
 }
 
 export interface SyncResult {
@@ -24,6 +27,7 @@ export interface SyncResult {
   artifacts_created: number;
   errors: string[];
   ms_sync_status: string;
+  minutes_draft_created?: boolean;
 }
 
 export function useMeetingArtifacts(meetingId: string | null) {
@@ -66,15 +70,61 @@ export function useMeetingArtifacts(meetingId: string | null) {
       } else {
         toast.success(`Found ${result.artifacts_found} artifact${result.artifacts_found !== 1 ? 's' : ''}`);
       }
+      if (result.minutes_draft_created) {
+        toast.success('Minutes draft created');
+      }
       if (result.errors?.length > 0) {
         toast.warning(`${result.errors.length} error(s) during sync`);
       }
       queryClient.invalidateQueries({ queryKey: ['meeting-artifacts', result.meeting_id] });
       queryClient.invalidateQueries({ queryKey: ['meetings'] });
+      queryClient.invalidateQueries({ queryKey: ['meeting-minutes-draft', result.meeting_id] });
     },
     onError: (error) => {
       console.error('Artifact sync failed:', error);
       toast.error(error instanceof Error ? error.message : 'Failed to sync artifacts');
+    },
+  });
+
+  const shareArtifactMutation = useMutation({
+    mutationFn: async ({ artifactId, share }: { artifactId: string; share: boolean }) => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Not authenticated');
+
+      const updateData: Record<string, unknown> = {
+        visibility: share ? 'client' : 'internal',
+      };
+      if (share) {
+        updateData.shared_at = new Date().toISOString();
+        updateData.shared_by = user.id;
+      } else {
+        updateData.shared_at = null;
+        updateData.shared_by = null;
+      }
+
+      const { error } = await supabase
+        .from('meeting_artifacts')
+        .update(updateData)
+        .eq('id', artifactId);
+
+      if (error) throw error;
+
+      // Audit log
+      await supabase.from('audit_events').insert({
+        entity: 'meeting_artifact',
+        entity_id: artifactId,
+        action: share ? 'artifact_shared' : 'artifact_unshared',
+        user_id: user.id,
+        details: { visibility: share ? 'client' : 'internal' },
+      });
+    },
+    onSuccess: () => {
+      toast.success('Artifact visibility updated');
+      queryClient.invalidateQueries({ queryKey: ['meeting-artifacts', meetingId] });
+    },
+    onError: (error) => {
+      console.error('Share artifact failed:', error);
+      toast.error('Failed to update artifact visibility');
     },
   });
 
@@ -84,5 +134,7 @@ export function useMeetingArtifacts(meetingId: string | null) {
     syncArtifacts: syncMutation.mutate,
     isSyncing: syncMutation.isPending,
     lastSyncResult: syncMutation.data ?? null,
+    shareArtifact: shareArtifactMutation.mutate,
+    isSharingArtifact: shareArtifactMutation.isPending,
   };
 }

@@ -1,12 +1,14 @@
 import { format } from 'date-fns';
 import {
   Video, FileText, File, ExternalLink, RefreshCw,
-  AlertCircle, CheckCircle2, Clock, Loader2,
+  AlertCircle, CheckCircle2, Clock, Loader2, Share2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
 import { MeetingArtifact, SyncResult } from '@/hooks/useMeetingArtifacts';
 
 interface MeetingArtifactsListProps {
@@ -15,6 +17,8 @@ interface MeetingArtifactsListProps {
   isSyncing: boolean;
   lastSyncResult: SyncResult | null;
   onSync: () => void;
+  onShareToggle?: (artifactId: string, share: boolean) => void;
+  isSharingArtifact?: boolean;
   meetingMsSyncStatus?: string | null;
   meetingMsSyncError?: string | null;
   meetingMsLastSyncedAt?: string | null;
@@ -38,6 +42,8 @@ export function MeetingArtifactsList({
   isSyncing,
   lastSyncResult,
   onSync,
+  onShareToggle,
+  isSharingArtifact,
   meetingMsSyncStatus,
   meetingMsSyncError,
   meetingMsLastSyncedAt,
@@ -111,6 +117,7 @@ export function MeetingArtifactsList({
           {artifacts.map((artifact) => {
             const Icon = artifactIcons[artifact.artifact_type] || File;
             const label = artifactLabels[artifact.artifact_type] || artifact.artifact_type;
+            const isShared = artifact.visibility === 'client';
 
             return (
               <div
@@ -126,11 +133,36 @@ export function MeetingArtifactsList({
                     <Badge variant="outline" className="text-xs shrink-0">
                       {label}
                     </Badge>
+                    {isShared && (
+                      <Badge variant="secondary" className="text-xs shrink-0 gap-1">
+                        <Share2 className="h-3 w-3" />
+                        Shared
+                      </Badge>
+                    )}
                   </div>
                   <div className="text-xs text-muted-foreground mt-0.5">
                     Captured {format(new Date(artifact.captured_at), 'MMM d, yyyy HH:mm')}
+                    {artifact.shared_at && (
+                      <> · Shared {format(new Date(artifact.shared_at), 'MMM d, yyyy')}</>
+                    )}
                   </div>
                 </div>
+
+                {/* Share toggle - only shown when onShareToggle is provided (Vivacity team) */}
+                {onShareToggle && (
+                  <div className="flex items-center gap-2 shrink-0">
+                    <Label htmlFor={`share-${artifact.id}`} className="text-xs text-muted-foreground">
+                      Share
+                    </Label>
+                    <Switch
+                      id={`share-${artifact.id}`}
+                      checked={isShared}
+                      onCheckedChange={(checked) => onShareToggle(artifact.id, checked)}
+                      disabled={isSharingArtifact}
+                    />
+                  </div>
+                )}
+
                 {artifact.web_url && (
                   <a
                     href={artifact.web_url}

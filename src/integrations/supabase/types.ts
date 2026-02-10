@@ -12697,9 +12697,12 @@ export type Database = {
           item_id: string | null
           meeting_id: string
           metadata: Json | null
+          shared_at: string | null
+          shared_by: string | null
           tenant_id: number
           title: string
           updated_at: string
+          visibility: string
           web_url: string | null
         }
         Insert: {
@@ -12712,9 +12715,12 @@ export type Database = {
           item_id?: string | null
           meeting_id: string
           metadata?: Json | null
+          shared_at?: string | null
+          shared_by?: string | null
           tenant_id: number
           title: string
           updated_at?: string
+          visibility?: string
           web_url?: string | null
         }
         Update: {
@@ -12727,9 +12733,12 @@ export type Database = {
           item_id?: string | null
           meeting_id?: string
           metadata?: Json | null
+          shared_at?: string | null
+          shared_by?: string | null
           tenant_id?: number
           title?: string
           updated_at?: string
+          visibility?: string
           web_url?: string | null
         }
         Relationships: [
@@ -12821,6 +12830,66 @@ export type Database = {
             columns: ["calendar_event_id"]
             isOneToOne: false
             referencedRelation: "calendar_events_shared"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      meeting_minutes_drafts: {
+        Row: {
+          content: string
+          created_at: string
+          created_by: string
+          id: string
+          meeting_id: string
+          portal_document_id: string | null
+          published_at: string | null
+          published_by: string | null
+          status: string
+          tenant_id: number
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          content?: string
+          created_at?: string
+          created_by: string
+          id?: string
+          meeting_id: string
+          portal_document_id?: string | null
+          published_at?: string | null
+          published_by?: string | null
+          status?: string
+          tenant_id: number
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          created_by?: string
+          id?: string
+          meeting_id?: string
+          portal_document_id?: string | null
+          published_at?: string | null
+          published_by?: string | null
+          status?: string
+          tenant_id?: number
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meeting_minutes_drafts_meeting_id_fkey"
+            columns: ["meeting_id"]
+            isOneToOne: true
+            referencedRelation: "meetings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "meeting_minutes_drafts_meeting_id_fkey"
+            columns: ["meeting_id"]
+            isOneToOne: true
+            referencedRelation: "meetings_shared"
             referencedColumns: ["id"]
           },
         ]
