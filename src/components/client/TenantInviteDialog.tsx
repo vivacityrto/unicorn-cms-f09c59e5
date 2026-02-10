@@ -37,7 +37,7 @@ interface TenantInviteDialogProps {
 
 const TENANT_ROLES = [
   { value: 'Admin', label: 'Admin', description: 'Can manage users and settings', icon: Shield },
-  { value: 'General User', label: 'General User', description: 'Standard access to features', icon: UserIcon },
+  { value: 'User', label: 'General User', description: 'Standard access to features', icon: UserIcon },
 ];
 
 export function TenantInviteDialog({
@@ -51,7 +51,7 @@ export function TenantInviteDialog({
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
-  const [role, setRole] = useState('General User');
+  const [role, setRole] = useState('User');
   const [isSending, setIsSending] = useState(false);
   
   // Seat limit state
@@ -98,7 +98,7 @@ export function TenantInviteDialog({
     setFirstName('');
     setLastName('');
     setEmail('');
-    setRole('General User');
+    setRole('User');
     onOpenChange(false);
   };
 

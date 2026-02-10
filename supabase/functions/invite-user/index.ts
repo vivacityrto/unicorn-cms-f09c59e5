@@ -7,7 +7,7 @@ type UnicornRole =
   | "Team Leader"
   | "Team Member"
   | "Admin"
-  | "General User";
+  | "User";
 
 type Payload = {
   email: string;
@@ -24,7 +24,7 @@ const VIVACITY_ROLES: UnicornRole[] = [
   "Team Leader",
   "Team Member",
 ];
-const CLIENT_ROLES: UnicornRole[] = ["Admin", "General User"];
+const CLIENT_ROLES: UnicornRole[] = ["Admin", "User"];
 
 function isValidEmail(e: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
