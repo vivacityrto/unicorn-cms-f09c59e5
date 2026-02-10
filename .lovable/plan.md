@@ -1,76 +1,43 @@
 
 
-## Fix: Client Resource Hub layout leak + separate client/admin resource experiences
+## Plan: Consolidate `/clients/:id` to `/tenant/:id`
 
-### Root Cause
+### What changes
 
-`ResourceHubDashboard.tsx` wraps its content in `<DashboardLayout>`, so when `ClientResourceHubWrapper` lazy-loads it inside `<ClientLayout>`, both layouts render -- the Vivacity Team sidebar appears inside the client portal.
+Replace the legacy `TenantDetail` page at `/tenant/:tenantId` with the new `ClientDetail` page, and update all navigation references from `/clients/` to `/tenant/`.
 
-### Solution Overview
+### Route changes in `src/App.tsx`
 
-1. Extract the resource hub content out of `DashboardLayout` so it can be reused
-2. Create a dedicated client-facing Resource Hub page with read-only, tenant-scoped access
-3. Keep the existing admin Resource Hub unchanged for Vivacity Team
-4. Update category paths to stay within `/client/*` namespace on client pages
+- **Remove** the route `/clients/:tenantId` pointing to `ClientDetailWrapper`
+- **Replace** the existing `/tenant/:tenantId` route from `TenantDetailWrapper` to `ClientDetailWrapper`
+- **Update** `/clients/:clientId/impact` to `/tenant/:clientId/impact`
+- Remove the `TenantDetailWrapper` lazy import (no longer used at this route)
 
-### Changes
+### Navigation link updates (9 files)
 
-**1. `src/pages/ResourceHubDashboard.tsx`**
-- Remove the `<DashboardLayout>` wrapper from the component's return
-- Wrap it externally: create a new wrapper or update existing route to add DashboardLayout at the route level
-- This prevents double-layout when the same component is loaded in client context
+All `navigate('/clients/...')` calls updated to `navigate('/tenant/...')`:
 
-Specifically: rename the inner content to a standalone component (e.g., `ResourceHubContent`) that does NOT include any layout wrapper, then have `ResourceHubDashboard` import and wrap it in `DashboardLayout`.
+| File | What changes |
+|------|-------------|
+| `src/pages/ManageTenants.tsx` | Row click navigates to `/tenant/:id` |
+| `src/pages/MyWork.tsx` | Tenant name link + action button |
+| `src/pages/TenantDocuments.tsx` | Back button |
+| `src/pages/TenantDocumentsHub.tsx` | Back button |
+| `src/pages/TenantNotes.tsx` | Back button |
+| `src/components/dashboard/MyWorkWidget.tsx` | Tenant link + action button |
+| `src/components/membership/MembershipGrid.tsx` | Multiple "View Client" buttons |
+| `src/hooks/useMissingMergeFields.tsx` | Notification link |
+| `src/pages/AdminPackageTenantDetail.tsx` | "View Full Profile" button (already points to `/tenant/`, no change needed) |
 
-**2. `src/pages/client/ClientResourceHubPage.tsx`** (new file)
-- A dedicated client-facing Resource Hub page that:
-  - Renders inside `ClientLayout` (via the wrapper)
-  - Shows published resources only (read-only, no edit/upload controls)
-  - Uses `/client/resource-hub/*` paths for category links (not `/resource-hub/*`)
-  - Includes search and browse by category
-  - Adds a "Request a resource" CTA button
-  - Includes tenant-safe data access checklist as code comments
+### Files removed or deprecated
 
-**3. `src/pages/client/ClientResourceHubWrapper.tsx`** (update)
-- Change from loading `ResourceHubDashboard` to loading the new `ClientResourceHubPage`
+- `src/pages/TenantDetailWrapper.tsx` -- no longer referenced (legacy page wrapper)
+- `src/pages/TenantDetail.tsx` -- no longer routed (legacy page itself can remain in codebase but is unreachable)
 
-**4. `src/types/resource.ts`** (update)
-- Add a helper function or constant for client-prefixed category paths, so category links on client pages point to `/client/resource-hub/templates` etc. instead of `/resource-hub/templates`
+### What stays the same
 
-**5. `src/App.tsx`** (update)
-- Add client resource hub category sub-routes under `/client/resource-hub/*`
-- Keep existing `/resource-hub/*` routes unchanged for Vivacity Team
-
-**6. `docs/client-portal/data-access-checklist.md`** (update)
-- Confirm/refine the Resource Hub entry with the tenant-scoping rules
-
-### What stays unchanged
-- All existing `/resource-hub/*` admin routes and `DashboardLayout` wrapping for Vivacity Team
-- `useResources` hook internals (client page will filter for `is_published` only)
-- Database tables and RLS policies (client reads published resources; no tenant join needed per the existing checklist)
-- Sidebar navigation (`ClientSidebar` already points to `/client/resource-hub`)
-
-### Technical detail
-
-The key architectural fix is separating the layout responsibility:
-
-```text
-BEFORE (broken):
-  ClientLayout > ClientResourceHubWrapper > ResourceHubDashboard > DashboardLayout > content
-  (two sidebars, two topbars)
-
-AFTER (correct):
-  Client route:  ClientLayout > ClientResourceHubWrapper > ClientResourceHubPage > content
-  Admin route:   DashboardLayout > ResourceHubDashboard > content
-```
-
-Files to create:
-- `src/pages/client/ClientResourceHubPage.tsx`
-
-Files to modify:
-- `src/pages/client/ClientResourceHubWrapper.tsx` (point to new client page)
-- `src/pages/ResourceHubDashboard.tsx` (extract content component to avoid layout nesting if reuse is needed, or simply leave it as-is since client now has its own page)
-- `src/App.tsx` (add `/client/resource-hub/:category` sub-routes)
-- `src/types/resource.ts` (add client path helper)
-- `docs/client-portal/data-access-checklist.md` (confirm resource hub entry)
+- All other `/tenant/:tenantId/*` sub-routes (logins, members, documents, notes, tasks) remain unchanged
+- The `ClientDetail` page component itself is unchanged
+- Legacy numeric IDs continue to work since the path parameter name stays `:tenantId`
+- No database or backend changes required
 
