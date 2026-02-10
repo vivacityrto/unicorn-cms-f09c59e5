@@ -1,62 +1,32 @@
 
-
-# Add Tag Filter to Notes Tab
+# Add Missing Add-in Columns to `app_settings`
 
 ## Overview
-Add a tag filter alongside the existing "All Notes / Client Notes / Package Notes" filter so users can quickly narrow down notes by one or more tags from the `dd_note_tags` lookup table.
+Add four boolean columns to the existing `app_settings` table so the Microsoft Add-in Settings page can read and write feature flags correctly.
 
----
+## Database Migration
 
-## What Changes
+Run a single `ALTER TABLE` statement adding:
 
-### 1. Add Tag Filter State (ClientStructuredNotesTab.tsx)
+| Column | Type | Default |
+|--------|------|---------|
+| `microsoft_addin_enabled` | boolean | false |
+| `addin_outlook_mail_enabled` | boolean | false |
+| `addin_meetings_enabled` | boolean | false |
+| `addin_documents_enabled` | boolean | false |
 
-Add a new `selectedTagFilter` state (array of strings) next to the existing `parentTypeFilter` state at line 58.
-
-### 2. Add Tag Filter Dropdown in the Header
-
-Place a multi-select-style tag filter next to the existing parent type filter (around lines 259-272). This will be a `Popover` with checkboxes for each active tag from `dd_note_tags`, similar to common filter patterns. It will show:
-- A trigger button with a `Tag` icon and count of selected tags (e.g., "Tags (2)")
-- A popover listing all active tags as checkable items
-- A "Clear" button to reset the filter
-
-The `useNoteTags` hook is already imported and available in the component.
-
-### 3. Apply Tag Filter to Notes List
-
-Update the `filteredNotes` logic at line 225 to also filter by selected tags. A note matches if it contains **any** of the selected tags (OR logic), so selecting multiple tags widens the results.
-
-### 4. Update Empty State Message
-
-Adjust the empty state text (lines 281-295) to mention tag filters when active.
-
----
-
-## Technical Details
-
-### New State
-```
-const [selectedTagFilter, setSelectedTagFilter] = useState<string[]>([]);
+```sql
+ALTER TABLE public.app_settings
+  ADD COLUMN IF NOT EXISTS microsoft_addin_enabled BOOLEAN NOT NULL DEFAULT false,
+  ADD COLUMN IF NOT EXISTS addin_outlook_mail_enabled BOOLEAN NOT NULL DEFAULT false,
+  ADD COLUMN IF NOT EXISTS addin_meetings_enabled BOOLEAN NOT NULL DEFAULT false,
+  ADD COLUMN IF NOT EXISTS addin_documents_enabled BOOLEAN NOT NULL DEFAULT false;
 ```
 
-### Updated Filter Logic
-```
-const filteredNotes = notes
-  .filter(note => parentTypeFilter === 'all' || note.parent_type === parentTypeFilter)
-  .filter(note => selectedTagFilter.length === 0 || note.tags.some(t => selectedTagFilter.includes(t)));
-```
+## No Frontend Changes Required
+The existing `useAddinFeatureFlags` hook and `AddinSettings` page already reference these exact column names. Once the columns exist, the toggles will work immediately.
 
-### Tag Filter UI
-A `Popover` component (already available via Radix) with a list of `Checkbox` items for each tag from `availableNoteTags`. The trigger shows a badge count when filters are active. Includes a "Clear all" action.
-
-### Files Modified
-| File | Change |
+## Files
+| File | Action |
 |------|--------|
-| `src/components/client/ClientStructuredNotesTab.tsx` | Add tag filter state, popover UI, and updated filter logic |
-
-### Imports Needed
-- `Popover, PopoverContent, PopoverTrigger` from `@/components/ui/popover`
-- `Checkbox` from `@/components/ui/checkbox`
-
-No new files or database changes required -- this builds entirely on the existing `useNoteTags` hook and `dd_note_tags` table.
-
+| Database migration | Add four boolean columns to `app_settings` |
