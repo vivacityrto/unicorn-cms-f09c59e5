@@ -22,6 +22,13 @@ export interface MinutesContent {
     status: string;
   }>;
   next_meeting: string;
+  // AI metadata
+  ai_generated?: boolean;
+  ai_generated_at?: string;
+  ai_generated_by?: string;
+  ai_source_artifact_id?: string;
+  ai_summary_version?: number;
+  ai_notes?: string;
 }
 
 export interface MeetingMinutes {
@@ -41,6 +48,16 @@ export interface MeetingMinutes {
   updated_at: string;
 }
 
+export interface AiProposedMinutes {
+  agenda_items: string[];
+  discussion_notes: string;
+  decisions: string[];
+  actions: Array<{ action: string; owner: string; due_date: string; status: string }>;
+  risks: string[];
+  open_questions: string[];
+  confidence: Record<string, string>;
+}
+
 const EMPTY_CONTENT: MinutesContent = {
   meeting_title: '',
   meeting_date: '',
@@ -58,7 +75,6 @@ const EMPTY_CONTENT: MinutesContent = {
   next_meeting: '',
 };
 
-// Use raw fetch since types aren't regenerated yet
 async function fetchFromTable(table: string, params: Record<string, string>, token: string) {
   const url = new URL(`${(supabase as any).supabaseUrl}/rest/v1/${table}`);
   Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
@@ -111,7 +127,6 @@ export function useTeamsMeetingMinutes(meetingId: string | null) {
 
       if (!rows || rows.length === 0) return null;
       const row = rows[0];
-      // Merge with EMPTY_CONTENT to ensure all fields exist
       const content = typeof row.content === 'string' ? JSON.parse(row.content) : (row.content || {});
       return {
         ...row,
@@ -119,6 +134,19 @@ export function useTeamsMeetingMinutes(meetingId: string | null) {
       } as MeetingMinutes;
     },
     enabled: !!meetingId,
+  });
+
+  // Check if AI is enabled
+  const { data: aiSettings } = useQuery({
+    queryKey: ['app-settings-ai'],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('app_settings')
+        .select('minutes_ai_enabled, minutes_ai_require_review')
+        .single();
+      return data;
+    },
+    staleTime: 60_000,
   });
 
   const saveDraftMutation = useMutation({
@@ -165,17 +193,97 @@ export function useTeamsMeetingMinutes(meetingId: string | null) {
       queryClient.invalidateQueries({ queryKey: ['meeting-minutes', meetingId] });
     },
     onError: (error) => {
-      console.error('Publish minutes failed:', error);
       toast.error(error instanceof Error ? error.message : 'Failed to publish minutes');
     },
   });
 
+  const generateFromTranscriptMutation = useMutation({
+    mutationFn: async (minutesId: string) => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) throw new Error('Not authenticated');
+
+      const { data, error } = await supabase.functions.invoke('generate-minutes-from-transcript', {
+        headers: { Authorization: `Bearer ${session.access_token}` },
+        body: { meeting_id: meetingId, minutes_id: minutesId },
+      });
+
+      if (error) throw new Error(error.message);
+      if (data && 'error' in data) throw new Error((data as any).error);
+      return data as { success: boolean; run_id: string; proposed: AiProposedMinutes };
+    },
+    onError: (error) => {
+      toast.error(error instanceof Error ? error.message : 'AI generation failed');
+    },
+  });
+
+  // Apply AI proposed content to the draft
+  const applyAiContent = async (minutesId: string, proposed: AiProposedMinutes, currentContent: MinutesContent) => {
+    const now = new Date().toISOString();
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) return;
+
+    const mergedContent: MinutesContent = {
+      ...currentContent,
+      agenda_items: proposed.agenda_items.length > 0 ? proposed.agenda_items : currentContent.agenda_items,
+      discussion_notes: proposed.discussion_notes || currentContent.discussion_notes,
+      decisions: proposed.decisions.length > 0 ? proposed.decisions : currentContent.decisions,
+      actions: proposed.actions.length > 0 ? proposed.actions : currentContent.actions,
+      ai_generated: true,
+      ai_generated_at: now,
+      ai_generated_by: session.user.id,
+      ai_summary_version: (currentContent.ai_summary_version || 0) + 1,
+      ai_notes: 'Draft generated from transcript summary. Review required before publishing.',
+    };
+
+    await patchTable('meeting_minutes', minutesId, {
+      content: mergedContent,
+      updated_at: now,
+    }, session.access_token);
+
+    // Audit: applied
+    await supabase.from('audit_events' as any).insert({
+      entity: 'meeting_minutes',
+      entity_id: minutesId,
+      action: 'minutes_ai_applied_to_draft',
+      user_id: session.user.id,
+      details: { meeting_id: meetingId },
+    });
+
+    toast.success('AI draft applied to minutes');
+    queryClient.invalidateQueries({ queryKey: ['meeting-minutes', meetingId] });
+  };
+
+  // Discard AI proposal (audit only)
+  const discardAiContent = async (minutesId: string) => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) return;
+
+    await supabase.from('audit_events' as any).insert({
+      entity: 'meeting_minutes',
+      entity_id: minutesId,
+      action: 'minutes_ai_discarded',
+      user_id: session.user.id,
+      details: { meeting_id: meetingId },
+    });
+
+    toast.info('AI draft discarded');
+  };
+
   return {
     minutes,
     isLoading,
+    aiEnabled: aiSettings?.minutes_ai_enabled ?? false,
+    aiRequireReview: aiSettings?.minutes_ai_require_review ?? true,
     saveDraft: saveDraftMutation.mutate,
     isSaving: saveDraftMutation.isPending,
     publishMinutes: publishMinutesMutation.mutate,
     isPublishing: publishMinutesMutation.isPending,
+    generateFromTranscript: generateFromTranscriptMutation.mutate,
+    isGenerating: generateFromTranscriptMutation.isPending,
+    aiProposal: generateFromTranscriptMutation.data?.proposed ?? null,
+    aiRunId: generateFromTranscriptMutation.data?.run_id ?? null,
+    applyAiContent,
+    discardAiContent,
+    resetAiProposal: generateFromTranscriptMutation.reset,
   };
 }

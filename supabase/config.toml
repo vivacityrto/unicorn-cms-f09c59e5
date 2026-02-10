@@ -134,3 +134,6 @@ verify_jwt = false
 
 [functions.publish-meeting-minutes]
 verify_jwt = false
+
+[functions.generate-minutes-from-transcript]
+verify_jwt = false
