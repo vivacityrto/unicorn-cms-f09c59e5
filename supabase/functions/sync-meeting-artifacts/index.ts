@@ -565,6 +565,70 @@ serve(async (req) => {
       }
     }
 
+    // ── Auto-create minutes draft ───────────────────────────────────
+
+    let minutesDraftCreated = false;
+    try {
+      // Check if draft already exists
+      const { data: existingDraft } = await supabaseAdmin
+        .from('meeting_minutes_drafts')
+        .select('id')
+        .eq('meeting_id', meetingId)
+        .maybeSingle();
+
+      if (!existingDraft) {
+        const startTime = graphEvent.start?.dateTime
+          ? new Date(graphEvent.start.dateTime + 'Z')
+          : new Date(meeting.starts_at);
+        const endTime = graphEvent.end?.dateTime
+          ? new Date(graphEvent.end.dateTime + 'Z')
+          : new Date(meeting.ends_at);
+        const durationMins = Math.round((endTime.getTime() - startTime.getTime()) / 60000);
+
+        const attendeeNames = (graphEvent.attendees || [])
+          .map((a: any) => a.emailAddress?.name || a.emailAddress?.address)
+          .filter(Boolean);
+
+        const draftContent = [
+          `Meeting: ${meeting.title}`,
+          `Date: ${startTime.toISOString().split('T')[0]}`,
+          `Duration: ${durationMins} minutes`,
+          attendeeNames.length > 0 ? `Attendees: ${attendeeNames.join(', ')}` : '',
+          '',
+          '---',
+          '',
+          'Key Discussion Points:',
+          '',
+          '',
+          'Decisions Made:',
+          '',
+          '',
+          'Action Items:',
+          '',
+          '',
+        ].filter(line => line !== undefined).join('\n');
+
+        const { error: draftError } = await supabaseAdmin
+          .from('meeting_minutes_drafts')
+          .insert({
+            tenant_id: meeting.tenant_id,
+            meeting_id: meetingId,
+            title: `Minutes - ${meeting.title}`,
+            content: draftContent,
+            created_by: user.id,
+          });
+
+        if (draftError) {
+          console.warn('[sync-artifacts] Minutes draft creation failed:', draftError);
+        } else {
+          minutesDraftCreated = true;
+          console.log('[sync-artifacts] Minutes draft auto-created');
+        }
+      }
+    } catch (draftErr) {
+      console.warn('[sync-artifacts] Minutes draft error:', draftErr);
+    }
+
     // ── Audit log ────────────────────────────────────────────────────
 
     await supabaseAdmin.from('audit_events').insert({
@@ -581,6 +645,7 @@ serve(async (req) => {
         has_recording: hasRecording,
         has_transcript: hasTranscript,
         sync_status: meetingUpdate.ms_sync_status,
+        minutes_draft_created: minutesDraftCreated,
       },
     });
 
@@ -590,6 +655,7 @@ serve(async (req) => {
       errors: artifactErrors.length,
       has_recording: hasRecording,
       has_transcript: hasTranscript,
+      minutes_draft_created: minutesDraftCreated,
     });
 
     return new Response(
@@ -603,6 +669,7 @@ serve(async (req) => {
         has_transcript: hasTranscript,
         ms_sync_status: meetingUpdate.ms_sync_status as string,
         ms_sync_error: meetingUpdate.ms_sync_error as string | null,
+        minutes_draft_created: minutesDraftCreated,
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );

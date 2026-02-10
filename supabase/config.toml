@@ -131,3 +131,6 @@ verify_jwt = false
 
 [functions.sync-meeting-artifacts]
 verify_jwt = false
+
+[functions.publish-meeting-minutes]
+verify_jwt = false
