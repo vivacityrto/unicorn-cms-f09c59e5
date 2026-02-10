@@ -71,7 +71,7 @@ export interface CopilotExtracted {
   confidence: Record<string, string>;
 }
 
-const EMPTY_CONTENT: MinutesContent = {
+export const EMPTY_CONTENT: MinutesContent = {
   meeting_title: '',
   meeting_date: '',
   meeting_time: '',
@@ -230,16 +230,26 @@ export function useTeamsMeetingMinutes(meetingId: string | null) {
         attendees: Array<{ display_name: string; email: string | null; is_external: boolean; attendance_status: string }>;
         attendees_count: number;
         graph_synced: boolean;
-        warning: string | null;
+        auto_fetch_enabled: boolean;
+        recap_found: boolean;
+        recap_source: string | null;
+        extracted: CopilotExtracted | null;
         needs_copilot_input: boolean;
+        warnings: string[];
       };
     },
     onSuccess: (data) => {
-      const msg = data.graph_synced
-        ? `Draft created with ${data.attendees_count} attendees from Microsoft`
-        : `Draft created with ${data.attendees_count} attendees`;
-      toast.success(msg);
-      if (data.warning) toast.warning(data.warning);
+      if (data.recap_found && data.extracted) {
+        toast.success(`Draft created with ${data.attendees_count} attendees and Copilot recap auto-populated`);
+      } else {
+        const msg = data.graph_synced
+          ? `Draft created with ${data.attendees_count} attendees from Microsoft`
+          : `Draft created with ${data.attendees_count} attendees`;
+        toast.success(msg);
+      }
+      if (data.warnings?.length) {
+        data.warnings.forEach((w) => toast.warning(w));
+      }
       queryClient.invalidateQueries({ queryKey: ['meeting-minutes', meetingId] });
     },
     onError: (error) => {
