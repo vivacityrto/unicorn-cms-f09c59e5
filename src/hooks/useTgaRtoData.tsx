@@ -308,7 +308,7 @@ export function useTgaRtoData(tenantId: number | null, rtoCode: string | null, c
           supabase.from('tga_rto_addresses').select('*').eq('tenant_id', tenantId).eq('rto_code', rtoCode),
           supabase.from('tga_rto_delivery_locations').select('*').eq('tenant_id', tenantId).eq('rto_code', rtoCode),
           // NEW: Fetch from unified tenant_rto_scope table
-          supabase.from('tenant_rto_scope').select('*').eq('tenant_id', tenantId).order('code'),
+          supabase.from('tenant_rto_scope').select('*').eq('tenant_id', tenantId).order('code').limit(10000),
           supabase.from('tga_rest_sync_jobs').select('*').eq('tenant_id', tenantId).eq('rto_id', rtoCode).order('created_at', { ascending: false }).limit(1).maybeSingle()
         ]);
 
