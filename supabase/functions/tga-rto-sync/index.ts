@@ -38,9 +38,8 @@ async function fetchWithRetry(url: string, maxRetries = 3): Promise<Response> {
           'Accept': 'application/json'
         }
       });
-      // If we get 500, retry (could be transient)
       if (response.status === 500 && attempt < maxRetries - 1) {
-        const delay = Math.pow(2, attempt) * 300; // 300ms, 600ms, 1200ms
+        const delay = Math.pow(2, attempt) * 300;
         log('warn', `TGA returned 500, retrying in ${delay}ms (attempt ${attempt + 1}/${maxRetries})`, { url });
         await new Promise(r => setTimeout(r, delay));
         continue;
@@ -58,20 +57,16 @@ async function fetchWithRetry(url: string, maxRetries = 3): Promise<Response> {
   throw lastError || new Error('Max retries exceeded');
 }
 
-// Fetch a single scope type (no pipe characters - simple filter)
-// Uses minimal URL params to avoid TGA 500 errors
+// Fetch a single scope type
 async function fetchScopeSingleType(rtoId: string, componentType: string): Promise<{ items: any[]; urls: string[]; error?: string }> {
   const items: any[] = [];
   const urls: string[] = [];
   let offset = 0;
   let hasMore = true;
   
-  // Build filter - fetch CURRENT, EXPLICIT scope items only
-  // Note: isImplicit==false in URL causes TGA 500 errors, so we filter locally instead
   const filter = `componentType==${componentType};status==current`;
   
   while (hasMore) {
-    // MINIMAL URL: no delivery param, no sorts (these may cause TGA 500s)
     const url = `https://training.gov.au/api/organisation/${encodeURIComponent(rtoId)}/scope?api-version=1.0&offset=${offset}&pageSize=${PAGE_SIZE}&filters=${encodeURIComponent(filter)}`;
     urls.push(url);
     
@@ -91,7 +86,6 @@ async function fetchScopeSingleType(rtoId: string, componentType: string): Promi
       
       log('info', `Got ${pageItems.length} ${componentType}(s) at offset ${offset}`, { total: data.count });
       
-      // Filter locally: only explicit (isImplicit !== true) and current (status === 'current')
       const currentExplicitItems = pageItems.filter((item: any) => 
         item.isImplicit !== true && item.status === 'current'
       );
@@ -101,7 +95,6 @@ async function fetchScopeSingleType(rtoId: string, componentType: string): Promi
         hasMore = false;
       } else {
         offset += PAGE_SIZE;
-        // Safety limit
         if (offset > 50000) {
           log('warn', `Safety limit reached for ${componentType} at offset ${offset}`);
           hasMore = false;
@@ -116,10 +109,8 @@ async function fetchScopeSingleType(rtoId: string, componentType: string): Promi
   return { items, urls };
 }
 
-// Fetch all pages of scope items for a component type
-// For 'unit', fetches BOTH 'unit' and 'accreditedUnit' separately and merges
+// Fetch all scope items for a component type
 async function fetchAllScope(rtoId: string, componentType: string): Promise<{ items: any[]; urls: string[]; error?: string }> {
-  // Units need two separate API calls (pipe character causes 500 errors)
   if (componentType === 'unit') {
     log('info', 'Fetching units with two separate API calls (unit + accreditedUnit)');
     
@@ -128,11 +119,9 @@ async function fetchAllScope(rtoId: string, componentType: string): Promise<{ it
       fetchScopeSingleType(rtoId, 'accreditedUnit'),
     ]);
     
-    // Merge results
     const allItems = [...unitResult.items, ...accreditedUnitResult.items];
     const allUrls = [...unitResult.urls, ...accreditedUnitResult.urls];
     
-    // Report any errors
     const errors: string[] = [];
     if (unitResult.error) errors.push(`unit: ${unitResult.error}`);
     if (accreditedUnitResult.error) errors.push(`accreditedUnit: ${accreditedUnitResult.error}`);
@@ -146,7 +135,6 @@ async function fetchAllScope(rtoId: string, componentType: string): Promise<{ it
     };
   }
   
-  // All other types: single API call
   return fetchScopeSingleType(rtoId, componentType);
 }
 
@@ -178,6 +166,24 @@ async function fetchOrgDetails(rtoId: string): Promise<{ data: any; url: string;
   }
 }
 
+// Helper to update job status (used in finally blocks to ensure it always runs)
+async function updateJobStatus(jobId: string | null, status: string, payload: Record<string, unknown>, lastError?: string | null) {
+  if (!jobId) return;
+  try {
+    await supabaseAdmin
+      .from('tga_rest_sync_jobs')
+      .update({
+        status,
+        last_error: lastError || null,
+        payload,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', jobId);
+  } catch (err) {
+    log('error', 'Failed to update job status', { jobId, error: String(err) });
+  }
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -185,6 +191,8 @@ serve(async (req) => {
 
   const startTime = Date.now();
   let jobId: string | null = null;
+  // Track progress so we can report partial results on timeout/error
+  const progress: Record<string, unknown> = { started_at: new Date().toISOString() };
 
   try {
     const { tenantId, rtoId, force = false } = await req.json();
@@ -197,17 +205,20 @@ serve(async (req) => {
     }
 
     const tenantIdNum = typeof tenantId === 'string' ? parseInt(tenantId, 10) : tenantId;
+    progress.tenantId = tenantIdNum;
+    progress.rtoId = rtoId;
+    progress.force = force;
     
     log('info', `Starting REST sync for RTO ${rtoId}`, { tenantId: tenantIdNum, force });
 
-    // 1. Create job row in tga_rest_sync_jobs
+    // 1. Create job row
     const { data: job, error: jobError } = await supabaseAdmin
       .from('tga_rest_sync_jobs')
       .insert({
         tenant_id: tenantIdNum,
         rto_id: rtoId,
         status: 'processing',
-        payload: { started_at: new Date().toISOString(), force },
+        payload: progress,
       })
       .select('id')
       .single();
@@ -220,6 +231,7 @@ serve(async (req) => {
     }
 
     // 2. Fetch organization details
+    progress.stage = 'fetching_org';
     const orgResult = await fetchOrgDetails(rtoId);
     
     if (orgResult.error || !orgResult.data) {
@@ -229,24 +241,18 @@ serve(async (req) => {
     const orgData = orgResult.data;
     const orgRawText = JSON.stringify(orgData);
     const rawSha256 = await computeSha256(orgRawText);
+    progress.stage = 'parsing_org';
     
-    // =====================================================================
-    // PARSE ORG DETAILS FROM REST PAYLOAD (correctly mapping real TGA structure)
-    // =====================================================================
-    
-    // Legal Name: find current (no endDate)
+    // Parse org details
     const currentLegalName = orgData.legalNames?.find((ln: any) => !ln.endDate);
     const legalName = currentLegalName?.name || null;
     
-    // Trading Names: filter current (no endDate), take first
     const currentTradingNames = orgData.tradingNames?.filter((tn: any) => !tn.endDate) || [];
     const tradingName = currentTradingNames[0]?.name || null;
     
-    // ABN: in legalNames[].abns[] - may be string/number or { abn: ... }
     let abn: string | null = null;
     if (currentLegalName?.abns && currentLegalName.abns.length > 0) {
       const abnEntry = currentLegalName.abns[0];
-      // Handle both formats: { abn: "123" } or just "123" or 123
       if (typeof abnEntry === 'object' && abnEntry.abn) {
         abn = String(abnEntry.abn);
       } else if (abnEntry) {
@@ -254,30 +260,32 @@ serve(async (req) => {
       }
     }
     
-    // ACN: in legalNames[].acn
     const acn = currentLegalName?.acn || null;
     
-    // Website: from webAddresses[] current entry (no endDate), field is "webAddress"
     const currentWebEntry = orgData.webAddresses?.find((w: any) => !w.endDate);
     const website = currentWebEntry?.webAddress || null;
     
-    // Registration dates: from registrations[] - pick current/most recent
     let registrationStartDate: string | null = null;
     let registrationEndDate: string | null = null;
     let initialRegistrationDate: string | null = null;
+    let registrationManager: string | null = null;
+    let legalAuthority: string | null = null;
+    let exerciser: string | null = null;
+
     if (orgData.registrations && orgData.registrations.length > 0) {
-      // Find current registration (no endDate or future endDate)
       const now = new Date();
       const currentReg = orgData.registrations.find((r: any) => 
         !r.endDate || new Date(r.endDate) > now
-      ) || orgData.registrations[orgData.registrations.length - 1]; // fallback to last
+      ) || orgData.registrations[orgData.registrations.length - 1];
       
       if (currentReg) {
         registrationStartDate = currentReg.startDate || null;
         registrationEndDate = currentReg.endDate || null;
+        registrationManager = currentReg.registrationManagerDescription || currentReg.registrationManager || null;
+        legalAuthority = currentReg.legalAuthorityDescription || currentReg.legalAuthority || null;
+        exerciser = currentReg.exerciserDescription || currentReg.exerciser || null;
       }
       
-      // Initial registration date = earliest startDate from all registrations
       const allStartDates = orgData.registrations
         .map((r: any) => r.startDate)
         .filter((d: any) => d)
@@ -287,8 +295,6 @@ serve(async (req) => {
       }
     }
     
-    // Organisation Type: from classifications[] where schemeDescription == 'Training Organisation Type'
-    // Pick primary + current (no endDate), use valueDescription
     let organisationType: string | null = null;
     if (orgData.classifications && orgData.classifications.length > 0) {
       const orgTypeClass = orgData.classifications.find((c: any) => 
@@ -308,6 +314,7 @@ serve(async (req) => {
     });
 
     // 3. Insert snapshot row
+    progress.stage = 'saving_snapshot';
     let snapshotId: string | null = null;
     const { data: snapshot, error: snapError } = await supabaseAdmin
       .from('tga_rto_snapshots')
@@ -325,10 +332,12 @@ serve(async (req) => {
       log('warn', 'Could not create snapshot', { error: snapError.message });
     } else {
       snapshotId = snapshot.id;
+      progress.snapshot_id = snapshotId;
       log('info', 'Created snapshot', { snapshotId });
     }
 
-    // 4. Fetch and persist all scope types
+    // 4. Fetch ALL scope types in PARALLEL (key fix for timeout)
+    progress.stage = 'fetching_scope';
     const scopeTypes = [
       { apiType: 'qualification', dbType: 'qualification' },
       { apiType: 'unit', dbType: 'unit' },
@@ -340,10 +349,18 @@ serve(async (req) => {
     const scopeUrls: Record<string, string[]> = {};
     const scopeErrors: Record<string, string> = {};
     
-    for (const { apiType, dbType } of scopeTypes) {
-      log('info', `Fetching ${apiType}...`);
-      
-      const result = await fetchAllScope(rtoId, apiType);
+    // Fetch all scope types in parallel instead of sequentially
+    const scopeResults = await Promise.all(
+      scopeTypes.map(async ({ apiType, dbType }) => {
+        log('info', `Fetching ${apiType}...`);
+        const result = await fetchAllScope(rtoId, apiType);
+        return { apiType, dbType, result };
+      })
+    );
+
+    // Persist scope items sequentially (to avoid DB contention)
+    progress.stage = 'persisting_scope';
+    for (const { apiType, dbType, result } of scopeResults) {
       scopeUrls[apiType] = result.urls;
       
       if (result.error) {
@@ -353,7 +370,6 @@ serve(async (req) => {
       }
       
       if (result.items.length > 0) {
-        // Persist via RPC function
         const { data: persistResult, error: persistError } = await supabaseAdmin.rpc('persist_tga_scope_items', {
           p_tenant_id: tenantIdNum,
           p_scope_type: dbType,
@@ -374,14 +390,16 @@ serve(async (req) => {
         scopeCounts[apiType] = 0;
       }
     }
+    progress.scope_counts = scopeCounts;
 
     // 5. Update tenants row with TGA status
+    progress.stage = 'updating_tenant';
     const now = new Date().toISOString();
     const { error: tenantUpdateError } = await supabaseAdmin
       .from('tenants')
       .update({
         rto_id: rtoId,
-        tga_connected_at: force ? now : undefined, // Only update if force or first time
+        tga_connected_at: force ? now : undefined,
         tga_last_synced_at: now,
         tga_status: 'connected',
         tga_legal_name: legalName,
@@ -393,7 +411,7 @@ serve(async (req) => {
       log('warn', 'Could not update tenant TGA status', { error: tenantUpdateError.message });
     }
 
-    // Also update tenant_profile for merge fields - with all parsed fields
+    // Update tenant_profile for merge fields
     await supabaseAdmin
       .from('tenant_profile')
       .upsert({
@@ -410,8 +428,7 @@ serve(async (req) => {
         updated_at: now,
       }, { onConflict: 'tenant_id' });
     
-    // Also upsert tga_rto_summary for the Summary tab UI
-    // Columns: rto_code (not rto_id), web_address (not website), source_payload (not raw_payload)
+    // Upsert tga_rto_summary
     const { error: summaryError } = await supabaseAdmin
       .from('tga_rto_summary')
       .upsert({
@@ -426,6 +443,9 @@ serve(async (req) => {
         registration_start_date: registrationStartDate,
         registration_end_date: registrationEndDate,
         organisation_type: organisationType,
+        registration_manager: registrationManager,
+        legal_authority: legalAuthority,
+        exerciser: exerciser,
         status: orgData.status || 'Registered',
         source_payload: orgData,
         fetched_at: now,
@@ -439,14 +459,70 @@ serve(async (req) => {
     }
 
     // =====================================================================
-    // PERSIST ADDRESSES (Head Office, Postal) and DELIVERY LOCATIONS
+    // 6. PERSIST CONTACTS (Chief Executive, Registration Enquiries, etc.)
     // =====================================================================
+    progress.stage = 'persisting_contacts';
+    const contacts = orgData.contacts || [];
+    const currentContacts = contacts.filter((c: any) => !c.endDate);
     
-    // Parse addresses from orgData.addresses array
+    log('info', 'Parsing contacts', { total: contacts.length, current: currentContacts.length });
+
+    // Delete existing contacts for this tenant+rto, then insert fresh
+    await supabaseAdmin
+      .from('tga_rto_contacts')
+      .delete()
+      .eq('tenant_id', tenantIdNum)
+      .eq('rto_code', rtoId);
+
+    const contactRows = currentContacts.map((contact: any) => {
+      // Build a single address string from structured address parts
+      const addrParts = [
+        contact.address?.line1,
+        contact.address?.line2,
+        contact.address?.suburb,
+        contact.address?.state,
+        contact.address?.postcode,
+      ].filter(Boolean);
+      const addressStr = addrParts.length > 0 ? addrParts.join(', ') : null;
+
+      return {
+        tenant_id: tenantIdNum,
+        rto_code: rtoId,
+        contact_type: contact.contactType || contact.type || null,
+        contact_type_raw: contact.contactType || contact.type || null,
+        name: [contact.title, contact.firstName, contact.lastName].filter(Boolean).join(' ') || contact.name || null,
+        position: contact.jobTitle || contact.position || null,
+        organisation_name: contact.organisationName || null,
+        phone: contact.phone || null,
+        mobile: contact.mobile || null,
+        fax: contact.fax || null,
+        email: contact.email || null,
+        address: addressStr,
+        source_payload: contact,
+        fetched_at: now,
+      };
+    });
+
+    if (contactRows.length > 0) {
+      const { error: contactError } = await supabaseAdmin
+        .from('tga_rto_contacts')
+        .insert(contactRows);
+      
+      if (contactError) {
+        log('warn', 'Could not insert contacts', { error: contactError.message });
+      } else {
+        log('info', `Inserted ${contactRows.length} contacts`);
+      }
+    }
+    progress.contacts_count = contactRows.length;
+
+    // =====================================================================
+    // 7. PERSIST ADDRESSES (Head Office, Postal) and DELIVERY LOCATIONS
+    // =====================================================================
+    progress.stage = 'persisting_addresses';
     const addresses = orgData.addresses || [];
     const currentAddresses = addresses.filter((addr: any) => !addr.endDate);
     
-    // Separate by type
     const headOfficeAddrs = currentAddresses.filter((a: any) => a.addressType === 'headOffice');
     const postalAddrs = currentAddresses.filter((a: any) => a.addressType === 'postal');
     const deliveryLocationAddrs = currentAddresses.filter((a: any) => a.addressType === 'deliveryLocation');
@@ -459,14 +535,13 @@ serve(async (req) => {
       deliveryLocations: deliveryLocationAddrs.length
     });
 
-    // Delete existing addresses for this tenant+rto, then insert fresh
+    // Delete existing addresses, then insert fresh
     await supabaseAdmin
       .from('tga_rto_addresses')
       .delete()
       .eq('tenant_id', tenantIdNum)
       .eq('rto_code', rtoId);
 
-    // Insert head office and postal addresses
     const addressRows = [...headOfficeAddrs, ...postalAddrs].map((addr: any) => ({
       tenant_id: tenantIdNum,
       rto_code: rtoId,
@@ -504,7 +579,6 @@ serve(async (req) => {
       .eq('tenant_id', tenantIdNum)
       .eq('rto_code', rtoId);
 
-    // Insert delivery locations
     const deliveryRows = deliveryLocationAddrs.map((addr: any) => ({
       tenant_id: tenantIdNum,
       rto_code: rtoId,
@@ -530,31 +604,29 @@ serve(async (req) => {
         log('info', `Inserted ${deliveryRows.length} delivery locations`);
       }
     }
+    progress.addresses_count = addressRows.length;
+    progress.delivery_locations_count = deliveryRows.length;
 
-    // 6. Mark job done
+    // 8. Mark job done
     const totalItems = Object.values(scopeCounts).reduce((a, b) => a + b, 0);
     const hasErrors = Object.keys(scopeErrors).length > 0;
     
-    if (jobId) {
-      await supabaseAdmin
-        .from('tga_rest_sync_jobs')
-        .update({
-          status: hasErrors ? 'done_with_errors' : 'done',
-          last_error: hasErrors ? JSON.stringify(scopeErrors) : null,
-          payload: {
-            completed_at: now,
-            duration_ms: Date.now() - startTime,
-            scope_counts: scopeCounts,
-            scope_urls: scopeUrls,
-            scope_errors: scopeErrors,
-            snapshot_id: snapshotId,
-          },
-          updated_at: now,
-        })
-        .eq('id', jobId);
-    }
+    progress.stage = 'done';
+    progress.completed_at = now;
+    progress.duration_ms = Date.now() - startTime;
+    progress.scope_counts = scopeCounts;
+    progress.scope_urls = scopeUrls;
+    progress.scope_errors = scopeErrors;
+    progress.snapshot_id = snapshotId;
 
-    // Also update tga_links if exists
+    await updateJobStatus(
+      jobId,
+      hasErrors ? 'done_with_errors' : 'done',
+      progress,
+      hasErrors ? JSON.stringify(scopeErrors) : null
+    );
+
+    // Update tga_links if exists
     await supabaseAdmin
       .from('tga_links')
       .update({
@@ -571,6 +643,9 @@ serve(async (req) => {
       rtoId, 
       totalItems, 
       scopeCounts,
+      contacts: contactRows.length,
+      addresses: addressRows.length,
+      deliveryLocations: deliveryRows.length,
       duration_ms: Date.now() - startTime,
     });
 
@@ -583,6 +658,9 @@ serve(async (req) => {
         snapshot_id: snapshotId,
         job_id: jobId,
         counts: scopeCounts,
+        contacts_count: contactRows.length,
+        addresses_count: addressRows.length,
+        delivery_locations_count: deliveryRows.length,
         total_items: totalItems,
         urls_used: scopeUrls,
         errors: hasErrors ? scopeErrors : undefined,
@@ -594,17 +672,11 @@ serve(async (req) => {
     const errorMsg = error instanceof Error ? error.message : String(error);
     log('error', 'Sync failed', { error: errorMsg, duration_ms: Date.now() - startTime });
     
-    // Update job to error status
-    if (jobId) {
-      await supabaseAdmin
-        .from('tga_rest_sync_jobs')
-        .update({
-          status: 'error',
-          last_error: errorMsg,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', jobId);
-    }
+    // Always update job to error status
+    progress.stage = 'error';
+    progress.completed_at = new Date().toISOString();
+    progress.duration_ms = Date.now() - startTime;
+    await updateJobStatus(jobId, 'error', progress, errorMsg);
     
     return new Response(
       JSON.stringify({ 
