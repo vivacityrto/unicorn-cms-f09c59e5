@@ -3812,10 +3812,12 @@ export type Database = {
           date_created: string | null
           date_created_at: string | null
           date_created_text: string | null
+          date_created_ts: string | null
           date_imported: string | null
           due_date: string | null
           due_date_at: string | null
           due_date_text: string | null
+          due_date_ts: string | null
           folder_name_path: string | null
           id: string
           import_id: number
@@ -3829,6 +3831,7 @@ export type Database = {
           start_date: string | null
           start_date_at: string | null
           start_date_text: string | null
+          start_date_ts: string | null
           status: string | null
           tags: Json | null
           task_content: string | null
@@ -3850,10 +3853,12 @@ export type Database = {
           date_created?: string | null
           date_created_at?: string | null
           date_created_text?: string | null
+          date_created_ts?: string | null
           date_imported?: string | null
           due_date?: string | null
           due_date_at?: string | null
           due_date_text?: string | null
+          due_date_ts?: string | null
           folder_name_path?: string | null
           id?: string
           import_id?: number
@@ -3867,6 +3872,7 @@ export type Database = {
           start_date?: string | null
           start_date_at?: string | null
           start_date_text?: string | null
+          start_date_ts?: string | null
           status?: string | null
           tags?: Json | null
           task_content?: string | null
@@ -3888,10 +3894,12 @@ export type Database = {
           date_created?: string | null
           date_created_at?: string | null
           date_created_text?: string | null
+          date_created_ts?: string | null
           date_imported?: string | null
           due_date?: string | null
           due_date_at?: string | null
           due_date_text?: string | null
+          due_date_ts?: string | null
           folder_name_path?: string | null
           id?: string
           import_id?: number
@@ -3905,6 +3913,7 @@ export type Database = {
           start_date?: string | null
           start_date_at?: string | null
           start_date_text?: string | null
+          start_date_ts?: string | null
           status?: string | null
           tags?: Json | null
           task_content?: string | null
@@ -16766,6 +16775,68 @@ export type Database = {
           },
         ]
       }
+      sharepoint_access_log: {
+        Row: {
+          action: string
+          created_at: string
+          drive_id: string
+          file_name: string | null
+          id: string
+          item_id: string
+          tenant_id: number
+          user_id: string
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          drive_id: string
+          file_name?: string | null
+          id?: string
+          item_id: string
+          tenant_id: number
+          user_id: string
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          drive_id?: string
+          file_name?: string | null
+          id?: string
+          item_id?: string
+          tenant_id?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sharepoint_access_log_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sharepoint_access_log_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_engagement_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "sharepoint_access_log_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_eos_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "sharepoint_access_log_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_compliance_entitlements"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
       skillset_cache: {
         Row: {
           data: Json
@@ -19133,6 +19204,86 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: []
+      }
+      tenant_sharepoint_settings: {
+        Row: {
+          created_at: string
+          created_by: string
+          drive_id: string | null
+          id: string
+          is_enabled: boolean
+          last_validated_at: string | null
+          root_folder_url: string
+          root_item_id: string | null
+          root_name: string | null
+          tenant_id: number
+          updated_at: string
+          updated_by: string | null
+          validation_error: string | null
+          validation_status: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          drive_id?: string | null
+          id?: string
+          is_enabled?: boolean
+          last_validated_at?: string | null
+          root_folder_url: string
+          root_item_id?: string | null
+          root_name?: string | null
+          tenant_id: number
+          updated_at?: string
+          updated_by?: string | null
+          validation_error?: string | null
+          validation_status?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          drive_id?: string | null
+          id?: string
+          is_enabled?: boolean
+          last_validated_at?: string | null
+          root_folder_url?: string
+          root_item_id?: string | null
+          root_name?: string | null
+          tenant_id?: number
+          updated_at?: string
+          updated_by?: string | null
+          validation_error?: string | null
+          validation_status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tenant_sharepoint_settings_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tenant_sharepoint_settings_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_engagement_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "tenant_sharepoint_settings_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_eos_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "tenant_sharepoint_settings_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_compliance_entitlements"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
       }
       tenant_stages: {
         Row: {

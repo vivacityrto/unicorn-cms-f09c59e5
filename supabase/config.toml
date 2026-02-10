@@ -122,3 +122,9 @@ verify_jwt = false
 
 [functions.help-center-chat]
 verify_jwt = false
+
+[functions.validate-sharepoint-root-folder]
+verify_jwt = false
+
+[functions.browse-sharepoint-folder]
+verify_jwt = false

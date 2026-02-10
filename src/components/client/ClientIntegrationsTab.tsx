@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { SharePointFolderConfig } from '@/components/client/SharePointFolderConfig';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -1409,6 +1410,11 @@ export function ClientIntegrationsTab({
             </CardContent>
           )}
         </Card>
+      )}
+
+      {/* SharePoint Folder Config */}
+      {profile?.tenant_id && (
+        <SharePointFolderConfig tenantId={profile.tenant_id} />
       )}
 
       {/* Future Integrations */}
