@@ -392,9 +392,10 @@ export function useTgaRtoData(tenantId: number | null, rtoCode: string | null, c
         setDeliveryLocations((locationsRes.data || []) as TGADeliveryLocation[]);
 
         // Show items based on TGA status, not endDate (endDate is metadata, not expiry)
+        // Current-only filter — DB should already be clean, but enforce as safety net
         const isOnScope = (item: any) => {
-          const status = (item.status || '').toLowerCase();
-          return status === 'current' || status === 'superseded';
+          const status = (item.status || '').trim().toLowerCase();
+          return status === 'current';
         };
         
         const quals = scopeItems
