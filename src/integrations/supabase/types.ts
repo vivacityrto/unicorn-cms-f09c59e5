@@ -20176,12 +20176,15 @@ export type Database = {
           abn: string | null
           acn: string | null
           created_at: string
+          exerciser: string | null
           fetched_at: string
           id: string
           initial_registration_date: string | null
+          legal_authority: string | null
           legal_name: string | null
           organisation_type: string | null
           registration_end_date: string | null
+          registration_manager: string | null
           registration_start_date: string | null
           rto_code: string
           source_hash: string | null
@@ -20196,12 +20199,15 @@ export type Database = {
           abn?: string | null
           acn?: string | null
           created_at?: string
+          exerciser?: string | null
           fetched_at?: string
           id?: string
           initial_registration_date?: string | null
+          legal_authority?: string | null
           legal_name?: string | null
           organisation_type?: string | null
           registration_end_date?: string | null
+          registration_manager?: string | null
           registration_start_date?: string | null
           rto_code: string
           source_hash?: string | null
@@ -20216,12 +20222,15 @@ export type Database = {
           abn?: string | null
           acn?: string | null
           created_at?: string
+          exerciser?: string | null
           fetched_at?: string
           id?: string
           initial_registration_date?: string | null
+          legal_authority?: string | null
           legal_name?: string | null
           organisation_type?: string | null
           registration_end_date?: string | null
+          registration_manager?: string | null
           registration_start_date?: string | null
           rto_code?: string
           source_hash?: string | null
