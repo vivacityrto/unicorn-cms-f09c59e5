@@ -307,9 +307,17 @@ export function useTgaRtoData(tenantId: number | null, rtoCode: string | null, c
         
         // Map unified scope data to legacy format
         const scopeItems = scopeRes.data || [];
+        const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+        
+        // Only show items currently on scope (end date >= today or no end date)
+        const isOnScope = (item: any) => {
+          const endDate = item.tga_data?.endDate;
+          if (!endDate) return true; // no end date = still on scope
+          return endDate >= today;
+        };
         
         const quals = scopeItems
-          .filter((item: any) => item.scope_type === 'qualification')
+          .filter((item: any) => item.scope_type === 'qualification' && isOnScope(item))
           .map((item: any) => ({
             id: item.id,
             qualification_code: item.code,
@@ -325,7 +333,7 @@ export function useTgaRtoData(tenantId: number | null, rtoCode: string | null, c
         setQualifications(quals);
 
         const unitItems = scopeItems
-          .filter((item: any) => item.scope_type === 'unit')
+          .filter((item: any) => item.scope_type === 'unit' && isOnScope(item))
           .map((item: any) => ({
             id: item.id,
             unit_code: item.code,
@@ -341,7 +349,7 @@ export function useTgaRtoData(tenantId: number | null, rtoCode: string | null, c
         setUnits(unitItems);
 
         const skillItems = scopeItems
-          .filter((item: any) => item.scope_type === 'skillset')
+          .filter((item: any) => item.scope_type === 'skillset' && isOnScope(item))
           .map((item: any) => ({
             id: item.id,
             skillset_code: item.code,
@@ -357,7 +365,7 @@ export function useTgaRtoData(tenantId: number | null, rtoCode: string | null, c
         setSkillsets(skillItems);
 
         const courseItems = scopeItems
-          .filter((item: any) => item.scope_type === 'accreditedCourse')
+          .filter((item: any) => item.scope_type === 'accreditedCourse' && isOnScope(item))
           .map((item: any) => ({
             id: item.id,
             course_code: item.code,
