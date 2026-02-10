@@ -391,9 +391,11 @@ export function useTgaRtoData(tenantId: number | null, rtoCode: string | null, c
         setAddresses((addressesRes.data || []) as TGAAddress[]);
         setDeliveryLocations((locationsRes.data || []) as TGADeliveryLocation[]);
 
-        // Show items based on TGA status, not endDate (endDate is metadata, not expiry)
-        // Current-only filter — DB should already be clean, but enforce as safety net
+        // Show Current + teach-out items — DB stores both after sync
         const isOnScope = (item: any) => {
+          const scopeState = item.tga_data?.scope_state;
+          if (scopeState === 'current' || scopeState === 'teach_out') return true;
+          // Fallback for items persisted before scope_state was added
           const status = (item.status || '').trim().toLowerCase();
           return status === 'current';
         };
@@ -411,6 +413,7 @@ export function useTgaRtoData(tenantId: number | null, rtoCode: string | null, c
             start_date: item.tga_data?.startDate || null,
             end_date: item.tga_data?.endDate || null,
             extent_label: item.tga_data?.extentLabel || null,
+            scope_state: item.tga_data?.scope_state || null,
           }));
         setQualifications(quals);
 
@@ -427,6 +430,7 @@ export function useTgaRtoData(tenantId: number | null, rtoCode: string | null, c
             start_date: item.tga_data?.startDate || null,
             end_date: item.tga_data?.endDate || null,
             extent_label: item.tga_data?.extentLabel || null,
+            scope_state: item.tga_data?.scope_state || null,
           }));
         setUnits(unitItems);
 
@@ -443,6 +447,7 @@ export function useTgaRtoData(tenantId: number | null, rtoCode: string | null, c
             start_date: item.tga_data?.startDate || null,
             end_date: item.tga_data?.endDate || null,
             extent_label: item.tga_data?.extentLabel || null,
+            scope_state: item.tga_data?.scope_state || null,
           }));
         setSkillsets(skillItems);
 
@@ -458,6 +463,7 @@ export function useTgaRtoData(tenantId: number | null, rtoCode: string | null, c
             start_date: item.tga_data?.startDate || null,
             end_date: item.tga_data?.endDate || null,
             extent_label: item.tga_data?.extentLabel || null,
+            scope_state: item.tga_data?.scope_state || null,
           }));
         setCourses(courseItems);
 
@@ -472,6 +478,7 @@ export function useTgaRtoData(tenantId: number | null, rtoCode: string | null, c
             is_current: item.status === 'Current' || item.status === 'current',
             start_date: item.tga_data?.startDate || null,
             end_date: item.tga_data?.endDate || null,
+            scope_state: item.tga_data?.scope_state || null,
           }));
         setTrainingPackages(tpItems);
         
