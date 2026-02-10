@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { format, differenceInMinutes } from 'date-fns';
 import { 
   Clock, MapPin, Users, Building2, Timer, Link as LinkIcon, 
-  ExternalLink, Video, FileText, Plus, Check, Loader2, Save
+  ExternalLink, Video, FileText, Plus, Check, Loader2, Save, Paperclip
 } from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
@@ -14,6 +14,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Meeting, MeetingParticipant, MeetingNote, MeetingActionItem, useMeetings } from '@/hooks/useMeetings';
+import { useMeetingArtifacts } from '@/hooks/useMeetingArtifacts';
+import { MeetingArtifactsList } from '@/components/meetings/MeetingArtifactsList';
 import { useQuery } from '@tanstack/react-query';
 import { cn } from '@/lib/utils';
 
@@ -42,11 +44,19 @@ export function MeetingDetailDrawer({
     updateActionItem 
   } = useMeetings();
 
+  const {
+    artifacts,
+    isLoading: loadingArtifacts,
+    isSyncing,
+    syncArtifacts,
+    lastSyncResult,
+  } = useMeetingArtifacts(open ? meeting?.id ?? null : null);
+
   const [activeTab, setActiveTab] = useState('details');
   const [newNote, setNewNote] = useState('');
   const [newActionItem, setNewActionItem] = useState('');
   const [isSavingNote, setIsSavingNote] = useState(false);
-
+  
   // Fetch participants
   const { data: participants = [], isLoading: loadingParticipants } = useQuery({
     queryKey: ['meeting-participants', meeting?.id],
@@ -165,6 +175,15 @@ export function MeetingDetailDrawer({
               <>
                 <TabsTrigger value="notes">Notes</TabsTrigger>
                 <TabsTrigger value="actions">Actions</TabsTrigger>
+                <TabsTrigger value="artifacts" className="gap-1">
+                  <Paperclip className="h-3 w-3" />
+                  Artifacts
+                  {artifacts.length > 0 && (
+                    <Badge variant="secondary" className="h-4 px-1 text-[10px] ml-1">
+                      {artifacts.length}
+                    </Badge>
+                  )}
+                </TabsTrigger>
               </>
             )}
           </TabsList>
@@ -370,6 +389,19 @@ export function MeetingDetailDrawer({
                   ))}
                 </div>
               )}
+            </TabsContent>
+
+            <TabsContent value="artifacts" className="p-6 pt-4 mt-0">
+              <MeetingArtifactsList
+                artifacts={artifacts}
+                isLoading={loadingArtifacts}
+                isSyncing={isSyncing}
+                lastSyncResult={lastSyncResult}
+                onSync={() => meeting?.id && syncArtifacts(meeting.id)}
+                meetingMsSyncStatus={(meeting as any)?.ms_sync_status}
+                meetingMsSyncError={(meeting as any)?.ms_sync_error}
+                meetingMsLastSyncedAt={(meeting as any)?.ms_last_synced_at}
+              />
             </TabsContent>
           </ScrollArea>
         </Tabs>

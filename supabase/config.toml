@@ -128,3 +128,6 @@ verify_jwt = false
 
 [functions.browse-sharepoint-folder]
 verify_jwt = false
+
+[functions.sync-meeting-artifacts]
+verify_jwt = false

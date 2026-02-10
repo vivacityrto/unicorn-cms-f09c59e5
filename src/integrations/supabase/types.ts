@@ -3928,7 +3928,7 @@ export type Database = {
         }
         Relationships: []
       }
-      clickup_tasks_260110: {
+      clickup_tasks_260210: {
         Row: {
           assigned_comments: Json | null
           assignees: Json | null
@@ -3938,10 +3938,12 @@ export type Database = {
           date_created: string | null
           date_created_at: string | null
           date_created_text: string | null
+          date_created_ts: string | null
           date_imported: string | null
           due_date: string | null
           due_date_at: string | null
           due_date_text: string | null
+          due_date_ts: string | null
           folder_name_path: string | null
           id: string
           inserted_at: string | null
@@ -3949,11 +3951,13 @@ export type Database = {
           parent_id: string | null
           priority: string | null
           rolled_up_time: string | null
+          rolled_up_time_minutes: number | null
           rolled_up_time_text: string | null
           space_name: string | null
           start_date: string | null
           start_date_at: string | null
           start_date_text: string | null
+          start_date_ts: string | null
           status: string | null
           tags: Json | null
           task_content: string | null
@@ -3961,8 +3965,10 @@ export type Database = {
           task_id: string | null
           task_name: string | null
           time_estimated: string | null
+          time_estimated_minutes: number | null
           time_estimated_text: string | null
           time_spent: string | null
+          time_spent_minutes: number | null
           time_spent_text: string | null
           updated_at: string | null
         }
@@ -3975,10 +3981,12 @@ export type Database = {
           date_created?: string | null
           date_created_at?: string | null
           date_created_text?: string | null
+          date_created_ts?: string | null
           date_imported?: string | null
           due_date?: string | null
           due_date_at?: string | null
           due_date_text?: string | null
+          due_date_ts?: string | null
           folder_name_path?: string | null
           id?: string
           inserted_at?: string | null
@@ -3986,11 +3994,13 @@ export type Database = {
           parent_id?: string | null
           priority?: string | null
           rolled_up_time?: string | null
+          rolled_up_time_minutes?: number | null
           rolled_up_time_text?: string | null
           space_name?: string | null
           start_date?: string | null
           start_date_at?: string | null
           start_date_text?: string | null
+          start_date_ts?: string | null
           status?: string | null
           tags?: Json | null
           task_content?: string | null
@@ -3998,8 +4008,10 @@ export type Database = {
           task_id?: string | null
           task_name?: string | null
           time_estimated?: string | null
+          time_estimated_minutes?: number | null
           time_estimated_text?: string | null
           time_spent?: string | null
+          time_spent_minutes?: number | null
           time_spent_text?: string | null
           updated_at?: string | null
         }
@@ -4012,10 +4024,12 @@ export type Database = {
           date_created?: string | null
           date_created_at?: string | null
           date_created_text?: string | null
+          date_created_ts?: string | null
           date_imported?: string | null
           due_date?: string | null
           due_date_at?: string | null
           due_date_text?: string | null
+          due_date_ts?: string | null
           folder_name_path?: string | null
           id?: string
           inserted_at?: string | null
@@ -4023,11 +4037,13 @@ export type Database = {
           parent_id?: string | null
           priority?: string | null
           rolled_up_time?: string | null
+          rolled_up_time_minutes?: number | null
           rolled_up_time_text?: string | null
           space_name?: string | null
           start_date?: string | null
           start_date_at?: string | null
           start_date_text?: string | null
+          start_date_ts?: string | null
           status?: string | null
           tags?: Json | null
           task_content?: string | null
@@ -4035,8 +4051,10 @@ export type Database = {
           task_id?: string | null
           task_name?: string | null
           time_estimated?: string | null
+          time_estimated_minutes?: number | null
           time_estimated_text?: string | null
           time_spent?: string | null
+          time_spent_minutes?: number | null
           time_spent_text?: string | null
           updated_at?: string | null
         }
@@ -12668,6 +12686,97 @@ export type Database = {
           },
         ]
       }
+      meeting_artifacts: {
+        Row: {
+          artifact_type: string
+          captured_at: string
+          captured_by: string
+          created_at: string
+          drive_id: string | null
+          id: string
+          item_id: string | null
+          meeting_id: string
+          metadata: Json | null
+          tenant_id: number
+          title: string
+          updated_at: string
+          web_url: string | null
+        }
+        Insert: {
+          artifact_type: string
+          captured_at?: string
+          captured_by: string
+          created_at?: string
+          drive_id?: string | null
+          id?: string
+          item_id?: string | null
+          meeting_id: string
+          metadata?: Json | null
+          tenant_id: number
+          title: string
+          updated_at?: string
+          web_url?: string | null
+        }
+        Update: {
+          artifact_type?: string
+          captured_at?: string
+          captured_by?: string
+          created_at?: string
+          drive_id?: string | null
+          id?: string
+          item_id?: string | null
+          meeting_id?: string
+          metadata?: Json | null
+          tenant_id?: number
+          title?: string
+          updated_at?: string
+          web_url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meeting_artifacts_meeting_id_fkey"
+            columns: ["meeting_id"]
+            isOneToOne: false
+            referencedRelation: "meetings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "meeting_artifacts_meeting_id_fkey"
+            columns: ["meeting_id"]
+            isOneToOne: false
+            referencedRelation: "meetings_shared"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "meeting_artifacts_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "meeting_artifacts_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_engagement_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "meeting_artifacts_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_eos_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "meeting_artifacts_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_compliance_entitlements"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
       meeting_capture_audit: {
         Row: {
           action: string
@@ -12886,6 +12995,12 @@ export type Database = {
           is_online: boolean | null
           is_organizer: boolean | null
           location: string | null
+          ms_ical_uid: string | null
+          ms_join_url: string | null
+          ms_last_synced_at: string | null
+          ms_organizer_email: string | null
+          ms_sync_error: string | null
+          ms_sync_status: string
           needs_linking: boolean | null
           owner_user_uuid: string
           package_id: number | null
@@ -12910,6 +13025,12 @@ export type Database = {
           is_online?: boolean | null
           is_organizer?: boolean | null
           location?: string | null
+          ms_ical_uid?: string | null
+          ms_join_url?: string | null
+          ms_last_synced_at?: string | null
+          ms_organizer_email?: string | null
+          ms_sync_error?: string | null
+          ms_sync_status?: string
           needs_linking?: boolean | null
           owner_user_uuid: string
           package_id?: number | null
@@ -12934,6 +13055,12 @@ export type Database = {
           is_online?: boolean | null
           is_organizer?: boolean | null
           location?: string | null
+          ms_ical_uid?: string | null
+          ms_join_url?: string | null
+          ms_last_synced_at?: string | null
+          ms_organizer_email?: string | null
+          ms_sync_error?: string | null
+          ms_sync_status?: string
           needs_linking?: boolean | null
           owner_user_uuid?: string
           package_id?: number | null
@@ -22765,6 +22892,12 @@ export type Database = {
           is_online: boolean | null
           is_organizer: boolean | null
           location: string | null
+          ms_ical_uid: string | null
+          ms_join_url: string | null
+          ms_last_synced_at: string | null
+          ms_organizer_email: string | null
+          ms_sync_error: string | null
+          ms_sync_status: string | null
           needs_linking: boolean | null
           owner_user_uuid: string | null
           package_id: number | null
