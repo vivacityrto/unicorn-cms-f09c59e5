@@ -10,6 +10,28 @@
 
 import { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
 
+/**
+ * Canonical event types – must match the CHECK constraint on
+ * client_timeline_events.event_type in the database.
+ */
+const VALID_EVENT_TYPES = new Set([
+  'microsoft_connected','microsoft_disconnected','microsoft_sync_failed',
+  'sharepoint_root_configured','sharepoint_root_invalid','sharepoint_doc_linked',
+  'document_shared_to_client','document_uploaded','document_downloaded',
+  'meeting_synced','meeting_attendance_imported','meeting_artifacts_captured',
+  'minutes_draft_created','minutes_draft_updated','minutes_published_pdf',
+  'tasks_created_from_minutes','task_completed_team','task_completed_client',
+  'action_item_created','action_item_updated','action_item_completed',
+  'email_linked','email_attachment_saved','email_sent','email_failed',
+  'note_added','note_created','note_pinned','note_unpinned',
+  'time_posted','time_ignored',
+] as const);
+
+type ValidEventType = typeof VALID_EVENT_TYPES extends Set<infer T> ? T : never;
+
+const VALID_SOURCES = new Set(['unicorn', 'microsoft', 'system', 'user'] as const);
+const VALID_VISIBILITIES = new Set(['internal', 'client'] as const);
+
 export interface TimelineEventInput {
   tenant_id: number;
   client_id: string;
@@ -28,6 +50,34 @@ export interface TimelineEventInput {
 }
 
 /**
+ * Validate an event before insertion.
+ * Throws on invalid data so callers can catch and log.
+ */
+function validateEvent(event: TimelineEventInput): void {
+  if (!VALID_EVENT_TYPES.has(event.event_type as ValidEventType)) {
+    throw new Error(`Invalid event_type: "${event.event_type}". Must be one of the canonical types.`);
+  }
+  if (!VALID_SOURCES.has(event.source as any)) {
+    throw new Error(`Invalid source: "${event.source}".`);
+  }
+  const vis = event.visibility || "internal";
+  if (!VALID_VISIBILITIES.has(vis as any)) {
+    throw new Error(`Invalid visibility: "${vis}".`);
+  }
+  // Business rules
+  if (event.source === "microsoft" && vis !== "internal") {
+    throw new Error("Microsoft-sourced events must have visibility='internal'.");
+  }
+  if (vis === "client" && event.source !== "unicorn") {
+    throw new Error("Client-visible events must have source='unicorn'.");
+  }
+  // Dedupe key required for Microsoft events
+  if (event.source === "microsoft" && !event.dedupe_key) {
+    throw new Error("Microsoft-sourced events require a dedupe_key.");
+  }
+}
+
+/**
  * Emit a timeline event and corresponding audit log.
  * 
  * @param supabase - Service role client (bypasses RLS)
@@ -39,6 +89,9 @@ export async function emitTimelineEvent(
   event: TimelineEventInput,
 ): Promise<string | null> {
   try {
+    // Validate before insert
+    validateEvent(event);
+
     // Sanitise metadata: strip any raw content fields
     const safeMetadata = sanitiseMetadata(event.metadata || {});
 
