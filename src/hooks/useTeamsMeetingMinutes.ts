@@ -29,6 +29,11 @@ export interface MinutesContent {
   ai_source_artifact_id?: string;
   ai_summary_version?: number;
   ai_notes?: string;
+  // Copilot source metadata
+  source?: 'manual' | 'copilot';
+  source_pasted_at?: string;
+  source_pasted_by?: string;
+  raw_input?: string;
 }
 
 export interface MeetingMinutes {
@@ -55,6 +60,14 @@ export interface AiProposedMinutes {
   actions: Array<{ action: string; owner: string; due_date: string; status: string }>;
   risks: string[];
   open_questions: string[];
+  confidence: Record<string, string>;
+}
+
+export interface CopilotExtracted {
+  attendees: string[];
+  summary: string;
+  decisions: string[];
+  actions: Array<{ action: string; owner: string; due_date: string; status: string }>;
   confidence: Record<string, string>;
 }
 
@@ -240,7 +253,6 @@ export function useTeamsMeetingMinutes(meetingId: string | null) {
       updated_at: now,
     }, session.access_token);
 
-    // Audit: applied
     await supabase.from('audit_events' as any).insert({
       entity: 'meeting_minutes',
       entity_id: minutesId,
@@ -269,6 +281,94 @@ export function useTeamsMeetingMinutes(meetingId: string | null) {
     toast.info('AI draft discarded');
   };
 
+  // ── Copilot extraction ─────────────────────────────────────────────
+  const extractCopilotMutation = useMutation({
+    mutationFn: async (pastedText: string) => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) throw new Error('Not authenticated');
+
+      const { data, error } = await supabase.functions.invoke('extract-copilot-minutes', {
+        headers: { Authorization: `Bearer ${session.access_token}` },
+        body: { meeting_id: meetingId, pasted_text: pastedText },
+      });
+
+      if (error) throw new Error(error.message);
+      if (data && 'error' in data) throw new Error((data as any).error);
+      return data as { success: boolean; extracted: CopilotExtracted; store_raw: boolean };
+    },
+    onError: (error) => {
+      toast.error(error instanceof Error ? error.message : 'Copilot extraction failed');
+    },
+  });
+
+  // Apply Copilot extracted content to the draft
+  const applyCopilotContent = async (
+    minutesId: string,
+    extracted: CopilotExtracted,
+    currentContent: MinutesContent,
+    storeRaw: boolean,
+    rawInput?: string,
+  ) => {
+    const now = new Date().toISOString();
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) return;
+
+    const mergedContent: MinutesContent = {
+      ...currentContent,
+      attendees: extracted.attendees.length > 0 ? extracted.attendees : currentContent.attendees,
+      discussion_notes: extracted.summary || currentContent.discussion_notes,
+      decisions: extracted.decisions.length > 0 ? extracted.decisions : currentContent.decisions,
+      actions: extracted.actions.length > 0 ? extracted.actions : currentContent.actions,
+      source: 'copilot',
+      source_pasted_at: now,
+      source_pasted_by: session.user.id,
+      ai_notes: 'Imported from Teams Copilot. Review required.',
+    };
+
+    if (storeRaw && rawInput) {
+      mergedContent.raw_input = rawInput;
+    }
+
+    await patchTable('meeting_minutes', minutesId, {
+      content: mergedContent,
+      updated_at: now,
+    }, session.access_token);
+
+    await supabase.from('audit_events' as any).insert({
+      entity: 'meeting_minutes',
+      entity_id: minutesId,
+      action: 'minutes_copilot_applied_to_draft',
+      user_id: session.user.id,
+      details: {
+        meeting_id: meetingId,
+        counts: {
+          attendees: extracted.attendees.length,
+          decisions: extracted.decisions.length,
+          actions: extracted.actions.length,
+        },
+      },
+    });
+
+    toast.success('Copilot minutes applied to draft');
+    queryClient.invalidateQueries({ queryKey: ['meeting-minutes', meetingId] });
+  };
+
+  // Discard Copilot extraction (audit only)
+  const discardCopilotContent = async (minutesId: string) => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) return;
+
+    await supabase.from('audit_events' as any).insert({
+      entity: 'meeting_minutes',
+      entity_id: minutesId,
+      action: 'minutes_copilot_discarded',
+      user_id: session.user.id,
+      details: { meeting_id: meetingId },
+    });
+
+    toast.info('Copilot extraction discarded');
+  };
+
   return {
     minutes,
     isLoading,
@@ -285,5 +385,13 @@ export function useTeamsMeetingMinutes(meetingId: string | null) {
     applyAiContent,
     discardAiContent,
     resetAiProposal: generateFromTranscriptMutation.reset,
+    // Copilot
+    extractCopilot: extractCopilotMutation.mutate,
+    isExtracting: extractCopilotMutation.isPending,
+    copilotExtracted: extractCopilotMutation.data?.extracted ?? null,
+    copilotStoreRaw: extractCopilotMutation.data?.store_raw ?? false,
+    applyCopilotContent,
+    discardCopilotContent,
+    resetCopilotExtraction: extractCopilotMutation.reset,
   };
 }
