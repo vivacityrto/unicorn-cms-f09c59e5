@@ -83,3 +83,8 @@ export const getCategoryIcon = (categoryId: string): string => {
   const category = RESOURCE_CATEGORIES.find(c => c.id === categoryId);
   return category?.icon || 'FileText';
 };
+
+/** Returns the client-namespaced path for a resource category */
+export const getClientCategoryPath = (categoryId: string): string => {
+  return `/client/resource-hub/${categoryId}`;
+};

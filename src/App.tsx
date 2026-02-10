@@ -919,6 +919,7 @@ const App = () => (
             <Route path="/client/home" element={<ProtectedRoute><ClientHomeWrapperNew /></ProtectedRoute>} />
             <Route path="/client/documents" element={<ProtectedRoute><ClientDocumentsWrapperNew /></ProtectedRoute>} />
             <Route path="/client/resource-hub" element={<ProtectedRoute><ClientResourceHubWrapperNew /></ProtectedRoute>} />
+            <Route path="/client/resource-hub/:categoryId" element={<ProtectedRoute><ClientResourceHubWrapperNew /></ProtectedRoute>} />
             <Route path="/client/calendar" element={<ProtectedRoute><ClientCalendarWrapperNew /></ProtectedRoute>} />
             <Route path="/client/notifications" element={<ProtectedRoute><ClientNotificationsWrapperNew /></ProtectedRoute>} />
             <Route path="/client/reports" element={<ProtectedRoute><ClientReportsWrapperNew /></ProtectedRoute>} />
