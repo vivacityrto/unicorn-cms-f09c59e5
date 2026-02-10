@@ -16,6 +16,7 @@ interface TokenRecord {
   refresh_token: string;
   expires_at: string;
   tenant_id: number;
+  scope?: string;
 }
 
 interface DriveItem {
@@ -83,7 +84,7 @@ async function refreshTokenIfNeeded(
       client_secret: MICROSOFT_CLIENT_SECRET,
       refresh_token: token.refresh_token,
       grant_type: 'refresh_token',
-      scope: 'openid profile email offline_access Files.Read Sites.Read.All'
+      scope: token.scope || 'openid profile email offline_access Files.Read.All'
     })
   });
 
