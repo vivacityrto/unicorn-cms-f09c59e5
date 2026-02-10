@@ -118,6 +118,23 @@ function classify(item: any): ClassifyResult {
   return { include: false, scope_state: null, endRaw, usageRaw, statusRaw, dropReason: "unknown_effective", dropDetail: effective };
 }
 
+/** Safe wrapper — never throws, captures exceptions as drop reasons */
+function safeClassify(item: any): ClassifyResult & { drop?: string; error?: string; sampleKeys?: string[] | string } {
+  try {
+    return classify(item);
+  } catch (e) {
+    return {
+      include: false,
+      scope_state: null,
+      endRaw: null,
+      usageRaw: null,
+      statusRaw: null,
+      dropReason: "unknown_effective",
+      dropDetail: `classifier_exception: ${String(e)}`,
+    };
+  }
+}
+
 // Compute SHA256 hash
 async function computeSha256(text: string): Promise<string> {
   const encoder = new TextEncoder();
@@ -234,7 +251,7 @@ function classifyAndFilter(categorised: Record<string, any[]>): {
     const diag: TypeDiagnostics = { raw_total: items.length, kept: 0, current: 0, teach_out: 0, dropped: 0, drop_reasons: {} };
 
     for (const item of items) {
-      const result = classify(item);
+      const result = safeClassify(item);
       if (result.include && result.scope_state) {
         item.scope_state = result.scope_state;
         item.usageRecommendation_raw = result.usageRaw;
@@ -399,8 +416,19 @@ serve(async (req) => {
 
     const categorised = categoriseScope(scopeResult.items);
 
+    // Log payload shapes per scope type BEFORE classification
+    const payloadShapes: Record<string, { count: number; sampleKeys: string[] | null }> = {};
+    for (const [type, arr] of Object.entries(categorised)) {
+      payloadShapes[type] = {
+        count: arr.length,
+        sampleKeys: arr[0] ? Object.keys(arr[0]) : null,
+      };
+    }
+    log('info', 'TGA payload shapes', payloadShapes);
+
     // Classify with diagnostics
     const { filtered, diagnostics } = classifyAndFilter(categorised);
+    (diagnostics as any).payload_shapes = payloadShapes;
 
     const keptTotal = Object.values(filtered).reduce((sum, arr) => sum + arr.length, 0);
     const rawTotal = scopeResult.items.length;
@@ -409,18 +437,29 @@ serve(async (req) => {
 
     // ── SANITY CHECKS before staging ────────────────────────────────
     if (rawTotal > 0 && keptTotal === 0) {
-      const errMsg = `TGA returned ${rawTotal} scope items but ALL were dropped after classification. Aborting swap to preserve existing data.`;
-      log('error', errMsg, { diagnostics });
+      const warnMsg = `TGA returned ${rawTotal} scope items but ALL were dropped after classification. Swap aborted — old data preserved.`;
+      log('warn', warnMsg, { diagnostics });
+
+      // Collect top drop reasons + sample dropped items for debugging
+      const allDropped: any[] = [];
+      for (const [type, diag] of Object.entries(diagnostics)) {
+        if (type === 'payload_shapes') continue;
+        const d = diag as TypeDiagnostics;
+        if (d.sample_dropped) allDropped.push({ type, ...d.sample_dropped });
+      }
 
       progress.stage = 'aborted_sanity_check';
       progress.diagnostics = diagnostics;
-      await updateJobStatus(jobId, 'error', progress, errMsg);
+      await updateJobStatus(jobId, 'error', progress, warnMsg);
 
+      // Return 200 with diagnostics instead of throwing
       return new Response(JSON.stringify({
         success: false,
-        error: errMsg,
+        abort_reason: 'all_items_dropped',
         job_id: jobId,
         diagnostics,
+        payload_shapes: payloadShapes,
+        sample_dropped: allDropped.slice(0, 5),
         raw_total: rawTotal,
         kept_total: 0,
         duration_ms: Date.now() - startTime,
