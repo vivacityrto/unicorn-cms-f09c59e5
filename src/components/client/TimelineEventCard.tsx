@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { TimelineEvent } from '@/hooks/useClientManagementData';
+import { type TimelineEventType } from '@/types/timeline';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -24,7 +25,10 @@ import type { LucideIcon } from 'lucide-react';
 // Icon & colour mapping
 // =============================================
 
-const EVENT_ICON_MAP: Record<string, LucideIcon> = {
+/**
+ * Exhaustive icon map – a missing key causes a compile error.
+ */
+const EVENT_ICON_MAP: Record<TimelineEventType, LucideIcon> = {
   microsoft_connected: Plug,
   microsoft_disconnected: PlugZap,
   microsoft_sync_failed: AlertTriangle,
@@ -41,6 +45,11 @@ const EVENT_ICON_MAP: Record<string, LucideIcon> = {
   minutes_draft_updated: FileEdit,
   minutes_published_pdf: FileCheck,
   tasks_created_from_minutes: CheckSquare,
+  task_completed_team: CheckSquare,
+  task_completed_client: CheckSquare,
+  action_item_created: CheckSquare,
+  action_item_updated: CheckSquare,
+  action_item_completed: CheckSquare,
   email_linked: Mail,
   email_attachment_saved: Paperclip,
   email_sent: Mail,
@@ -49,13 +58,23 @@ const EVENT_ICON_MAP: Record<string, LucideIcon> = {
   note_created: FileText,
   note_pinned: Pin,
   note_unpinned: PinOff,
-  task_completed_team: CheckSquare,
-  task_completed_client: CheckSquare,
   time_posted: Clock,
   time_ignored: Clock,
 };
 
-const EVENT_COLOR_MAP: Record<string, string> = {
+/**
+ * Exhaustive colour map – a missing key causes a compile error.
+ */
+const EVENT_COLOR_MAP: Record<TimelineEventType, string> = {
+  microsoft_connected: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
+  microsoft_disconnected: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
+  microsoft_sync_failed: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
+  sharepoint_root_configured: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
+  sharepoint_root_invalid: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
+  sharepoint_doc_linked: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
+  document_shared_to_client: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
+  document_uploaded: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
+  document_downloaded: 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400',
   meeting_synced: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
   meeting_attendance_imported: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
   meeting_artifacts_captured: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
@@ -63,25 +82,19 @@ const EVENT_COLOR_MAP: Record<string, string> = {
   minutes_draft_updated: 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400',
   minutes_published_pdf: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
   tasks_created_from_minutes: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400',
+  task_completed_team: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400',
+  task_completed_client: 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400',
+  action_item_created: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400',
+  action_item_updated: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400',
+  action_item_completed: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
   email_linked: 'bg-cyan-100 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-400',
   email_attachment_saved: 'bg-cyan-100 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-400',
   email_sent: 'bg-cyan-100 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-400',
   email_failed: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
-  sharepoint_doc_linked: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
-  sharepoint_root_configured: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
-  sharepoint_root_invalid: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
-  document_shared_to_client: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
-  document_uploaded: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
-  document_downloaded: 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400',
-  microsoft_connected: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
-  microsoft_disconnected: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
-  microsoft_sync_failed: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
   note_added: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400',
   note_created: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400',
   note_pinned: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
   note_unpinned: 'bg-muted text-muted-foreground',
-  task_completed_team: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400',
-  task_completed_client: 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400',
   time_posted: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
   time_ignored: 'bg-muted text-muted-foreground',
 };
@@ -170,8 +183,9 @@ export function TimelineEventCard({
   const navigate = useNavigate();
   const [expanded, setExpanded] = useState(false);
 
-  const Icon = EVENT_ICON_MAP[event.event_type] || Activity;
-  const colorClass = EVENT_COLOR_MAP[event.event_type] || 'bg-muted text-muted-foreground';
+  const eventKey = event.event_type as TimelineEventType;
+  const Icon = EVENT_ICON_MAP[eventKey] ?? Activity;
+  const colorClass = EVENT_COLOR_MAP[eventKey] ?? 'bg-muted text-muted-foreground';
   const occurredAt = event.occurred_at || event.created_at;
   const meta = event.metadata as Record<string, unknown>;
   const hasDetails = event.body || Object.keys(meta || {}).length > 0;
