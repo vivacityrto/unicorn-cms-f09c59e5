@@ -1,81 +1,36 @@
 
 
-## Login History: User-Centric with Tenant Context
+## Apply Safe DDL Pack — New Tables Only
 
-### Design Decision
+### Pre-flight checks (completed)
 
-Login events are recorded against the **user**, not the tenant. Session activity metrics are optionally tagged with a `tenant_id` to allow filtering by organisation context.
+- `tga_rto_snapshots.id` is **uuid** — the FK from `tga_rto_acknowledgements` will work without changes.
+- None of the 12 target tables exist yet — no conflicts expected.
 
-This matches reality: a user authenticates once to the platform, then works across one or more tenants during that session.
+### What will be created
 
-### Schema Changes
+| Group | Tables |
+|-------|--------|
+| 1. Client Portal Sessions | `client_portal_sessions` |
+| 2. Client Documents | `client_documents`, `client_document_shares`, `client_document_requests` |
+| 3. Tenant Conversations | `tenant_conversations`, `tenant_messages`, `tenant_message_attachments` |
+| 4. Chatbot Audit Trail | `chat_sessions`, `chat_messages`, `chat_escalations` |
+| 5. TGA Monitoring Add-ons | `tga_rto_flags`, `tga_rto_acknowledgements` |
 
-**Modify `user_activity` table** -- add an optional `tenant_id` column and a `session_id` for grouping actions within a login session:
+### What will NOT be touched
 
-```text
-user_activity (existing table, modified)
----------------------------------------------
-id              uuid        PK
-user_id         uuid        FK -> users.user_uuid (NOT NULL)
-tenant_id       bigint      FK -> tenants.id (NULLABLE)    <-- NEW
-session_id      uuid        (NULLABLE, groups actions)     <-- NEW
-login_date      timestamptz NOT NULL
-logout_date     timestamptz (NULLABLE)                     <-- NEW
-docs_downloaded integer     (NULLABLE)
-messages_sent   integer     (NULLABLE)
-tasks_created   integer     (NULLABLE)
-created_at      timestamptz
-```
+- `meetings`, `meeting_participants`, `meetings_shared`, `tga_rto_snapshots` — already deployed, skipped entirely.
 
-- `tenant_id` is nullable because the login event itself is user-level; the tenant context is set when the user selects/enters a tenant workspace
-- `session_id` groups multiple activity updates within one session
-- `logout_date` enables session duration tracking
+### Steps
 
-**Preserve legacy data**: Add a one-time migration to snapshot `users.last_sign_in_at` into a `legacy_last_sign_in` column on the `users` table (or a separate `legacy_login_snapshot` table) so the old value is never lost as new logins overwrite it.
+1. Run the safe DDL migration exactly as provided (12 tables, all FKs, all indexes, wrapped in a transaction).
+2. No RLS policies are included in this DDL — those will need to be added separately as a follow-up step when the application code starts querying these tables.
+3. No code changes in this step — this is schema-only.
 
-```text
-legacy_login_snapshot (new table)
----------------------------------------------
-id              uuid        PK
-user_id         uuid        FK -> users.user_uuid (UNIQUE)
-last_sign_in_at timestamptz (from legacy system)
-migrated_at     timestamptz DEFAULT now()
-```
+### Technical detail
 
-### Auto-Recording Logins
-
-Create a database function + trigger (or edge function hook) that fires on auth sign-in to insert a row into `user_activity`:
-
-- Records `user_id` and `login_date` automatically
-- `tenant_id` is set later when the user navigates into a tenant context
-
-### Hook Changes (`useLoginHistory.ts`)
-
-- Accept an optional `tenantId` parameter
-- When `tenantId` is provided: filter `user_activity` rows by that tenant (shows "what happened in this org")
-- When `tenantId` is null: show all activity for the user (for a user-profile view)
-- Always join to `users` table for name/email
-
-### UI Changes (`ClientLoginHistoryTab.tsx`)
-
-- **User Login Summary** card: shows each tenant user, their legacy last sign-in (from snapshot table), their current last sign-in, and total login count
-- **Session Activity Log**: shows individual sessions with tenant context badge, duration, and action counts
-- Add a "Legacy" badge next to the preserved `last_sign_in_at` value so it's clear which data came from the old system
-
-### RLS Policies
-
-- `user_activity`: users can read their own rows; SuperAdmins can read all; tenant admins can read rows matching their tenant_id
-- `legacy_login_snapshot`: read-only for SuperAdmins and the user themselves
-
-### Technical Summary
-
-| Step | Detail |
-|------|--------|
-| 1. Migration | Add `tenant_id`, `session_id`, `logout_date` columns to `user_activity` |
-| 2. Migration | Create `legacy_login_snapshot` table |
-| 3. Data insert | Populate `legacy_login_snapshot` from current `users.last_sign_in_at` |
-| 4. Migration | Add RLS policies to both tables |
-| 5. Code | Create auth login trigger or edge function to auto-record logins |
-| 6. Code | Update `useLoginHistory.ts` to support user-centric + tenant-filtered queries |
-| 7. Code | Update `ClientLoginHistoryTab.tsx` to show legacy badge and session data |
+- The migration will be executed as a single Supabase migration file.
+- All foreign keys use `DROP CONSTRAINT IF EXISTS` before `ADD CONSTRAINT` for idempotency.
+- All indexes use `CREATE INDEX IF NOT EXISTS`.
+- The `BEGIN` / `COMMIT` wrapper ensures atomicity.
 
