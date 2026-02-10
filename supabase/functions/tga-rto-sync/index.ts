@@ -152,11 +152,11 @@ async function fetchAllScope(rtoId: string): Promise<{ categorised: Record<strin
     return { categorised: { qualification: [], unit: [], skillSet: [], accreditedCourse: [] }, urls: result.urls, error: result.error };
   }
   
-  // Keep ALL items (current, superseded, etc.) — the DB and UI handle status filtering
-  // Only remove implicit items (these are inherited from parent packages, not directly on scope)
-  const explicitItems = result.items.filter((item: any) => item.isImplicit !== true);
+  // Include ALL scope items — implicit items are inherited from training packages but are
+  // still legitimate scope items displayed on training.gov.au
+  const explicitItems = result.items;
   
-  log('info', `Total scope items: ${result.items.length}, explicit (non-implicit): ${explicitItems.length}`);
+  log('info', `Total scope items: ${result.items.length} (all included, no implicit filter)`);
   
   // Log sample items to understand structure
   if (result.items.length > 0) {
