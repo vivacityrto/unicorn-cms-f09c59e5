@@ -55,9 +55,8 @@ export function ClientTopbar({ isPreview }: ClientTopbarProps) {
 
   return (
     <header
-      className="h-14 bg-card border-b flex items-center justify-between px-4 md:px-6 sticky z-20"
+      className="h-16 bg-card border-b flex items-center justify-between px-4 md:px-6"
       style={{
-        top: isPreview ? "48px" : "0",
         borderColor: "hsl(270 20% 88%)",
       }}
     >
