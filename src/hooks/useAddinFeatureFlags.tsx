@@ -60,14 +60,16 @@ export function useAddinFeatureFlags() {
         throw new Error("No app_settings row found");
       }
 
-      // Cast updates to any to bypass type checking since columns may not be in types yet
-      const { error } = await supabase
+      const { data: updated, error } = await supabase
         .from("app_settings")
         .update(updates as Record<string, unknown>)
-        .eq("id", current.id);
+        .eq("id", current.id)
+        .select("*")
+        .single();
 
       if (error) throw error;
-      return updates;
+      if (!updated) throw new Error("Update blocked or no rows updated");
+      return updated;
     },
     onSuccess: () => {
       toast.success("Feature flags updated");
