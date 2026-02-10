@@ -1,69 +1,44 @@
 
 
-## Fix: TGA Data Not Displaying (RLS Policy Mismatch)
+## Fix: TGA Scope Sync Missing Current Training Products
 
 ### Root Cause
 
-The sync **is working correctly** -- the database contains all the TGA data for RTO 91020:
-- 84 qualifications, 2,016 units, 180 skill sets, 4 courses (in `tenant_rto_scope`)
-- 3 contacts, 2 addresses, 11 delivery locations
-- Sync jobs show status "done" in `tga_rest_sync_jobs`
+The edge function filters scope items using `item.isImplicit !== true`, which removes **902 out of 925 items** -- including all current qualifications like BSB40920, CHC30125, CHC33021, etc.
 
-The problem is **broken RLS policies** preventing the UI from reading the data. Two tables use `u.role = 'superadmin'` which matches **no user** in the system. The actual field is `unicorn_role = 'Super Admin'`.
+In the TGA API, `isImplicit` means the item is inherited from a training package on the RTO's scope. However, training.gov.au **still displays these items** on the RTO's scope page. They are legitimate scope items that clients need to see.
 
-### What's Broken
+The current result: only 23 non-implicit (all old/superseded) items are kept, while 902 items including all current qualifications are discarded.
 
-| Table | Current SuperAdmin Check | Works? |
-|---|---|---|
-| `tenant_rto_scope` | `u.role = 'superadmin'` | No |
-| `tga_rest_sync_jobs` | `u.role = 'superadmin'` | No |
-| `tga_rto_snapshots` (one policy) | `u.role = 'superadmin'` | No |
-| `tga_rto_summary` | `users.global_role = 'SuperAdmin'` | Maybe |
-| `tga_rto_contacts` | `users.global_role = 'SuperAdmin'` | Maybe |
-| `tga_rto_addresses` | `users.global_role = 'SuperAdmin'` | Maybe |
-| `tga_rto_delivery_locations` | `users.global_role = 'SuperAdmin'` | Maybe |
+### Fix
 
-The system already has a helper function `is_vivacity_team_safe(auth.uid())` that checks `unicorn_role IN ('Super Admin', 'Team Leader', 'Team Member')` -- this is the correct standard.
+**File: `supabase/functions/tga-rto-sync/index.ts` (~line 155-159)**
 
-Additionally, the debug panel reads from `tga_rto_import_jobs` (old table, stuck at "queued") instead of `tga_rest_sync_jobs` (current table, shows "done").
+Remove the `isImplicit` filter so all scope items are persisted. The database already stores `tga_data` (the full raw item) so the implicit flag is preserved for reference if needed.
 
-### Fix Plan
-
-**Step 1: Migration to fix all TGA-related RLS policies**
-
-Replace all broken superadmin checks with `is_vivacity_team_safe(auth.uid())` and ensure tenant member access via `has_tenant_access_safe(auth.uid(), tenant_id)`:
-
-- Drop and recreate policies on `tenant_rto_scope`, `tga_rest_sync_jobs`, `tga_rto_snapshots`
-- Drop and recreate policies on `tga_rto_summary`, `tga_rto_contacts`, `tga_rto_addresses`, `tga_rto_delivery_locations`
-- All policies will follow the same pattern:
-  - Vivacity staff: full access via `is_vivacity_team_safe`
-  - Tenant users: read access via `has_tenant_access_safe`
-
-**Step 2: Fix debug panel data source**
-
-Update `ClientIntegrationsTab.tsx` to read from `tga_rest_sync_jobs` instead of `tga_rto_import_jobs` so the debug panel shows the correct sync status.
-
-### Technical Details
-
+Change:
 ```text
-Migration SQL pattern per table:
-
-  DROP POLICY IF EXISTS "old_policy_name" ON table_name;
-  CREATE POLICY "vivacity_all" ON table_name FOR ALL
-    USING (is_vivacity_team_safe(auth.uid()));
-  CREATE POLICY "tenant_read" ON table_name FOR SELECT
-    USING (has_tenant_access_safe(auth.uid(), tenant_id));
+const explicitItems = result.items.filter((item: any) => item.isImplicit !== true);
 ```
 
-Debug panel fix in `ClientIntegrationsTab.tsx` (~line 398):
-- Change `supabase.from('tga_rto_import_jobs')` to `supabase.from('tga_rest_sync_jobs')`
-- Map the correct column names from the new table
+To:
+```text
+const explicitItems = result.items;
+```
+
+Update the log message accordingly to reflect that all items are now included.
 
 ### Expected Result
 
-After this fix:
-- All TGA tabs (Quals, Skills, Units, Courses) will show correct counts and data
-- Summary, Contacts, Addresses tabs will display correctly
-- Debug panel will show "done" instead of "queued"
-- Both Vivacity staff and tenant users will have appropriate access
+After re-syncing RTO 1915:
+- All 925 scope items will be persisted (was 23)
+- Current qualifications (BSB40920, BSB50820, CHC30125, CHC30221, CHC33021, etc.) will appear
+- Status values will correctly show "Current", "Superseded", and "Non-current" as returned by TGA
+- Matches what training.gov.au displays
+
+### Post-Fix Steps
+
+1. Deploy the updated edge function
+2. Trigger a re-sync for tenant 7500 (RTO 1915) to pull all items
+3. Verify the Quals tab shows the correct mix of Current and Superseded items
 
