@@ -19,7 +19,7 @@ interface TokenRecord {
   scope?: string;
 }
 
-interface ArtifactResult {
+export interface ArtifactResult {
   artifact_type: 'recording' | 'transcript' | 'shared_file';
   title: string;
   web_url: string;
@@ -27,6 +27,98 @@ interface ArtifactResult {
   item_id: string | null;
   metadata: Record<string, unknown>;
 }
+
+// ── File-type detection ──────────────────────────────────────────────
+
+/** Known recording MIME types */
+const RECORDING_MIME_TYPES = new Set([
+  'video/mp4',
+  'video/webm',
+  'video/x-matroska',
+  'video/quicktime',
+  'audio/mp4',
+  'audio/mpeg',
+  'audio/ogg',
+  'audio/webm',
+  'audio/wav',
+  'audio/x-wav',
+]);
+
+/** Known transcript MIME types */
+const TRANSCRIPT_MIME_TYPES = new Set([
+  'text/vtt',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document', // .docx
+  'text/plain',
+  'application/json', // some transcript formats
+]);
+
+/** File extensions → artifact type */
+const RECORDING_EXTENSIONS = new Set([
+  '.mp4', '.webm', '.mkv', '.mov', '.m4a', '.mp3', '.ogg', '.wav',
+]);
+
+const TRANSCRIPT_EXTENSIONS = new Set([
+  '.vtt', '.srt', '.txt',
+]);
+
+/**
+ * Classify a file as recording, transcript, or shared_file
+ * using mimeType first, then file extension, then name heuristics.
+ */
+export function classifyArtifact(
+  fileName: string,
+  mimeType?: string | null,
+): 'recording' | 'transcript' | 'shared_file' {
+  const nameLower = (fileName || '').toLowerCase();
+
+  // 1. MIME type check (most reliable)
+  if (mimeType) {
+    const mime = mimeType.toLowerCase();
+    if (RECORDING_MIME_TYPES.has(mime)) return 'recording';
+    if (TRANSCRIPT_MIME_TYPES.has(mime)) {
+      // .docx could be a transcript if name suggests it, otherwise shared_file
+      if (mime.includes('wordprocessing') && !nameLower.includes('transcript')) {
+        return 'shared_file';
+      }
+      return 'transcript';
+    }
+  }
+
+  // 2. Extension check
+  const dotIdx = nameLower.lastIndexOf('.');
+  if (dotIdx >= 0) {
+    const ext = nameLower.slice(dotIdx);
+    if (RECORDING_EXTENSIONS.has(ext)) return 'recording';
+    if (TRANSCRIPT_EXTENSIONS.has(ext)) return 'transcript';
+  }
+
+  // 3. Name heuristics
+  if (nameLower.includes('transcript')) return 'transcript';
+  if (nameLower.includes('recording') || nameLower.includes('meeting_recording')) return 'recording';
+
+  return 'shared_file';
+}
+
+// ── Link extraction ──────────────────────────────────────────────────
+
+/**
+ * Parse SharePoint/OneDrive links from HTML body content.
+ */
+export function extractSharePointLinks(htmlBody: string): string[] {
+  const links: string[] = [];
+  const urlRegex = /https?:\/\/[a-zA-Z0-9.-]+\.sharepoint\.com\/[^\s"'<>]+|https?:\/\/[a-zA-Z0-9.-]+\-my\.sharepoint\.com\/[^\s"'<>]+|https?:\/\/onedrive\.live\.com\/[^\s"'<>]+/gi;
+
+  let match;
+  while ((match = urlRegex.exec(htmlBody)) !== null) {
+    const url = match[0].replace(/[&;]amp;/g, '&');
+    if (!links.includes(url)) {
+      links.push(url);
+    }
+  }
+  return links;
+}
+
+// ── Token refresh ────────────────────────────────────────────────────
 
 async function refreshTokenIfNeeded(
   supabaseAdmin: SupabaseClient,
@@ -71,12 +163,11 @@ async function refreshTokenIfNeeded(
   return tokens.access_token;
 }
 
-/**
- * Fetch a single event from Graph by its ID, including full body.
- */
+// ── Graph helpers ────────────────────────────────────────────────────
+
 async function fetchEventDetails(accessToken: string, eventId: string) {
   const url = `https://graph.microsoft.com/v1.0/me/events/${eventId}?$select=id,iCalUId,subject,body,start,end,location,organizer,attendees,onlineMeeting,webLink,isCancelled,sensitivity`;
-  
+
   const res = await fetch(url, {
     headers: { Authorization: `Bearer ${accessToken}` },
   });
@@ -89,38 +180,28 @@ async function fetchEventDetails(accessToken: string, eventId: string) {
   return await res.json();
 }
 
-/**
- * Parse SharePoint/OneDrive links from HTML body content.
- */
-function extractSharePointLinks(htmlBody: string): string[] {
-  const links: string[] = [];
-  // Match SharePoint and OneDrive URLs
-  const urlRegex = /https?:\/\/[a-zA-Z0-9.-]+\.sharepoint\.com\/[^\s"'<>]+|https?:\/\/[a-zA-Z0-9.-]+\-my\.sharepoint\.com\/[^\s"'<>]+|https?:\/\/onedrive\.live\.com\/[^\s"'<>]+/gi;
-  
-  let match;
-  while ((match = urlRegex.exec(htmlBody)) !== null) {
-    const url = match[0].replace(/[&;]amp;/g, '&'); // Decode HTML entities
-    if (!links.includes(url)) {
-      links.push(url);
-    }
-  }
-  return links;
-}
-
-/**
- * Resolve a SharePoint/OneDrive sharing URL to a drive item.
- */
-async function resolveShareLink(accessToken: string, shareUrl: string): Promise<{ driveId: string; itemId: string; name: string; webUrl: string; isFolder: boolean } | null> {
+async function resolveShareLink(
+  accessToken: string,
+  shareUrl: string
+): Promise<{
+  driveId: string;
+  itemId: string;
+  name: string;
+  webUrl: string;
+  isFolder: boolean;
+  mimeType?: string;
+} | null> {
   try {
-    // Encode the URL as a shareId (Graph sharing API format)
     const base64 = btoa(shareUrl);
     const shareId = 'u!' + base64.replace(/=+$/, '').replace(/\//g, '_').replace(/\+/g, '-');
 
-    const res = await fetch(`https://graph.microsoft.com/v1.0/shares/${shareId}/driveItem?$select=id,name,webUrl,folder,parentReference`, {
-      headers: { Authorization: `Bearer ${accessToken}` },
-    });
+    const res = await fetch(
+      `https://graph.microsoft.com/v1.0/shares/${shareId}/driveItem?$select=id,name,webUrl,folder,parentReference,file`,
+      { headers: { Authorization: `Bearer ${accessToken}` } }
+    );
 
     if (!res.ok) {
+      const _body = await res.text(); // consume body
       console.warn(`[sync-artifacts] Could not resolve share link: ${res.status}`);
       return null;
     }
@@ -132,6 +213,7 @@ async function resolveShareLink(accessToken: string, shareUrl: string): Promise<
       name: item.name,
       webUrl: item.webUrl,
       isFolder: !!item.folder,
+      mimeType: item.file?.mimeType || undefined,
     };
   } catch (err) {
     console.warn('[sync-artifacts] Share link resolution error:', err);
@@ -140,29 +222,30 @@ async function resolveShareLink(accessToken: string, shareUrl: string): Promise<
 }
 
 /**
- * Check the organiser's OneDrive Recordings folder for files created during the meeting window.
+ * Discover recordings and transcripts from OneDrive Recordings folder.
+ * Uses classifyArtifact for reliable type detection.
  */
-async function discoverRecordings(
+export async function discoverRecordings(
   accessToken: string,
   meetingStart: string,
   meetingEnd: string
 ): Promise<ArtifactResult[]> {
   const artifacts: ArtifactResult[] = [];
-  
+
   try {
-    // Check the standard Recordings folder in OneDrive
     const recordingsUrl = `https://graph.microsoft.com/v1.0/me/drive/root:/Recordings:/children?$select=id,name,webUrl,createdDateTime,parentReference,file&$orderby=createdDateTime desc&$top=20`;
-    
+
     const res = await fetch(recordingsUrl, {
       headers: { Authorization: `Bearer ${accessToken}` },
     });
 
     if (!res.ok) {
-      // Recordings folder may not exist - that's fine
       if (res.status === 404) {
+        const _body = await res.text();
         console.log('[sync-artifacts] No Recordings folder found in OneDrive');
         return artifacts;
       }
+      const _body = await res.text();
       console.warn(`[sync-artifacts] Recordings folder fetch failed: ${res.status}`);
       return artifacts;
     }
@@ -170,20 +253,22 @@ async function discoverRecordings(
     const data = await res.json();
     const items = data.value || [];
 
-    // Expand the window slightly (30 min before, 60 min after)
+    // Expand window: 30 min before, 60 min after
     const windowStart = new Date(new Date(meetingStart).getTime() - 30 * 60 * 1000);
     const windowEnd = new Date(new Date(meetingEnd).getTime() + 60 * 60 * 1000);
 
     for (const item of items) {
       if (!item.createdDateTime || !item.file) continue;
-      
+
       const created = new Date(item.createdDateTime);
       if (created >= windowStart && created <= windowEnd) {
-        const ext = (item.name || '').toLowerCase();
-        const isTranscript = ext.endsWith('.vtt') || ext.endsWith('.docx') || ext.includes('transcript');
-        
+        const artifactType = classifyArtifact(item.name, item.file?.mimeType);
+
+        // Only capture recordings and transcripts from this folder
+        if (artifactType === 'shared_file') continue;
+
         artifacts.push({
-          artifact_type: isTranscript ? 'transcript' : 'recording',
+          artifact_type: artifactType,
           title: item.name,
           web_url: item.webUrl || '',
           drive_id: item.parentReference?.driveId || null,
@@ -192,6 +277,7 @@ async function discoverRecordings(
             created_at: item.createdDateTime,
             size: item.file?.size || null,
             mime_type: item.file?.mimeType || null,
+            source: 'onedrive_recordings',
           },
         });
       }
@@ -202,6 +288,8 @@ async function discoverRecordings(
 
   return artifacts;
 }
+
+// ── Main handler ─────────────────────────────────────────────────────
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -284,7 +372,6 @@ serve(async (req) => {
       .single();
 
     if (tokenError || !tokenRecord) {
-      // Update meeting sync status
       await supabaseAdmin.from('meetings').update({
         ms_sync_status: 'error',
         ms_sync_error: 'Microsoft account not connected',
@@ -344,7 +431,7 @@ serve(async (req) => {
       );
     }
 
-    // Upsert meeting MS fields
+    // Upsert meeting MS fields (initially synced, may become warning below)
     const meetingUpdate: Record<string, unknown> = {
       ms_ical_uid: graphEvent.iCalUId || null,
       ms_join_url: graphEvent.onlineMeeting?.joinUrl || meeting.external_meeting_url,
@@ -355,17 +442,13 @@ serve(async (req) => {
       updated_at: new Date().toISOString(),
     };
 
-    // Update meeting URL if we got a better one
     if (graphEvent.onlineMeeting?.joinUrl && !meeting.external_meeting_url) {
       meetingUpdate.external_meeting_url = graphEvent.onlineMeeting.joinUrl;
     }
 
-    await supabaseAdmin.from('meetings').update(meetingUpdate).eq('id', meetingId);
-
     // Upsert attendees as participants
     const attendees = graphEvent.attendees || [];
     if (attendees.length > 0) {
-      // Remove existing, re-insert
       await supabaseAdmin.from('meeting_participants').delete().eq('meeting_id', meetingId);
 
       const participants = attendees.map((a: any) => ({
@@ -375,7 +458,6 @@ serve(async (req) => {
         participant_type: a.type === 'required' ? 'required' : (a.type === 'optional' ? 'optional' : 'required'),
       }));
 
-      // Add organizer
       if (graphEvent.organizer?.emailAddress?.address) {
         participants.unshift({
           meeting_id: meetingId,
@@ -388,7 +470,8 @@ serve(async (req) => {
       await supabaseAdmin.from('meeting_participants').insert(participants);
     }
 
-    // Discover artifacts
+    // ── Discover artifacts ───────────────────────────────────────────
+
     const allArtifacts: ArtifactResult[] = [];
 
     // 1. Parse event body for SharePoint/OneDrive links
@@ -399,19 +482,30 @@ serve(async (req) => {
     for (const link of shareLinks) {
       const resolved = await resolveShareLink(accessToken, link);
       if (resolved && !resolved.isFolder) {
+        // Classify the resolved file
+        const artifactType = classifyArtifact(resolved.name, resolved.mimeType);
         allArtifacts.push({
-          artifact_type: 'shared_file',
+          artifact_type: artifactType,
           title: resolved.name,
           web_url: resolved.webUrl || link,
           drive_id: resolved.driveId,
           item_id: resolved.itemId,
-          metadata: { source: 'event_body', original_url: link },
+          metadata: {
+            source: 'event_body',
+            original_url: link,
+            mime_type: resolved.mimeType || null,
+          },
         });
       } else if (!resolved) {
-        // Store unresolved link anyway
+        // Classify unresolved link by URL path
+        const pathName = (() => {
+          try { return new URL(link).pathname.split('/').pop() || 'Shared File'; }
+          catch { return 'Shared File'; }
+        })();
+        const artifactType = classifyArtifact(pathName);
         allArtifacts.push({
-          artifact_type: 'shared_file',
-          title: new URL(link).pathname.split('/').pop() || 'Shared File',
+          artifact_type: artifactType,
+          title: pathName,
           web_url: link,
           drive_id: null,
           item_id: null,
@@ -429,7 +523,21 @@ serve(async (req) => {
     allArtifacts.push(...recordings);
     console.log('[sync-artifacts] Found', recordings.length, 'recordings/transcripts');
 
-    // Upsert artifacts
+    // ── Warning: recording found but transcript missing ──────────────
+
+    const hasRecording = allArtifacts.some(a => a.artifact_type === 'recording');
+    const hasTranscript = allArtifacts.some(a => a.artifact_type === 'transcript');
+
+    if (hasRecording && !hasTranscript) {
+      meetingUpdate.ms_sync_status = 'warning';
+      meetingUpdate.ms_sync_error = 'Recording found but transcript is missing. Transcript may still be processing.';
+    }
+
+    // Apply the meeting update (now includes possible warning)
+    await supabaseAdmin.from('meetings').update(meetingUpdate).eq('id', meetingId);
+
+    // ── Upsert artifacts ─────────────────────────────────────────────
+
     let artifactsCreated = 0;
     const artifactErrors: string[] = [];
 
@@ -457,7 +565,8 @@ serve(async (req) => {
       }
     }
 
-    // Audit log
+    // ── Audit log ────────────────────────────────────────────────────
+
     await supabaseAdmin.from('audit_events').insert({
       entity: 'meeting',
       entity_id: meetingId,
@@ -469,6 +578,9 @@ serve(async (req) => {
         errors: artifactErrors,
         body_links: shareLinks.length,
         recordings_found: recordings.length,
+        has_recording: hasRecording,
+        has_transcript: hasTranscript,
+        sync_status: meetingUpdate.ms_sync_status,
       },
     });
 
@@ -476,6 +588,8 @@ serve(async (req) => {
       artifacts_found: allArtifacts.length,
       artifacts_created: artifactsCreated,
       errors: artifactErrors.length,
+      has_recording: hasRecording,
+      has_transcript: hasTranscript,
     });
 
     return new Response(
@@ -485,7 +599,10 @@ serve(async (req) => {
         artifacts_found: allArtifacts.length,
         artifacts_created: artifactsCreated,
         errors: artifactErrors,
-        ms_sync_status: 'synced',
+        has_recording: hasRecording,
+        has_transcript: hasTranscript,
+        ms_sync_status: meetingUpdate.ms_sync_status as string,
+        ms_sync_error: meetingUpdate.ms_sync_error as string | null,
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
