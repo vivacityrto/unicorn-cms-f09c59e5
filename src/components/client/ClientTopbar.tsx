@@ -60,14 +60,14 @@ export function ClientTopbar({ isPreview }: ClientTopbarProps) {
 
   return (
     <header
-      className="h-16 bg-card border-b flex items-center justify-between px-4 md:px-6"
+      className="h-[72px] bg-card border-b flex items-center justify-between px-4 md:px-6"
       style={{
         borderColor: "hsl(270 20% 88%)",
       }}
     >
       {/* Left: Vivacity logo */}
       <div className="flex items-center gap-3 min-w-0 flex-shrink-0">
-        <img src={vivacityLogo} alt="Vivacity" className="h-7 w-auto" />
+        <img src={vivacityLogo} alt="Vivacity" className="h-10 w-auto" />
       </div>
 
       {/* Center: Search */}
