@@ -17,6 +17,7 @@ export interface TimelineEventInput {
   title: string;
   body?: string | null;
   source: "microsoft" | "unicorn" | "system" | "user";
+  visibility?: "internal" | "client"; // defaults to 'internal'
   entity_type?: string | null;
   entity_id?: string | null;
   package_id?: number | null;
@@ -49,6 +50,7 @@ export async function emitTimelineEvent(
         title: event.title,
         body: event.body || null,
         source: event.source,
+        visibility: event.visibility || "internal",
         entity_type: event.entity_type || null,
         entity_id: event.entity_id || null,
         package_id: event.package_id || null,

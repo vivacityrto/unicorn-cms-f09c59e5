@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useClientTimeline, TimelineEvent, PinnedNote } from '@/hooks/useClientManagementData';
+import { useAuth } from '@/hooks/useAuth';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -114,6 +115,10 @@ function getDeepLink(event: TimelineEvent): string | null {
 
 export function ClientTimelineTab({ tenantId, clientId, clientName }: ClientTimelineTabProps) {
   const navigate = useNavigate();
+  const { isSuperAdmin, profile } = useAuth();
+  const isVivacityTeam = isSuperAdmin() || 
+    profile?.unicorn_role === 'Team Leader' || 
+    profile?.unicorn_role === 'Team Member';
   const { 
     events, 
     pinnedNotes,
@@ -358,7 +363,9 @@ export function ClientTimelineTab({ tenantId, clientId, clientName }: ClientTime
           <div className="mt-4 space-y-3">
             {/* Filter chips */}
             <div className="flex flex-wrap gap-2">
-              {FILTER_OPTIONS.map(option => {
+              {FILTER_OPTIONS
+                .filter(option => option.value !== 'microsoft' || isVivacityTeam)
+                .map(option => {
                 const Icon = option.icon;
                 return (
                   <Button
@@ -517,6 +524,11 @@ export function ClientTimelineTab({ tenantId, clientId, clientName }: ClientTime
                             {event.source === 'microsoft' && (
                               <Badge variant="outline" className="text-[10px] h-4">
                                 Microsoft
+                              </Badge>
+                            )}
+                            {isVivacityTeam && event.visibility === 'internal' && (
+                              <Badge variant="secondary" className="text-[10px] h-4">
+                                Internal
                               </Badge>
                             )}
                             {/* Deep-link button */}
