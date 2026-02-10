@@ -1,37 +1,27 @@
-import { useState, useCallback } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/useAuth";
+import { useState } from "react";
 import { useClientTenant } from "@/contexts/ClientTenantContext";
 import { useHelpCenter } from "@/components/help-center";
+import {
+  usePortalDocuments,
+  useUploadPortalDocument,
+  useDownloadPortalDocument,
+  type PortalDocument,
+} from "@/hooks/usePortalDocuments";
+import { supabase } from "@/integrations/supabase/client";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
+  Dialog, DialogContent, DialogDescription, DialogFooter,
+  DialogHeader, DialogTitle, DialogTrigger,
 } from "@/components/ui/dialog";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Upload, Download, Eye, FileText, Loader2, MessageCircle, Inbox } from "lucide-react";
@@ -39,26 +29,6 @@ import { toast } from "sonner";
 import { format } from "date-fns";
 
 const CATEGORIES = ["Compliance", "Evidence", "Admin", "Other"];
-
-function useDocuments(source: "shared_to_client" | "uploaded_by_client") {
-  const { activeTenantId } = useClientTenant();
-
-  return useQuery({
-    queryKey: ["tenant_documents", activeTenantId, source],
-    queryFn: async () => {
-      if (!activeTenantId) return [];
-      const { data, error } = await supabase
-        .from("tenant_documents")
-        .select("*")
-        .eq("tenant_id", activeTenantId)
-        .eq("source", source)
-        .order("created_at", { ascending: false });
-      if (error) throw error;
-      return data ?? [];
-    },
-    enabled: !!activeTenantId,
-  });
-}
 
 function EmptyState({ message }: { message: string }) {
   return (
@@ -69,23 +39,16 @@ function EmptyState({ message }: { message: string }) {
   );
 }
 
-function DocumentTable({ docs, onView }: { docs: any[]; onView: (doc: any) => void }) {
-  const handleDownload = async (doc: any) => {
-    try {
-      const { data, error } = await supabase.storage
-        .from("portal-documents")
-        .download(doc.storage_path);
-      if (error) throw error;
-      const url = URL.createObjectURL(data);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = doc.title || "document";
-      a.click();
-      URL.revokeObjectURL(url);
-    } catch {
-      toast.error("Failed to download file");
-    }
-  };
+function DocumentTable({
+  docs,
+  tenantId,
+  onView,
+}: {
+  docs: PortalDocument[];
+  tenantId: number;
+  onView: (doc: PortalDocument) => void;
+}) {
+  const downloadMutation = useDownloadPortalDocument();
 
   return (
     <div className="rounded-lg border overflow-hidden" style={{ borderColor: "hsl(270 20% 88%)" }}>
@@ -96,52 +59,57 @@ function DocumentTable({ docs, onView }: { docs: any[]; onView: (doc: any) => vo
             <TableHead className="hidden sm:table-cell">Type</TableHead>
             <TableHead className="hidden md:table-cell">Uploaded by</TableHead>
             <TableHead className="hidden sm:table-cell">Date</TableHead>
-            <TableHead className="hidden md:table-cell">Category</TableHead>
             <TableHead className="text-right">Actions</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
-          {docs.map((doc) => (
-            <TableRow key={doc.id}>
-              <TableCell className="font-medium">
-                <div className="flex items-center gap-2">
-                  <FileText className="h-4 w-4 flex-shrink-0" style={{ color: "hsl(330 86% 51%)" }} />
-                  <span className="truncate max-w-[200px]">{doc.title}</span>
-                </div>
-              </TableCell>
-              <TableCell className="hidden sm:table-cell text-muted-foreground text-xs">
-                {doc.mime_type?.split("/").pop()?.toUpperCase() || "—"}
-              </TableCell>
-              <TableCell className="hidden md:table-cell">
-                <Badge
-                  variant="outline"
-                  className="text-xs"
-                  style={{
-                    borderColor: doc.uploaded_by_role === "vivacity" ? "hsl(270 55% 41%)" : "hsl(189 74% 50%)",
-                    color: doc.uploaded_by_role === "vivacity" ? "hsl(270 55% 41%)" : "hsl(189 74% 50%)",
-                  }}
-                >
-                  {doc.uploaded_by_role === "vivacity" ? "Vivacity" : "Your team"}
-                </Badge>
-              </TableCell>
-              <TableCell className="hidden sm:table-cell text-muted-foreground text-xs">
-                {format(new Date(doc.created_at), "dd MMM yyyy")}
-              </TableCell>
-              <TableCell className="hidden md:table-cell text-muted-foreground text-xs">
-                {doc.category || "—"}
-              </TableCell>
-              <TableCell className="text-right">
-                <div className="flex items-center justify-end gap-1">
-                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onView(doc)}>
-                    <Eye className="h-4 w-4" />
-                  </Button>
-                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleDownload(doc)}>
-                    <Download className="h-4 w-4" />
-                  </Button>
-                </div>
-              </TableCell>
-            </TableRow>
-          ))}
+          {docs.map((doc) => {
+            const isVivacity = doc.direction === "vivacity_to_client";
+            return (
+              <TableRow key={doc.id}>
+                <TableCell className="font-medium">
+                  <div className="flex items-center gap-2">
+                    <FileText className="h-4 w-4 flex-shrink-0" style={{ color: "hsl(330 86% 51%)" }} />
+                    <span className="truncate max-w-[200px]">{doc.file_name}</span>
+                  </div>
+                </TableCell>
+                <TableCell className="hidden sm:table-cell text-muted-foreground text-xs">
+                  {doc.file_type?.split("/").pop()?.toUpperCase() || "—"}
+                </TableCell>
+                <TableCell className="hidden md:table-cell">
+                  <Badge
+                    variant="outline"
+                    className="text-xs"
+                    style={{
+                      borderColor: isVivacity ? "hsl(270 55% 41%)" : "hsl(189 74% 50%)",
+                      color: isVivacity ? "hsl(270 55% 41%)" : "hsl(189 74% 50%)",
+                    }}
+                  >
+                    {isVivacity ? "Vivacity" : "Your team"}
+                  </Badge>
+                </TableCell>
+                <TableCell className="hidden sm:table-cell text-muted-foreground text-xs">
+                  {format(new Date(doc.created_at), "dd MMM yyyy")}
+                </TableCell>
+                <TableCell className="text-right">
+                  <div className="flex items-center justify-end gap-1">
+                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onView(doc)}>
+                      <Eye className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8"
+                      onClick={() => downloadMutation.mutate({ doc, tenantId })}
+                      disabled={downloadMutation.isPending}
+                    >
+                      <Download className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </TableCell>
+              </TableRow>
+            );
+          })}
         </TableBody>
       </Table>
     </div>
@@ -155,15 +123,17 @@ export function ClientDocumentsPage() {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [category, setCategory] = useState<string>("");
-  const [uploading, setUploading] = useState(false);
 
-  const { user } = useAuth();
   const { activeTenantId, isReadOnly } = useClientTenant();
   const { openHelpCenter } = useHelpCenter();
-  const queryClient = useQueryClient();
 
-  const shared = useDocuments("shared_to_client");
-  const uploaded = useDocuments("uploaded_by_client");
+  // Use existing portal_documents hooks with direction filter
+  const shared = usePortalDocuments(activeTenantId, "vivacity_to_client");
+  const uploaded = usePortalDocuments(activeTenantId, "client_to_vivacity");
+  const uploadMutation = useUploadPortalDocument();
+
+  // Filter shared tab to only client-visible docs
+  const sharedDocs = (shared.data ?? []).filter((d) => d.is_client_visible);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0] ?? null;
@@ -178,45 +148,26 @@ export function ClientDocumentsPage() {
     setCategory("");
   };
 
-  const handleUpload = async () => {
-    if (!file || !activeTenantId || !user) return;
-    setUploading(true);
-    try {
-      const docId = crypto.randomUUID();
-      const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
-      const storagePath = `${activeTenantId}/${docId}/${safeName}`;
-
-      const { error: storageError } = await supabase.storage
-        .from("portal-documents")
-        .upload(storagePath, file);
-      if (storageError) throw storageError;
-
-      const { error: dbError } = await supabase.from("tenant_documents").insert({
-        tenant_id: activeTenantId,
-        uploaded_by_user_id: user.id,
-        uploaded_by_role: "client",
-        title: title || file.name,
-        description: description || null,
-        category: category || null,
-        storage_path: storagePath,
-        mime_type: file.type || null,
-        file_size: file.size,
-        source: "uploaded_by_client",
-      });
-      if (dbError) throw dbError;
-
-      toast.success("Document uploaded");
-      queryClient.invalidateQueries({ queryKey: ["tenant_documents"] });
-      resetForm();
-      setUploadOpen(false);
-    } catch (err: any) {
-      toast.error(err.message || "Upload failed");
-    } finally {
-      setUploading(false);
-    }
+  const handleUpload = () => {
+    if (!file || !activeTenantId) return;
+    uploadMutation.mutate(
+      {
+        tenantId: activeTenantId,
+        file,
+        direction: "client_to_vivacity",
+        isClientVisible: true,
+        tags: category ? [category] : undefined,
+      },
+      {
+        onSuccess: () => {
+          resetForm();
+          setUploadOpen(false);
+        },
+      }
+    );
   };
 
-  const handleView = async (doc: any) => {
+  const handleView = async (doc: PortalDocument) => {
     try {
       const { data, error } = await supabase.storage
         .from("portal-documents")
@@ -283,12 +234,7 @@ export function ClientDocumentsPage() {
                 <div className="space-y-4 py-2">
                   <div>
                     <Label htmlFor="file">File</Label>
-                    <Input
-                      id="file"
-                      type="file"
-                      onChange={handleFileChange}
-                      className="mt-1"
-                    />
+                    <Input id="file" type="file" onChange={handleFileChange} className="mt-1" />
                   </div>
                   <div>
                     <Label htmlFor="title">Title</Label>
@@ -331,13 +277,13 @@ export function ClientDocumentsPage() {
                   </Button>
                   <Button
                     onClick={handleUpload}
-                    disabled={!file || uploading}
+                    disabled={!file || uploadMutation.isPending}
                     style={{
                       backgroundColor: "hsl(189 74% 50%)",
                       color: "hsl(270 47% 26%)",
                     }}
                   >
-                    {uploading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                    {uploadMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
                     Upload
                   </Button>
                 </DialogFooter>
@@ -359,10 +305,10 @@ export function ClientDocumentsPage() {
             <div className="flex justify-center py-12">
               <Loader2 className="h-6 w-6 animate-spin text-primary" />
             </div>
-          ) : !shared.data?.length ? (
+          ) : !sharedDocs.length ? (
             <EmptyState message="No documents shared yet." />
           ) : (
-            <DocumentTable docs={shared.data} onView={handleView} />
+            <DocumentTable docs={sharedDocs} tenantId={activeTenantId} onView={handleView} />
           )}
         </TabsContent>
 
@@ -374,7 +320,7 @@ export function ClientDocumentsPage() {
           ) : !uploaded.data?.length ? (
             <EmptyState message="No documents uploaded yet." />
           ) : (
-            <DocumentTable docs={uploaded.data} onView={handleView} />
+            <DocumentTable docs={uploaded.data} tenantId={activeTenantId} onView={handleView} />
           )}
         </TabsContent>
       </Tabs>
