@@ -140,3 +140,6 @@ verify_jwt = false
 
 [functions.extract-copilot-minutes]
 verify_jwt = false
+
+[functions.generate-minutes-draft]
+verify_jwt = false

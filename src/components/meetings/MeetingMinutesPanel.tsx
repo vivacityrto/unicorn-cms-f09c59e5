@@ -270,6 +270,7 @@ export function MeetingMinutesPanel({ meetingId, isVivacityTeam }: MeetingMinute
     extractCopilot, isExtracting,
     copilotExtracted, copilotStoreRaw,
     applyCopilotContent, discardCopilotContent, resetCopilotExtraction,
+    generateDraft, isGeneratingDraft, draftResult, resetDraftResult,
   } = useTeamsMeetingMinutes(meetingId);
 
   const [isEditing, setIsEditing] = useState(false);
@@ -278,21 +279,99 @@ export function MeetingMinutesPanel({ meetingId, isVivacityTeam }: MeetingMinute
   const [reviewConfirmed, setReviewConfirmed] = useState(false);
   const [showCopilotPanel, setShowCopilotPanel] = useState(false);
   const [copilotText, setCopilotText] = useState('');
+  const [showCopilotModal, setShowCopilotModal] = useState(false);
   const copilotTextareaRef = useRef<HTMLTextAreaElement>(null);
   const copilotRawTextRef = useRef<string>('');
+  const copilotModalRef = useRef<HTMLTextAreaElement>(null);
 
   if (isLoading) {
     return <div className="text-sm text-muted-foreground">Loading minutes...</div>;
   }
 
+  // ── No minutes yet: show Generate button (Vivacity Team) ──────────
   if (!minutes) {
     return (
       <div className="text-center py-6">
         <FileText className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
         <p className="text-sm text-muted-foreground">No minutes yet</p>
-        <p className="text-xs text-muted-foreground mt-1">
-          Sync Microsoft artifacts to auto-create a minutes draft.
-        </p>
+        {isVivacityTeam ? (
+          <>
+            <p className="text-xs text-muted-foreground mt-1 mb-3">
+              Generate a draft from Microsoft meeting data and Copilot recap.
+            </p>
+            <Button
+              size="sm"
+              onClick={() => generateDraft()}
+              disabled={isGeneratingDraft}
+              className="gap-2"
+            >
+              {isGeneratingDraft ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Sparkles className="h-4 w-4" />
+              )}
+              Generate Minutes Draft
+            </Button>
+
+            {/* After draft generated, show Copilot modal */}
+            {draftResult?.needs_copilot_input && (
+              <div className="mt-4 space-y-3 text-left border rounded-lg p-4 bg-muted/30">
+                <div className="flex items-center gap-2">
+                  <CheckCircle2 className="h-4 w-4 text-primary" />
+                  <span className="text-sm font-medium">
+                    Draft created with {draftResult.attendees_count} attendees
+                  </span>
+                </div>
+                {draftResult.warning && (
+                  <Alert>
+                    <AlertTriangle className="h-4 w-4" />
+                    <AlertDescription className="text-xs">{draftResult.warning}</AlertDescription>
+                  </Alert>
+                )}
+                <Separator />
+                <div className="space-y-2">
+                  <Label className="text-xs font-medium">Paste Copilot recap to populate summary, decisions & actions</Label>
+                  <Textarea
+                    ref={copilotModalRef}
+                    placeholder="Open your Teams meeting → View recap → Copy the recap text and paste here..."
+                    rows={8}
+                    value={copilotText}
+                    onChange={(e) => setCopilotText(e.target.value)}
+                  />
+                  <div className="flex gap-2">
+                    <Button
+                      size="sm"
+                      onClick={() => {
+                        if (!copilotText.trim()) return;
+                        copilotRawTextRef.current = copilotText;
+                        extractCopilot(copilotText);
+                      }}
+                      disabled={isExtracting || !copilotText.trim()}
+                      className="gap-1"
+                    >
+                      {isExtracting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
+                      Extract & Preview
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => {
+                        resetDraftResult();
+                        setCopilotText('');
+                      }}
+                    >
+                      Skip – edit manually
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </>
+        ) : (
+          <p className="text-xs text-muted-foreground mt-1">
+            Minutes will appear here once published.
+          </p>
+        )}
       </div>
     );
   }
@@ -300,7 +379,8 @@ export function MeetingMinutesPanel({ meetingId, isVivacityTeam }: MeetingMinute
   const isPublished = minutes.status === 'published';
   const content = minutes.content;
   const isAiDraft = content.ai_generated === true;
-  const needsReviewGate = aiRequireReview && isAiDraft && !reviewConfirmed;
+  const isCopilotDraft = content.source === 'copilot';
+  const needsReviewGate = aiRequireReview && (isAiDraft || isCopilotDraft) && !reviewConfirmed;
 
   const handleStartEdit = () => {
     setEditContent({ ...content });
@@ -546,6 +626,11 @@ export function MeetingMinutesPanel({ meetingId, isVivacityTeam }: MeetingMinute
               <Sparkles className="h-3 w-3" /> AI draft
             </Badge>
           )}
+          {isCopilotDraft && !isAiDraft && (
+            <Badge variant="outline" className="text-[10px] gap-1">
+              <ClipboardPaste className="h-3 w-3" /> Copilot
+            </Badge>
+          )}
           <span className="text-xs text-muted-foreground">v{minutes.version}</span>
         </div>
         <div className="text-xs text-muted-foreground">
@@ -553,7 +638,7 @@ export function MeetingMinutesPanel({ meetingId, isVivacityTeam }: MeetingMinute
         </div>
       </div>
 
-      {isAiDraft && content.ai_notes && (
+      {(isAiDraft || isCopilotDraft) && content.ai_notes && (
         <Alert>
           <AlertTriangle className="h-4 w-4" />
           <AlertDescription className="text-xs">{content.ai_notes}</AlertDescription>
@@ -679,7 +764,7 @@ export function MeetingMinutesPanel({ meetingId, isVivacityTeam }: MeetingMinute
                 onCheckedChange={(checked) => setReviewConfirmed(checked === true)}
               />
               <label htmlFor="review-confirmed" className="text-xs leading-tight cursor-pointer">
-                I have reviewed and edited this AI-generated draft for accuracy before publishing.
+                I have reviewed and edited this draft for accuracy before publishing.
               </label>
             </div>
           )}

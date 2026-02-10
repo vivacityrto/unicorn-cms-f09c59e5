@@ -210,6 +210,43 @@ export function useTeamsMeetingMinutes(meetingId: string | null) {
     },
   });
 
+  // ── One-click draft generation ─────────────────────────────────────
+  const generateDraftMutation = useMutation({
+    mutationFn: async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) throw new Error('Not authenticated');
+
+      const { data, error } = await supabase.functions.invoke('generate-minutes-draft', {
+        headers: { Authorization: `Bearer ${session.access_token}` },
+        body: { meeting_id: meetingId },
+      });
+
+      if (error) throw new Error(error.message);
+      if (data && 'error' in data) throw new Error((data as any).error);
+      return data as {
+        success: boolean;
+        minutes_id: string;
+        version: number;
+        attendees: Array<{ display_name: string; email: string | null; is_external: boolean; attendance_status: string }>;
+        attendees_count: number;
+        graph_synced: boolean;
+        warning: string | null;
+        needs_copilot_input: boolean;
+      };
+    },
+    onSuccess: (data) => {
+      const msg = data.graph_synced
+        ? `Draft created with ${data.attendees_count} attendees from Microsoft`
+        : `Draft created with ${data.attendees_count} attendees`;
+      toast.success(msg);
+      if (data.warning) toast.warning(data.warning);
+      queryClient.invalidateQueries({ queryKey: ['meeting-minutes', meetingId] });
+    },
+    onError: (error) => {
+      toast.error(error instanceof Error ? error.message : 'Draft generation failed');
+    },
+  });
+
   const generateFromTranscriptMutation = useMutation({
     mutationFn: async (minutesId: string) => {
       const { data: { session } } = await supabase.auth.getSession();
@@ -385,6 +422,11 @@ export function useTeamsMeetingMinutes(meetingId: string | null) {
     applyAiContent,
     discardAiContent,
     resetAiProposal: generateFromTranscriptMutation.reset,
+    // One-click draft
+    generateDraft: generateDraftMutation.mutate,
+    isGeneratingDraft: generateDraftMutation.isPending,
+    draftResult: generateDraftMutation.data ?? null,
+    resetDraftResult: generateDraftMutation.reset,
     // Copilot
     extractCopilot: extractCopilotMutation.mutate,
     isExtracting: extractCopilotMutation.isPending,
