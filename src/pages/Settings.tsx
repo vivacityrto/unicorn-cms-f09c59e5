@@ -216,7 +216,7 @@ export default function Settings() {
             </TabsTrigger>
             <TabsTrigger value="calendar" className="gap-2 data-[state=active]:bg-background">
               <Calendar className="h-4 w-4" />
-              <span className="hidden sm:inline">Calendar</span>
+              <span className="hidden sm:inline">Microsoft</span>
             </TabsTrigger>
             <TabsTrigger value="notifications" className="gap-2 data-[state=active]:bg-background">
               <Bell className="h-4 w-4" />
