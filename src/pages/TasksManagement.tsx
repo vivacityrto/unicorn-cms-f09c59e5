@@ -124,7 +124,7 @@ export default function TasksManagement() {
     try {
       setLoading(true);
 
-      // Fetch all data from tasks_tenants table with related information
+      // Fetch all data from tasks_tenants table
       const {
         data: tasksData,
         error: tasksError
@@ -141,13 +141,27 @@ export default function TasksManagement() {
           followers,
           created_at,
           updated_at,
-          file_paths,
-          tenants(name),
-          packages(name, created_at, full_text)
+          file_paths
         `).order("created_at", {
         ascending: false
       });
       if (tasksError) throw tasksError;
+
+      // Fetch tenant and package names separately (no FK joins available)
+      const tenantIds = [...new Set(tasksData?.map((t: any) => t.tenant_id).filter(Boolean))];
+      const packageIds = [...new Set(tasksData?.map((t: any) => t.package_id).filter(Boolean))];
+
+      let tenantsMap = new Map<number, string>();
+      if (tenantIds.length > 0) {
+        const { data: tenantRows } = await supabase.from("tenants").select("id, name").in("id", tenantIds);
+        if (tenantRows) tenantsMap = new Map(tenantRows.map((t: any) => [t.id, t.name]));
+      }
+
+      let packagesMap = new Map<number, { name: string; created_at: string | null; full_text: string | null }>();
+      if (packageIds.length > 0) {
+        const { data: pkgRows } = await supabase.from("packages").select("id, name, created_at, full_text").in("id", packageIds);
+        if (pkgRows) packagesMap = new Map(pkgRows.map((p: any) => [p.id, { name: p.name, created_at: p.created_at, full_text: p.full_text }]));
+      }
 
       // Get unique creator and follower user IDs
       const creatorIds = [...new Set(tasksData?.map((task: any) => task.created_by).filter(Boolean))] as string[];
@@ -166,27 +180,30 @@ export default function TasksManagement() {
       }
 
       // Map all fields from tasks_tenants table
-      const transformedTasks = tasksData?.map((task: any) => ({
-        id: task.id,
-        tenant_id: task.tenant_id,
-        package_id: task.package_id,
-        task_name: task.task_name,
-        description: task.description,
-        due_date: task.due_date,
-        status: task.status,
-        completed: task.completed,
-        created_by: task.created_by,
-        followers: task.followers || [],
-        created_at: task.created_at,
-        updated_at: task.updated_at,
-        file_paths: task.file_paths || [],
-        tenant_name: task.tenants?.name || "N/A",
-        package_name: task.packages?.name || null,
-        package_created_at: task.packages?.created_at || null,
-        package_full_text: task.packages?.full_text || null,
-        created_by_name: task.created_by ? `${usersMap.get(task.created_by)?.first_name || ''} ${usersMap.get(task.created_by)?.last_name || ''}`.trim() || "Unknown" : "Unknown",
-        follower_users: (task.followers || []).map((id: string) => usersMap.get(id)).filter(Boolean)
-      })) || [];
+      const transformedTasks = tasksData?.map((task: any) => {
+        const pkg = task.package_id ? packagesMap.get(task.package_id) : null;
+        return {
+          id: task.id,
+          tenant_id: task.tenant_id,
+          package_id: task.package_id,
+          task_name: task.task_name,
+          description: task.description,
+          due_date: task.due_date,
+          status: task.status,
+          completed: task.completed,
+          created_by: task.created_by,
+          followers: task.followers || [],
+          created_at: task.created_at,
+          updated_at: task.updated_at,
+          file_paths: task.file_paths || [],
+          tenant_name: tenantsMap.get(task.tenant_id) || "N/A",
+          package_name: pkg?.name || null,
+          package_created_at: pkg?.created_at || null,
+          package_full_text: pkg?.full_text || null,
+          created_by_name: task.created_by ? `${usersMap.get(task.created_by)?.first_name || ''} ${usersMap.get(task.created_by)?.last_name || ''}`.trim() || "Unknown" : "Unknown",
+          follower_users: (task.followers || []).map((id: string) => usersMap.get(id)).filter(Boolean)
+        };
+      }) || [];
       setTasks(transformedTasks);
       setFilteredTasks(transformedTasks);
     } catch (error: any) {
