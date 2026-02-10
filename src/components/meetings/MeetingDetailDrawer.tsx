@@ -16,7 +16,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Meeting, MeetingParticipant, MeetingNote, MeetingActionItem, useMeetings } from '@/hooks/useMeetings';
 import { useMeetingArtifacts } from '@/hooks/useMeetingArtifacts';
 import { MeetingArtifactsList } from '@/components/meetings/MeetingArtifactsList';
-import { MeetingMinutesDraftPanel } from '@/components/meetings/MeetingMinutesDraftPanel';
+import { MeetingMinutesPanel } from '@/components/meetings/MeetingMinutesPanel';
 import { useRBAC } from '@/hooks/useRBAC';
 import { useQuery } from '@tanstack/react-query';
 import { cn } from '@/lib/utils';
@@ -433,7 +433,7 @@ export function MeetingDetailDrawer({
 
             {showMinutesTab && (
               <TabsContent value="minutes" className="p-6 pt-4 mt-0">
-                <MeetingMinutesDraftPanel
+                <MeetingMinutesPanel
                   meetingId={meeting.id}
                   isVivacityTeam={isVivacityTeam}
                 />

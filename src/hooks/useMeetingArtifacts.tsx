@@ -15,7 +15,7 @@ export interface MeetingArtifact {
   captured_at: string;
   captured_by: string;
   metadata: Record<string, unknown>;
-  visibility: 'internal' | 'client';
+  visibility: 'internal' | 'shared_with_client';
   shared_at: string | null;
   shared_by: string | null;
 }
@@ -78,7 +78,7 @@ export function useMeetingArtifacts(meetingId: string | null) {
       }
       queryClient.invalidateQueries({ queryKey: ['meeting-artifacts', result.meeting_id] });
       queryClient.invalidateQueries({ queryKey: ['meetings'] });
-      queryClient.invalidateQueries({ queryKey: ['meeting-minutes-draft', result.meeting_id] });
+      queryClient.invalidateQueries({ queryKey: ['meeting-minutes', result.meeting_id] });
     },
     onError: (error) => {
       console.error('Artifact sync failed:', error);
@@ -92,7 +92,7 @@ export function useMeetingArtifacts(meetingId: string | null) {
       if (!user) throw new Error('Not authenticated');
 
       const updateData: Record<string, unknown> = {
-        visibility: share ? 'client' : 'internal',
+        visibility: share ? 'shared_with_client' : 'internal',
       };
       if (share) {
         updateData.shared_at = new Date().toISOString();
@@ -115,7 +115,7 @@ export function useMeetingArtifacts(meetingId: string | null) {
         entity_id: artifactId,
         action: share ? 'artifact_shared' : 'artifact_unshared',
         user_id: user.id,
-        details: { visibility: share ? 'client' : 'internal' },
+        details: { visibility: share ? 'shared_with_client' : 'internal' },
       });
     },
     onSuccess: () => {
