@@ -9,107 +9,211 @@ const corsHeaders = {
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
+interface ActionItem {
+  action: string;
+  owner: string;
+  due_date: string;
+  status?: string;
+}
+
 interface MinutesContent {
   meeting_title: string;
   meeting_date: string;
   meeting_time: string;
+  meeting_type: string;
   duration_minutes: number;
+  facilitator: string;
+  minute_taker: string;
   attendees: string[];
   apologies: string[];
   agenda_items: string[];
   discussion_notes: string;
   decisions: string[];
-  actions: Array<{ action: string; owner: string; due_date: string }>;
+  actions: ActionItem[];
   next_meeting: string;
 }
 
-function generatePdfHtml(content: MinutesContent, title: string, tenantName: string): string {
+function escapeHtml(str: string): string {
+  return (str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+function sectionOrPlaceholder(items: string[] | undefined, placeholder = 'Not discussed'): string {
+  if (!items || items.length === 0) return `<p style="font-size:13px;color:#9ca3af;font-style:italic;">${placeholder}</p>`;
+  return `<ul style="padding-left:20px;margin:4px 0;">${items.map(i => `<li style="font-size:13px;margin-bottom:3px;">${escapeHtml(i)}</li>`).join('')}</ul>`;
+}
+
+function generateBrandedHtml(content: MinutesContent, tenantName: string, publisherName: string): string {
   const actionsTable = content.actions?.length > 0
     ? `<table style="width:100%;border-collapse:collapse;margin-top:8px;">
         <thead>
-          <tr style="background:#f3f4f6;">
-            <th style="text-align:left;padding:6px 8px;border:1px solid #e5e7eb;font-size:12px;">Action</th>
-            <th style="text-align:left;padding:6px 8px;border:1px solid #e5e7eb;font-size:12px;width:120px;">Owner</th>
-            <th style="text-align:left;padding:6px 8px;border:1px solid #e5e7eb;font-size:12px;width:100px;">Due Date</th>
+          <tr style="background:#5b2d8e;color:#fff;">
+            <th style="text-align:left;padding:8px 10px;font-size:12px;font-weight:600;">Action</th>
+            <th style="text-align:left;padding:8px 10px;font-size:12px;font-weight:600;width:130px;">Owner</th>
+            <th style="text-align:left;padding:8px 10px;font-size:12px;font-weight:600;width:100px;">Due Date</th>
+            <th style="text-align:left;padding:8px 10px;font-size:12px;font-weight:600;width:90px;">Status</th>
           </tr>
         </thead>
         <tbody>
-          ${content.actions.map(a => `
-            <tr>
-              <td style="padding:6px 8px;border:1px solid #e5e7eb;font-size:12px;">${escapeHtml(a.action)}</td>
-              <td style="padding:6px 8px;border:1px solid #e5e7eb;font-size:12px;">${escapeHtml(a.owner)}</td>
-              <td style="padding:6px 8px;border:1px solid #e5e7eb;font-size:12px;">${escapeHtml(a.due_date)}</td>
+          ${content.actions.map((a, i) => `
+            <tr style="background:${i % 2 === 0 ? '#f9fafb' : '#fff'};">
+              <td style="padding:7px 10px;border-bottom:1px solid #e5e7eb;font-size:12px;">${escapeHtml(a.action)}</td>
+              <td style="padding:7px 10px;border-bottom:1px solid #e5e7eb;font-size:12px;">${escapeHtml(a.owner)}</td>
+              <td style="padding:7px 10px;border-bottom:1px solid #e5e7eb;font-size:12px;">${escapeHtml(a.due_date)}</td>
+              <td style="padding:7px 10px;border-bottom:1px solid #e5e7eb;font-size:12px;">${escapeHtml(a.status || 'Open')}</td>
             </tr>
           `).join('')}
         </tbody>
       </table>`
-    : '';
+    : `<p style="font-size:13px;color:#9ca3af;font-style:italic;">No action items recorded</p>`;
 
   return `<!DOCTYPE html>
 <html>
 <head>
   <meta charset="utf-8">
   <style>
-    body { font-family: Arial, Helvetica, sans-serif; margin: 40px; color: #1f2937; line-height: 1.5; }
-    h1 { font-size: 20px; margin-bottom: 4px; color: #111827; }
-    h2 { font-size: 14px; color: #6b7280; margin-top: 24px; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 1px solid #e5e7eb; padding-bottom: 4px; }
-    .meta { font-size: 12px; color: #6b7280; margin-bottom: 4px; }
-    .tenant { font-size: 14px; color: #4b5563; margin-bottom: 16px; }
-    ul { padding-left: 20px; }
-    li { font-size: 13px; margin-bottom: 4px; }
-    .notes { font-size: 13px; white-space: pre-wrap; background: #f9fafb; padding: 12px; border-radius: 4px; }
-    .footer { margin-top: 40px; font-size: 11px; color: #9ca3af; border-top: 1px solid #e5e7eb; padding-top: 12px; }
+    @page { margin: 0; }
+    body {
+      font-family: 'Segoe UI', Arial, Helvetica, sans-serif;
+      margin: 0; padding: 0; color: #1f2937; line-height: 1.5;
+    }
+    .header {
+      background: linear-gradient(135deg, #5b2d8e 0%, #7c3aed 50%, #06b6d4 100%);
+      padding: 24px 40px 18px;
+      color: #fff;
+      position: relative;
+    }
+    .header-top {
+      display: flex; justify-content: space-between; align-items: flex-start;
+    }
+    .header-contact {
+      font-size: 11px; line-height: 1.6; opacity: 0.9;
+    }
+    .header-brand {
+      text-align: right;
+    }
+    .header-brand .brand-name {
+      font-size: 28px; font-weight: 700; letter-spacing: -0.5px;
+    }
+    .header-brand .brand-tagline {
+      font-size: 11px; opacity: 0.85; margin-top: 2px;
+    }
+    .header-brand .brand-sub {
+      font-size: 10px; font-weight: 600; letter-spacing: 0.1em; margin-top: 4px;
+      color: #f472b6;
+    }
+    .accent-bar {
+      height: 4px;
+      background: linear-gradient(90deg, #f472b6, #06b6d4);
+    }
+    .content { padding: 30px 40px 20px; }
+    .doc-title {
+      font-size: 20px; font-weight: 700; color: #5b2d8e;
+      margin-bottom: 4px; border-bottom: 2px solid #5b2d8e;
+      padding-bottom: 8px;
+    }
+    .meta-grid {
+      display: grid; grid-template-columns: 1fr 1fr;
+      gap: 6px 20px; margin: 12px 0 20px;
+      font-size: 12px;
+    }
+    .meta-label { color: #6b7280; font-weight: 600; }
+    .meta-value { color: #1f2937; }
+    .section-title {
+      font-size: 13px; font-weight: 700; color: #5b2d8e;
+      text-transform: uppercase; letter-spacing: 0.06em;
+      border-bottom: 1px solid #e5e7eb; padding-bottom: 4px;
+      margin-top: 22px; margin-bottom: 8px;
+    }
+    .notes-block {
+      font-size: 13px; white-space: pre-wrap;
+      background: #f9fafb; padding: 12px; border-radius: 4px;
+      border-left: 3px solid #5b2d8e;
+    }
+    .footer {
+      margin-top: 40px; padding: 16px 40px;
+      border-top: 2px solid #5b2d8e;
+      font-size: 10px; color: #9ca3af;
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    .footer-brand { font-weight: 600; color: #5b2d8e; }
+    .footer-tagline {
+      font-size: 9px; letter-spacing: 0.15em; text-transform: uppercase;
+      color: #6b7280;
+    }
   </style>
 </head>
 <body>
-  <div class="tenant">${escapeHtml(tenantName)}</div>
-  <h1>${escapeHtml(title)}</h1>
-  <div class="meta">${escapeHtml(content.meeting_date)}${content.meeting_time ? ' at ' + escapeHtml(content.meeting_time) : ''}${content.duration_minutes > 0 ? ' (' + content.duration_minutes + ' minutes)' : ''}</div>
+  <div class="header">
+    <div class="header-top">
+      <div class="header-contact">
+        1300 729 455<br>
+        vivacity.com.au<br>
+        ABN 40 140 059 016<br>
+        hello@vivacity.com.au
+      </div>
+      <div class="header-brand">
+        <div class="brand-name">vivacity</div>
+        <div class="brand-tagline">above+beyond</div>
+        <div class="brand-sub">RTO + CRICOS SUPERHERO</div>
+      </div>
+    </div>
+  </div>
+  <div class="accent-bar"></div>
 
-  ${content.attendees?.length > 0 ? `
-    <h2>Attendees</h2>
-    <p style="font-size:13px;">${content.attendees.map(escapeHtml).join(', ')}</p>
-  ` : ''}
+  <div class="content">
+    <div class="doc-title">MEETING MINUTES</div>
 
-  ${content.apologies?.length > 0 ? `
-    <h2>Apologies</h2>
-    <p style="font-size:13px;">${content.apologies.map(escapeHtml).join(', ')}</p>
-  ` : ''}
+    <div class="meta-grid">
+      <div><span class="meta-label">Client:</span> <span class="meta-value">${escapeHtml(tenantName)}</span></div>
+      <div><span class="meta-label">Date:</span> <span class="meta-value">${escapeHtml(content.meeting_date || '')}${content.meeting_time ? ' at ' + escapeHtml(content.meeting_time) : ''}</span></div>
+      <div><span class="meta-label">Meeting:</span> <span class="meta-value">${escapeHtml(content.meeting_title || '')}</span></div>
+      <div><span class="meta-label">Duration:</span> <span class="meta-value">${content.duration_minutes > 0 ? content.duration_minutes + ' minutes' : '—'}</span></div>
+      ${content.meeting_type ? `<div><span class="meta-label">Type:</span> <span class="meta-value">${escapeHtml(content.meeting_type)}</span></div>` : ''}
+      ${content.facilitator ? `<div><span class="meta-label">Facilitator:</span> <span class="meta-value">${escapeHtml(content.facilitator)}</span></div>` : ''}
+      ${content.minute_taker ? `<div><span class="meta-label">Minute Taker:</span> <span class="meta-value">${escapeHtml(content.minute_taker)}</span></div>` : ''}
+    </div>
 
-  ${content.agenda_items?.length > 0 ? `
-    <h2>Agenda</h2>
-    <ul>${content.agenda_items.map(i => `<li>${escapeHtml(i)}</li>`).join('')}</ul>
-  ` : ''}
+    <div class="section-title">Attendees</div>
+    ${content.attendees?.length > 0
+      ? `<p style="font-size:13px;">${content.attendees.map(escapeHtml).join(', ')}</p>`
+      : `<p style="font-size:13px;color:#9ca3af;font-style:italic;">No attendees recorded</p>`}
 
-  ${content.discussion_notes ? `
-    <h2>Discussion Notes</h2>
-    <div class="notes">${escapeHtml(content.discussion_notes)}</div>
-  ` : ''}
+    ${content.apologies?.length > 0 ? `
+      <div class="section-title">Apologies</div>
+      <p style="font-size:13px;">${content.apologies.map(escapeHtml).join(', ')}</p>
+    ` : ''}
 
-  ${content.decisions?.length > 0 ? `
-    <h2>Decisions</h2>
-    <ul>${content.decisions.map(d => `<li>${escapeHtml(d)}</li>`).join('')}</ul>
-  ` : ''}
+    <div class="section-title">Agenda</div>
+    ${sectionOrPlaceholder(content.agenda_items)}
 
-  ${content.actions?.length > 0 ? `
-    <h2>Action Items</h2>
+    <div class="section-title">Discussion Notes</div>
+    ${content.discussion_notes?.trim()
+      ? `<div class="notes-block">${escapeHtml(content.discussion_notes)}</div>`
+      : `<p style="font-size:13px;color:#9ca3af;font-style:italic;">Not discussed</p>`}
+
+    <div class="section-title">Decisions</div>
+    ${sectionOrPlaceholder(content.decisions)}
+
+    <div class="section-title">Action Items</div>
     ${actionsTable}
-  ` : ''}
 
-  ${content.next_meeting ? `
-    <h2>Next Meeting</h2>
-    <p style="font-size:13px;">${escapeHtml(content.next_meeting)}</p>
-  ` : ''}
+    ${content.next_meeting ? `
+      <div class="section-title">Next Meeting</div>
+      <p style="font-size:13px;">${escapeHtml(content.next_meeting)}</p>
+    ` : ''}
+  </div>
 
   <div class="footer">
-    Generated by Unicorn 2.0 · ${new Date().toISOString().split('T')[0]}
+    <div>
+      <span class="footer-brand">Vivacity Coaching & Consulting</span>
+      <span style="margin-left:8px;" class="footer-tagline">Empowering RTOs for Excellence</span>
+    </div>
+    <div>
+      Generated by ${escapeHtml(publisherName)} · ${new Date().toISOString().split('T')[0]}
+    </div>
   </div>
 </body>
 </html>`;
-}
-
-function escapeHtml(str: string): string {
-  return (str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
 serve(async (req) => {
@@ -178,14 +282,8 @@ serve(async (req) => {
       );
     }
 
-    if (minutes.status === 'published') {
-      return new Response(
-        JSON.stringify({ error: 'Minutes already published' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
     const content = minutes.content as MinutesContent;
+    const isRegenerate = minutes.status === 'published';
 
     // Validate minimum fields
     if (!content.attendees?.length || (!content.decisions?.length && !content.actions?.length && !content.discussion_notes)) {
@@ -203,19 +301,16 @@ serve(async (req) => {
       .single();
 
     const tenantName = tenant?.name || 'Client';
+    const publisherName = [userRecord.first_name, userRecord.last_name].filter(Boolean).join(' ') || 'Vivacity Team';
 
-    // Get meeting details
-    const { data: meeting } = await supabaseAdmin
-      .from('meetings')
-      .select('title, starts_at, client_id')
-      .eq('id', minutes.meeting_id)
-      .single();
+    // Generate branded HTML
+    const htmlContent = generateBrandedHtml(content, tenantName, publisherName);
 
-    // Generate HTML content for PDF
-    const htmlContent = generatePdfHtml(content, minutes.title, tenantName);
+    // Determine version
+    const newVersion = isRegenerate ? (minutes.version || 1) + 1 : (minutes.version || 1);
 
-    // Store the HTML as a file in storage for the portal
-    const fileName = `${minutes.title.replace(/[^a-zA-Z0-9\s-]/g, '').replace(/\s+/g, '-')}.html`;
+    // Store HTML in storage
+    const fileName = `${minutes.title.replace(/[^a-zA-Z0-9\s-]/g, '').replace(/\s+/g, '-')}-v${newVersion}.html`;
     const storagePath = `meeting-minutes/${minutes.tenant_id}/${minutes.meeting_id}/${fileName}`;
 
     const { error: storageError } = await supabaseAdmin.storage
@@ -227,69 +322,89 @@ serve(async (req) => {
 
     if (storageError) {
       console.error('[publish-minutes] Storage upload failed:', storageError);
-      // Continue without storage - create portal doc anyway
     }
 
-    // Create portal document
-    const publisherName = [userRecord.first_name, userRecord.last_name].filter(Boolean).join(' ') || 'Vivacity Team';
+    // Create or update portal document
+    const portalDocData = {
+      tenant_id: minutes.tenant_id,
+      file_name: fileName,
+      file_type: 'text/html',
+      file_size: new TextEncoder().encode(htmlContent).length,
+      description: `Meeting minutes published by ${publisherName}`,
+      uploaded_by: user.id,
+      direction: 'outbound',
+      is_client_visible: true,
+      storage_path: storageError ? null : storagePath,
+    };
 
-    const { data: portalDoc, error: portalError } = await supabaseAdmin
-      .from('portal_documents')
-      .insert({
-        tenant_id: minutes.tenant_id,
-        file_name: fileName,
-        file_type: 'text/html',
-        file_size: new TextEncoder().encode(htmlContent).length,
-        description: `Meeting minutes published by ${publisherName}`,
-        uploaded_by: user.id,
-        direction: 'outbound',
-        is_client_visible: true,
-        storage_path: storageError ? null : storagePath,
-      })
-      .select('id')
-      .single();
+    let portalDocId: string;
 
-    if (portalError) {
-      console.error('[publish-minutes] Portal doc creation failed:', portalError);
-      return new Response(
-        JSON.stringify({ error: 'Failed to create portal document' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+    if (isRegenerate && minutes.pdf_document_id) {
+      // Update existing portal doc
+      await supabaseAdmin
+        .from('portal_documents')
+        .update({
+          ...portalDocData,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', minutes.pdf_document_id);
+      portalDocId = minutes.pdf_document_id;
+    } else {
+      // Create new portal doc
+      const { data: portalDoc, error: portalError } = await supabaseAdmin
+        .from('portal_documents')
+        .insert(portalDocData)
+        .select('id')
+        .single();
+
+      if (portalError) {
+        console.error('[publish-minutes] Portal doc creation failed:', portalError);
+        return new Response(
+          JSON.stringify({ error: 'Failed to create portal document' }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      portalDocId = portalDoc.id;
     }
 
-    // Update minutes status
+    // Update minutes record
     const now = new Date().toISOString();
     await supabaseAdmin.from('meeting_minutes').update({
       status: 'published',
+      version: newVersion,
       published_at: now,
       published_by: user.id,
-      pdf_document_id: portalDoc.id,
+      pdf_document_id: portalDocId,
       pdf_storage_path: storageError ? null : storagePath,
       updated_at: now,
     }).eq('id', minutesId);
 
     // Audit log
+    const auditAction = isRegenerate ? 'meeting_minutes_regenerated' : 'meeting_minutes_published';
     await supabaseAdmin.from('audit_events').insert({
       entity: 'meeting_minutes',
       entity_id: minutesId,
-      action: 'minutes_published',
+      action: auditAction,
       user_id: user.id,
       details: {
         meeting_id: minutes.meeting_id,
-        portal_document_id: portalDoc.id,
+        portal_document_id: portalDocId,
         tenant_id: minutes.tenant_id,
         title: minutes.title,
         tenant_name: tenantName,
+        version: newVersion,
       },
     });
 
-    console.log('[publish-minutes] Published:', { minutesId, portalDocId: portalDoc.id });
+    console.log(`[publish-minutes] ${auditAction}:`, { minutesId, portalDocId, version: newVersion });
 
     return new Response(
       JSON.stringify({
         success: true,
         minutes_id: minutesId,
-        portal_document_id: portalDoc.id,
+        portal_document_id: portalDocId,
+        version: newVersion,
+        regenerated: isRegenerate,
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
