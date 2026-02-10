@@ -5,18 +5,22 @@ import { useHelpCenter } from "@/components/help-center";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useOpenDocumentRequest } from "@/components/layout/ClientLayout";
+import { useClientActingUser } from "@/hooks/useClientActingUser";
 
 export function ClientHomePage() {
   const { openHelpCenter } = useHelpCenter();
   const { profile } = useAuth();
+  const { actingUser } = useClientActingUser();
   const openDocumentRequest = useOpenDocumentRequest();
+
+  const displayName = actingUser?.first_name || profile?.first_name;
 
   return (
     <div className="space-y-8 max-w-5xl">
       {/* Welcome */}
       <div>
         <h1 className="text-2xl font-bold text-secondary">
-          Welcome{profile?.first_name ? `, ${profile.first_name}` : ""}
+          Welcome{displayName ? `, ${displayName}` : ""}
         </h1>
         <p className="text-muted-foreground mt-1">What do you need today?</p>
       </div>
