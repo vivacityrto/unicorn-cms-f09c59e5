@@ -1,8 +1,8 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { format } from 'date-fns';
 import {
   FileText, Save, Send, Loader2, CheckCircle2, Plus, Trash2, Download,
-  RefreshCw, Sparkles, AlertTriangle, Check, X,
+  RefreshCw, Sparkles, AlertTriangle, Check, X, ClipboardPaste,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -20,7 +20,7 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import { useTeamsMeetingMinutes, MinutesContent, AiProposedMinutes } from '@/hooks/useTeamsMeetingMinutes';
+import { useTeamsMeetingMinutes, MinutesContent, AiProposedMinutes, CopilotExtracted } from '@/hooks/useTeamsMeetingMinutes';
 
 interface MeetingMinutesPanelProps {
   meetingId: string;
@@ -154,6 +154,111 @@ function AiPreviewPanel({
   );
 }
 
+// ── Copilot Preview component ────────────────────────────────────────
+function CopilotPreviewPanel({
+  extracted,
+  onApply,
+  onDiscard,
+}: {
+  extracted: CopilotExtracted;
+  onApply: () => void;
+  onDiscard: () => void;
+}) {
+  const confidenceBadge = (level: string) => {
+    const variant = level === 'high' ? 'default' : level === 'medium' ? 'secondary' : 'destructive';
+    return <Badge variant={variant} className="text-[10px] ml-1">{level}</Badge>;
+  };
+
+  return (
+    <div className="space-y-3 border rounded-lg p-4 bg-muted/30">
+      <div className="flex items-center gap-2">
+        <ClipboardPaste className="h-4 w-4 text-primary" />
+        <span className="text-sm font-medium">Copilot Extract Preview</span>
+        <Badge variant="outline" className="text-[10px]">Review required</Badge>
+      </div>
+
+      <Alert>
+        <AlertTriangle className="h-4 w-4" />
+        <AlertDescription className="text-xs">
+          Imported from Teams Copilot. Review all sections for accuracy before applying.
+        </AlertDescription>
+      </Alert>
+
+      {extracted.attendees.length > 0 && (
+        <div>
+          <div className="text-xs font-medium text-muted-foreground flex items-center">
+            Attendees {confidenceBadge(extracted.confidence?.attendees || 'medium')}
+          </div>
+          <div className="text-xs mt-1">{extracted.attendees.join(', ')}</div>
+        </div>
+      )}
+
+      {extracted.summary && (
+        <div>
+          <div className="text-xs font-medium text-muted-foreground flex items-center">
+            Summary {confidenceBadge(extracted.confidence?.summary || 'medium')}
+          </div>
+          <div className="text-xs whitespace-pre-wrap bg-background p-2 rounded mt-1 border">
+            {extracted.summary}
+          </div>
+        </div>
+      )}
+
+      {extracted.decisions.length > 0 && (
+        <div>
+          <div className="text-xs font-medium text-muted-foreground flex items-center">
+            Decisions {confidenceBadge(extracted.confidence?.decisions || 'medium')}
+          </div>
+          <ul className="list-disc list-inside text-xs mt-1 space-y-0.5">
+            {extracted.decisions.map((d, i) => <li key={i}>{d}</li>)}
+          </ul>
+        </div>
+      )}
+
+      {extracted.actions.length > 0 && (
+        <div>
+          <div className="text-xs font-medium text-muted-foreground flex items-center">
+            Actions {confidenceBadge(extracted.confidence?.actions || 'medium')}
+          </div>
+          <div className="border rounded overflow-hidden mt-1">
+            <table className="w-full text-xs">
+              <thead className="bg-muted/50">
+                <tr>
+                  <th className="text-left p-1.5 font-medium">Action</th>
+                  <th className="text-left p-1.5 font-medium w-20">Owner</th>
+                  <th className="text-left p-1.5 font-medium w-20">Due</th>
+                  <th className="text-left p-1.5 font-medium w-16">Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {extracted.actions.map((a, i) => (
+                  <tr key={i} className="border-t">
+                    <td className="p-1.5">{a.action}</td>
+                    <td className="p-1.5">{a.owner}</td>
+                    <td className="p-1.5">{a.due_date || '—'}</td>
+                    <td className="p-1.5">{a.status}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      <Separator />
+
+      <div className="flex gap-2">
+        <Button size="sm" onClick={onApply} className="gap-1">
+          <Check className="h-3.5 w-3.5" /> Apply to draft
+        </Button>
+        <Button size="sm" variant="outline" onClick={onDiscard} className="gap-1">
+          <X className="h-3.5 w-3.5" /> Discard
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 // ── Main component ───────────────────────────────────────────────────
 
 export function MeetingMinutesPanel({ meetingId, isVivacityTeam }: MeetingMinutesPanelProps) {
@@ -162,12 +267,19 @@ export function MeetingMinutesPanel({ meetingId, isVivacityTeam }: MeetingMinute
     saveDraft, isSaving, publishMinutes, isPublishing,
     generateFromTranscript, isGenerating,
     aiProposal, applyAiContent, discardAiContent, resetAiProposal,
+    extractCopilot, isExtracting,
+    copilotExtracted, copilotStoreRaw,
+    applyCopilotContent, discardCopilotContent, resetCopilotExtraction,
   } = useTeamsMeetingMinutes(meetingId);
 
   const [isEditing, setIsEditing] = useState(false);
   const [editContent, setEditContent] = useState<MinutesContent | null>(null);
   const [editTitle, setEditTitle] = useState('');
   const [reviewConfirmed, setReviewConfirmed] = useState(false);
+  const [showCopilotPanel, setShowCopilotPanel] = useState(false);
+  const [copilotText, setCopilotText] = useState('');
+  const copilotTextareaRef = useRef<HTMLTextAreaElement>(null);
+  const copilotRawTextRef = useRef<string>('');
 
   if (isLoading) {
     return <div className="text-sm text-muted-foreground">Loading minutes...</div>;
@@ -244,6 +356,50 @@ export function MeetingMinutesPanel({ meetingId, isVivacityTeam }: MeetingMinute
     discardAiContent(minutes.id);
     resetAiProposal();
   };
+
+  // ── Copilot handlers ───────────────────────────────────────────────
+  const handleCopilotExtract = () => {
+    if (!copilotText.trim()) return;
+    copilotRawTextRef.current = copilotText;
+    extractCopilot(copilotText);
+  };
+
+  const handleApplyCopilot = () => {
+    if (!copilotExtracted) return;
+    applyCopilotContent(
+      minutes.id,
+      copilotExtracted,
+      content,
+      copilotStoreRaw,
+      copilotRawTextRef.current,
+    );
+    resetCopilotExtraction();
+    setCopilotText('');
+    setShowCopilotPanel(false);
+  };
+
+  const handleDiscardCopilot = () => {
+    discardCopilotContent(minutes.id);
+    resetCopilotExtraction();
+  };
+
+  const openCopilotPanel = () => {
+    setShowCopilotPanel(true);
+    setTimeout(() => copilotTextareaRef.current?.focus(), 100);
+  };
+
+  // ── Copilot extraction preview ─────────────────────────────────────
+  if (copilotExtracted && isVivacityTeam) {
+    return (
+      <div className="space-y-4">
+        <CopilotPreviewPanel
+          extracted={copilotExtracted}
+          onApply={handleApplyCopilot}
+          onDiscard={handleDiscardCopilot}
+        />
+      </div>
+    );
+  }
 
   // ── AI proposal preview ────────────────────────────────────────────
   if (aiProposal && isVivacityTeam) {
@@ -533,6 +689,19 @@ export function MeetingMinutesPanel({ meetingId, isVivacityTeam }: MeetingMinute
               Edit
             </Button>
 
+            {/* Copilot paste shortcut */}
+            {!isPublished && (
+              <Button
+                size="sm"
+                variant="outline"
+                className="gap-1"
+                onClick={openCopilotPanel}
+              >
+                <ClipboardPaste className="h-4 w-4" />
+                Paste Copilot minutes
+              </Button>
+            )}
+
             {/* AI generate button */}
             {aiEnabled && !isPublished && (
               <Button
@@ -605,6 +774,54 @@ export function MeetingMinutesPanel({ meetingId, isVivacityTeam }: MeetingMinute
               </Button>
             )}
           </div>
+
+          {/* Copilot import panel */}
+          {showCopilotPanel && !isPublished && (
+            <>
+              <Separator />
+              <div className="space-y-3 border rounded-lg p-4 bg-muted/30">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <ClipboardPaste className="h-4 w-4 text-primary" />
+                    <span className="text-sm font-medium">Import from Teams Copilot</span>
+                  </div>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => { setShowCopilotPanel(false); setCopilotText(''); }}
+                    className="h-6 w-6 p-0"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
+                <Textarea
+                  ref={copilotTextareaRef}
+                  placeholder="Paste Copilot meeting notes here..."
+                  rows={8}
+                  value={copilotText}
+                  onChange={(e) => setCopilotText(e.target.value)}
+                />
+                <div className="flex gap-2">
+                  <Button
+                    size="sm"
+                    onClick={handleCopilotExtract}
+                    disabled={isExtracting || !copilotText.trim()}
+                    className="gap-1"
+                  >
+                    {isExtracting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
+                    Extract
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => { setShowCopilotPanel(false); setCopilotText(''); }}
+                  >
+                    Cancel
+                  </Button>
+                </div>
+              </div>
+            </>
+          )}
         </>
       )}
 
