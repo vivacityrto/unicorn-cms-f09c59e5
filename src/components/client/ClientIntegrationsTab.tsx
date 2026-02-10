@@ -833,13 +833,20 @@ export function ClientIntegrationsTab({
                             <TableCell className="font-mono text-sm">{qual.qualification_code}</TableCell>
                             <TableCell className="font-medium">{qual.qualification_title || '-'}</TableCell>
                             <TableCell>
-                              <span className={`inline-flex items-center px-2.5 py-0.5 rounded-sm text-xs font-medium ${
-                                qual.status_label === 'Current' ? 'bg-green-100 text-green-800 border border-green-300' :
-                                qual.status_label === 'Superseded' ? 'bg-red-100 text-red-800 border border-red-300' :
-                                'bg-gray-100 text-gray-800 border border-gray-300'
-                              }`}>
-                                {qual.status_label || qual.status || '-'}
-                              </span>
+                              <div className="flex items-center gap-1.5">
+                                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-sm text-xs font-medium ${
+                                  qual.status_label === 'Current' ? 'bg-green-100 text-green-800 border border-green-300' :
+                                  qual.status_label === 'Superseded' ? 'bg-red-100 text-red-800 border border-red-300' :
+                                  'bg-gray-100 text-gray-800 border border-gray-300'
+                                }`}>
+                                  {qual.status_label || qual.status || '-'}
+                                </span>
+                                {(qual as any).scope_state === 'teach_out' && (
+                                  <span className="inline-flex items-center px-2 py-0.5 rounded-sm text-xs font-medium bg-amber-100 text-amber-800 border border-amber-300">
+                                    Teach-out
+                                  </span>
+                                )}
+                              </div>
                             </TableCell>
                             <TableCell className="text-sm">{qual.extent_label || '-'}</TableCell>
                             <TableCell className="text-sm">{qual.start_date ? new Date(qual.start_date).toLocaleDateString('en-AU', { day: '2-digit', month: 'short', year: 'numeric' }) : '-'}</TableCell>
@@ -879,13 +886,20 @@ export function ClientIntegrationsTab({
                             <TableCell className="font-mono text-sm">{skill.skillset_code}</TableCell>
                             <TableCell className="font-medium">{skill.skillset_title || '-'}</TableCell>
                             <TableCell>
-                              <span className={`inline-flex items-center px-2.5 py-0.5 rounded-sm text-xs font-medium ${
-                                skill.status_label === 'Current' ? 'bg-green-100 text-green-800 border border-green-300' :
-                                skill.status_label === 'Superseded' ? 'bg-red-100 text-red-800 border border-red-300' :
-                                'bg-gray-100 text-gray-800 border border-gray-300'
-                              }`}>
-                                {skill.status_label || skill.status || '-'}
-                              </span>
+                              <div className="flex items-center gap-1.5">
+                                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-sm text-xs font-medium ${
+                                  skill.status_label === 'Current' ? 'bg-green-100 text-green-800 border border-green-300' :
+                                  skill.status_label === 'Superseded' ? 'bg-red-100 text-red-800 border border-red-300' :
+                                  'bg-gray-100 text-gray-800 border border-gray-300'
+                                }`}>
+                                  {skill.status_label || skill.status || '-'}
+                                </span>
+                                {(skill as any).scope_state === 'teach_out' && (
+                                  <span className="inline-flex items-center px-2 py-0.5 rounded-sm text-xs font-medium bg-amber-100 text-amber-800 border border-amber-300">
+                                    Teach-out
+                                  </span>
+                                )}
+                              </div>
                             </TableCell>
                             <TableCell className="text-sm">{skill.extent_label || '-'}</TableCell>
                             <TableCell className="text-sm">{skill.start_date ? new Date(skill.start_date).toLocaleDateString('en-AU', { day: '2-digit', month: 'short', year: 'numeric' }) : '-'}</TableCell>
@@ -924,13 +938,20 @@ export function ClientIntegrationsTab({
                             <TableCell className="font-mono text-sm">{unit.unit_code}</TableCell>
                             <TableCell className="font-medium">{unit.unit_title || '-'}</TableCell>
                             <TableCell>
-                              <span className={`inline-flex items-center px-2.5 py-0.5 rounded-sm text-xs font-medium ${
-                                unit.status_label === 'Current' ? 'bg-green-100 text-green-800 border border-green-300' :
-                                unit.status_label === 'Superseded' ? 'bg-red-100 text-red-800 border border-red-300' :
-                                'bg-gray-100 text-gray-800 border border-gray-300'
-                              }`}>
-                                {unit.status_label || unit.status || '-'}
-                              </span>
+                              <div className="flex items-center gap-1.5">
+                                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-sm text-xs font-medium ${
+                                  unit.status_label === 'Current' ? 'bg-green-100 text-green-800 border border-green-300' :
+                                  unit.status_label === 'Superseded' ? 'bg-red-100 text-red-800 border border-red-300' :
+                                  'bg-gray-100 text-gray-800 border border-gray-300'
+                                }`}>
+                                  {unit.status_label || unit.status || '-'}
+                                </span>
+                                {(unit as any).scope_state === 'teach_out' && (
+                                  <span className="inline-flex items-center px-2 py-0.5 rounded-sm text-xs font-medium bg-amber-100 text-amber-800 border border-amber-300">
+                                    Teach-out
+                                  </span>
+                                )}
+                              </div>
                             </TableCell>
                             <TableCell className="text-sm">{unit.extent_label || '-'}</TableCell>
                             <TableCell className="text-sm">{unit.start_date ? new Date(unit.start_date).toLocaleDateString('en-AU', { day: '2-digit', month: 'short', year: 'numeric' }) : '-'}</TableCell>
@@ -968,13 +989,20 @@ export function ClientIntegrationsTab({
                             <TableCell className="font-mono text-sm">{course.course_code}</TableCell>
                             <TableCell className="font-medium">{course.course_title || '-'}</TableCell>
                             <TableCell>
-                              <span className={`inline-flex items-center px-2.5 py-0.5 rounded-sm text-xs font-medium ${
-                                course.status_label === 'Current' ? 'bg-green-100 text-green-800 border border-green-300' :
-                                course.status_label === 'Superseded' ? 'bg-red-100 text-red-800 border border-red-300' :
-                                'bg-gray-100 text-gray-800 border border-gray-300'
-                              }`}>
-                                {course.status_label || course.status || '-'}
-                              </span>
+                              <div className="flex items-center gap-1.5">
+                                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-sm text-xs font-medium ${
+                                  course.status_label === 'Current' ? 'bg-green-100 text-green-800 border border-green-300' :
+                                  course.status_label === 'Superseded' ? 'bg-red-100 text-red-800 border border-red-300' :
+                                  'bg-gray-100 text-gray-800 border border-gray-300'
+                                }`}>
+                                  {course.status_label || course.status || '-'}
+                                </span>
+                                {(course as any).scope_state === 'teach_out' && (
+                                  <span className="inline-flex items-center px-2 py-0.5 rounded-sm text-xs font-medium bg-amber-100 text-amber-800 border border-amber-300">
+                                    Teach-out
+                                  </span>
+                                )}
+                              </div>
                             </TableCell>
                             <TableCell className="text-sm">{course.start_date ? new Date(course.start_date).toLocaleDateString('en-AU', { day: '2-digit', month: 'short', year: 'numeric' }) : '-'}</TableCell>
                             <TableCell className="text-sm">{course.end_date ? new Date(course.end_date).toLocaleDateString('en-AU', { day: '2-digit', month: 'short', year: 'numeric' }) : '-'}</TableCell>
@@ -1011,13 +1039,20 @@ export function ClientIntegrationsTab({
                             <TableCell className="font-mono text-sm">{tp.package_code}</TableCell>
                             <TableCell className="font-medium">{tp.package_title || '-'}</TableCell>
                             <TableCell>
-                              <span className={`inline-flex items-center px-2.5 py-0.5 rounded-sm text-xs font-medium ${
-                                tp.status_label === 'Current' ? 'bg-green-100 text-green-800 border border-green-300' :
-                                tp.status_label === 'Superseded' ? 'bg-red-100 text-red-800 border border-red-300' :
-                                'bg-gray-100 text-gray-800 border border-gray-300'
-                              }`}>
-                                {tp.status_label || tp.status || '-'}
-                              </span>
+                              <div className="flex items-center gap-1.5">
+                                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-sm text-xs font-medium ${
+                                  tp.status_label === 'Current' ? 'bg-green-100 text-green-800 border border-green-300' :
+                                  tp.status_label === 'Superseded' ? 'bg-red-100 text-red-800 border border-red-300' :
+                                  'bg-gray-100 text-gray-800 border border-gray-300'
+                                }`}>
+                                  {tp.status_label || tp.status || '-'}
+                                </span>
+                                {(tp as any).scope_state === 'teach_out' && (
+                                  <span className="inline-flex items-center px-2 py-0.5 rounded-sm text-xs font-medium bg-amber-100 text-amber-800 border border-amber-300">
+                                    Teach-out
+                                  </span>
+                                )}
+                              </div>
                             </TableCell>
                             <TableCell className="text-sm">{tp.start_date ? new Date(tp.start_date).toLocaleDateString('en-AU', { day: '2-digit', month: 'short', year: 'numeric' }) : '-'}</TableCell>
                             <TableCell className="text-sm">{tp.end_date ? new Date(tp.end_date).toLocaleDateString('en-AU', { day: '2-digit', month: 'short', year: 'numeric' }) : '-'}</TableCell>

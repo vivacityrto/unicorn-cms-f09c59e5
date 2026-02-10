@@ -12,9 +12,25 @@ const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
 
 const PAGE_SIZE = 500;
 
-// Status normalisation helpers — keep only Current scope items
+// Status normalisation helpers
 const normStatus = (s: any) => String(s ?? "").trim().toLowerCase();
-const isCurrent = (item: any) => normStatus(item.status) === "current";
+
+// Classify scope state: current, teach_out (superseded with future endDate), or null (drop)
+function classifyScopeState(item: any): "current" | "teach_out" | null {
+  const usage = normStatus(item.usageRecommendation ?? item.status);
+  const endDateStr = item.endDate ?? null;
+
+  if (usage === "current") return "current";
+
+  if (usage === "superseded" && endDateStr) {
+    const endDate = new Date(endDateStr);
+    if (!isNaN(endDate.getTime()) && endDate >= new Date()) {
+      return "teach_out";
+    }
+  }
+
+  return null; // drop this item
+}
 
 // Compute SHA256 hash of a string using Web Crypto API
 async function computeSha256(text: string): Promise<string> {
@@ -181,23 +197,34 @@ async function fetchAllScope(rtoId: string): Promise<{ categorised: Record<strin
   
   const categorised = categoriseScope(explicitItems);
 
-  // Filter to Current-only before persistence — drop Superseded/Deleted/Non-current
+  // Classify each item: keep Current + teach-out (superseded with future endDate), drop the rest
   for (const [type, items] of Object.entries(categorised)) {
     const before = items.length;
-    categorised[type] = items.filter(isCurrent);
-    const dropped = before - categorised[type].length;
-    if (dropped > 0) log('info', `Filtered ${type}: kept ${categorised[type].length}, dropped ${dropped} non-current`);
+    const kept: any[] = [];
+    for (const item of items) {
+      const scopeState = classifyScopeState(item);
+      if (scopeState) {
+        // Inject scope_state into the item so it lands in tga_data
+        item.scope_state = scopeState;
+        kept.push(item);
+      }
+    }
+    categorised[type] = kept;
+    const dropped = before - kept.length;
+    if (dropped > 0) log('info', `Filtered ${type}: kept ${kept.length} (${kept.filter((i: any) => i.scope_state === 'teach_out').length} teach-out), dropped ${dropped}`);
   }
   
-  const currentTotal = Object.values(categorised).reduce((sum, arr) => sum + arr.length, 0);
-  log('info', `Categorised scope (Current-only)`, {
+  const keptTotal = Object.values(categorised).reduce((sum, arr) => sum + arr.length, 0);
+  const teachOutTotal = Object.values(categorised).reduce((sum, arr) => sum + arr.filter((i: any) => i.scope_state === 'teach_out').length, 0);
+  log('info', `Categorised scope (Current + teach-out)`, {
     qualification: categorised.qualification.length,
     unit: categorised.unit.length,
     skillSet: categorised.skillSet.length,
     accreditedCourse: categorised.accreditedCourse.length,
     trainingPackage: categorised.trainingPackage.length,
-    total: currentTotal,
-    droppedFromTotal: explicitItems.length - currentTotal,
+    total: keptTotal,
+    teachOut: teachOutTotal,
+    droppedFromTotal: explicitItems.length - keptTotal,
   });
   
   return { categorised, urls: result.urls };
