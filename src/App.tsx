@@ -149,6 +149,8 @@ const ClientReportsWrapperNew = lazy(() => import("./pages/client/ClientReportsW
 const ClientUsersWrapperNew = lazy(() => import("./pages/client/ClientUsersWrapper"));
 const ClientSettingsWrapperNew = lazy(() => import("./pages/client/ClientSettingsWrapper"));
 const ClientTeamWrapperNew = lazy(() => import("./pages/client/ClientTeamWrapper"));
+const ClientProfileWrapperNew = lazy(() => import("./pages/client/ClientProfileWrapper"));
+const ClientTgaDetailsWrapperNew = lazy(() => import("./pages/client/ClientTgaDetailsWrapper"));
 
 const queryClient = new QueryClient();
 
@@ -923,6 +925,8 @@ const App = () => (
             <Route path="/client/users" element={<ProtectedRoute><ClientUsersWrapperNew /></ProtectedRoute>} />
             <Route path="/client/team" element={<ProtectedRoute><ClientTeamWrapperNew /></ProtectedRoute>} />
             <Route path="/client/settings" element={<ProtectedRoute><ClientSettingsWrapperNew /></ProtectedRoute>} />
+            <Route path="/client/profile" element={<ProtectedRoute><ClientProfileWrapperNew /></ProtectedRoute>} />
+            <Route path="/client/tga" element={<ProtectedRoute><ClientTgaDetailsWrapperNew /></ProtectedRoute>} />
             
             {/* Add-in Shell Route - works without full auth for add-in JWT holders */}
             <Route path="/addin" element={<AddinShell />} />

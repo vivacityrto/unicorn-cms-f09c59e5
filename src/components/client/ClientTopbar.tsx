@@ -26,6 +26,7 @@ import {
 import { useAuth } from "@/hooks/useAuth";
 import { useNotifications } from "@/hooks/useNotifications";
 import { useClientTenant } from "@/contexts/ClientTenantContext";
+import { useClientActingUser } from "@/hooks/useClientActingUser";
 import { useHelpCenter } from "@/components/help-center";
 import vivacityLogo from "@/assets/vivacity-logo.svg";
 
@@ -38,19 +39,23 @@ export function ClientTopbar({ isPreview }: ClientTopbarProps) {
   const { profile, signOut } = useAuth();
   const { openHelpCenter } = useHelpCenter();
   const { unreadCount, notifications } = useNotifications();
+  const { actingUser } = useClientActingUser();
+
+  // Use acting user (parent account in preview mode) for avatar display
+  const displayUser = actingUser || profile;
 
   const getInitials = () => {
-    if (profile?.first_name && profile?.last_name) {
-      return `${profile.first_name[0]}${profile.last_name[0]}`.toUpperCase();
-    }
-    return (profile?.email?.split("@")[0] || "U").substring(0, 2).toUpperCase();
+    const fn = actingUser?.first_name || profile?.first_name;
+    const ln = actingUser?.last_name || profile?.last_name;
+    if (fn && ln) return `${fn[0]}${ln[0]}`.toUpperCase();
+    return (displayUser?.email?.split("@")[0] || "U").substring(0, 2).toUpperCase();
   };
 
   const getUserDisplayName = () => {
-    if (profile?.first_name && profile?.last_name) {
-      return `${profile.first_name} ${profile.last_name}`;
-    }
-    return profile?.email?.split("@")[0] || "User";
+    const fn = actingUser?.first_name || profile?.first_name;
+    const ln = actingUser?.last_name || profile?.last_name;
+    if (fn && ln) return `${fn} ${ln}`;
+    return displayUser?.email?.split("@")[0] || "User";
   };
 
   return (
@@ -144,7 +149,7 @@ export function ClientTopbar({ isPreview }: ClientTopbarProps) {
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" className="relative h-9 w-9 rounded-full p-0 ml-1">
               <Avatar className="h-8 w-8 border-2" style={{ borderColor: "hsl(270 20% 88%)" }}>
-                <AvatarImage src={profile?.avatar_url || ""} alt={getUserDisplayName()} />
+                <AvatarImage src={actingUser?.avatar_url || profile?.avatar_url || ""} alt={getUserDisplayName()} />
                 <AvatarFallback
                   className="text-xs font-semibold"
                   style={{
@@ -161,12 +166,12 @@ export function ClientTopbar({ isPreview }: ClientTopbarProps) {
             <DropdownMenuLabel className="font-normal">
               <div className="flex flex-col space-y-1">
                 <p className="text-sm font-medium">{getUserDisplayName()}</p>
-                <p className="text-xs text-muted-foreground truncate">{profile?.email}</p>
+                <p className="text-xs text-muted-foreground truncate">{displayUser?.email || profile?.email}</p>
               </div>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuItem asChild>
-              <Link to="/client/settings" className="flex items-center">
+              <Link to="/client/profile" className="flex items-center">
                 <Settings className="mr-2 h-4 w-4" />
                 Profile Settings
               </Link>

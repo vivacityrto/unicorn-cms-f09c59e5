@@ -4838,6 +4838,62 @@ export type Database = {
           },
         ]
       }
+      client_tga_reviews: {
+        Row: {
+          id: string
+          notes: string | null
+          reviewed_at: string
+          reviewed_by_user_id: string
+          source: string
+          tenant_id: number
+        }
+        Insert: {
+          id?: string
+          notes?: string | null
+          reviewed_at?: string
+          reviewed_by_user_id: string
+          source?: string
+          tenant_id: number
+        }
+        Update: {
+          id?: string
+          notes?: string | null
+          reviewed_at?: string
+          reviewed_by_user_id?: string
+          source?: string
+          tenant_id?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_tga_reviews_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_tga_reviews_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_engagement_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "client_tga_reviews_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_eos_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "client_tga_reviews_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_compliance_entitlements"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
       client_tga_snapshot: {
         Row: {
           client_id: string
