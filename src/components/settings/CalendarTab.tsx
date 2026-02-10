@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Calendar, Share2, Plus, Trash2 } from 'lucide-react';
+import { Calendar, Share2, Plus, Trash2, Info, AlertCircle } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -7,12 +7,18 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
-import { OutlookIntegration } from '@/components/profile/OutlookIntegration';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { MicrosoftAccountCard } from '@/components/profile/MicrosoftAccountCard';
 import { useCalendarShares } from '@/hooks/useCalendarShares';
+import { useOutlookConnectionStatus } from '@/hooks/useOutlookConnectionStatus';
+import { useAddinFeatureFlags } from '@/hooks/useAddinFeatureFlags';
 import { useAuth } from '@/hooks/useAuth';
+import { Link } from 'react-router-dom';
 
 export function CalendarTab() {
   const { profile } = useAuth();
+  const { isConnected } = useOutlookConnectionStatus();
+  const { flags } = useAddinFeatureFlags();
   
   // Check if user is Vivacity Team member
   const isVivacityTeam = ['Super Admin', 'Team Leader', 'Team Member'].includes(
@@ -42,10 +48,36 @@ export function CalendarTab() {
     }
   };
 
+  const masterEnabled = flags.microsoft_addin_enabled;
+  const calendarEnabled = masterEnabled && flags.addin_meetings_enabled;
+
   return (
     <div className="space-y-6 max-w-3xl">
-      {/* Microsoft Outlook Integration */}
-      <OutlookIntegration />
+      {/* Microsoft Account Card - identity-based connection */}
+      <MicrosoftAccountCard />
+
+      {/* Calendar Status Messages */}
+      {!isConnected && masterEnabled && (
+        <Alert>
+          <Info className="h-4 w-4" />
+          <AlertDescription>
+            Microsoft Calendar is not connected.{' '}
+            <Link to="/settings?tab=calendar" className="font-medium underline">
+              Connect your Microsoft account
+            </Link>{' '}
+            above to enable calendar sync.
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {!calendarEnabled && masterEnabled && isConnected && (
+        <Alert>
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>
+            Calendar sync is currently disabled by your administrator.
+          </AlertDescription>
+        </Alert>
+      )}
 
       {/* Calendar Sharing - Only for Vivacity Team */}
       {isVivacityTeam && (
@@ -133,7 +165,7 @@ export function CalendarTab() {
           <div className="flex items-start gap-3">
             <Calendar className="h-5 w-5 text-primary mt-0.5" />
             <div>
-              <h3 className="font-semibold mb-1">Your calendar connection is private</h3>
+              <h3 className="font-semibold mb-1">Your connection is private</h3>
               <p className="text-sm text-muted-foreground">
                 Only you can see and manage this connection. Your calendar data is never shared with other users or administrators.
                 Calendar events are only used to create time entry drafts for your personal time tracking.
@@ -150,15 +182,15 @@ export function CalendarTab() {
           <ul className="space-y-2 text-sm text-muted-foreground">
             <li className="flex items-start gap-2">
               <span className="text-primary font-medium">1.</span>
-              <span>Connect your Microsoft Outlook calendar using your work or personal account.</span>
+              <span>Connect your Microsoft account using the card above.</span>
             </li>
             <li className="flex items-start gap-2">
               <span className="text-primary font-medium">2.</span>
-              <span>Your calendar events will be synced automatically to create time entry drafts.</span>
+              <span>Your administrator controls which features (Mail, Calendar, Documents) are active.</span>
             </li>
             <li className="flex items-start gap-2">
               <span className="text-primary font-medium">3.</span>
-              <span>Review and post drafts from your Time Inbox to track billable hours.</span>
+              <span>When Calendar is enabled, events sync automatically to create time entry drafts.</span>
             </li>
           </ul>
         </CardContent>
