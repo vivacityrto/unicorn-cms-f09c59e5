@@ -112,7 +112,7 @@ export function ClientHomePage() {
         <h3 className="font-semibold text-foreground mb-3">Quick links</h3>
         <div className="flex flex-wrap gap-2">
           <Button variant="outline" size="sm" asChild>
-            <Link to="/manage-documents">
+            <Link to="/client/documents">
               <FileText className="h-3.5 w-3.5 mr-1" /> Documents
             </Link>
           </Button>
@@ -122,7 +122,7 @@ export function ClientHomePage() {
             </Link>
           </Button>
           <Button variant="outline" size="sm" asChild>
-            <Link to="/resource-hub">
+            <Link to="/client/resource-hub">
               <Library className="h-3.5 w-3.5 mr-1" /> Resource Hub
             </Link>
           </Button>

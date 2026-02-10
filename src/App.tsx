@@ -136,8 +136,17 @@ const AcademySettings = lazy(() => import("./pages/academy/AcademySettings"));
 // Client Preview pages
 const ClientPreview = lazy(() => import("./pages/ClientPreview"));
 const ClientPreviewAcademy = lazy(() => import("./pages/ClientPreviewAcademy"));
-const ClientCalendarWrapper = lazy(() => import("./pages/ClientCalendarWrapper"));
-const ClientNotificationsWrapper = lazy(() => import("./pages/ClientNotificationsWrapper"));
+const ClientCalendarWrapperLegacy = lazy(() => import("./pages/ClientCalendarWrapper"));
+const ClientNotificationsWrapperLegacy = lazy(() => import("./pages/ClientNotificationsWrapper"));
+
+// Client Portal pages (isolated layout)
+const ClientHomeWrapperNew = lazy(() => import("./pages/client/ClientHomeWrapper"));
+const ClientDocumentsWrapperNew = lazy(() => import("./pages/client/ClientDocumentsWrapper"));
+const ClientResourceHubWrapperNew = lazy(() => import("./pages/client/ClientResourceHubWrapper"));
+const ClientCalendarWrapperNew = lazy(() => import("./pages/client/ClientCalendarWrapper"));
+const ClientNotificationsWrapperNew = lazy(() => import("./pages/client/ClientNotificationsWrapper"));
+const ClientReportsWrapperNew = lazy(() => import("./pages/client/ClientReportsWrapper"));
+const ClientUsersWrapperNew = lazy(() => import("./pages/client/ClientUsersWrapper"));
 
 const queryClient = new QueryClient();
 
@@ -902,9 +911,14 @@ const App = () => (
             {/* Client Preview Routes */}
             <Route path="/client-preview" element={<ProtectedRoute><ClientPreview /></ProtectedRoute>} />
             <Route path="/client-preview/academy" element={<ProtectedRoute><ClientPreviewAcademy /></ProtectedRoute>} />
-            {/* Client Portal Routes */}
-            <Route path="/client/calendar" element={<ProtectedRoute><ClientCalendarWrapper /></ProtectedRoute>} />
-            <Route path="/client/notifications" element={<ProtectedRoute><ClientNotificationsWrapper /></ProtectedRoute>} />
+            {/* Client Portal Routes (isolated ClientLayout) */}
+            <Route path="/client/home" element={<ProtectedRoute><ClientHomeWrapperNew /></ProtectedRoute>} />
+            <Route path="/client/documents" element={<ProtectedRoute><ClientDocumentsWrapperNew /></ProtectedRoute>} />
+            <Route path="/client/resource-hub" element={<ProtectedRoute><ClientResourceHubWrapperNew /></ProtectedRoute>} />
+            <Route path="/client/calendar" element={<ProtectedRoute><ClientCalendarWrapperNew /></ProtectedRoute>} />
+            <Route path="/client/notifications" element={<ProtectedRoute><ClientNotificationsWrapperNew /></ProtectedRoute>} />
+            <Route path="/client/reports" element={<ProtectedRoute><ClientReportsWrapperNew /></ProtectedRoute>} />
+            <Route path="/client/users" element={<ProtectedRoute><ClientUsersWrapperNew /></ProtectedRoute>} />
             
             {/* Add-in Shell Route - works without full auth for add-in JWT holders */}
             <Route path="/addin" element={<AddinShell />} />

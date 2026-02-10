@@ -79,7 +79,7 @@ export function ClientFooter() {
             <ul className="space-y-1.5">
               <li>
                 <Link
-                  to="/manage-documents"
+                  to="/client/documents"
                   className="text-sm text-white hover:text-white/80 transition-colors"
                 >
                   Documents
@@ -103,7 +103,7 @@ export function ClientFooter() {
               </li>
               <li>
                 <Link
-                  to="/resource-hub"
+                  to="/client/resource-hub"
                   className="text-sm text-white hover:text-white/80 transition-colors"
                 >
                   Resource Hub

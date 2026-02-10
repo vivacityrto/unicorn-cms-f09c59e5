@@ -4,17 +4,24 @@ import { DashboardLayout } from "@/components/DashboardLayout";
 import { useAuth } from "@/hooks/useAuth";
 import { Loader2 } from "lucide-react";
 import MembershipDashboard from "./MembershipDashboard";
-import { ClientHomePage } from "@/components/client/ClientHomePage";
 
 const Dashboard = () => {
   const { profile } = useAuth();
   const navigate = useNavigate();
   const isSuperAdmin = profile?.unicorn_role === "Super Admin";
   const isTeamLeader = profile?.unicorn_role === "Team Leader";
+  const isTeamMember = profile?.unicorn_role === "Team Member";
   const isAdminOrUser = profile?.unicorn_role === "Admin" || profile?.unicorn_role === "User";
 
-  // Show Membership Dashboard for Super Admin and Team Leader
-  if (isSuperAdmin || isTeamLeader) {
+  // Redirect client roles to the isolated client portal
+  useEffect(() => {
+    if (isAdminOrUser) {
+      navigate("/client/home", { replace: true });
+    }
+  }, [isAdminOrUser, navigate]);
+
+  // Show Membership Dashboard for Vivacity team
+  if (isSuperAdmin || isTeamLeader || isTeamMember) {
     return (
       <DashboardLayout>
         <MembershipDashboard />
@@ -22,16 +29,7 @@ const Dashboard = () => {
     );
   }
 
-  // Client Home Page for Admin/User roles
-  if (isAdminOrUser) {
-    return (
-      <DashboardLayout>
-        <ClientHomePage />
-      </DashboardLayout>
-    );
-  }
-
-  // Fallback loading
+  // Fallback loading while redirecting
   return (
     <DashboardLayout>
       <div className="flex items-center justify-center h-96">

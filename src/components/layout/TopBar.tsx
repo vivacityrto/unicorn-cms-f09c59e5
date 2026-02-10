@@ -84,6 +84,14 @@ const routeTitles: Record<string, string> = {
   "/settings": "Profile Settings",
   "/reports": "Reports",
   "/team-settings": "Team Settings",
+  // Client portal routes
+  "/client/home": "Home",
+  "/client/documents": "Documents",
+  "/client/resource-hub": "Resource Hub",
+  "/client/calendar": "Calendar",
+  "/client/notifications": "Notifications",
+  "/client/reports": "Reports",
+  "/client/users": "Team",
   // Academy routes
   "/academy": "Academy Dashboard",
   "/academy/courses": "My Courses",
