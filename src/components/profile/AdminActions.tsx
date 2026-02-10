@@ -276,7 +276,14 @@ export function AdminActions({
         body: { user_uuid: user.user_uuid },
       });
 
-      if (error) throw error;
+      if (error) {
+        // Try to parse the error context for a user-friendly message
+        const errorBody = typeof error === 'object' && error !== null && 'context' in error
+          ? await (error as any).context?.json?.().catch(() => null)
+          : null;
+        const detail = errorBody?.detail || data?.detail || data?.code || error.message;
+        throw new Error(detail);
+      }
 
       if (!data?.ok) {
         throw new Error(data?.detail || data?.code || 'Failed to send password reset');
