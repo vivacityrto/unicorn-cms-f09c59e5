@@ -871,6 +871,8 @@ export type Database = {
           id: number
           max_generation_retries: number | null
           microsoft_addin_enabled: boolean
+          minutes_ai_enabled: boolean
+          minutes_ai_require_review: boolean
           review_required_before_release: boolean
           updated_at: string
         }
@@ -886,6 +888,8 @@ export type Database = {
           id?: never
           max_generation_retries?: number | null
           microsoft_addin_enabled?: boolean
+          minutes_ai_enabled?: boolean
+          minutes_ai_require_review?: boolean
           review_required_before_release?: boolean
           updated_at?: string
         }
@@ -901,6 +905,8 @@ export type Database = {
           id?: never
           max_generation_retries?: number | null
           microsoft_addin_enabled?: boolean
+          minutes_ai_enabled?: boolean
+          minutes_ai_require_review?: boolean
           review_required_before_release?: boolean
           updated_at?: string
         }
@@ -3948,6 +3954,7 @@ export type Database = {
           id: string
           inserted_at: string | null
           list_name: string | null
+          package_id: number | null
           parent_id: string | null
           priority: string | null
           rolled_up_time: string | null
@@ -3964,6 +3971,7 @@ export type Database = {
           task_custom_id: string | null
           task_id: string | null
           task_name: string | null
+          tenant_id: number | null
           time_estimated: string | null
           time_estimated_minutes: number | null
           time_estimated_text: string | null
@@ -3991,6 +3999,7 @@ export type Database = {
           id?: string
           inserted_at?: string | null
           list_name?: string | null
+          package_id?: number | null
           parent_id?: string | null
           priority?: string | null
           rolled_up_time?: string | null
@@ -4007,6 +4016,7 @@ export type Database = {
           task_custom_id?: string | null
           task_id?: string | null
           task_name?: string | null
+          tenant_id?: number | null
           time_estimated?: string | null
           time_estimated_minutes?: number | null
           time_estimated_text?: string | null
@@ -4034,6 +4044,7 @@ export type Database = {
           id?: string
           inserted_at?: string | null
           list_name?: string | null
+          package_id?: number | null
           parent_id?: string | null
           priority?: string | null
           rolled_up_time?: string | null
@@ -4050,6 +4061,7 @@ export type Database = {
           task_custom_id?: string | null
           task_id?: string | null
           task_name?: string | null
+          tenant_id?: number | null
           time_estimated?: string | null
           time_estimated_minutes?: number | null
           time_estimated_text?: string | null
@@ -12899,6 +12911,51 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      meeting_minutes_ai_runs: {
+        Row: {
+          created_at: string
+          created_by: string
+          error: string | null
+          finished_at: string | null
+          id: string
+          meeting_id: string
+          minutes_id: string
+          started_at: string
+          status: string
+          tenant_id: number
+          token_usage: Json | null
+          transcript_artifact_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          error?: string | null
+          finished_at?: string | null
+          id?: string
+          meeting_id: string
+          minutes_id: string
+          started_at?: string
+          status?: string
+          tenant_id: number
+          token_usage?: Json | null
+          transcript_artifact_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          error?: string | null
+          finished_at?: string | null
+          id?: string
+          meeting_id?: string
+          minutes_id?: string
+          started_at?: string
+          status?: string
+          tenant_id?: number
+          token_usage?: Json | null
+          transcript_artifact_id?: string
+        }
+        Relationships: []
       }
       meeting_notes: {
         Row: {
