@@ -5,6 +5,9 @@ export interface LoginHistoryEntry {
   id: string;
   user_id: string;
   login_date: string;
+  logout_date: string | null;
+  session_id: string | null;
+  tenant_id: number | null;
   docs_downloaded: number | null;
   messages_sent: number | null;
   tasks_created: number | null;
@@ -20,11 +23,11 @@ export interface TenantUserLogin {
   email: string;
   role: string;
   last_sign_in_at: string | null;
+  legacy_last_sign_in_at: string | null;
   login_count: number;
 }
 
 export function useLoginHistory(tenantId: number | null) {
-  // Fetch tenant users with their last sign-in and login counts
   const usersQuery = useQuery({
     queryKey: ['login-history', 'users', tenantId],
     queryFn: async (): Promise<TenantUserLogin[]> => {
@@ -40,43 +43,49 @@ export function useLoginHistory(tenantId: number | null) {
 
       const userIds = tenantUsers.map(tu => tu.user_id);
 
-      const { data: users, error: uError } = await supabase
-        .from('users')
-        .select('user_uuid, first_name, last_name, email, last_sign_in_at')
-        .in('user_uuid', userIds);
+      // Fetch users, activity counts, and legacy snapshots in parallel
+      const [usersResult, activitiesResult, legacyResult] = await Promise.all([
+        supabase
+          .from('users')
+          .select('user_uuid, first_name, last_name, email, last_sign_in_at')
+          .in('user_uuid', userIds),
+        supabase
+          .from('user_activity')
+          .select('user_id')
+          .in('user_id', userIds),
+        supabase
+          .from('legacy_login_snapshot')
+          .select('user_id, last_sign_in_at')
+          .in('user_id', userIds),
+      ]);
 
-      if (uError) throw uError;
-
-      // Get login counts from user_activity
-      const { data: activities, error: aError } = await supabase
-        .from('user_activity')
-        .select('user_id, login_date')
-        .in('user_id', userIds)
-        .order('login_date', { ascending: false });
-
-      if (aError) throw aError;
+      if (usersResult.error) throw usersResult.error;
 
       const loginCounts = new Map<string, number>();
-      activities?.forEach(a => {
+      (activitiesResult.data || []).forEach(a => {
         loginCounts.set(a.user_id, (loginCounts.get(a.user_id) || 0) + 1);
       });
 
+      const legacyMap = new Map(
+        (legacyResult.data || []).map(l => [l.user_id, l.last_sign_in_at])
+      );
+
       const roleMap = new Map(tenantUsers.map(tu => [tu.user_id, tu.role]));
 
-      return (users || []).map(u => ({
+      return (usersResult.data || []).map(u => ({
         user_id: u.user_uuid,
         first_name: u.first_name || '',
         last_name: u.last_name || '',
         email: u.email || '',
         role: roleMap.get(u.user_uuid) || 'unknown',
         last_sign_in_at: u.last_sign_in_at,
+        legacy_last_sign_in_at: legacyMap.get(u.user_uuid) || null,
         login_count: loginCounts.get(u.user_uuid) || 0,
       }));
     },
     enabled: !!tenantId,
   });
 
-  // Fetch detailed login activity entries
   const activityQuery = useQuery({
     queryKey: ['login-history', 'activity', tenantId],
     queryFn: async (): Promise<LoginHistoryEntry[]> => {
@@ -92,26 +101,26 @@ export function useLoginHistory(tenantId: number | null) {
 
       const userIds = tenantUsers.map(tu => tu.user_id);
 
-      const { data: activities, error } = await supabase
-        .from('user_activity')
-        .select('id, user_id, login_date, docs_downloaded, messages_sent, tasks_created')
-        .in('user_id', userIds)
-        .order('login_date', { ascending: false })
-        .limit(200);
+      const [activitiesResult, usersResult] = await Promise.all([
+        supabase
+          .from('user_activity')
+          .select('id, user_id, login_date, logout_date, session_id, tenant_id, docs_downloaded, messages_sent, tasks_created')
+          .in('user_id', userIds)
+          .order('login_date', { ascending: false })
+          .limit(200),
+        supabase
+          .from('users')
+          .select('user_uuid, first_name, last_name, email')
+          .in('user_uuid', userIds),
+      ]);
 
-      if (error) throw error;
-
-      // Enrich with user names
-      const { data: users } = await supabase
-        .from('users')
-        .select('user_uuid, first_name, last_name, email')
-        .in('user_uuid', userIds);
+      if (activitiesResult.error) throw activitiesResult.error;
 
       const userMap = new Map(
-        (users || []).map(u => [u.user_uuid, u])
+        (usersResult.data || []).map(u => [u.user_uuid, u])
       );
 
-      return (activities || []).map(a => {
+      return (activitiesResult.data || []).map(a => {
         const user = userMap.get(a.user_id);
         return {
           ...a,
