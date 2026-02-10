@@ -1,30 +1,24 @@
 
 
-## Fix: Topbar obscuring content + remove redundant preview text
+## Fix: Topbar content overlap + align topbar height with sidebar header
 
-### Problem 1 -- Content hidden behind topbar
-The impersonation banner is fixed at the top (48px tall). The topbar is sticky at `top: 48px`. However, the page content in `<main>` starts immediately after the topbar with no offset, so the first ~112px of content is hidden behind the two bars.
+### Problem 1 -- Content hidden behind sticky topbar
+The topbar (`ClientTopbar.tsx`) is `sticky` positioned, but the `<main>` content area directly below it has no padding-top to account for the topbar height. The sticky bar sits on top of the page content, clipping the "Calendar" heading as seen in the screenshot.
 
-**Fix**: Add top padding to the main content wrapper in `ClientLayout.tsx` to account for the impersonation banner (48px) + topbar (56px) when in preview mode, or just the topbar when not in preview.
+**Fix**: Remove `sticky` positioning from the topbar entirely. Since it lives inside the flex column flow of the main content wrapper, it will naturally sit above `<main>` without overlapping. The topbar does not need to be sticky -- it should scroll with the page like a normal in-flow element.
 
-Specifically in `ClientLayout.tsx`, the `<main>` element (line 50) needs conditional top padding:
-- Preview mode: `pt-[104px]` (48px banner + 56px topbar)  
-- Normal mode: `pt-14` (56px topbar only)
+### Problem 2 -- Topbar height does not match sidebar header
+The sidebar header area ("CLIENT PORTAL / AHMRC Training") is taller than the topbar (`h-14` = 56px). The sidebar header uses `pt-4 pb-3` with two lines of text, making it roughly 64-68px. The topbar should match this height so they visually align.
 
-Alternatively (and more robustly), make the topbar non-sticky or use a spacer div approach so the content naturally flows below both bars.
+**Fix**: Change the topbar from `h-14` to a matching height. Increase to `h-16` (64px) or use the same padding approach as the sidebar header (`py-3 pt-4`) to produce a visually aligned bar.
 
-### Problem 2 -- Redundant preview text
-In `ClientPreview.tsx` (lines 32-37), the heading "Welcome to {tenant}" and description "This is a preview of the client portal experience" duplicate what the impersonation banner already communicates.
+### Changes
 
-**Fix**: Remove lines 32-37 from `ClientPreview.tsx` so the page renders `<ClientHomePage />` directly without the extra wrapper text.
+**1. `src/components/client/ClientTopbar.tsx` (line 58)**
+- Remove `sticky z-20` from the header className
+- Change `h-14` to `h-16` to match sidebar header height
+- Remove the inline `top` style since it is no longer sticky
 
-### Files to change
-
-1. **`src/components/layout/ClientLayout.tsx`** -- Add top padding to main content area that accounts for sticky topbar height (and banner height when `isPreview` is true). Change the main element's classes to include appropriate padding-top.
-
-2. **`src/pages/ClientPreview.tsx`** -- Remove the `<div className="space-y-2 mb-6">` block containing the "Welcome to" heading and preview description text, leaving only `<ClientHomePage />` inside `<ClientLayout>`.
-
-### Technical detail
-
-For the layout fix, the cleanest approach is to make the impersonation banner not `fixed` but instead part of the normal document flow at the top of `ClientLayout`, with the topbar sticky below it. This way content naturally flows beneath both elements without manual padding calculations. If the banner must remain fixed (for scroll persistence), then a matching-height spacer div will be inserted before the topbar.
+**2. `src/components/layout/ClientLayout.tsx`**
+- No changes needed -- once the topbar is not sticky, content will flow naturally below it without padding hacks
 
