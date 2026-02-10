@@ -4,6 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 
 import { ClientTimelineTab } from '@/components/client/ClientTimelineTab';
+import { ClientLoginHistoryTab } from '@/components/client/ClientLoginHistoryTab';
 import { ClientStructuredNotesTab } from '@/components/client/ClientStructuredNotesTab';
 import { ClientActionItemsTab } from '@/components/client/ClientActionItemsTab';
 import { ClientEmailsTab } from '@/components/client/ClientEmailsTab';
@@ -26,6 +27,7 @@ import {
   Link2,
   StickyNote,
   Activity,
+  LogIn,
   CheckSquare,
   Calendar,
   Save,
@@ -316,6 +318,13 @@ export default function ClientDetail() {
                 Timeline
               </TabsTrigger>
               <TabsTrigger
+                value="logins"
+                className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none bg-transparent px-1 pb-3"
+              >
+                <LogIn className="h-4 w-4 mr-2" />
+                Login History
+              </TabsTrigger>
+              <TabsTrigger
                 value="integrations"
                 className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none bg-transparent px-1 pb-3"
               >
@@ -425,6 +434,10 @@ export default function ClientDetail() {
 
           <TabsContent value="timeline" className="mt-0">
             <ClientTimelineTab tenantId={tenantIdNum!} clientId={tenant.id.toString()} />
+          </TabsContent>
+
+          <TabsContent value="logins" className="mt-0">
+            <ClientLoginHistoryTab tenantId={tenantIdNum!} />
           </TabsContent>
 
           <TabsContent value="integrations" className="mt-0">
