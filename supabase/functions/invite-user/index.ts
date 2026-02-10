@@ -259,8 +259,8 @@ serve(async (req) => {
     const hashArray = Array.from(new Uint8Array(hashBuffer));
     const tokenHash = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
 
-    // Create invitation record with 24-hour expiration
-    const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+    // Create invitation record with 7-day expiration
+    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
     const { error: inviteError } = await supabase
       .from('user_invitations')
       .insert({
