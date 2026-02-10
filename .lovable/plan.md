@@ -1,69 +1,30 @@
 
 
-## Fix: Client Documents Page Not Showing Uploaded Documents
+## Fix: Topbar obscuring content + remove redundant preview text
 
-### Root Cause
+### Problem 1 -- Content hidden behind topbar
+The impersonation banner is fixed at the top (48px tall). The topbar is sticky at `top: 48px`. However, the page content in `<main>` starts immediately after the topbar with no offset, so the first ~112px of content is hidden behind the two bars.
 
-Documents uploaded through the admin/Vivacity portal are stored in the `portal_documents` table (4 rows exist). The client Documents page was recently built to query a separate `tenant_documents` table (0 rows). The two tables are disconnected -- nothing populates `tenant_documents`.
+**Fix**: Add top padding to the main content wrapper in `ClientLayout.tsx` to account for the impersonation banner (48px) + topbar (56px) when in preview mode, or just the topbar when not in preview.
 
-### Solution
+Specifically in `ClientLayout.tsx`, the `<main>` element (line 50) needs conditional top padding:
+- Preview mode: `pt-[104px]` (48px banner + 56px topbar)  
+- Normal mode: `pt-14` (56px topbar only)
 
-Rewire `ClientDocumentsPage.tsx` to query `portal_documents` instead of `tenant_documents`, using the existing hooks and data model. This avoids creating a parallel data silo and ensures documents shared by Vivacity appear immediately.
+Alternatively (and more robustly), make the topbar non-sticky or use a spacer div approach so the content naturally flows below both bars.
 
-### Changes
+### Problem 2 -- Redundant preview text
+In `ClientPreview.tsx` (lines 32-37), the heading "Welcome to {tenant}" and description "This is a preview of the client portal experience" duplicate what the impersonation banner already communicates.
 
-#### 1. Update `src/components/client/ClientDocumentsPage.tsx`
+**Fix**: Remove lines 32-37 from `ClientPreview.tsx` so the page renders `<ClientHomePage />` directly without the extra wrapper text.
 
-**Tab: "Shared with you"**
-- Query `portal_documents` where `tenant_id = activeTenantId`, `is_client_visible = true`, `direction = 'vivacity_to_client'`, and `deleted_at IS NULL`
-- Map `file_name` to the Name column (instead of `title`)
+### Files to change
 
-**Tab: "Uploaded by you"**
-- Query `portal_documents` where `tenant_id = activeTenantId`, `direction = 'client_to_vivacity'`, and `deleted_at IS NULL`
+1. **`src/components/layout/ClientLayout.tsx`** -- Add top padding to main content area that accounts for sticky topbar height (and banner height when `isPreview` is true). Change the main element's classes to include appropriate padding-top.
 
-**Upload handler**
-- Insert into `portal_documents` instead of `tenant_documents`
-- Set `direction = 'client_to_vivacity'`, `source = 'manual_upload'`, `is_client_visible = true`
-- Use the same `portal-documents` storage bucket (already used for downloads)
+2. **`src/pages/ClientPreview.tsx`** -- Remove the `<div className="space-y-2 mb-6">` block containing the "Welcome to" heading and preview description text, leaving only `<ClientHomePage />` inside `<ClientLayout>`.
 
-**Field mapping adjustments**
-- `doc.title` becomes `doc.file_name`
-- `doc.mime_type` becomes `doc.file_type`
-- `doc.uploaded_by_role` badge logic uses `doc.direction` instead (`vivacity_to_client` = "Vivacity", `client_to_vivacity` = "Your team")
-- `doc.category` becomes `doc.category_id` (join to `portal_document_categories` or show raw, depending on need)
+### Technical detail
 
-**Invalidation keys**
-- Switch query keys from `["tenant_documents", ...]` to use `portalDocumentsKeys` from `usePortalDocuments.tsx`
-
-#### 2. Optionally reuse existing hooks
-
-The file `src/hooks/usePortalDocuments.tsx` already has `usePortalDocuments(tenantId, direction)`, `useUploadPortalDocument()`, and `useDownloadPortalDocument()`. The client page can import and use these directly instead of inline queries, keeping the codebase DRY.
-
-#### 3. No database migration needed
-
-The `portal_documents` table and its RLS policies already exist and support tenant-scoped access. No schema changes required.
-
-### Technical Detail
-
-| Current (broken) | Fixed |
-|---|---|
-| Queries `tenant_documents` | Queries `portal_documents` |
-| 0 rows returned | 4 rows already present |
-| Separate upload path | Uses shared `portal-documents` bucket and `portal_documents` table |
-| `title` field | `file_name` field |
-| `source` enum (`shared_to_client` / `uploaded_by_client`) | `direction` enum (`vivacity_to_client` / `client_to_vivacity`) |
-
-### Files Modified
-
-| File | Change |
-|---|---|
-| `src/components/client/ClientDocumentsPage.tsx` | Rewire queries, upload, and field mappings to use `portal_documents` |
-
-### No changes to
-
-- Database schema
-- RLS policies
-- Storage bucket configuration
-- Admin document management pages
-- Existing `usePortalDocuments` hooks
+For the layout fix, the cleanest approach is to make the impersonation banner not `fixed` but instead part of the normal document flow at the top of `ClientLayout`, with the topbar sticky below it. This way content naturally flows beneath both elements without manual padding calculations. If the banner must remain fixed (for scroll persistence), then a matching-height spacer div will be inserted before the topbar.
 
