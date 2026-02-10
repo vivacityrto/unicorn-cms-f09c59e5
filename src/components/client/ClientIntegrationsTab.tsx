@@ -395,8 +395,8 @@ export function ClientIntegrationsTab({
     
     const fetchDebugInfo = async () => {
       const [runRes, payloadRes] = await Promise.all([
-        supabase.from('tga_rto_import_jobs')
-          .select('id, status, created_at, stage, job_type, attempts, last_error, payload_meta')
+        supabase.from('tga_rest_sync_jobs')
+          .select('id, status, created_at, rto_id, scope_counts, last_error')
           .eq('tenant_id', profile.tenant_id)
           .order('created_at', { ascending: false })
           .limit(1)
