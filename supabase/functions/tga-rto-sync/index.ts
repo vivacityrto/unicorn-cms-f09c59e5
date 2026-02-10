@@ -57,51 +57,49 @@ async function fetchWithRetry(url: string, maxRetries = 3): Promise<Response> {
   throw lastError || new Error('Max retries exceeded');
 }
 
-// Fetch a single scope type
-async function fetchScopeSingleType(rtoId: string, componentType: string): Promise<{ items: any[]; urls: string[]; error?: string }> {
+// Fetch ALL scope items (unfiltered) with pagination
+async function fetchAllScopeUnfiltered(rtoId: string): Promise<{ items: any[]; urls: string[]; error?: string }> {
   const items: any[] = [];
   const urls: string[] = [];
   let offset = 0;
   let hasMore = true;
   
-  const filter = `componentType==${componentType};status==current`;
-  
   while (hasMore) {
-    const url = `https://training.gov.au/api/organisation/${encodeURIComponent(rtoId)}/scope?api-version=1.0&offset=${offset}&pageSize=${PAGE_SIZE}&filters=${encodeURIComponent(filter)}`;
+    // Fetch without filters first; fall back to filtered if unfiltered also fails
+    const url = `https://training.gov.au/api/organisation/${encodeURIComponent(rtoId)}/scope?api-version=1.0&offset=${offset}&pageSize=${PAGE_SIZE}`;
     urls.push(url);
     
-    log('info', `Fetching ${componentType} at offset ${offset}`, { url });
+    log('info', `Fetching scope at offset ${offset}`, { url });
     
     try {
       const response = await fetchWithRetry(url);
       
       if (!response.ok) {
         const responseText = await response.text();
-        log('error', `TGA API error for ${componentType}`, { status: response.status, body: responseText.substring(0, 500) });
+        log('error', `TGA scope API error`, { status: response.status, body: responseText.substring(0, 500) });
         return { items, urls, error: `HTTP ${response.status}` };
       }
       
       const data = await response.json();
-      const pageItems = data.value || [];
+      // TGA may return { value: [...], count: N } or just an array
+      const pageItems = Array.isArray(data) ? data : (data.value || data.items || []);
+      const totalCount = data.count || data.totalCount || null;
       
-      log('info', `Got ${pageItems.length} ${componentType}(s) at offset ${offset}`, { total: data.count });
+      log('info', `Got ${pageItems.length} scope items at offset ${offset}`, { total: totalCount });
       
-      const currentExplicitItems = pageItems.filter((item: any) => 
-        item.isImplicit !== true && item.status === 'current'
-      );
-      items.push(...currentExplicitItems);
+      items.push(...pageItems);
       
       if (pageItems.length < PAGE_SIZE) {
         hasMore = false;
       } else {
         offset += PAGE_SIZE;
         if (offset > 50000) {
-          log('warn', `Safety limit reached for ${componentType} at offset ${offset}`);
+          log('warn', `Safety limit reached at offset ${offset}`);
           hasMore = false;
         }
       }
     } catch (err) {
-      log('error', `Fetch error for ${componentType}`, { error: String(err) });
+      log('error', `Fetch error for scope`, { error: String(err) });
       return { items, urls, error: String(err) };
     }
   }
@@ -109,33 +107,82 @@ async function fetchScopeSingleType(rtoId: string, componentType: string): Promi
   return { items, urls };
 }
 
-// Fetch all scope items for a component type
-async function fetchAllScope(rtoId: string, componentType: string): Promise<{ items: any[]; urls: string[]; error?: string }> {
-  if (componentType === 'unit') {
-    log('info', 'Fetching units with two separate API calls (unit + accreditedUnit)');
+// Categorise raw scope items by componentType, client-side
+function categoriseScope(items: any[]): Record<string, any[]> {
+  const result: Record<string, any[]> = {
+    qualification: [],
+    unit: [],
+    skillSet: [],
+    accreditedCourse: [],
+  };
+  
+  for (const item of items) {
+    const ct = item.componentType || item.type || '';
+    const ctLower = ct.toLowerCase();
     
-    const [unitResult, accreditedUnitResult] = await Promise.all([
-      fetchScopeSingleType(rtoId, 'unit'),
-      fetchScopeSingleType(rtoId, 'accreditedUnit'),
-    ]);
-    
-    const allItems = [...unitResult.items, ...accreditedUnitResult.items];
-    const allUrls = [...unitResult.urls, ...accreditedUnitResult.urls];
-    
-    const errors: string[] = [];
-    if (unitResult.error) errors.push(`unit: ${unitResult.error}`);
-    if (accreditedUnitResult.error) errors.push(`accreditedUnit: ${accreditedUnitResult.error}`);
-    
-    log('info', `Merged unit results: ${unitResult.items.length} units + ${accreditedUnitResult.items.length} accreditedUnits = ${allItems.length} total`);
-    
-    return { 
-      items: allItems, 
-      urls: allUrls, 
-      error: errors.length > 0 ? errors.join('; ') : undefined 
-    };
+    if (ctLower === 'qualification') {
+      result.qualification.push(item);
+    } else if (ctLower === 'unit' || ctLower === 'accreditedunit' || ctLower === 'unitofcompetency') {
+      result.unit.push(item);
+    } else if (ctLower === 'skillset' || ctLower === 'skill set') {
+      result.skillSet.push(item);
+    } else if (ctLower === 'accreditedcourse' || ctLower === 'course') {
+      result.accreditedCourse.push(item);
+    } else {
+      // Unknown type - log and try to include based on code pattern
+      log('warn', `Unknown componentType: ${ct}`, { code: item.code, title: item.title });
+      // Heuristic: codes starting with letters then numbers
+      const code = (item.code || '').toUpperCase();
+      if (/^[A-Z]{2,5}\d{4,5}$/.test(code)) {
+        result.unit.push(item);
+      } else if (/^[A-Z]{2,5}\d{5}$/.test(code)) {
+        result.qualification.push(item);
+      }
+    }
   }
   
-  return fetchScopeSingleType(rtoId, componentType);
+  return result;
+}
+
+// fetchAllScope now uses the unfiltered approach
+async function fetchAllScope(rtoId: string): Promise<{ categorised: Record<string, any[]>; urls: string[]; error?: string }> {
+  const result = await fetchAllScopeUnfiltered(rtoId);
+  
+  if (result.error) {
+    return { categorised: { qualification: [], unit: [], skillSet: [], accreditedCourse: [] }, urls: result.urls, error: result.error };
+  }
+  
+  // Keep ALL items (current, superseded, etc.) — the DB and UI handle status filtering
+  // Only remove implicit items (these are inherited from parent packages, not directly on scope)
+  const explicitItems = result.items.filter((item: any) => item.isImplicit !== true);
+  
+  log('info', `Total scope items: ${result.items.length}, explicit (non-implicit): ${explicitItems.length}`);
+  
+  // Log sample items to understand structure
+  if (result.items.length > 0) {
+    const sample = result.items[0];
+    log('info', 'Sample scope item structure', { 
+      keys: Object.keys(sample).join(','),
+      componentType: sample.componentType,
+      type: sample.type,
+      status: sample.status,
+      statusLabel: sample.statusLabel,
+      isImplicit: sample.isImplicit,
+      code: sample.code,
+    });
+  }
+  
+  const categorised = categoriseScope(explicitItems);
+  
+  log('info', `Categorised scope`, {
+    qualification: categorised.qualification.length,
+    unit: categorised.unit.length,
+    skillSet: categorised.skillSet.length,
+    accreditedCourse: categorised.accreditedCourse.length,
+    total: explicitItems.length,
+  });
+  
+  return { categorised, urls: result.urls };
 }
 
 // Fetch organization details from REST API
@@ -336,44 +383,37 @@ serve(async (req) => {
       log('info', 'Created snapshot', { snapshotId });
     }
 
-    // 4. Fetch ALL scope types in PARALLEL (key fix for timeout)
+    // 4. Fetch ALL scope in a single unfiltered call, then categorise client-side
     progress.stage = 'fetching_scope';
-    const scopeTypes = [
-      { apiType: 'qualification', dbType: 'qualification' },
-      { apiType: 'unit', dbType: 'unit' },
-      { apiType: 'skillSet', dbType: 'skillset' },
-      { apiType: 'accreditedCourse', dbType: 'accreditedCourse' }
-    ];
-    
     const scopeCounts: Record<string, number> = {};
     const scopeUrls: Record<string, string[]> = {};
     const scopeErrors: Record<string, string> = {};
     
-    // Fetch all scope types in parallel instead of sequentially
-    const scopeResults = await Promise.all(
-      scopeTypes.map(async ({ apiType, dbType }) => {
-        log('info', `Fetching ${apiType}...`);
-        const result = await fetchAllScope(rtoId, apiType);
-        return { apiType, dbType, result };
-      })
-    );
+    const scopeResult = await fetchAllScope(rtoId);
+    scopeUrls['all'] = scopeResult.urls;
+    
+    if (scopeResult.error) {
+      scopeErrors['all'] = scopeResult.error;
+      log('error', 'Scope fetch failed entirely', { error: scopeResult.error });
+    }
+    
+    const dbTypeMap: Record<string, string> = {
+      qualification: 'qualification',
+      unit: 'unit',
+      skillSet: 'skillset',
+      accreditedCourse: 'accreditedCourse',
+    };
 
-    // Persist scope items sequentially (to avoid DB contention)
+    // Persist each category
     progress.stage = 'persisting_scope';
-    for (const { apiType, dbType, result } of scopeResults) {
-      scopeUrls[apiType] = result.urls;
+    for (const [apiType, items] of Object.entries(scopeResult.categorised)) {
+      const dbType = dbTypeMap[apiType] || apiType;
       
-      if (result.error) {
-        scopeErrors[apiType] = result.error;
-        scopeCounts[apiType] = 0;
-        continue;
-      }
-      
-      if (result.items.length > 0) {
+      if (items.length > 0) {
         const { data: persistResult, error: persistError } = await supabaseAdmin.rpc('persist_tga_scope_items', {
           p_tenant_id: tenantIdNum,
           p_scope_type: dbType,
-          p_scope_items: result.items
+          p_scope_items: items
         });
         
         if (persistError) {
@@ -381,12 +421,11 @@ serve(async (req) => {
           scopeErrors[apiType] = persistError.message;
           scopeCounts[apiType] = 0;
         } else {
-          const persisted = (persistResult as any)?.items_persisted || result.items.length;
+          const persisted = (persistResult as any)?.items_persisted || items.length;
           log('info', `Persisted ${persisted} ${apiType}(s)`, { dbType });
           scopeCounts[apiType] = persisted;
         }
       } else {
-        log('info', `No ${apiType}s found`, {});
         scopeCounts[apiType] = 0;
       }
     }
