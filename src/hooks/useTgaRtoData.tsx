@@ -2,6 +2,54 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
+// --- Paginated fetch helper to avoid Supabase's 1,000-row default limit ---
+const PAGE_SIZE = 1000;
+
+async function fetchAllTenantScopeRows(tenantId: number) {
+  let all: any[] = [];
+  let from = 0;
+
+  while (true) {
+    const to = from + PAGE_SIZE - 1;
+    const { data, error } = await supabase
+      .from('tenant_rto_scope')
+      .select('*')
+      .eq('tenant_id', tenantId)
+      .order('code', { ascending: true })
+      .range(from, to);
+
+    if (error) throw error;
+    const batch = data ?? [];
+    all = all.concat(batch);
+    if (batch.length < PAGE_SIZE) break;
+    from += PAGE_SIZE;
+  }
+  return all;
+}
+
+// --- Fetch exact DB counts per scope_type (head:true = fast count-only) ---
+const SCOPE_TYPES = ['qualification', 'skillset', 'unit', 'accreditedCourse', 'trainingPackage'] as const;
+
+async function fetchScopeCounts(tenantId: number): Promise<Record<string, number>> {
+  const results = await Promise.all(
+    SCOPE_TYPES.map(async (scope_type) => {
+      const { count, error } = await supabase
+        .from('tenant_rto_scope')
+        .select('*', { count: 'exact', head: true })
+        .eq('tenant_id', tenantId)
+        .eq('scope_type', scope_type);
+      if (error) throw error;
+      return [scope_type, count ?? 0] as const;
+    })
+  );
+  return Object.fromEntries(results);
+}
+
+export interface ScopeMismatch {
+  hasMismatch: boolean;
+  details: { type: string; loaded: number; stored: number }[];
+}
+
 // Types for the new TGA data model
 export interface TGARtoData {
   legal_name: string | null;
@@ -184,6 +232,7 @@ export function useTgaRtoData(tenantId: number | null, rtoCode: string | null, c
   const [latestJob, setLatestJob] = useState<TGAImportJob | null>(null);
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
+  const [scopeMismatch, setScopeMismatch] = useState<ScopeMismatch>({ hasMismatch: false, details: [] });
   const { toast } = useToast();
 
   const fetchData = useCallback(async () => {
@@ -307,18 +356,41 @@ export function useTgaRtoData(tenantId: number | null, rtoCode: string | null, c
           supabase.from('tga_rto_contacts').select('*').eq('tenant_id', tenantId).eq('rto_code', rtoCode),
           supabase.from('tga_rto_addresses').select('*').eq('tenant_id', tenantId).eq('rto_code', rtoCode),
           supabase.from('tga_rto_delivery_locations').select('*').eq('tenant_id', tenantId).eq('rto_code', rtoCode),
-          // NEW: Fetch from unified tenant_rto_scope table
-          supabase.from('tenant_rto_scope').select('*').eq('tenant_id', tenantId).order('code').limit(10000),
+          // NEW: Paginated fetch from unified tenant_rto_scope table
+          fetchAllTenantScopeRows(tenantId!),
           supabase.from('tga_rest_sync_jobs').select('*').eq('tenant_id', tenantId).eq('rto_id', rtoCode).order('created_at', { ascending: false }).limit(1).maybeSingle()
         ]);
+
+        const scopeItems = scopeRes as any[];
+
+        // Fetch exact DB counts and compare with loaded rows
+        try {
+          const dbCounts = await fetchScopeCounts(tenantId!);
+          const loadedCounts: Record<string, number> = {};
+          for (const item of scopeItems) {
+            const t = item.scope_type;
+            loadedCounts[t] = (loadedCounts[t] || 0) + 1;
+          }
+          const mismatchDetails: ScopeMismatch['details'] = [];
+          for (const [type, stored] of Object.entries(dbCounts)) {
+            const loaded = loadedCounts[type] || 0;
+            if (loaded !== stored) {
+              mismatchDetails.push({ type, loaded, stored });
+            }
+          }
+          setScopeMismatch({
+            hasMismatch: mismatchDetails.length > 0,
+            details: mismatchDetails,
+          });
+        } catch (err) {
+          console.error('Failed to verify scope counts:', err);
+        }
 
         setSummary(summaryRes.data as TGASummary | null);
         setContacts((contactsRes.data || []) as TGAContact[]);
         setAddresses((addressesRes.data || []) as TGAAddress[]);
         setDeliveryLocations((locationsRes.data || []) as TGADeliveryLocation[]);
-        
-        // Map unified scope data to legacy format
-        const scopeItems = scopeRes.data || [];
+
         // Show items based on TGA status, not endDate (endDate is metadata, not expiry)
         const isOnScope = (item: any) => {
           const status = (item.status || '').toLowerCase();
@@ -493,13 +565,26 @@ export function useTgaRtoData(tenantId: number | null, rtoCode: string | null, c
       }
 
       if (liveData?.success) {
-        const counts = liveData.counts || {};
-        const countParts = [
-          counts.qualification && `${counts.qualification} quals`,
-          counts.skillSet && `${counts.skillSet} skill sets`,
-          counts.unit && `${counts.unit} units`,
-          counts.accreditedCourse && `${counts.accreditedCourse} courses`,
-        ].filter(Boolean).join(', ');
+        // Fetch actual DB counts for the toast (source of truth)
+        let countParts = '';
+        try {
+          const dbCounts = await fetchScopeCounts(tenantId!);
+          countParts = [
+            dbCounts.qualification && `${dbCounts.qualification} quals`,
+            dbCounts.skillset && `${dbCounts.skillset} skill sets`,
+            dbCounts.unit && `${dbCounts.unit} units`,
+            dbCounts.accreditedCourse && `${dbCounts.accreditedCourse} courses`,
+            dbCounts.trainingPackage && `${dbCounts.trainingPackage} packages`,
+          ].filter(Boolean).join(', ');
+        } catch {
+          const counts = liveData.counts || {};
+          countParts = [
+            counts.qualification && `${counts.qualification} quals`,
+            counts.skillSet && `${counts.skillSet} skill sets`,
+            counts.unit && `${counts.unit} units`,
+            counts.accreditedCourse && `${counts.accreditedCourse} courses`,
+          ].filter(Boolean).join(', ');
+        }
         
         toast({
           title: 'TGA Sync Complete',
@@ -550,6 +635,7 @@ export function useTgaRtoData(tenantId: number | null, rtoCode: string | null, c
     loading,
     syncing,
     hasData,
+    scopeMismatch,
     triggerSync,
     refresh: fetchData
   };
