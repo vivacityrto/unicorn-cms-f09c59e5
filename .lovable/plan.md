@@ -1,112 +1,83 @@
 
+# Tag Management System for Notes
 
-## Plan: Remove Registration-End Fallback, Persist TGA endDate, Add Teach-Out Classification
-
-### Current State
-
-The system is **mostly correct already**:
-- `tenant_rto_scope` stores scope items with the full TGA raw item in the `tga_data` JSONB column
-- The UI reads `end_date` from `item.tga_data?.endDate` -- this IS the TGA scope end date, not the registration end date
-- There is no registration-end fallback in the scope item mapping
-- The `persist_tga_scope_items` RPC stores the raw TGA response as `tga_data`, preserving the original `endDate`
-
-**What needs changing**: The `isCurrent` filter currently drops ALL non-current items, including "Superseded" items that have a future end date (teach-out period). The user wants a `scope_state` classification and to persist teach-out items too.
+## Overview
+Create a `dd_note_tags` lookup table following the existing `dd_` code table pattern, allow SuperAdmins to manage tags, and replace the free-text tag input in notes with a controlled dropdown selector.
 
 ---
 
-### 1. Edge Function: Add Teach-Out Classification
+## Step 1: Create the `dd_note_tags` Table
 
-**File: `supabase/functions/tga-rto-sync/index.ts`**
+Create a new lookup table matching the pattern used by `dd_address_type` and other `dd_` tables:
 
-Replace the simple `isCurrent` filter (line 17) with a two-tier filter that keeps both Current and teach-out items:
+- **Columns**: `id` (serial PK), `code` (text, unique, not null), `label` (text, not null), `description` (text, nullable), `is_active` (boolean, default true), `sort_order` (integer, default 0)
+- **RLS**: SELECT open to all authenticated users (needed for dropdowns app-wide). INSERT/UPDATE/DELETE restricted to Super Admins via `is_super_admin_safe(auth.uid())`.
+- Seed with any existing tags already in use across notes data.
 
-```text
-const normStatus = (s: any) => String(s ?? "").trim().toLowerCase();
+## Step 2: Migrate Existing Free-Text Tags
 
-function classifyScopeState(item: any): "current" | "teach_out" | null {
-  const usage = normStatus(item.usageRecommendation ?? item.status);
-  const endDateStr = item.endDate ?? null;
+Run a query to extract all distinct tags currently stored in `notes.tags` arrays and insert them into `dd_note_tags` so no existing data is orphaned.
 
-  if (usage === "current") return "current";
+## Step 3: Add SuperAdmin Management UI
 
-  if (usage === "superseded" && endDateStr) {
-    const endDate = new Date(endDateStr);
-    if (!isNaN(endDate.getTime()) && endDate >= new Date()) {
-      return "teach_out";
-    }
-  }
+Add `dd_note_tags` to the existing SuperAdmin code tables management interface so it can be discovered and managed (CRUD) through the same pattern used for other `dd_` tables. This means:
 
-  return null; // drop this item
-}
+- The table will appear in the SuperAdmin code tables list automatically (since it follows the `dd_` prefix convention).
+- SuperAdmins can add, edit, deactivate, and soft-delete tags from there.
+
+## Step 4: Replace Free-Text Tag Input with Dropdown
+
+In `ClientStructuredNotesTab.tsx`, replace the current free-text `Input` + "Add" button for tags with a multi-select dropdown that:
+
+- Fetches active tags from `dd_note_tags` (ordered by `sort_order`, then `label`).
+- Allows selecting multiple tags from the list.
+- Displays selected tags as removable badges (keeping the current badge UI).
+- Stores the tag `code` values in the `notes.tags` array (consistent with existing data format).
+
+---
+
+## Technical Details
+
+### Database Migration SQL
+```sql
+CREATE TABLE public.dd_note_tags (
+  id SERIAL PRIMARY KEY,
+  code TEXT UNIQUE NOT NULL,
+  label TEXT NOT NULL,
+  description TEXT,
+  is_active BOOLEAN NOT NULL DEFAULT true,
+  sort_order INTEGER NOT NULL DEFAULT 0
+);
+
+ALTER TABLE public.dd_note_tags ENABLE ROW LEVEL SECURITY;
+
+-- All authenticated users can read (for dropdowns)
+CREATE POLICY "dd_note_tags_select" ON public.dd_note_tags
+  FOR SELECT TO authenticated USING (true);
+
+-- Only Super Admins can manage
+CREATE POLICY "dd_note_tags_manage" ON public.dd_note_tags
+  FOR ALL TO authenticated
+  USING (public.is_super_admin_safe(auth.uid()))
+  WITH CHECK (public.is_super_admin_safe(auth.uid()));
 ```
 
-In the filtering loop (lines 184-190), replace `items.filter(isCurrent)` with:
-- Classify each item using `classifyScopeState`
-- Keep items where result is `"current"` or `"teach_out"`
-- Inject `scope_state` into the item before persistence so it lands in `tga_data`
-
-This means items with `status: "Superseded"` but `endDate` in the future are kept and tagged `scope_state: "teach_out"`.
-
-### 2. Edge Function: Ensure endDate Is Never Overwritten
-
-Confirm (no change needed): The `persist_tga_scope_items` RPC stores `_item` (the raw TGA JSON) as `tga_data`. The `endDate` field comes straight from TGA. There is no registration-end fallback anywhere in the scope persistence path.
-
-The `registration_end_date` is only stored on `tenant_profile` and `tga_rto_summary` for the RTO-level registration period -- completely separate from scope item end dates.
-
-### 3. UI Hook: Update isOnScope to Include Teach-Out
-
-**File: `src/hooks/useTgaRtoData.tsx`** (lines 396-399)
-
-Change:
-```typescript
-const isOnScope = (item: any) => {
-  const status = (item.status || '').trim().toLowerCase();
-  return status === 'current';
-};
+### Seed Existing Tags
+```sql
+INSERT INTO public.dd_note_tags (code, label)
+SELECT DISTINCT unnest(tags) AS code, unnest(tags) AS label
+FROM public.notes
+WHERE tags IS NOT NULL AND array_length(tags, 1) > 0
+ON CONFLICT (code) DO NOTHING;
 ```
 
-To:
-```typescript
-const isOnScope = (item: any) => {
-  const scopeState = item.tga_data?.scope_state;
-  if (scopeState === 'current' || scopeState === 'teach_out') return true;
-  // Fallback for items persisted before scope_state was added
-  const status = (item.status || '').trim().toLowerCase();
-  return status === 'current';
-};
-```
+### Frontend Changes
+- **New hook** `useNoteTags()` -- fetches active tags from `dd_note_tags`, returns `{ tags, loading }`.
+- **`ClientStructuredNotesTab.tsx`** -- replace the tag `Input`+`Add` block (lines 582-608) with a multi-select dropdown powered by the hook. Selected tags render as removable badges. The rest of the form logic (saving `tags` array) stays the same.
 
-### 4. UI: End Date Column Already Correct
-
-The UI tables already render `end_date` which is mapped from `item.tga_data?.endDate` in the hook (lines 412, 428, 444, 459, 474). This IS the TGA scope end date. No change needed.
-
-**No registration end date is ever shown in scope tables.** The "Registration End" field only appears in the Summary section header, correctly sourced from `tga_rto_summary.registration_end_date`.
-
-### 5. Add scope_state to Debug Panel (if it exists)
-
-**File: `src/components/client/ClientIntegrationsTab.tsx`**
-
-In each scope table, the `Usage recommendation` / `Status` column already shows the TGA status. To surface `scope_state`, add a visual indicator:
-- Items with `scope_state === "teach_out"` get an amber "Teach-out" badge next to the status pill
-- Items with `scope_state === "current"` continue showing the green "Current" badge
-
-### Files to Modify
-
-| File | Change |
-|---|---|
-| `supabase/functions/tga-rto-sync/index.ts` | Replace `isCurrent` with `classifyScopeState`, inject `scope_state` into items before persist, keep teach-out items |
-| `src/hooks/useTgaRtoData.tsx` | Update `isOnScope` to accept `current` and `teach_out` scope states |
-| `src/components/client/ClientIntegrationsTab.tsx` | Add amber "Teach-out" badge for items with `scope_state === "teach_out"` |
-
-### No Migration Needed
-
-The `scope_state` is stored inside `tga_data` JSONB -- no schema change required. A re-sync will populate it for all items.
-
-### Expected Behaviour After Re-Sync
-
-- Items with TGA status "Current" get `scope_state: "current"`, show green badge, display TGA `endDate`
-- Items with TGA status "Superseded" + future `endDate` get `scope_state: "teach_out"`, show amber badge, display TGA `endDate`
-- Items with "Superseded" + past `endDate` or null are dropped (not persisted)
-- End Date column always shows the TGA-provided date, never the RTO registration end
-- On RTO renewal/re-sync, all end dates update to reflect the latest TGA values
-
+### Files to Create/Modify
+| File | Action |
+|------|--------|
+| Database migration | Create `dd_note_tags` table + RLS + seed |
+| `src/hooks/useNoteTags.ts` | New -- fetch active tags from `dd_note_tags` |
+| `src/components/client/ClientStructuredNotesTab.tsx` | Modify -- replace free-text tag input with dropdown selector |
