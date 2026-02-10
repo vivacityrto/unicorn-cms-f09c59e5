@@ -276,17 +276,13 @@ export function AdminActions({
         body: { user_uuid: user.user_uuid },
       });
 
-      if (error) {
-        // Try to parse the error context for a user-friendly message
-        const errorBody = typeof error === 'object' && error !== null && 'context' in error
-          ? await (error as any).context?.json?.().catch(() => null)
-          : null;
-        const detail = errorBody?.detail || data?.detail || data?.code || error.message;
-        throw new Error(detail);
+      // When edge function returns non-2xx, data contains the parsed JSON body
+      if (data && !data.ok) {
+        throw new Error(data.detail || data.code || 'Failed to send password reset');
       }
 
-      if (!data?.ok) {
-        throw new Error(data?.detail || data?.code || 'Failed to send password reset');
+      if (error) {
+        throw new Error(error.message || 'Failed to send password reset');
       }
 
       toast({
