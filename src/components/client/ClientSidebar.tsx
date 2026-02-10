@@ -12,6 +12,7 @@ import {
   MessageCircle,
   Headphones,
   Bot,
+  ShieldCheck,
 } from "lucide-react";
 import { useClientTenant } from "@/contexts/ClientTenantContext";
 import { useHelpCenter } from "@/components/help-center";
@@ -25,6 +26,7 @@ const clientMenuItems = [
   { icon: Bell, label: "Notifications", path: "/client/notifications" },
   { icon: BarChart3, label: "Reports", path: "/client/reports" },
   { icon: Users, label: "Team", path: "/client/team" },
+  { icon: ShieldCheck, label: "TGA Details", path: "/client/tga" },
 ];
 
 interface ClientSidebarProps {
