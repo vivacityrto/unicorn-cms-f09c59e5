@@ -259,10 +259,10 @@ export function useClientProfile(tenantId: number | null) {
     try {
       setLoading(true);
       
-      const [tenantResult, linkResult] = await Promise.all([
+      const [tenantResult, linkResult, tgaSummaryResult] = await Promise.all([
         supabase
           .from('tenants')
-          .select('id, legal_name, rto_name, abn, acn, website, state, rto_id, cricos_id, lms, sms, accounting_system, risk_level, updated_at, tga_status, tga_legal_name, tga_snapshot')
+          .select('id, legal_name, rto_name, abn, acn, website, state, rto_id, cricos_id, lms, sms, accounting_system, risk_level, updated_at, tga_status')
           .eq('id', tenantId)
           .single(),
         supabase
@@ -270,6 +270,11 @@ export function useClientProfile(tenantId: number | null) {
           .select('*')
           .eq('tenant_id', tenantId)
           .eq('registry', 'tga')
+          .maybeSingle(),
+        supabase
+          .from('tga_rto_summary')
+          .select('legal_name, trading_name, abn, acn, web_address, organisation_type')
+          .eq('tenant_id', tenantId)
           .maybeSingle()
       ]);
 
@@ -277,33 +282,32 @@ export function useClientProfile(tenantId: number | null) {
         throw tenantResult.error;
       }
 
-      // Extract TGA data from tenant snapshot if TGA is connected
       const tenant = tenantResult.data;
       const tgaConnected = tenant.tga_status === 'connected';
-      const snapshot = tenant.tga_snapshot as Record<string, any> | null;
+      const tga = tgaConnected ? tgaSummaryResult.data : null;
 
-      let tgaLegalName: string | null = null;
-      let tgaTradingName: string | null = null;
-      let tgaWebsite: string | null = null;
-
-      if (tgaConnected && snapshot) {
-        const legalNames = snapshot.legalNames as any[];
-        const tradingNames = snapshot.tradingNames as any[];
-        const webAddresses = snapshot.webAddresses as any[];
-        tgaLegalName = legalNames?.[0]?.name || tenant.tga_legal_name || null;
-        tgaTradingName = tradingNames?.[0]?.name || null;
-        tgaWebsite = webAddresses?.[0]?.url || null;
+      // Map TGA organisation classification to our org_type enum
+      let tgaOrgType: string | null = null;
+      if (tga?.organisation_type) {
+        const orgTypeLower = tga.organisation_type.toLowerCase();
+        if (orgTypeLower.includes('registered training organisation')) {
+          tgaOrgType = 'rto';
+        }
+      }
+      // If tenant has both RTO and CRICOS, override to rto_cricos
+      if (tgaOrgType === 'rto' && tenant.cricos_id) {
+        tgaOrgType = 'rto_cricos';
       }
 
       // Map tenant columns to ClientProfile interface, overlaying TGA data where available
       const profileData: ClientProfile = {
         tenant_id: tenant.id,
-        legal_name: tgaLegalName || tenant.legal_name,
-        trading_name: tgaTradingName || tenant.rto_name,
-        abn: tenant.abn,
-        acn: tenant.acn,
-        org_type: null, // Column not yet in database
-        website: tgaWebsite || tenant.website,
+        legal_name: tga?.legal_name || tenant.legal_name,
+        trading_name: tga?.trading_name || tenant.rto_name,
+        abn: tga?.abn || tenant.abn,
+        acn: tga?.acn || tenant.acn,
+        org_type: tgaOrgType,
+        website: tga?.web_address || tenant.website,
         state: tenant.state,
         rto_number: tenant.rto_id,
         cricos_number: tenant.cricos_id,
