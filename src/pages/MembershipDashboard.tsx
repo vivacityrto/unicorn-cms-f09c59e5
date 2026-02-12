@@ -14,6 +14,7 @@ import { MembershipWithDetails } from '@/types/membership';
 import { MyWorkWidget } from '@/components/dashboard/MyWorkWidget';
 import { TimeInboxWidget } from '@/components/dashboard/TimeInboxWidget';
  import { ProcessesWidget } from '@/components/dashboard/ProcessesWidget';
+import { ConsultantCapacityTable } from '@/components/capacity/ConsultantCapacityTable';
 
 export default function MembershipDashboard() {
   const { profile } = useAuth();
@@ -128,6 +129,9 @@ export default function MembershipDashboard() {
  
            {/* Processes Widget */}
            <ProcessesWidget />
+
+           {/* Consultant Capacity Overview */}
+           <ConsultantCapacityTable />
 
           {/* Command Bar */}
           <MembershipCommandBar

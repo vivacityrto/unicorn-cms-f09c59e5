@@ -47,6 +47,7 @@ import { ClientTimeSummaryCard } from '@/components/client/ClientTimeSummaryCard
 import { RiskLevelBadge } from '@/components/client/RiskLevelBadge';
 import { CSCAssignmentSelector } from '@/components/client/CSCAssignmentSelector';
 import { ConsultantAssignmentCard } from '@/components/client/ConsultantAssignmentCard';
+import { MembershipUsageCard } from '@/components/capacity/MembershipUsageCard';
 import { ViewAsClientButton } from '@/components/client/ViewAsClientButton';
 
 interface TenantBasic {
@@ -341,6 +342,9 @@ export default function ClientDetail() {
               <ClientTimeSummaryCard clientId={tenantIdNum!} />
               <ConsultantAssignmentCard tenantId={tenantIdNum!} canEdit={canEdit} />
             </div>
+
+            {/* Membership Usage */}
+            <MembershipUsageCard tenantId={tenantIdNum!} />
             
             {/* Profile Form */}
             {canEdit ? (

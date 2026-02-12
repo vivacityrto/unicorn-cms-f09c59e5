@@ -6181,6 +6181,115 @@ export type Database = {
           },
         ]
       }
+      consultant_capacity_audit_log: {
+        Row: {
+          candidate_snapshot: Json
+          client_id: number | null
+          consultant_current_load: number | null
+          created_at: string
+          created_by: string | null
+          id: string
+          new_client_weekly_required: number | null
+          over_capacity: boolean
+          projected_remaining: number | null
+          selected_consultant_user_id: string | null
+          tenant_id: number | null
+          weekly_assignable_hours: number | null
+        }
+        Insert: {
+          candidate_snapshot?: Json
+          client_id?: number | null
+          consultant_current_load?: number | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          new_client_weekly_required?: number | null
+          over_capacity?: boolean
+          projected_remaining?: number | null
+          selected_consultant_user_id?: string | null
+          tenant_id?: number | null
+          weekly_assignable_hours?: number | null
+        }
+        Update: {
+          candidate_snapshot?: Json
+          client_id?: number | null
+          consultant_current_load?: number | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          new_client_weekly_required?: number | null
+          over_capacity?: boolean
+          projected_remaining?: number | null
+          selected_consultant_user_id?: string | null
+          tenant_id?: number | null
+          weekly_assignable_hours?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "consultant_capacity_audit_log_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "consultant_capacity_audit_log_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_engagement_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "consultant_capacity_audit_log_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_eos_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "consultant_capacity_audit_log_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_compliance_entitlements"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "consultant_capacity_audit_log_selected_consultant_user_id_fkey"
+            columns: ["selected_consultant_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "consultant_capacity_audit_log_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "consultant_capacity_audit_log_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_engagement_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "consultant_capacity_audit_log_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_eos_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "consultant_capacity_audit_log_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_compliance_entitlements"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
       consults: {
         Row: {
           client_id: string
@@ -13745,6 +13854,7 @@ export type Database = {
       }
       membership_tier_capacity_config: {
         Row: {
+          annual_included_hours: number
           created_at: string
           id: string
           package_ids: number[]
@@ -13754,6 +13864,7 @@ export type Database = {
           weekly_required_hours: number
         }
         Insert: {
+          annual_included_hours?: number
           created_at?: string
           id?: string
           package_ids?: number[]
@@ -13763,6 +13874,7 @@ export type Database = {
           weekly_required_hours: number
         }
         Update: {
+          annual_included_hours?: number
           created_at?: string
           id?: string
           package_ids?: number[]
@@ -24337,6 +24449,19 @@ export type Database = {
         Args: { p_meeting_id: string }
         Returns: Json
       }
+      compute_client_weekly_required: {
+        Args: { p_tenant_id: number }
+        Returns: number
+      }
+      compute_consultant_current_load: {
+        Args: { p_user_id: string }
+        Returns: number
+      }
+      compute_consultant_weekly_capacity: {
+        Args: { p_user_id: string }
+        Returns: number
+      }
+      compute_membership_usage: { Args: { p_tenant_id: number }; Returns: Json }
       compute_rock_rollup_status: { Args: { rock_id: string }; Returns: string }
       copy_stage_template_to_package: {
         Args: { p_package_id: number; p_stage_id: number }
@@ -25235,6 +25360,8 @@ export type Database = {
         Args: { p_client_id: number; p_days?: number }
         Returns: Json
       }
+      rpc_get_consultant_capacity_overview: { Args: never; Returns: Json }
+      rpc_get_membership_usage: { Args: { p_tenant_id: number }; Returns: Json }
       rpc_get_my_action_items: {
         Args: {
           p_include_overdue?: boolean
