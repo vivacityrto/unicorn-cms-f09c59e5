@@ -123,10 +123,63 @@ export function ClientAddressSection({ tenantId, loading: parentLoading }: Clien
     if (error) {
       console.error('Error fetching addresses:', error);
       toast.error('Failed to load addresses');
-    } else {
-      setAddresses(data || []);
+      setLoading(false);
+      return;
     }
+
+    // If no addresses exist, try to seed from TGA data
+    if (!data || data.length === 0) {
+      const seeded = await seedFromTga();
+      if (seeded) {
+        setLoading(false);
+        return; // fetchAddresses will be called again after seeding
+      }
+    }
+
+    setAddresses(data || []);
     setLoading(false);
+  };
+
+  const seedFromTga = async (): Promise<boolean> => {
+    const { data: tgaAddresses } = await supabase
+      .from('tga_rto_addresses')
+      .select('address_type, address_line_1, address_line_2, suburb, state, postcode, country')
+      .eq('tenant_id', tenantId);
+
+    if (!tgaAddresses || tgaAddresses.length === 0) return false;
+
+    const typeMap: Record<string, string> = {
+      headOffice: 'HO',
+      postal: 'PO',
+      deliveryLocation: 'DS'
+    };
+
+    const rows = tgaAddresses
+      .filter(a => typeMap[a.address_type])
+      .map(a => ({
+        tenant_id: tenantId,
+        address_type: typeMap[a.address_type],
+        address1: a.address_line_1,
+        address2: a.address_line_2 || null,
+        suburb: a.suburb || null,
+        state: a.state || null,
+        postcode: a.postcode || null,
+        country: a.country || 'Australia',
+        country_code: 'AU',
+        inactive: false
+      }));
+
+    if (rows.length === 0) return false;
+
+    const { error } = await supabase.from('tenant_addresses').insert(rows);
+    if (error) {
+      console.error('Error seeding TGA addresses:', error);
+      return false;
+    }
+
+    toast.success(`${rows.length} address(es) imported from TGA`);
+    await fetchAddresses();
+    return true;
   };
 
   const handleFormChange = (field: keyof AddressFormData, value: string) => {
