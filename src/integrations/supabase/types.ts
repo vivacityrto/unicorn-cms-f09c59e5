@@ -27584,7 +27584,6 @@ export type Database = {
           computed_weekly_required: number | null
           has_tier_config: boolean | null
           onboarding_multiplier: number | null
-          package_id: number | null
           status: string | null
           tenant_id: number | null
           tier_name: string | null
