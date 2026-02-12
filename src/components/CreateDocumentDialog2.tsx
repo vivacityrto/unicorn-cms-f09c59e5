@@ -318,10 +318,10 @@ export function CreateDocumentDialog2({ open, onOpenChange, onSuccess, packageId
                   <Label className="text-xs text-muted-foreground">Existing Files</Label>
                   {existingFiles.map((filePath, index) => {
                     const fileName = filePath.split('/').pop() || `file-${index + 1}`;
-                    const handleViewFile = () => {
-                      const { data } = supabase.storage.from('package-documents').getPublicUrl(filePath);
-                      if (data?.publicUrl) {
-                        window.open(data.publicUrl, '_blank');
+                    const handleViewFile = async () => {
+                      const { data } = await supabase.storage.from('package-documents').createSignedUrl(filePath, 3600);
+                      if (data?.signedUrl) {
+                        window.open(data.signedUrl, '_blank');
                       }
                     };
                     return (

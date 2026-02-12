@@ -831,11 +831,12 @@ export default function DocumentDetail() {
 
   const handleViewFile = async (filePath: string) => {
     try {
-      const { data } = await supabase.storage
+      const { data, error } = await supabase.storage
         .from('document-files')
-        .getPublicUrl(filePath);
+        .createSignedUrl(filePath, 3600);
 
-      window.open(data.publicUrl, '_blank');
+      if (error || !data?.signedUrl) throw error || new Error('Failed to generate file URL');
+      window.open(data.signedUrl, '_blank');
     } catch (error: any) {
       toast({
         title: 'Error',
