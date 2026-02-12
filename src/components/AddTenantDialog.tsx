@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { Building2, Loader2 } from 'lucide-react';
@@ -15,6 +16,12 @@ interface AddTenantDialogProps {
   preSelectedPackageId?: number;
 }
 
+interface PackageOption {
+  id: number;
+  name: string;
+  package_type: string;
+}
+
 export function AddTenantDialog({ open, onOpenChange, onSuccess, preSelectedPackageId }: AddTenantDialogProps) {
   const { toast } = useToast();
   const [saving, setSaving] = useState(false);
@@ -22,7 +29,12 @@ export function AddTenantDialog({ open, onOpenChange, onSuccess, preSelectedPack
   // Form fields
   const [tenantName, setTenantName] = useState('');
   const [rtoCode, setRtoCode] = useState('');
+  const [selectedPackageId, setSelectedPackageId] = useState<string>('');
   const [autoAssignConsultant, setAutoAssignConsultant] = useState(true);
+
+  // Package options
+  const [packages, setPackages] = useState<PackageOption[]>([]);
+  const [loadingPackages, setLoadingPackages] = useState(false);
 
   const generateSlug = (name: string): string => {
     return name
@@ -30,6 +42,30 @@ export function AddTenantDialog({ open, onOpenChange, onSuccess, preSelectedPack
       .replace(/[^a-z0-9]+/g, '-')
       .replace(/^-|-$/g, '');
   };
+
+  // Fetch available packages
+  useEffect(() => {
+    if (!open) return;
+    const fetchPackages = async () => {
+      setLoadingPackages(true);
+      const { data, error } = await supabase
+        .from('packages')
+        .select('id, name, package_type')
+        .order('name');
+      if (!error && data) {
+        setPackages(data);
+      }
+      setLoadingPackages(false);
+    };
+    fetchPackages();
+  }, [open]);
+
+  // Set pre-selected package when available
+  useEffect(() => {
+    if (preSelectedPackageId) {
+      setSelectedPackageId(String(preSelectedPackageId));
+    }
+  }, [preSelectedPackageId]);
 
   const handleSaveTenant = async () => {
     if (!tenantName) {
@@ -68,7 +104,6 @@ export function AddTenantDialog({ open, onOpenChange, onSuccess, preSelectedPack
         status: 'active',
         risk_level: 'low',
         rto_id: rtoCode || null,
-        package_id: preSelectedPackageId || null,
         metadata: {
           source: 'manual'
         }
@@ -84,6 +119,28 @@ export function AddTenantDialog({ open, onOpenChange, onSuccess, preSelectedPack
         .single();
 
       const newTenantId = newTenant?.id;
+
+      // Create package instance if a package was selected
+      if (selectedPackageId && newTenantId) {
+        try {
+          const { error: piError } = await supabase.from('package_instances').insert({
+            tenant_id: newTenantId,
+            package_id: parseInt(selectedPackageId),
+            is_complete: false,
+            start_date: new Date().toISOString().split('T')[0],
+            clo_id: 0, // Will be updated when consultant is assigned
+          });
+          if (piError) {
+            console.warn('[AddTenant] Package instance creation failed:', piError.message);
+            toast({
+              title: 'Warning',
+              description: 'Client created but package assignment failed. You can assign it manually.',
+            });
+          }
+        } catch (piErr) {
+          console.warn('[AddTenant] Package instance error:', piErr);
+        }
+      }
 
       toast({
         title: 'Success',
@@ -144,6 +201,7 @@ export function AddTenantDialog({ open, onOpenChange, onSuccess, preSelectedPack
   const resetForm = () => {
     setTenantName('');
     setRtoCode('');
+    setSelectedPackageId(preSelectedPackageId ? String(preSelectedPackageId) : '');
     setAutoAssignConsultant(true);
   };
 
@@ -188,6 +246,26 @@ export function AddTenantDialog({ open, onOpenChange, onSuccess, preSelectedPack
               />
             </div>
 
+            <div className="space-y-2">
+              <Label htmlFor="package">Package *</Label>
+              <Select
+                value={selectedPackageId}
+                onValueChange={setSelectedPackageId}
+                disabled={!!preSelectedPackageId}
+              >
+                <SelectTrigger id="package">
+                  <SelectValue placeholder={loadingPackages ? "Loading packages..." : "Select a package"} />
+                </SelectTrigger>
+                <SelectContent>
+                  {packages.map((pkg) => (
+                    <SelectItem key={pkg.id} value={String(pkg.id)}>
+                      {pkg.name} <span className="text-muted-foreground ml-1">({pkg.package_type})</span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
             <div className="flex items-center justify-between rounded-lg border p-3">
               <div className="space-y-0.5">
                 <Label htmlFor="auto-assign">Auto-assign Consultant</Label>
@@ -215,7 +293,7 @@ export function AddTenantDialog({ open, onOpenChange, onSuccess, preSelectedPack
           </Button>
           <Button
             onClick={handleSaveTenant}
-            disabled={saving || !tenantName}
+            disabled={saving || !tenantName || !selectedPackageId}
           >
             {saving ? (
               <>
