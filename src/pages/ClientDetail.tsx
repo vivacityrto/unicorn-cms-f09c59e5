@@ -355,7 +355,7 @@ export default function ClientDetail() {
                   profile={profile}
                   onSave={saveProfile}
                   loading={profileLoading}
-                  tgaLinked={registryLink?.link_status === 'verified'}
+                  tgaLinked={registryLink?.link_status === 'verified' || registryLink?.link_status === 'linked'}
                   onStateChange={handleProfileStateChange}
                 />
                 <ClientAddressSection

@@ -276,9 +276,10 @@ export function useClientProfile(tenantId: number | null) {
         throw tenantResult.error;
       }
 
-      // If TGA is linked and verified, fetch organisation data to auto-populate fields
+      // If TGA is linked (any active status), fetch organisation data to auto-populate fields
       let tgaOrg: any = null;
-      if (linkResult.data?.link_status === 'verified' && linkResult.data?.external_id) {
+      const tgaIsLinked = linkResult.data?.link_status === 'linked' || linkResult.data?.link_status === 'verified';
+      if (tgaIsLinked && linkResult.data?.external_id) {
         const { data: orgData } = await supabase
           .from('tga_organisations')
           .select('legal_name, trading_name, abn, website, organisation_type')
