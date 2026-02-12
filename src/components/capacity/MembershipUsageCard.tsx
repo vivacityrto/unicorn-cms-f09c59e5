@@ -22,18 +22,33 @@ export function MembershipUsageCard({ tenantId }: MembershipUsageCardProps) {
   }
 
   if (!usage || usage.included_hours_annual === 0) {
-    return null; // Don't show for tiers with no included hours (Amethyst)
+    return (
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base flex items-center gap-2">
+            <Clock className="h-4 w-4" />
+            Membership Usage
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <Badge variant="outline" className="text-xs">No included hours</Badge>
+        </CardContent>
+      </Card>
+    );
   }
 
   const isOverage = usage.percent_utilised > 100;
-  const isWarning = usage.percent_utilised >= 75;
+  const isAt90 = usage.percent_utilised >= 90 && !isOverage;
+  const isAt75 = usage.percent_utilised >= 75 && !isAt90 && !isOverage;
   const progressPct = Math.min(usage.percent_utilised, 100);
 
-  const progressClass = isOverage 
-    ? 'bg-red-500' 
-    : isWarning 
-      ? 'bg-amber-500' 
-      : 'bg-green-500';
+  const progressClass = isOverage
+    ? 'bg-red-500'
+    : isAt90
+      ? 'bg-red-400'
+      : isAt75
+        ? 'bg-amber-500'
+        : 'bg-green-500';
 
   const yearStart = new Date(usage.membership_year_start).toLocaleDateString('en-AU', {
     day: 'numeric', month: 'short', year: 'numeric'
@@ -50,16 +65,24 @@ export function MembershipUsageCard({ tenantId }: MembershipUsageCardProps) {
             <Clock className="h-4 w-4" />
             Membership Usage
           </CardTitle>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 flex-wrap justify-end">
+            {usage.tier_name && (
+              <Badge variant="secondary" className="text-xs">{usage.tier_name}</Badge>
+            )}
             {isOverage && (
               <Badge variant="destructive" className="text-xs gap-1">
                 <AlertTriangle className="h-3 w-3" />
-                Over Limit
+                Overage
               </Badge>
             )}
-            {!isOverage && isWarning && (
-              <Badge variant="outline" className="text-xs text-amber-600 border-amber-300">
-                {usage.percent_utilised.toFixed(0)}% used
+            {isAt90 && (
+              <Badge className="text-xs bg-red-500/15 text-red-700 dark:text-red-400 border-red-300" variant="outline">
+                90% used
+              </Badge>
+            )}
+            {isAt75 && (
+              <Badge className="text-xs bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-300" variant="outline">
+                75% used
               </Badge>
             )}
           </div>
@@ -76,8 +99,8 @@ export function MembershipUsageCard({ tenantId }: MembershipUsageCardProps) {
               {usage.included_hours_annual}h included
             </span>
           </div>
-          <Progress 
-            value={progressPct} 
+          <Progress
+            value={progressPct}
             className="h-3"
             indicatorClassName={progressClass}
           />
@@ -97,7 +120,7 @@ export function MembershipUsageCard({ tenantId }: MembershipUsageCardProps) {
           </div>
           <div>
             <p className="text-xs text-muted-foreground">Remaining</p>
-            <p className={`text-sm font-medium ${usage.hours_remaining === 0 ? 'text-red-600' : 'text-green-600'}`}>
+            <p className={`text-sm font-medium ${usage.hours_remaining <= 0 ? 'text-red-600' : 'text-green-600'}`}>
               {usage.hours_remaining.toFixed(1)}h
             </p>
           </div>

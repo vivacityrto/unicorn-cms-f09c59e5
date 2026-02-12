@@ -28834,6 +28834,10 @@ export type Database = {
         Returns: Json
       }
       rpc_get_consultant_capacity_overview: { Args: never; Returns: Json }
+      rpc_get_consultant_clients: {
+        Args: { p_consultant_uuid: string }
+        Returns: Json
+      }
       rpc_get_membership_usage: { Args: { p_tenant_id: number }; Returns: Json }
       rpc_get_my_action_items: {
         Args: {
