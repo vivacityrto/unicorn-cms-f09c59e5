@@ -75,6 +75,7 @@ export default function ClientDetail() {
   const { 
     profile, 
     registryLink, 
+    tgaConnected,
     loading: profileLoading, 
     saveProfile, 
     setTgaLink,
@@ -355,7 +356,7 @@ export default function ClientDetail() {
                   profile={profile}
                   onSave={saveProfile}
                   loading={profileLoading}
-                  tgaLinked={registryLink?.link_status === 'verified' || registryLink?.link_status === 'linked'}
+                  tgaLinked={tgaConnected}
                   onStateChange={handleProfileStateChange}
                 />
                 <ClientAddressSection
