@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { Building2, Loader2 } from 'lucide-react';
@@ -26,6 +27,7 @@ export function AddTenantDialog({ open, onOpenChange, onSuccess, preSelectedPack
   const [abn, setAbn] = useState('');
   const [address, setAddress] = useState('');
   const [notes, setNotes] = useState('');
+  const [autoAssignConsultant, setAutoAssignConsultant] = useState(true);
 
   const generateSlug = (name: string): string => {
     return name
@@ -80,24 +82,51 @@ export function AddTenantDialog({ open, onOpenChange, onSuccess, preSelectedPack
 
       if (error) throw error;
 
+      // Get newly created tenant ID
+      const { data: newTenant } = await supabase
+        .from('tenants')
+        .select('id')
+        .eq('slug', tenantSlug)
+        .single();
+
+      const newTenantId = newTenant?.id;
+
       toast({
         title: 'Success',
         description: 'Tenant created successfully',
       });
 
+      // Auto-assign consultant (fire and forget)
+      if (autoAssignConsultant && newTenantId) {
+        try {
+          supabase.rpc('rpc_auto_assign_consultant', { p_tenant_id: newTenantId })
+            .then(({ data: assignData, error: assignError }) => {
+              if (assignError) {
+                console.warn('[AddTenant] Auto-assign consultant failed:', assignError.message);
+              } else {
+                console.log('[AddTenant] Consultant auto-assigned:', assignData);
+              }
+            });
+        } catch (assignErr) {
+          console.warn('[AddTenant] Auto-assign error:', assignErr);
+        }
+      }
+
       // Auto-provision SharePoint folder (fire and forget)
-      try {
-        supabase.functions.invoke('provision-tenant-sharepoint-folder', {
-          body: { tenant_id: (await supabase.from('tenants').select('id').eq('slug', tenantSlug).single()).data?.id }
-        }).then(({ data, error: provError }) => {
-          if (provError || !data?.success) {
-            console.warn('[AddTenant] SharePoint provisioning failed:', provError?.message || data?.error);
-          } else {
-            console.log('[AddTenant] SharePoint folder provisioned:', data.folder_name);
-          }
-        });
-      } catch (provErr) {
-        console.warn('[AddTenant] SharePoint provisioning error:', provErr);
+      if (newTenantId) {
+        try {
+          supabase.functions.invoke('provision-tenant-sharepoint-folder', {
+            body: { tenant_id: newTenantId }
+          }).then(({ data, error: provError }) => {
+            if (provError || !data?.success) {
+              console.warn('[AddTenant] SharePoint provisioning failed:', provError?.message || data?.error);
+            } else {
+              console.log('[AddTenant] SharePoint folder provisioned:', data.folder_name);
+            }
+          });
+        } catch (provErr) {
+          console.warn('[AddTenant] SharePoint provisioning error:', provErr);
+        }
       }
 
       resetForm();
@@ -126,6 +155,7 @@ export function AddTenantDialog({ open, onOpenChange, onSuccess, preSelectedPack
     setAbn('');
     setAddress('');
     setNotes('');
+    setAutoAssignConsultant(true);
   };
 
   useEffect(() => {
@@ -215,6 +245,20 @@ export function AddTenantDialog({ open, onOpenChange, onSuccess, preSelectedPack
                 onChange={(e) => setNotes(e.target.value)}
                 placeholder="Additional information about this tenant"
                 rows={3}
+              />
+            </div>
+
+            <div className="flex items-center justify-between rounded-lg border p-3">
+              <div className="space-y-0.5">
+                <Label htmlFor="auto-assign">Auto-assign Consultant</Label>
+                <p className="text-xs text-muted-foreground">
+                  Automatically assign a consultant based on capacity
+                </p>
+              </div>
+              <Switch
+                id="auto-assign"
+                checked={autoAssignConsultant}
+                onCheckedChange={setAutoAssignConsultant}
               />
             </div>
           </div>

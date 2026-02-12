@@ -6090,6 +6090,97 @@ export type Database = {
           },
         ]
       }
+      consultant_assignment_audit_log: {
+        Row: {
+          action: string
+          candidate_snapshot: Json
+          created_at: string
+          created_by: string | null
+          id: string
+          new_client_weekly_required: number | null
+          onboarding_multiplier: number | null
+          over_capacity: boolean
+          previous_consultant_user_id: string | null
+          reason: string | null
+          selected_consultant_user_id: string | null
+          selected_projected_remaining: number | null
+          tenant_id: number
+        }
+        Insert: {
+          action?: string
+          candidate_snapshot?: Json
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          new_client_weekly_required?: number | null
+          onboarding_multiplier?: number | null
+          over_capacity?: boolean
+          previous_consultant_user_id?: string | null
+          reason?: string | null
+          selected_consultant_user_id?: string | null
+          selected_projected_remaining?: number | null
+          tenant_id: number
+        }
+        Update: {
+          action?: string
+          candidate_snapshot?: Json
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          new_client_weekly_required?: number | null
+          onboarding_multiplier?: number | null
+          over_capacity?: boolean
+          previous_consultant_user_id?: string | null
+          reason?: string | null
+          selected_consultant_user_id?: string | null
+          selected_projected_remaining?: number | null
+          tenant_id?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "consultant_assignment_audit_lo_previous_consultant_user_id_fkey"
+            columns: ["previous_consultant_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "consultant_assignment_audit_lo_selected_consultant_user_id_fkey"
+            columns: ["selected_consultant_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "consultant_assignment_audit_log_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "consultant_assignment_audit_log_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_engagement_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "consultant_assignment_audit_log_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_eos_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "consultant_assignment_audit_log_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_compliance_entitlements"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
       consults: {
         Row: {
           client_id: string
@@ -13652,6 +13743,36 @@ export type Database = {
         }
         Relationships: []
       }
+      membership_tier_capacity_config: {
+        Row: {
+          created_at: string
+          id: string
+          package_ids: number[]
+          tier_key: string
+          tier_label: string
+          updated_at: string
+          weekly_required_hours: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          package_ids?: number[]
+          tier_key: string
+          tier_label: string
+          updated_at?: string
+          weekly_required_hours: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          package_ids?: number[]
+          tier_key?: string
+          tier_label?: string
+          updated_at?: string
+          weekly_required_hours?: number
+        }
+        Relationships: []
+      }
       merge_field_definitions: {
         Row: {
           code: string
@@ -20077,9 +20198,12 @@ export type Database = {
           academy_subscription_expires_at: string | null
           accounting_system: string | null
           acn: string | null
+          assigned_consultant_user_id: string | null
           billing_status: Database["public"]["Enums"]["billing_status"]
           certificates_issued_count: number
+          client_onboarded_at: string | null
           compliance_system_enabled: boolean
+          consultant_assignment_method: string | null
           courses_enrolled_count: number
           created_at: string
           cricos_id: string | null
@@ -20124,9 +20248,12 @@ export type Database = {
           academy_subscription_expires_at?: string | null
           accounting_system?: string | null
           acn?: string | null
+          assigned_consultant_user_id?: string | null
           billing_status?: Database["public"]["Enums"]["billing_status"]
           certificates_issued_count?: number
+          client_onboarded_at?: string | null
           compliance_system_enabled?: boolean
+          consultant_assignment_method?: string | null
           courses_enrolled_count?: number
           created_at?: string
           cricos_id?: string | null
@@ -20171,9 +20298,12 @@ export type Database = {
           academy_subscription_expires_at?: string | null
           accounting_system?: string | null
           acn?: string | null
+          assigned_consultant_user_id?: string | null
           billing_status?: Database["public"]["Enums"]["billing_status"]
           certificates_issued_count?: number
+          client_onboarded_at?: string | null
           compliance_system_enabled?: boolean
+          consultant_assignment_method?: string | null
           courses_enrolled_count?: number
           created_at?: string
           cricos_id?: string | null
@@ -20211,7 +20341,15 @@ export type Database = {
           updated_at?: string
           website?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "tenants_assigned_consultant_user_id_fkey"
+            columns: ["assigned_consultant_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["user_uuid"]
+          },
+        ]
       }
       tga_cache: {
         Row: {
@@ -22487,6 +22625,7 @@ export type Database = {
           accountable_person: string | null
           accounting_system: string | null
           acn: string | null
+          allocation_paused: boolean
           archived: boolean
           availability_note: string | null
           avatar_path: string | null
@@ -22568,6 +22707,7 @@ export type Database = {
           accountable_person?: string | null
           accounting_system?: string | null
           acn?: string | null
+          allocation_paused?: boolean
           archived?: boolean
           availability_note?: string | null
           avatar_path?: string | null
@@ -22649,6 +22789,7 @@ export type Database = {
           accountable_person?: string | null
           accounting_system?: string | null
           acn?: string | null
+          allocation_paused?: boolean
           archived?: boolean
           availability_note?: string | null
           avatar_path?: string | null
@@ -24107,6 +24248,7 @@ export type Database = {
           user_id: string
         }[]
       }
+      auto_assign_consultant: { Args: { p_tenant_id: number }; Returns: string }
       backfill_l10_meeting_participants: { Args: never; Returns: Json }
       bulk_create_documents_with_versions: {
         Args: {
@@ -25006,6 +25148,10 @@ export type Database = {
           p_apply_package?: boolean
           p_draft_id: string
         }
+        Returns: Json
+      }
+      rpc_auto_assign_consultant: {
+        Args: { p_tenant_id: number }
         Returns: Json
       }
       rpc_bulk_discard_time_drafts: {

@@ -46,6 +46,7 @@ import { TenantTimeTrackerBar } from '@/components/client/TenantTimeTrackerBar';
 import { ClientTimeSummaryCard } from '@/components/client/ClientTimeSummaryCard';
 import { RiskLevelBadge } from '@/components/client/RiskLevelBadge';
 import { CSCAssignmentSelector } from '@/components/client/CSCAssignmentSelector';
+import { ConsultantAssignmentCard } from '@/components/client/ConsultantAssignmentCard';
 import { ViewAsClientButton } from '@/components/client/ViewAsClientButton';
 
 interface TenantBasic {
@@ -335,8 +336,11 @@ export default function ClientDetail() {
       <div className="p-6">
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsContent value="overview" className="mt-0 space-y-6">
-            {/* Time Summary Card */}
-            <ClientTimeSummaryCard clientId={tenantIdNum!} />
+            {/* Time Summary & Consultant Assignment */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <ClientTimeSummaryCard clientId={tenantIdNum!} />
+              <ConsultantAssignmentCard tenantId={tenantIdNum!} canEdit={canEdit} />
+            </div>
             
             {/* Profile Form */}
             {canEdit ? (
