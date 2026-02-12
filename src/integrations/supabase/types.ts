@@ -81,6 +81,20 @@ export type Database = {
             referencedRelation: "v_tenant_compliance_entitlements"
             referencedColumns: ["tenant_id"]
           },
+          {
+            foreignKeyName: "accountability_chart_versions_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "accountability_chart_versions_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["tenant_id"]
+          },
         ]
       }
       accountability_charts: {
@@ -138,6 +152,20 @@ export type Database = {
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "v_tenant_compliance_entitlements"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "accountability_charts_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "accountability_charts_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
             referencedColumns: ["tenant_id"]
           },
         ]
@@ -226,6 +254,20 @@ export type Database = {
             referencedRelation: "v_tenant_compliance_entitlements"
             referencedColumns: ["tenant_id"]
           },
+          {
+            foreignKeyName: "accountability_functions_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "accountability_functions_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["tenant_id"]
+          },
         ]
       }
       accountability_seat_assignments: {
@@ -312,6 +354,20 @@ export type Database = {
             referencedRelation: "v_tenant_compliance_entitlements"
             referencedColumns: ["tenant_id"]
           },
+          {
+            foreignKeyName: "accountability_seat_assignments_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "accountability_seat_assignments_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["tenant_id"]
+          },
         ]
       }
       accountability_seat_roles: {
@@ -387,6 +443,20 @@ export type Database = {
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "v_tenant_compliance_entitlements"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "accountability_seat_roles_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "accountability_seat_roles_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
             referencedColumns: ["tenant_id"]
           },
         ]
@@ -474,6 +544,13 @@ export type Database = {
             referencedColumns: ["user_uuid"]
           },
           {
+            foreignKeyName: "accountability_seats_backup_owner_user_id_fkey"
+            columns: ["backup_owner_user_id"]
+            isOneToOne: false
+            referencedRelation: "vw_consultant_load"
+            referencedColumns: ["user_uuid"]
+          },
+          {
             foreignKeyName: "accountability_seats_chart_id_fkey"
             columns: ["chart_id"]
             isOneToOne: false
@@ -513,6 +590,20 @@ export type Database = {
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "v_tenant_compliance_entitlements"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "accountability_seats_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "accountability_seats_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
             referencedColumns: ["tenant_id"]
           },
         ]
@@ -640,6 +731,20 @@ export type Database = {
             referencedColumns: ["tenant_id"]
           },
           {
+            foreignKeyName: "ai_interaction_logs_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "ai_interaction_logs_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["tenant_id"]
+          },
+          {
             foreignKeyName: "ai_interaction_logs_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
@@ -651,6 +756,13 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "vw_consultant_capacity"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "ai_interaction_logs_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "vw_consultant_load"
             referencedColumns: ["user_uuid"]
           },
         ]
@@ -721,6 +833,13 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "vw_consultant_capacity"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "ai_quality_events_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "vw_consultant_load"
             referencedColumns: ["user_uuid"]
           },
         ]
@@ -797,6 +916,13 @@ export type Database = {
             referencedColumns: ["user_uuid"]
           },
           {
+            foreignKeyName: "ai_review_flags_flagged_by_fkey"
+            columns: ["flagged_by"]
+            isOneToOne: false
+            referencedRelation: "vw_consultant_load"
+            referencedColumns: ["user_uuid"]
+          },
+          {
             foreignKeyName: "ai_review_flags_resolved_by_fkey"
             columns: ["resolved_by"]
             isOneToOne: false
@@ -808,6 +934,13 @@ export type Database = {
             columns: ["resolved_by"]
             isOneToOne: false
             referencedRelation: "vw_consultant_capacity"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "ai_review_flags_resolved_by_fkey"
+            columns: ["resolved_by"]
+            isOneToOne: false
+            referencedRelation: "vw_consultant_load"
             referencedColumns: ["user_uuid"]
           },
         ]
@@ -1023,6 +1156,20 @@ export type Database = {
             columns: ["client_tenant_id"]
             isOneToOne: false
             referencedRelation: "v_tenant_compliance_entitlements"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "assistant_audit_log_client_tenant_id_fkey"
+            columns: ["client_tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "assistant_audit_log_client_tenant_id_fkey"
+            columns: ["client_tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
             referencedColumns: ["tenant_id"]
           },
           {
@@ -1331,6 +1478,20 @@ export type Database = {
             referencedRelation: "v_tenant_compliance_entitlements"
             referencedColumns: ["tenant_id"]
           },
+          {
+            foreignKeyName: "audit_client_impersonation_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "audit_client_impersonation_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["tenant_id"]
+          },
         ]
       }
       audit_eos_events: {
@@ -1570,6 +1731,20 @@ export type Database = {
             referencedRelation: "v_tenant_compliance_entitlements"
             referencedColumns: ["tenant_id"]
           },
+          {
+            foreignKeyName: "audit_gwc_trends_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "audit_gwc_trends_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["tenant_id"]
+          },
         ]
       }
       audit_inspection: {
@@ -1764,6 +1939,13 @@ export type Database = {
             referencedColumns: ["user_uuid"]
           },
           {
+            foreignKeyName: "audit_log_editor_uuid_fkey"
+            columns: ["editor_uuid"]
+            isOneToOne: false
+            referencedRelation: "vw_consultant_load"
+            referencedColumns: ["user_uuid"]
+          },
+          {
             foreignKeyName: "audit_log_user_uuid_fkey"
             columns: ["user_uuid"]
             isOneToOne: false
@@ -1775,6 +1957,13 @@ export type Database = {
             columns: ["user_uuid"]
             isOneToOne: false
             referencedRelation: "vw_consultant_capacity"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "audit_log_user_uuid_fkey"
+            columns: ["user_uuid"]
+            isOneToOne: false
+            referencedRelation: "vw_consultant_load"
             referencedColumns: ["user_uuid"]
           },
         ]
@@ -1841,6 +2030,20 @@ export type Database = {
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "v_tenant_compliance_entitlements"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "audit_people_analyzer_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "audit_people_analyzer_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
             referencedColumns: ["tenant_id"]
           },
         ]
@@ -2045,6 +2248,20 @@ export type Database = {
             referencedRelation: "v_tenant_compliance_entitlements"
             referencedColumns: ["tenant_id"]
           },
+          {
+            foreignKeyName: "audit_restricted_actions_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "audit_restricted_actions_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["tenant_id"]
+          },
         ]
       }
       audit_seat_health: {
@@ -2136,6 +2353,20 @@ export type Database = {
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "v_tenant_compliance_entitlements"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "audit_seat_health_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "audit_seat_health_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
             referencedColumns: ["tenant_id"]
           },
         ]
@@ -2251,6 +2482,20 @@ export type Database = {
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "v_tenant_compliance_entitlements"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "audit_succession_events_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "audit_succession_events_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
             referencedColumns: ["tenant_id"]
           },
         ]
@@ -2452,6 +2697,20 @@ export type Database = {
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "v_tenant_compliance_entitlements"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "audit_upgrade_attempts_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "audit_upgrade_attempts_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
             referencedColumns: ["tenant_id"]
           },
         ]
@@ -3336,6 +3595,20 @@ export type Database = {
             referencedColumns: ["tenant_id"]
           },
           {
+            foreignKeyName: "calendar_events_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "calendar_events_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["tenant_id"]
+          },
+          {
             foreignKeyName: "calendar_events_package_id_fkey"
             columns: ["package_id"]
             isOneToOne: false
@@ -3418,6 +3691,13 @@ export type Database = {
             referencedColumns: ["user_uuid"]
           },
           {
+            foreignKeyName: "calendar_shares_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "vw_consultant_load"
+            referencedColumns: ["user_uuid"]
+          },
+          {
             foreignKeyName: "calendar_shares_owner_user_uuid_fkey"
             columns: ["owner_user_uuid"]
             isOneToOne: false
@@ -3432,6 +3712,13 @@ export type Database = {
             referencedColumns: ["user_uuid"]
           },
           {
+            foreignKeyName: "calendar_shares_owner_user_uuid_fkey"
+            columns: ["owner_user_uuid"]
+            isOneToOne: false
+            referencedRelation: "vw_consultant_load"
+            referencedColumns: ["user_uuid"]
+          },
+          {
             foreignKeyName: "calendar_shares_viewer_user_uuid_fkey"
             columns: ["viewer_user_uuid"]
             isOneToOne: false
@@ -3443,6 +3730,13 @@ export type Database = {
             columns: ["viewer_user_uuid"]
             isOneToOne: false
             referencedRelation: "vw_consultant_capacity"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "calendar_shares_viewer_user_uuid_fkey"
+            columns: ["viewer_user_uuid"]
+            isOneToOne: false
+            referencedRelation: "vw_consultant_load"
             referencedColumns: ["user_uuid"]
           },
         ]
@@ -3621,6 +3915,20 @@ export type Database = {
             referencedRelation: "v_tenant_compliance_entitlements"
             referencedColumns: ["tenant_id"]
           },
+          {
+            foreignKeyName: "chat_escalations_tenant_fk"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "chat_escalations_tenant_fk"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["tenant_id"]
+          },
         ]
       }
       chat_messages: {
@@ -3687,6 +3995,20 @@ export type Database = {
             referencedRelation: "v_tenant_compliance_entitlements"
             referencedColumns: ["tenant_id"]
           },
+          {
+            foreignKeyName: "chat_messages_tenant_fk"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "chat_messages_tenant_fk"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["tenant_id"]
+          },
         ]
       }
       chat_sessions: {
@@ -3741,6 +4063,20 @@ export type Database = {
             referencedColumns: ["tenant_id"]
           },
           {
+            foreignKeyName: "chat_sessions_tenant_fk"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "chat_sessions_tenant_fk"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["tenant_id"]
+          },
+          {
             foreignKeyName: "chat_sessions_user_fk"
             columns: ["user_uuid"]
             isOneToOne: false
@@ -3752,6 +4088,13 @@ export type Database = {
             columns: ["user_uuid"]
             isOneToOne: false
             referencedRelation: "vw_consultant_capacity"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "chat_sessions_user_fk"
+            columns: ["user_uuid"]
+            isOneToOne: false
+            referencedRelation: "vw_consultant_load"
             referencedColumns: ["user_uuid"]
           },
         ]
@@ -4443,6 +4786,13 @@ export type Database = {
             referencedColumns: ["user_uuid"]
           },
           {
+            foreignKeyName: "client_document_requests_assigned_to_user_fk"
+            columns: ["assigned_to_user_uuid"]
+            isOneToOne: false
+            referencedRelation: "vw_consultant_load"
+            referencedColumns: ["user_uuid"]
+          },
+          {
             foreignKeyName: "client_document_requests_fulfilled_doc_fk"
             columns: ["fulfilled_document_id"]
             isOneToOne: false
@@ -4461,6 +4811,13 @@ export type Database = {
             columns: ["requested_by_user_uuid"]
             isOneToOne: false
             referencedRelation: "vw_consultant_capacity"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "client_document_requests_requested_by_user_fk"
+            columns: ["requested_by_user_uuid"]
+            isOneToOne: false
+            referencedRelation: "vw_consultant_load"
             referencedColumns: ["user_uuid"]
           },
           {
@@ -4489,6 +4846,20 @@ export type Database = {
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "v_tenant_compliance_entitlements"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "client_document_requests_tenant_fk"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "client_document_requests_tenant_fk"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
             referencedColumns: ["tenant_id"]
           },
         ]
@@ -4538,6 +4909,13 @@ export type Database = {
             referencedColumns: ["user_uuid"]
           },
           {
+            foreignKeyName: "client_document_shares_shared_by_user_fk"
+            columns: ["shared_by_user_uuid"]
+            isOneToOne: false
+            referencedRelation: "vw_consultant_load"
+            referencedColumns: ["user_uuid"]
+          },
+          {
             foreignKeyName: "client_document_shares_shared_with_user_fk"
             columns: ["shared_with_user_uuid"]
             isOneToOne: false
@@ -4549,6 +4927,13 @@ export type Database = {
             columns: ["shared_with_user_uuid"]
             isOneToOne: false
             referencedRelation: "vw_consultant_capacity"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "client_document_shares_shared_with_user_fk"
+            columns: ["shared_with_user_uuid"]
+            isOneToOne: false
+            referencedRelation: "vw_consultant_load"
             referencedColumns: ["user_uuid"]
           },
         ]
@@ -4629,6 +5014,20 @@ export type Database = {
             referencedColumns: ["tenant_id"]
           },
           {
+            foreignKeyName: "client_documents_tenant_fk"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "client_documents_tenant_fk"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["tenant_id"]
+          },
+          {
             foreignKeyName: "client_documents_uploaded_by_user_fk"
             columns: ["uploaded_by_user_uuid"]
             isOneToOne: false
@@ -4640,6 +5039,13 @@ export type Database = {
             columns: ["uploaded_by_user_uuid"]
             isOneToOne: false
             referencedRelation: "vw_consultant_capacity"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "client_documents_uploaded_by_user_fk"
+            columns: ["uploaded_by_user_uuid"]
+            isOneToOne: false
+            referencedRelation: "vw_consultant_load"
             referencedColumns: ["user_uuid"]
           },
         ]
@@ -4807,6 +5213,20 @@ export type Database = {
             referencedRelation: "v_tenant_compliance_entitlements"
             referencedColumns: ["tenant_id"]
           },
+          {
+            foreignKeyName: "client_impact_items_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "client_impact_items_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["tenant_id"]
+          },
         ]
       }
       client_impact_reports: {
@@ -4904,6 +5324,20 @@ export type Database = {
             referencedRelation: "v_tenant_compliance_entitlements"
             referencedColumns: ["tenant_id"]
           },
+          {
+            foreignKeyName: "client_impact_reports_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "client_impact_reports_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["tenant_id"]
+          },
         ]
       }
       client_liaisons: {
@@ -4958,6 +5392,13 @@ export type Database = {
             referencedColumns: ["user_uuid"]
           },
           {
+            foreignKeyName: "client_liaisons_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "vw_consultant_load"
+            referencedColumns: ["user_uuid"]
+          },
+          {
             foreignKeyName: "client_liaisons_vivacity_user_id_fkey"
             columns: ["vivacity_user_id"]
             isOneToOne: false
@@ -4969,6 +5410,13 @@ export type Database = {
             columns: ["vivacity_user_id"]
             isOneToOne: false
             referencedRelation: "vw_consultant_capacity"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "client_liaisons_vivacity_user_id_fkey"
+            columns: ["vivacity_user_id"]
+            isOneToOne: false
+            referencedRelation: "vw_consultant_load"
             referencedColumns: ["user_uuid"]
           },
         ]
@@ -5220,6 +5668,13 @@ export type Database = {
             referencedColumns: ["user_uuid"]
           },
           {
+            foreignKeyName: "client_portal_sessions_acting_user_fk"
+            columns: ["acting_user_uuid"]
+            isOneToOne: false
+            referencedRelation: "vw_consultant_load"
+            referencedColumns: ["user_uuid"]
+          },
+          {
             foreignKeyName: "client_portal_sessions_tenant_fk"
             columns: ["tenant_id"]
             isOneToOne: false
@@ -5248,6 +5703,20 @@ export type Database = {
             referencedColumns: ["tenant_id"]
           },
           {
+            foreignKeyName: "client_portal_sessions_tenant_fk"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "client_portal_sessions_tenant_fk"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["tenant_id"]
+          },
+          {
             foreignKeyName: "client_portal_sessions_viewer_user_fk"
             columns: ["viewer_user_uuid"]
             isOneToOne: false
@@ -5259,6 +5728,13 @@ export type Database = {
             columns: ["viewer_user_uuid"]
             isOneToOne: false
             referencedRelation: "vw_consultant_capacity"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "client_portal_sessions_viewer_user_fk"
+            columns: ["viewer_user_uuid"]
+            isOneToOne: false
+            referencedRelation: "vw_consultant_load"
             referencedColumns: ["user_uuid"]
           },
         ]
@@ -5575,6 +6051,20 @@ export type Database = {
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "v_tenant_compliance_entitlements"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "client_tga_reviews_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "client_tga_reviews_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
             referencedColumns: ["tenant_id"]
           },
         ]
@@ -6096,6 +6586,13 @@ export type Database = {
             referencedColumns: ["user_uuid"]
           },
           {
+            foreignKeyName: "consult_entries_consultant_id_fkey"
+            columns: ["consultant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_consultant_load"
+            referencedColumns: ["user_uuid"]
+          },
+          {
             foreignKeyName: "consult_entries_project_id_fkey"
             columns: ["project_id"]
             isOneToOne: false
@@ -6229,6 +6726,20 @@ export type Database = {
             referencedColumns: ["tenant_id"]
           },
           {
+            foreignKeyName: "consult_time_entries_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "consult_time_entries_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["tenant_id"]
+          },
+          {
             foreignKeyName: "consult_time_entries_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
@@ -6240,6 +6751,13 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "vw_consultant_capacity"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "consult_time_entries_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "vw_consultant_load"
             referencedColumns: ["user_uuid"]
           },
         ]
@@ -6306,6 +6824,13 @@ export type Database = {
             referencedColumns: ["user_uuid"]
           },
           {
+            foreignKeyName: "consultant_assignment_audit_lo_previous_consultant_user_id_fkey"
+            columns: ["previous_consultant_user_id"]
+            isOneToOne: false
+            referencedRelation: "vw_consultant_load"
+            referencedColumns: ["user_uuid"]
+          },
+          {
             foreignKeyName: "consultant_assignment_audit_lo_selected_consultant_user_id_fkey"
             columns: ["selected_consultant_user_id"]
             isOneToOne: false
@@ -6317,6 +6842,13 @@ export type Database = {
             columns: ["selected_consultant_user_id"]
             isOneToOne: false
             referencedRelation: "vw_consultant_capacity"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "consultant_assignment_audit_lo_selected_consultant_user_id_fkey"
+            columns: ["selected_consultant_user_id"]
+            isOneToOne: false
+            referencedRelation: "vw_consultant_load"
             referencedColumns: ["user_uuid"]
           },
           {
@@ -6345,6 +6877,20 @@ export type Database = {
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "v_tenant_compliance_entitlements"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "consultant_assignment_audit_log_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "consultant_assignment_audit_log_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
             referencedColumns: ["tenant_id"]
           },
         ]
@@ -6422,6 +6968,20 @@ export type Database = {
             referencedColumns: ["tenant_id"]
           },
           {
+            foreignKeyName: "consultant_capacity_audit_log_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "consultant_capacity_audit_log_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["tenant_id"]
+          },
+          {
             foreignKeyName: "consultant_capacity_audit_log_selected_consultant_user_id_fkey"
             columns: ["selected_consultant_user_id"]
             isOneToOne: false
@@ -6433,6 +6993,13 @@ export type Database = {
             columns: ["selected_consultant_user_id"]
             isOneToOne: false
             referencedRelation: "vw_consultant_capacity"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "consultant_capacity_audit_log_selected_consultant_user_id_fkey"
+            columns: ["selected_consultant_user_id"]
+            isOneToOne: false
+            referencedRelation: "vw_consultant_load"
             referencedColumns: ["user_uuid"]
           },
           {
@@ -6461,6 +7028,20 @@ export type Database = {
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "v_tenant_compliance_entitlements"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "consultant_capacity_audit_log_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "consultant_capacity_audit_log_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
             referencedColumns: ["tenant_id"]
           },
         ]
@@ -7226,6 +7807,20 @@ export type Database = {
             referencedColumns: ["tenant_id"]
           },
           {
+            foreignKeyName: "document_links_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "document_links_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["tenant_id"]
+          },
+          {
             foreignKeyName: "document_links_meeting_id_fkey"
             columns: ["meeting_id"]
             isOneToOne: false
@@ -7279,6 +7874,20 @@ export type Database = {
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "v_tenant_compliance_entitlements"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "document_links_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "document_links_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
             referencedColumns: ["tenant_id"]
           },
         ]
@@ -7616,6 +8225,13 @@ export type Database = {
             referencedRelation: "vw_consultant_capacity"
             referencedColumns: ["user_uuid"]
           },
+          {
+            foreignKeyName: "documents_categories_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "vw_consultant_load"
+            referencedColumns: ["user_uuid"]
+          },
         ]
       }
       documents_fields: {
@@ -7656,6 +8272,13 @@ export type Database = {
             columns: ["created_by"]
             isOneToOne: false
             referencedRelation: "vw_consultant_capacity"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "documents_fields_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "vw_consultant_load"
             referencedColumns: ["user_uuid"]
           },
         ]
@@ -7817,6 +8440,13 @@ export type Database = {
             columns: ["created_by"]
             isOneToOne: false
             referencedRelation: "vw_consultant_capacity"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "documents_stages_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "vw_consultant_load"
             referencedColumns: ["user_uuid"]
           },
         ]
@@ -8320,6 +8950,20 @@ export type Database = {
             referencedColumns: ["tenant_id"]
           },
           {
+            foreignKeyName: "email_messages_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "email_messages_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["tenant_id"]
+          },
+          {
             foreignKeyName: "email_messages_package_id_fkey"
             columns: ["package_id"]
             isOneToOne: false
@@ -8362,6 +9006,20 @@ export type Database = {
             referencedColumns: ["tenant_id"]
           },
           {
+            foreignKeyName: "email_messages_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "email_messages_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["tenant_id"]
+          },
+          {
             foreignKeyName: "email_messages_user_uuid_fkey"
             columns: ["user_uuid"]
             isOneToOne: false
@@ -8373,6 +9031,13 @@ export type Database = {
             columns: ["user_uuid"]
             isOneToOne: false
             referencedRelation: "vw_consultant_capacity"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "email_messages_user_uuid_fkey"
+            columns: ["user_uuid"]
+            isOneToOne: false
+            referencedRelation: "vw_consultant_load"
             referencedColumns: ["user_uuid"]
           },
         ]
@@ -8982,6 +9647,20 @@ export type Database = {
             referencedRelation: "v_tenant_compliance_entitlements"
             referencedColumns: ["tenant_id"]
           },
+          {
+            foreignKeyName: "eos_alerts_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "eos_alerts_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["tenant_id"]
+          },
         ]
       }
       eos_chart_drafts: {
@@ -9160,6 +9839,13 @@ export type Database = {
             referencedColumns: ["user_uuid"]
           },
           {
+            foreignKeyName: "eos_function_team_members_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "vw_consultant_load"
+            referencedColumns: ["user_uuid"]
+          },
+          {
             foreignKeyName: "eos_function_team_members_function_id_fkey"
             columns: ["function_id"]
             isOneToOne: false
@@ -9195,6 +9881,20 @@ export type Database = {
             referencedColumns: ["tenant_id"]
           },
           {
+            foreignKeyName: "eos_function_team_members_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "eos_function_team_members_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["tenant_id"]
+          },
+          {
             foreignKeyName: "eos_function_team_members_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
@@ -9206,6 +9906,13 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "vw_consultant_capacity"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "eos_function_team_members_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "vw_consultant_load"
             referencedColumns: ["user_uuid"]
           },
         ]
@@ -9350,6 +10057,20 @@ export type Database = {
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "v_tenant_compliance_entitlements"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "eos_health_snapshots_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "eos_health_snapshots_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
             referencedColumns: ["tenant_id"]
           },
         ]
@@ -9628,6 +10349,13 @@ export type Database = {
             referencedColumns: ["user_uuid"]
           },
           {
+            foreignKeyName: "eos_meeting_attendees_marked_by_fkey"
+            columns: ["marked_by"]
+            isOneToOne: false
+            referencedRelation: "vw_consultant_load"
+            referencedColumns: ["user_uuid"]
+          },
+          {
             foreignKeyName: "eos_meeting_attendees_meeting_id_fkey"
             columns: ["meeting_id"]
             isOneToOne: false
@@ -9695,6 +10423,13 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "vw_consultant_capacity"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "eos_meeting_attendees_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "vw_consultant_load"
             referencedColumns: ["user_uuid"]
           },
         ]
@@ -10705,6 +11440,13 @@ export type Database = {
             referencedColumns: ["user_uuid"]
           },
           {
+            foreignKeyName: "eos_meetings_quorum_override_by_fkey"
+            columns: ["quorum_override_by"]
+            isOneToOne: false
+            referencedRelation: "vw_consultant_load"
+            referencedColumns: ["user_uuid"]
+          },
+          {
             foreignKeyName: "eos_meetings_series_id_fkey"
             columns: ["series_id"]
             isOneToOne: false
@@ -10973,6 +11715,20 @@ export type Database = {
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "v_tenant_compliance_entitlements"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "eos_processes_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "eos_processes_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
             referencedColumns: ["tenant_id"]
           },
         ]
@@ -11816,6 +12572,13 @@ export type Database = {
             referencedColumns: ["user_uuid"]
           },
           {
+            foreignKeyName: "eos_user_roles_assigned_by_fkey"
+            columns: ["assigned_by"]
+            isOneToOne: false
+            referencedRelation: "vw_consultant_load"
+            referencedColumns: ["user_uuid"]
+          },
+          {
             foreignKeyName: "eos_user_roles_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
@@ -11827,6 +12590,13 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "vw_consultant_capacity"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "eos_user_roles_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "vw_consultant_load"
             referencedColumns: ["user_uuid"]
           },
         ]
@@ -12138,6 +12908,13 @@ export type Database = {
             referencedRelation: "vw_consultant_capacity"
             referencedColumns: ["user_uuid"]
           },
+          {
+            foreignKeyName: "evidence_request_items_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "vw_consultant_load"
+            referencedColumns: ["user_uuid"]
+          },
         ]
       }
       evidence_request_template_items: {
@@ -12230,6 +13007,13 @@ export type Database = {
             referencedRelation: "vw_consultant_capacity"
             referencedColumns: ["user_uuid"]
           },
+          {
+            foreignKeyName: "evidence_request_templates_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "vw_consultant_load"
+            referencedColumns: ["user_uuid"]
+          },
         ]
       }
       evidence_requests: {
@@ -12306,6 +13090,13 @@ export type Database = {
             referencedColumns: ["user_uuid"]
           },
           {
+            foreignKeyName: "evidence_requests_assigned_to_client_user_id_fkey"
+            columns: ["assigned_to_client_user_id"]
+            isOneToOne: false
+            referencedRelation: "vw_consultant_load"
+            referencedColumns: ["user_uuid"]
+          },
+          {
             foreignKeyName: "evidence_requests_linked_support_request_id_fkey"
             columns: ["linked_support_request_id"]
             isOneToOne: false
@@ -12324,6 +13115,13 @@ export type Database = {
             columns: ["requested_by_user_id"]
             isOneToOne: false
             referencedRelation: "vw_consultant_capacity"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "evidence_requests_requested_by_user_id_fkey"
+            columns: ["requested_by_user_id"]
+            isOneToOne: false
+            referencedRelation: "vw_consultant_load"
             referencedColumns: ["user_uuid"]
           },
           {
@@ -12359,6 +13157,20 @@ export type Database = {
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "v_tenant_compliance_entitlements"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "evidence_requests_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "evidence_requests_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
             referencedColumns: ["tenant_id"]
           },
         ]
@@ -12617,6 +13429,13 @@ export type Database = {
             referencedColumns: ["user_uuid"]
           },
           {
+            foreignKeyName: "generated_documents_shared_by_fkey"
+            columns: ["shared_by"]
+            isOneToOne: false
+            referencedRelation: "vw_consultant_load"
+            referencedColumns: ["user_uuid"]
+          },
+          {
             foreignKeyName: "generated_documents_source_document_id_fkey"
             columns: ["source_document_id"]
             isOneToOne: false
@@ -12744,6 +13563,20 @@ export type Database = {
             referencedRelation: "v_tenant_compliance_entitlements"
             referencedColumns: ["tenant_id"]
           },
+          {
+            foreignKeyName: "help_threads_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "help_threads_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["tenant_id"]
+          },
         ]
       }
       integration_slack: {
@@ -12856,6 +13689,13 @@ export type Database = {
             columns: ["invited_by"]
             isOneToOne: false
             referencedRelation: "vw_consultant_capacity"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "invitation_tokens_invited_by_fkey"
+            columns: ["invited_by"]
+            isOneToOne: false
+            referencedRelation: "vw_consultant_load"
             referencedColumns: ["user_uuid"]
           },
         ]
@@ -13076,6 +13916,13 @@ export type Database = {
             referencedRelation: "vw_consultant_capacity"
             referencedColumns: ["user_uuid"]
           },
+          {
+            foreignKeyName: "legacy_login_snapshot_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "vw_consultant_load"
+            referencedColumns: ["user_uuid"]
+          },
         ]
       }
       lookup_list_items: {
@@ -13202,6 +14049,13 @@ export type Database = {
             referencedColumns: ["user_uuid"]
           },
           {
+            foreignKeyName: "meeting_action_items_assigned_to_fkey"
+            columns: ["assigned_to"]
+            isOneToOne: false
+            referencedRelation: "vw_consultant_load"
+            referencedColumns: ["user_uuid"]
+          },
+          {
             foreignKeyName: "meeting_action_items_created_by_fkey"
             columns: ["created_by"]
             isOneToOne: false
@@ -13213,6 +14067,13 @@ export type Database = {
             columns: ["created_by"]
             isOneToOne: false
             referencedRelation: "vw_consultant_capacity"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "meeting_action_items_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "vw_consultant_load"
             referencedColumns: ["user_uuid"]
           },
           {
@@ -13305,6 +14166,13 @@ export type Database = {
             referencedColumns: ["user_uuid"]
           },
           {
+            foreignKeyName: "meeting_action_tasks_assigned_to_user_uuid_fkey"
+            columns: ["assigned_to_user_uuid"]
+            isOneToOne: false
+            referencedRelation: "vw_consultant_load"
+            referencedColumns: ["user_uuid"]
+          },
+          {
             foreignKeyName: "meeting_action_tasks_minutes_id_fkey"
             columns: ["minutes_id"]
             isOneToOne: false
@@ -13337,6 +14205,20 @@ export type Database = {
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "v_tenant_compliance_entitlements"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "meeting_action_tasks_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "meeting_action_tasks_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
             referencedColumns: ["tenant_id"]
           },
         ]
@@ -13437,6 +14319,20 @@ export type Database = {
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "v_tenant_compliance_entitlements"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "meeting_artifacts_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "meeting_artifacts_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
             referencedColumns: ["tenant_id"]
           },
         ]
@@ -13641,6 +14537,13 @@ export type Database = {
             referencedColumns: ["user_uuid"]
           },
           {
+            foreignKeyName: "meeting_notes_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "vw_consultant_load"
+            referencedColumns: ["user_uuid"]
+          },
+          {
             foreignKeyName: "meeting_notes_meeting_id_fkey"
             columns: ["meeting_id"]
             isOneToOne: false
@@ -13762,6 +14665,20 @@ export type Database = {
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "v_tenant_compliance_entitlements"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "meeting_sync_audit_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "meeting_sync_audit_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
             referencedColumns: ["tenant_id"]
           },
         ]
@@ -13887,6 +14804,20 @@ export type Database = {
             referencedColumns: ["tenant_id"]
           },
           {
+            foreignKeyName: "meetings_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "meetings_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["tenant_id"]
+          },
+          {
             foreignKeyName: "meetings_owner_user_uuid_fkey"
             columns: ["owner_user_uuid"]
             isOneToOne: false
@@ -13898,6 +14829,13 @@ export type Database = {
             columns: ["owner_user_uuid"]
             isOneToOne: false
             referencedRelation: "vw_consultant_capacity"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "meetings_owner_user_uuid_fkey"
+            columns: ["owner_user_uuid"]
+            isOneToOne: false
+            referencedRelation: "vw_consultant_load"
             referencedColumns: ["user_uuid"]
           },
           {
@@ -13933,6 +14871,20 @@ export type Database = {
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "v_tenant_compliance_entitlements"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "meetings_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "meetings_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
             referencedColumns: ["tenant_id"]
           },
         ]
@@ -14495,6 +15447,13 @@ export type Database = {
             referencedColumns: ["user_uuid"]
           },
           {
+            foreignKeyName: "notification_outbox_recipient_user_uuid_fkey"
+            columns: ["recipient_user_uuid"]
+            isOneToOne: false
+            referencedRelation: "vw_consultant_load"
+            referencedColumns: ["user_uuid"]
+          },
+          {
             foreignKeyName: "notification_outbox_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
@@ -14520,6 +15479,20 @@ export type Database = {
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "v_tenant_compliance_entitlements"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "notification_outbox_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "notification_outbox_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
             referencedColumns: ["tenant_id"]
           },
         ]
@@ -14610,6 +15583,13 @@ export type Database = {
             columns: ["user_uuid"]
             isOneToOne: false
             referencedRelation: "vw_consultant_capacity"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "notification_rules_user_uuid_fkey"
+            columns: ["user_uuid"]
+            isOneToOne: false
+            referencedRelation: "vw_consultant_load"
             referencedColumns: ["user_uuid"]
           },
         ]
@@ -15528,6 +16508,20 @@ export type Database = {
             referencedRelation: "v_tenant_compliance_entitlements"
             referencedColumns: ["tenant_id"]
           },
+          {
+            foreignKeyName: "people_analyzer_entries_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "people_analyzer_entries_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["tenant_id"]
+          },
         ]
       }
       people_analyzer_trends: {
@@ -15653,6 +16647,20 @@ export type Database = {
             referencedRelation: "v_tenant_compliance_entitlements"
             referencedColumns: ["tenant_id"]
           },
+          {
+            foreignKeyName: "people_analyzer_trends_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "people_analyzer_trends_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["tenant_id"]
+          },
         ]
       }
       place_holders: {
@@ -15723,6 +16731,13 @@ export type Database = {
             referencedColumns: ["user_uuid"]
           },
           {
+            foreignKeyName: "portal_document_audit_actor_user_id_fkey"
+            columns: ["actor_user_id"]
+            isOneToOne: false
+            referencedRelation: "vw_consultant_load"
+            referencedColumns: ["user_uuid"]
+          },
+          {
             foreignKeyName: "portal_document_audit_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
@@ -15748,6 +16763,20 @@ export type Database = {
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "v_tenant_compliance_entitlements"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "portal_document_audit_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "portal_document_audit_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
             referencedColumns: ["tenant_id"]
           },
         ]
@@ -15796,6 +16825,13 @@ export type Database = {
             columns: ["created_by"]
             isOneToOne: false
             referencedRelation: "vw_consultant_capacity"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "portal_document_categories_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "vw_consultant_load"
             referencedColumns: ["user_uuid"]
           },
         ]
@@ -15920,6 +16956,13 @@ export type Database = {
             referencedColumns: ["user_uuid"]
           },
           {
+            foreignKeyName: "portal_documents_deleted_by_fkey"
+            columns: ["deleted_by"]
+            isOneToOne: false
+            referencedRelation: "vw_consultant_load"
+            referencedColumns: ["user_uuid"]
+          },
+          {
             foreignKeyName: "portal_documents_evidence_item_fk"
             columns: ["evidence_request_item_id"]
             isOneToOne: false
@@ -15952,6 +16995,13 @@ export type Database = {
             columns: ["shared_by"]
             isOneToOne: false
             referencedRelation: "vw_consultant_capacity"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "portal_documents_shared_by_fkey"
+            columns: ["shared_by"]
+            isOneToOne: false
+            referencedRelation: "vw_consultant_load"
             referencedColumns: ["user_uuid"]
           },
           {
@@ -15990,6 +17040,20 @@ export type Database = {
             referencedColumns: ["tenant_id"]
           },
           {
+            foreignKeyName: "portal_documents_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "portal_documents_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["tenant_id"]
+          },
+          {
             foreignKeyName: "portal_documents_uploaded_by_fkey"
             columns: ["uploaded_by"]
             isOneToOne: false
@@ -16001,6 +17065,13 @@ export type Database = {
             columns: ["uploaded_by"]
             isOneToOne: false
             referencedRelation: "vw_consultant_capacity"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "portal_documents_uploaded_by_fkey"
+            columns: ["uploaded_by"]
+            isOneToOne: false
+            referencedRelation: "vw_consultant_load"
             referencedColumns: ["user_uuid"]
           },
         ]
@@ -16311,6 +17382,13 @@ export type Database = {
             referencedColumns: ["user_uuid"]
           },
           {
+            foreignKeyName: "processes_approved_by_fkey"
+            columns: ["approved_by"]
+            isOneToOne: false
+            referencedRelation: "vw_consultant_load"
+            referencedColumns: ["user_uuid"]
+          },
+          {
             foreignKeyName: "processes_owner_user_id_fkey"
             columns: ["owner_user_id"]
             isOneToOne: false
@@ -16322,6 +17400,13 @@ export type Database = {
             columns: ["owner_user_id"]
             isOneToOne: false
             referencedRelation: "vw_consultant_capacity"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "processes_owner_user_id_fkey"
+            columns: ["owner_user_id"]
+            isOneToOne: false
+            referencedRelation: "vw_consultant_load"
             referencedColumns: ["user_uuid"]
           },
         ]
@@ -16438,6 +17523,13 @@ export type Database = {
             columns: ["created_by"]
             isOneToOne: false
             referencedRelation: "vw_consultant_capacity"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "projects_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "vw_consultant_load"
             referencedColumns: ["user_uuid"]
           },
         ]
@@ -16776,6 +17868,20 @@ export type Database = {
             referencedRelation: "v_tenant_compliance_entitlements"
             referencedColumns: ["tenant_id"]
           },
+          {
+            foreignKeyName: "rock_outcomes_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "rock_outcomes_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["tenant_id"]
+          },
         ]
       }
       rto_cache: {
@@ -16843,6 +17949,13 @@ export type Database = {
             columns: ["created_by"]
             isOneToOne: false
             referencedRelation: "vw_consultant_capacity"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "rto_tips_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "vw_consultant_load"
             referencedColumns: ["user_uuid"]
           },
         ]
@@ -17280,6 +18393,20 @@ export type Database = {
             referencedRelation: "v_tenant_compliance_entitlements"
             referencedColumns: ["tenant_id"]
           },
+          {
+            foreignKeyName: "seat_health_scores_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "seat_health_scores_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["tenant_id"]
+          },
         ]
       }
       seat_measurable_entries: {
@@ -17356,6 +18483,20 @@ export type Database = {
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "v_tenant_compliance_entitlements"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "seat_measurable_entries_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "seat_measurable_entries_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
             referencedColumns: ["tenant_id"]
           },
         ]
@@ -17439,6 +18580,20 @@ export type Database = {
             referencedRelation: "v_tenant_compliance_entitlements"
             referencedColumns: ["tenant_id"]
           },
+          {
+            foreignKeyName: "seat_measurables_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "seat_measurables_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["tenant_id"]
+          },
         ]
       }
       seat_meeting_requirements: {
@@ -17514,6 +18669,20 @@ export type Database = {
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "v_tenant_compliance_entitlements"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "seat_meeting_requirements_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "seat_meeting_requirements_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
             referencedColumns: ["tenant_id"]
           },
         ]
@@ -17650,6 +18819,20 @@ export type Database = {
             referencedRelation: "v_tenant_compliance_entitlements"
             referencedColumns: ["tenant_id"]
           },
+          {
+            foreignKeyName: "seat_rebalancing_recommendations_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "seat_rebalancing_recommendations_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["tenant_id"]
+          },
         ]
       }
       seat_scorecard_versions: {
@@ -17714,6 +18897,20 @@ export type Database = {
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "v_tenant_compliance_entitlements"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "seat_scorecard_versions_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "seat_scorecard_versions_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
             referencedColumns: ["tenant_id"]
           },
         ]
@@ -17799,6 +18996,20 @@ export type Database = {
             referencedRelation: "v_tenant_compliance_entitlements"
             referencedColumns: ["tenant_id"]
           },
+          {
+            foreignKeyName: "seat_scorecards_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "seat_scorecards_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["tenant_id"]
+          },
         ]
       }
       sharepoint_access_log: {
@@ -17859,6 +19070,20 @@ export type Database = {
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "v_tenant_compliance_entitlements"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "sharepoint_access_log_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "sharepoint_access_log_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
             referencedColumns: ["tenant_id"]
           },
         ]
@@ -18829,6 +20054,13 @@ export type Database = {
             referencedColumns: ["user_uuid"]
           },
           {
+            foreignKeyName: "support_requests_assigned_to_user_id_fkey"
+            columns: ["assigned_to_user_id"]
+            isOneToOne: false
+            referencedRelation: "vw_consultant_load"
+            referencedColumns: ["user_uuid"]
+          },
+          {
             foreignKeyName: "support_requests_requested_by_user_id_fkey"
             columns: ["requested_by_user_id"]
             isOneToOne: false
@@ -18840,6 +20072,13 @@ export type Database = {
             columns: ["requested_by_user_id"]
             isOneToOne: false
             referencedRelation: "vw_consultant_capacity"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "support_requests_requested_by_user_id_fkey"
+            columns: ["requested_by_user_id"]
+            isOneToOne: false
+            referencedRelation: "vw_consultant_load"
             referencedColumns: ["user_uuid"]
           },
           {
@@ -18868,6 +20107,20 @@ export type Database = {
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "v_tenant_compliance_entitlements"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "support_requests_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "support_requests_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
             referencedColumns: ["tenant_id"]
           },
         ]
@@ -19223,6 +20476,13 @@ export type Database = {
             referencedColumns: ["user_uuid"]
           },
           {
+            foreignKeyName: "team_leader_assignments_leader_user_uuid_fkey"
+            columns: ["leader_user_uuid"]
+            isOneToOne: false
+            referencedRelation: "vw_consultant_load"
+            referencedColumns: ["user_uuid"]
+          },
+          {
             foreignKeyName: "team_leader_assignments_member_user_uuid_fkey"
             columns: ["member_user_uuid"]
             isOneToOne: false
@@ -19234,6 +20494,13 @@ export type Database = {
             columns: ["member_user_uuid"]
             isOneToOne: false
             referencedRelation: "vw_consultant_capacity"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "team_leader_assignments_member_user_uuid_fkey"
+            columns: ["member_user_uuid"]
+            isOneToOne: false
+            referencedRelation: "vw_consultant_load"
             referencedColumns: ["user_uuid"]
           },
         ]
@@ -19407,6 +20674,13 @@ export type Database = {
             referencedColumns: ["user_uuid"]
           },
           {
+            foreignKeyName: "tenant_compliance_memberships_assigned_csc_user_id_fkey"
+            columns: ["assigned_csc_user_id"]
+            isOneToOne: false
+            referencedRelation: "vw_consultant_load"
+            referencedColumns: ["user_uuid"]
+          },
+          {
             foreignKeyName: "tenant_compliance_memberships_assigned_team_leader_user_id_fkey"
             columns: ["assigned_team_leader_user_id"]
             isOneToOne: false
@@ -19418,6 +20692,13 @@ export type Database = {
             columns: ["assigned_team_leader_user_id"]
             isOneToOne: false
             referencedRelation: "vw_consultant_capacity"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "tenant_compliance_memberships_assigned_team_leader_user_id_fkey"
+            columns: ["assigned_team_leader_user_id"]
+            isOneToOne: false
+            referencedRelation: "vw_consultant_load"
             referencedColumns: ["user_uuid"]
           },
           {
@@ -19469,6 +20750,20 @@ export type Database = {
             referencedRelation: "v_tenant_compliance_entitlements"
             referencedColumns: ["tenant_id"]
           },
+          {
+            foreignKeyName: "tenant_compliance_memberships_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "tenant_compliance_memberships_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["tenant_id"]
+          },
         ]
       }
       tenant_conversations: {
@@ -19518,6 +20813,13 @@ export type Database = {
             referencedColumns: ["user_uuid"]
           },
           {
+            foreignKeyName: "tenant_conversations_assigned_to_user_fk"
+            columns: ["assigned_to_user_uuid"]
+            isOneToOne: false
+            referencedRelation: "vw_consultant_load"
+            referencedColumns: ["user_uuid"]
+          },
+          {
             foreignKeyName: "tenant_conversations_created_by_user_fk"
             columns: ["created_by_user_uuid"]
             isOneToOne: false
@@ -19529,6 +20831,13 @@ export type Database = {
             columns: ["created_by_user_uuid"]
             isOneToOne: false
             referencedRelation: "vw_consultant_capacity"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "tenant_conversations_created_by_user_fk"
+            columns: ["created_by_user_uuid"]
+            isOneToOne: false
+            referencedRelation: "vw_consultant_load"
             referencedColumns: ["user_uuid"]
           },
           {
@@ -19557,6 +20866,20 @@ export type Database = {
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "v_tenant_compliance_entitlements"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "tenant_conversations_tenant_fk"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "tenant_conversations_tenant_fk"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
             referencedColumns: ["tenant_id"]
           },
         ]
@@ -19605,6 +20928,13 @@ export type Database = {
             columns: ["csc_user_id"]
             isOneToOne: false
             referencedRelation: "vw_consultant_capacity"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "tenant_csc_assignments_csc_user_id_fkey"
+            columns: ["csc_user_id"]
+            isOneToOne: false
+            referencedRelation: "vw_consultant_load"
             referencedColumns: ["user_uuid"]
           },
         ]
@@ -19752,6 +21082,20 @@ export type Database = {
             referencedRelation: "v_tenant_compliance_entitlements"
             referencedColumns: ["tenant_id"]
           },
+          {
+            foreignKeyName: "tenant_document_request_attachments_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "tenant_document_request_attachments_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["tenant_id"]
+          },
         ]
       }
       tenant_document_requests: {
@@ -19827,6 +21171,20 @@ export type Database = {
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "v_tenant_compliance_entitlements"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "tenant_document_requests_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "tenant_document_requests_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
             referencedColumns: ["tenant_id"]
           },
         ]
@@ -19906,6 +21264,20 @@ export type Database = {
             referencedRelation: "v_tenant_compliance_entitlements"
             referencedColumns: ["tenant_id"]
           },
+          {
+            foreignKeyName: "tenant_documents_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "tenant_documents_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["tenant_id"]
+          },
         ]
       }
       tenant_members: {
@@ -19955,6 +21327,13 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "vw_consultant_capacity"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "tenant_members_user_id_users_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "vw_consultant_load"
             referencedColumns: ["user_uuid"]
           },
         ]
@@ -20078,6 +21457,13 @@ export type Database = {
             referencedColumns: ["user_uuid"]
           },
           {
+            foreignKeyName: "tenant_messages_sender_user_fk"
+            columns: ["sender_user_uuid"]
+            isOneToOne: false
+            referencedRelation: "vw_consultant_load"
+            referencedColumns: ["user_uuid"]
+          },
+          {
             foreignKeyName: "tenant_messages_tenant_fk"
             columns: ["tenant_id"]
             isOneToOne: false
@@ -20103,6 +21489,20 @@ export type Database = {
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "v_tenant_compliance_entitlements"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "tenant_messages_tenant_fk"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "tenant_messages_tenant_fk"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
             referencedColumns: ["tenant_id"]
           },
         ]
@@ -20444,6 +21844,20 @@ export type Database = {
             referencedRelation: "v_tenant_compliance_entitlements"
             referencedColumns: ["tenant_id"]
           },
+          {
+            foreignKeyName: "tenant_sharepoint_reference_links_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "tenant_sharepoint_reference_links_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["tenant_id"]
+          },
         ]
       }
       tenant_sharepoint_seed_runs: {
@@ -20523,6 +21937,20 @@ export type Database = {
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "v_tenant_compliance_entitlements"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "tenant_sharepoint_seed_runs_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "tenant_sharepoint_seed_runs_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
             referencedColumns: ["tenant_id"]
           },
         ]
@@ -20640,6 +22068,20 @@ export type Database = {
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "v_tenant_compliance_entitlements"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "tenant_sharepoint_settings_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "tenant_sharepoint_settings_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
             referencedColumns: ["tenant_id"]
           },
         ]
@@ -20760,6 +22202,20 @@ export type Database = {
             referencedRelation: "v_tenant_compliance_entitlements"
             referencedColumns: ["tenant_id"]
           },
+          {
+            foreignKeyName: "tenant_support_inclusions_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "tenant_support_inclusions_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["tenant_id"]
+          },
         ]
       }
       tenant_tier_capacity_config: {
@@ -20817,6 +22273,20 @@ export type Database = {
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "v_tenant_compliance_entitlements"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "tenant_tier_capacity_config_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "tenant_tier_capacity_config_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
             referencedColumns: ["tenant_id"]
           },
         ]
@@ -21015,6 +22485,13 @@ export type Database = {
             columns: ["assigned_consultant_user_id"]
             isOneToOne: false
             referencedRelation: "vw_consultant_capacity"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "tenants_assigned_consultant_user_id_fkey"
+            columns: ["assigned_consultant_user_id"]
+            isOneToOne: false
+            referencedRelation: "vw_consultant_load"
             referencedColumns: ["user_uuid"]
           },
         ]
@@ -21473,6 +22950,13 @@ export type Database = {
             referencedColumns: ["user_uuid"]
           },
           {
+            foreignKeyName: "tga_rto_acknowledgements_ack_by_user_fk"
+            columns: ["ack_by_user_uuid"]
+            isOneToOne: false
+            referencedRelation: "vw_consultant_load"
+            referencedColumns: ["user_uuid"]
+          },
+          {
             foreignKeyName: "tga_rto_acknowledgements_snapshot_fk"
             columns: ["snapshot_id"]
             isOneToOne: false
@@ -21505,6 +22989,20 @@ export type Database = {
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "v_tenant_compliance_entitlements"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "tga_rto_acknowledgements_tenant_fk"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "tga_rto_acknowledgements_tenant_fk"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
             referencedColumns: ["tenant_id"]
           },
         ]
@@ -21732,6 +23230,20 @@ export type Database = {
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "v_tenant_compliance_entitlements"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "tga_rto_flags_tenant_fk"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "tga_rto_flags_tenant_fk"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
             referencedColumns: ["tenant_id"]
           },
         ]
@@ -22976,6 +24488,20 @@ export type Database = {
             referencedRelation: "v_tenant_compliance_entitlements"
             referencedColumns: ["tenant_id"]
           },
+          {
+            foreignKeyName: "user_activity_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "user_activity_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["tenant_id"]
+          },
         ]
       }
       user_invitations: {
@@ -23081,6 +24607,13 @@ export type Database = {
             referencedRelation: "vw_consultant_capacity"
             referencedColumns: ["user_uuid"]
           },
+          {
+            foreignKeyName: "user_microsoft_identities_user_uuid_fkey"
+            columns: ["user_uuid"]
+            isOneToOne: true
+            referencedRelation: "vw_consultant_load"
+            referencedColumns: ["user_uuid"]
+          },
         ]
       }
       user_notification_integrations: {
@@ -23133,6 +24666,13 @@ export type Database = {
             columns: ["user_uuid"]
             isOneToOne: false
             referencedRelation: "vw_consultant_capacity"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "user_notification_integrations_user_uuid_fkey"
+            columns: ["user_uuid"]
+            isOneToOne: false
+            referencedRelation: "vw_consultant_load"
             referencedColumns: ["user_uuid"]
           },
         ]
@@ -23585,6 +25125,13 @@ export type Database = {
             referencedColumns: ["user_uuid"]
           },
           {
+            foreignKeyName: "users_cover_user_id_fkey"
+            columns: ["cover_user_id"]
+            isOneToOne: false
+            referencedRelation: "vw_consultant_load"
+            referencedColumns: ["user_uuid"]
+          },
+          {
             foreignKeyName: "users_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
@@ -23610,6 +25157,20 @@ export type Database = {
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "v_tenant_compliance_entitlements"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "users_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "users_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
             referencedColumns: ["tenant_id"]
           },
         ]
@@ -23692,6 +25253,20 @@ export type Database = {
             referencedRelation: "v_tenant_compliance_entitlements"
             referencedColumns: ["tenant_id"]
           },
+          {
+            foreignKeyName: "vector_embeddings_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "vector_embeddings_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["tenant_id"]
+          },
         ]
       }
       vector_index_logs: {
@@ -23744,6 +25319,13 @@ export type Database = {
             referencedColumns: ["user_uuid"]
           },
           {
+            foreignKeyName: "vector_index_logs_performed_by_fkey"
+            columns: ["performed_by"]
+            isOneToOne: false
+            referencedRelation: "vw_consultant_load"
+            referencedColumns: ["user_uuid"]
+          },
+          {
             foreignKeyName: "vector_index_logs_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
@@ -23769,6 +25351,20 @@ export type Database = {
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "v_tenant_compliance_entitlements"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "vector_index_logs_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "vector_index_logs_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
             referencedColumns: ["tenant_id"]
           },
         ]
@@ -23874,6 +25470,20 @@ export type Database = {
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "v_tenant_compliance_entitlements"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "calendar_events_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "calendar_events_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
             referencedColumns: ["tenant_id"]
           },
           {
@@ -24279,6 +25889,13 @@ export type Database = {
             referencedColumns: ["user_uuid"]
           },
           {
+            foreignKeyName: "meetings_owner_user_uuid_fkey"
+            columns: ["owner_user_uuid"]
+            isOneToOne: false
+            referencedRelation: "vw_consultant_load"
+            referencedColumns: ["user_uuid"]
+          },
+          {
             foreignKeyName: "meetings_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
@@ -24304,6 +25921,20 @@ export type Database = {
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "v_tenant_compliance_entitlements"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "meetings_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "meetings_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
             referencedColumns: ["tenant_id"]
           },
         ]
@@ -24405,6 +26036,20 @@ export type Database = {
             referencedRelation: "v_tenant_compliance_entitlements"
             referencedColumns: ["tenant_id"]
           },
+          {
+            foreignKeyName: "accountability_seats_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "accountability_seats_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["tenant_id"]
+          },
         ]
       }
       seat_succession_status: {
@@ -24441,6 +26086,13 @@ export type Database = {
             referencedColumns: ["user_uuid"]
           },
           {
+            foreignKeyName: "accountability_seats_backup_owner_user_id_fkey"
+            columns: ["backup_owner_user_id"]
+            isOneToOne: false
+            referencedRelation: "vw_consultant_load"
+            referencedColumns: ["user_uuid"]
+          },
+          {
             foreignKeyName: "accountability_seats_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
@@ -24466,6 +26118,20 @@ export type Database = {
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "v_tenant_compliance_entitlements"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "accountability_seats_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "accountability_seats_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
             referencedColumns: ["tenant_id"]
           },
         ]
@@ -24758,6 +26424,13 @@ export type Database = {
             referencedColumns: ["user_uuid"]
           },
           {
+            foreignKeyName: "tenant_compliance_memberships_assigned_csc_user_id_fkey"
+            columns: ["assigned_csc_user_id"]
+            isOneToOne: false
+            referencedRelation: "vw_consultant_load"
+            referencedColumns: ["user_uuid"]
+          },
+          {
             foreignKeyName: "tenant_compliance_memberships_assigned_team_leader_user_id_fkey"
             columns: ["assigned_team_leader_user_id"]
             isOneToOne: false
@@ -24771,10 +26444,43 @@ export type Database = {
             referencedRelation: "vw_consultant_capacity"
             referencedColumns: ["user_uuid"]
           },
+          {
+            foreignKeyName: "tenant_compliance_memberships_assigned_team_leader_user_id_fkey"
+            columns: ["assigned_team_leader_user_id"]
+            isOneToOne: false
+            referencedRelation: "vw_consultant_load"
+            referencedColumns: ["user_uuid"]
+          },
         ]
+      }
+      vw_client_capacity_diagnostics: {
+        Row: {
+          base_weekly_required: number | null
+          client_id: number | null
+          client_name: string | null
+          computed_weekly_required: number | null
+          has_tier_config: boolean | null
+          onboarding_multiplier: number | null
+          package_id: number | null
+          status: string | null
+          tenant_id: number | null
+          tier_name: string | null
+        }
+        Relationships: []
       }
       vw_consultant_capacity: {
         Row: {
+          tenant_id: number | null
+          user_uuid: string | null
+          weekly_assignable_hours: number | null
+        }
+        Relationships: []
+      }
+      vw_consultant_load: {
+        Row: {
+          active_clients_count: number | null
+          current_load: number | null
+          remaining_capacity: number | null
           tenant_id: number | null
           user_uuid: string | null
           weekly_assignable_hours: number | null
@@ -25081,7 +26787,7 @@ export type Database = {
         Returns: number
       }
       compute_consultant_current_load: {
-        Args: { p_user_id: string }
+        Args: { p_user_uuid: string }
         Returns: number
       }
       compute_consultant_weekly_capacity: {
