@@ -18,8 +18,15 @@ import {
   Users,
   User,
   Search,
-  GitBranch
+  GitBranch,
+  ChevronDown
 } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { useEosRocksHierarchy } from '@/hooks/useEosRocksHierarchy';
 import { useVivacityTeamUsers } from '@/hooks/useVivacityTeamUsers';
 import { useRBAC } from '@/hooks/useRBAC';
@@ -168,14 +175,29 @@ function RocksHierarchyContent() {
         icon={Target}
         actions={
           <PermissionTooltip permission="rocks:create" action="create rocks">
-            <Button 
-              onClick={() => setShowCompanyDialog(true)}
-              disabled={!canCreateRocks()}
-            >
-              <Plus className="w-4 h-4 mr-2" />
-              <span className="hidden sm:inline">Add Company Rock</span>
-              <span className="sm:hidden">Add Rock</span>
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild disabled={!canCreateRocks()}>
+                <Button disabled={!canCreateRocks()}>
+                  <Plus className="w-4 h-4 mr-2" />
+                  Add Rock
+                  <ChevronDown className="w-4 h-4 ml-2" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="bg-popover border border-border shadow-lg z-50">
+                <DropdownMenuItem onClick={() => setShowCompanyDialog(true)}>
+                  <Building2 className="w-4 h-4 mr-2" />
+                  Company Rock
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => { setSelectedParentRock(null); setShowTeamDialog(true); }}>
+                  <Users className="w-4 h-4 mr-2" />
+                  Team Rock
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => { setSelectedParentRock(null); setShowIndividualDialog(true); }}>
+                  <User className="w-4 h-4 mr-2" />
+                  Individual Rock
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </PermissionTooltip>
         }
       />
