@@ -276,15 +276,26 @@ export function useClientProfile(tenantId: number | null) {
         throw tenantResult.error;
       }
 
-      // Map tenant columns to ClientProfile interface
+      // If TGA is linked and verified, fetch organisation data to auto-populate fields
+      let tgaOrg: any = null;
+      if (linkResult.data?.link_status === 'verified' && linkResult.data?.external_id) {
+        const { data: orgData } = await supabase
+          .from('tga_organisations')
+          .select('legal_name, trading_name, abn, website, organisation_type')
+          .eq('code', linkResult.data.external_id)
+          .maybeSingle();
+        tgaOrg = orgData;
+      }
+
+      // Map tenant columns to ClientProfile interface, overlaying TGA data where available
       const profileData: ClientProfile = {
         tenant_id: tenantResult.data.id,
-        legal_name: tenantResult.data.legal_name,
-        trading_name: tenantResult.data.rto_name,
-        abn: tenantResult.data.abn,
+        legal_name: tgaOrg?.legal_name || tenantResult.data.legal_name,
+        trading_name: tgaOrg?.trading_name || tenantResult.data.rto_name,
+        abn: tgaOrg?.abn || tenantResult.data.abn,
         acn: tenantResult.data.acn,
         org_type: null, // Column not yet in database
-        website: tenantResult.data.website,
+        website: tgaOrg?.website || tenantResult.data.website,
         state: tenantResult.data.state,
         rto_number: tenantResult.data.rto_id,
         cricos_number: tenantResult.data.cricos_id,
