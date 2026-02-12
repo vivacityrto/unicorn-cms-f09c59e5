@@ -7275,6 +7275,7 @@ export type Database = {
       }
       consultant_capacity_audit_log: {
         Row: {
+          assignment_method: string
           candidate_snapshot: Json
           client_id: number | null
           consultant_current_load: number | null
@@ -7289,6 +7290,7 @@ export type Database = {
           weekly_assignable_hours: number | null
         }
         Insert: {
+          assignment_method?: string
           candidate_snapshot?: Json
           client_id?: number | null
           consultant_current_load?: number | null
@@ -7303,6 +7305,7 @@ export type Database = {
           weekly_assignable_hours?: number | null
         }
         Update: {
+          assignment_method?: string
           candidate_snapshot?: Json
           client_id?: number | null
           consultant_current_load?: number | null
