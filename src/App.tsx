@@ -1,4 +1,4 @@
-import { lazy, Suspense } from "react";
+import { lazy, Suspense, useEffect } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -12,6 +12,8 @@ import { ClientPreviewProvider } from "./contexts/ClientPreviewContext";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { LazyLoadFallback } from "./components/LazyLoadFallback";
 import { ErrorBoundary } from "./components/ErrorBoundary";
+import { startVersionChecking, stopVersionChecking } from "./utils/versionCheck";
+import { DevDiagnosticsPanel } from "./components/DevDiagnosticsPanel";
 
  // Lazy load all page components for code splitting
  const Index = lazy(() => import("./pages/Index"));
@@ -153,10 +155,30 @@ const ClientProfileWrapperNew = lazy(() => import("./pages/client/ClientProfileW
 const ClientTgaDetailsWrapperNew = lazy(() => import("./pages/client/ClientTgaDetailsWrapper"));
 const ClientFilesWrapperNew = lazy(() => import("./pages/client/ClientFilesWrapper"));
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 2 * 60 * 1000, // 2 minutes — data is fresh for this window
+      refetchOnWindowFocus: true, // Re-fetch when user tabs back
+      retry: 1,
+    },
+  },
+});
+
+/**
+ * Root wrapper that starts the build-version auto-reload checker.
+ */
+function VersionGuard({ children }: { children: React.ReactNode }) {
+  useEffect(() => {
+    startVersionChecking();
+    return () => stopVersionChecking();
+  }, []);
+  return <>{children}</>;
+}
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
+  <VersionGuard>
     <TooltipProvider>
       <Toaster />
       <Sonner />
@@ -947,6 +969,8 @@ const App = () => (
         </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>
+    <DevDiagnosticsPanel />
+  </VersionGuard>
   </QueryClientProvider>
 );
 

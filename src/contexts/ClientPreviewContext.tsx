@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useRBAC } from "@/hooks/useRBAC";
@@ -43,6 +44,7 @@ interface StoredPreviewSession {
 export const ClientPreviewProvider = ({ children }: { children: ReactNode }) => {
   const { profile, session } = useAuth();
   const { isSuperAdmin, isVivacityTeam } = useRBAC();
+  const queryClient = useQueryClient();
   
   const [isPreviewMode, setIsPreviewMode] = useState(false);
   const [previewTenant, setPreviewTenant] = useState<PreviewTenant | null>(null);
@@ -139,6 +141,9 @@ export const ClientPreviewProvider = ({ children }: { children: ReactNode }) => 
       setPreviewSessionId(auditData.id);
       setPreviewReason(reason || null);
 
+      // Invalidate tenant-scoped caches so the preview shows fresh data
+      queryClient.invalidateQueries();
+
       return true;
     } catch (error) {
       console.error("Error starting preview:", error);
@@ -178,9 +183,11 @@ export const ClientPreviewProvider = ({ children }: { children: ReactNode }) => 
       setPreviewSessionId(null);
       setPreviewReason(null);
       sessionStorage.removeItem(PREVIEW_SESSION_KEY);
+      // Invalidate all caches so we return to the admin's own data
+      queryClient.invalidateQueries();
       setLoading(false);
     }
-  }, [previewSessionId]);
+  }, [previewSessionId, queryClient]);
 
   return (
     <ClientPreviewContext.Provider

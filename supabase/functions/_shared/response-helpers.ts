@@ -74,6 +74,7 @@ export function jsonOk<T>(data: T, status = 200): Response {
     status,
     headers: {
       "Content-Type": "application/json",
+      "Cache-Control": "no-store",
       ...corsHeaders,
     },
   });
@@ -98,6 +99,7 @@ export function jsonError(status: number, code: string, detail?: string): Respon
     status,
     headers: {
       "Content-Type": "application/json",
+      "Cache-Control": "no-store",
       ...corsHeaders,
     },
   });
@@ -116,6 +118,7 @@ export function jsonRaw<T>(data: T, status = 200): Response {
     status,
     headers: {
       "Content-Type": "application/json",
+      "Cache-Control": "no-store",
       ...corsHeaders,
     },
   });
