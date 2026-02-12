@@ -1,0 +1,1 @@
+UPDATE tenants SET status = 'archived' WHERE id IN (6328, 7493, 7375, 7390);
