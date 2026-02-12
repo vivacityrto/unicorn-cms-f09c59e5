@@ -35,6 +35,8 @@ export interface MembershipUsage {
   percent_utilised: number;
   membership_year_start: string;
   membership_year_end: string;
+  tier_name?: string;
+  flags?: string[];
   error?: string;
 }
 
@@ -44,7 +46,7 @@ export function useMembershipUsage(tenantId: number | null) {
     queryFn: async (): Promise<MembershipUsage | null> => {
       if (!tenantId) return null;
       const { data, error } = await supabase.rpc('rpc_get_membership_usage', {
-        p_tenant_id: tenantId,
+        p_tenant_id: Number(tenantId),
       });
       if (error) throw error;
       if (!data) return null;
@@ -54,6 +56,34 @@ export function useMembershipUsage(tenantId: number | null) {
       return parsed as MembershipUsage;
     },
     enabled: !!tenantId,
+    staleTime: 30_000,
+  });
+}
+
+export interface ConsultantClient {
+  tenant_id: number;
+  name: string;
+  tier_name: string;
+  weekly_required: number;
+  onboarding_multiplier: number;
+  percent_utilised: number;
+}
+
+export function useConsultantClients(consultantUuid: string | null) {
+  return useQuery({
+    queryKey: ['consultant-clients', consultantUuid],
+    queryFn: async (): Promise<ConsultantClient[]> => {
+      if (!consultantUuid) return [];
+      const { data, error } = await supabase.rpc('rpc_get_consultant_clients', {
+        p_consultant_uuid: consultantUuid,
+      });
+      if (error) throw error;
+      if (!data) return [];
+      
+      const parsed = typeof data === 'string' ? JSON.parse(data) : data;
+      return (Array.isArray(parsed) ? parsed : []) as ConsultantClient[];
+    },
+    enabled: !!consultantUuid,
     staleTime: 30_000,
   });
 }
