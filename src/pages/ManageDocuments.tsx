@@ -935,10 +935,9 @@ export default function ManageDocuments() {
   const handleViewFile = async (filePath: string, e: React.MouseEvent) => {
     e.stopPropagation();
     try {
-      const {
-        data
-      } = await supabase.storage.from("document-files").getPublicUrl(filePath);
-      window.open(data.publicUrl, "_blank");
+      const { data, error } = await supabase.storage.from("document-files").createSignedUrl(filePath, 3600);
+      if (error || !data?.signedUrl) throw error || new Error('Failed to generate file URL');
+      window.open(data.signedUrl, "_blank");
     } catch (error: any) {
       toast({
         title: "Error",
@@ -1264,11 +1263,9 @@ export default function ManageDocuments() {
                               if (publicIndex !== -1 && segments.length > publicIndex + 2) {
                                 const bucket = segments[publicIndex + 1];
                                 const objectPath = segments.slice(publicIndex + 2).join("/");
-                                const {
-                                  data
-                                } = supabase.storage.from(bucket).getPublicUrl(objectPath);
-                                if (data.publicUrl) {
-                                  window.open(data.publicUrl, "_blank");
+                                const { data } = await supabase.storage.from(bucket).createSignedUrl(objectPath, 3600);
+                                if (data?.signedUrl) {
+                                  window.open(data.signedUrl, "_blank");
                                 } else {
                                   window.open(file.url, "_blank");
                                 }
@@ -1276,11 +1273,9 @@ export default function ManageDocuments() {
                                 window.open(file.url, "_blank");
                               }
                             } else {
-                              const {
-                                data
-                              } = supabase.storage.from("document-files").getPublicUrl(file.url);
-                              if (data.publicUrl) {
-                                window.open(data.publicUrl, "_blank");
+                              const { data } = await supabase.storage.from("document-files").createSignedUrl(file.url, 3600);
+                              if (data?.signedUrl) {
+                                window.open(data.signedUrl, "_blank");
                               }
                             }
                           } catch {
