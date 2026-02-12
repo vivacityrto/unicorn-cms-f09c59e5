@@ -151,7 +151,24 @@ export function ConsultantCapacityTable() {
             </div>
           </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-3">
+          {/* CSC Client Distribution Summary */}
+          <div className="flex flex-wrap items-center gap-2 p-2.5 rounded-md bg-muted/50">
+            <span className="text-xs font-medium text-muted-foreground">Clients:</span>
+            {filtered
+              .filter(c => c.active_clients > 0)
+              .sort((a, b) => b.active_clients - a.active_clients)
+              .map(c => (
+                <Badge
+                  key={c.user_uuid}
+                  variant="outline"
+                  className="text-xs gap-1 cursor-pointer hover:bg-accent"
+                  onClick={() => setSelectedConsultant(c)}
+                >
+                  {c.first_name} <span className="font-bold">{c.active_clients}</span>
+                </Badge>
+              ))}
+          </div>
           <div className="rounded-md border">
             <Table>
               <TableHeader>

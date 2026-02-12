@@ -688,6 +688,42 @@ export default function ManageTenants() {
         </div>
       </div>
 
+      {/* CSC Client Distribution */}
+      {(() => {
+        const activeTenantsList = tenants.filter(t => t.status === 'active');
+        const cscCounts: Record<string, { name: string; count: number }> = {};
+        let unassigned = 0;
+        activeTenantsList.forEach(t => {
+          if (t.csc_user_id && t.csc_name) {
+            if (!cscCounts[t.csc_user_id]) cscCounts[t.csc_user_id] = { name: t.csc_name, count: 0 };
+            cscCounts[t.csc_user_id].count++;
+          } else {
+            unassigned++;
+          }
+        });
+        const sorted = Object.entries(cscCounts).sort((a, b) => b[1].count - a[1].count);
+        return (
+          <div className="flex flex-wrap items-center gap-2 p-3 rounded-lg border bg-card">
+            <span className="text-sm font-medium text-muted-foreground mr-1">CSC Load:</span>
+            {sorted.map(([id, { name, count }]) => (
+              <Badge
+                key={id}
+                variant={cscFilter === id ? "default" : "outline"}
+                className="cursor-pointer text-xs gap-1"
+                onClick={() => setCscFilter(cscFilter === id ? 'all' : id)}
+              >
+                {name.split(' ')[0]} <span className="font-bold">{count}</span>
+              </Badge>
+            ))}
+            {unassigned > 0 && (
+              <Badge variant="outline" className="text-xs gap-1 text-amber-600 border-amber-300">
+                Unassigned <span className="font-bold">{unassigned}</span>
+              </Badge>
+            )}
+          </div>
+        );
+      })()}
+
       {/* Filters and Search */}
       <div className="flex flex-col md:flex-row gap-4">
         <div className="relative flex-1">
@@ -722,19 +758,25 @@ export default function ManageTenants() {
         <Combobox 
           options={[
             { value: "all", label: "All CSC", icon: Users, iconColor: "text-muted-foreground" },
-            ...cscFilterOptions.filter(u => !u.archived).map(csc => ({
-              value: csc.user_uuid,
-              label: `${csc.first_name} ${csc.last_name}`,
-              icon: Users,
-              iconColor: "text-primary"
-            })),
-            ...cscFilterOptions.filter(u => u.archived).map(csc => ({
-              value: csc.user_uuid,
-              label: `${csc.first_name} ${csc.last_name}`,
-              badge: "Archived",
-              icon: Archive,
-              iconColor: "text-muted-foreground"
-            }))
+            ...cscFilterOptions.filter(u => !u.archived).map(csc => {
+              const clientCount = tenants.filter(t => t.status === 'active' && t.csc_user_id === csc.user_uuid).length;
+              return {
+                value: csc.user_uuid,
+                label: `${csc.first_name} ${csc.last_name} (${clientCount})`,
+                icon: Users,
+                iconColor: "text-primary"
+              };
+            }),
+            ...cscFilterOptions.filter(u => u.archived).map(csc => {
+              const clientCount = tenants.filter(t => t.status === 'active' && t.csc_user_id === csc.user_uuid).length;
+              return {
+                value: csc.user_uuid,
+                label: `${csc.first_name} ${csc.last_name} (${clientCount})`,
+                badge: "Archived",
+                icon: Archive,
+                iconColor: "text-muted-foreground"
+              };
+            })
           ]} 
           value={cscFilter} 
           onValueChange={setCscFilter} 
