@@ -249,6 +249,7 @@ export function useClientManagement() {
 export function useClientProfile(tenantId: number | null) {
   const [profile, setProfile] = useState<ClientProfile | null>(null);
   const [registryLink, setRegistryLink] = useState<RegistryLink | null>(null);
+  const [tgaConnected, setTgaConnected] = useState(false);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
@@ -261,7 +262,7 @@ export function useClientProfile(tenantId: number | null) {
       const [tenantResult, linkResult] = await Promise.all([
         supabase
           .from('tenants')
-          .select('id, legal_name, rto_name, abn, acn, website, state, rto_id, cricos_id, lms, sms, accounting_system, risk_level, updated_at')
+          .select('id, legal_name, rto_name, abn, acn, website, state, rto_id, cricos_id, lms, sms, accounting_system, risk_level, updated_at, tga_status, tga_legal_name, tga_snapshot')
           .eq('id', tenantId)
           .single(),
         supabase
@@ -276,38 +277,45 @@ export function useClientProfile(tenantId: number | null) {
         throw tenantResult.error;
       }
 
-      // If TGA is linked (any active status), fetch organisation data to auto-populate fields
-      let tgaOrg: any = null;
-      const tgaIsLinked = linkResult.data?.link_status === 'linked' || linkResult.data?.link_status === 'verified';
-      if (tgaIsLinked && linkResult.data?.external_id) {
-        const { data: orgData } = await supabase
-          .from('tga_organisations')
-          .select('legal_name, trading_name, abn, website, organisation_type')
-          .eq('code', linkResult.data.external_id)
-          .maybeSingle();
-        tgaOrg = orgData;
+      // Extract TGA data from tenant snapshot if TGA is connected
+      const tenant = tenantResult.data;
+      const tgaConnected = tenant.tga_status === 'connected';
+      const snapshot = tenant.tga_snapshot as Record<string, any> | null;
+
+      let tgaLegalName: string | null = null;
+      let tgaTradingName: string | null = null;
+      let tgaWebsite: string | null = null;
+
+      if (tgaConnected && snapshot) {
+        const legalNames = snapshot.legalNames as any[];
+        const tradingNames = snapshot.tradingNames as any[];
+        const webAddresses = snapshot.webAddresses as any[];
+        tgaLegalName = legalNames?.[0]?.name || tenant.tga_legal_name || null;
+        tgaTradingName = tradingNames?.[0]?.name || null;
+        tgaWebsite = webAddresses?.[0]?.url || null;
       }
 
       // Map tenant columns to ClientProfile interface, overlaying TGA data where available
       const profileData: ClientProfile = {
-        tenant_id: tenantResult.data.id,
-        legal_name: tgaOrg?.legal_name || tenantResult.data.legal_name,
-        trading_name: tgaOrg?.trading_name || tenantResult.data.rto_name,
-        abn: tgaOrg?.abn || tenantResult.data.abn,
-        acn: tenantResult.data.acn,
+        tenant_id: tenant.id,
+        legal_name: tgaLegalName || tenant.legal_name,
+        trading_name: tgaTradingName || tenant.rto_name,
+        abn: tenant.abn,
+        acn: tenant.acn,
         org_type: null, // Column not yet in database
-        website: tgaOrg?.website || tenantResult.data.website,
-        state: tenantResult.data.state,
-        rto_number: tenantResult.data.rto_id,
-        cricos_number: tenantResult.data.cricos_id,
-        lms: tenantResult.data.lms,
-        sms: tenantResult.data.sms,
-        accounting_system: tenantResult.data.accounting_system,
-        risk_level: tenantResult.data.risk_level,
-        updated_at: tenantResult.data.updated_at
+        website: tgaWebsite || tenant.website,
+        state: tenant.state,
+        rto_number: tenant.rto_id,
+        cricos_number: tenant.cricos_id,
+        lms: tenant.lms,
+        sms: tenant.sms,
+        accounting_system: tenant.accounting_system,
+        risk_level: tenant.risk_level,
+        updated_at: tenant.updated_at
       };
 
       setProfile(profileData);
+      setTgaConnected(tgaConnected);
       setRegistryLink(linkResult.data);
     } catch (error: any) {
       console.error('Error fetching client profile:', error);
@@ -510,6 +518,7 @@ export function useClientProfile(tenantId: number | null) {
   return {
     profile,
     registryLink,
+    tgaConnected,
     loading,
     saveProfile,
     setTgaLink,
