@@ -37,10 +37,14 @@ export function MembershipUsageCard({ tenantId }: MembershipUsageCardProps) {
     );
   }
 
-  const isOverage = usage.percent_utilised > 100;
-  const isAt90 = usage.percent_utilised >= 90 && !isOverage;
-  const isAt75 = usage.percent_utilised >= 75 && !isAt90 && !isOverage;
-  const progressPct = Math.min(usage.percent_utilised, 100);
+  const hoursUsed = usage.hours_used_ytd ?? 0;
+  const hoursRemaining = usage.hours_remaining ?? 0;
+  const percentUtilised = usage.percent_utilised ?? 0;
+
+  const isOverage = percentUtilised > 100;
+  const isAt90 = percentUtilised >= 90 && !isOverage;
+  const isAt75 = percentUtilised >= 75 && !isAt90 && !isOverage;
+  const progressPct = Math.min(percentUtilised, 100);
 
   const progressClass = isOverage
     ? 'bg-red-500'
@@ -93,7 +97,7 @@ export function MembershipUsageCard({ tenantId }: MembershipUsageCardProps) {
         <div className="space-y-2">
           <div className="flex justify-between text-sm">
             <span className="text-muted-foreground">
-              {usage.hours_used_ytd.toFixed(1)}h used
+              {hoursUsed.toFixed(1)}h used
             </span>
             <span className="font-medium">
               {usage.included_hours_annual}h included
@@ -115,13 +119,13 @@ export function MembershipUsageCard({ tenantId }: MembershipUsageCardProps) {
           <div>
             <p className="text-xs text-muted-foreground">Used YTD</p>
             <p className={`text-sm font-medium ${isOverage ? 'text-red-600' : ''}`}>
-              {usage.hours_used_ytd.toFixed(1)}h
+              {hoursUsed.toFixed(1)}h
             </p>
           </div>
           <div>
             <p className="text-xs text-muted-foreground">Remaining</p>
-            <p className={`text-sm font-medium ${usage.hours_remaining <= 0 ? 'text-red-600' : 'text-green-600'}`}>
-              {usage.hours_remaining.toFixed(1)}h
+            <p className={`text-sm font-medium ${hoursRemaining <= 0 ? 'text-red-600' : 'text-green-600'}`}>
+              {hoursRemaining.toFixed(1)}h
             </p>
           </div>
         </div>
