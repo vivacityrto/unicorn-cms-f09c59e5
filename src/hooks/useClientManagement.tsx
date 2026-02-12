@@ -349,7 +349,7 @@ export function useClientProfile(tenantId: number | null) {
       if ('trading_name' in updates) tenantUpdates.rto_name = updates.trading_name;
       if ('abn' in updates) tenantUpdates.abn = updates.abn;
       if ('acn' in updates) tenantUpdates.acn = updates.acn;
-      if ('org_type' in updates) tenantUpdates.org_type = updates.org_type;
+      // org_type is derived from TGA data, not stored on tenants table
       if ('website' in updates) tenantUpdates.website = updates.website;
       if ('state' in updates) tenantUpdates.state = updates.state;
       if ('rto_number' in updates) tenantUpdates.rto_id = updates.rto_number;
