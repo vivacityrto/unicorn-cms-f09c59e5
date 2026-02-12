@@ -6,9 +6,10 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Target, Plus, X, Armchair, Building2 } from 'lucide-react';
+import { Target, Plus, X, Armchair, Building2, Sparkles, Loader2, Info } from 'lucide-react';
 import { useEosRocksHierarchy } from '@/hooks/useEosRocksHierarchy';
 import { useVivacityTeamUsers, VIVACITY_TENANT_ID } from '@/hooks/useVivacityTeamUsers';
+import { useAISuggestRock } from '@/hooks/useAISuggestRock';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { getCurrentQuarter } from '@/utils/rockRollup';
@@ -22,6 +23,7 @@ interface CreateCompanyRockDialogProps {
 
 export function CreateCompanyRockDialog({ open, onOpenChange, onSuccess }: CreateCompanyRockDialogProps) {
   const { createRock, activeVto } = useEosRocksHierarchy();
+  const { suggestRock, isGenerating } = useAISuggestRock();
   const currentQuarter = getCurrentQuarter();
   
   const [title, setTitle] = useState('');
@@ -33,6 +35,24 @@ export function CreateCompanyRockDialog({ open, onOpenChange, onSuccess }: Creat
   const [quarterNumber, setQuarterNumber] = useState(currentQuarter.quarter);
   const [dueDate, setDueDate] = useState('');
   const [milestones, setMilestones] = useState<{ id: string; text: string; completed: boolean }[]>([]);
+  const [aiDraft, setAiDraft] = useState(false);
+
+  const handleAISuggest = async () => {
+    const result = await suggestRock({
+      rock_level: 'company',
+      tenant_id: VIVACITY_TENANT_ID,
+    });
+    if (result) {
+      setTitle(result.title);
+      setDescription(result.description);
+      setIssue(result.issue);
+      setOutcome(result.outcome);
+      setMilestones(
+        result.milestones.map((m) => ({ id: crypto.randomUUID(), text: m.text, completed: false }))
+      );
+      setAiDraft(true);
+    }
+  };
 
   // Helper function to calculate quarter end date
   const getQuarterEndDate = (year: number, quarter: number): string => {
@@ -138,6 +158,28 @@ export function CreateCompanyRockDialog({ open, onOpenChange, onSuccess }: Creat
         </DialogHeader>
 
         <div className="space-y-4 py-4">
+          {/* AI Suggest */}
+          <Button
+            type="button"
+            variant="outline"
+            className="w-full"
+            onClick={handleAISuggest}
+            disabled={isGenerating}
+          >
+            {isGenerating ? (
+              <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Generating suggestion…</>
+            ) : (
+              <><Sparkles className="h-4 w-4 mr-2" /> Suggest with AI</>
+            )}
+          </Button>
+
+          {aiDraft && (
+            <div className="flex items-center gap-2 p-2 rounded-md bg-muted/50 text-sm text-muted-foreground">
+              <Info className="h-4 w-4 shrink-0" />
+              AI-suggested draft — review and edit before saving
+            </div>
+          )}
+
           {/* VTO Mission link */}
           {activeVto?.ten_year_target && (
             <div className="p-3 rounded-lg bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800">

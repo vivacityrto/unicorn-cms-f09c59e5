@@ -146,6 +146,8 @@ verify_jwt = false
 
 [functions.create-tasks-from-minutes]
 verify_jwt = false
-
 [functions.provision-tenant-sharepoint-folder]
+verify_jwt = false
+
+[functions.ai-suggest-rock]
 verify_jwt = false
