@@ -23373,7 +23373,7 @@ export type Database = {
           cricos_id?: string | null
           document_downloads_count?: number
           documents_enabled?: boolean
-          id: number
+          id?: number
           id_uuid?: string | null
           import_id?: number
           is_system_tenant?: boolean
