@@ -7,7 +7,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Users, Plus, X, GitBranch, AlertTriangle } from 'lucide-react';
+import { Users, Plus, X, GitBranch, AlertTriangle, Sparkles, Loader2, Info } from 'lucide-react';
+import { useAISuggestRock } from '@/hooks/useAISuggestRock';
 import { useEosRocksHierarchy } from '@/hooks/useEosRocksHierarchy';
 import { useVivacityTeamUsers, VIVACITY_TENANT_ID } from '@/hooks/useVivacityTeamUsers';
 import { useQuery } from '@tanstack/react-query';
@@ -26,6 +27,7 @@ interface CreateTeamRockDialogProps {
 export function CreateTeamRockDialog({ open, onOpenChange, parentRock, onSuccess }: CreateTeamRockDialogProps) {
   const { createRock, companyRocks, functions, teamRocksByFunction } = useEosRocksHierarchy();
   const { data: vivacityUsers } = useVivacityTeamUsers();
+  const { suggestRock, isGenerating } = useAISuggestRock();
   const currentQuarter = getCurrentQuarter();
   
   const [title, setTitle] = useState('');
@@ -37,6 +39,26 @@ export function CreateTeamRockDialog({ open, onOpenChange, parentRock, onSuccess
   const [ownerId, setOwnerId] = useState('');
   const [dueDate, setDueDate] = useState('');
   const [milestones, setMilestones] = useState<{ id: string; text: string; completed: boolean }[]>([]);
+  const [aiDraft, setAiDraft] = useState(false);
+
+  const handleAISuggest = async () => {
+    const result = await suggestRock({
+      rock_level: 'team',
+      tenant_id: VIVACITY_TENANT_ID,
+      parent_rock_id: parentRockId || undefined,
+      function_id: functionId || undefined,
+    });
+    if (result) {
+      setTitle(result.title);
+      setDescription(result.description);
+      setIssue(result.issue);
+      setOutcome(result.outcome);
+      setMilestones(
+        result.milestones.map((m) => ({ id: crypto.randomUUID(), text: m.text, completed: false }))
+      );
+      setAiDraft(true);
+    }
+  };
 
   // Sync parent rock when prop changes
   useEffect(() => {
@@ -124,6 +146,28 @@ export function CreateTeamRockDialog({ open, onOpenChange, parentRock, onSuccess
         </DialogHeader>
 
         <div className="space-y-4 py-4">
+          {/* AI Suggest */}
+          <Button
+            type="button"
+            variant="outline"
+            className="w-full"
+            onClick={handleAISuggest}
+            disabled={isGenerating}
+          >
+            {isGenerating ? (
+              <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Generating suggestion…</>
+            ) : (
+              <><Sparkles className="h-4 w-4 mr-2" /> Suggest with AI</>
+            )}
+          </Button>
+
+          {aiDraft && (
+            <div className="flex items-center gap-2 p-2 rounded-md bg-muted/50 text-sm text-muted-foreground">
+              <Info className="h-4 w-4 shrink-0" />
+              AI-suggested draft — review and edit before saving
+            </div>
+          )}
+
           {/* Parent Company Rock */}
           <div className="space-y-2">
             <Label className="flex items-center gap-2">
