@@ -49,6 +49,7 @@ import { CSCAssignmentSelector } from '@/components/client/CSCAssignmentSelector
 import { ConsultantAssignmentCard } from '@/components/client/ConsultantAssignmentCard';
 import { MembershipUsageCard } from '@/components/capacity/MembershipUsageCard';
 import { ViewAsClientButton } from '@/components/client/ViewAsClientButton';
+import { AssignPackageDialog } from '@/components/client/AssignPackageDialog';
 
 interface TenantBasic {
   id: number;
@@ -64,6 +65,7 @@ export default function ClientDetail() {
   const [tenant, setTenant] = useState<TenantBasic | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('overview');
+  const [assignPackageOpen, setAssignPackageOpen] = useState(false);
   const [profileHasChanges, setProfileHasChanges] = useState(false);
   const [profileSaving, setProfileSaving] = useState(false);
   const [triggerProfileSave, setTriggerProfileSave] = useState<(() => void) | null>(null);
@@ -378,6 +380,14 @@ export default function ClientDetail() {
               tenantName={tenant.name}
               packages={packages}
               loading={packagesLoading}
+              onAddPackage={() => setAssignPackageOpen(true)}
+            />
+            <AssignPackageDialog
+              open={assignPackageOpen}
+              onOpenChange={setAssignPackageOpen}
+              tenantId={tenantIdNum!}
+              tenantName={tenant.name}
+              onSuccess={refreshPackages}
             />
           </TabsContent>
 
