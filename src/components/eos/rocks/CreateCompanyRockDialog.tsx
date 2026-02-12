@@ -5,13 +5,11 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Badge } from '@/components/ui/badge';
-import { Target, Plus, X, Armchair, Building2, Sparkles, Loader2, Info } from 'lucide-react';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Target, Plus, X, User, Building2, Sparkles, Loader2, Info } from 'lucide-react';
 import { useEosRocksHierarchy } from '@/hooks/useEosRocksHierarchy';
 import { useVivacityTeamUsers, VIVACITY_TENANT_ID } from '@/hooks/useVivacityTeamUsers';
 import { useAISuggestRock } from '@/hooks/useAISuggestRock';
-import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
 import { getCurrentQuarter } from '@/utils/rockRollup';
 import { DB_ROCK_STATUS } from '@/utils/rockStatusUtils';
 
@@ -30,7 +28,8 @@ export function CreateCompanyRockDialog({ open, onOpenChange, onSuccess }: Creat
   const [description, setDescription] = useState('');
   const [issue, setIssue] = useState('');
   const [outcome, setOutcome] = useState('');
-  const [seatId, setSeatId] = useState('');
+  const [ownerId, setOwnerId] = useState('');
+  const { data: vivacityUsers } = useVivacityTeamUsers();
   const [quarterYear, setQuarterYear] = useState(currentQuarter.year);
   const [quarterNumber, setQuarterNumber] = useState(currentQuarter.quarter);
   const [dueDate, setDueDate] = useState('');
@@ -77,31 +76,21 @@ export function CreateCompanyRockDialog({ open, onOpenChange, onSuccess }: Creat
     setDueDate(getQuarterEndDate(newYear, quarterNumber));
   };
 
-  // Fetch seats
-  const { data: seats } = useQuery({
-    queryKey: ['seats-for-rocks', VIVACITY_TENANT_ID],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('accountability_seats')
-        .select(`
-          id,
-          seat_name,
-          accountability_functions!inner(name)
-        `)
-        .eq('tenant_id', VIVACITY_TENANT_ID);
-      
-      if (error) throw error;
-      return data;
-    },
-    enabled: open,
-  });
+  const getUserInfo = (userId: string) => {
+    const user = vivacityUsers?.find(u => u.user_uuid === userId);
+    if (!user) return null;
+    return {
+      name: [user.first_name, user.last_name].filter(Boolean).join(' ') || user.email,
+      avatar_url: user.avatar_url,
+    };
+  };
 
   const resetForm = () => {
     setTitle('');
     setDescription('');
     setIssue('');
     setOutcome('');
-    setSeatId('');
+    setOwnerId('');
     setQuarterYear(currentQuarter.year);
     setQuarterNumber(currentQuarter.quarter);
     setDueDate('');
@@ -109,7 +98,7 @@ export function CreateCompanyRockDialog({ open, onOpenChange, onSuccess }: Creat
   };
 
   const handleSubmit = async () => {
-    if (!title.trim() || !dueDate || !seatId) return;
+    if (!title.trim() || !dueDate || !ownerId) return;
 
     await createRock.mutateAsync({
       title: title.trim(),
@@ -120,7 +109,7 @@ export function CreateCompanyRockDialog({ open, onOpenChange, onSuccess }: Creat
         ? milestones.filter(m => m.text.trim()) 
         : undefined,
       rock_level: 'company',
-      seat_id: seatId,
+      owner_id: ownerId,
       vto_id: activeVto?.id,
       quarter_year: quarterYear,
       quarter_number: quarterNumber,
@@ -145,7 +134,7 @@ export function CreateCompanyRockDialog({ open, onOpenChange, onSuccess }: Creat
     setMilestones(milestones.filter(m => m.id !== id));
   };
 
-  const canSubmit = title.trim() && dueDate && seatId;
+  const canSubmit = title.trim() && dueDate && ownerId;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -269,25 +258,36 @@ export function CreateCompanyRockDialog({ open, onOpenChange, onSuccess }: Creat
             </div>
           </div>
 
-          {/* Seat */}
+          {/* Owner */}
           <div className="space-y-2">
             <Label className="flex items-center gap-2">
-              <Armchair className="h-4 w-4" />
-              Owner Seat *
+              <User className="h-4 w-4" />
+              Owner *
             </Label>
-            <Select value={seatId || 'none'} onValueChange={(v) => setSeatId(v === 'none' ? '' : v)}>
+            <Select value={ownerId || 'none'} onValueChange={(v) => setOwnerId(v === 'none' ? '' : v)}>
               <SelectTrigger>
-                <SelectValue placeholder="Select accountability seat..." />
+                <SelectValue placeholder="Select team member...">
+                  {ownerId && getUserInfo(ownerId) ? (
+                    <div className="flex items-center gap-2">
+                      <Avatar className="h-5 w-5">
+                        <AvatarImage src={getUserInfo(ownerId)!.avatar_url || undefined} />
+                        <AvatarFallback className="text-[10px]"><User className="h-3 w-3" /></AvatarFallback>
+                      </Avatar>
+                      <span>{getUserInfo(ownerId)!.name}</span>
+                    </div>
+                  ) : undefined}
+                </SelectValue>
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="none" disabled>Select a seat...</SelectItem>
-                {seats?.map((seat) => (
-                  <SelectItem key={seat.id} value={seat.id}>
+                <SelectItem value="none" disabled>Select a team member...</SelectItem>
+                {vivacityUsers?.map((user) => (
+                  <SelectItem key={user.user_uuid} value={user.user_uuid}>
                     <div className="flex items-center gap-2">
-                      <span>{seat.seat_name}</span>
-                      <Badge variant="outline" className="text-[10px]">
-                        {(seat.accountability_functions as any)?.name}
-                      </Badge>
+                      <Avatar className="h-5 w-5">
+                        <AvatarImage src={user.avatar_url || undefined} />
+                        <AvatarFallback className="text-[10px]"><User className="h-3 w-3" /></AvatarFallback>
+                      </Avatar>
+                      <span>{[user.first_name, user.last_name].filter(Boolean).join(' ') || user.email}</span>
                     </div>
                   </SelectItem>
                 ))}
