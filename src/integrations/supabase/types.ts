@@ -19816,11 +19816,13 @@ export type Database = {
           id: string
           is_enabled: boolean
           last_validated_at: string | null
+          manual_folder_url: string | null
           provisioning_error: string | null
           provisioning_status: string
           root_folder_url: string | null
           root_item_id: string | null
           root_name: string | null
+          setup_mode: string
           site_id: string | null
           template_id: string | null
           tenant_id: number
@@ -19840,11 +19842,13 @@ export type Database = {
           id?: string
           is_enabled?: boolean
           last_validated_at?: string | null
+          manual_folder_url?: string | null
           provisioning_error?: string | null
           provisioning_status?: string
           root_folder_url?: string | null
           root_item_id?: string | null
           root_name?: string | null
+          setup_mode?: string
           site_id?: string | null
           template_id?: string | null
           tenant_id: number
@@ -19864,11 +19868,13 @@ export type Database = {
           id?: string
           is_enabled?: boolean
           last_validated_at?: string | null
+          manual_folder_url?: string | null
           provisioning_error?: string | null
           provisioning_status?: string
           root_folder_url?: string | null
           root_item_id?: string | null
           root_name?: string | null
+          setup_mode?: string
           site_id?: string | null
           template_id?: string | null
           tenant_id?: number

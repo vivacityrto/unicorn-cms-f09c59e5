@@ -27,11 +27,11 @@ export default function ClientFilesPage() {
   useEffect(() => {
     if (!tenantId) return;
 
-    const fetch = async () => {
+    const fetchData = async () => {
       const [settingsRes, linksRes] = await Promise.all([
         supabase
           .from('tenant_sharepoint_settings')
-          .select('root_folder_url, provisioning_status, client_access_enabled')
+          .select('root_folder_url, manual_folder_url, setup_mode, provisioning_status, client_access_enabled')
           .eq('tenant_id', tenantId)
           .maybeSingle(),
         supabase
@@ -43,15 +43,17 @@ export default function ClientFilesPage() {
       ]);
 
       const s = settingsRes.data;
-      if (s?.provisioning_status === 'success' && s?.client_access_enabled && s?.root_folder_url) {
-        setFolderUrl(s.root_folder_url);
+      if (s?.provisioning_status === 'success' && s?.client_access_enabled) {
+        // Use effective URL based on setup_mode
+        const url = s.setup_mode === 'manual' ? s.manual_folder_url : s.root_folder_url;
+        setFolderUrl(url || null);
       }
 
       setReferenceLinks((linksRes.data || []) as ReferenceLink[]);
       setLoading(false);
     };
 
-    fetch();
+    fetchData();
   }, [tenantId]);
 
   if (loading) {

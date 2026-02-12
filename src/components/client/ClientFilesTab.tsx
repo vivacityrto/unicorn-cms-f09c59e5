@@ -12,7 +12,6 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Separator } from '@/components/ui/separator';
 import {
   FolderOpen,
   CheckCircle2,
@@ -26,6 +25,7 @@ import {
   FolderPlus,
   BookOpen,
   FolderTree,
+  ClipboardPaste,
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -56,6 +56,8 @@ interface SharePointSettings {
   provisioning_error: string | null;
   client_access_enabled: boolean;
   template_id: string | null;
+  setup_mode: string;
+  manual_folder_url: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -78,6 +80,13 @@ interface SeedRun {
   completed_at: string | null;
 }
 
+/** Returns the effective folder URL based on setup mode. */
+function getEffectiveFolderUrl(settings: SharePointSettings | null): string | null {
+  if (!settings) return null;
+  if (settings.setup_mode === 'manual') return settings.manual_folder_url || null;
+  return settings.root_folder_url || null;
+}
+
 export function ClientFilesTab({ tenantId, clientName }: ClientFilesTabProps) {
   const { profile } = useAuth();
   const { toast } = useToast();
@@ -87,8 +96,8 @@ export function ClientFilesTab({ tenantId, clientName }: ClientFilesTabProps) {
   const [loading, setLoading] = useState(true);
   const [validating, setValidating] = useState(false);
   const [provisioning, setProvisioning] = useState(false);
-  const [editing, setEditing] = useState(false);
-  const [urlInput, setUrlInput] = useState('');
+  const [manualEditing, setManualEditing] = useState(false);
+  const [manualUrlInput, setManualUrlInput] = useState('');
 
   const isVivacityTeam = ['Super Admin', 'Team Leader', 'Team Member'].includes(
     profile?.unicorn_role || ''
@@ -116,8 +125,9 @@ export function ClientFilesTab({ tenantId, clientName }: ClientFilesTabProps) {
     ]);
 
     if (settingsRes.error) console.error('[ClientFiles] Settings error:', settingsRes.error);
-    setSettings(settingsRes.data as SharePointSettings | null);
-    if (settingsRes.data) setUrlInput(settingsRes.data.root_folder_url || '');
+    const s = settingsRes.data as SharePointSettings | null;
+    setSettings(s);
+    if (s) setManualUrlInput(s.manual_folder_url || s.root_folder_url || '');
 
     setReferenceLinks((linksRes.data || []) as ReferenceLink[]);
     setSeedRun(seedRes.data as SeedRun | null);
@@ -128,6 +138,9 @@ export function ClientFilesTab({ tenantId, clientName }: ClientFilesTabProps) {
     fetchAll();
   }, [fetchAll]);
 
+  const effectiveUrl = getEffectiveFolderUrl(settings);
+
+  // ── Auto-provision handler ──
   const handleProvision = async () => {
     setProvisioning(true);
     try {
@@ -157,29 +170,78 @@ export function ClientFilesTab({ tenantId, clientName }: ClientFilesTabProps) {
     }
   };
 
-  const handleValidateAndSave = async () => {
-    const trimmedUrl = urlInput.trim();
-    if (!trimmedUrl || !trimmedUrl.startsWith('http')) {
-      toast({ title: 'Invalid URL', description: 'Please enter a valid URL.', variant: 'destructive' });
+  // ── Manual paste handler ──
+  const handleManualSave = async () => {
+    const trimmedUrl = manualUrlInput.trim();
+    if (!trimmedUrl || !trimmedUrl.startsWith('https://')) {
+      toast({ title: 'Invalid URL', description: 'Please enter a valid https:// SharePoint URL.', variant: 'destructive' });
       return;
     }
+
+    // Basic SharePoint URL validation
+    const isSharePointUrl = /sharepoint\.com|onedrive\.com/i.test(trimmedUrl);
+    if (!isSharePointUrl) {
+      toast({ title: 'Invalid URL', description: 'URL must be a SharePoint or OneDrive folder link.', variant: 'destructive' });
+      return;
+    }
+
     setValidating(true);
     try {
-      const { data, error } = await supabase.functions.invoke(
-        'validate-sharepoint-root-folder',
-        { body: { tenant_id: tenantId, root_folder_url: trimmedUrl } }
-      );
-      if (error) {
-        toast({ title: 'Validation failed', description: error.message, variant: 'destructive' });
-      } else if (data?.success) {
-        toast({ title: 'Folder connected', description: `Root folder "${data.root_name}" validated.` });
-        setEditing(false);
+      const now = new Date().toISOString();
+
+      if (settings) {
+        // Update existing row
+        const { error } = await supabase
+          .from('tenant_sharepoint_settings')
+          .update({
+            setup_mode: 'manual',
+            manual_folder_url: trimmedUrl,
+            provisioning_status: 'success',
+            last_validated_at: now,
+            validation_status: 'valid',
+            validation_error: null,
+            updated_at: now,
+          })
+          .eq('tenant_id', tenantId);
+
+        if (error) throw error;
       } else {
-        toast({ title: 'Validation failed', description: data?.error || 'Could not validate.', variant: 'destructive' });
+        // Insert new row
+        const { error } = await supabase
+          .from('tenant_sharepoint_settings')
+          .insert({
+            tenant_id: tenantId,
+            setup_mode: 'manual',
+            manual_folder_url: trimmedUrl,
+            provisioning_status: 'success',
+            last_validated_at: now,
+            validation_status: 'valid',
+            is_enabled: true,
+            created_by: profile?.user_uuid || '',
+          });
+
+        if (error) throw error;
       }
+
+      // Emit timeline event
+      await supabase.from('client_timeline_events').insert({
+        tenant_id: tenantId,
+        client_id: String(tenantId),
+        event_type: 'sharepoint_root_configured',
+        title: 'SharePoint folder linked manually',
+        body: `Folder URL set manually by ${profile?.first_name || 'Vivacity'}.`,
+        metadata: { setup_mode: 'manual', url: trimmedUrl },
+        created_by: profile?.user_uuid || null,
+        dedupe_key: `sharepoint_root_configured:${tenantId}:${now}`,
+        visibility: 'internal',
+        source: 'system',
+      }).then(({ error: tlError }) => { if (tlError) console.warn('Timeline event error:', tlError); });
+
+      toast({ title: 'Folder linked', description: 'Manual SharePoint link saved successfully.' });
+      setManualEditing(false);
       await fetchAll();
     } catch (err) {
-      toast({ title: 'Error', description: err instanceof Error ? err.message : 'Unexpected error', variant: 'destructive' });
+      toast({ title: 'Save failed', description: err instanceof Error ? err.message : 'Unexpected error', variant: 'destructive' });
     } finally {
       setValidating(false);
     }
@@ -237,7 +299,7 @@ export function ClientFilesTab({ tenantId, clientName }: ClientFilesTabProps) {
     const canOpen =
       settings?.provisioning_status === 'success' &&
       settings?.client_access_enabled &&
-      settings?.root_folder_url;
+      effectiveUrl;
 
     const clientLinks = referenceLinks.filter(l => l.visibility === 'client');
 
@@ -256,7 +318,7 @@ export function ClientFilesTab({ tenantId, clientName }: ClientFilesTabProps) {
           <CardContent>
             {canOpen ? (
               <Button asChild>
-                <a href={settings!.root_folder_url!} target="_blank" rel="noopener noreferrer">
+                <a href={effectiveUrl!} target="_blank" rel="noopener noreferrer">
                   <ExternalLink className="h-4 w-4 mr-2" />
                   Open Client Files
                 </a>
@@ -306,10 +368,11 @@ export function ClientFilesTab({ tenantId, clientName }: ClientFilesTabProps) {
 
   // ── Vivacity team view ──
   const provStatus = settings?.provisioning_status || 'not_started';
+  const setupMode = settings?.setup_mode || 'auto';
   const isProvisioned = provStatus === 'success';
   const isFailed = provStatus === 'failed';
+  const hasNoSettings = !settings;
   const isValid = settings?.validation_status === 'valid';
-  const isConfigured = !!settings?.root_folder_url;
 
   return (
     <div className="space-y-6">
@@ -320,70 +383,79 @@ export function ClientFilesTab({ tenantId, clientName }: ClientFilesTabProps) {
         </p>
       </div>
 
+      {/* Setup Mode Badge */}
+      {settings && (
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-muted-foreground">Setup mode:</span>
+          <Badge variant={setupMode === 'manual' ? 'secondary' : 'default'} className="text-xs">
+            {setupMode === 'manual' ? 'Manual' : 'Auto'}
+          </Badge>
+          {isProvisioned && (
+            <Badge variant="default" className="flex items-center gap-1 text-xs">
+              <CheckCircle2 className="h-3 w-3" />
+              Configured
+            </Badge>
+          )}
+          {isFailed && (
+            <Badge variant="destructive" className="flex items-center gap-1 text-xs">
+              <AlertCircle className="h-3 w-3" />
+              Failed
+            </Badge>
+          )}
+        </div>
+      )}
+
       {/* Folder Configuration Card */}
       <Card>
         <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle className="text-base flex items-center gap-2">
-              <FolderOpen className="h-5 w-5" />
-              Folder Configuration
-            </CardTitle>
-            <div className="flex items-center gap-2">
-              {provStatus === 'not_started' && <Badge variant="outline" className="text-xs">Not Created</Badge>}
-              {provStatus === 'pending' && (
-                <Badge variant="secondary" className="text-xs flex items-center gap-1">
-                  <Loader2 className="h-3 w-3 animate-spin" />
-                  Provisioning...
-                </Badge>
-              )}
-              {isProvisioned && (
-                <Badge variant="default" className="flex items-center gap-1">
-                  <CheckCircle2 className="h-3 w-3" />
-                  Provisioned
-                </Badge>
-              )}
-              {isFailed && (
-                <Badge variant="destructive" className="flex items-center gap-1">
-                  <AlertCircle className="h-3 w-3" />
-                  Failed
-                </Badge>
-              )}
-              {isProvisioned && settings && (
-                <Badge variant={isValid ? 'default' : 'destructive'} className="flex items-center gap-1">
-                  {isValid ? <CheckCircle2 className="h-3 w-3" /> : <AlertCircle className="h-3 w-3" />}
-                  {isValid ? 'Connected' : 'Invalid'}
-                </Badge>
-              )}
-            </div>
-          </div>
+          <CardTitle className="text-base flex items-center gap-2">
+            <FolderOpen className="h-5 w-5" />
+            Folder Configuration
+          </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          {provStatus === 'not_started' && !isConfigured && (
-            <div className="text-center py-4 space-y-3">
+
+          {/* No settings yet — show both options */}
+          {hasNoSettings && !manualEditing && (
+            <div className="space-y-4">
               <p className="text-sm text-muted-foreground">
-                No SharePoint folder has been created for this client yet.
+                No SharePoint folder has been configured for this client yet.
               </p>
-              <Button onClick={handleProvision} disabled={provisioning}>
-                {provisioning ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <FolderPlus className="h-4 w-4 mr-2" />}
-                Provision Folder
-              </Button>
+              <div className="flex flex-wrap gap-3">
+                <Button variant="outline" onClick={() => setManualEditing(true)}>
+                  <ClipboardPaste className="h-4 w-4 mr-2" />
+                  Paste Existing Folder Link
+                </Button>
+                <Button onClick={handleProvision} disabled={provisioning}>
+                  {provisioning ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <FolderPlus className="h-4 w-4 mr-2" />}
+                  Auto-Provision Folder
+                </Button>
+              </div>
             </div>
           )}
 
+          {/* Failed provisioning */}
           {isFailed && (
             <Alert variant="destructive">
               <AlertCircle className="h-4 w-4" />
               <AlertDescription className="flex items-center justify-between">
                 <span>{settings?.provisioning_error || 'Provisioning failed.'}</span>
-                <Button variant="outline" size="sm" onClick={handleProvision} disabled={provisioning} className="ml-4 shrink-0">
-                  {provisioning ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <RotateCcw className="h-4 w-4 mr-2" />}
-                  Retry Provisioning
-                </Button>
+                <div className="flex gap-2 ml-4 shrink-0">
+                  <Button variant="outline" size="sm" onClick={() => setManualEditing(true)}>
+                    <ClipboardPaste className="h-4 w-4 mr-2" />
+                    Paste Link Instead
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={handleProvision} disabled={provisioning}>
+                    {provisioning ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <RotateCcw className="h-4 w-4 mr-2" />}
+                    Retry
+                  </Button>
+                </div>
               </AlertDescription>
             </Alert>
           )}
 
-          {isConfigured && !editing && (
+          {/* Currently configured folder display */}
+          {isProvisioned && !manualEditing && (
             <div className="rounded-lg border bg-muted/50 p-4 space-y-3">
               {settings?.folder_name && (
                 <div className="flex items-center gap-2 text-sm">
@@ -402,7 +474,7 @@ export function ClientFilesTab({ tenantId, clientName }: ClientFilesTabProps) {
               <div className="flex items-center gap-2 text-sm">
                 <Link2 className="h-4 w-4 text-muted-foreground" />
                 <span className="text-muted-foreground">URL:</span>
-                <span className="text-xs font-mono truncate max-w-md">{settings?.root_folder_url}</span>
+                <span className="text-xs font-mono truncate max-w-md">{effectiveUrl}</span>
               </div>
               {settings?.last_validated_at && (
                 <div className="text-xs text-muted-foreground">
@@ -418,52 +490,59 @@ export function ClientFilesTab({ tenantId, clientName }: ClientFilesTabProps) {
             </div>
           )}
 
-          {(editing || (provStatus === 'not_started' && !isConfigured)) && (
-            <div className="space-y-2">
-              <Label htmlFor="sp-folder-url">SharePoint folder link (manual override)</Label>
+          {/* Manual paste form */}
+          {manualEditing && (
+            <div className="space-y-3 rounded-lg border p-4">
+              <Label htmlFor="sp-manual-url" className="text-sm font-medium">
+                Paste existing SharePoint folder link
+              </Label>
               <div className="flex gap-2">
                 <Input
-                  id="sp-folder-url"
-                  placeholder="https://yourorg.sharepoint.com/..."
-                  value={urlInput}
-                  onChange={(e) => setUrlInput(e.target.value)}
+                  id="sp-manual-url"
+                  placeholder="https://yourorg.sharepoint.com/sites/..."
+                  value={manualUrlInput}
+                  onChange={(e) => setManualUrlInput(e.target.value)}
                   className="flex-1"
                 />
-                <Button onClick={handleValidateAndSave} disabled={validating || !urlInput.trim()}>
+                <Button onClick={handleManualSave} disabled={validating || !manualUrlInput.trim()}>
                   {validating ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <CheckCircle2 className="h-4 w-4 mr-2" />}
-                  Validate & Save
+                  Save
                 </Button>
               </div>
               <p className="text-xs text-muted-foreground flex items-start gap-1">
                 <Info className="h-3 w-3 mt-0.5 flex-shrink-0" />
-                Or use auto-provisioning above to create a folder automatically.
+                URL must be a valid https:// SharePoint or OneDrive folder link.
               </p>
-              {editing && (
-                <Button variant="ghost" size="sm" onClick={() => { setEditing(false); setUrlInput(settings?.root_folder_url || ''); }}>
-                  Cancel
-                </Button>
-              )}
+              <Button variant="ghost" size="sm" onClick={() => {
+                setManualEditing(false);
+                setManualUrlInput(settings?.manual_folder_url || settings?.root_folder_url || '');
+              }}>
+                Cancel
+              </Button>
             </div>
           )}
 
-          {isConfigured && !editing && (
+          {/* Action buttons when configured */}
+          {isProvisioned && !manualEditing && (
             <div className="flex flex-wrap gap-2">
-              <Button variant="outline" size="sm" onClick={() => setEditing(true)}>
-                <Link2 className="h-4 w-4 mr-2" />
-                Update Folder Link
+              <Button variant="outline" size="sm" onClick={() => setManualEditing(true)}>
+                <ClipboardPaste className="h-4 w-4 mr-2" />
+                Change Folder Link
               </Button>
-              {settings?.root_folder_url && (
+              {effectiveUrl && (
                 <Button variant="outline" size="sm" asChild>
-                  <a href={settings.root_folder_url} target="_blank" rel="noopener noreferrer">
+                  <a href={effectiveUrl} target="_blank" rel="noopener noreferrer">
                     <ExternalLink className="h-4 w-4 mr-2" />
                     Open in SharePoint
                   </a>
                 </Button>
               )}
-              <Button variant="outline" size="sm" onClick={handleTestAccess} disabled={validating}>
-                {validating ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <RefreshCw className="h-4 w-4 mr-2" />}
-                Revalidate
-              </Button>
+              {setupMode === 'auto' && (
+                <Button variant="outline" size="sm" onClick={handleTestAccess} disabled={validating}>
+                  {validating ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <RefreshCw className="h-4 w-4 mr-2" />}
+                  Revalidate
+                </Button>
+              )}
             </div>
           )}
         </CardContent>
