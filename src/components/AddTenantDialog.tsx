@@ -3,7 +3,6 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
@@ -22,11 +21,7 @@ export function AddTenantDialog({ open, onOpenChange, onSuccess, preSelectedPack
   
   // Form fields
   const [tenantName, setTenantName] = useState('');
-  const [tenantSlug, setTenantSlug] = useState('');
   const [rtoCode, setRtoCode] = useState('');
-  const [abn, setAbn] = useState('');
-  const [address, setAddress] = useState('');
-  const [notes, setNotes] = useState('');
   const [autoAssignConsultant, setAutoAssignConsultant] = useState(true);
 
   const generateSlug = (name: string): string => {
@@ -37,16 +32,18 @@ export function AddTenantDialog({ open, onOpenChange, onSuccess, preSelectedPack
   };
 
   const handleSaveTenant = async () => {
-    if (!tenantName || !tenantSlug) {
+    if (!tenantName) {
       toast({
         title: 'Validation Error',
-        description: 'Tenant name and slug are required',
+        description: 'Tenant name is required',
         variant: 'destructive',
       });
       return;
     }
 
     setSaving(true);
+    const tenantSlug = generateSlug(tenantName);
+
     try {
       // Check if slug already exists
       const { data: existingTenant } = await supabase
@@ -58,7 +55,7 @@ export function AddTenantDialog({ open, onOpenChange, onSuccess, preSelectedPack
       if (existingTenant) {
         toast({
           title: 'Slug Already Exists',
-          description: `The slug "${tenantSlug}" is already in use. Please choose a different slug.`,
+          description: `A tenant with a similar name already exists. Please use a different name.`,
           variant: 'destructive',
         });
         setSaving(false);
@@ -70,12 +67,9 @@ export function AddTenantDialog({ open, onOpenChange, onSuccess, preSelectedPack
         slug: tenantSlug,
         status: 'active',
         risk_level: 'low',
+        rto_id: rtoCode || null,
         package_id: preSelectedPackageId || null,
         metadata: {
-          rto_code: rtoCode,
-          abn: abn,
-          address: address,
-          notes: notes,
           source: 'manual'
         }
       }] as any);
@@ -93,7 +87,7 @@ export function AddTenantDialog({ open, onOpenChange, onSuccess, preSelectedPack
 
       toast({
         title: 'Success',
-        description: 'Tenant created successfully',
+        description: 'Client created successfully',
       });
 
       // Auto-assign consultant (fire and forget)
@@ -133,10 +127,9 @@ export function AddTenantDialog({ open, onOpenChange, onSuccess, preSelectedPack
       onOpenChange(false);
       onSuccess?.();
     } catch (error: any) {
-      // Provide user-friendly message for common errors
-      let errorMessage = error.message || 'Failed to create tenant';
+      let errorMessage = error.message || 'Failed to create client';
       if (error.message?.includes('tenants_slug_key')) {
-        errorMessage = `The slug "${tenantSlug}" is already in use. Please choose a different slug.`;
+        errorMessage = `A client with a similar name already exists. Please use a different name.`;
       }
       toast({
         title: 'Error',
@@ -150,11 +143,7 @@ export function AddTenantDialog({ open, onOpenChange, onSuccess, preSelectedPack
 
   const resetForm = () => {
     setTenantName('');
-    setTenantSlug('');
     setRtoCode('');
-    setAbn('');
-    setAddress('');
-    setNotes('');
     setAutoAssignConsultant(true);
   };
 
@@ -166,85 +155,36 @@ export function AddTenantDialog({ open, onOpenChange, onSuccess, preSelectedPack
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90vh] overflow-hidden flex flex-col border-[3px] border-[#dfdfdf]" style={{ width: '650px', maxWidth: '90vw' }}>
+      <DialogContent className="max-h-[90vh] overflow-hidden flex flex-col border-[3px] border-[#dfdfdf]" style={{ width: '500px', maxWidth: '90vw' }}>
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Building2 className="h-5 w-5" />
-            Add New Tenant
+            Add New Client
           </DialogTitle>
           <DialogDescription>
-            Enter tenant details manually
+            Enter client details to create a new tenant
           </DialogDescription>
         </DialogHeader>
 
         <div className="flex-1 overflow-y-auto space-y-4 py-4 px-1">
           <div className="space-y-4 px-1">
             <div className="space-y-2">
-              <Label htmlFor="name">Tenant Name *</Label>
+              <Label htmlFor="name">Client Name *</Label>
               <Input
                 id="name"
                 value={tenantName}
-                onChange={(e) => {
-                  setTenantName(e.target.value);
-                  setTenantSlug(generateSlug(e.target.value));
-                }}
+                onChange={(e) => setTenantName(e.target.value)}
                 placeholder="Organisation name"
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="slug">Slug *</Label>
+              <Label htmlFor="rto">RTO Code</Label>
               <Input
-                id="slug"
-                value={tenantSlug}
-                onChange={(e) => setTenantSlug(e.target.value)}
-                placeholder="tenant-slug"
-              />
-              <p className="text-xs text-muted-foreground">
-                URL-friendly identifier (lowercase, hyphens only)
-              </p>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="rto">RTO Code</Label>
-                <Input
-                  id="rto"
-                  value={rtoCode}
-                  onChange={(e) => setRtoCode(e.target.value)}
-                  placeholder="12345"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="abn">ABN</Label>
-                <Input
-                  id="abn"
-                  value={abn}
-                  onChange={(e) => setAbn(e.target.value)}
-                  placeholder="12 345 678 901"
-                />
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="address">Address</Label>
-              <Input
-                id="address"
-                value={address}
-                onChange={(e) => setAddress(e.target.value)}
-                placeholder="Street, City, State, Postcode"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="notes">Notes</Label>
-              <Textarea
-                id="notes"
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                placeholder="Additional information about this tenant"
-                rows={3}
+                id="rto"
+                value={rtoCode}
+                onChange={(e) => setRtoCode(e.target.value)}
+                placeholder="e.g. 91262"
               />
             </div>
 
@@ -275,7 +215,7 @@ export function AddTenantDialog({ open, onOpenChange, onSuccess, preSelectedPack
           </Button>
           <Button
             onClick={handleSaveTenant}
-            disabled={saving || !tenantName || !tenantSlug}
+            disabled={saving || !tenantName}
           >
             {saving ? (
               <>
@@ -283,7 +223,7 @@ export function AddTenantDialog({ open, onOpenChange, onSuccess, preSelectedPack
                 Creating...
               </>
             ) : (
-              'Create Tenant'
+              'Create Client'
             )}
           </Button>
         </DialogFooter>
