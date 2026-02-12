@@ -1,32 +1,33 @@
 
-# Add Missing Add-in Columns to `app_settings`
 
-## Overview
-Add four boolean columns to the existing `app_settings` table so the Microsoft Add-in Settings page can read and write feature flags correctly.
+## Replace "Add Company Rock" Button with a Rock Type Selector
 
-## Database Migration
+### What Changes
+The current "Add Company Rock" button will be replaced with a dropdown menu that lets users choose which type of Rock to create: **Company**, **Team**, or **Individual**.
 
-Run a single `ALTER TABLE` statement adding:
+### How It Works
+- The button label changes to **"Add Rock"**
+- Clicking it reveals a dropdown with three options:
+  - **Company Rock** (with Building icon)
+  - **Team Rock** (with Users icon)
+  - **Individual Rock** (with User icon)
+- Selecting an option opens the corresponding dialog that already exists in the codebase
 
-| Column | Type | Default |
-|--------|------|---------|
-| `microsoft_addin_enabled` | boolean | false |
-| `addin_outlook_mail_enabled` | boolean | false |
-| `addin_meetings_enabled` | boolean | false |
-| `addin_documents_enabled` | boolean | false |
+### Visual Behaviour
+- The dropdown will use the existing `DropdownMenu` component from the UI library
+- Each option will have an icon and label for clarity
+- The dropdown background will be solid (not transparent) with a high z-index
 
-```sql
-ALTER TABLE public.app_settings
-  ADD COLUMN IF NOT EXISTS microsoft_addin_enabled BOOLEAN NOT NULL DEFAULT false,
-  ADD COLUMN IF NOT EXISTS addin_outlook_mail_enabled BOOLEAN NOT NULL DEFAULT false,
-  ADD COLUMN IF NOT EXISTS addin_meetings_enabled BOOLEAN NOT NULL DEFAULT false,
-  ADD COLUMN IF NOT EXISTS addin_documents_enabled BOOLEAN NOT NULL DEFAULT false;
-```
+### Technical Details
 
-## No Frontend Changes Required
-The existing `useAddinFeatureFlags` hook and `AddinSettings` page already reference these exact column names. Once the columns exist, the toggles will work immediately.
+**File: `src/pages/EosRocks.tsx`**
 
-## Files
-| File | Action |
-|------|--------|
-| Database migration | Add four boolean columns to `app_settings` |
+1. Add imports for `DropdownMenu`, `DropdownMenuContent`, `DropdownMenuItem`, `DropdownMenuTrigger` and `ChevronDown` icon
+2. Replace the single `Button` in the `PageHeader` actions with a `DropdownMenu` containing three `DropdownMenuItem` entries:
+   - "Company Rock" -- sets `showCompanyDialog(true)`
+   - "Team Rock" -- sets `showTeamDialog(true)`
+   - "Individual Rock" -- sets `showIndividualDialog(true)`
+3. No changes to any dialog components -- all three (`CreateCompanyRockDialog`, `CreateTeamRockDialog`, `CreateIndividualRockDialog`) are already imported and wired up in this page
+
+**No database, edge function, or other file changes required.**
+
