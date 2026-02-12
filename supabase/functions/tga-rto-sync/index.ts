@@ -605,7 +605,7 @@ serve(async (req) => {
       const addrParts = [contact.address?.line1, contact.address?.line2, contact.address?.suburb, contact.address?.state, contact.address?.postcode].filter(Boolean);
       return {
         tenant_id: tenantIdNum, rto_code: rtoId,
-        contact_type: contact.contactType || contact.type || null,
+        contact_type: contact.roleDescription || contact.role || contact.contactType || contact.type || null,
         contact_type_raw: contact.contactType || contact.type || null,
         name: [contact.title, contact.firstName, contact.lastName].filter(Boolean).join(' ') || contact.name || null,
         position: contact.jobTitle || contact.position || null,
