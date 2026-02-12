@@ -1,127 +1,38 @@
 
 
-## AI-Assisted Rock Building
+## Replace "Owner Seat" with "Owner (Team Member)" in Company Rock Dialog
 
-### What This Does
+### What Changes
 
-Adds a "Suggest with AI" button to each Rock creation dialog (Company, Team, Individual) that uses AI to generate smart Rock suggestions based on the organisation's strategic context -- VTO goals, existing rocks, open issues, and scorecard trends.
-
-Instead of starting from a blank form, users click one button and get a pre-filled draft they can review and edit before saving.
+The Company Rock creation dialog currently asks users to pick an **Owner Seat** (from the Accountability Chart). This will be replaced with an **Owner** dropdown that lists Vivacity team members by name and avatar -- the same pattern already used in the Team Rock and Individual Rock dialogs.
 
 ### How It Works
 
-1. User opens any Rock creation dialog (Company, Team, or Individual)
-2. User clicks "Suggest with AI" (sparkle icon button)
-3. AI reads the tenant's VTO (10-year target, 3-year picture, 1-year goals), existing rocks for the current quarter, open issues, and scorecard trends
-4. AI returns a suggested Rock with: title, description, issue, outcome, and milestones
-5. The form fields are pre-filled with the suggestion
-6. User reviews, edits if needed, then saves normally
+- The "Owner Seat" dropdown (using `accountability_seats`) is removed
+- A new "Owner" dropdown appears in its place, listing Vivacity team members (Super Admin, Team Leader, Team Member)
+- Each option shows the person's avatar and name
+- The selected person's `user_uuid` is saved as `owner_id` on the rock
 
-The user always has final control -- AI drafts, humans approve.
+### What Stays the Same
 
-### User Experience Flow
-
-```text
-+---------------------------+
-| Create [Level] Rock       |
-|                           |
-|  [Suggest with AI]        |
-|                           |
-|  Title: _______________   |
-|  Description: _________   |
-|  Issue: _______________   |
-|  Outcome: _____________   |
-|  Milestones:              |
-|    1. ___                 |
-|    2. ___                 |
-|                           |
-|  [Cancel]  [Create Rock]  |
-+---------------------------+
-```
-
-After clicking "Suggest with AI":
-- A loading spinner replaces the button text
-- All text fields populate with the AI suggestion
-- A subtle banner appears: "AI-suggested draft -- review and edit before saving"
-- User can click "Suggest with AI" again for a different suggestion
-
-### Context Sent to AI (by Rock Level)
-
-| Rock Level | Context Provided |
-|------------|-----------------|
-| Company | VTO (10-year target, 3-year measurables, 1-year goals), existing company rocks this quarter |
-| Team | Parent company rock title + description, function name, existing team rocks for that function |
-| Individual | Parent team rock title + description, owner name, existing individual rocks for that owner |
+- All other fields (title, description, issue, outcome, milestones, quarter, due date, AI suggest)
+- The VTO mission banner
+- The save/cancel logic
 
 ### Technical Details
 
-**1. New Edge Function: `ai-suggest-rock`**
+**File: `src/components/eos/rocks/CreateCompanyRockDialog.tsx`**
 
-File: `supabase/functions/ai-suggest-rock/index.ts`
+1. Replace `seatId` state variable with `ownerId` state variable
+2. Remove the `seats` query (lines 80-97) -- no longer needed
+3. Import `Avatar`, `AvatarFallback`, `AvatarImage` and `User` icon
+4. Remove `Armchair` icon import
+5. Add `useVivacityTeamUsers` hook (already imported but not used for the dropdown)
+6. Replace the "Owner Seat" `Select` block (lines 272-296) with a team member picker using `vivacityUsers`, showing avatar + name per option
+7. Update `handleSubmit` to pass `owner_id: ownerId` instead of `seat_id: seatId`
+8. Update `canSubmit` to check `ownerId` instead of `seatId`
+9. Update `resetForm` to clear `ownerId` instead of `seatId`
+10. Add a `getUserInfo` helper (same pattern as Individual Rock dialog)
 
-- Accepts: `{ rock_level, tenant_id, parent_rock_id?, function_id?, owner_id? }`
-- Fetches context from database based on rock level
-- Calls Lovable AI Gateway (`google/gemini-3-flash-preview`) with tool calling to extract structured output
-- Returns: `{ title, description, issue, outcome, milestones[] }`
-- Uses tool calling (not JSON mode) for reliable structured extraction
-- Handles 429/402 errors gracefully
-- Adds `Cache-Control: no-store` header
+**No database, migration, or edge function changes required.** The `CreateRockInput` interface already supports both `seat_id` and `owner_id`.
 
-Tool schema for structured extraction:
-```text
-function: suggest_rock
-parameters:
-  title: string (max 100 chars)
-  description: string (max 300 chars)
-  issue: string (max 200 chars)
-  outcome: string (max 200 chars)
-  milestones: array of { text: string } (3-5 items)
-```
-
-**2. Config update: `supabase/config.toml`**
-
-Add:
-```text
-[functions.ai-suggest-rock]
-verify_jwt = false
-```
-
-**3. New React hook: `src/hooks/useAISuggestRock.ts`**
-
-- Wraps the edge function call in a `useMutation`
-- Returns `{ suggestRock, isGenerating }` 
-- Shows toast on error (including rate limit messages)
-
-**4. UI changes to all three dialog components**
-
-Files:
-- `src/components/eos/rocks/CreateCompanyRockDialog.tsx`
-- `src/components/eos/rocks/CreateTeamRockDialog.tsx`
-- `src/components/eos/rocks/CreateIndividualRockDialog.tsx`
-
-Each dialog gets:
-- A "Suggest with AI" button (with Sparkles icon) placed below the dialog header
-- On click: calls the hook, populates title/description/issue/outcome/milestones
-- Shows a loading state while generating
-- Shows a small info banner when AI content is loaded: "AI-suggested draft -- review and edit before saving"
-- The banner disappears if the user manually edits any field
-
-**5. No database changes required**
-
-The feature is stateless -- suggestions are generated on-demand and only persisted when the user clicks "Create Rock" (using the existing save flow).
-
-### Files to Create
-- `supabase/functions/ai-suggest-rock/index.ts`
-- `src/hooks/useAISuggestRock.ts`
-
-### Files to Edit
-- `supabase/config.toml` (add function entry)
-- `src/components/eos/rocks/CreateCompanyRockDialog.tsx` (add AI suggest button)
-- `src/components/eos/rocks/CreateTeamRockDialog.tsx` (add AI suggest button)
-- `src/components/eos/rocks/CreateIndividualRockDialog.tsx` (add AI suggest button)
-
-### What Does Not Change
-- No new database tables or migrations
-- No changes to existing Rock save logic
-- No changes to permissions or RLS
-- No changes to the Rock hierarchy or rollup rules
