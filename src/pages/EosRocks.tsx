@@ -261,29 +261,33 @@ function RocksHierarchyContent() {
         </div>
 
         <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-          {/* Quarter selector */}
+          {/* Year selector */}
           <Select 
-            value={`${quarterYear}-${quarterNumber}`} 
-            onValueChange={(v) => {
-              const [y, q] = v.split('-').map(Number);
-              setQuarterYear(y);
-              setQuarterNumber(q);
-            }}
+            value={String(quarterYear)} 
+            onValueChange={(v) => setQuarterYear(Number(v))}
           >
-            <SelectTrigger className="w-28 sm:w-32">
+            <SelectTrigger className="w-24 sm:w-28">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              {[-1, 0, 1, 2].map(offset => {
-                const q = currentQuarter.quarter + offset;
-                const adjustedQ = ((q - 1) % 4 + 4) % 4 + 1;
-                const adjustedY = currentQuarter.year + Math.floor((currentQuarter.quarter + offset - 1) / 4);
-                return (
-                  <SelectItem key={`${adjustedY}-${adjustedQ}`} value={`${adjustedY}-${adjustedQ}`}>
-                    Q{adjustedQ} {adjustedY}
-                  </SelectItem>
-                );
-              })}
+              {Array.from({ length: 5 }, (_, i) => currentQuarter.year - 2 + i).map(y => (
+                <SelectItem key={y} value={String(y)}>{y}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          {/* Quarter selector */}
+          <Select 
+            value={String(quarterNumber)} 
+            onValueChange={(v) => setQuarterNumber(Number(v))}
+          >
+            <SelectTrigger className="w-20 sm:w-24">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {[1, 2, 3, 4].map(q => (
+                <SelectItem key={q} value={String(q)}>Q{q}</SelectItem>
+              ))}
             </SelectContent>
           </Select>
 
