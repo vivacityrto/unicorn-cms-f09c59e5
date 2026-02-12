@@ -54,12 +54,12 @@ export function MembershipUsageCard({ tenantId }: MembershipUsageCardProps) {
         ? 'bg-amber-500'
         : 'bg-green-500';
 
-  const yearStart = new Date(usage.membership_year_start).toLocaleDateString('en-AU', {
-    day: 'numeric', month: 'short', year: 'numeric'
-  });
-  const yearEnd = new Date(usage.membership_year_end).toLocaleDateString('en-AU', {
-    day: 'numeric', month: 'short', year: 'numeric'
-  });
+  const yearStart = usage.membership_year_start
+    ? new Date(usage.membership_year_start).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' })
+    : null;
+  const yearEnd = usage.membership_year_end
+    ? new Date(usage.membership_year_end).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' })
+    : null;
 
   return (
     <Card className={isOverage ? 'border-red-300 dark:border-red-700' : ''}>
@@ -130,9 +130,11 @@ export function MembershipUsageCard({ tenantId }: MembershipUsageCardProps) {
           </div>
         </div>
 
-        <p className="text-xs text-muted-foreground text-center">
-          Membership year: {yearStart} — {yearEnd}
-        </p>
+        {yearStart && yearEnd && (
+          <p className="text-xs text-muted-foreground text-center">
+            Membership year: {yearStart} — {yearEnd}
+          </p>
+        )}
       </CardContent>
     </Card>
   );

@@ -53,7 +53,17 @@ export function useMembershipUsage(tenantId: number | null) {
       
       const parsed = typeof data === 'string' ? JSON.parse(data) : data;
       if (parsed?.error) return null;
-      return parsed as MembershipUsage;
+      // Map RPC field names to component field names
+      return {
+        included_hours_annual: parsed.included_hours_annual ?? 0,
+        hours_used_ytd: parsed.hours_used_in_year ?? parsed.hours_used_ytd ?? 0,
+        hours_remaining: parsed.hours_remaining ?? 0,
+        percent_utilised: parsed.percent_utilised ?? 0,
+        membership_year_start: parsed.membership_start_date ?? parsed.membership_year_start,
+        membership_year_end: parsed.membership_end_date ?? parsed.membership_year_end,
+        tier_name: parsed.tier_name,
+        flags: parsed.flags,
+      } as MembershipUsage;
     },
     enabled: !!tenantId,
     staleTime: 30_000,
