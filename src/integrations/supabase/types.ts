@@ -20272,6 +20272,65 @@ export type Database = {
           },
         ]
       }
+      tenant_tier_capacity_config: {
+        Row: {
+          annual_included_hours: number
+          created_at: string
+          created_by: string | null
+          id: string
+          tenant_id: number
+          tier_name: string
+          weekly_required_hours: number
+        }
+        Insert: {
+          annual_included_hours?: number
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          tenant_id: number
+          tier_name: string
+          weekly_required_hours?: number
+        }
+        Update: {
+          annual_included_hours?: number
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          tenant_id?: number
+          tier_name?: string
+          weekly_required_hours?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tenant_tier_capacity_config_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tenant_tier_capacity_config_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_engagement_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "tenant_tier_capacity_config_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_eos_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "tenant_tier_capacity_config_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_compliance_entitlements"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
       tenant_users: {
         Row: {
           created_at: string
