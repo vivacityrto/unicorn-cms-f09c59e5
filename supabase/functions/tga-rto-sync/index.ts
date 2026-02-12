@@ -616,11 +616,20 @@ serve(async (req) => {
       };
     });
 
-    if (contactRows.length > 0) {
-      const { error: contactError } = await supabaseAdmin.from('tga_rto_contacts').insert(contactRows);
+    // Deduplicate by (contact_type, name) to avoid unique constraint violations
+    const seen = new Set<string>();
+    const uniqueContactRows = contactRows.filter((row: any) => {
+      const key = `${row.contact_type}::${row.name}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+
+    if (uniqueContactRows.length > 0) {
+      const { error: contactError } = await supabaseAdmin.from('tga_rto_contacts').insert(uniqueContactRows);
       if (contactError) log('warn', 'Could not insert contacts', { error: contactError.message });
     }
-    progress.contacts_count = contactRows.length;
+    progress.contacts_count = uniqueContactRows.length;
 
     // ── PERSIST ADDRESSES & DELIVERY LOCATIONS ──────────────────────
     progress.stage = 'persisting_addresses';

@@ -663,7 +663,7 @@ export function ClientIntegrationsTab({
               </Alert>
             ) : (
               <Tabs defaultValue="summary" className="w-full">
-                <TabsList className="grid w-full grid-cols-7">
+                <TabsList className="grid w-full grid-cols-8">
                   <TabsTrigger value="summary" className="text-xs">
                     <Building2 className="h-3 w-3 mr-1" />
                     Summary
