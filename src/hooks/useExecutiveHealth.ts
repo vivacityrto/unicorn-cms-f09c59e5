@@ -1,7 +1,7 @@
 /**
  * useExecutiveHealth – Unicorn 2.0
  *
- * Fetches v_executive_client_health (with 7-day deltas + confidence) and
+ * Fetches v_executive_client_health (with 7-day deltas + confidence + 30-day sparklines) and
  * v_executive_watchlist_7d for the Executive Dashboard.
  */
 
@@ -68,6 +68,13 @@ export interface ExecutiveHealthRow {
   t7_distance_seconds_predictive: number | null;
   snapshots_last_7d_predictive: number;
   days_since_latest_predictive: number;
+  // 30-day sparkline data
+  compliance_spark_scores: number[] | null;
+  compliance_spark_days: string[] | null;
+  compliance_spark_confidence: DeltaConfidence;
+  predictive_spark_scores: number[] | null;
+  predictive_spark_days: string[] | null;
+  predictive_spark_confidence: DeltaConfidence;
 }
 
 export interface WatchlistItem {
@@ -156,7 +163,6 @@ export function useExecutiveHealth() {
     const atRiskCount = data.filter(r => r.risk_band === 'at_risk' || r.risk_band === 'immediate_attention').length;
     const criticalRisks = data.filter(r => r.has_active_critical).length;
     const staleCount = data.filter(r => r.days_stale > 14).length;
-    // Aggregate confidence: worst confidence across all rows
     const hasAnyBaseline = data.some(r => r.delta_confidence_compliance_7d !== 'none');
     const allHigh = data.every(r => r.delta_confidence_compliance_7d === 'high');
     const kpiConfidence: DeltaConfidence = !hasAnyBaseline ? 'none' : allHigh ? 'high' : data.some(r => r.delta_confidence_compliance_7d === 'low') ? 'low' : 'medium';

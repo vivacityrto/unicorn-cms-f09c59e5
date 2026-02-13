@@ -1,7 +1,7 @@
 /**
  * PriorityQueueTable – Unicorn 2.0
  *
- * Sorted table with 7-day delta chips.
+ * Sorted table with 7-day delta chips and 30-day sparklines.
  */
 
 import { useMemo } from 'react';
@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { DeltaChip } from './DeltaChip';
+import { SparklineMini } from './SparklineMini';
 import type { ExecutiveHealthRow } from '@/hooks/useExecutiveHealth';
 
 interface PriorityQueueTableProps {
@@ -50,6 +51,7 @@ export function PriorityQueueTable({ data, onRowClick }: PriorityQueueTableProps
                 <th className="text-left px-4 py-2.5 font-medium text-muted-foreground">Client</th>
                 <th className="text-left px-4 py-2.5 font-medium text-muted-foreground">Package</th>
                 <th className="text-center px-3 py-2.5 font-medium text-muted-foreground">Score</th>
+                <th className="text-center px-3 py-2.5 font-medium text-muted-foreground">30d</th>
                 <th className="text-center px-3 py-2.5 font-medium text-muted-foreground">Band</th>
                 <th className="text-center px-3 py-2.5 font-medium text-muted-foreground">Actions</th>
                 <th className="text-center px-3 py-2.5 font-medium text-muted-foreground">Docs</th>
@@ -72,6 +74,15 @@ export function PriorityQueueTable({ data, onRowClick }: PriorityQueueTableProps
                     <DeltaChip value={row.delta_overall_score_7d} type="compliance" className="ml-1" />
                   </td>
                   <td className="px-3 py-3 text-center">
+                    <SparklineMini
+                      values={row.compliance_spark_scores ?? []}
+                      confidence={row.compliance_spark_confidence}
+                      kind="compliance"
+                      height={24}
+                      width={72}
+                    />
+                  </td>
+                  <td className="px-3 py-3 text-center">
                     <Badge className={cn('text-xs capitalize', bandVariant[row.risk_band] || bandVariant.stable)}>
                       {row.risk_band.replace('_', ' ')}
                     </Badge>
@@ -92,7 +103,7 @@ export function PriorityQueueTable({ data, onRowClick }: PriorityQueueTableProps
               ))}
               {sorted.length === 0 && (
                 <tr>
-                  <td colSpan={9} className="px-4 py-8 text-center text-muted-foreground">
+                  <td colSpan={10} className="px-4 py-8 text-center text-muted-foreground">
                     No active packages match your filters.
                   </td>
                 </tr>

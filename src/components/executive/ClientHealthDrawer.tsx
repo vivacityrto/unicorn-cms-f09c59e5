@@ -2,16 +2,16 @@
  * ClientHealthDrawer – Unicorn 2.0
  *
  * Right-side drawer showing "Why Flagged" for a selected client+package.
- * Compliance breakdown, predictive signals, and next best actions.
+ * Compliance breakdown, predictive signals, 30-day sparklines, and next best actions.
  */
 
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
 import { ArrowRight, CalendarCheck, Upload, ShieldAlert, Clock, ListChecks } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { SparklineMini } from './SparklineMini';
 import type { ExecutiveHealthRow } from '@/hooks/useExecutiveHealth';
 
 interface ClientHealthDrawerProps {
@@ -37,48 +37,21 @@ interface ActionSuggestion {
 function getActions(row: ExecutiveHealthRow): ActionSuggestion[] {
   const actions: ActionSuggestion[] = [];
   const flags = row.predictive_flags;
-
   if (flags.activity_decay || flags.severe_activity_decay) {
-    actions.push({
-      icon: CalendarCheck,
-      label: 'Schedule check-in',
-      description: 'Activity has dropped. Trend detected.',
-      href: `/manage-tenants/${row.tenant_id}`,
-    });
+    actions.push({ icon: CalendarCheck, label: 'Schedule check-in', description: 'Activity has dropped. Trend detected.', href: `/manage-tenants/${row.tenant_id}` });
   }
   if (flags.backlog_growth || flags.sustained_backlog_growth) {
-    actions.push({
-      icon: Upload,
-      label: 'Upload missing documents',
-      description: `${row.documents_pending_upload} documents pending upload.`,
-      href: `/manage-tenants/${row.tenant_id}`,
-    });
+    actions.push({ icon: Upload, label: 'Upload missing documents', description: `${row.documents_pending_upload} documents pending upload.`, href: `/manage-tenants/${row.tenant_id}` });
   }
   if (flags.risk_escalation) {
-    actions.push({
-      icon: ShieldAlert,
-      label: 'Review high priority risks',
-      description: `${row.active_risks} active risks detected.`,
-      href: `/manage-tenants/${row.tenant_id}`,
-    });
+    actions.push({ icon: ShieldAlert, label: 'Review high priority risks', description: `${row.active_risks} active risks detected.`, href: `/manage-tenants/${row.tenant_id}` });
   }
   if (flags.burn_rate_risk) {
-    actions.push({
-      icon: Clock,
-      label: 'Review consult allocation',
-      description: `${row.hours_remaining}h remaining of ${row.hours_included}h.`,
-      href: `/manage-tenants/${row.tenant_id}`,
-    });
+    actions.push({ icon: Clock, label: 'Review consult allocation', description: `${row.hours_remaining}h remaining of ${row.hours_included}h.`, href: `/manage-tenants/${row.tenant_id}` });
   }
   if (flags.phase_drift) {
-    actions.push({
-      icon: ListChecks,
-      label: 'Complete next phase actions',
-      description: `${row.total_actions_remaining} actions remaining${row.current_phase ? ` in ${row.current_phase}` : ''}.`,
-      href: `/manage-tenants/${row.tenant_id}`,
-    });
+    actions.push({ icon: ListChecks, label: 'Complete next phase actions', description: `${row.total_actions_remaining} actions remaining${row.current_phase ? ` in ${row.current_phase}` : ''}.`, href: `/manage-tenants/${row.tenant_id}` });
   }
-
   return actions;
 }
 
@@ -90,10 +63,7 @@ function ScoreBar({ label, value }: { label: string; value: number }) {
         <span className="font-medium text-foreground">{value}%</span>
       </div>
       <div className="h-1.5 bg-muted rounded-full overflow-hidden">
-        <div
-          className="h-full bg-primary rounded-full transition-all"
-          style={{ width: `${Math.min(value, 100)}%` }}
-        />
+        <div className="h-full bg-primary rounded-full transition-all" style={{ width: `${Math.min(value, 100)}%` }} />
       </div>
     </div>
   );
@@ -115,6 +85,13 @@ function SignalRow({ label, active }: { label: string; active: boolean }) {
   );
 }
 
+const CONFIDENCE_LABELS: Record<string, string> = {
+  high: 'High density',
+  medium: 'Medium density',
+  low: 'Low density',
+  none: 'No data',
+};
+
 export function ClientHealthDrawer({ row, open, onOpenChange }: ClientHealthDrawerProps) {
   const navigate = useNavigate();
 
@@ -133,8 +110,8 @@ export function ClientHealthDrawer({ row, open, onOpenChange }: ClientHealthDraw
           <SheetDescription className="text-sm">{row.package_name}</SheetDescription>
         </SheetHeader>
 
-        {/* Compliance State */}
         <div className="space-y-4">
+          {/* Compliance State */}
           <div>
             <h4 className="text-sm font-semibold text-foreground mb-3">Compliance State</h4>
             <div className="flex items-center gap-3 mb-3">
@@ -168,6 +145,41 @@ export function ClientHealthDrawer({ row, open, onOpenChange }: ClientHealthDraw
 
           <Separator />
 
+          {/* 30-Day Trends */}
+          <div>
+            <h4 className="text-sm font-semibold text-foreground mb-3">30-Day Trends</h4>
+            <div className="space-y-3">
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-xs text-muted-foreground">Compliance Score</span>
+                  <span className="text-[10px] text-muted-foreground">{CONFIDENCE_LABELS[row.compliance_spark_confidence]}</span>
+                </div>
+                <SparklineMini
+                  values={row.compliance_spark_scores ?? []}
+                  confidence={row.compliance_spark_confidence}
+                  kind="compliance"
+                  height={32}
+                  width={320}
+                />
+              </div>
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-xs text-muted-foreground">Operational Risk</span>
+                  <span className="text-[10px] text-muted-foreground">{CONFIDENCE_LABELS[row.predictive_spark_confidence]}</span>
+                </div>
+                <SparklineMini
+                  values={row.predictive_spark_scores ?? []}
+                  confidence={row.predictive_spark_confidence}
+                  kind="predictive"
+                  height={32}
+                  width={320}
+                />
+              </div>
+            </div>
+          </div>
+
+          <Separator />
+
           {/* Predictive Signals */}
           <div>
             <h4 className="text-sm font-semibold text-foreground mb-3">Predictive Signals</h4>
@@ -195,10 +207,7 @@ export function ClientHealthDrawer({ row, open, onOpenChange }: ClientHealthDraw
                       <button
                         key={i}
                         className="w-full flex items-start gap-3 p-3 rounded-lg border border-border hover:bg-muted/30 transition-colors text-left"
-                        onClick={() => {
-                          onOpenChange(false);
-                          navigate(action.href);
-                        }}
+                        onClick={() => { onOpenChange(false); navigate(action.href); }}
                       >
                         <Icon className="w-4 h-4 mt-0.5 text-primary flex-shrink-0" />
                         <div className="min-w-0">
