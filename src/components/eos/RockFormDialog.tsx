@@ -291,14 +291,18 @@ export function RockFormDialog({ open, onOpenChange, rock }: RockFormDialogProps
       rockData.parent_rock_id = parentRockId || null;
     }
 
-    if (rock?.id) {
-      await updateRock.mutateAsync({ id: rock.id, ...rockData });
-    } else {
-      await createRock.mutateAsync(rockData);
+    try {
+      if (rock?.id) {
+        await updateRock.mutateAsync({ id: rock.id, ...rockData });
+      } else {
+        await createRock.mutateAsync(rockData);
+      }
+      onOpenChange(false);
+      resetForm();
+    } catch (error) {
+      console.error('Rock save failed:', error);
+      // Dialog stays open so the user can retry
     }
-    
-    onOpenChange(false);
-    resetForm();
   };
 
   const resetForm = () => {

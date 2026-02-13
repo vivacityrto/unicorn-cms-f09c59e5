@@ -3,12 +3,15 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { AlertTriangle } from 'lucide-react';
 import { useEosRocks, useEosIssues } from '@/hooks/useEos';
+import { getStatusOptions, dbToUiStatus, uiToDbStatus } from '@/utils/rockStatusUtils';
 import type { EosRock } from '@/types/eos';
 
 interface RockProgressControlProps {
   rock: EosRock;
   compact?: boolean;
 }
+
+const statusOptions = getStatusOptions();
 
 export function RockProgressControl({ rock, compact = false }: RockProgressControlProps) {
   const { updateRock } = useEosRocks();
@@ -20,7 +23,7 @@ export function RockProgressControl({ rock, compact = false }: RockProgressContr
     await updateRock.mutateAsync({
       id: rock.id,
       status: newStatus,
-      completed_date: newStatus === 'complete' ? new Date().toISOString() : null,
+      completed_date: dbToUiStatus(newStatus) === 'complete' ? new Date().toISOString() : null,
     });
   };
 
@@ -34,6 +37,8 @@ export function RockProgressControl({ rock, compact = false }: RockProgressContr
     });
   };
 
+  const isOffTrack = dbToUiStatus(status) === 'off_track';
+
   if (compact) {
     return (
       <div className="flex items-center gap-2">
@@ -42,13 +47,12 @@ export function RockProgressControl({ rock, compact = false }: RockProgressContr
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="on_track">On Track</SelectItem>
-            <SelectItem value="off_track">Off Track</SelectItem>
-            <SelectItem value="complete">Complete</SelectItem>
-            <SelectItem value="abandoned">Abandoned</SelectItem>
+            {statusOptions.map(opt => (
+              <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+            ))}
           </SelectContent>
         </Select>
-        {status === 'off_track' && (
+        {isOffTrack && (
           <Button
             variant="ghost"
             size="sm"
@@ -71,15 +75,14 @@ export function RockProgressControl({ rock, compact = false }: RockProgressContr
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="on_track">On Track</SelectItem>
-            <SelectItem value="off_track">Off Track</SelectItem>
-            <SelectItem value="complete">Complete</SelectItem>
-            <SelectItem value="abandoned">Abandoned</SelectItem>
+            {statusOptions.map(opt => (
+              <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+            ))}
           </SelectContent>
         </Select>
       </div>
 
-      {status === 'off_track' && (
+      {isOffTrack && (
         <Button
           variant="outline"
           size="sm"
