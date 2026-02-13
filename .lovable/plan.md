@@ -1,18 +1,35 @@
 
 
-## Fix: Show All Clients in Client Commitments Tenant Selector
+## Fix Client Commitments Form: Searchable Client + Team Member Dropdown
 
 ### Problem
-The tenant dropdown in the Client Commitments form currently filters to only Diamond-tier tenants (`.eq('tier', 'diamond')`). The dropdown appears empty because no tenants match that filter, and commitments should be assignable to any client.
+1. **Client dropdown is not searchable** -- with many tenants, users cannot type to filter. Should use the existing `Combobox` component (already used elsewhere, e.g., `InviteUserDialog`).
+2. **"Assigned To" is a free-text Input** -- the `assigned_to` column stores a UUID (`user_uuid`), but the form renders a plain text input. Typing a name like "Angela" causes a database error: `invalid input syntax for type uuid: "Angela"`. This needs to be a dropdown of Vivacity team members.
 
 ### Changes
 
 **File: `src/pages/ExecutiveClientCommitments.tsx`**
 
-1. **Remove the Diamond-tier filter** from `fetchTenants` (line 78) -- load all non-system tenants instead of filtering by `tier = 'diamond'`
-2. **Update description text** on line 250 from "Manage diamond-tier client commitments" to "Manage client commitments and deliverables"
-3. **Update dialog description** on line 328 from "Add a new commitment for a diamond-tier client" to "Add a new commitment for a client"
+1. **Import `Combobox`** from `@/components/ui/combobox` (replacing the need for the plain Select for tenants).
+
+2. **Import `useTenantUsers`** (or fetch Vivacity team members directly) to populate the "Assigned To" dropdown. Since this is a SuperAdmin context, fetch users from the Vivacity tenant (ID 6372) to list internal staff as assignees.
+
+3. **Add state for team members** -- fetch Vivacity team users on mount, similar to how `fetchTenants` works.
+
+4. **Replace Client (Tenant) Select with Combobox** (lines 191-197):
+   - Convert `tenants` array to `ComboboxOption[]` format (`{ value, label }`)
+   - Use the `Combobox` component with search functionality
+   - This allows typing to filter the tenant list
+
+5. **Replace "Assigned To" Input with Select dropdown** (lines 231-233):
+   - Change from `<Input>` to a `<Select>` populated with fetched team members
+   - Include an "Unassigned" option
+   - Each option value is the user's `user_uuid`
+   - Display format: "First Last"
+
+6. **Update table display** for the "Assigned To" column to resolve UUIDs to names using the fetched team members list.
 
 ### Technical Detail
-The `fetchTenants` function will query `tenants` excluding system tenants (`.neq('is_system_tenant', true)`) and order by name, consistent with how other parts of the app load client lists (e.g., `useAddinLookups`).
-
+- The `Combobox` component at `src/components/ui/combobox.tsx` already supports search filtering, grouped options, and custom placeholders
+- Team members will be fetched from the `users` table filtered by `tenant_id = 6372` (Vivacity tenant)
+- No database changes required -- `assigned_to` already expects a UUID
