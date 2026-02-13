@@ -166,3 +166,6 @@ verify_jwt = false
 
 [functions.extract-document-fields]
 verify_jwt = false
+
+[functions.calculate-phase-completeness]
+verify_jwt = false

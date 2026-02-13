@@ -19901,6 +19901,36 @@ export type Database = {
           },
         ]
       }
+      phase_requirements: {
+        Row: {
+          created_at: string
+          framework: string
+          phase_key: string
+          phase_requirement_id: string
+          required_doc_types: string[]
+          required_fields: Json
+          tenant_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          framework: string
+          phase_key: string
+          phase_requirement_id?: string
+          required_doc_types?: string[]
+          required_fields?: Json
+          tenant_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          framework?: string
+          phase_key?: string
+          phase_requirement_id?: string
+          required_doc_types?: string[]
+          required_fields?: Json
+          tenant_id?: string | null
+        }
+        Relationships: []
+      }
       place_holders: {
         Row: {
           ID: number
