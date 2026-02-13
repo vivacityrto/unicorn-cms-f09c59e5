@@ -7300,7 +7300,21 @@ export type Database = {
             foreignKeyName: "compliance_score_snapshots_package_instance_id_fkey"
             columns: ["package_instance_id"]
             isOneToOne: false
+            referencedRelation: "v_completion_eligibility"
+            referencedColumns: ["package_instance_id"]
+          },
+          {
+            foreignKeyName: "compliance_score_snapshots_package_instance_id_fkey"
+            columns: ["package_instance_id"]
+            isOneToOne: false
             referencedRelation: "v_dashboard_consultant_momentum"
+            referencedColumns: ["package_instance_id"]
+          },
+          {
+            foreignKeyName: "compliance_score_snapshots_package_instance_id_fkey"
+            columns: ["package_instance_id"]
+            isOneToOne: false
+            referencedRelation: "v_progress_anchor_inputs"
             referencedColumns: ["package_instance_id"]
           },
           {
@@ -17366,7 +17380,21 @@ export type Database = {
             foreignKeyName: "package_notes_package_instance_id_fkey"
             columns: ["package_instance_id"]
             isOneToOne: false
+            referencedRelation: "v_completion_eligibility"
+            referencedColumns: ["package_instance_id"]
+          },
+          {
+            foreignKeyName: "package_notes_package_instance_id_fkey"
+            columns: ["package_instance_id"]
+            isOneToOne: false
             referencedRelation: "v_dashboard_consultant_momentum"
+            referencedColumns: ["package_instance_id"]
+          },
+          {
+            foreignKeyName: "package_notes_package_instance_id_fkey"
+            columns: ["package_instance_id"]
+            isOneToOne: false
+            referencedRelation: "v_progress_anchor_inputs"
             referencedColumns: ["package_instance_id"]
           },
           {
@@ -28570,6 +28598,19 @@ export type Database = {
         }
         Relationships: []
       }
+      v_completion_eligibility: {
+        Row: {
+          eligible: boolean | null
+          has_active_critical: boolean | null
+          ineligible_reasons: string[] | null
+          is_final_phase_completed: boolean | null
+          missing_required_docs_ratio: number | null
+          package_id: number | null
+          package_instance_id: number | null
+          tenant_id: number | null
+        }
+        Relationships: []
+      }
       v_compliance_score_latest: {
         Row: {
           calculated_at: string | null
@@ -28613,7 +28654,21 @@ export type Database = {
             foreignKeyName: "compliance_score_snapshots_package_instance_id_fkey"
             columns: ["package_instance_id"]
             isOneToOne: false
+            referencedRelation: "v_completion_eligibility"
+            referencedColumns: ["package_instance_id"]
+          },
+          {
+            foreignKeyName: "compliance_score_snapshots_package_instance_id_fkey"
+            columns: ["package_instance_id"]
+            isOneToOne: false
             referencedRelation: "v_dashboard_consultant_momentum"
+            referencedColumns: ["package_instance_id"]
+          },
+          {
+            foreignKeyName: "compliance_score_snapshots_package_instance_id_fkey"
+            columns: ["package_instance_id"]
+            isOneToOne: false
+            referencedRelation: "v_progress_anchor_inputs"
             referencedColumns: ["package_instance_id"]
           },
           {
@@ -28741,6 +28796,23 @@ export type Database = {
           uploaded_by_name: string | null
           uploaded_by_type: string | null
           version_number: number | null
+        }
+        Relationships: []
+      }
+      v_progress_anchor_inputs: {
+        Row: {
+          actions_remaining_current_phase: number | null
+          client_name: string | null
+          days_stale: number | null
+          documents_pending_upload: number | null
+          has_active_critical: boolean | null
+          is_stale: boolean | null
+          next_milestone_label: string | null
+          overall_score: number | null
+          package_id: number | null
+          package_instance_id: number | null
+          package_name: string | null
+          tenant_id: number | null
         }
         Relationships: []
       }

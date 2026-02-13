@@ -8,6 +8,7 @@ import { useOpenDocumentRequest } from "@/components/layout/ClientLayout";
 import { useClientActingUser } from "@/hooks/useClientActingUser";
 import { useClientTenant } from "@/contexts/ClientTenantContext";
 import { ClientProgressSummary } from "./ClientProgressSummary";
+import { ProgressAnchors } from "@/components/compliance/ProgressAnchors";
 
 export function ClientHomePage() {
   const { openHelpCenter } = useHelpCenter();
@@ -30,6 +31,9 @@ export function ClientHomePage() {
 
       {/* Progress Summary */}
       <ClientProgressSummary tenantId={activeTenantId} />
+
+      {/* Progress Anchors */}
+      <ProgressAnchors tenantId={activeTenantId} variant="client" />
 
       {/* Row 1: What do you need? */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
