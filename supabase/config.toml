@@ -160,3 +160,6 @@ verify_jwt = false
 
 [functions.ai-orchestrator]
 verify_jwt = false
+
+[functions.generate-meeting-summary]
+verify_jwt = false

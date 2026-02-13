@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { format, differenceInMinutes } from 'date-fns';
 import { 
   Clock, MapPin, Users, Building2, Timer, Link as LinkIcon, 
-  ExternalLink, Video, FileText, Plus, Check, Loader2, Save, Paperclip
+  ExternalLink, Video, FileText, Plus, Check, Loader2, Save, Paperclip, Sparkles
 } from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
@@ -17,6 +17,7 @@ import { Meeting, MeetingParticipant, MeetingNote, MeetingActionItem, useMeeting
 import { useMeetingArtifacts } from '@/hooks/useMeetingArtifacts';
 import { MeetingArtifactsList } from '@/components/meetings/MeetingArtifactsList';
 import { MeetingMinutesPanel } from '@/components/meetings/MeetingMinutesPanel';
+import { MeetingAiSummaryPanel } from '@/components/meetings/MeetingAiSummaryPanel';
 import { useRBAC } from '@/hooks/useRBAC';
 import { useQuery } from '@tanstack/react-query';
 import { cn } from '@/lib/utils';
@@ -101,6 +102,8 @@ export function MeetingDetailDrawer({
   const showArtifactsTab = isVivacityTeam && isOwner;
   // Vivacity team sees minutes tab; clients do not see it at all
   const showMinutesTab = isVivacityTeam && isOwner;
+  // Vivacity team sees AI summary tab; internal only
+  const showAiSummaryTab = isVivacityTeam && isOwner;
 
   const handleAddNote = async () => {
     if (!meeting.id || !newNote.trim()) return;
@@ -205,6 +208,12 @@ export function MeetingDetailDrawer({
                   <TabsTrigger value="minutes" className="gap-1">
                     <FileText className="h-3 w-3" />
                     Minutes
+                  </TabsTrigger>
+                )}
+                {showAiSummaryTab && (
+                  <TabsTrigger value="ai-summary" className="gap-1">
+                    <Sparkles className="h-3 w-3" />
+                    AI Summary
                   </TabsTrigger>
                 )}
               </>
@@ -436,6 +445,15 @@ export function MeetingDetailDrawer({
                 <MeetingMinutesPanel
                   meetingId={meeting.id}
                   isVivacityTeam={isVivacityTeam}
+                />
+              </TabsContent>
+            )}
+
+            {showAiSummaryTab && (
+              <TabsContent value="ai-summary" className="p-6 pt-4 mt-0">
+                <MeetingAiSummaryPanel
+                  meetingId={meeting.id}
+                  tenantId={meeting.tenant_id}
                 />
               </TabsContent>
             )}

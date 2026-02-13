@@ -17334,6 +17334,59 @@ export type Database = {
           },
         ]
       }
+      meeting_summaries: {
+        Row: {
+          action_items: Json
+          ai_event_id: string | null
+          confidence: number | null
+          created_at: string
+          created_by_user_id: string
+          decisions: Json
+          meeting_id: string
+          meeting_summary_id: string
+          risks_raised: Json
+          source: string
+          summary_text: string
+          tenant_id: number
+        }
+        Insert: {
+          action_items?: Json
+          ai_event_id?: string | null
+          confidence?: number | null
+          created_at?: string
+          created_by_user_id: string
+          decisions?: Json
+          meeting_id: string
+          meeting_summary_id?: string
+          risks_raised?: Json
+          source: string
+          summary_text: string
+          tenant_id: number
+        }
+        Update: {
+          action_items?: Json
+          ai_event_id?: string | null
+          confidence?: number | null
+          created_at?: string
+          created_by_user_id?: string
+          decisions?: Json
+          meeting_id?: string
+          meeting_summary_id?: string
+          risks_raised?: Json
+          source?: string
+          summary_text?: string
+          tenant_id?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meeting_summaries_ai_event_id_fkey"
+            columns: ["ai_event_id"]
+            isOneToOne: false
+            referencedRelation: "ai_events"
+            referencedColumns: ["ai_event_id"]
+          },
+        ]
+      }
       meeting_sync_audit: {
         Row: {
           action: string
