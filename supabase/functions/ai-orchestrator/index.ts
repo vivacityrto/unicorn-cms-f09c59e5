@@ -383,6 +383,124 @@ function simpleHash(input: string): string {
   return Math.abs(hash).toString(36);
 }
 
+// ============= Input Size Limits =============
+
+const MAX_INPUT_SIZES: Record<string, number> = {
+  meeting_summary: 100_000,     // ~100K chars for transcripts
+  doc_extract_tas: 200_000,     // ~200K chars for doc text
+  doc_extract_trainer_matrix: 200_000,
+  phase_completeness_check: 10_000,
+  risk_explain_v1: 10_000,
+};
+
+function checkInputSize(taskType: string, input: unknown): string | null {
+  const maxSize = MAX_INPUT_SIZES[taskType] || 50_000;
+  const inputStr = JSON.stringify(input);
+  if (inputStr.length > maxSize) {
+    return `Input too large: ${inputStr.length} chars exceeds limit of ${maxSize} for ${taskType}`;
+  }
+  return null;
+}
+
+// ============= Feature Flag Mapping =============
+
+const TASK_TO_FLAG: Record<string, string> = {
+  meeting_summary: "ai_meeting_summary_enabled",
+  doc_extract_tas: "ai_doc_extract_enabled",
+  doc_extract_trainer_matrix: "ai_doc_extract_enabled",
+  phase_completeness_check: "ai_phase_check_enabled",
+  risk_explain_v1: "ai_risk_radar_enabled",
+};
+
+/**
+ * Check if a feature is enabled for the given tenant.
+ * Priority: tenant override > global app_settings.
+ * SuperAdmins always have access (for testing).
+ */
+async function isFeatureEnabled(
+  supabase: ReturnType<typeof createClient>,
+  taskType: string,
+  tenantId: number,
+  userId: string
+): Promise<{ enabled: boolean; reason?: string }> {
+  const flagName = TASK_TO_FLAG[taskType];
+  if (!flagName) return { enabled: false, reason: "Unknown task type" };
+
+  // SuperAdmins bypass feature flags
+  const { data: userData } = await supabase
+    .from("users")
+    .select("unicorn_role, global_role")
+    .eq("user_uuid", userId)
+    .single();
+
+  if (userData) {
+    const role = userData.unicorn_role || userData.global_role || "";
+    if (role === "Super Admin" || role === "SuperAdmin") {
+      return { enabled: true };
+    }
+  }
+
+  // Check tenant-level override first
+  const { data: override } = await supabase
+    .from("ai_feature_overrides")
+    .select("enabled")
+    .eq("tenant_id", tenantId)
+    .eq("flag_name", flagName)
+    .maybeSingle();
+
+  if (override) {
+    return override.enabled
+      ? { enabled: true }
+      : { enabled: false, reason: `Feature ${flagName} is disabled for this tenant` };
+  }
+
+  // Fall back to global setting
+  const { data: settings } = await supabase
+    .from("app_settings")
+    .select(flagName)
+    .limit(1)
+    .single();
+
+  if (settings && (settings as any)[flagName] === true) {
+    return { enabled: true };
+  }
+
+  return { enabled: false, reason: `Feature ${flagName} is globally disabled` };
+}
+
+// ============= Stale Data Warning =============
+
+async function checkStaleData(
+  supabase: ReturnType<typeof createClient>,
+  tenantId: number
+): Promise<{ isStale: boolean; daysSinceActivity: number }> {
+  const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+
+  const { count } = await supabase
+    .from("audit_events")
+    .select("*", { count: "exact", head: true })
+    .gte("created_at", thirtyDaysAgo)
+    .limit(1);
+
+  if ((count || 0) > 0) {
+    return { isStale: false, daysSinceActivity: 0 };
+  }
+
+  // Find last activity
+  const { data: lastEvent } = await supabase
+    .from("audit_events")
+    .select("created_at")
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  const daysSince = lastEvent
+    ? Math.floor((Date.now() - new Date(lastEvent.created_at).getTime()) / (1000 * 60 * 60 * 24))
+    : 999;
+
+  return { isStale: true, daysSinceActivity: daysSince };
+}
+
 // ============= Main Handler =============
 
 Deno.serve(async (req) => {
@@ -464,6 +582,90 @@ Deno.serve(async (req) => {
       );
     }
 
+    // ---- Feature flag check ----
+    const featureCheck = await isFeatureEnabled(supabase, payload.task_type, payload.tenant_id, user.id);
+    if (!featureCheck.enabled) {
+      const latencyFf = Date.now() - startMs;
+      await writeAuditEvent(supabase, {
+        tenant_id: payload.tenant_id,
+        actor_user_id: user.id,
+        feature: payload.feature,
+        task_type: payload.task_type,
+        request_id: requestId,
+        input_hash: simpleHash(JSON.stringify(payload.input)),
+        context_hash: simpleHash(""),
+        model_name: "none",
+        latency_ms: latencyFf,
+        status: "blocked",
+        confidence: null,
+        request_json: { input: payload.input },
+        context_json: null,
+        response_json: null,
+        citations_json: null,
+        error_json: { feature_disabled: featureCheck.reason },
+      });
+
+      return new Response(
+        JSON.stringify({ error: featureCheck.reason, request_id: requestId }),
+        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // ---- Rate limiting ----
+    const { data: rateLimitOk } = await supabase.rpc("check_ai_rate_limit", {
+      p_user_id: user.id,
+      p_tenant_id: payload.tenant_id,
+      p_max_per_hour: 30,
+      p_max_per_tenant_hour: 100,
+    });
+
+    if (rateLimitOk === false) {
+      const latencyRl = Date.now() - startMs;
+      await writeAuditEvent(supabase, {
+        tenant_id: payload.tenant_id,
+        actor_user_id: user.id,
+        feature: payload.feature,
+        task_type: payload.task_type,
+        request_id: requestId,
+        input_hash: simpleHash(JSON.stringify(payload.input)),
+        context_hash: simpleHash(""),
+        model_name: "none",
+        latency_ms: latencyRl,
+        status: "blocked",
+        confidence: null,
+        request_json: { input: payload.input },
+        context_json: null,
+        response_json: null,
+        citations_json: null,
+        error_json: { rate_limited: true },
+      });
+
+      return new Response(
+        JSON.stringify({ error: "Rate limit exceeded. Try again later.", request_id: requestId }),
+        { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // ---- Input size check ----
+    const sizeError = checkInputSize(payload.task_type, payload.input);
+    if (sizeError) {
+      return new Response(
+        JSON.stringify({ error: sizeError, request_id: requestId }),
+        { status: 413, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // ---- Stale data check ----
+    let staleWarning: string | null = null;
+    let confidenceCap: number | null = null;
+    const staleCheck = await checkStaleData(supabase, payload.tenant_id);
+    if (staleCheck.isStale) {
+      staleWarning = `Warning: No activity detected in ${staleCheck.daysSinceActivity} days. Results may not reflect current state.`;
+      // Cap confidence based on staleness
+      if (staleCheck.daysSinceActivity > 60) confidenceCap = 0.3;
+      else if (staleCheck.daysSinceActivity > 30) confidenceCap = 0.5;
+    }
+
     // Execute task
     const { output, model_name } = await executeTask(supabase, payload);
 
@@ -501,6 +703,12 @@ Deno.serve(async (req) => {
     // Extract citations if present
     const citations = (output as any).citations || null;
 
+    // Apply confidence cap for stale data
+    let finalConfidence = (output as any).confidence || null;
+    if (confidenceCap !== null && finalConfidence !== null) {
+      finalConfidence = Math.min(finalConfidence, confidenceCap);
+    }
+
     // Success — log audit event
     await writeAuditEvent(supabase, {
       tenant_id: payload.tenant_id,
@@ -513,7 +721,7 @@ Deno.serve(async (req) => {
       model_name,
       latency_ms: latency,
       status: "success",
-      confidence: (output as any).confidence || null,
+      confidence: finalConfidence,
       request_json: { input: payload.input },
       context_json: payload.context || null,
       response_json: output,
@@ -528,6 +736,8 @@ Deno.serve(async (req) => {
         task_type: payload.task_type,
         model_name,
         latency_ms: latency,
+        confidence: finalConfidence,
+        stale_warning: staleWarning,
         output,
       }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
