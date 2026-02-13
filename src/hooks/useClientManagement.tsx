@@ -588,7 +588,7 @@ export function useClientPackages(tenantId: number | null) {
           package_name: pkg?.name || 'Unknown',
           package_slug: pkg?.slug || null,
           package_full_text: pkg?.full_text || null,
-          membership_state: inst.is_complete ? 'exiting' : 'active',
+          membership_state: inst.membership_state || (inst.is_complete ? 'exiting' : 'active'),
           hours_included: totalHours,
           hours_used: inst.hours_used || 0,
           current_stage_name: activeStage ? (activeStage.documents_stages as any)?.title || null : null,
