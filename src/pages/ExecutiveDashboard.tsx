@@ -1,8 +1,9 @@
 /**
  * ExecutiveDashboard – Unicorn 2.0
  *
- * Visionary–Integrator alignment view.
- * Answers: Where are we exposed? Is execution moving? Who needs support?
+ * Visionary–Integrator weekly alignment view.
+ * Single-screen layout: Snapshot → Signals + Momentum → Exposure + Owner Pressure → Summary.
+ * Weekly Review Mode default ON. No scrolling required at 1440px.
  */
 
 import { useState, useMemo } from 'react';
@@ -16,15 +17,16 @@ import { useExecutiveMomentum, useConsultantDistribution, useExecSystemHealth } 
 import { StrategicHealthSnapshot } from '@/components/executive/StrategicHealthSnapshot';
 import { AlignmentSignalsPanel } from '@/components/executive/AlignmentSignalsPanel';
 import { ExecutionMomentumPanel } from '@/components/executive/ExecutionMomentumPanel';
-import { ConsultantDistributionTable } from '@/components/executive/ConsultantDistributionTable';
+import { OwnerPressureTable } from '@/components/executive/OwnerPressureTable';
 import { StrategicExposureTable } from '@/components/executive/StrategicExposureTable';
-import { SystemHealthBlock } from '@/components/executive/SystemHealthBlock';
 import { ClientHealthDrawer } from '@/components/executive/ClientHealthDrawer';
 import { ExecutiveFiltersBar } from '@/components/executive/ExecutiveFiltersBar';
+import { WeeklySummaryFooter } from '@/components/executive/WeeklySummaryFooter';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
-import { Loader2, Eye, Users, ShieldAlert } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Loader2, Eye, ShieldAlert, Search } from 'lucide-react';
 
 export default function ExecutiveDashboard() {
   const { isSuperAdmin } = useRBAC();
@@ -39,8 +41,8 @@ export default function ExecutiveDashboard() {
 
   const [selectedRow, setSelectedRow] = useState<ExecutiveHealthRow | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [weeklyMode, setWeeklyMode] = useState(false);
-  const [showConsultants, setShowConsultants] = useState(false);
+  const [weeklyMode, setWeeklyMode] = useState(true); // Default ON
+  const [showAllClients, setShowAllClients] = useState(false);
 
   if (!isSuperAdmin) {
     return (
@@ -70,9 +72,6 @@ export default function ExecutiveDashboard() {
     ? anomalies.filter(a => a.tenant_id === selectedRow.tenant_id && a.package_instance_id === selectedRow.package_instance_id)
     : [];
 
-  const hasFilters = filters.search || filters.riskBands.length > 0 || filters.packageType ||
-    filters.staleOnly || filters.criticalOnly || filters.ownerUuid;
-
   if (isLoading) {
     return (
       <DashboardLayout>
@@ -85,16 +84,28 @@ export default function ExecutiveDashboard() {
 
   return (
     <DashboardLayout>
-      <div className="space-y-6 p-4 md:p-6 max-w-screen-2xl mx-auto">
+      <div className="space-y-3 p-3 md:p-4 max-w-screen-2xl mx-auto">
         {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-foreground">Visionary &amp; Integrator Dashboard</h1>
-            <p className="text-sm text-muted-foreground mt-1">
-              Strategic alignment and operational health.
+            <h1 className="text-lg font-bold text-foreground">Visionary &amp; Integrator Dashboard</h1>
+            <p className="text-xs text-muted-foreground">
+              {weeklyMode ? 'Weekly alignment review' : 'Strategic alignment and operational health'}
             </p>
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
+            {/* Minimal search in weekly mode */}
+            {weeklyMode && (
+              <div className="relative w-48">
+                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+                <Input
+                  placeholder="Search client..."
+                  value={filters.search}
+                  onChange={e => updateFilter('search', e.target.value)}
+                  className="pl-8 h-8 text-xs"
+                />
+              </div>
+            )}
             <div className="flex items-center gap-2">
               <Switch
                 id="weekly-mode"
@@ -106,49 +117,66 @@ export default function ExecutiveDashboard() {
                 Weekly Review
               </Label>
             </div>
-            <Button
-              variant={showConsultants ? 'secondary' : 'ghost'}
-              size="sm"
-              className="text-xs gap-1.5"
-              onClick={() => setShowConsultants(!showConsultants)}
-            >
-              <Users className="w-3.5 h-3.5" />
-              By Consultant
-            </Button>
           </div>
         </div>
 
-        {/* 1. Strategic Health Snapshot */}
-        <StrategicHealthSnapshot data={rawData} weeklyMode={weeklyMode} />
+        {/* Row 1: Strategic Snapshot — 6 compact tiles */}
+        <StrategicHealthSnapshot data={rawData} weeklyMode={weeklyMode} systemHealth={execSystemHealth} />
 
-        {/* 2. Alignment Signals + Execution Momentum */}
-        <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+        {/* Row 2: Alignment Signals (left) + Execution Momentum (right) */}
+        <div className="grid grid-cols-1 xl:grid-cols-3 gap-3">
           <div className="xl:col-span-2">
             <AlignmentSignalsPanel signals={alignmentSignals ?? []} isLoading={alignmentLoading} weeklyMode={weeklyMode} />
           </div>
-          <div className="space-y-6">
+          <div>
             <ExecutionMomentumPanel data={momentum} systemHealth={execSystemHealth} isLoading={momentumLoading} weeklyMode={weeklyMode} />
-            <SystemHealthBlock data={rawData} />
           </div>
         </div>
 
-        {/* 3. Consultant Distribution (toggle) */}
-        {showConsultants && (
-          <ConsultantDistributionTable data={consultants ?? []} isLoading={consultantsLoading} />
-        )}
-
-        {/* 4. Sticky Filter Bar */}
-        <div className="sticky top-0 z-10">
-          <ExecutiveFiltersBar
-            filters={filters}
-            onFilterChange={updateFilter}
-            onReset={resetFilters}
-            packageTypes={packageTypes}
-          />
+        {/* Row 3: Exposure (left) + Owner Pressure (right) */}
+        <div className="grid grid-cols-1 xl:grid-cols-3 gap-3">
+          <div className="xl:col-span-2">
+            <StrategicExposureTable data={data} onRowClick={handleSelect} weeklyMode={weeklyMode} />
+          </div>
+          <div>
+            <OwnerPressureTable data={consultants ?? []} isLoading={consultantsLoading} />
+          </div>
         </div>
 
-        {/* 5. Strategic Exposure Table */}
-        <StrategicExposureTable data={data} onRowClick={handleSelect} weeklyMode={weeklyMode} />
+        {/* Weekly Summary Footer */}
+        <WeeklySummaryFooter data={rawData} />
+
+        {/* Below the fold: Full filter bar + full table when "Show all clients" */}
+        {weeklyMode && (
+          <div className="flex items-center gap-2 pt-1">
+            <Switch
+              id="show-all"
+              checked={showAllClients}
+              onCheckedChange={setShowAllClients}
+            />
+            <Label htmlFor="show-all" className="text-xs cursor-pointer text-muted-foreground">
+              Show all clients
+            </Label>
+          </div>
+        )}
+
+        {(!weeklyMode || showAllClients) && (
+          <>
+            {!weeklyMode && (
+              <div className="sticky top-0 z-10">
+                <ExecutiveFiltersBar
+                  filters={filters}
+                  onFilterChange={updateFilter}
+                  onReset={resetFilters}
+                  packageTypes={packageTypes}
+                />
+              </div>
+            )}
+            {(!weeklyMode || showAllClients) && (
+              <StrategicExposureTable data={data} onRowClick={handleSelect} weeklyMode={false} />
+            )}
+          </>
+        )}
 
         <ClientHealthDrawer
           row={selectedRow}

@@ -33,18 +33,19 @@ export function AlignmentSignalsPanel({ signals, isLoading, weeklyMode }: Alignm
     let items = signals;
 
     if (weeklyMode) {
-      // Hide phase_completed, show only critical/warning
+      // Hide phase_completed
       items = items.filter(s => s.signal_type !== 'phase_completed');
+      // Show only critical/warning
       items = items.filter(s => s.severity === 'critical' || s.severity === 'warning');
 
-      // Collapse consult_spike if no critical signals exist
-      const hasCritical = items.some(s => s.severity === 'critical');
-      if (!hasCritical) {
-        items = items.filter(s => s.signal_type !== 'consult_spike');
+      // Hide consult_spike unless it's the only activity signal
+      const nonSpikeItems = items.filter(s => s.signal_type !== 'consult_spike');
+      if (nonSpikeItems.length > 0) {
+        items = nonSpikeItems;
       }
     }
 
-    return items.slice(0, 8);
+    return items.slice(0, 6);
   }, [signals, weeklyMode]);
 
   if (isLoading) {

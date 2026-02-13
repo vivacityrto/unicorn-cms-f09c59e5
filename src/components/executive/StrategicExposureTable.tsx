@@ -51,7 +51,7 @@ function TrendIcon({ value }: { value: number }) {
 export function StrategicExposureTable({ data, onRowClick, weeklyMode }: StrategicExposureTableProps) {
   const sorted = useMemo(() => {
     const filtered = weeklyMode
-      ? data.filter(r => r.risk_band !== 'stable' || r.delta_overall_score_7d !== 0 || r.delta_operational_risk_7d !== 0)
+      ? data.filter(r => r.risk_band !== 'stable')
       : data;
 
     return [...filtered].sort((a, b) => {
@@ -61,15 +61,15 @@ export function StrategicExposureTable({ data, onRowClick, weeklyMode }: Strateg
       if (b.risk_band_change_7d === 'changed' && a.risk_band_change_7d !== 'changed') return 1;
       if (b.delta_operational_risk_7d !== a.delta_operational_risk_7d) return b.delta_operational_risk_7d - a.delta_operational_risk_7d;
       return b.days_stale - a.days_stale;
-    }).slice(0, 15);
+    }).slice(0, 10);
   }, [data, weeklyMode]);
 
   return (
     <Card>
       <CardHeader className="pb-2">
-        <CardTitle className="text-base">Strategic Exposure</CardTitle>
+        <CardTitle className="text-base">Where We Are Exposed</CardTitle>
         <p className="text-xs text-muted-foreground">
-          {weeklyMode ? 'Showing movement only' : `Top ${sorted.length} by exposure`}
+          {weeklyMode ? 'Movement only — stable clients hidden' : `Top ${sorted.length} by exposure`}
         </p>
       </CardHeader>
       <CardContent className="p-0">
