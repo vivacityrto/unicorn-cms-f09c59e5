@@ -7321,6 +7321,13 @@ export type Database = {
             foreignKeyName: "compliance_score_snapshots_package_instance_id_fkey"
             columns: ["package_instance_id"]
             isOneToOne: false
+            referencedRelation: "v_phase_actions_remaining"
+            referencedColumns: ["package_instance_id"]
+          },
+          {
+            foreignKeyName: "compliance_score_snapshots_package_instance_id_fkey"
+            columns: ["package_instance_id"]
+            isOneToOne: false
             referencedRelation: "v_progress_anchor_inputs"
             referencedColumns: ["package_instance_id"]
           },
@@ -17534,6 +17541,13 @@ export type Database = {
             foreignKeyName: "package_notes_package_instance_id_fkey"
             columns: ["package_instance_id"]
             isOneToOne: false
+            referencedRelation: "v_phase_actions_remaining"
+            referencedColumns: ["package_instance_id"]
+          },
+          {
+            foreignKeyName: "package_notes_package_instance_id_fkey"
+            columns: ["package_instance_id"]
+            isOneToOne: false
             referencedRelation: "v_progress_anchor_inputs"
             referencedColumns: ["package_instance_id"]
           },
@@ -17545,6 +17559,42 @@ export type Database = {
             referencedColumns: ["package_instance_id"]
           },
         ]
+      }
+      package_phase_requirements: {
+        Row: {
+          created_at: string
+          id: string
+          package_type: string
+          phase_key: string
+          required: boolean
+          requirement_key: string
+          requirement_type: string
+          updated_at: string
+          weight: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          package_type: string
+          phase_key: string
+          required?: boolean
+          requirement_key: string
+          requirement_type: string
+          updated_at?: string
+          weight?: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          package_type?: string
+          phase_key?: string
+          required?: boolean
+          requirement_key?: string
+          requirement_type?: string
+          updated_at?: string
+          weight?: number
+        }
+        Relationships: []
       }
       package_staff_tasks: {
         Row: {
@@ -28908,6 +28958,13 @@ export type Database = {
             foreignKeyName: "compliance_score_snapshots_package_instance_id_fkey"
             columns: ["package_instance_id"]
             isOneToOne: false
+            referencedRelation: "v_phase_actions_remaining"
+            referencedColumns: ["package_instance_id"]
+          },
+          {
+            foreignKeyName: "compliance_score_snapshots_package_instance_id_fkey"
+            columns: ["package_instance_id"]
+            isOneToOne: false
             referencedRelation: "v_progress_anchor_inputs"
             referencedColumns: ["package_instance_id"]
           },
@@ -29027,6 +29084,26 @@ export type Database = {
           pause_reason: string[] | null
           recovery_eligible: boolean | null
           tenant_id: number | null
+        }
+        Relationships: []
+      }
+      v_phase_actions_remaining: {
+        Row: {
+          approvals_remaining: number | null
+          checklist_remaining: number | null
+          client_name: string | null
+          docs_remaining: number | null
+          meetings_remaining: number | null
+          next_milestone_label: string | null
+          package_id: number | null
+          package_instance_id: number | null
+          package_name: string | null
+          package_type: string | null
+          phase_key: string | null
+          phase_name: string | null
+          risks_blocking: number | null
+          tenant_id: number | null
+          total_actions_remaining: number | null
         }
         Relationships: []
       }
