@@ -75,7 +75,7 @@ export default function ExecutiveClientCommitments() {
       const { data, error } = await supabase
         .from('tenants')
         .select('id, name')
-        .eq('tier', 'diamond')
+        .neq('is_system_tenant', true)
         .order('name');
       if (error) throw error;
       setTenants(data ?? []);
@@ -247,7 +247,7 @@ export default function ExecutiveClientCommitments() {
         <div className="flex justify-between items-center">
           <div>
             <h1 className="text-[28px] font-bold">Client Commitments</h1>
-            <p className="text-muted-foreground">Manage diamond-tier client commitments and deliverables</p>
+            <p className="text-muted-foreground">Manage client commitments and deliverables</p>
           </div>
           <Button onClick={() => { setFormData(defaultForm); setIsCreateOpen(true); }} className="bg-primary hover:bg-primary/90">
             <Plus className="mr-2 h-4 w-4" /> New Commitment
@@ -324,7 +324,7 @@ export default function ExecutiveClientCommitments() {
           <DialogContent className="max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>New Client Commitment</DialogTitle>
-              <DialogDescription>Add a new commitment for a diamond-tier client</DialogDescription>
+              <DialogDescription>Add a new commitment for a client</DialogDescription>
             </DialogHeader>
             {formFields}
             <DialogFooter>
