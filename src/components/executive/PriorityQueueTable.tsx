@@ -1,13 +1,14 @@
 /**
  * PriorityQueueTable – Unicorn 2.0
  *
- * Sorted table of all active client packages with health data.
+ * Sorted table with 7-day delta chips.
  */
 
 import { useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
+import { DeltaChip } from './DeltaChip';
 import type { ExecutiveHealthRow } from '@/hooks/useExecutiveHealth';
 
 interface PriorityQueueTableProps {
@@ -15,12 +16,7 @@ interface PriorityQueueTableProps {
   onRowClick: (row: ExecutiveHealthRow) => void;
 }
 
-const bandOrder: Record<string, number> = {
-  immediate_attention: 0,
-  at_risk: 1,
-  watch: 2,
-  stable: 3,
-};
+const bandOrder: Record<string, number> = { immediate_attention: 0, at_risk: 1, watch: 2, stable: 3 };
 
 const bandVariant: Record<string, string> = {
   stable: 'bg-brand-purple-100 text-brand-purple-700 dark:bg-brand-purple-900 dark:text-brand-purple-200',
@@ -32,17 +28,12 @@ const bandVariant: Record<string, string> = {
 export function PriorityQueueTable({ data, onRowClick }: PriorityQueueTableProps) {
   const sorted = useMemo(() =>
     [...data].sort((a, b) => {
-      // risk_band desc
       const bandDiff = (bandOrder[a.risk_band] ?? 3) - (bandOrder[b.risk_band] ?? 3);
       if (bandDiff !== 0) return bandDiff;
-      // operational_risk_score desc
       if (b.operational_risk_score !== a.operational_risk_score) return b.operational_risk_score - a.operational_risk_score;
-      // overall_score asc
       if (a.overall_score !== b.overall_score) return a.overall_score - b.overall_score;
-      // days_stale desc
       return b.days_stale - a.days_stale;
-    }),
-    [data]
+    }), [data]
   );
 
   return (
@@ -76,7 +67,10 @@ export function PriorityQueueTable({ data, onRowClick }: PriorityQueueTableProps
                 >
                   <td className="px-4 py-3 font-medium text-foreground max-w-[200px] truncate">{row.client_name}</td>
                   <td className="px-4 py-3 text-muted-foreground max-w-[160px] truncate">{row.package_name}</td>
-                  <td className="px-3 py-3 text-center font-semibold">{row.overall_score}%</td>
+                  <td className="px-3 py-3 text-center">
+                    <span className="font-semibold">{row.overall_score}%</span>
+                    <DeltaChip value={row.delta_overall_score_7d} type="compliance" className="ml-1" />
+                  </td>
                   <td className="px-3 py-3 text-center">
                     <Badge className={cn('text-xs capitalize', bandVariant[row.risk_band] || bandVariant.stable)}>
                       {row.risk_band.replace('_', ' ')}
@@ -90,7 +84,10 @@ export function PriorityQueueTable({ data, onRowClick }: PriorityQueueTableProps
                       <span className="inline-block w-2 h-2 rounded-full bg-[hsl(var(--brand-fuchsia-600))]" title="Has critical risk" />
                     )}
                   </td>
-                  <td className="px-3 py-3 text-center text-muted-foreground">{row.days_stale}d</td>
+                  <td className="px-3 py-3 text-center text-muted-foreground">
+                    {row.days_stale}d
+                    <DeltaChip value={row.delta_days_stale_7d} type="stale" className="ml-1" />
+                  </td>
                 </tr>
               ))}
               {sorted.length === 0 && (

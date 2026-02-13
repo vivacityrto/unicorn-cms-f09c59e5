@@ -1,8 +1,8 @@
 /**
  * useExecutiveHealth – Unicorn 2.0
  *
- * Fetches v_executive_client_health for the Executive Dashboard.
- * Internal-only: SuperAdmin / Vivacity Team.
+ * Fetches v_executive_client_health (with 7-day deltas) and
+ * v_executive_watchlist_7d for the Executive Dashboard.
  */
 
 import { useQuery } from '@tanstack/react-query';
@@ -46,6 +46,26 @@ export interface ExecutiveHealthRow {
   hours_remaining: number;
   hours_included: number;
   updated_at: string | null;
+  // 7-day deltas
+  delta_overall_score_7d: number;
+  delta_phase_completion_7d: number;
+  delta_docs_coverage_7d: number;
+  delta_risk_health_7d: number;
+  delta_consult_health_7d: number;
+  delta_days_stale_7d: number;
+  delta_operational_risk_7d: number;
+  risk_band_change_7d: string;
+  compliance_baseline_at: string | null;
+  predictive_baseline_at: string | null;
+}
+
+export interface WatchlistItem {
+  tenant_id: number;
+  package_instance_id: number;
+  change_type: string;
+  change_value: number;
+  baseline_value: number | null;
+  current_value: number | null;
 }
 
 export interface ExecutiveFilters {
@@ -76,9 +96,20 @@ export function useExecutiveHealth() {
         .from('v_executive_client_health' as any)
         .select('*')
         .order('operational_risk_score', { ascending: false });
-
       if (error) throw error;
       return (data ?? []) as unknown as ExecutiveHealthRow[];
+    },
+    staleTime: 30_000,
+  });
+
+  const { data: watchlist } = useQuery({
+    queryKey: ['executive-watchlist'],
+    queryFn: async (): Promise<WatchlistItem[]> => {
+      const { data, error } = await supabase
+        .from('v_executive_watchlist_7d' as any)
+        .select('*');
+      if (error) throw error;
+      return (data ?? []) as unknown as WatchlistItem[];
     },
     staleTime: 30_000,
   });
@@ -102,21 +133,32 @@ export function useExecutiveHealth() {
 
   const resetFilters = useCallback(() => setFilters(defaultFilters), []);
 
-  // KPI calculations
+  // KPI calculations with deltas
   const kpis = useMemo(() => {
     const data = rawData ?? [];
     const avgScore = data.length > 0
       ? Math.round(data.reduce((sum, r) => sum + r.overall_score, 0) / data.length)
       : 0;
+    const avgScoreBaseline = data.length > 0
+      ? Math.round(data.reduce((sum, r) => sum + (r.overall_score - r.delta_overall_score_7d), 0) / data.length)
+      : 0;
     const atRiskCount = data.filter(r => r.risk_band === 'at_risk' || r.risk_band === 'immediate_attention').length;
     const criticalRisks = data.filter(r => r.has_active_critical).length;
     const staleCount = data.filter(r => r.days_stale > 14).length;
-    return { avgScore, atRiskCount, criticalRisks, staleCount, totalPackages: data.length };
+    return {
+      avgScore,
+      avgScoreDelta: avgScore - avgScoreBaseline,
+      atRiskCount,
+      criticalRisks,
+      staleCount,
+      totalPackages: data.length,
+    };
   }, [rawData]);
 
   return {
     data: filteredData,
     rawData: rawData ?? [],
+    watchlist: watchlist ?? [],
     isLoading,
     error,
     filters,

@@ -1,14 +1,13 @@
 /**
  * ClientHealthMatrix – Unicorn 2.0
  *
- * Scatter plot: X = Compliance Score, Y = Predictive Operational Risk Score.
- * Each dot = a client + package. Quadrant logic applied.
- * Respects reduced motion (no animation when enabled).
+ * Scatter plot with delta mode toggle.
  */
 
 import { useMemo, useState } from 'react';
 import { ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, ReferenceLine, Label } from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import type { ExecutiveHealthRow } from '@/hooks/useExecutiveHealth';
 
 interface ClientHealthMatrixProps {
@@ -17,34 +16,17 @@ interface ClientHealthMatrixProps {
 }
 
 const BAND_COLORS: Record<string, string> = {
-  stable: 'hsl(275, 55%, 41%)',       // brand-purple
-  watch: 'hsl(190, 74%, 50%)',        // brand-aqua
-  at_risk: 'hsl(48, 96%, 52%)',       // brand-macaron
-  immediate_attention: 'hsl(333, 86%, 51%)', // brand-fuchsia
+  stable: 'hsl(275, 55%, 41%)',
+  watch: 'hsl(190, 74%, 50%)',
+  at_risk: 'hsl(48, 96%, 52%)',
+  immediate_attention: 'hsl(333, 86%, 51%)',
 };
-
-function getQuadrantLabel(complianceScore: number, riskScore: number): string {
-  if (complianceScore >= 50 && riskScore < 50) return 'Stable';
-  if (complianceScore >= 50 && riskScore >= 50) return 'Stall Risk';
-  if (complianceScore < 50 && riskScore < 50) return 'In Progress';
-  return 'Immediate Attention';
-}
 
 const prefersReducedMotion = typeof window !== 'undefined'
   ? window.matchMedia('(prefers-reduced-motion: reduce)').matches
   : false;
 
-interface TooltipPayload {
-  payload: {
-    client_name: string;
-    package_name: string;
-    overall_score: number;
-    operational_risk_score: number;
-    risk_band: string;
-  };
-}
-
-function CustomTooltip({ active, payload }: { active?: boolean; payload?: TooltipPayload[] }) {
+function CustomTooltip({ active, payload, deltaMode }: { active?: boolean; payload?: any[]; deltaMode?: boolean }) {
   if (!active || !payload?.length) return null;
   const d = payload[0].payload;
   return (
@@ -52,79 +34,93 @@ function CustomTooltip({ active, payload }: { active?: boolean; payload?: Toolti
       <p className="font-semibold text-foreground truncate">{d.client_name}</p>
       <p className="text-muted-foreground text-xs truncate">{d.package_name}</p>
       <div className="mt-2 space-y-1">
-        <p>Compliance: <span className="font-medium">{d.overall_score}%</span></p>
-        <p>Risk Score: <span className="font-medium">{d.operational_risk_score}</span></p>
+        {deltaMode ? (
+          <>
+            <p>Compliance Δ7d: <span className="font-medium">{d.delta_overall_score_7d > 0 ? '+' : ''}{d.delta_overall_score_7d}</span></p>
+            <p>Risk Δ7d: <span className="font-medium">{d.delta_operational_risk_7d > 0 ? '+' : ''}{d.delta_operational_risk_7d}</span></p>
+          </>
+        ) : (
+          <>
+            <p>Compliance: <span className="font-medium">{d.overall_score}%</span></p>
+            <p>Risk Score: <span className="font-medium">{d.operational_risk_score}</span></p>
+          </>
+        )}
         <p>Band: <span className="font-medium capitalize">{d.risk_band.replace('_', ' ')}</span></p>
-        <p className="text-xs text-muted-foreground mt-1">{getQuadrantLabel(d.overall_score, d.operational_risk_score)}</p>
       </div>
     </div>
   );
 }
 
 export function ClientHealthMatrix({ data, onSelect }: ClientHealthMatrixProps) {
+  const [deltaMode, setDeltaMode] = useState(false);
+
   const chartData = useMemo(() =>
     data.map(row => ({
       ...row,
-      x: row.overall_score,
-      y: row.operational_risk_score,
+      x: deltaMode ? row.delta_overall_score_7d : row.overall_score,
+      y: deltaMode ? row.delta_operational_risk_7d : row.operational_risk_score,
     })),
-    [data]
+    [data, deltaMode]
   );
+
+  const domain: [number, number] = deltaMode ? [-50, 50] : [0, 100];
+  const refLine = deltaMode ? 0 : 50;
 
   return (
     <Card>
-      <CardHeader className="pb-2">
-        <CardTitle className="text-base">Health Matrix</CardTitle>
-        <p className="text-xs text-muted-foreground">X: Compliance Score · Y: Operational Risk Score</p>
+      <CardHeader className="pb-2 flex flex-row items-center justify-between">
+        <div>
+          <CardTitle className="text-base">Health Matrix</CardTitle>
+          <p className="text-xs text-muted-foreground">
+            {deltaMode ? 'X: Compliance Δ7d · Y: Risk Δ7d' : 'X: Compliance Score · Y: Risk Score'}
+          </p>
+        </div>
+        <div className="flex gap-1">
+          <Button
+            variant={deltaMode ? 'ghost' : 'secondary'}
+            size="sm"
+            className="text-xs h-7"
+            onClick={() => setDeltaMode(false)}
+          >
+            Current
+          </Button>
+          <Button
+            variant={deltaMode ? 'secondary' : 'ghost'}
+            size="sm"
+            className="text-xs h-7"
+            onClick={() => setDeltaMode(true)}
+          >
+            Change (7d)
+          </Button>
+        </div>
       </CardHeader>
       <CardContent>
         <div className="h-[350px] w-full">
           <ResponsiveContainer width="100%" height="100%">
             <ScatterChart margin={{ top: 10, right: 10, bottom: 30, left: 10 }}>
               <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-              <XAxis
-                type="number"
-                dataKey="x"
-                domain={[0, 100]}
-                name="Compliance"
-                tick={{ fontSize: 11 }}
-                className="fill-muted-foreground"
-              >
-                <Label value="Compliance Score" position="bottom" offset={10} className="fill-muted-foreground text-xs" />
+              <XAxis type="number" dataKey="x" domain={domain} tick={{ fontSize: 11 }} className="fill-muted-foreground">
+                <Label value={deltaMode ? 'Compliance Δ' : 'Compliance Score'} position="bottom" offset={10} className="fill-muted-foreground text-xs" />
               </XAxis>
-              <YAxis
-                type="number"
-                dataKey="y"
-                domain={[0, 100]}
-                name="Risk"
-                tick={{ fontSize: 11 }}
-                className="fill-muted-foreground"
-              >
-                <Label value="Risk Score" angle={-90} position="insideLeft" offset={0} className="fill-muted-foreground text-xs" />
+              <YAxis type="number" dataKey="y" domain={domain} tick={{ fontSize: 11 }} className="fill-muted-foreground">
+                <Label value={deltaMode ? 'Risk Δ' : 'Risk Score'} angle={-90} position="insideLeft" offset={0} className="fill-muted-foreground text-xs" />
               </YAxis>
-              <ReferenceLine x={50} stroke="hsl(var(--border))" strokeDasharray="4 4" />
-              <ReferenceLine y={50} stroke="hsl(var(--border))" strokeDasharray="4 4" />
-              <Tooltip content={<CustomTooltip />} />
+              <ReferenceLine x={refLine} stroke="hsl(var(--border))" strokeDasharray="4 4" />
+              <ReferenceLine y={refLine} stroke="hsl(var(--border))" strokeDasharray="4 4" />
+              <Tooltip content={<CustomTooltip deltaMode={deltaMode} />} />
               <Scatter
                 data={chartData}
                 isAnimationActive={!prefersReducedMotion}
-                onClick={(entry: any) => {
-                  if (entry) onSelect(entry);
-                }}
+                onClick={(entry: any) => entry && onSelect(entry)}
                 cursor="pointer"
               >
                 {chartData.map((entry, index) => (
-                  <Cell
-                    key={`cell-${index}`}
-                    fill={BAND_COLORS[entry.risk_band] || BAND_COLORS.stable}
-                    r={6}
-                  />
+                  <Cell key={`cell-${index}`} fill={BAND_COLORS[entry.risk_band] || BAND_COLORS.stable} r={6} />
                 ))}
               </Scatter>
             </ScatterChart>
           </ResponsiveContainer>
         </div>
-        {/* Legend */}
         <div className="flex flex-wrap gap-4 mt-3 justify-center">
           {Object.entries(BAND_COLORS).map(([band, color]) => (
             <div key={band} className="flex items-center gap-1.5 text-xs text-muted-foreground">
