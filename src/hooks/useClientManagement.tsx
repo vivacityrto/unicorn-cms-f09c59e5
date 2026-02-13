@@ -555,12 +555,15 @@ export function useClientPackages(tenantId: number | null) {
       // Get unique package IDs to fetch package details
       const packageIds = [...new Set((instances || []).map(i => i.package_id))];
 
-      // Fetch package details and stage states in parallel
-      const [packagesResult, stageStatesResult] = await Promise.all([
+      // Fetch package details and stage instances in parallel
+      const instanceIds = (instances || []).map(i => i.id);
+      const [packagesResult, stageInstancesResult] = await Promise.all([
         packageIds.length > 0
           ? supabase.from('packages').select('id, name, slug, full_text').in('id', packageIds)
           : Promise.resolve({ data: [] }),
-        supabase.from('client_package_stage_state').select('*, documents_stages(title)').eq('tenant_id', tenantId)
+        instanceIds.length > 0
+          ? supabase.from('stage_instances').select('id, packageinstance_id, stage_id, status, stage_sortorder, completion_date, documents_stages(title)').in('packageinstance_id', instanceIds).order('stage_sortorder')
+          : Promise.resolve({ data: [] })
       ]);
 
       const packagesMap = ((packagesResult as any).data || []).reduce((acc: Record<number, any>, pkg: any) => {
@@ -568,16 +571,18 @@ export function useClientPackages(tenantId: number | null) {
         return acc;
       }, {} as Record<number, any>);
 
-      const stageStates = (stageStatesResult as any).data || [];
+      const stageInstances = (stageInstancesResult as any).data || [];
 
       // Build package data with stage info
       const packageData: ClientPackage[] = (instances || []).map(inst => {
         const pkg = packagesMap[inst.package_id];
-        const pkgStages = stageStates.filter((s: any) => s.package_id === inst.package_id);
+        const pkgStages = stageInstances.filter((s: any) => s.packageinstance_id === inst.id);
         const totalStages = pkgStages.length;
-        const completedStages = pkgStages.filter((s: any) => s.status === 'completed').length;
+        const completedStages = pkgStages.filter((s: any) => s.status === 'completed' || s.status === '3').length;
         const hasBlocked = pkgStages.some((s: any) => s.status === 'blocked');
-        const activeStage = pkgStages.find((s: any) => s.status === 'active' || s.status === 'in_progress');
+        const activeStage = pkgStages.find((s: any) => 
+          s.status !== 'completed' && s.status !== '3' && s.status !== 'na' && s.status !== 'not_started'
+        ) || pkgStages.find((s: any) => s.status === 'not_started');
 
         // Total hours = included + any added hours
         const totalHours = (inst.hours_included || 0) + (inst.hours_added || 0);
