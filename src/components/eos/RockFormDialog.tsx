@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -7,30 +7,22 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Combobox } from '@/components/ui/combobox';
 import { Slider } from '@/components/ui/slider';
-import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useEosRocks } from '@/hooks/useEos';
 import { useAuth } from '@/hooks/useAuth';
 import { useVivacityTeamUsers, VIVACITY_TENANT_ID } from '@/hooks/useVivacityTeamUsers';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { AlertTriangle, Armchair, User, Plus, X, ListChecks, GitBranch } from 'lucide-react';
-import { DB_ROCK_STATUS, getStatusOptions, dbToUiStatus, uiToDbStatus } from '@/utils/rockStatusUtils';
-import type { EosRock } from '@/types/eos';
+import { User, Plus, X, ListChecks, GitBranch, Building2, Users, UserCircle } from 'lucide-react';
+import { DB_ROCK_STATUS, getStatusOptions } from '@/utils/rockStatusUtils';
+import type { EosRock, RockLevel } from '@/types/eos';
 
 interface RockFormDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   rock?: EosRock | null;
-}
-
-interface SeatWithOwner {
-  id: string;
-  seat_name: string;
-  function_name: string;
-  primary_owner_id: string | null;
-  primary_owner_name: string | null;
 }
 
 interface Milestone {
@@ -44,12 +36,13 @@ export function RockFormDialog({ open, onOpenChange, rock }: RockFormDialogProps
   const { createRock, updateRock } = useEosRocks();
   const { data: vivacityUsers } = useVivacityTeamUsers();
   
+  // Form state
+  const [rockLevel, setRockLevel] = useState<RockLevel>(rock?.rock_level || 'company');
   const [title, setTitle] = useState(rock?.title || '');
   const [description, setDescription] = useState(rock?.description || '');
   const [issue, setIssue] = useState((rock as any)?.issue || '');
   const [problemSolved, setProblemSolved] = useState((rock as any)?.outcome || '');
   const [milestones, setMilestones] = useState<Milestone[]>(() => {
-    // Initialize milestones with proper deep copies
     const savedMilestones = (rock as any)?.milestones;
     if (Array.isArray(savedMilestones)) {
       return savedMilestones.map(m => ({ ...m, id: m.id || crypto.randomUUID() }));
@@ -57,7 +50,7 @@ export function RockFormDialog({ open, onOpenChange, rock }: RockFormDialogProps
     return [];
   });
   const [clientId, setClientId] = useState<string>(rock?.client_id ? String(rock.client_id) : '');
-  const [seatId, setSeatId] = useState(rock?.seat_id || '');
+  const [functionId, setFunctionId] = useState((rock as any)?.function_id || '');
   const [ownerId, setOwnerId] = useState((rock as any)?.owner_id || '');
   const [parentRockId, setParentRockId] = useState((rock as any)?.parent_rock_id || '');
   const [status, setStatus] = useState(rock?.status || DB_ROCK_STATUS.ON_TRACK);
@@ -68,19 +61,18 @@ export function RockFormDialog({ open, onOpenChange, rock }: RockFormDialogProps
   const [quarterYear, setQuarterYear] = useState(rock?.quarter_year || new Date().getFullYear());
   const [dueDate, setDueDate] = useState(rock?.due_date ? rock.due_date.split('T')[0] : '');
 
-  // Helper function to calculate quarter end date
+  // Quarter end date helper
   const getQuarterEndDate = (year: number, quarter: number): string => {
     const quarterEndDates: Record<number, { month: number; day: number }> = {
-      1: { month: 3, day: 31 },   // March 31
-      2: { month: 6, day: 30 },   // June 30
-      3: { month: 9, day: 30 },   // September 30
-      4: { month: 12, day: 31 }, // December 31
+      1: { month: 3, day: 31 },
+      2: { month: 6, day: 30 },
+      3: { month: 9, day: 30 },
+      4: { month: 12, day: 31 },
     };
     const { month, day } = quarterEndDates[quarter];
     return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
   };
 
-  // Auto-update due date when quarter or year changes
   const handleQuarterChange = (newQuarter: number) => {
     setQuarterNumber(newQuarter);
     setDueDate(getQuarterEndDate(quarterYear, newQuarter));
@@ -90,28 +82,21 @@ export function RockFormDialog({ open, onOpenChange, rock }: RockFormDialogProps
     setQuarterYear(newYear);
     setDueDate(getQuarterEndDate(newYear, quarterNumber));
   };
-  
-  // Determine rock level for conditional fields
-  const rockLevel = (rock as any)?.rock_level;
 
-  // Initialization tracking to prevent duplicate state syncs
+  // Initialization tracking
   const [isInitialized, setIsInitialized] = useState(false);
   const previousRockId = useRef<string | null>(null);
 
-  // Initialize form only when rock ID changes or dialog opens fresh
   useEffect(() => {
     const rockId = rock?.id ?? null;
-    
-    // Only reinitialize if rock ID actually changed or dialog just opened
     if (rockId !== previousRockId.current || (open && !isInitialized)) {
       previousRockId.current = rockId;
-      
       if (rock) {
+        setRockLevel(rock.rock_level || 'company');
         setTitle(rock.title || '');
         setDescription(rock.description || '');
         setIssue((rock as any)?.issue || '');
         setProblemSolved((rock as any)?.outcome || '');
-        // Parse milestones from JSON - create deep copies with proper IDs
         const savedMilestones = (rock as any)?.milestones;
         if (Array.isArray(savedMilestones)) {
           setMilestones(savedMilestones.map(m => ({
@@ -123,7 +108,7 @@ export function RockFormDialog({ open, onOpenChange, rock }: RockFormDialogProps
           setMilestones([]);
         }
         setClientId(rock.client_id ? String(rock.client_id) : '');
-        setSeatId(rock.seat_id || '');
+        setFunctionId((rock as any)?.function_id || '');
         setOwnerId((rock as any)?.owner_id || '');
         setParentRockId((rock as any)?.parent_rock_id || '');
         setStatus(rock.status || DB_ROCK_STATUS.ON_TRACK);
@@ -134,12 +119,10 @@ export function RockFormDialog({ open, onOpenChange, rock }: RockFormDialogProps
       } else {
         resetForm();
       }
-      
       setIsInitialized(true);
     }
   }, [rock?.id, open]);
 
-  // Reset initialization state when dialog closes
   useEffect(() => {
     if (!open) {
       setIsInitialized(false);
@@ -147,49 +130,31 @@ export function RockFormDialog({ open, onOpenChange, rock }: RockFormDialogProps
     }
   }, [open]);
 
-  // Fetch seats with their primary owners
-  const { data: seats, isLoading: seatsLoading } = useQuery({
-    queryKey: ['seats-for-rocks', VIVACITY_TENANT_ID],
+  // When scope changes, clear fields that don't apply
+  const handleScopeChange = (newLevel: RockLevel) => {
+    setRockLevel(newLevel);
+    if (newLevel === 'company') {
+      setFunctionId('');
+      // Owner is optional for company rocks
+    }
+    if (newLevel === 'individual') {
+      setFunctionId(''); // optional for individual
+    }
+    // Don't auto-clear owner — let the user decide
+    setParentRockId(''); // Reset parent when scope changes
+  };
+
+  // Fetch accountability functions (used as "Teams" for team rocks)
+  const { data: functions } = useQuery({
+    queryKey: ['accountability-functions-for-rocks', VIVACITY_TENANT_ID],
     queryFn: async () => {
-      // Get all seats
-      const { data: seatsData, error: seatsError } = await supabase
-        .from('accountability_seats')
-        .select(`
-          id,
-          seat_name,
-          accountability_functions!inner(name)
-        `)
-        .eq('tenant_id', VIVACITY_TENANT_ID);
-      
-      if (seatsError) throw seatsError;
-
-      // Get primary assignments
-      const { data: assignments, error: assignError } = await supabase
-        .from('accountability_seat_assignments')
-        .select('seat_id, user_id')
+      const { data, error } = await supabase
+        .from('accountability_functions')
+        .select('id, name')
         .eq('tenant_id', VIVACITY_TENANT_ID)
-        .eq('assignment_type', 'Primary')
-        .or('end_date.is.null,end_date.gt.' + new Date().toISOString());
-      
-      if (assignError) throw assignError;
-
-      // Get user names
-      const userIds = [...new Set(assignments?.map(a => a.user_id) || [])];
-      const { data: users } = await supabase
-        .from('users')
-        .select('user_uuid, first_name, last_name')
-        .in('user_uuid', userIds);
-
-      const userMap = new Map(users?.map(u => [u.user_uuid, `${u.first_name || ''} ${u.last_name || ''}`.trim()]) || []);
-      const assignmentMap = new Map(assignments?.map(a => [a.seat_id, a.user_id]) || []);
-
-      return seatsData?.map((seat): SeatWithOwner => ({
-        id: seat.id,
-        seat_name: seat.seat_name,
-        function_name: (seat.accountability_functions as any)?.name || '',
-        primary_owner_id: assignmentMap.get(seat.id) || null,
-        primary_owner_name: assignmentMap.get(seat.id) ? userMap.get(assignmentMap.get(seat.id)!) || 'Unknown' : null,
-      })) || [];
+        .order('sort_order', { ascending: true });
+      if (error) throw error;
+      return data;
     },
     enabled: !!profile && open,
   });
@@ -203,31 +168,35 @@ export function RockFormDialog({ open, onOpenChange, rock }: RockFormDialogProps
         .select('id, name')
         .neq('id', VIVACITY_TENANT_ID)
         .order('name');
-      
       if (error) throw error;
       return data;
     },
     enabled: !!profile && open,
   });
 
-  // Fetch Company Rocks for parent rock selection (for Team rocks)
-  const { data: companyRocks } = useQuery({
-    queryKey: ['company-rocks-for-parent', VIVACITY_TENANT_ID, quarterYear, quarterNumber],
+  // Fetch potential parent rocks (company and team rocks in same tenant)
+  const { data: parentRocks } = useQuery({
+    queryKey: ['parent-rocks', VIVACITY_TENANT_ID, rockLevel],
     queryFn: async () => {
+      // Determine which levels can be parents
+      let parentLevels: string[] = [];
+      if (rockLevel === 'team') parentLevels = ['company'];
+      else if (rockLevel === 'individual') parentLevels = ['company', 'team'];
+      // Company rocks have no parent
+      if (parentLevels.length === 0) return [];
+
       const { data, error } = await supabase
         .from('eos_rocks')
-        .select('id, title, quarter_year, quarter_number')
+        .select('id, title, rock_level, quarter_year, quarter_number')
         .eq('tenant_id', VIVACITY_TENANT_ID)
-        .eq('rock_level', 'company')
+        .in('rock_level', parentLevels)
         .is('archived_at', null)
         .order('title');
-      
       if (error) throw error;
       return data;
     },
-    enabled: !!profile && open && rockLevel === 'team',
+    enabled: !!profile && open && rockLevel !== 'company',
   });
-
 
   // Get user info helper
   const getUserInfo = (userId: string) => {
@@ -241,18 +210,21 @@ export function RockFormDialog({ open, onOpenChange, rock }: RockFormDialogProps
     };
   };
 
-  // Validation states
-  const canSubmit = title.trim() && dueDate && ownerId;
+  // Validation
+  const canSubmit = useMemo(() => {
+    if (!title.trim() || !dueDate) return false;
+    if (rockLevel === 'team' && (!functionId || !ownerId)) return false;
+    if (rockLevel === 'individual' && !ownerId) return false;
+    return true;
+  }, [title, dueDate, rockLevel, functionId, ownerId]);
 
   // Milestone handlers
   const addMilestone = () => {
     setMilestones([...milestones, { id: crypto.randomUUID(), text: '', completed: false }]);
   };
-
   const updateMilestone = (id: string, text: string) => {
     setMilestones(milestones.map(m => m.id === id ? { ...m, text } : m));
   };
-
   const removeMilestone = (id: string) => {
     setMilestones(milestones.filter(m => m.id !== id));
   };
@@ -265,12 +237,14 @@ export function RockFormDialog({ open, onOpenChange, rock }: RockFormDialogProps
       description: description || null,
       issue: issue || null,
       outcome: problemSolved || null,
-      milestones: milestones.filter(m => m.text.trim()).length > 0 
-        ? milestones.filter(m => m.text.trim()) 
+      milestones: milestones.filter(m => m.text.trim()).length > 0
+        ? milestones.filter(m => m.text.trim())
         : null,
       client_id: clientId ? Number(clientId) : null,
-      seat_id: seatId || null,
+      rock_level: rockLevel,
+      function_id: rockLevel === 'team' ? functionId : (rockLevel === 'individual' && functionId ? functionId : null),
       owner_id: ownerId || null,
+      parent_rock_id: parentRockId || null,
       status,
       priority,
       quarter_number: quarterNumber,
@@ -278,11 +252,6 @@ export function RockFormDialog({ open, onOpenChange, rock }: RockFormDialogProps
       due_date: dueDate,
       tenant_id: VIVACITY_TENANT_ID,
     };
-
-    // Include parent_rock_id for team rocks
-    if (rockLevel === 'team') {
-      rockData.parent_rock_id = parentRockId || null;
-    }
 
     try {
       if (rock?.id) {
@@ -294,18 +263,18 @@ export function RockFormDialog({ open, onOpenChange, rock }: RockFormDialogProps
       resetForm();
     } catch (error) {
       console.error('Rock save failed:', error);
-      // Dialog stays open so the user can retry
     }
   };
 
   const resetForm = () => {
+    setRockLevel('company');
     setTitle('');
     setDescription('');
     setIssue('');
     setProblemSolved('');
     setMilestones([]);
     setClientId('');
-    setSeatId('');
+    setFunctionId('');
     setOwnerId('');
     setParentRockId('');
     setStatus(DB_ROCK_STATUS.ON_TRACK);
@@ -313,6 +282,12 @@ export function RockFormDialog({ open, onOpenChange, rock }: RockFormDialogProps
     setQuarterNumber(Math.ceil((new Date().getMonth() + 1) / 3));
     setQuarterYear(new Date().getFullYear());
     setDueDate('');
+  };
+
+  const scopeIcons: Record<RockLevel, typeof Building2> = {
+    company: Building2,
+    team: Users,
+    individual: UserCircle,
   };
 
   return (
@@ -324,37 +299,118 @@ export function RockFormDialog({ open, onOpenChange, rock }: RockFormDialogProps
         
         <div className="space-y-4 py-4">
 
-          {/* Parent Company Rock (for Team rocks only) */}
-          {rockLevel === 'team' && (
+          {/* Scope Selector */}
+          <div className="space-y-2">
+            <Label>Scope *</Label>
+            <RadioGroup
+              value={rockLevel}
+              onValueChange={(v) => handleScopeChange(v as RockLevel)}
+              className="flex gap-4"
+            >
+              {(['company', 'team', 'individual'] as RockLevel[]).map((level) => {
+                const Icon = scopeIcons[level];
+                return (
+                  <div key={level} className="flex items-center space-x-2">
+                    <RadioGroupItem value={level} id={`scope-${level}`} />
+                    <Label htmlFor={`scope-${level}`} className="flex items-center gap-1.5 cursor-pointer capitalize">
+                      <Icon className="h-4 w-4" />
+                      {level}
+                    </Label>
+                  </div>
+                );
+              })}
+            </RadioGroup>
+          </div>
+
+          {/* Team selector (for team rocks, optional for individual) */}
+          {(rockLevel === 'team' || rockLevel === 'individual') && (
+            <div className="space-y-2">
+              <Label htmlFor="function" className="flex items-center gap-2">
+                <Users className="h-4 w-4" />
+                Team {rockLevel === 'team' ? '*' : '(Optional)'}
+              </Label>
+              <Select
+                value={functionId || 'none'}
+                onValueChange={(v) => setFunctionId(v === 'none' ? '' : v)}
+              >
+                <SelectTrigger className={rockLevel === 'team' && !functionId ? 'border-amber-300' : ''}>
+                  <SelectValue placeholder="Select team..." />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">{rockLevel === 'team' ? 'Select team...' : 'None'}</SelectItem>
+                  {functions?.map((fn) => (
+                    <SelectItem key={fn.id} value={fn.id}>{fn.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
+          {/* Owner selector (required for team + individual, optional for company) */}
+          <div className="space-y-2">
+            <Label htmlFor="owner" className="flex items-center gap-2">
+              <User className="h-4 w-4" />
+              Owner {rockLevel !== 'company' ? '*' : '(Optional)'}
+            </Label>
+            <Select
+              value={ownerId || 'none'}
+              onValueChange={(v) => setOwnerId(v === 'none' ? '' : v)}
+            >
+              <SelectTrigger className={rockLevel !== 'company' && !ownerId ? 'border-amber-300' : ''}>
+                <SelectValue placeholder="Select owner..." />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">{rockLevel !== 'company' ? 'Select owner...' : 'None'}</SelectItem>
+                {vivacityUsers?.map((user) => {
+                  const info = getUserInfo(user.user_uuid);
+                  return (
+                    <SelectItem key={user.user_uuid} value={user.user_uuid}>
+                      <div className="flex items-center gap-2">
+                        <Avatar className="h-5 w-5">
+                          <AvatarImage src={info?.avatarUrl || undefined} />
+                          <AvatarFallback className="text-[10px]">{info?.initials}</AvatarFallback>
+                        </Avatar>
+                        <span>{info?.name}</span>
+                        {info?.role && (
+                          <Badge variant="outline" className="text-[10px]">{info.role}</Badge>
+                        )}
+                      </div>
+                    </SelectItem>
+                  );
+                })}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Parent Rock (for team and individual only) */}
+          {rockLevel !== 'company' && (
             <div className="space-y-2">
               <Label htmlFor="parent-rock" className="flex items-center gap-2">
                 <GitBranch className="h-4 w-4" />
-                Parent Company Rock
+                Parent Rock (Optional)
               </Label>
-              <Select 
-                value={parentRockId || "none"} 
-                onValueChange={(v) => setParentRockId(v === "none" ? "" : v)}
+              <Select
+                value={parentRockId || 'none'}
+                onValueChange={(v) => setParentRockId(v === 'none' ? '' : v)}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Select parent company rock..." />
+                  <SelectValue placeholder="Link to parent rock..." />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="none">None (no parent)</SelectItem>
-                  {companyRocks?.map((companyRock) => (
-                    <SelectItem key={companyRock.id} value={companyRock.id}>
+                  {parentRocks?.map((pr) => (
+                    <SelectItem key={pr.id} value={pr.id}>
                       <div className="flex items-center gap-2">
-                        <span className="truncate max-w-[350px]">{companyRock.title}</span>
-                        <Badge variant="outline" className="text-[10px] shrink-0">
-                          Q{companyRock.quarter_number} {companyRock.quarter_year}
+                        <Badge variant="outline" className="text-[10px] capitalize shrink-0">{pr.rock_level}</Badge>
+                        <span className="truncate max-w-[300px]">{pr.title}</span>
+                        <Badge variant="secondary" className="text-[10px] shrink-0">
+                          Q{pr.quarter_number} {pr.quarter_year}
                         </Badge>
                       </div>
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
-              <p className="text-xs text-muted-foreground">
-                This Team Rock cascades from the selected Company Rock.
-              </p>
             </div>
           )}
 
@@ -445,66 +501,6 @@ export function RockFormDialog({ open, onOpenChange, rock }: RockFormDialogProps
             </div>
           </div>
 
-          {/* Owner - Required, single source of truth */}
-          <div className="space-y-2">
-            <Label htmlFor="owner" className="flex items-center gap-2">
-              <User className="h-4 w-4" />
-              Owner *
-            </Label>
-            <Select 
-              value={ownerId || "none"} 
-              onValueChange={(v) => setOwnerId(v === "none" ? "" : v)}
-            >
-              <SelectTrigger className={!ownerId ? 'border-amber-300' : ''}>
-                <SelectValue placeholder="Select owner..." />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="none" disabled>Select owner...</SelectItem>
-                {vivacityUsers?.map((user) => {
-                  const info = getUserInfo(user.user_uuid);
-                  return (
-                    <SelectItem key={user.user_uuid} value={user.user_uuid}>
-                      <div className="flex items-center gap-2">
-                        <Avatar className="h-5 w-5">
-                          <AvatarImage src={info?.avatarUrl || undefined} />
-                          <AvatarFallback className="text-[10px]">{info?.initials}</AvatarFallback>
-                        </Avatar>
-                        <span>{info?.name}</span>
-                        {info?.role && (
-                          <Badge variant="outline" className="text-[10px]">{info.role}</Badge>
-                        )}
-                      </div>
-                    </SelectItem>
-                  );
-                })}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Seat Selection - Optional, for reporting only */}
-          <div className="space-y-2">
-            <Label htmlFor="seat" className="flex items-center gap-2">
-              <Armchair className="h-4 w-4" />
-              Accountability Seat (Optional)
-            </Label>
-            <Select value={seatId || "none"} onValueChange={(v) => setSeatId(v === "none" ? "" : v)}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select accountability seat..." />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="none">None</SelectItem>
-                {seats?.map((seat) => (
-                  <SelectItem key={seat.id} value={seat.id}>
-                    <div className="flex items-center gap-2">
-                      <span>{seat.seat_name}</span>
-                      <Badge variant="outline" className="text-[10px]">{seat.function_name}</Badge>
-                    </div>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="quarter">Quarter *</Label>
@@ -545,14 +541,14 @@ export function RockFormDialog({ open, onOpenChange, rock }: RockFormDialogProps
             <Label htmlFor="client">Client (Optional)</Label>
             <Combobox
               options={[
-                { value: "none", label: "None" },
+                { value: 'none', label: 'None' },
                 ...(clients?.map((client) => ({
                   value: String(client.id),
                   label: client.name || String(client.id),
                 })) || []),
               ]}
-              value={clientId || "none"}
-              onValueChange={(v) => setClientId(v === "none" ? "" : v)}
+              value={clientId || 'none'}
+              onValueChange={(v) => setClientId(v === 'none' ? '' : v)}
               placeholder="Search clients..."
               searchPlaceholder="Type to filter clients..."
               emptyText="No clients found."
