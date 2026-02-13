@@ -899,6 +899,36 @@ export type Database = {
           },
         ]
       }
+      ai_feature_overrides: {
+        Row: {
+          created_at: string
+          enabled: boolean
+          flag_name: string
+          id: string
+          tenant_id: number
+          updated_at: string
+          updated_by: string
+        }
+        Insert: {
+          created_at?: string
+          enabled?: boolean
+          flag_name: string
+          id?: string
+          tenant_id: number
+          updated_at?: string
+          updated_by: string
+        }
+        Update: {
+          created_at?: string
+          enabled?: boolean
+          flag_name?: string
+          id?: string
+          tenant_id?: number
+          updated_at?: string
+          updated_by?: string
+        }
+        Relationships: []
+      }
       ai_feedback: {
         Row: {
           actor_user_id: string
@@ -1221,6 +1251,30 @@ export type Database = {
           },
         ]
       }
+      ai_rate_limits: {
+        Row: {
+          id: string
+          request_count: number
+          tenant_id: number
+          user_id: string
+          window_start: string
+        }
+        Insert: {
+          id?: string
+          request_count?: number
+          tenant_id: number
+          user_id: string
+          window_start?: string
+        }
+        Update: {
+          id?: string
+          request_count?: number
+          tenant_id?: number
+          user_id?: string
+          window_start?: string
+        }
+        Relationships: []
+      }
       ai_review_flags: {
         Row: {
           ai_interaction_log_id: string
@@ -1436,6 +1490,10 @@ export type Database = {
           addin_documents_enabled: boolean
           addin_meetings_enabled: boolean
           addin_outlook_mail_enabled: boolean
+          ai_doc_extract_enabled: boolean
+          ai_meeting_summary_enabled: boolean
+          ai_phase_check_enabled: boolean
+          ai_risk_radar_enabled: boolean
           ask_viv_floating_launcher_enabled: boolean
           clickup_enabled: boolean
           email_sending_enabled: boolean | null
@@ -1456,6 +1514,10 @@ export type Database = {
           addin_documents_enabled?: boolean
           addin_meetings_enabled?: boolean
           addin_outlook_mail_enabled?: boolean
+          ai_doc_extract_enabled?: boolean
+          ai_meeting_summary_enabled?: boolean
+          ai_phase_check_enabled?: boolean
+          ai_risk_radar_enabled?: boolean
           ask_viv_floating_launcher_enabled?: boolean
           clickup_enabled?: boolean
           email_sending_enabled?: boolean | null
@@ -1476,6 +1538,10 @@ export type Database = {
           addin_documents_enabled?: boolean
           addin_meetings_enabled?: boolean
           addin_outlook_mail_enabled?: boolean
+          ai_doc_extract_enabled?: boolean
+          ai_meeting_summary_enabled?: boolean
+          ai_phase_check_enabled?: boolean
+          ai_risk_radar_enabled?: boolean
           ask_viv_floating_launcher_enabled?: boolean
           clickup_enabled?: boolean
           email_sending_enabled?: boolean | null
@@ -33555,6 +33621,15 @@ export type Database = {
         }
         Returns: string[]
       }
+      check_ai_rate_limit: {
+        Args: {
+          p_max_per_hour?: number
+          p_max_per_tenant_hour?: number
+          p_tenant_id: number
+          p_user_id: string
+        }
+        Returns: boolean
+      }
       check_rate_limit: {
         Args: { p_action_type: string; p_tenant_id: number }
         Returns: boolean
@@ -33568,6 +33643,7 @@ export type Database = {
         }
         Returns: Json
       }
+      cleanup_old_rate_limits: { Args: never; Returns: undefined }
       client_tga_link_set: {
         Args: { p_rto_number: string; p_tenant_id: number }
         Returns: Json
