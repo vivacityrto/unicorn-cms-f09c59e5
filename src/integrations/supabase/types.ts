@@ -31316,7 +31316,43 @@ export type Database = {
           total_actions_remaining: number | null
           updated_at: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "tenants_assigned_consultant_user_id_fkey"
+            columns: ["owner_user_uuid"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "tenants_assigned_consultant_user_id_fkey"
+            columns: ["owner_user_uuid"]
+            isOneToOne: false
+            referencedRelation: "v_dashboard_weekly_wins"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "tenants_assigned_consultant_user_id_fkey"
+            columns: ["owner_user_uuid"]
+            isOneToOne: false
+            referencedRelation: "v_executive_consultant_distribution"
+            referencedColumns: ["consultant_uuid"]
+          },
+          {
+            foreignKeyName: "tenants_assigned_consultant_user_id_fkey"
+            columns: ["owner_user_uuid"]
+            isOneToOne: false
+            referencedRelation: "vw_consultant_capacity"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "tenants_assigned_consultant_user_id_fkey"
+            columns: ["owner_user_uuid"]
+            isOneToOne: false
+            referencedRelation: "vw_consultant_load"
+            referencedColumns: ["user_uuid"]
+          },
+        ]
       }
       v_executive_consultant_distribution: {
         Row: {
