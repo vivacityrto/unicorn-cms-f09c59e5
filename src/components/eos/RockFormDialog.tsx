@@ -196,12 +196,11 @@ export function RockFormDialog({ open, onOpenChange, rock }: RockFormDialogProps
 
   // Fetch clients for dropdown
   const { data: clients } = useQuery({
-    queryKey: ['clients-for-rocks', VIVACITY_TENANT_ID],
+    queryKey: ['clients-for-rocks'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('clients_legacy')
         .select('id, companyname, contactname')
-        .eq('tenant_id', VIVACITY_TENANT_ID)
         .order('companyname');
       
       if (error) throw error;
