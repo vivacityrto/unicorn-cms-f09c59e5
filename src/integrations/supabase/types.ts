@@ -5272,6 +5272,144 @@ export type Database = {
         }
         Relationships: []
       }
+      clickup_taskstimes_260213: {
+        Row: {
+          assigned_comments: Json | null
+          assignees: Json | null
+          attachments: Json | null
+          checklists: Json | null
+          comments: Json | null
+          date_created: string | null
+          date_created_at: string | null
+          date_created_text: string | null
+          date_created_ts: string | null
+          date_imported: string | null
+          due_date: string | null
+          due_date_at: string | null
+          due_date_text: string | null
+          due_date_ts: string | null
+          folder_name_path: string | null
+          id: string
+          inserted_at: string | null
+          list_name: string | null
+          package_id: number | null
+          parent_id: string | null
+          priority: string | null
+          rolled_up_time: string | null
+          rolled_up_time_minutes: number | null
+          rolled_up_time_text: string | null
+          space_name: string | null
+          start_date: string | null
+          start_date_at: string | null
+          start_date_text: string | null
+          start_date_ts: string | null
+          status: string | null
+          tags: Json | null
+          task_content: string | null
+          task_custom_id: string | null
+          task_id: string | null
+          task_name: string | null
+          tenant_id: number | null
+          time_estimated: string | null
+          time_estimated_minutes: number | null
+          time_estimated_text: string | null
+          time_spent: string | null
+          time_spent_minutes: number | null
+          time_spent_text: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          assigned_comments?: Json | null
+          assignees?: Json | null
+          attachments?: Json | null
+          checklists?: Json | null
+          comments?: Json | null
+          date_created?: string | null
+          date_created_at?: string | null
+          date_created_text?: string | null
+          date_created_ts?: string | null
+          date_imported?: string | null
+          due_date?: string | null
+          due_date_at?: string | null
+          due_date_text?: string | null
+          due_date_ts?: string | null
+          folder_name_path?: string | null
+          id?: string
+          inserted_at?: string | null
+          list_name?: string | null
+          package_id?: number | null
+          parent_id?: string | null
+          priority?: string | null
+          rolled_up_time?: string | null
+          rolled_up_time_minutes?: number | null
+          rolled_up_time_text?: string | null
+          space_name?: string | null
+          start_date?: string | null
+          start_date_at?: string | null
+          start_date_text?: string | null
+          start_date_ts?: string | null
+          status?: string | null
+          tags?: Json | null
+          task_content?: string | null
+          task_custom_id?: string | null
+          task_id?: string | null
+          task_name?: string | null
+          tenant_id?: number | null
+          time_estimated?: string | null
+          time_estimated_minutes?: number | null
+          time_estimated_text?: string | null
+          time_spent?: string | null
+          time_spent_minutes?: number | null
+          time_spent_text?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          assigned_comments?: Json | null
+          assignees?: Json | null
+          attachments?: Json | null
+          checklists?: Json | null
+          comments?: Json | null
+          date_created?: string | null
+          date_created_at?: string | null
+          date_created_text?: string | null
+          date_created_ts?: string | null
+          date_imported?: string | null
+          due_date?: string | null
+          due_date_at?: string | null
+          due_date_text?: string | null
+          due_date_ts?: string | null
+          folder_name_path?: string | null
+          id?: string
+          inserted_at?: string | null
+          list_name?: string | null
+          package_id?: number | null
+          parent_id?: string | null
+          priority?: string | null
+          rolled_up_time?: string | null
+          rolled_up_time_minutes?: number | null
+          rolled_up_time_text?: string | null
+          space_name?: string | null
+          start_date?: string | null
+          start_date_at?: string | null
+          start_date_text?: string | null
+          start_date_ts?: string | null
+          status?: string | null
+          tags?: Json | null
+          task_content?: string | null
+          task_custom_id?: string | null
+          task_id?: string | null
+          task_name?: string | null
+          tenant_id?: number | null
+          time_estimated?: string | null
+          time_estimated_minutes?: number | null
+          time_estimated_text?: string | null
+          time_spent?: string | null
+          time_spent_minutes?: number | null
+          time_spent_text?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       client_action_item_comments: {
         Row: {
           action_item_id: string
@@ -13745,6 +13883,7 @@ export type Database = {
           quarter_start: string | null
           quarter_year: number
           rock_level: string | null
+          rock_type: string
           seat_id: string | null
           seat_owner_user_id: string | null
           sort_order: number | null
@@ -13780,6 +13919,7 @@ export type Database = {
           quarter_start?: string | null
           quarter_year: number
           rock_level?: string | null
+          rock_type?: string
           seat_id?: string | null
           seat_owner_user_id?: string | null
           sort_order?: number | null
@@ -13815,6 +13955,7 @@ export type Database = {
           quarter_start?: string | null
           quarter_year?: number
           rock_level?: string | null
+          rock_type?: string
           seat_id?: string | null
           seat_owner_user_id?: string | null
           sort_order?: number | null
@@ -33845,6 +33986,7 @@ export type Database = {
         }
         Returns: string
       }
+      upsert_rock_with_parenting: { Args: { p_payload: Json }; Returns: Json }
       user_has_tenant_access: {
         Args: { p_tenant_id: number }
         Returns: boolean

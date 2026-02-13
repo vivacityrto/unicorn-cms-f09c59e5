@@ -10,13 +10,13 @@ import { Slider } from '@/components/ui/slider';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { useEosRocks } from '@/hooks/useEos';
 import { useAuth } from '@/hooks/useAuth';
 import { useVivacityTeamUsers, VIVACITY_TENANT_ID } from '@/hooks/useVivacityTeamUsers';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { User, Plus, X, ListChecks, GitBranch, Building2, Users, UserCircle } from 'lucide-react';
+import { User, Plus, X, ListChecks, GitBranch, Building2, Users, UserCircle, Info } from 'lucide-react';
 import { DB_ROCK_STATUS, getStatusOptions } from '@/utils/rockStatusUtils';
+import { toast } from '@/hooks/use-toast';
 import type { EosRock, RockLevel } from '@/types/eos';
 
 interface RockFormDialogProps {
@@ -33,8 +33,27 @@ interface Milestone {
 
 export function RockFormDialog({ open, onOpenChange, rock }: RockFormDialogProps) {
   const { profile } = useAuth();
-  const { createRock, updateRock } = useEosRocks();
+  const queryClient = useQueryClient();
   const { data: vivacityUsers } = useVivacityTeamUsers();
+
+  // RPC-based mutation for save with auto-parenting
+  const upsertRock = useMutation({
+    mutationFn: async (payload: Record<string, any>) => {
+      const { data, error } = await supabase.rpc('upsert_rock_with_parenting', {
+        p_payload: payload,
+      });
+      if (error) throw error;
+      return data as { id: string; parent_rock_id: string | null; action: string };
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['eos-rocks-hierarchy'] });
+      queryClient.invalidateQueries({ queryKey: ['eos-rocks'] });
+      toast({ title: data.action === 'created' ? 'Rock created' : 'Rock updated' });
+    },
+    onError: (error: Error) => {
+      toast({ title: 'Error saving rock', description: error.message, variant: 'destructive' });
+    },
+  });
   
   // Form state
   const [rockLevel, setRockLevel] = useState<RockLevel>(rock?.rock_level || 'company');
@@ -176,18 +195,16 @@ export function RockFormDialog({ open, onOpenChange, rock }: RockFormDialogProps
 
   // Fetch potential parent rocks (company and team rocks in same tenant)
   const { data: parentRocks } = useQuery({
-    queryKey: ['parent-rocks', VIVACITY_TENANT_ID, rockLevel],
+    queryKey: ['parent-rocks', VIVACITY_TENANT_ID, rockLevel, functionId, clientId, quarterYear, quarterNumber],
     queryFn: async () => {
-      // Determine which levels can be parents
       let parentLevels: string[] = [];
       if (rockLevel === 'team') parentLevels = ['company'];
       else if (rockLevel === 'individual') parentLevels = ['company', 'team'];
-      // Company rocks have no parent
       if (parentLevels.length === 0) return [];
 
       const { data, error } = await supabase
         .from('eos_rocks')
-        .select('id, title, rock_level, quarter_year, quarter_number')
+        .select('id, title, rock_level, quarter_year, quarter_number, function_id, client_id')
         .eq('tenant_id', VIVACITY_TENANT_ID)
         .in('rock_level', parentLevels)
         .is('archived_at', null)
@@ -197,6 +214,46 @@ export function RockFormDialog({ open, onOpenChange, rock }: RockFormDialogProps
     },
     enabled: !!profile && open && rockLevel !== 'company',
   });
+
+  // Track whether user has manually changed parent
+  const [parentManuallySet, setParentManuallySet] = useState(false);
+
+  // Auto-suggest parent rock for individual rocks
+  useEffect(() => {
+    if (rockLevel !== 'individual' || !parentRocks || parentManuallySet || rock?.id) return;
+
+    // Priority 1: team rock matching team + quarter + client
+    if (functionId && clientId) {
+      const match = parentRocks.find(
+        r => r.rock_level === 'team' &&
+          r.function_id === functionId &&
+          r.client_id === Number(clientId) &&
+          r.quarter_year === quarterYear &&
+          r.quarter_number === quarterNumber
+      );
+      if (match) { setParentRockId(match.id); return; }
+    }
+
+    // Priority 2: team rock matching team + quarter (no client)
+    if (functionId) {
+      const match = parentRocks.find(
+        r => r.rock_level === 'team' &&
+          r.function_id === functionId &&
+          r.client_id == null &&
+          r.quarter_year === quarterYear &&
+          r.quarter_number === quarterNumber
+      );
+      if (match) { setParentRockId(match.id); return; }
+    }
+
+    // No suggestion
+    setParentRockId('');
+  }, [rockLevel, functionId, clientId, quarterYear, quarterNumber, parentRocks, parentManuallySet, rock?.id]);
+
+  // Reset manual parent flag when scope changes
+  useEffect(() => {
+    setParentManuallySet(false);
+  }, [rockLevel]);
 
   // Get user info helper
   const getUserInfo = (userId: string) => {
@@ -255,10 +312,9 @@ export function RockFormDialog({ open, onOpenChange, rock }: RockFormDialogProps
 
     try {
       if (rock?.id) {
-        await updateRock.mutateAsync({ id: rock.id, ...rockData });
-      } else {
-        await createRock.mutateAsync(rockData);
+        rockData.id = rock.id;
       }
+      await upsertRock.mutateAsync(rockData);
       onOpenChange(false);
       resetForm();
     } catch (error) {
@@ -277,6 +333,7 @@ export function RockFormDialog({ open, onOpenChange, rock }: RockFormDialogProps
     setFunctionId('');
     setOwnerId('');
     setParentRockId('');
+    setParentManuallySet(false);
     setStatus(DB_ROCK_STATUS.ON_TRACK);
     setPriority(1);
     setQuarterNumber(Math.ceil((new Date().getMonth() + 1) / 3));
@@ -391,7 +448,10 @@ export function RockFormDialog({ open, onOpenChange, rock }: RockFormDialogProps
               </Label>
               <Select
                 value={parentRockId || 'none'}
-                onValueChange={(v) => setParentRockId(v === 'none' ? '' : v)}
+                onValueChange={(v) => {
+                  setParentRockId(v === 'none' ? '' : v);
+                  setParentManuallySet(true);
+                }}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Link to parent rock..." />
@@ -411,6 +471,18 @@ export function RockFormDialog({ open, onOpenChange, rock }: RockFormDialogProps
                   ))}
                 </SelectContent>
               </Select>
+              {rockLevel === 'individual' && parentRockId && !parentManuallySet && (
+                <p className="text-xs text-muted-foreground flex items-center gap-1">
+                  <Info className="h-3 w-3" />
+                  Auto-suggested based on team and quarter. You can change or remove it.
+                </p>
+              )}
+              {rockLevel === 'individual' && clientId && (
+                <p className="text-xs text-muted-foreground flex items-center gap-1">
+                  <Info className="h-3 w-3" />
+                  Links to a team-level Client Rock for this quarter. One will be created automatically if needed.
+                </p>
+              )}
             </div>
           )}
 
@@ -594,7 +666,7 @@ export function RockFormDialog({ open, onOpenChange, rock }: RockFormDialogProps
           </Button>
           <Button
             onClick={handleSubmit}
-            disabled={!canSubmit || createRock.isPending || updateRock.isPending}
+            disabled={!canSubmit || upsertRock.isPending}
           >
             {rock ? 'Update' : 'Create'} Rock
           </Button>
