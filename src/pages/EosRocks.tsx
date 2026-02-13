@@ -52,10 +52,12 @@ export default function EosRocks() {
 }
 
 function RocksHierarchyContent() {
+  const { profile } = useAuth();
   const currentQuarter = getCurrentQuarter();
   const [quarterYear, setQuarterYear] = useState(currentQuarter.year);
   const [quarterNumber, setQuarterNumber] = useState(currentQuarter.quarter);
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [userFilter, setUserFilter] = useState<string | null>(null); // null = not yet initialized
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState<'company' | 'team' | 'individual' | 'cascade'>('company');
   
@@ -80,6 +82,8 @@ function RocksHierarchyContent() {
   const { data: vivacityUsers } = useVivacityTeamUsers();
   const { canCreateRocks } = useRBAC();
 
+  // Default user filter to logged-in user once profile and users are available
+  const effectiveUserFilter = userFilter === null ? (profile?.user_uuid || 'all') : userFilter;
   // Helper functions
   const getUserName = (userId: string): string | null => {
     const user = vivacityUsers?.find(u => u.user_uuid === userId);
@@ -118,7 +122,8 @@ function RocksHierarchyContent() {
       const matchesSearch = !searchQuery || 
         rock.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
         rock.description?.toLowerCase().includes(searchQuery.toLowerCase());
-      return matchesStatus && matchesSearch;
+      const matchesUser = effectiveUserFilter === 'all' || rock.owner_id === effectiveUserFilter;
+      return matchesStatus && matchesSearch && matchesUser;
     });
   };
 
@@ -302,6 +307,27 @@ function RocksHierarchyContent() {
               <SelectItem value="off_track">Off Track</SelectItem>
               <SelectItem value="complete">Complete</SelectItem>
             </SelectContent>
+           </Select>
+
+          {/* User filter */}
+          <Select 
+            value={effectiveUserFilter} 
+            onValueChange={(v) => setUserFilter(v)}
+          >
+            <SelectTrigger className="w-36 sm:w-44">
+              <SelectValue placeholder="All Users" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Users</SelectItem>
+              {vivacityUsers?.map((user) => {
+                const name = [user.first_name, user.last_name].filter(Boolean).join(' ') || user.email;
+                return (
+                  <SelectItem key={user.user_uuid} value={user.user_uuid}>
+                    {name}
+                  </SelectItem>
+                );
+              })}
+            </SelectContent>
           </Select>
         </div>
 
@@ -316,13 +342,14 @@ function RocksHierarchyContent() {
           />
         </div>
 
-        {(statusFilter !== 'all' || searchQuery) && (
+        {(statusFilter !== 'all' || searchQuery || effectiveUserFilter !== 'all') && (
           <Button
             variant="ghost"
             size="sm"
             onClick={() => {
               setStatusFilter('all');
               setSearchQuery('');
+              setUserFilter('all');
             }}
             className="self-start sm:self-auto"
           >
