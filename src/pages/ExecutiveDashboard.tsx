@@ -1,9 +1,7 @@
 /**
  * ExecutiveDashboard – Unicorn 2.0
  *
- * Internal-only view combining Compliance Score + Predictive Operational Risk.
- * Route: /executive
- * Access: SuperAdmin, Team Leader, Vivacity Team
+ * Internal-only view: Compliance + Predictive Risk + 7-Day Deltas.
  */
 
 import { useState, useMemo } from 'react';
@@ -14,10 +12,11 @@ import { ClientHealthMatrix } from '@/components/executive/ClientHealthMatrix';
 import { PriorityQueueTable } from '@/components/executive/PriorityQueueTable';
 import { ClientHealthDrawer } from '@/components/executive/ClientHealthDrawer';
 import { ExecutiveFiltersBar } from '@/components/executive/ExecutiveFiltersBar';
+import { WatchlistPanel } from '@/components/executive/WatchlistPanel';
 import { Loader2 } from 'lucide-react';
 
 export default function ExecutiveDashboard() {
-  const { data, rawData, isLoading, kpis, filters, updateFilter, resetFilters } = useExecutiveHealth();
+  const { data, rawData, watchlist, isLoading, kpis, filters, updateFilter, resetFilters } = useExecutiveHealth();
   const [selectedRow, setSelectedRow] = useState<ExecutiveHealthRow | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
 
@@ -44,7 +43,6 @@ export default function ExecutiveDashboard() {
   return (
     <DashboardLayout>
       <div className="space-y-6 p-4 md:p-6 max-w-screen-2xl mx-auto">
-        {/* Header */}
         <div>
           <h1 className="text-2xl font-bold text-foreground">Executive Dashboard</h1>
           <p className="text-sm text-muted-foreground mt-1">
@@ -52,15 +50,14 @@ export default function ExecutiveDashboard() {
           </p>
         </div>
 
-        {/* KPI Strip */}
         <ExecutiveKpiStrip
           avgScore={kpis.avgScore}
+          avgScoreDelta={kpis.avgScoreDelta}
           atRiskCount={kpis.atRiskCount}
           criticalRisks={kpis.criticalRisks}
           staleCount={kpis.staleCount}
         />
 
-        {/* Filters */}
         <ExecutiveFiltersBar
           filters={filters}
           onFilterChange={updateFilter}
@@ -68,20 +65,15 @@ export default function ExecutiveDashboard() {
           packageTypes={packageTypes}
         />
 
-        {/* Health Matrix + Priority Queue */}
+        {/* Watchlist */}
+        <WatchlistPanel watchlist={watchlist} healthData={rawData} onItemClick={handleSelect} />
+
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
           <ClientHealthMatrix data={data} onSelect={handleSelect} />
-          <div className="xl:col-span-1">
-            <PriorityQueueTable data={data} onRowClick={handleSelect} />
-          </div>
+          <PriorityQueueTable data={data} onRowClick={handleSelect} />
         </div>
 
-        {/* Drawer */}
-        <ClientHealthDrawer
-          row={selectedRow}
-          open={drawerOpen}
-          onOpenChange={setDrawerOpen}
-        />
+        <ClientHealthDrawer row={selectedRow} open={drawerOpen} onOpenChange={setDrawerOpen} />
       </div>
     </DashboardLayout>
   );

@@ -1,7 +1,7 @@
 /**
  * ExecutiveKpiStrip – Unicorn 2.0
  *
- * Four KPI tiles for the Executive Dashboard.
+ * Four KPI tiles with 7-day trend deltas.
  */
 
 import { StatCard } from '@/components/ui/stat-card';
@@ -9,12 +9,13 @@ import { BarChart3, AlertTriangle, ShieldAlert, Clock } from 'lucide-react';
 
 interface KpiStripProps {
   avgScore: number;
+  avgScoreDelta: number;
   atRiskCount: number;
   criticalRisks: number;
   staleCount: number;
 }
 
-export function ExecutiveKpiStrip({ avgScore, atRiskCount, criticalRisks, staleCount }: KpiStripProps) {
+export function ExecutiveKpiStrip({ avgScore, avgScoreDelta, atRiskCount, criticalRisks, staleCount }: KpiStripProps) {
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
       <StatCard
@@ -22,6 +23,7 @@ export function ExecutiveKpiStrip({ avgScore, atRiskCount, criticalRisks, staleC
         value={`${avgScore}%`}
         icon={BarChart3}
         intent="default"
+        trend={avgScoreDelta !== 0 ? { value: Math.abs(avgScoreDelta), positive: avgScoreDelta > 0 } : undefined}
       />
       <StatCard
         label="Clients At Risk"
