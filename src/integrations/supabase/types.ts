@@ -7307,7 +7307,28 @@ export type Database = {
             foreignKeyName: "compliance_score_snapshots_package_instance_id_fkey"
             columns: ["package_instance_id"]
             isOneToOne: false
+            referencedRelation: "v_consult_hours_remaining"
+            referencedColumns: ["package_instance_id"]
+          },
+          {
+            foreignKeyName: "compliance_score_snapshots_package_instance_id_fkey"
+            columns: ["package_instance_id"]
+            isOneToOne: false
             referencedRelation: "v_dashboard_consultant_momentum"
+            referencedColumns: ["package_instance_id"]
+          },
+          {
+            foreignKeyName: "compliance_score_snapshots_package_instance_id_fkey"
+            columns: ["package_instance_id"]
+            isOneToOne: false
+            referencedRelation: "v_documents_pending"
+            referencedColumns: ["package_instance_id"]
+          },
+          {
+            foreignKeyName: "compliance_score_snapshots_package_instance_id_fkey"
+            columns: ["package_instance_id"]
+            isOneToOne: false
+            referencedRelation: "v_executive_client_health"
             referencedColumns: ["package_instance_id"]
           },
           {
@@ -17534,7 +17555,28 @@ export type Database = {
             foreignKeyName: "package_notes_package_instance_id_fkey"
             columns: ["package_instance_id"]
             isOneToOne: false
+            referencedRelation: "v_consult_hours_remaining"
+            referencedColumns: ["package_instance_id"]
+          },
+          {
+            foreignKeyName: "package_notes_package_instance_id_fkey"
+            columns: ["package_instance_id"]
+            isOneToOne: false
             referencedRelation: "v_dashboard_consultant_momentum"
+            referencedColumns: ["package_instance_id"]
+          },
+          {
+            foreignKeyName: "package_notes_package_instance_id_fkey"
+            columns: ["package_instance_id"]
+            isOneToOne: false
+            referencedRelation: "v_documents_pending"
+            referencedColumns: ["package_instance_id"]
+          },
+          {
+            foreignKeyName: "package_notes_package_instance_id_fkey"
+            columns: ["package_instance_id"]
+            isOneToOne: false
+            referencedRelation: "v_executive_client_health"
             referencedColumns: ["package_instance_id"]
           },
           {
@@ -28983,6 +29025,15 @@ export type Database = {
         }
         Relationships: []
       }
+      v_client_risk_summary: {
+        Row: {
+          active_critical: number | null
+          active_risks: number | null
+          high_or_critical: number | null
+          tenant_id: number | null
+        }
+        Relationships: []
+      }
       v_client_risks_actions: {
         Row: {
           category: string | null
@@ -29066,7 +29117,28 @@ export type Database = {
             foreignKeyName: "compliance_score_snapshots_package_instance_id_fkey"
             columns: ["package_instance_id"]
             isOneToOne: false
+            referencedRelation: "v_consult_hours_remaining"
+            referencedColumns: ["package_instance_id"]
+          },
+          {
+            foreignKeyName: "compliance_score_snapshots_package_instance_id_fkey"
+            columns: ["package_instance_id"]
+            isOneToOne: false
             referencedRelation: "v_dashboard_consultant_momentum"
+            referencedColumns: ["package_instance_id"]
+          },
+          {
+            foreignKeyName: "compliance_score_snapshots_package_instance_id_fkey"
+            columns: ["package_instance_id"]
+            isOneToOne: false
+            referencedRelation: "v_documents_pending"
+            referencedColumns: ["package_instance_id"]
+          },
+          {
+            foreignKeyName: "compliance_score_snapshots_package_instance_id_fkey"
+            columns: ["package_instance_id"]
+            isOneToOne: false
+            referencedRelation: "v_executive_client_health"
             referencedColumns: ["package_instance_id"]
           },
           {
@@ -29162,6 +29234,33 @@ export type Database = {
           },
         ]
       }
+      v_consult_hours_remaining: {
+        Row: {
+          hours_included: number | null
+          hours_remaining: number | null
+          hours_used: number | null
+          package_id: number | null
+          package_instance_id: number | null
+          tenant_id: number | null
+        }
+        Insert: {
+          hours_included?: never
+          hours_remaining?: never
+          hours_used?: never
+          package_id?: number | null
+          package_instance_id?: number | null
+          tenant_id?: number | null
+        }
+        Update: {
+          hours_included?: never
+          hours_remaining?: never
+          hours_used?: never
+          package_id?: number | null
+          package_instance_id?: number | null
+          tenant_id?: number | null
+        }
+        Relationships: []
+      }
       v_dashboard_consultant_momentum: {
         Row: {
           caps_applied: Json | null
@@ -29193,6 +29292,47 @@ export type Database = {
           rocks_closed: number | null
           user_uuid: string | null
           week_start_date: string | null
+        }
+        Relationships: []
+      }
+      v_documents_pending: {
+        Row: {
+          documents_pending_upload: number | null
+          package_id: number | null
+          package_instance_id: number | null
+          tenant_id: number | null
+        }
+        Relationships: []
+      }
+      v_executive_client_health: {
+        Row: {
+          active_risks: number | null
+          caps_applied: Json | null
+          client_name: string | null
+          compliance_calculated_at: string | null
+          consult_health: number | null
+          current_phase: string | null
+          days_stale: number | null
+          documentation_coverage: number | null
+          documents_pending_upload: number | null
+          has_active_critical: boolean | null
+          hours_included: number | null
+          hours_remaining: number | null
+          operational_risk_score: number | null
+          overall_score: number | null
+          owner_user_uuid: string | null
+          package_id: number | null
+          package_instance_id: number | null
+          package_name: string | null
+          package_type: string | null
+          phase_completion: number | null
+          predictive_calculated_at: string | null
+          predictive_flags: Json | null
+          risk_band: string | null
+          risk_health: number | null
+          tenant_id: number | null
+          total_actions_remaining: number | null
+          updated_at: string | null
         }
         Relationships: []
       }
@@ -29264,6 +29404,82 @@ export type Database = {
           version_number: number | null
         }
         Relationships: []
+      }
+      v_predictive_operational_risk_latest: {
+        Row: {
+          activity_decay: boolean | null
+          backlog_growth: boolean | null
+          burn_rate_risk: boolean | null
+          calculated_at: string | null
+          id: string | null
+          inputs: Json | null
+          operational_risk_score: number | null
+          package_instance_id: number | null
+          phase_drift: boolean | null
+          risk_band: string | null
+          risk_escalation: boolean | null
+          severe_activity_decay: boolean | null
+          sustained_backlog_growth: boolean | null
+          tenant_id: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "predictive_operational_risk_snapshots_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "predictive_operational_risk_snapshots_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_engagement_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "predictive_operational_risk_snapshots_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_eos_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "predictive_operational_risk_snapshots_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_compliance_entitlements"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "predictive_operational_risk_snapshots_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "predictive_operational_risk_snapshots_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "predictive_operational_risk_snapshots_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_membership_usage"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "predictive_operational_risk_snapshots_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_membership_usage"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
       }
       v_predictive_signal_inputs: {
         Row: {

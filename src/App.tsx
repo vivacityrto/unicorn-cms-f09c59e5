@@ -96,6 +96,7 @@ const EosCalendar = lazy(() => import("./pages/EosCalendar"));
  const ResourceFavourites = lazy(() => import("./pages/ResourceFavourites"));
  const ResourceUpdatesLog = lazy(() => import("./pages/ResourceUpdatesLog"));
  const MembershipDashboardWrapper = lazy(() => import("./pages/MembershipDashboardWrapper"));
+ const ExecutiveDashboard = lazy(() => import("./pages/ExecutiveDashboard"));
  const ClientDetailWrapper = lazy(() => import("./pages/ClientDetailWrapper"));
  const AdminTgaIntegrationWrapper = lazy(() => import("./pages/AdminTgaIntegrationWrapper"));
  const AdminUserAudit = lazy(() => import("./pages/AdminUserAudit"));
@@ -899,6 +900,8 @@ const App = () => (
             <Route path="/resource-hub/updates" element={<ProtectedRoute><ResourceUpdatesLog /></ProtectedRoute>} />
             {/* Membership Dashboard */}
             <Route path="/membership-dashboard" element={<ProtectedRoute><MembershipDashboardWrapper /></ProtectedRoute>} />
+            {/* Executive Dashboard – Internal Only */}
+            <Route path="/executive" element={<ProtectedRoute><ExecutiveDashboard /></ProtectedRoute>} />
             {/* Client Detail route removed — consolidated into /tenant/:tenantId above */}
             {/* Admin Integrations */}
             <Route path="/admin/integrations/tga" element={<ProtectedRoute><AdminTgaIntegrationWrapper /></ProtectedRoute>} />
