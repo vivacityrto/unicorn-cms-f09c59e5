@@ -6,14 +6,16 @@
  * Weekly Review Mode default ON. No scrolling required at 1440px.
  */
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { useRBAC } from '@/hooks/useRBAC';
+import { useAuth } from '@/hooks/useAuth';
 import { useExecutiveHealth, type ExecutiveHealthRow } from '@/hooks/useExecutiveHealth';
 import { useExecutiveAnomalies } from '@/hooks/useExecutiveAnomalies';
-import { useAlignmentSignals } from '@/hooks/useAlignmentSignals';
+import { useAlignmentSignals, type AlignmentSignal } from '@/hooks/useAlignmentSignals';
 import { useExecutiveMomentum, useConsultantDistribution, useExecSystemHealth } from '@/hooks/useExecutiveData';
+import { useWeeklyReview, genItemId } from '@/hooks/useWeeklyReview';
 import { StrategicHealthSnapshot } from '@/components/executive/StrategicHealthSnapshot';
 import { AlignmentSignalsPanel } from '@/components/executive/AlignmentSignalsPanel';
 import { ExecutionMomentumPanel } from '@/components/executive/ExecutionMomentumPanel';
@@ -22,14 +24,19 @@ import { StrategicExposureTable } from '@/components/executive/StrategicExposure
 import { ClientHealthDrawer } from '@/components/executive/ClientHealthDrawer';
 import { ExecutiveFiltersBar } from '@/components/executive/ExecutiveFiltersBar';
 import { WeeklySummaryFooter } from '@/components/executive/WeeklySummaryFooter';
+import { WeeklyReviewNotesPanel } from '@/components/executive/WeeklyReviewNotesPanel';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Loader2, Eye, ShieldAlert, Search } from 'lucide-react';
+import { toast } from '@/hooks/use-toast';
+
+const VIVACITY_TENANT_UUID = '00000000-0000-0000-0000-000000006372';
 
 export default function ExecutiveDashboard() {
   const { isSuperAdmin } = useRBAC();
+  const { profile } = useAuth();
   const navigate = useNavigate();
 
   const { data, rawData, watchlist, isLoading, kpis, filters, updateFilter, resetFilters } = useExecutiveHealth();
@@ -39,10 +46,81 @@ export default function ExecutiveDashboard() {
   const { data: consultants, isLoading: consultantsLoading } = useConsultantDistribution();
   const { data: execSystemHealth } = useExecSystemHealth();
 
+  // Weekly review — use first tenant from data or vivacity default
+  const tenantUuid = useMemo(() => {
+    // Try to derive from user profile tenant, or use vivacity system tenant
+    return VIVACITY_TENANT_UUID;
+  }, []);
+
+  const { currentReview, updateReview } = useWeeklyReview(tenantUuid);
+
   const [selectedRow, setSelectedRow] = useState<ExecutiveHealthRow | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [weeklyMode, setWeeklyMode] = useState(true); // Default ON
   const [showAllClients, setShowAllClients] = useState(false);
+
+  // Momentum label for notes panel
+  const momentumLabel = useMemo(() => {
+    if (!momentum) return 'unknown';
+    const agg = momentum.reduce(
+      (acc, r) => ({
+        pc: acc.pc + Number(r.phases_completed_7d),
+        pcp: acc.pcp + Number(r.phases_completed_prev_7d),
+        dg: acc.dg + Number(r.documents_generated_7d),
+        dgp: acc.dgp + Number(r.documents_generated_prev_7d),
+        rr: acc.rr + Number(r.risks_resolved_7d),
+        rrp: acc.rrp + Number(r.risks_resolved_prev_7d),
+        de: acc.de + Number(r.document_events_7d),
+        dep: acc.dep + Number(r.document_events_prev_7d),
+        ch: acc.ch + Number(r.consult_hours_logged_7d),
+        chp: acc.chp + Number(r.consult_hours_logged_prev_7d),
+      }),
+      { pc: 0, pcp: 0, dg: 0, dgp: 0, rr: 0, rrp: 0, de: 0, dep: 0, ch: 0, chp: 0 }
+    );
+    const metrics = [
+      { c: agg.pc, p: agg.pcp },
+      { c: agg.dg, p: agg.dgp },
+      { c: agg.de, p: agg.dep },
+      { c: agg.rr, p: agg.rrp },
+      { c: agg.ch, p: agg.chp },
+    ];
+    const declining = metrics.filter(m => m.c < m.p).length;
+    const improving = metrics.filter(m => m.c > m.p).length;
+    return declining >= 3 ? 'Momentum down' : improving >= 3 ? 'Momentum up' : 'Momentum flat';
+  }, [momentum]);
+
+  // Add signal to weekly notes
+  const handleAddSignalToNotes = useCallback(async (signal: AlignmentSignal) => {
+    if (!currentReview) {
+      toast({ title: 'Review not ready', description: 'Wait for draft to load.', variant: 'destructive' });
+      return;
+    }
+    if (currentReview.status === 'final') {
+      toast({ title: 'Review finalised', description: 'Cannot add to a finalised review.', variant: 'destructive' });
+      return;
+    }
+    const existing = (currentReview.discussion_items as any[]) ?? [];
+    const alreadyAdded = existing.some((item: any) => item.source_key === signal.source_key);
+    if (alreadyAdded) {
+      toast({ title: 'Already added', description: 'This signal is already in the notes.' });
+      return;
+    }
+    const newItem = {
+      source_key: signal.source_key,
+      client_name: signal.client_name,
+      title: signal.title,
+      detail: signal.detail,
+      severity: signal.severity,
+      suggested_discussion: signal.suggested_discussion,
+      deep_link_href: signal.deep_link_href,
+    };
+    try {
+      await updateReview({ discussion_items: [...existing, newItem] } as any);
+      toast({ title: 'Added to notes', description: signal.title });
+    } catch {
+      // error handled by mutation
+    }
+  }, [currentReview, updateReview]);
 
   if (!isSuperAdmin) {
     return (
@@ -126,7 +204,12 @@ export default function ExecutiveDashboard() {
         {/* Row 2: Alignment Signals (left) + Execution Momentum (right) */}
         <div className="grid grid-cols-1 xl:grid-cols-3 gap-3">
           <div className="xl:col-span-2">
-            <AlignmentSignalsPanel signals={alignmentSignals ?? []} isLoading={alignmentLoading} weeklyMode={weeklyMode} />
+            <AlignmentSignalsPanel
+              signals={alignmentSignals ?? []}
+              isLoading={alignmentLoading}
+              weeklyMode={weeklyMode}
+              onAddToNotes={weeklyMode ? handleAddSignalToNotes : undefined}
+            />
           </div>
           <div>
             <ExecutionMomentumPanel data={momentum} systemHealth={execSystemHealth} isLoading={momentumLoading} weeklyMode={weeklyMode} />
@@ -145,6 +228,16 @@ export default function ExecutiveDashboard() {
 
         {/* Weekly Summary Footer */}
         <WeeklySummaryFooter data={rawData} />
+
+        {/* Weekly Review Notes Panel — visible in weekly mode */}
+        {weeklyMode && (
+          <WeeklyReviewNotesPanel
+            tenantUuid={tenantUuid}
+            rawData={rawData}
+            kpis={kpis}
+            momentumLabel={momentumLabel}
+          />
+        )}
 
         {/* Below the fold: Full filter bar + full table when "Show all clients" */}
         {weeklyMode && (

@@ -3,21 +3,24 @@
  *
  * "Where We Must Talk" — structured meeting surface.
  * Powered by v_exec_alignment_signals_7d backend view.
- * Capped at 8 highest-priority items.
+ * Capped at 6 highest-priority items.
+ * Includes "Add to Weekly Notes" action per row.
  */
 
 import { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { MessageSquare } from 'lucide-react';
+import { MessageSquare, Plus } from 'lucide-react';
 import type { AlignmentSignal } from '@/hooks/useAlignmentSignals';
 
 interface AlignmentSignalsPanelProps {
   signals: AlignmentSignal[];
   isLoading: boolean;
   weeklyMode: boolean;
+  onAddToNotes?: (signal: AlignmentSignal) => void;
 }
 
 const severityStyles: Record<string, string> = {
@@ -26,7 +29,7 @@ const severityStyles: Record<string, string> = {
   info: 'bg-[hsl(186,72%,90%)] text-[hsl(186,72%,25%)] dark:bg-[hsl(186,72%,15%)] dark:text-[hsl(186,72%,70%)]',
 };
 
-export function AlignmentSignalsPanel({ signals, isLoading, weeklyMode }: AlignmentSignalsPanelProps) {
+export function AlignmentSignalsPanel({ signals, isLoading, weeklyMode, onAddToNotes }: AlignmentSignalsPanelProps) {
   const navigate = useNavigate();
 
   const filtered = useMemo(() => {
@@ -88,6 +91,7 @@ export function AlignmentSignalsPanel({ signals, isLoading, weeklyMode }: Alignm
                   <th className="text-center px-3 py-2 font-medium text-muted-foreground">Severity</th>
                   <th className="text-left px-4 py-2 font-medium text-muted-foreground">Owner</th>
                   <th className="text-left px-4 py-2 font-medium text-muted-foreground">Suggested Discussion</th>
+                  {onAddToNotes && <th className="px-2 py-2 w-8" />}
                 </tr>
               </thead>
               <tbody>
@@ -117,6 +121,22 @@ export function AlignmentSignalsPanel({ signals, isLoading, weeklyMode }: Alignm
                     <td className="px-4 py-2.5 text-muted-foreground text-xs max-w-[200px]">
                       {s.suggested_discussion}
                     </td>
+                    {onAddToNotes && (
+                      <td className="px-2 py-2.5">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6"
+                          title="Add to Weekly Notes"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onAddToNotes(s);
+                          }}
+                        >
+                          <Plus className="w-3.5 h-3.5 text-muted-foreground" />
+                        </Button>
+                      </td>
+                    )}
                   </tr>
                 ))}
               </tbody>

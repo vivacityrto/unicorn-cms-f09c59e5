@@ -14889,6 +14889,98 @@ export type Database = {
           },
         ]
       }
+      exec_weekly_review_audit_log: {
+        Row: {
+          action: string
+          created_at: string
+          details: Json | null
+          id: string
+          review_id: string
+          user_id: string
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          details?: Json | null
+          id?: string
+          review_id: string
+          user_id: string
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          details?: Json | null
+          id?: string
+          review_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "exec_weekly_review_audit_log_review_id_fkey"
+            columns: ["review_id"]
+            isOneToOne: false
+            referencedRelation: "exec_weekly_reviews"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      exec_weekly_reviews: {
+        Row: {
+          created_at: string
+          created_by_user_uuid: string
+          decisions: Json
+          discussion_items: Json
+          headline: string | null
+          id: string
+          integrator_user_uuid: string | null
+          next_actions: Json
+          portfolio_summary: Json
+          risks: Json
+          status: string
+          tenant_uuid: string
+          updated_at: string
+          updated_by_user_uuid: string
+          visionary_user_uuid: string | null
+          week_start_date: string
+        }
+        Insert: {
+          created_at?: string
+          created_by_user_uuid: string
+          decisions?: Json
+          discussion_items?: Json
+          headline?: string | null
+          id?: string
+          integrator_user_uuid?: string | null
+          next_actions?: Json
+          portfolio_summary?: Json
+          risks?: Json
+          status?: string
+          tenant_uuid: string
+          updated_at?: string
+          updated_by_user_uuid: string
+          visionary_user_uuid?: string | null
+          week_start_date: string
+        }
+        Update: {
+          created_at?: string
+          created_by_user_uuid?: string
+          decisions?: Json
+          discussion_items?: Json
+          headline?: string | null
+          id?: string
+          integrator_user_uuid?: string | null
+          next_actions?: Json
+          portfolio_summary?: Json
+          risks?: Json
+          status?: string
+          tenant_uuid?: string
+          updated_at?: string
+          updated_by_user_uuid?: string
+          visionary_user_uuid?: string | null
+          week_start_date?: string
+        }
+        Relationships: []
+      }
       generated_documents: {
         Row: {
           client_legacy_id: string | null
