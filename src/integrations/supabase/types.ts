@@ -7088,6 +7088,125 @@ export type Database = {
           },
         ]
       }
+      compliance_score_snapshots: {
+        Row: {
+          calculated_at: string
+          calculated_by_user_uuid: string | null
+          caps_applied: Json
+          consult_health: number
+          days_stale: number
+          documentation_coverage: number
+          id: string
+          inputs: Json
+          overall_score: number
+          package_instance_id: number
+          phase_completion: number
+          risk_health: number
+          tenant_id: number
+        }
+        Insert: {
+          calculated_at?: string
+          calculated_by_user_uuid?: string | null
+          caps_applied?: Json
+          consult_health?: number
+          days_stale?: number
+          documentation_coverage?: number
+          id?: string
+          inputs?: Json
+          overall_score?: number
+          package_instance_id: number
+          phase_completion?: number
+          risk_health?: number
+          tenant_id: number
+        }
+        Update: {
+          calculated_at?: string
+          calculated_by_user_uuid?: string | null
+          caps_applied?: Json
+          consult_health?: number
+          days_stale?: number
+          documentation_coverage?: number
+          id?: string
+          inputs?: Json
+          overall_score?: number
+          package_instance_id?: number
+          phase_completion?: number
+          risk_health?: number
+          tenant_id?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "compliance_score_snapshots_package_instance_id_fkey"
+            columns: ["package_instance_id"]
+            isOneToOne: false
+            referencedRelation: "package_instances"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "compliance_score_snapshots_package_instance_id_fkey"
+            columns: ["package_instance_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_package_usage_summary"
+            referencedColumns: ["instance_id"]
+          },
+          {
+            foreignKeyName: "compliance_score_snapshots_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "compliance_score_snapshots_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_engagement_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "compliance_score_snapshots_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_eos_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "compliance_score_snapshots_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_compliance_entitlements"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "compliance_score_snapshots_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "compliance_score_snapshots_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "compliance_score_snapshots_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_membership_usage"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "compliance_score_snapshots_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_membership_usage"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
       connected_tenants: {
         Row: {
           connected_at: string
@@ -27772,6 +27891,95 @@ export type Database = {
         }
         Relationships: []
       }
+      v_compliance_score_latest: {
+        Row: {
+          calculated_at: string | null
+          calculated_by_user_uuid: string | null
+          caps_applied: Json | null
+          consult_health: number | null
+          days_stale: number | null
+          documentation_coverage: number | null
+          id: string | null
+          inputs: Json | null
+          overall_score: number | null
+          package_instance_id: number | null
+          phase_completion: number | null
+          risk_health: number | null
+          tenant_id: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "compliance_score_snapshots_package_instance_id_fkey"
+            columns: ["package_instance_id"]
+            isOneToOne: false
+            referencedRelation: "package_instances"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "compliance_score_snapshots_package_instance_id_fkey"
+            columns: ["package_instance_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_package_usage_summary"
+            referencedColumns: ["instance_id"]
+          },
+          {
+            foreignKeyName: "compliance_score_snapshots_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "compliance_score_snapshots_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_engagement_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "compliance_score_snapshots_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_eos_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "compliance_score_snapshots_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_compliance_entitlements"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "compliance_score_snapshots_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "compliance_score_snapshots_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "compliance_score_snapshots_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_membership_usage"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "compliance_score_snapshots_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_membership_usage"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
       v_portal_documents_unified: {
         Row: {
           category_name: string | null
@@ -28132,6 +28340,14 @@ export type Database = {
           p_documents: Json
           p_standard_refs?: string[]
           p_standard_set?: string
+        }
+        Returns: Json
+      }
+      calculate_compliance_score: {
+        Args: {
+          p_actor_user_uuid?: string
+          p_package_instance_id: number
+          p_tenant_id: number
         }
         Returns: Json
       }
