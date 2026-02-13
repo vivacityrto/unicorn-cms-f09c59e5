@@ -562,7 +562,7 @@ export function useClientPackages(tenantId: number | null) {
           ? supabase.from('packages').select('id, name, slug, full_text').in('id', packageIds)
           : Promise.resolve({ data: [] }),
         instanceIds.length > 0
-          ? supabase.from('stage_instances').select('id, packageinstance_id, stage_id, status, stage_sortorder, completion_date, documents_stages(title)').in('packageinstance_id', instanceIds).order('stage_sortorder')
+          ? supabase.from('stage_instances').select('id, packageinstance_id, stage_id, status, stage_sortorder, completion_date').in('packageinstance_id', instanceIds).order('stage_sortorder')
           : Promise.resolve({ data: [] })
       ]);
 
@@ -572,6 +572,18 @@ export function useClientPackages(tenantId: number | null) {
       }, {} as Record<number, any>);
 
       const stageInstances = (stageInstancesResult as any).data || [];
+
+      // Fetch stage names from documents_stages for current stage display
+      const stageIdSet = new Set<number>();
+      stageInstances.forEach((s: any) => stageIdSet.add(Number(s.stage_id)));
+      const stageIds = Array.from(stageIdSet);
+      const stageNamesResult = stageIds.length > 0
+        ? await (supabase.from('documents_stages').select('id, title') as any).in('id', stageIds)
+        : { data: [] };
+      const stageNamesMap = ((stageNamesResult as any).data || []).reduce((acc: Record<number, string>, s: any) => {
+        acc[s.id] = s.title;
+        return acc;
+      }, {} as Record<number, string>);
 
       // Build package data with stage info
       const packageData: ClientPackage[] = (instances || []).map(inst => {
@@ -596,7 +608,7 @@ export function useClientPackages(tenantId: number | null) {
           membership_state: inst.membership_state || (inst.is_complete ? 'exiting' : 'active'),
           hours_included: totalHours,
           hours_used: inst.hours_used || 0,
-          current_stage_name: activeStage ? (activeStage.documents_stages as any)?.title || null : null,
+          current_stage_name: activeStage ? stageNamesMap[activeStage.stage_id] || null : null,
           completed_stages: completedStages,
           total_stages: totalStages,
           has_blocked_stages: hasBlocked,
