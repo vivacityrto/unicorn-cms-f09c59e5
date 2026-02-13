@@ -1,8 +1,8 @@
 /**
  * ProgressAnchors – Unicorn 2.0
  *
- * Displays 3–5 short, data-driven statements anchored to measurable counts.
- * Every statement maps to a real system metric.
+ * Displays 3–5 short, data-driven statements anchored to deterministic counts.
+ * Every statement maps to a real system metric from v_phase_actions_remaining.
  * Supports internal and client variants.
  */
 
@@ -15,6 +15,7 @@ import {
   FileText,
   ListChecks,
   Target,
+  CheckCircle2,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useProgressAnchors, type ProgressAnchorData } from '@/hooks/useProgressAnchors';
@@ -47,11 +48,13 @@ function buildAnchors(data: ProgressAnchorData, variant: 'internal' | 'client'):
     });
   }
 
-  // Critical risk (highest priority)
-  if (data.has_active_critical) {
+  // Blocking risks
+  if (data.risks_blocking > 0) {
     anchors.push({
       icon: AlertTriangle,
-      text: variant === 'client' ? 'Action required on open items.' : 'Active critical risk requires attention.',
+      text: variant === 'client'
+        ? `${data.risks_blocking} item${data.risks_blocking !== 1 ? 's' : ''} require${data.risks_blocking === 1 ? 's' : ''} attention.`
+        : `${data.risks_blocking} risk${data.risks_blocking !== 1 ? 's' : ''} require${data.risks_blocking === 1 ? 's' : ''} resolution.`,
       color: 'fuchsia',
       priority: 1,
     });
@@ -62,26 +65,37 @@ function buildAnchors(data: ProgressAnchorData, variant: 'internal' | 'client'):
     icon: ShieldCheck,
     text: `You are ${data.overall_score}% Audit Ready.`,
     color: 'purple',
-    priority: data.is_stale || data.has_active_critical ? 5 : 2,
+    priority: data.is_stale || data.risks_blocking > 0 ? 5 : 2,
   });
 
-  // Actions remaining
-  if (data.actions_remaining_current_phase > 0) {
+  // Deterministic actions remaining (checklist + approvals + meetings)
+  const nonDocActions = data.checklist_remaining + data.meetings_remaining + data.approvals_remaining;
+  if (nonDocActions > 0 && data.phase_name) {
     anchors.push({
       icon: ListChecks,
-      text: `${data.actions_remaining_current_phase} action${data.actions_remaining_current_phase !== 1 ? 's' : ''} remaining in this phase.`,
+      text: `${nonDocActions} action${nonDocActions !== 1 ? 's' : ''} remaining in ${data.phase_name}.`,
       color: 'aqua',
       priority: 3,
     });
   }
 
-  // Documents pending
-  if (data.documents_pending_upload > 0) {
+  // Documents pending (separate from actions for clarity)
+  if (data.docs_remaining > 0) {
     anchors.push({
       icon: FileText,
-      text: `${data.documents_pending_upload} document${data.documents_pending_upload !== 1 ? 's' : ''} pending upload.`,
-      color: data.documents_pending_upload > 3 ? 'macaron' : 'aqua',
+      text: `${data.docs_remaining} document${data.docs_remaining !== 1 ? 's' : ''} pending upload.`,
+      color: data.docs_remaining > 3 ? 'macaron' : 'aqua',
       priority: 4,
+    });
+  }
+
+  // Phase complete indicator
+  if (data.total_actions_remaining === 0 && data.phase_name) {
+    anchors.push({
+      icon: CheckCircle2,
+      text: 'This phase is complete.',
+      color: 'purple',
+      priority: 3,
     });
   }
 
@@ -124,8 +138,8 @@ export function ProgressAnchors({
 
   if (!anchorDataList || anchorDataList.length === 0) return null;
 
-  // Use first package if no specific one selected
-  const data = anchorDataList[0];
+  // Use first package if no specific one selected (highest priority = lowest score)
+  const data = anchorDataList.sort((a, b) => a.overall_score - b.overall_score)[0];
   const anchors = buildAnchors(data, variant);
 
   return (
