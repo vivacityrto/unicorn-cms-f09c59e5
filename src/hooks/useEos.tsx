@@ -63,6 +63,7 @@ export const useEosRocks = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['eos-rocks'] });
+      queryClient.invalidateQueries({ queryKey: ['eos-rocks-hierarchy'] });
       toast({ title: 'Rock created successfully' });
     },
     onError: (error: Error) => {
@@ -84,6 +85,7 @@ export const useEosRocks = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['eos-rocks'] });
+      queryClient.invalidateQueries({ queryKey: ['eos-rocks-hierarchy'] });
       toast({ title: 'Rock updated successfully' });
     },
     onError: (error: Error) => {
@@ -102,6 +104,7 @@ export const useEosRocks = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['eos-rocks'] });
+      queryClient.invalidateQueries({ queryKey: ['eos-rocks-hierarchy'] });
       toast({ title: 'Rock deleted successfully' });
     },
     onError: (error: Error) => {
