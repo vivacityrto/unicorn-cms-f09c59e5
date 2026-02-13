@@ -1,50 +1,72 @@
 
-## Fix Rock Update Not Saving
+## Data Flow Analysis: "Active" Status Origin
 
-### Problem
-When editing a Rock and changing the Team Member Responsible, the change does not persist. The DB shows `updated_at` changing but `owner_id` remaining the same, suggesting the update either errors silently or the payload is incorrect.
+### Current Implementation (Lines 183-189 in ClientPackagesTab.tsx)
 
-### Root Causes Identified
+The "active" badge displayed at line 183-189 is derived from the `membership_state` field in the `ClientPackage` interface:
 
-1. **No error handling in handleSubmit**: The `handleSubmit` function in `RockFormDialog.tsx` calls `updateRock.mutateAsync()` without try/catch. If the mutation fails, the error is thrown but not caught -- the dialog stays open and the user gets no clear feedback about what went wrong.
-
-2. **RockProgressControl uses wrong status values**: This separate component sends lowercase status values (`on_track`, `off_track`, `complete`, `abandoned`) directly to the DB, but the DB enum expects PascalCase (`On_Track`, `Off_Track`, `Complete`). The value `abandoned` doesn't even exist in the enum. If this component was ever used to update status, it could corrupt the row state.
-
-### Plan
-
-**File: `src/components/eos/RockFormDialog.tsx`**
-- Wrap `handleSubmit` in try/catch to properly handle errors and show feedback
-- Add explicit error toast on failure so the user knows the save failed
-- Only close the dialog and reset the form on successful save
-
-**File: `src/components/eos/RockProgressControl.tsx`**
-- Replace hardcoded lowercase status values with proper `DB_ROCK_STATUS` constants and `getStatusOptions()` helper
-- Remove the non-existent `abandoned` status option
-- Use `uiToDbStatus()` conversion where needed
-
-### Technical Details
-
-```text
-handleSubmit changes:
-  Before:  await updateRock.mutateAsync({ ... });
-           onOpenChange(false);
-           resetForm();
-  
-  After:   try {
-             await updateRock.mutateAsync({ ... });
-             onOpenChange(false);
-             resetForm();
-           } catch (error) {
-             // onError callback shows toast, dialog stays open
-             console.error('Rock save failed:', error);
-           }
+```typescript
+<Badge 
+  variant="outline"
+  className={`${STATE_COLORS[pkg.membership_state] || ''}`}
+>
+  {STATE_ICONS[pkg.membership_state]}
+  <span className="ml-1 capitalize">{pkg.membership_state}</span>
+</Badge>
 ```
 
-```text
-RockProgressControl status fix:
-  Before:  <SelectItem value="on_track">On Track</SelectItem>
-           <SelectItem value="abandoned">Abandoned</SelectItem>
-  
-  After:   Uses getStatusOptions() from rockStatusUtils
-           to generate correct PascalCase enum values
+### Data Source Trace
+
+**1. useClientPackages Hook** (`src/hooks/useClientManagement.tsx`, lines 535-624)
+   - Fetches from `package_instances` table
+   - **Key line 591**: `membership_state: inst.is_complete ? 'exiting' : 'active'`
+   - **This is where "active" is computed** – it's a derived value, not stored in the database
+
+**2. Logic**
+   - `package_instances.is_complete = false` → `membership_state = 'active'`
+   - `package_instances.is_complete = true` → `membership_state = 'exiting'`
+
+**3. State Color Mapping** (`ClientPackagesTab.tsx`, lines 43-48)
+   ```typescript
+   const STATE_COLORS: Record<string, string> = {
+     active: 'bg-green-500/10 text-green-600 border-green-500',
+     at_risk: 'bg-amber-500/10 text-amber-600 border-amber-500',
+     paused: 'bg-gray-500/10 text-gray-600 border-gray-500',
+     exiting: 'bg-red-500/10 text-red-600 border-red-500'
+   };
+   ```
+
+### Current Data Structure Issue
+
+The `ClientPackage` interface (lines 5-19) includes:
+```typescript
+membership_state: string;
 ```
+
+But this field:
+- Is **not** stored in the `package_instances` table
+- Is **computed frontend-side** based on `is_complete` boolean
+- Only supports two hardcoded states: `active` or `exiting`
+- Cannot represent `at_risk` or `paused` states mentioned in the color mapping
+
+### Why This Matters
+
+The system references four possible states (`active`, `at_risk`, `paused`, `exiting`) in the UI, but only two can be represented with the current logic. To support the full state machine:
+
+1. **Option A (Recommended)**: Add a `membership_state` column to `package_instances` table with enum values: `active`, `at_risk`, `paused`, `exiting`, `complete`
+   - Enables true state persistence
+   - Required for audit compliance
+   - Supports future state transitions (pause, escalate to at_risk)
+
+2. **Option B**: Maintain computed logic but expand the rules to check multiple factors (overdue tasks, hours usage, inactivity) to determine `at_risk` and `paused` states
+   - More complex frontend logic
+   - No audit trail of state transitions
+
+### Recommendation
+
+Implement **Option A** via a database migration:
+- Add `membership_state` column (default to 'active')
+- Create a database function to transition states (audit logged)
+- Update the hook to read from the column instead of computing from `is_complete`
+- This aligns with Unicorn 2.0's audit-first principle
+
