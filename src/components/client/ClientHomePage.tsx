@@ -6,11 +6,14 @@ import { Link } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useOpenDocumentRequest } from "@/components/layout/ClientLayout";
 import { useClientActingUser } from "@/hooks/useClientActingUser";
+import { useClientTenant } from "@/contexts/ClientTenantContext";
+import { ClientProgressSummary } from "./ClientProgressSummary";
 
 export function ClientHomePage() {
   const { openHelpCenter } = useHelpCenter();
   const { profile } = useAuth();
   const { actingUser } = useClientActingUser();
+  const { activeTenantId } = useClientTenant();
   const openDocumentRequest = useOpenDocumentRequest();
 
   const displayName = actingUser?.first_name || profile?.first_name;
@@ -24,6 +27,9 @@ export function ClientHomePage() {
         </h1>
         <p className="text-muted-foreground mt-1">What do you need today?</p>
       </div>
+
+      {/* Progress Summary */}
+      <ClientProgressSummary tenantId={activeTenantId} />
 
       {/* Row 1: What do you need? */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

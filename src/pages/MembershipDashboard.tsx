@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { Sparkles, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -15,6 +15,9 @@ import { MyWorkWidget } from '@/components/dashboard/MyWorkWidget';
 import { TimeInboxWidget } from '@/components/dashboard/TimeInboxWidget';
  import { ProcessesWidget } from '@/components/dashboard/ProcessesWidget';
 import { ConsultantCapacityTable } from '@/components/capacity/ConsultantCapacityTable';
+import { MomentumPanel } from '@/components/dashboard/MomentumPanel';
+import { WeeklyWinTracker } from '@/components/dashboard/WeeklyWinTracker';
+import { WinBanner } from '@/components/dashboard/WinBanner';
 
 export default function MembershipDashboard() {
   const { profile } = useAuth();
@@ -48,6 +51,7 @@ export default function MembershipDashboard() {
   const [addNoteOpen, setAddNoteOpen] = useState(false);
   const [createTaskOpen, setCreateTaskOpen] = useState(false);
   const [selectedMembership, setSelectedMembership] = useState<MembershipWithDetails | null>(null);
+  const winsRef = useRef<HTMLDivElement>(null);
 
   const handleSelectMembership = (membership: MembershipWithDetails) => {
     setSelectedMembership(membership);
@@ -114,6 +118,20 @@ export default function MembershipDashboard() {
       <div className="flex flex-col lg:flex-row w-full min-w-0">
         {/* Left Panel - Main Dashboard */}
         <div className="flex-1 min-w-0 p-4 md:p-6 space-y-6">
+          {/* Engagement Region: Momentum + Weekly Wins */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            <MomentumPanel userUuid={profile?.user_uuid ?? null} className="lg:col-span-2" />
+            <div ref={winsRef}>
+              <WeeklyWinTracker userUuid={profile?.user_uuid ?? null} />
+            </div>
+          </div>
+
+          {/* Win Banner */}
+          <WinBanner
+            userUuid={profile?.user_uuid ?? null}
+            onScrollToWins={() => winsRef.current?.scrollIntoView({ behavior: 'smooth' })}
+          />
+
           {/* KPI Tiles */}
           <MembershipKPITiles 
             stats={kpiStats} 
