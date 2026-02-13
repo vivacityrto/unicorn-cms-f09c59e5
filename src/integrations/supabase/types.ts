@@ -29067,8 +29067,171 @@ export type Database = {
         }
         Relationships: []
       }
+      v_compliance_delta_confidence_7d: {
+        Row: {
+          days_since_latest: number | null
+          delta_confidence_7d: string | null
+          package_instance_id: number | null
+          snapshots_last_7d: number | null
+          t0_at: string | null
+          t7_at: string | null
+          t7_distance_seconds: number | null
+          tenant_id: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "compliance_score_snapshots_package_instance_id_fkey"
+            columns: ["package_instance_id"]
+            isOneToOne: false
+            referencedRelation: "package_instances"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "compliance_score_snapshots_package_instance_id_fkey"
+            columns: ["package_instance_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_dashboard_progress"
+            referencedColumns: ["package_instance_id"]
+          },
+          {
+            foreignKeyName: "compliance_score_snapshots_package_instance_id_fkey"
+            columns: ["package_instance_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_package_usage_summary"
+            referencedColumns: ["instance_id"]
+          },
+          {
+            foreignKeyName: "compliance_score_snapshots_package_instance_id_fkey"
+            columns: ["package_instance_id"]
+            isOneToOne: false
+            referencedRelation: "v_completion_eligibility"
+            referencedColumns: ["package_instance_id"]
+          },
+          {
+            foreignKeyName: "compliance_score_snapshots_package_instance_id_fkey"
+            columns: ["package_instance_id"]
+            isOneToOne: false
+            referencedRelation: "v_consult_hours_remaining"
+            referencedColumns: ["package_instance_id"]
+          },
+          {
+            foreignKeyName: "compliance_score_snapshots_package_instance_id_fkey"
+            columns: ["package_instance_id"]
+            isOneToOne: false
+            referencedRelation: "v_dashboard_consultant_momentum"
+            referencedColumns: ["package_instance_id"]
+          },
+          {
+            foreignKeyName: "compliance_score_snapshots_package_instance_id_fkey"
+            columns: ["package_instance_id"]
+            isOneToOne: false
+            referencedRelation: "v_documents_pending"
+            referencedColumns: ["package_instance_id"]
+          },
+          {
+            foreignKeyName: "compliance_score_snapshots_package_instance_id_fkey"
+            columns: ["package_instance_id"]
+            isOneToOne: false
+            referencedRelation: "v_executive_client_health"
+            referencedColumns: ["package_instance_id"]
+          },
+          {
+            foreignKeyName: "compliance_score_snapshots_package_instance_id_fkey"
+            columns: ["package_instance_id"]
+            isOneToOne: false
+            referencedRelation: "v_momentum_state"
+            referencedColumns: ["package_instance_id"]
+          },
+          {
+            foreignKeyName: "compliance_score_snapshots_package_instance_id_fkey"
+            columns: ["package_instance_id"]
+            isOneToOne: false
+            referencedRelation: "v_phase_actions_remaining"
+            referencedColumns: ["package_instance_id"]
+          },
+          {
+            foreignKeyName: "compliance_score_snapshots_package_instance_id_fkey"
+            columns: ["package_instance_id"]
+            isOneToOne: false
+            referencedRelation: "v_predictive_signal_inputs"
+            referencedColumns: ["package_instance_id"]
+          },
+          {
+            foreignKeyName: "compliance_score_snapshots_package_instance_id_fkey"
+            columns: ["package_instance_id"]
+            isOneToOne: false
+            referencedRelation: "v_progress_anchor_inputs"
+            referencedColumns: ["package_instance_id"]
+          },
+          {
+            foreignKeyName: "compliance_score_snapshots_package_instance_id_fkey"
+            columns: ["package_instance_id"]
+            isOneToOne: false
+            referencedRelation: "v_score_consult"
+            referencedColumns: ["package_instance_id"]
+          },
+          {
+            foreignKeyName: "compliance_score_snapshots_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "compliance_score_snapshots_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_engagement_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "compliance_score_snapshots_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_eos_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "compliance_score_snapshots_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_compliance_entitlements"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "compliance_score_snapshots_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "compliance_score_snapshots_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "compliance_score_snapshots_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_membership_usage"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "compliance_score_snapshots_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_membership_usage"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
       v_compliance_score_deltas_7d: {
         Row: {
+          days_since_latest: number | null
+          delta_confidence_7d: string | null
           delta_consult_health_7d: number | null
           delta_days_stale_7d: number | null
           delta_docs_coverage_7d: number | null
@@ -29076,6 +29239,7 @@ export type Database = {
           delta_phase_completion_7d: number | null
           delta_risk_health_7d: number | null
           package_instance_id: number | null
+          snapshots_last_7d: number | null
           t0_calculated_at: string | null
           t0_consult_health: number | null
           t0_days_stale: number | null
@@ -29085,6 +29249,7 @@ export type Database = {
           t0_risk_health: number | null
           t7_calculated_at: string | null
           t7_days_stale: number | null
+          t7_distance_seconds: number | null
           t7_overall_score: number | null
           tenant_id: number | null
         }
@@ -29655,7 +29820,11 @@ export type Database = {
           compliance_calculated_at: string | null
           consult_health: number | null
           current_phase: string | null
+          days_since_latest_compliance: number | null
+          days_since_latest_predictive: number | null
           days_stale: number | null
+          delta_confidence_compliance_7d: string | null
+          delta_confidence_predictive_7d: string | null
           delta_consult_health_7d: number | null
           delta_days_stale_7d: number | null
           delta_docs_coverage_7d: number | null
@@ -29682,6 +29851,10 @@ export type Database = {
           risk_band: string | null
           risk_band_change_7d: string | null
           risk_health: number | null
+          snapshots_last_7d_compliance: number | null
+          snapshots_last_7d_predictive: number | null
+          t7_distance_seconds_compliance: number | null
+          t7_distance_seconds_predictive: number | null
           tenant_id: number | null
           total_actions_remaining: number | null
           updated_at: string | null
@@ -29768,6 +29941,76 @@ export type Database = {
         }
         Relationships: []
       }
+      v_predictive_delta_confidence_7d: {
+        Row: {
+          days_since_latest: number | null
+          delta_confidence_7d: string | null
+          package_instance_id: number | null
+          snapshots_last_7d: number | null
+          t0_at: string | null
+          t7_at: string | null
+          t7_distance_seconds: number | null
+          tenant_id: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "predictive_operational_risk_snapshots_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "predictive_operational_risk_snapshots_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_engagement_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "predictive_operational_risk_snapshots_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_eos_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "predictive_operational_risk_snapshots_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_compliance_entitlements"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "predictive_operational_risk_snapshots_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "predictive_operational_risk_snapshots_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "predictive_operational_risk_snapshots_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_membership_usage"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "predictive_operational_risk_snapshots_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_membership_usage"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
       v_predictive_operational_risk_latest: {
         Row: {
           activity_decay: boolean | null
@@ -29846,13 +30089,17 @@ export type Database = {
       }
       v_predictive_risk_deltas_7d: {
         Row: {
+          days_since_latest: number | null
+          delta_confidence_7d: string | null
           delta_operational_risk_7d: number | null
           package_instance_id: number | null
           risk_band_change_7d: string | null
+          snapshots_last_7d: number | null
           t0_calculated_at: string | null
           t0_operational_risk_score: number | null
           t0_risk_band: string | null
           t7_calculated_at: string | null
+          t7_distance_seconds: number | null
           t7_operational_risk_score: number | null
           t7_risk_band: string | null
           tenant_id: number | null

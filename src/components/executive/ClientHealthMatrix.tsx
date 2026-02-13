@@ -2,6 +2,7 @@
  * ClientHealthMatrix – Unicorn 2.0
  *
  * Scatter plot with delta mode toggle.
+ * Low/None confidence points rendered with reduced emphasis in delta mode.
  */
 
 import { useMemo, useState } from 'react';
@@ -29,6 +30,11 @@ const prefersReducedMotion = typeof window !== 'undefined'
 function CustomTooltip({ active, payload, deltaMode }: { active?: boolean; payload?: any[]; deltaMode?: boolean }) {
   if (!active || !payload?.length) return null;
   const d = payload[0].payload;
+  const confidenceLabel = deltaMode
+    ? (d.delta_confidence_compliance_7d === 'none' || d.delta_confidence_compliance_7d === 'low'
+        ? ' (Low confidence delta)'
+        : '')
+    : '';
   return (
     <div className="bg-card border border-border rounded-lg shadow-lg p-3 text-sm max-w-[220px]">
       <p className="font-semibold text-foreground truncate">{d.client_name}</p>
@@ -38,6 +44,7 @@ function CustomTooltip({ active, payload, deltaMode }: { active?: boolean; paylo
           <>
             <p>Compliance Δ7d: <span className="font-medium">{d.delta_overall_score_7d > 0 ? '+' : ''}{d.delta_overall_score_7d}</span></p>
             <p>Risk Δ7d: <span className="font-medium">{d.delta_operational_risk_7d > 0 ? '+' : ''}{d.delta_operational_risk_7d}</span></p>
+            {confidenceLabel && <p className="text-xs text-muted-foreground italic">{confidenceLabel.trim()}</p>}
           </>
         ) : (
           <>
@@ -114,9 +121,21 @@ export function ClientHealthMatrix({ data, onSelect }: ClientHealthMatrixProps) 
                 onClick={(entry: any) => entry && onSelect(entry)}
                 cursor="pointer"
               >
-                {chartData.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={BAND_COLORS[entry.risk_band] || BAND_COLORS.stable} r={6} />
-                ))}
+                {chartData.map((entry, index) => {
+                  const isLowConfidence = deltaMode && (
+                    entry.delta_confidence_compliance_7d === 'low' ||
+                    entry.delta_confidence_compliance_7d === 'none'
+                  );
+                  const baseColor = BAND_COLORS[entry.risk_band] || BAND_COLORS.stable;
+                  return (
+                    <Cell
+                      key={`cell-${index}`}
+                      fill={baseColor}
+                      fillOpacity={isLowConfidence ? 0.3 : 1}
+                      r={isLowConfidence ? 4 : 6}
+                    />
+                  );
+                })}
               </Scatter>
             </ScatterChart>
           </ResponsiveContainer>

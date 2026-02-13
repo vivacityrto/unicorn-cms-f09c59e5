@@ -53,6 +53,7 @@ export default function ExecutiveDashboard() {
         <ExecutiveKpiStrip
           avgScore={kpis.avgScore}
           avgScoreDelta={kpis.avgScoreDelta}
+          avgScoreConfidence={kpis.avgScoreConfidence}
           atRiskCount={kpis.atRiskCount}
           criticalRisks={kpis.criticalRisks}
           staleCount={kpis.staleCount}

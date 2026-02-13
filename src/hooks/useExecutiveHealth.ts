@@ -1,7 +1,7 @@
 /**
  * useExecutiveHealth – Unicorn 2.0
  *
- * Fetches v_executive_client_health (with 7-day deltas) and
+ * Fetches v_executive_client_health (with 7-day deltas + confidence) and
  * v_executive_watchlist_7d for the Executive Dashboard.
  */
 
@@ -9,6 +9,8 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useState, useCallback, useMemo } from 'react';
 import type { RiskBand } from '@/hooks/usePredictiveRisk';
+
+export type DeltaConfidence = 'high' | 'medium' | 'low' | 'none';
 
 export interface ExecutiveHealthRow {
   tenant_id: number;
@@ -57,6 +59,15 @@ export interface ExecutiveHealthRow {
   risk_band_change_7d: string;
   compliance_baseline_at: string | null;
   predictive_baseline_at: string | null;
+  // Confidence fields
+  delta_confidence_compliance_7d: DeltaConfidence;
+  t7_distance_seconds_compliance: number | null;
+  snapshots_last_7d_compliance: number;
+  days_since_latest_compliance: number;
+  delta_confidence_predictive_7d: DeltaConfidence;
+  t7_distance_seconds_predictive: number | null;
+  snapshots_last_7d_predictive: number;
+  days_since_latest_predictive: number;
 }
 
 export interface WatchlistItem {
@@ -145,9 +156,14 @@ export function useExecutiveHealth() {
     const atRiskCount = data.filter(r => r.risk_band === 'at_risk' || r.risk_band === 'immediate_attention').length;
     const criticalRisks = data.filter(r => r.has_active_critical).length;
     const staleCount = data.filter(r => r.days_stale > 14).length;
+    // Aggregate confidence: worst confidence across all rows
+    const hasAnyBaseline = data.some(r => r.delta_confidence_compliance_7d !== 'none');
+    const allHigh = data.every(r => r.delta_confidence_compliance_7d === 'high');
+    const kpiConfidence: DeltaConfidence = !hasAnyBaseline ? 'none' : allHigh ? 'high' : data.some(r => r.delta_confidence_compliance_7d === 'low') ? 'low' : 'medium';
     return {
       avgScore,
       avgScoreDelta: avgScore - avgScoreBaseline,
+      avgScoreConfidence: kpiConfidence,
       atRiskCount,
       criticalRisks,
       staleCount,
