@@ -7,7 +7,8 @@ import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { Building2, Loader2, AlertTriangle, ShieldAlert, ExternalLink } from 'lucide-react';
+import { Building2, Loader2, AlertTriangle, ShieldAlert, Merge } from 'lucide-react';
+import { TenantMergeWizard } from '@/components/tenant/TenantMergeWizard';
 
 interface AddTenantDialogProps {
   open: boolean;
@@ -34,6 +35,9 @@ interface DuplicateResult {
   hard_block: boolean;
   block_reason?: string;
   matches: DuplicateMatch[];
+  // Cross-identifier conflict fields
+  abn_tenant?: { tenant_id: number; name: string; identifier_type: string; identifier_value: string };
+  rto_tenant?: { tenant_id: number; name: string; identifier_type: string; identifier_value: string };
 }
 
 export function AddTenantDialog({ open, onOpenChange, onSuccess, preSelectedPackageId }: AddTenantDialogProps) {
@@ -53,6 +57,9 @@ export function AddTenantDialog({ open, onOpenChange, onSuccess, preSelectedPack
   const [duplicateResult, setDuplicateResult] = useState<DuplicateResult | null>(null);
   const [showDuplicateWarning, setShowDuplicateWarning] = useState(false);
   const [userAcknowledgedWarning, setUserAcknowledgedWarning] = useState(false);
+
+  // Merge wizard state
+  const [showMergeWizard, setShowMergeWizard] = useState(false);
 
   // Package options
   const [packages, setPackages] = useState<PackageOption[]>([]);
@@ -123,13 +130,11 @@ export function AddTenantDialog({ open, onOpenChange, onSuccess, preSelectedPack
       setDuplicateResult(result);
 
       if (result.hard_block) {
-        // Hard block — show blocking modal, don't proceed
         setShowDuplicateWarning(true);
         return;
       }
 
       if (result.matches.length > 0 && !userAcknowledgedWarning) {
-        // Soft warning — show warning modal, let user decide
         setShowDuplicateWarning(true);
         return;
       }
@@ -144,7 +149,6 @@ export function AddTenantDialog({ open, onOpenChange, onSuccess, preSelectedPack
     const tenantSlug = generateSlug(displayName);
 
     try {
-      // Check if slug already exists
       const { data: existingTenant } = await supabase
         .from('tenants')
         .select('id')
@@ -174,7 +178,6 @@ export function AddTenantDialog({ open, onOpenChange, onSuccess, preSelectedPack
 
       if (error) throw error;
 
-      // Get newly created tenant ID
       const { data: newTenant } = await supabase
         .from('tenants')
         .select('id')
@@ -202,7 +205,7 @@ export function AddTenantDialog({ open, onOpenChange, onSuccess, preSelectedPack
         }
       }
 
-      // Create package instance if a package was selected
+      // Create package instance
       if (selectedPackageId && newTenantId) {
         try {
           const { error: piError } = await supabase.from('package_instances').insert({
@@ -214,10 +217,7 @@ export function AddTenantDialog({ open, onOpenChange, onSuccess, preSelectedPack
           });
           if (piError) {
             console.warn('[AddTenant] Package instance creation failed:', piError.message);
-            toast({
-              title: 'Warning',
-              description: 'Client created but package assignment failed. You can assign it manually.',
-            });
+            toast({ title: 'Warning', description: 'Client created but package assignment failed.' });
           }
         } catch (piErr) {
           console.warn('[AddTenant] Package instance error:', piErr);
@@ -228,27 +228,19 @@ export function AddTenantDialog({ open, onOpenChange, onSuccess, preSelectedPack
 
       // Auto-assign consultant (fire and forget)
       if (autoAssignConsultant && newTenantId) {
-        try {
-          supabase.rpc('rpc_auto_assign_consultant', { p_tenant_id: newTenantId })
-            .then(({ error: assignError }) => {
-              if (assignError) console.warn('[AddTenant] Auto-assign consultant failed:', assignError.message);
-            });
-        } catch (assignErr) {
-          console.warn('[AddTenant] Auto-assign error:', assignErr);
-        }
+        supabase.rpc('rpc_auto_assign_consultant', { p_tenant_id: newTenantId })
+          .then(({ error: assignError }) => {
+            if (assignError) console.warn('[AddTenant] Auto-assign failed:', assignError.message);
+          });
       }
 
       // Auto-provision SharePoint folder (fire and forget)
       if (newTenantId) {
-        try {
-          supabase.functions.invoke('provision-tenant-sharepoint-folder', {
-            body: { tenant_id: newTenantId }
-          }).then(({ error: provError }) => {
-            if (provError) console.warn('[AddTenant] SharePoint provisioning failed:', provError.message);
-          });
-        } catch (provErr) {
-          console.warn('[AddTenant] SharePoint provisioning error:', provErr);
-        }
+        supabase.functions.invoke('provision-tenant-sharepoint-folder', {
+          body: { tenant_id: newTenantId }
+        }).then(({ error: provError }) => {
+          if (provError) console.warn('[AddTenant] SharePoint provisioning failed:', provError.message);
+        });
       }
 
       resetForm();
@@ -275,6 +267,7 @@ export function AddTenantDialog({ open, onOpenChange, onSuccess, preSelectedPack
     setDuplicateResult(null);
     setShowDuplicateWarning(false);
     setUserAcknowledgedWarning(false);
+    setShowMergeWizard(false);
   };
 
   useEffect(() => {
@@ -290,8 +283,32 @@ export function AddTenantDialog({ open, onOpenChange, onSuccess, preSelectedPack
     }
   };
 
-  // Duplicate warning/block overlay
+  // ── Merge wizard (shown when conflict requires merge) ──
+  if (showMergeWizard && duplicateResult?.abn_tenant && duplicateResult?.rto_tenant) {
+    return (
+      <TenantMergeWizard
+        open={open}
+        onOpenChange={(v) => {
+          if (!v) {
+            setShowMergeWizard(false);
+            setShowDuplicateWarning(false);
+          }
+          onOpenChange(v);
+        }}
+        targetTenant={duplicateResult.abn_tenant}
+        sourceTenant={duplicateResult.rto_tenant}
+        reason={`ABN (${duplicateResult.abn_tenant.identifier_value}) and RTO ID (${duplicateResult.rto_tenant.identifier_value}) resolve to different tenants`}
+        onComplete={() => {
+          resetForm();
+          onSuccess?.();
+        }}
+      />
+    );
+  }
+
+  // ── Duplicate warning/block overlay ──
   if (showDuplicateWarning && duplicateResult) {
+    const isConflict = duplicateResult.block_reason === 'identifier_conflict_requires_merge';
     const isHardBlock = duplicateResult.hard_block;
 
     return (
@@ -299,17 +316,25 @@ export function AddTenantDialog({ open, onOpenChange, onSuccess, preSelectedPack
         <DialogContent className="max-h-[90vh] overflow-hidden flex flex-col border-[3px] border-[#dfdfdf]" style={{ width: '540px', maxWidth: '90vw' }}>
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              {isHardBlock ? (
+              {isConflict ? (
+                <Merge className="h-5 w-5 text-destructive" />
+              ) : isHardBlock ? (
                 <ShieldAlert className="h-5 w-5 text-destructive" />
               ) : (
                 <AlertTriangle className="h-5 w-5 text-amber-500" />
               )}
-              {isHardBlock ? 'Duplicate Detected — Cannot Create' : 'Possible Duplicates Found'}
+              {isConflict
+                ? 'Identifier Conflict — Merge Required'
+                : isHardBlock
+                  ? 'Duplicate Detected — Cannot Create'
+                  : 'Possible Duplicates Found'}
             </DialogTitle>
             <DialogDescription>
-              {isHardBlock
-                ? `A client with the same ${duplicateResult.block_reason === 'abn' ? 'ABN' : 'RTO ID'} already exists. You cannot create a duplicate.`
-                : 'The following existing clients match the details you entered. Please review before continuing.'}
+              {isConflict
+                ? 'The ABN and RTO ID you entered belong to different existing tenants. You must merge them before proceeding.'
+                : isHardBlock
+                  ? `A client with the same ${duplicateResult.block_reason === 'abn' ? 'ABN' : 'RTO ID'} already exists.`
+                  : 'The following existing clients match the details you entered. Please review before continuing.'}
             </DialogDescription>
           </DialogHeader>
 
@@ -333,15 +358,29 @@ export function AddTenantDialog({ open, onOpenChange, onSuccess, preSelectedPack
           </div>
 
           <DialogFooter className="gap-2 sm:gap-0">
-            {isHardBlock ? (
+            {isConflict ? (
               <>
-                <Button variant="outline" onClick={() => { setShowDuplicateWarning(false); }}>
+                <Button variant="outline" onClick={() => setShowDuplicateWarning(false)}>
                   Back to Form
                 </Button>
+                <Button
+                  variant="destructive"
+                  onClick={() => {
+                    setShowDuplicateWarning(false);
+                    setShowMergeWizard(true);
+                  }}
+                >
+                  <Merge className="h-4 w-4 mr-2" />
+                  Merge Now
+                </Button>
               </>
+            ) : isHardBlock ? (
+              <Button variant="outline" onClick={() => setShowDuplicateWarning(false)}>
+                Back to Form
+              </Button>
             ) : (
               <>
-                <Button variant="outline" onClick={() => { setShowDuplicateWarning(false); }}>
+                <Button variant="outline" onClick={() => setShowDuplicateWarning(false)}>
                   Back to Form
                 </Button>
                 <Button
@@ -362,6 +401,7 @@ export function AddTenantDialog({ open, onOpenChange, onSuccess, preSelectedPack
     );
   }
 
+  // ── Main create form ──
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[90vh] overflow-hidden flex flex-col border-[3px] border-[#dfdfdf]" style={{ width: '500px', maxWidth: '90vw' }}>

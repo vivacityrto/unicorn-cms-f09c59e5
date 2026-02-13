@@ -33448,6 +33448,14 @@ export type Database = {
         Returns: string
       }
       mark_all_present: { Args: { p_meeting_id: string }; Returns: Json }
+      merge_tenants: {
+        Args: {
+          p_reason?: string
+          p_source_tenant_id: number
+          p_target_tenant_id: number
+        }
+        Returns: Json
+      }
       normalise_abn: { Args: { p: string }; Returns: string }
       normalise_name: { Args: { p: string }; Returns: string }
       normalize_company_key: { Args: { txt: string }; Returns: string }
