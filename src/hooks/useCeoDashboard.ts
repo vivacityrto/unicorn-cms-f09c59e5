@@ -310,23 +310,52 @@ export function useCeoDecisionQueue() {
   });
 }
 
-// ─── I. KPI Score ───
+// ─── I. KPI Score (via RPC) ───
 export interface KpiScore {
   overall: number;
   eosExecution: number;
   unicornIntegrity: number;
   ceoRelief: number;
   financialAccuracy: number;
+  status: string | null;
 }
 
+export function useKpiScoreRpc(tenantId: number = SYSTEM_TENANT_ID, days: number = 30) {
+  return useQuery({
+    queryKey: ['ceo-kpi-score-rpc', tenantId, days],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('kpi_score_rolling' as any, {
+        p_tenant_id: tenantId,
+        p_days: days,
+      });
+
+      if (error) throw error;
+      const result = data as any;
+
+      return {
+        overall: Math.round(result?.overall_score ?? 0),
+        eosExecution: Math.round(result?.scores?.eos_execution ?? 0),
+        unicornIntegrity: Math.round(result?.scores?.unicorn_integrity ?? 0),
+        ceoRelief: Math.round(result?.scores?.ceo_relief ?? 0),
+        financialAccuracy: Math.round(result?.scores?.financial_accuracy ?? 0),
+        status: result?.status ?? null,
+      } as KpiScore;
+    },
+    staleTime: 60_000,
+  });
+}
+
+/**
+ * Client-side fallback when RPC is unavailable or returns nulls.
+ * Kept for backward compat.
+ */
 export function useCeoKpiScore(
   rockStats?: RockStats | null,
   todoStats?: TodoStats | null,
   integrityStats?: IntegrityStats | null,
   reliefStats?: CeoReliefStats | null,
   financialControls?: FinancialControlRow[]
-) {
-  // Computed client-side from other hook data
+): KpiScore {
   const eosExecution = (() => {
     if (!rockStats || !todoStats) return 0;
     const rockScore = rockStats.total > 0
@@ -337,7 +366,6 @@ export function useCeoKpiScore(
 
   const unicornIntegrity = (() => {
     if (!integrityStats) return 0;
-    // Score based on overdue count: 100 = 0 overdue, drops 5 per overdue
     return Math.max(0, 100 - (integrityStats.overdueTaskCount * 5));
   })();
 
@@ -353,5 +381,5 @@ export function useCeoKpiScore(
     (eosExecution * 0.3) + (unicornIntegrity * 0.25) + (ceoRelief * 0.25) + (financialAccuracy * 0.2)
   );
 
-  return { overall, eosExecution, unicornIntegrity, ceoRelief, financialAccuracy } as KpiScore;
+  return { overall, eosExecution, unicornIntegrity, ceoRelief, financialAccuracy, status: overall >= 85 ? 'green' : overall >= 70 ? 'amber' : 'red' };
 }

@@ -16,6 +16,7 @@ import {
   useDiamondCommitments,
   useCeoDecisionQueue,
   useCeoKpiScore,
+  useKpiScoreRpc,
 } from '@/hooks/useCeoDashboard';
 import { TractionStatusPanel } from './TractionStatusPanel';
 import { EosDisciplinePanel } from './EosDisciplinePanel';
@@ -47,8 +48,10 @@ export function CeoDashboardSection() {
   const { data: diamondData, isLoading: diamondLoading } = useDiamondCommitments();
   const { data: decisionItems, isLoading: decisionLoading } = useCeoDecisionQueue();
 
-  // KPI Score computed from other stats
-  const kpiScore = useCeoKpiScore(rockStats, todoStats, integrityStats, reliefStats, financialControls);
+  // KPI Score: try RPC first, fall back to client-side computation
+  const { data: rpcKpi } = useKpiScoreRpc();
+  const clientKpi = useCeoKpiScore(rockStats, todoStats, integrityStats, reliefStats, financialControls);
+  const kpiScore = rpcKpi ?? clientKpi;
 
   return (
     <div className="space-y-3">
