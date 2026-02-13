@@ -3,9 +3,12 @@ import * as React from "react";
 import { cn } from "@/lib/utils";
 
 /**
- * Table component with built-in responsive wrapper
- * - Horizontal scroll is contained inside the table region
- * - Never causes page-level horizontal scroll
+ * Table System – Unicorn 2.0 Design System
+ *
+ * Header: Acai 700, 15px semibold
+ * Row hover: Light Purple 100
+ * Row padding: 12-16px
+ * Status chips: semantic mapping only
  */
 const Table = React.forwardRef<HTMLTableElement, React.HTMLAttributes<HTMLTableElement>>(
   ({ className, ...props }, ref) => (
@@ -14,7 +17,6 @@ const Table = React.forwardRef<HTMLTableElement, React.HTMLAttributes<HTMLTableE
         ref={ref} 
         className={cn(
           "w-full caption-bottom text-sm",
-          // Minimum width to prevent squishing
           "min-w-[600px]",
           className
         )} 
@@ -31,8 +33,7 @@ const TableHeader = React.forwardRef<HTMLTableSectionElement, React.HTMLAttribut
       ref={ref} 
       className={cn(
         "[&_tr]:border-b",
-        // Sticky header support
-        "bg-background",
+        "bg-brand-acai-50 dark:bg-brand-acai-900",
         className
       )} 
       {...props} 
@@ -59,7 +60,11 @@ const TableRow = React.forwardRef<HTMLTableRowElement, React.HTMLAttributes<HTML
   ({ className, ...props }, ref) => (
     <tr
       ref={ref}
-      className={cn("border-b transition-colors data-[state=selected]:bg-muted hover:bg-muted/50", className)}
+      className={cn(
+        "border-b transition-colors data-[state=selected]:bg-muted",
+        "hover:bg-brand-light-purple-100 dark:hover:bg-brand-acai-800",
+        className
+      )}
       {...props}
     />
   ),
@@ -71,8 +76,8 @@ const TableHead = React.forwardRef<HTMLTableCellElement, React.ThHTMLAttributes<
     <th
       ref={ref}
       className={cn(
-        "h-12 px-3 md:px-4 text-left align-middle font-medium text-muted-foreground",
-        "whitespace-nowrap",
+        "h-12 px-3 md:px-4 text-left align-middle font-semibold text-secondary",
+        "whitespace-nowrap text-sm",
         "[&:has([role=checkbox])]:pr-0",
         className,
       )}
