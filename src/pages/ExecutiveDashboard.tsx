@@ -1,27 +1,40 @@
 /**
  * ExecutiveDashboard – Unicorn 2.0
  *
- * Internal-only view: Compliance + Predictive Risk + 7-Day Deltas + Anomaly Signals.
+ * Visionary–Integrator alignment view.
+ * Answers: Where are we exposed? Is execution moving? Who needs support?
  */
 
 import { useState, useMemo } from 'react';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { useExecutiveHealth, type ExecutiveHealthRow } from '@/hooks/useExecutiveHealth';
 import { useExecutiveAnomalies } from '@/hooks/useExecutiveAnomalies';
-import { ExecutiveKpiStrip } from '@/components/executive/ExecutiveKpiStrip';
-import { ClientHealthMatrix } from '@/components/executive/ClientHealthMatrix';
-import { PriorityQueueTable } from '@/components/executive/PriorityQueueTable';
+import { useExecutiveMomentum, useConsultantDistribution } from '@/hooks/useExecutiveData';
+import { StrategicHealthSnapshot } from '@/components/executive/StrategicHealthSnapshot';
+import { AlignmentSignalsPanel } from '@/components/executive/AlignmentSignalsPanel';
+import { ExecutionMomentumPanel } from '@/components/executive/ExecutionMomentumPanel';
+import { ConsultantDistributionTable } from '@/components/executive/ConsultantDistributionTable';
+import { StrategicExposureTable } from '@/components/executive/StrategicExposureTable';
+import { SystemHealthBlock } from '@/components/executive/SystemHealthBlock';
+import { SignalsPanel } from '@/components/executive/SignalsPanel';
+import { WatchlistPanel } from '@/components/executive/WatchlistPanel';
 import { ClientHealthDrawer } from '@/components/executive/ClientHealthDrawer';
 import { ExecutiveFiltersBar } from '@/components/executive/ExecutiveFiltersBar';
-import { WatchlistPanel } from '@/components/executive/WatchlistPanel';
-import { SignalsPanel } from '@/components/executive/SignalsPanel';
-import { Loader2 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
+import { Loader2, Eye, Users } from 'lucide-react';
 
 export default function ExecutiveDashboard() {
   const { data, rawData, watchlist, isLoading, kpis, filters, updateFilter, resetFilters } = useExecutiveHealth();
   const { data: anomalies } = useExecutiveAnomalies();
+  const { data: momentum, isLoading: momentumLoading } = useExecutiveMomentum();
+  const { data: consultants, isLoading: consultantsLoading } = useConsultantDistribution();
+
   const [selectedRow, setSelectedRow] = useState<ExecutiveHealthRow | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [weeklyMode, setWeeklyMode] = useState(false);
+  const [showConsultants, setShowConsultants] = useState(false);
 
   const handleSelect = (row: ExecutiveHealthRow) => {
     setSelectedRow(row);
@@ -33,13 +46,16 @@ export default function ExecutiveDashboard() {
     return Array.from(types).sort();
   }, [rawData]);
 
-  // Filter anomalies for selected row
   const selectedAnomalies = useMemo(() => {
     if (!selectedRow || !anomalies) return [];
     return anomalies.filter(
       a => a.tenant_id === selectedRow.tenant_id && a.package_instance_id === selectedRow.package_instance_id
     );
   }, [selectedRow, anomalies]);
+
+  // Check if filters are active
+  const hasFilters = filters.search || filters.riskBands.length > 0 || filters.packageType ||
+    filters.staleOnly || filters.criticalOnly || filters.ownerUuid;
 
   if (isLoading) {
     return (
@@ -54,39 +70,87 @@ export default function ExecutiveDashboard() {
   return (
     <DashboardLayout>
       <div className="space-y-6 p-4 md:p-6 max-w-screen-2xl mx-auto">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">Executive Dashboard</h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            Compliance health and operational risk across all active packages.
-          </p>
+        {/* Header with mode toggles */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-bold text-foreground">Executive Dashboard</h1>
+            <p className="text-sm text-muted-foreground mt-1">
+              Strategic alignment and operational health.
+            </p>
+          </div>
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
+              <Switch
+                id="weekly-mode"
+                checked={weeklyMode}
+                onCheckedChange={setWeeklyMode}
+              />
+              <Label htmlFor="weekly-mode" className="text-xs cursor-pointer flex items-center gap-1">
+                <Eye className="w-3.5 h-3.5" />
+                Weekly Review
+              </Label>
+            </div>
+            <Button
+              variant={showConsultants ? 'secondary' : 'ghost'}
+              size="sm"
+              className="text-xs gap-1.5"
+              onClick={() => setShowConsultants(!showConsultants)}
+            >
+              <Users className="w-3.5 h-3.5" />
+              By Consultant
+            </Button>
+          </div>
         </div>
 
-        <ExecutiveKpiStrip
-          avgScore={kpis.avgScore}
-          avgScoreDelta={kpis.avgScoreDelta}
-          avgScoreConfidence={kpis.avgScoreConfidence}
-          atRiskCount={kpis.atRiskCount}
-          criticalRisks={kpis.criticalRisks}
-          staleCount={kpis.staleCount}
-        />
+        {/* 1. Strategic Health Snapshot */}
+        <StrategicHealthSnapshot data={rawData} weeklyMode={weeklyMode} />
 
-        <ExecutiveFiltersBar
-          filters={filters}
-          onFilterChange={updateFilter}
-          onReset={resetFilters}
-          packageTypes={packageTypes}
-        />
-
-        {/* Signals + Watchlist */}
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-          <SignalsPanel anomalies={anomalies ?? []} />
-          <WatchlistPanel watchlist={watchlist} healthData={rawData} onItemClick={handleSelect} />
+        {/* 2. Alignment Signals + Execution Momentum */}
+        <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+          <div className="xl:col-span-2">
+            <AlignmentSignalsPanel data={rawData} anomalies={anomalies ?? []} />
+          </div>
+          <div className="space-y-6">
+            <ExecutionMomentumPanel data={momentum} isLoading={momentumLoading} weeklyMode={weeklyMode} />
+            <SystemHealthBlock data={rawData} />
+          </div>
         </div>
 
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-          <ClientHealthMatrix data={data} onSelect={handleSelect} />
-          <PriorityQueueTable data={data} onRowClick={handleSelect} />
-        </div>
+        {/* 3. Consultant Distribution (toggle) */}
+        {showConsultants && (
+          <ConsultantDistributionTable data={consultants ?? []} isLoading={consultantsLoading} />
+        )}
+
+        {/* 4. Filters (secondary, collapsible feel) */}
+        {hasFilters && (
+          <ExecutiveFiltersBar
+            filters={filters}
+            onFilterChange={updateFilter}
+            onReset={resetFilters}
+            packageTypes={packageTypes}
+          />
+        )}
+
+        {/* 5. Signals + Watchlist */}
+        {(anomalies ?? []).length > 0 || watchlist.length > 0 ? (
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+            <SignalsPanel anomalies={anomalies ?? []} />
+            <WatchlistPanel watchlist={watchlist} healthData={rawData} onItemClick={handleSelect} />
+          </div>
+        ) : null}
+
+        {/* 6. Strategic Exposure Table */}
+        <StrategicExposureTable data={data} onRowClick={handleSelect} weeklyMode={weeklyMode} />
+
+        {/* Filters bar (always accessible at bottom when not active) */}
+        {!hasFilters && (
+          <ExecutiveFiltersBar
+            filters={filters}
+            onFilterChange={updateFilter}
+            onReset={resetFilters}
+            packageTypes={packageTypes}
+          />
+        )}
 
         <ClientHealthDrawer
           row={selectedRow}
