@@ -7314,6 +7314,13 @@ export type Database = {
             foreignKeyName: "compliance_score_snapshots_package_instance_id_fkey"
             columns: ["package_instance_id"]
             isOneToOne: false
+            referencedRelation: "v_momentum_state"
+            referencedColumns: ["package_instance_id"]
+          },
+          {
+            foreignKeyName: "compliance_score_snapshots_package_instance_id_fkey"
+            columns: ["package_instance_id"]
+            isOneToOne: false
             referencedRelation: "v_progress_anchor_inputs"
             referencedColumns: ["package_instance_id"]
           },
@@ -16591,6 +16598,93 @@ export type Database = {
         }
         Relationships: []
       }
+      momentum_state_history: {
+        Row: {
+          changed_at: string
+          changed_by_system: boolean
+          id: string
+          package_instance_id: number
+          pause_reason: string[]
+          state: string
+          tenant_id: number
+        }
+        Insert: {
+          changed_at?: string
+          changed_by_system?: boolean
+          id?: string
+          package_instance_id: number
+          pause_reason?: string[]
+          state: string
+          tenant_id: number
+        }
+        Update: {
+          changed_at?: string
+          changed_by_system?: boolean
+          id?: string
+          package_instance_id?: number
+          pause_reason?: string[]
+          state?: string
+          tenant_id?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "momentum_state_history_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "momentum_state_history_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_engagement_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "momentum_state_history_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_eos_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "momentum_state_history_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_compliance_entitlements"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "momentum_state_history_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "momentum_state_history_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "momentum_state_history_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_membership_usage"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "momentum_state_history_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_membership_usage"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
       notes: {
         Row: {
           assignees: string[] | null
@@ -17388,6 +17482,13 @@ export type Database = {
             columns: ["package_instance_id"]
             isOneToOne: false
             referencedRelation: "v_dashboard_consultant_momentum"
+            referencedColumns: ["package_instance_id"]
+          },
+          {
+            foreignKeyName: "package_notes_package_instance_id_fkey"
+            columns: ["package_instance_id"]
+            isOneToOne: false
+            referencedRelation: "v_momentum_state"
             referencedColumns: ["package_instance_id"]
           },
           {
@@ -28668,6 +28769,13 @@ export type Database = {
             foreignKeyName: "compliance_score_snapshots_package_instance_id_fkey"
             columns: ["package_instance_id"]
             isOneToOne: false
+            referencedRelation: "v_momentum_state"
+            referencedColumns: ["package_instance_id"]
+          },
+          {
+            foreignKeyName: "compliance_score_snapshots_package_instance_id_fkey"
+            columns: ["package_instance_id"]
+            isOneToOne: false
             referencedRelation: "v_progress_anchor_inputs"
             referencedColumns: ["package_instance_id"]
           },
@@ -28767,6 +28875,26 @@ export type Database = {
           rocks_closed: number | null
           user_uuid: string | null
           week_start_date: string | null
+        }
+        Relationships: []
+      }
+      v_momentum_state: {
+        Row: {
+          client_name: string | null
+          current_phase_name: string | null
+          days_in_current_phase: number | null
+          days_since_last_activity: number | null
+          has_active_critical: boolean | null
+          has_unresolved_risk: boolean | null
+          is_paused: boolean | null
+          manager_id: string | null
+          momentum_state: string | null
+          package_id: number | null
+          package_instance_id: number | null
+          package_name: string | null
+          pause_reason: string[] | null
+          recovery_eligible: boolean | null
+          tenant_id: number | null
         }
         Relationships: []
       }
