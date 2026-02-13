@@ -1,23 +1,27 @@
 /**
  * ClientHealthDrawer – Unicorn 2.0
  *
- * Right-side drawer showing "Why Flagged" for a selected client+package.
- * Compliance breakdown, predictive signals, 30-day sparklines, and next best actions.
+ * Right-side drawer with tabs: Overview, Signals, Actions.
  */
 
+import { useState } from 'react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { cn } from '@/lib/utils';
 import { ArrowRight, CalendarCheck, Upload, ShieldAlert, Clock, ListChecks } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { SparklineMini } from './SparklineMini';
+import { DrawerSignalsTab } from './DrawerSignalsTab';
 import type { ExecutiveHealthRow } from '@/hooks/useExecutiveHealth';
+import type { AnomalyRow } from '@/hooks/useExecutiveAnomalies';
 
 interface ClientHealthDrawerProps {
   row: ExecutiveHealthRow | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  anomalies?: AnomalyRow[];
 }
 
 const bandVariant: Record<string, string> = {
@@ -92,8 +96,9 @@ const CONFIDENCE_LABELS: Record<string, string> = {
   none: 'No data',
 };
 
-export function ClientHealthDrawer({ row, open, onOpenChange }: ClientHealthDrawerProps) {
+export function ClientHealthDrawer({ row, open, onOpenChange, anomalies = [] }: ClientHealthDrawerProps) {
   const navigate = useNavigate();
+  const [tab, setTab] = useState('overview');
 
   if (!row) return null;
 
@@ -110,119 +115,138 @@ export function ClientHealthDrawer({ row, open, onOpenChange }: ClientHealthDraw
           <SheetDescription className="text-sm">{row.package_name}</SheetDescription>
         </SheetHeader>
 
-        <div className="space-y-4">
-          {/* Compliance State */}
-          <div>
-            <h4 className="text-sm font-semibold text-foreground mb-3">Compliance State</h4>
-            <div className="flex items-center gap-3 mb-3">
-              <span className="text-3xl font-bold text-foreground">{row.overall_score}%</span>
-              <Badge className={cn('capitalize', bandVariant[row.risk_band])}>
-                {row.risk_band.replace('_', ' ')}
-              </Badge>
-            </div>
-            <div className="space-y-2">
-              <ScoreBar label="Phase Completion" value={row.phase_completion} />
-              <ScoreBar label="Documentation Coverage" value={row.documentation_coverage} />
-              <ScoreBar label="Risk Health" value={row.risk_health} />
-              <ScoreBar label="Consult Health" value={row.consult_health} />
-            </div>
-            {capsApplied.length > 0 && (
-              <div className="mt-2">
-                <p className="text-xs text-muted-foreground">Caps applied:</p>
-                <div className="flex flex-wrap gap-1 mt-1">
-                  {capsApplied.map((cap, i) => (
-                    <Badge key={i} variant="outline" className="text-xs">
-                      {cap.type}: {cap.cap}%
-                    </Badge>
-                  ))}
+        <Tabs value={tab} onValueChange={setTab} className="w-full">
+          <TabsList className="w-full mb-4">
+            <TabsTrigger value="overview" className="flex-1">Overview</TabsTrigger>
+            <TabsTrigger value="signals" className="flex-1">
+              Signals
+              {anomalies.length > 0 && (
+                <Badge variant="secondary" className="ml-1.5 text-[10px] px-1.5 py-0">{anomalies.length}</Badge>
+              )}
+            </TabsTrigger>
+            <TabsTrigger value="actions" className="flex-1">Actions</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="overview" className="space-y-4 mt-0">
+            {/* Compliance State */}
+            <div>
+              <h4 className="text-sm font-semibold text-foreground mb-3">Compliance State</h4>
+              <div className="flex items-center gap-3 mb-3">
+                <span className="text-3xl font-bold text-foreground">{row.overall_score}%</span>
+                <Badge className={cn('capitalize', bandVariant[row.risk_band])}>
+                  {row.risk_band.replace('_', ' ')}
+                </Badge>
+              </div>
+              <div className="space-y-2">
+                <ScoreBar label="Phase Completion" value={row.phase_completion} />
+                <ScoreBar label="Documentation Coverage" value={row.documentation_coverage} />
+                <ScoreBar label="Risk Health" value={row.risk_health} />
+                <ScoreBar label="Consult Health" value={row.consult_health} />
+              </div>
+              {capsApplied.length > 0 && (
+                <div className="mt-2">
+                  <p className="text-xs text-muted-foreground">Caps applied:</p>
+                  <div className="flex flex-wrap gap-1 mt-1">
+                    {capsApplied.map((cap, i) => (
+                      <Badge key={i} variant="outline" className="text-xs">
+                        {cap.type}: {cap.cap}%
+                      </Badge>
+                    ))}
+                  </div>
                 </div>
+              )}
+              <p className="text-xs text-muted-foreground mt-2">
+                {row.days_stale > 0 ? `${row.days_stale} days since last activity` : 'Active recently'}
+              </p>
+            </div>
+
+            <Separator />
+
+            {/* 30-Day Trends */}
+            <div>
+              <h4 className="text-sm font-semibold text-foreground mb-3">30-Day Trends</h4>
+              <div className="space-y-3">
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-xs text-muted-foreground">Compliance Score</span>
+                    <span className="text-[10px] text-muted-foreground">{CONFIDENCE_LABELS[row.compliance_spark_confidence]}</span>
+                  </div>
+                  <SparklineMini
+                    values={row.compliance_spark_scores ?? []}
+                    confidence={row.compliance_spark_confidence}
+                    kind="compliance"
+                    height={32}
+                    width={320}
+                  />
+                </div>
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-xs text-muted-foreground">Operational Risk</span>
+                    <span className="text-[10px] text-muted-foreground">{CONFIDENCE_LABELS[row.predictive_spark_confidence]}</span>
+                  </div>
+                  <SparklineMini
+                    values={row.predictive_spark_scores ?? []}
+                    confidence={row.predictive_spark_confidence}
+                    kind="predictive"
+                    height={32}
+                    width={320}
+                  />
+                </div>
+              </div>
+            </div>
+
+            <Separator />
+
+            {/* Predictive Signals */}
+            <div>
+              <h4 className="text-sm font-semibold text-foreground mb-3">Predictive Signals</h4>
+              <div className="space-y-0.5">
+                <SignalRow label="Activity Decay" active={row.predictive_flags.activity_decay} />
+                <SignalRow label="Risk Escalation" active={row.predictive_flags.risk_escalation} />
+                <SignalRow label="Backlog Growth" active={row.predictive_flags.backlog_growth} />
+                <SignalRow label="Burn Rate Risk" active={row.predictive_flags.burn_rate_risk} />
+                <SignalRow label="Phase Drift" active={row.predictive_flags.phase_drift} />
+              </div>
+              <p className="text-xs text-muted-foreground mt-2">
+                Operational Risk Score: {row.operational_risk_score}/100
+              </p>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="signals" className="mt-0">
+            <DrawerSignalsTab
+              anomalies={anomalies}
+              tenantId={row.tenant_id}
+              onClose={() => onOpenChange(false)}
+            />
+          </TabsContent>
+
+          <TabsContent value="actions" className="mt-0">
+            {actions.length === 0 ? (
+              <p className="text-sm text-muted-foreground py-4">No recommended actions at this time.</p>
+            ) : (
+              <div className="space-y-2">
+                {actions.map((action, i) => {
+                  const Icon = action.icon;
+                  return (
+                    <button
+                      key={i}
+                      className="w-full flex items-start gap-3 p-3 rounded-lg border border-border hover:bg-muted/30 transition-colors text-left"
+                      onClick={() => { onOpenChange(false); navigate(action.href); }}
+                    >
+                      <Icon className="w-4 h-4 mt-0.5 text-primary flex-shrink-0" />
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium text-foreground">{action.label}</p>
+                        <p className="text-xs text-muted-foreground">{action.description}</p>
+                      </div>
+                      <ArrowRight className="w-4 h-4 text-muted-foreground flex-shrink-0 mt-0.5" />
+                    </button>
+                  );
+                })}
               </div>
             )}
-            <p className="text-xs text-muted-foreground mt-2">
-              {row.days_stale > 0 ? `${row.days_stale} days since last activity` : 'Active recently'}
-            </p>
-          </div>
-
-          <Separator />
-
-          {/* 30-Day Trends */}
-          <div>
-            <h4 className="text-sm font-semibold text-foreground mb-3">30-Day Trends</h4>
-            <div className="space-y-3">
-              <div>
-                <div className="flex items-center justify-between mb-1">
-                  <span className="text-xs text-muted-foreground">Compliance Score</span>
-                  <span className="text-[10px] text-muted-foreground">{CONFIDENCE_LABELS[row.compliance_spark_confidence]}</span>
-                </div>
-                <SparklineMini
-                  values={row.compliance_spark_scores ?? []}
-                  confidence={row.compliance_spark_confidence}
-                  kind="compliance"
-                  height={32}
-                  width={320}
-                />
-              </div>
-              <div>
-                <div className="flex items-center justify-between mb-1">
-                  <span className="text-xs text-muted-foreground">Operational Risk</span>
-                  <span className="text-[10px] text-muted-foreground">{CONFIDENCE_LABELS[row.predictive_spark_confidence]}</span>
-                </div>
-                <SparklineMini
-                  values={row.predictive_spark_scores ?? []}
-                  confidence={row.predictive_spark_confidence}
-                  kind="predictive"
-                  height={32}
-                  width={320}
-                />
-              </div>
-            </div>
-          </div>
-
-          <Separator />
-
-          {/* Predictive Signals */}
-          <div>
-            <h4 className="text-sm font-semibold text-foreground mb-3">Predictive Signals</h4>
-            <div className="space-y-0.5">
-              <SignalRow label="Activity Decay" active={row.predictive_flags.activity_decay} />
-              <SignalRow label="Risk Escalation" active={row.predictive_flags.risk_escalation} />
-              <SignalRow label="Backlog Growth" active={row.predictive_flags.backlog_growth} />
-              <SignalRow label="Burn Rate Risk" active={row.predictive_flags.burn_rate_risk} />
-              <SignalRow label="Phase Drift" active={row.predictive_flags.phase_drift} />
-            </div>
-            <p className="text-xs text-muted-foreground mt-2">
-              Operational Risk Score: {row.operational_risk_score}/100
-            </p>
-          </div>
-
-          {actions.length > 0 && (
-            <>
-              <Separator />
-              <div>
-                <h4 className="text-sm font-semibold text-foreground mb-3">Next Best Actions</h4>
-                <div className="space-y-2">
-                  {actions.map((action, i) => {
-                    const Icon = action.icon;
-                    return (
-                      <button
-                        key={i}
-                        className="w-full flex items-start gap-3 p-3 rounded-lg border border-border hover:bg-muted/30 transition-colors text-left"
-                        onClick={() => { onOpenChange(false); navigate(action.href); }}
-                      >
-                        <Icon className="w-4 h-4 mt-0.5 text-primary flex-shrink-0" />
-                        <div className="min-w-0">
-                          <p className="text-sm font-medium text-foreground">{action.label}</p>
-                          <p className="text-xs text-muted-foreground">{action.description}</p>
-                        </div>
-                        <ArrowRight className="w-4 h-4 text-muted-foreground flex-shrink-0 mt-0.5" />
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            </>
-          )}
-        </div>
+          </TabsContent>
+        </Tabs>
       </SheetContent>
     </Sheet>
   );
