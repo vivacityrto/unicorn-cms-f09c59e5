@@ -13,7 +13,7 @@ interface Rock {
   issue?: string | null;
   outcome?: string | null;
   milestones?: any;
-  client_id?: string | null;
+  client_id?: number | null;
   owner_id?: string | null;
   due_date: string;
   quarter_number: number;

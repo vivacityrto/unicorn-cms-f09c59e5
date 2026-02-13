@@ -30,7 +30,7 @@ export function RockProgressControl({ rock, compact = false }: RockProgressContr
       description: rock.description || `Issue from rock: ${rock.title}`,
       status: 'Open',
       priority: (rock.priority || 2) as any,
-      client_id: rock.client_id,
+      client_id: rock.client_id ? String(rock.client_id) : undefined,
     });
   };
 

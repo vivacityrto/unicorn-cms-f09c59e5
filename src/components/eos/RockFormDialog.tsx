@@ -56,7 +56,7 @@ export function RockFormDialog({ open, onOpenChange, rock }: RockFormDialogProps
     }
     return [];
   });
-  const [clientId, setClientId] = useState(rock?.client_id || '');
+  const [clientId, setClientId] = useState<string>(rock?.client_id ? String(rock.client_id) : '');
   const [seatId, setSeatId] = useState(rock?.seat_id || '');
   const [ownerId, setOwnerId] = useState((rock as any)?.owner_id || '');
   const [parentRockId, setParentRockId] = useState((rock as any)?.parent_rock_id || '');
@@ -122,7 +122,7 @@ export function RockFormDialog({ open, onOpenChange, rock }: RockFormDialogProps
         } else {
           setMilestones([]);
         }
-        setClientId(rock.client_id || '');
+        setClientId(rock.client_id ? String(rock.client_id) : '');
         setSeatId(rock.seat_id || '');
         setOwnerId((rock as any)?.owner_id || '');
         setParentRockId((rock as any)?.parent_rock_id || '');
@@ -194,14 +194,15 @@ export function RockFormDialog({ open, onOpenChange, rock }: RockFormDialogProps
     enabled: !!profile && open,
   });
 
-  // Fetch clients for dropdown
+  // Fetch tenants for client dropdown
   const { data: clients } = useQuery({
-    queryKey: ['clients-for-rocks'],
+    queryKey: ['tenants-for-rocks'],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('clients_legacy')
-        .select('id, companyname, contactname')
-        .order('companyname');
+        .from('tenants')
+        .select('id, name')
+        .neq('id', VIVACITY_TENANT_ID)
+        .order('name');
       
       if (error) throw error;
       return data;
@@ -274,7 +275,7 @@ export function RockFormDialog({ open, onOpenChange, rock }: RockFormDialogProps
       milestones: milestones.filter(m => m.text.trim()).length > 0 
         ? milestones.filter(m => m.text.trim()) 
         : null,
-      client_id: clientId || null,
+      client_id: clientId ? Number(clientId) : null,
       seat_id: seatId || null,
       owner_id: ownerId || null,
       status,
@@ -614,8 +615,8 @@ export function RockFormDialog({ open, onOpenChange, rock }: RockFormDialogProps
               options={[
                 { value: "none", label: "None" },
                 ...(clients?.map((client) => ({
-                  value: client.id,
-                  label: client.companyname || client.contactname || client.id,
+                  value: String(client.id),
+                  label: client.name || String(client.id),
                 })) || []),
               ]}
               value={clientId || "none"}
