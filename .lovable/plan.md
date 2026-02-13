@@ -1,32 +1,68 @@
 
-# Fix: Show Only Active Clients on Executive Dashboard
 
-## Problem
-The Executive Dashboard displays clients with `inactive` and `archived` tenant status (e.g., NSW Fishing Industry Training, Positive Training Academy). The underlying view `v_executive_client_health` filters on `package_instances.is_complete = false` but does not check `tenants.status`.
+## CEO Executive Dashboard — Data Entry Management Pages
 
-## Solution
-Add `AND t.status = 'active'` to the `v_executive_client_health` view definition. This single change filters inactive/archived tenants from all dashboard components (Exposure table, Snapshot tiles, Alignment Signals, Momentum, etc.) since they all consume this view.
+### Overview
+Build three new SuperAdmin-only management pages for entering and managing data that feeds the CEO Dashboard panels. Each page provides full CRUD (Create, Read, Update, Delete) with table listings, modal forms, and links back to the Executive Dashboard.
 
-## Technical Details
+### Pages to Create
 
-### Migration: Update `v_executive_client_health` view
+#### 1. Financial Controls (`/executive/financial-controls`)
+- **Table columns**: Control Type, Status, Due Date, Completed At, Amount Outstanding, Notes
+- **Control types**: `xero_reconciliation`, `payroll`, `outstanding_balance`
+- **Status options**: `ok`, `pending`, `overdue`, `flagged`
+- **Form fields**: tenant selector, control type dropdown, status dropdown, due date picker, amount, notes textarea
+- **Link from**: FinancialControlPanel header (pencil/manage icon)
 
-1. Drop and recreate `v_executive_client_health` (and its dependent views like `v_executive_watchlist_7d`) with an added `WHERE` clause: `AND t.status = 'active'`.
-2. The current final line is:
-   ```sql
-   WHERE pi.is_complete = false;
-   ```
-   It becomes:
-   ```sql
-   WHERE pi.is_complete = false
-     AND t.status = 'active';
-   ```
-3. Recreate all dependent views (`v_executive_watchlist_7d`) after the base view.
+#### 2. Client Commitments (`/executive/client-commitments`)
+- **Table columns**: Tenant, Title, Due Date, Status, Impact Level, Assigned To, Completed At
+- **Status options**: `pending`, `met`, `missed`, `at_risk`
+- **Impact levels**: `low`, `medium`, `high`, `critical`
+- **Form fields**: tenant selector (filtered to diamond-tier), title, description, due date, status, impact level, assigned to
+- **Link from**: DiamondClientPanel header
 
-### No Frontend Changes Required
-The hook and all components already consume from this view — filtering at the SQL level ensures consistency everywhere.
+#### 3. CEO Decision Queue (`/executive/decision-queue`)
+- **Table columns**: Title, Impact Level, Recommended Option, Status, Submitted At, Days Pending, Decision Note
+- **Status options**: `pending`, `decided`, `deferred`
+- **Form fields**: title, description, impact level, recommended option, status, decision note
+- **Link from**: DecisionQueuePanel header
 
-### Impact
-- Removes inactive/archived tenants from all Executive Dashboard panels
-- Reduces noise for Visionary/Integrator weekly reviews
-- No effect on client-facing views or other dashboards
+### Technical Details
+
+#### Routing (in App.tsx)
+```
+/executive/financial-controls  -> ProtectedRoute requireSuperAdmin
+/executive/client-commitments  -> ProtectedRoute requireSuperAdmin
+/executive/decision-queue      -> ProtectedRoute requireSuperAdmin
+```
+
+#### File Structure
+```
+src/pages/
+  ExecutiveFinancialControls.tsx
+  ExecutiveClientCommitments.tsx
+  ExecutiveDecisionQueue.tsx
+```
+
+#### UI Pattern
+Each page follows the existing ManageFields pattern:
+- DashboardLayout wrapper
+- Back button to /executive
+- Search/filter bar
+- Data table with edit/delete actions per row
+- FormModal for create and edit
+- AlertDialog for delete confirmation
+- Toast notifications for success/error
+- Loading states
+
+#### Panel Drill-Down Links
+Each CEO dashboard panel header gains a small "Manage" link icon (visible to SuperAdmins only) that navigates to the corresponding management page. This uses the existing `useRBAC().isSuperAdmin` check.
+
+#### No Database Changes Required
+All three tables already exist with proper RLS policies (SuperAdmin write, Vivacity team read). No migrations needed.
+
+#### Data Flow
+- `created_by` / `submitted_by` fields auto-populated from `auth.uid()` via the authenticated Supabase client
+- `tenant_id` defaults to SYSTEM_TENANT_ID (6372) for financial controls and decision queue; client commitments use the selected tenant
+- Forms validate required fields before submission
+
