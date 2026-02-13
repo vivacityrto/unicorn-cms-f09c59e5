@@ -14,6 +14,7 @@ import { CSCProfileFields } from '@/components/profile/CSCProfileFields';
 import { TeamProfileFields } from '@/components/profile/TeamProfileFields';
 import { TimeInboxSettings } from '@/components/profile/TimeInboxSettings';
 import { OutlookIntegration } from '@/components/profile/OutlookIntegration';
+import { CelebrationSettings } from '@/components/profile/CelebrationSettings';
 
 interface UserData {
   user_uuid: string;
@@ -287,6 +288,7 @@ export default function UserProfile() {
             <>
               <OutlookIntegration />
               <TimeInboxSettings />
+              <CelebrationSettings />
             </>
           )}
         </div>

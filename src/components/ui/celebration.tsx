@@ -3,16 +3,23 @@ import { createFireworks, TIER_DURATION, type CelebrationConfig, type Celebratio
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { X } from 'lucide-react';
+import { useUIPrefs } from '@/hooks/use-ui-prefs';
 
 // ============================================================
 // Context
 // ============================================================
 
 interface CelebrationContextValue {
-  celebrate: (config: CelebrationConfig) => void;
+  /** Trigger a celebration. Only call after server-confirmed success. */
+  trigger: (config: CelebrationConfig) => void;
+  dismiss: () => void;
+  isShowing: boolean;
+  currentEvent: CelebrationConfig | null;
   /** User preference: reduce celebration motion */
   reducedCelebration: boolean;
   setReducedCelebration: (v: boolean) => void;
+  /** @deprecated Use trigger() instead */
+  celebrate: (config: CelebrationConfig) => void;
 }
 
 const CelebrationContext = createContext<CelebrationContextValue | null>(null);
@@ -24,64 +31,149 @@ export function useCelebration() {
 }
 
 // ============================================================
+// Dedup key
+// ============================================================
+
+function dedupKey(config: CelebrationConfig): string {
+  // Use tier + message as dedup key (message encodes event_type context)
+  return `${config.tier}:${config.message || ''}`;
+}
+
+// ============================================================
 // Provider + Overlay
 // ============================================================
 
+const COOLDOWN_MS = 5000;
+const DEDUP_WINDOW_MS = 10000;
+
+/** Whether current route is client portal */
+function isClientPortal() {
+  return typeof window !== 'undefined' && window.location.pathname.startsWith('/client');
+}
+
 export function CelebrationProvider({ children }: { children: React.ReactNode }) {
+  const { prefs } = useUIPrefs();
   const [active, setActive] = useState<CelebrationConfig | null>(null);
-  const [reducedCelebration, setReducedCelebration] = useState(() => {
-    if (typeof window === 'undefined') return false;
-    return (
-      localStorage.getItem('unicorn-reduced-celebration') === 'true' ||
-      window.matchMedia('(prefers-reduced-motion: reduce)').matches
-    );
-  });
+  const queueRef = useRef<CelebrationConfig[]>([]);
+  const lastDismissRef = useRef<number>(0);
+  const recentEventsRef = useRef<Map<string, number>>(new Map());
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const cleanupRef = useRef<(() => void) | null>(null);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Persist preference
+  const canAnimate = prefs.celebrations_enabled && !prefs.reduce_motion;
+  const celebrationsEnabled = prefs.celebrations_enabled;
+
+  // Clean old dedup entries periodically
   useEffect(() => {
-    localStorage.setItem('unicorn-reduced-celebration', String(reducedCelebration));
-  }, [reducedCelebration]);
+    const interval = setInterval(() => {
+      const now = Date.now();
+      recentEventsRef.current.forEach((ts, key) => {
+        if (now - ts > DEDUP_WINDOW_MS) recentEventsRef.current.delete(key);
+      });
+    }, DEDUP_WINDOW_MS);
+    return () => clearInterval(interval);
+  }, []);
 
   const dismiss = useCallback(() => {
     cleanupRef.current?.();
     cleanupRef.current = null;
     if (timeoutRef.current) clearTimeout(timeoutRef.current);
     setActive(null);
+    lastDismissRef.current = Date.now();
+
+    // Process queue after cooldown
+    setTimeout(() => {
+      if (queueRef.current.length > 0) {
+        const next = queueRef.current.shift()!;
+        showCelebration(next);
+      }
+    }, COOLDOWN_MS);
   }, []);
 
-  const celebrate = useCallback(
+  const showCelebration = useCallback(
     (config: CelebrationConfig) => {
-      if (reducedCelebration) {
-        // Still show the banner text, just skip animation
-        setActive(config);
-        const dur = config.duration || TIER_DURATION[config.tier];
-        timeoutRef.current = setTimeout(() => setActive(null), dur);
-        return;
+      // Tier 3 blocked in client portal
+      if (config.tier === 'enterprise' && isClientPortal()) {
+        config = { ...config, tier: 'milestone' };
       }
 
       setActive(config);
 
-      // Start fireworks after a tick so canvas is mounted
-      requestAnimationFrame(() => {
-        if (canvasRef.current) {
-          const dur = config.duration || TIER_DURATION[config.tier];
-          cleanupRef.current = createFireworks(canvasRef.current, config.tier, dur);
-          timeoutRef.current = setTimeout(dismiss, dur + 500);
-        }
-      });
+      if (canAnimate) {
+        requestAnimationFrame(() => {
+          if (canvasRef.current) {
+            const dur = config.duration || TIER_DURATION[config.tier];
+            cleanupRef.current = createFireworks(canvasRef.current, config.tier, dur);
+            timeoutRef.current = setTimeout(dismiss, dur + 500);
+          }
+        });
+      } else {
+        // Reduced motion: show banner only, no fireworks
+        const dur = config.duration || TIER_DURATION[config.tier];
+        timeoutRef.current = setTimeout(dismiss, dur);
+      }
     },
-    [reducedCelebration, dismiss],
+    [canAnimate, dismiss],
+  );
+
+  const trigger = useCallback(
+    (config: CelebrationConfig) => {
+      if (!celebrationsEnabled) return;
+
+      // Dedup check
+      const key = dedupKey(config);
+      const now = Date.now();
+      const lastSeen = recentEventsRef.current.get(key);
+      if (lastSeen && now - lastSeen < DEDUP_WINDOW_MS) return;
+      recentEventsRef.current.set(key, now);
+
+      // If something is showing, queue
+      if (active) {
+        queueRef.current.push(config);
+        return;
+      }
+
+      // Cooldown check
+      if (now - lastDismissRef.current < COOLDOWN_MS) {
+        queueRef.current.push(config);
+        return;
+      }
+
+      showCelebration(config);
+    },
+    [celebrationsEnabled, active, showCelebration],
   );
 
   // Cleanup on unmount
-  useEffect(() => () => { cleanupRef.current?.(); if (timeoutRef.current) clearTimeout(timeoutRef.current); }, []);
+  useEffect(() => () => {
+    cleanupRef.current?.();
+    if (timeoutRef.current) clearTimeout(timeoutRef.current);
+  }, []);
+
+  // Esc to dismiss
+  useEffect(() => {
+    if (!active) return;
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') dismiss();
+    };
+    document.addEventListener('keydown', handler);
+    return () => document.removeEventListener('keydown', handler);
+  }, [active, dismiss]);
 
   return (
-    <CelebrationContext.Provider value={{ celebrate, reducedCelebration, setReducedCelebration }}>
+    <CelebrationContext.Provider
+      value={{
+        trigger,
+        dismiss,
+        isShowing: !!active,
+        currentEvent: active,
+        reducedCelebration: prefs.reduce_motion,
+        setReducedCelebration: () => {},
+        celebrate: trigger, // backward compat
+      }}
+    >
       {children}
 
       {/* Celebration overlay */}
@@ -90,7 +182,7 @@ export function CelebrationProvider({ children }: { children: React.ReactNode })
           config={active}
           canvasRef={canvasRef}
           onDismiss={dismiss}
-          reduced={reducedCelebration}
+          reduced={!canAnimate}
         />
       )}
     </CelebrationContext.Provider>
@@ -113,6 +205,19 @@ function CelebrationOverlay({
   reduced: boolean;
 }) {
   const isFullOverlay = config.tier === 'milestone' || config.tier === 'enterprise';
+  const previousFocusRef = useRef<HTMLElement | null>(null);
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
+
+  // Focus management: capture + restore
+  useEffect(() => {
+    previousFocusRef.current = document.activeElement as HTMLElement;
+    if (isFullOverlay) {
+      closeButtonRef.current?.focus();
+    }
+    return () => {
+      previousFocusRef.current?.focus();
+    };
+  }, [isFullOverlay]);
 
   return (
     <div
@@ -126,7 +231,10 @@ function CelebrationOverlay({
       {/* Backdrop for milestone/enterprise */}
       {isFullOverlay && (
         <div
-          className="absolute inset-0 bg-secondary/40 animate-in fade-in duration-300"
+          className={cn(
+            'absolute inset-0 bg-secondary/40 animate-in fade-in duration-300',
+            !reduced && 'backdrop-blur-[3px]',
+          )}
           onClick={onDismiss}
         />
       )}
@@ -160,6 +268,7 @@ function CelebrationOverlay({
             isFullOverlay
               ? 'bg-background/95 backdrop-blur-sm max-w-md w-full'
               : 'bg-background/95 backdrop-blur-sm',
+            reduced && 'border-primary/30',
           )}>
             <h2 className={cn(
               'font-semibold text-secondary',
@@ -179,7 +288,13 @@ function CelebrationOverlay({
                 </Button>
               )}
               {isFullOverlay && (
-                <Button variant="ghost" size="sm" onClick={onDismiss}>
+                <Button
+                  ref={closeButtonRef}
+                  variant="ghost"
+                  size="sm"
+                  onClick={onDismiss}
+                  aria-label="Dismiss celebration"
+                >
                   <X className="h-4 w-4 mr-1" /> Dismiss
                 </Button>
               )}

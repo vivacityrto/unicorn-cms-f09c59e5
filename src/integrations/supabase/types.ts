@@ -4071,6 +4071,111 @@ export type Database = {
           },
         ]
       }
+      celebration_events: {
+        Row: {
+          actor_user_uuid: string
+          client_id: number | null
+          created_at: string
+          cta_href: string | null
+          cta_label: string | null
+          event_type: string
+          id: string
+          package_id: number | null
+          source_module: string
+          subtitle: string | null
+          tenant_id: number
+          tier: number
+          title: string
+        }
+        Insert: {
+          actor_user_uuid: string
+          client_id?: number | null
+          created_at?: string
+          cta_href?: string | null
+          cta_label?: string | null
+          event_type: string
+          id?: string
+          package_id?: number | null
+          source_module: string
+          subtitle?: string | null
+          tenant_id: number
+          tier: number
+          title: string
+        }
+        Update: {
+          actor_user_uuid?: string
+          client_id?: number | null
+          created_at?: string
+          cta_href?: string | null
+          cta_label?: string | null
+          event_type?: string
+          id?: string
+          package_id?: number | null
+          source_module?: string
+          subtitle?: string | null
+          tenant_id?: number
+          tier?: number
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "celebration_events_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "celebration_events_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_engagement_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "celebration_events_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_eos_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "celebration_events_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_compliance_entitlements"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "celebration_events_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "celebration_events_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "celebration_events_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_membership_usage"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "celebration_events_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_membership_usage"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
       chat_escalations: {
         Row: {
           conversation_id: string | null
@@ -26010,6 +26115,55 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      user_ui_prefs: {
+        Row: {
+          celebrations_enabled: boolean
+          id: string
+          reduce_motion: boolean
+          sound_enabled: boolean
+          updated_at: string
+          user_uuid: string
+        }
+        Insert: {
+          celebrations_enabled?: boolean
+          id?: string
+          reduce_motion?: boolean
+          sound_enabled?: boolean
+          updated_at?: string
+          user_uuid: string
+        }
+        Update: {
+          celebrations_enabled?: boolean
+          id?: string
+          reduce_motion?: boolean
+          sound_enabled?: boolean
+          updated_at?: string
+          user_uuid?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_ui_prefs_user_uuid_fkey"
+            columns: ["user_uuid"]
+            isOneToOne: true
+            referencedRelation: "users"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "user_ui_prefs_user_uuid_fkey"
+            columns: ["user_uuid"]
+            isOneToOne: true
+            referencedRelation: "vw_consultant_capacity"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "user_ui_prefs_user_uuid_fkey"
+            columns: ["user_uuid"]
+            isOneToOne: true
+            referencedRelation: "vw_consultant_load"
+            referencedColumns: ["user_uuid"]
+          },
+        ]
       }
       users: {
         Row: {
