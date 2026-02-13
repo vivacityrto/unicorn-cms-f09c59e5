@@ -30776,15 +30776,20 @@ export type Database = {
       }
       v_exec_alignment_signals_7d: {
         Row: {
-          delta_text: string | null
+          client_name: string | null
+          deep_link_href: string | null
+          detail: string | null
           happened_at: string | null
-          owner_user_id: string | null
+          owner_name: string | null
+          owner_user_uuid: string | null
           package_instance_id: number | null
+          priority_rank: number | null
           severity: string | null
           signal_type: string | null
+          source_key: string | null
+          suggested_discussion: string | null
           tenant_id: number | null
           title: string | null
-          window_days: number | null
         }
         Relationships: []
       }
