@@ -7328,6 +7328,13 @@ export type Database = {
             foreignKeyName: "compliance_score_snapshots_package_instance_id_fkey"
             columns: ["package_instance_id"]
             isOneToOne: false
+            referencedRelation: "v_predictive_signal_inputs"
+            referencedColumns: ["package_instance_id"]
+          },
+          {
+            foreignKeyName: "compliance_score_snapshots_package_instance_id_fkey"
+            columns: ["package_instance_id"]
+            isOneToOne: false
             referencedRelation: "v_progress_anchor_inputs"
             referencedColumns: ["package_instance_id"]
           },
@@ -17548,6 +17555,13 @@ export type Database = {
             foreignKeyName: "package_notes_package_instance_id_fkey"
             columns: ["package_instance_id"]
             isOneToOne: false
+            referencedRelation: "v_predictive_signal_inputs"
+            referencedColumns: ["package_instance_id"]
+          },
+          {
+            foreignKeyName: "package_notes_package_instance_id_fkey"
+            columns: ["package_instance_id"]
+            isOneToOne: false
             referencedRelation: "v_progress_anchor_inputs"
             referencedColumns: ["package_instance_id"]
           },
@@ -18769,6 +18783,114 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "vw_consultant_load"
             referencedColumns: ["user_uuid"]
+          },
+        ]
+      }
+      predictive_operational_risk_snapshots: {
+        Row: {
+          activity_decay: boolean
+          backlog_growth: boolean
+          burn_rate_risk: boolean
+          calculated_at: string
+          id: string
+          inputs: Json
+          operational_risk_score: number
+          package_instance_id: number
+          phase_drift: boolean
+          risk_band: string
+          risk_escalation: boolean
+          severe_activity_decay: boolean
+          sustained_backlog_growth: boolean
+          tenant_id: number
+        }
+        Insert: {
+          activity_decay?: boolean
+          backlog_growth?: boolean
+          burn_rate_risk?: boolean
+          calculated_at?: string
+          id?: string
+          inputs?: Json
+          operational_risk_score?: number
+          package_instance_id: number
+          phase_drift?: boolean
+          risk_band?: string
+          risk_escalation?: boolean
+          severe_activity_decay?: boolean
+          sustained_backlog_growth?: boolean
+          tenant_id: number
+        }
+        Update: {
+          activity_decay?: boolean
+          backlog_growth?: boolean
+          burn_rate_risk?: boolean
+          calculated_at?: string
+          id?: string
+          inputs?: Json
+          operational_risk_score?: number
+          package_instance_id?: number
+          phase_drift?: boolean
+          risk_band?: string
+          risk_escalation?: boolean
+          severe_activity_decay?: boolean
+          sustained_backlog_growth?: boolean
+          tenant_id?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "predictive_operational_risk_snapshots_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "predictive_operational_risk_snapshots_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_engagement_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "predictive_operational_risk_snapshots_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_eos_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "predictive_operational_risk_snapshots_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_compliance_entitlements"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "predictive_operational_risk_snapshots_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "predictive_operational_risk_snapshots_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "predictive_operational_risk_snapshots_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_membership_usage"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "predictive_operational_risk_snapshots_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_membership_usage"
+            referencedColumns: ["tenant_id"]
           },
         ]
       }
@@ -28965,6 +29087,13 @@ export type Database = {
             foreignKeyName: "compliance_score_snapshots_package_instance_id_fkey"
             columns: ["package_instance_id"]
             isOneToOne: false
+            referencedRelation: "v_predictive_signal_inputs"
+            referencedColumns: ["package_instance_id"]
+          },
+          {
+            foreignKeyName: "compliance_score_snapshots_package_instance_id_fkey"
+            columns: ["package_instance_id"]
+            isOneToOne: false
             referencedRelation: "v_progress_anchor_inputs"
             referencedColumns: ["package_instance_id"]
           },
@@ -29133,6 +29262,28 @@ export type Database = {
           uploaded_by_name: string | null
           uploaded_by_type: string | null
           version_number: number | null
+        }
+        Relationships: []
+      }
+      v_predictive_signal_inputs: {
+        Row: {
+          actions_remaining: number | null
+          activity_trend_ratio: number | null
+          client_name: string | null
+          days_in_current_phase: number | null
+          hours_used_30d: number | null
+          manager_id: string | null
+          missing_docs_now: number | null
+          new_high_risks_7d: number | null
+          overdue_high_risks: number | null
+          package_id: number | null
+          package_instance_id: number | null
+          package_name: string | null
+          projected_days_to_exhaustion: number | null
+          remaining_hours: number | null
+          tenant_id: number | null
+          total_activity_30d: number | null
+          total_activity_7d: number | null
         }
         Relationships: []
       }

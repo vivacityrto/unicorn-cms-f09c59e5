@@ -21,6 +21,8 @@ import { ChevronDown, ChevronRight, Clock, AlertTriangle, Info, TrendingUp } fro
 import { cn } from '@/lib/utils';
 import { useMomentumPanel, type MomentumClient } from '@/hooks/useMomentumPanel';
 import { useConsultantMomentumStates, type MomentumState, type MomentumStateValue } from '@/hooks/useMomentumState';
+import { usePredictiveRisk, type PredictiveRiskSnapshot } from '@/hooks/usePredictiveRisk';
+import { OperationalRiskChip } from './OperationalRiskChip';
 
 interface MomentumPanelProps {
   userUuid: string | null;
@@ -78,6 +80,14 @@ export function MomentumPanel({ userUuid, className }: MomentumPanelProps) {
   const stateMap = new Map<string, MomentumState>();
   momentumStates?.forEach((ms) => {
     stateMap.set(`${ms.tenant_id}:${ms.package_instance_id}`, ms);
+  });
+
+  // Fetch predictive risk snapshots for all tenants the consultant manages
+  const tenantIds = clients ? [...new Set(clients.map(c => c.tenant_id))] : [];
+  const { data: allRiskSnapshots } = usePredictiveRisk(tenantIds[0] ?? null);
+  const riskMap = new Map<string, PredictiveRiskSnapshot>();
+  allRiskSnapshots?.forEach((rs) => {
+    riskMap.set(`${rs.tenant_id}:${rs.package_instance_id}`, rs);
   });
 
   const groups = clients ? groupByTenant(clients) : [];
@@ -158,6 +168,7 @@ export function MomentumPanel({ userUuid, className }: MomentumPanelProps) {
           <div className="divide-y">
             {filteredGroups.map((group) => {
               const ms = stateMap.get(`${group.tenantId}:${group.primary.package_instance_id}`);
+              const risk = riskMap.get(`${group.tenantId}:${group.primary.package_instance_id}`);
               return (
                 <div key={group.tenantId}>
                   {/* Momentum banner for paused/at_risk */}
@@ -173,6 +184,7 @@ export function MomentumPanel({ userUuid, className }: MomentumPanelProps) {
                       <div className="flex items-center gap-2">
                         <span className="text-sm font-medium text-foreground truncate">{group.clientName}</span>
                         {ms && momentumChip(ms.momentum_state)}
+                        {risk && risk.risk_band !== 'stable' && <OperationalRiskChip snapshot={risk} />}
                         {group.isMultiPackage && (
                           <Button
                             variant="ghost"

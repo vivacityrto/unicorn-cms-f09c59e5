@@ -151,3 +151,6 @@ verify_jwt = false
 
 [functions.ai-suggest-rock]
 verify_jwt = false
+
+[functions.calculate-predictive-risk]
+verify_jwt = false
