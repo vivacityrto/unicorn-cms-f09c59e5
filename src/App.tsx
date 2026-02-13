@@ -14,6 +14,7 @@ import { LazyLoadFallback } from "./components/LazyLoadFallback";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { startVersionChecking, stopVersionChecking } from "./utils/versionCheck";
 import { DevDiagnosticsPanel } from "./components/DevDiagnosticsPanel";
+import { CelebrationProvider } from "./components/ui/celebration";
 
  // Lazy load all page components for code splitting
  const Index = lazy(() => import("./pages/Index"));
@@ -189,6 +190,7 @@ const App = () => (
             <ClientPreviewProvider>
             <ViewModeProvider>
             <FacilitatorModeProvider>
+            <CelebrationProvider>
              <Suspense fallback={<LazyLoadFallback />}>
            <Routes>
             <Route path="/" element={<Login />} />
@@ -961,6 +963,7 @@ const App = () => (
             <Route path="*" element={<NotFound />} />
           </Routes>
              </Suspense>
+            </CelebrationProvider>
             </FacilitatorModeProvider>
             </ViewModeProvider>
             </ClientPreviewProvider>

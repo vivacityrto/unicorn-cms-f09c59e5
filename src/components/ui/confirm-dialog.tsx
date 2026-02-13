@@ -13,10 +13,14 @@ import {
 } from "@/components/ui/app-modal";
 
 /**
- * ConfirmDialog - Standardized confirmation dialog
+ * ConfirmDialog – Unicorn 2.0 Design System
  * 
- * Uses AppModal for consistent sizing and accessibility.
- * Provides visual variants for different confirmation types.
+ * Required for: Delete client, Archive user, Overwrite document, Reset integration.
+ *
+ * Structure: Clear title, short impact statement.
+ * Confirm: Fuchsia (destructive) or variant-appropriate.
+ * Cancel: Secondary/Ghost.
+ * Typed confirmation for high-risk actions.
  */
 
 type ConfirmVariant = "destructive" | "warning" | "info" | "success";
@@ -24,54 +28,47 @@ type ConfirmVariant = "destructive" | "warning" | "info" | "success";
 interface ConfirmDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  /** Dialog title */
   title: string;
-  /** Description/message */
   description: string;
-  /** Optional item name to highlight */
   itemName?: string;
-  /** Confirmation callback */
   onConfirm: () => void;
-  /** Cancel callback (optional) */
   onCancel?: () => void;
-  /** Confirm button text */
   confirmText?: string;
-  /** Cancel button text */
   cancelText?: string;
-  /** Loading state */
   isLoading?: boolean;
-  /** Visual variant */
   variant?: ConfirmVariant;
-  /** Prevent closing during action */
   isBlocking?: boolean;
+  /** For high-risk: require typed confirmation text */
+  requireTypedConfirmation?: string;
 }
 
 const variantStyles: Record<ConfirmVariant, {
   icon: React.ElementType;
   iconClass: string;
   bgClass: string;
-  buttonClass?: string;
+  buttonVariant?: 'default' | 'destructive' | 'warning';
 }> = {
   destructive: {
     icon: AlertTriangle,
     iconClass: "text-destructive",
     bgClass: "bg-destructive/10",
-    buttonClass: "bg-destructive text-destructive-foreground hover:bg-destructive/90",
+    buttonVariant: "destructive",
   },
   warning: {
     icon: AlertCircle,
-    iconClass: "text-amber-600",
-    bgClass: "bg-amber-100",
+    iconClass: "text-brand-macaron-700",
+    bgClass: "bg-brand-macaron-50",
+    buttonVariant: "warning",
   },
   info: {
     icon: Info,
-    iconClass: "text-blue-600",
-    bgClass: "bg-blue-100",
+    iconClass: "text-brand-aqua-700",
+    bgClass: "bg-brand-aqua-50",
   },
   success: {
     icon: CheckCircle2,
-    iconClass: "text-green-600",
-    bgClass: "bg-green-100",
+    iconClass: "text-primary",
+    bgClass: "bg-primary/10",
   },
 };
 
@@ -88,16 +85,24 @@ export function ConfirmDialog({
   isLoading = false,
   variant = "destructive",
   isBlocking = false,
+  requireTypedConfirmation,
 }: ConfirmDialogProps) {
+  const [typedValue, setTypedValue] = React.useState('');
   const styles = variantStyles[variant];
   const IconComponent = styles.icon;
 
+  const isConfirmDisabled = requireTypedConfirmation
+    ? typedValue !== requireTypedConfirmation
+    : false;
+
   const handleCancel = () => {
+    setTypedValue('');
     onCancel?.();
     onOpenChange(false);
   };
 
   const handleConfirm = () => {
+    setTypedValue('');
     onConfirm();
   };
 
@@ -128,6 +133,22 @@ export function ConfirmDialog({
               {itemName}
             </div>
           )}
+
+          {requireTypedConfirmation && (
+            <div className="space-y-2">
+              <p className="text-xs text-muted-foreground">
+                Type <span className="font-mono font-semibold text-foreground">{requireTypedConfirmation}</span> to confirm:
+              </p>
+              <input
+                type="text"
+                value={typedValue}
+                onChange={(e) => setTypedValue(e.target.value)}
+                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                placeholder={requireTypedConfirmation}
+                autoFocus
+              />
+            </div>
+          )}
         </AppModalBody>
 
         <AppModalFooter>
@@ -140,11 +161,13 @@ export function ConfirmDialog({
             {cancelText}
           </Button>
           <Button
+            variant={styles.buttonVariant || 'default'}
             onClick={handleConfirm}
-            disabled={isLoading}
-            className={cn("w-full sm:w-auto", styles.buttonClass)}
+            disabled={isLoading || isConfirmDisabled}
+            isLoading={isLoading}
+            className="w-full sm:w-auto"
           >
-            {isLoading ? "Processing..." : confirmText}
+            {confirmText}
           </Button>
         </AppModalFooter>
       </AppModalContent>
