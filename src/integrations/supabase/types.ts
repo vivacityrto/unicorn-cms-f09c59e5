@@ -33020,6 +33020,10 @@ export type Database = {
       is_vivacity_team_user: { Args: { p_user_id: string }; Returns: boolean }
       is_vivacity_team_v2: { Args: { p_user_id: string }; Returns: boolean }
       is_vivacity_user: { Args: never; Returns: boolean }
+      kpi_score_rolling: {
+        Args: { p_days?: number; p_tenant_id: number }
+        Returns: Json
+      }
       list_meeting_summaries_for_client: {
         Args: { p_client_id: string; p_limit?: number; p_offset?: number }
         Returns: {
