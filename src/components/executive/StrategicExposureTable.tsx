@@ -1,17 +1,19 @@
 /**
  * StrategicExposureTable – Unicorn 2.0
  *
- * Simplified, scannable exposure view. Top 15 max.
- * 4px left severity bar per row. Owner + Hours columns.
+ * Simplified, scannable exposure view. Top 10 max.
+ * 4px left severity bar per row. Owner shows CSC first name + avatar.
  */
 
 import { useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
 import { DeltaChip } from './DeltaChip';
 import { ArrowUp, ArrowDown, Minus } from 'lucide-react';
 import type { ExecutiveHealthRow } from '@/hooks/useExecutiveHealth';
+import { useOwnerProfiles } from '@/hooks/useOwnerProfiles';
 
 interface StrategicExposureTableProps {
   data: ExecutiveHealthRow[];
@@ -64,6 +66,9 @@ export function StrategicExposureTable({ data, onRowClick, weeklyMode }: Strateg
     }).slice(0, 10);
   }, [data, weeklyMode]);
 
+  const ownerUuids = useMemo(() => sorted.map(r => r.owner_user_uuid).filter(Boolean) as string[], [sorted]);
+  const { data: owners } = useOwnerProfiles(ownerUuids);
+
   return (
     <Card>
       <CardHeader className="pb-2">
@@ -83,50 +88,68 @@ export function StrategicExposureTable({ data, onRowClick, weeklyMode }: Strateg
                 <th className="text-center px-3 py-2.5 font-medium text-muted-foreground">Actions</th>
                 <th className="text-center px-3 py-2.5 font-medium text-muted-foreground">Critical</th>
                 <th className="text-center px-3 py-2.5 font-medium text-muted-foreground">Hours</th>
-                <th className="text-center px-3 py-2.5 font-medium text-muted-foreground">Owner</th>
+                <th className="text-left px-3 py-2.5 font-medium text-muted-foreground">Owner</th>
               </tr>
             </thead>
             <tbody>
-              {sorted.map(row => (
-                <tr
-                  key={`${row.tenant_id}-${row.package_instance_id}`}
-                  className={cn(
-                    'border-b border-border last:border-0 hover:bg-muted/20 cursor-pointer transition-colors border-l-4',
-                    rowBorderColor[row.risk_band] ?? rowBorderColor.stable
-                  )}
-                  onClick={() => onRowClick(row)}
-                >
-                  <td className="px-4 py-3">
-                    <p className={cn('font-medium truncate max-w-[200px]', scoreColor(row.overall_score))}>
-                      {row.client_name}
-                    </p>
-                    <p className="text-xs text-muted-foreground truncate">{row.package_name}</p>
-                  </td>
-                  <td className="px-3 py-3 text-center">
-                    <Badge className={cn('text-xs capitalize', bandVariant[row.risk_band] || bandVariant.stable)}>
-                      {row.risk_band.replace('_', ' ')}
-                    </Badge>
-                  </td>
-                  <td className="px-3 py-3 text-center">
-                    <div className="flex items-center justify-center gap-1">
-                      <TrendIcon value={row.delta_overall_score_7d} />
-                      <DeltaChip value={row.delta_overall_score_7d} type="compliance" />
-                    </div>
-                  </td>
-                  <td className="px-3 py-3 text-center tabular-nums">{row.total_actions_remaining}</td>
-                  <td className="px-3 py-3 text-center">
-                    {row.has_active_critical && (
-                      <span className="inline-block w-2 h-2 rounded-full bg-[hsl(333,86%,51%)]" title="Has critical risk" />
+              {sorted.map(row => {
+                const owner = row.owner_user_uuid && owners ? owners[row.owner_user_uuid] : null;
+                const initials = owner?.first_name ? owner.first_name.charAt(0).toUpperCase() : '';
+                return (
+                  <tr
+                    key={`${row.tenant_id}-${row.package_instance_id}`}
+                    className={cn(
+                      'border-b border-border last:border-0 hover:bg-muted/20 cursor-pointer transition-colors border-l-4',
+                      rowBorderColor[row.risk_band] ?? rowBorderColor.stable
                     )}
-                  </td>
-                  <td className="px-3 py-3 text-center tabular-nums text-muted-foreground">
-                    {row.hours_included > 0 ? `${row.hours_remaining}h` : '—'}
-                  </td>
-                  <td className="px-3 py-3 text-center text-muted-foreground text-xs truncate max-w-[80px]">
-                    {row.owner_user_uuid ? row.owner_user_uuid.slice(0, 8) + '…' : '—'}
-                  </td>
-                </tr>
-              ))}
+                    onClick={() => onRowClick(row)}
+                  >
+                    <td className="px-4 py-3">
+                      <p className={cn('font-medium truncate max-w-[200px]', scoreColor(row.overall_score))}>
+                        {row.client_name}
+                      </p>
+                      <p className="text-xs text-muted-foreground truncate">{row.package_name}</p>
+                    </td>
+                    <td className="px-3 py-3 text-center">
+                      <Badge className={cn('text-xs capitalize', bandVariant[row.risk_band] || bandVariant.stable)}>
+                        {row.risk_band.replace('_', ' ')}
+                      </Badge>
+                    </td>
+                    <td className="px-3 py-3 text-center">
+                      <div className="flex items-center justify-center gap-1">
+                        <TrendIcon value={row.delta_overall_score_7d} />
+                        <DeltaChip value={row.delta_overall_score_7d} type="compliance" />
+                      </div>
+                    </td>
+                    <td className="px-3 py-3 text-center tabular-nums">{row.total_actions_remaining}</td>
+                    <td className="px-3 py-3 text-center">
+                      {row.has_active_critical && (
+                        <span className="inline-block w-2 h-2 rounded-full bg-[hsl(333,86%,51%)]" title="Has critical risk" />
+                      )}
+                    </td>
+                    <td className="px-3 py-3 text-center tabular-nums text-muted-foreground">
+                      {row.hours_included > 0 ? `${row.hours_remaining}h` : '—'}
+                    </td>
+                    <td className="px-3 py-3">
+                      {owner ? (
+                        <div className="flex items-center gap-2">
+                          <Avatar className="h-6 w-6">
+                            <AvatarImage src={owner.avatar_url ?? undefined} alt={owner.first_name ?? ''} />
+                            <AvatarFallback className="text-[10px] bg-primary/10 text-primary font-medium">
+                              {initials}
+                            </AvatarFallback>
+                          </Avatar>
+                          <span className="text-xs text-foreground truncate max-w-[80px]">
+                            {owner.first_name ?? '—'}
+                          </span>
+                        </div>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">—</span>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
               {sorted.length === 0 && (
                 <tr>
                   <td colSpan={7} className="px-4 py-8 text-center text-muted-foreground">
