@@ -8,16 +8,22 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 
 export interface MomentumData {
-  phases_completed_7d: number;
-  phases_completed_prev_7d: number;
+  tenant_id: number;
+  risks_resolved_7d: number;
+  risks_resolved_prev_7d: number;
+  risks_resolved_delta: number;
   documents_generated_7d: number;
   documents_generated_prev_7d: number;
-  clients_moved_forward_7d: number;
-  clients_moved_forward_prev_7d: number;
-  rocks_closed_7d: number;
-  rocks_closed_prev_7d: number;
-  hours_logged_7d: number;
-  hours_logged_prev_7d: number;
+  documents_generated_delta: number;
+  document_events_7d: number;
+  document_events_prev_7d: number;
+  document_events_delta: number;
+  phases_completed_7d: number;
+  phases_completed_prev_7d: number;
+  phases_completed_delta: number;
+  consult_hours_logged_7d: number;
+  consult_hours_logged_prev_7d: number;
+  consult_hours_logged_delta: number;
 }
 
 export interface ConsultantDistRow {
@@ -34,13 +40,12 @@ export interface ConsultantDistRow {
 export function useExecutiveMomentum() {
   return useQuery({
     queryKey: ['executive-momentum'],
-    queryFn: async (): Promise<MomentumData> => {
+    queryFn: async (): Promise<MomentumData[]> => {
       const { data, error } = await supabase
-        .from('v_executive_momentum_7d' as any)
-        .select('*')
-        .single();
+        .from('v_exec_execution_momentum_7d' as any)
+        .select('*');
       if (error) throw error;
-      return data as unknown as MomentumData;
+      return (data ?? []) as unknown as MomentumData[];
     },
     staleTime: 30_000,
   });

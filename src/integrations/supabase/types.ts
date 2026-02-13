@@ -30788,17 +30788,41 @@ export type Database = {
         }
         Relationships: []
       }
+      v_exec_consult_hours_7d: {
+        Row: {
+          consult_hours_logged_7d: number | null
+          consult_hours_logged_delta: number | null
+          consult_hours_logged_prev_7d: number | null
+          tenant_id: number | null
+        }
+        Relationships: []
+      }
       v_exec_execution_momentum_7d: {
         Row: {
+          consult_hours_logged_7d: number | null
+          consult_hours_logged_delta: number | null
+          consult_hours_logged_prev_7d: number | null
           document_events_7d: number | null
           document_events_delta: number | null
           document_events_prev_7d: number | null
           documents_generated_7d: number | null
           documents_generated_delta: number | null
           documents_generated_prev_7d: number | null
+          phases_completed_7d: number | null
+          phases_completed_delta: number | null
+          phases_completed_prev_7d: number | null
           risks_resolved_7d: number | null
           risks_resolved_delta: number | null
           risks_resolved_prev_7d: number | null
+          tenant_id: number | null
+        }
+        Relationships: []
+      }
+      v_exec_phases_completed_7d: {
+        Row: {
+          phases_completed_7d: number | null
+          phases_completed_delta: number | null
+          phases_completed_prev_7d: number | null
           tenant_id: number | null
         }
         Relationships: []
