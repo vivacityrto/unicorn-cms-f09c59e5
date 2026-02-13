@@ -10,6 +10,10 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { StageStaffTasks } from './StageStaffTasks';
 import { StageDetailSection } from './StageDetailSection';
+import { StageDocumentsSection } from './StageDocumentsSection';
+import { StageEmailsSection } from './StageEmailsSection';
+import { StageNotesSection } from './StageNotesSection';
+import { LegacyDataDiagnostics } from './LegacyDataDiagnostics';
 import { 
   CheckCircle2, 
   Circle, 
@@ -325,11 +329,27 @@ export function PackageStagesManager({ tenantId, packageId, packageName }: Packa
                   tenantId={tenantId}
                   packageId={packageId}
                 />
+                <StageDocumentsSection
+                  stageInstanceId={stage.id}
+                  tenantId={tenantId}
+                />
+                <StageEmailsSection
+                  stageInstanceId={stage.id}
+                />
+                <StageNotesSection
+                  tenantId={tenantId}
+                  packageId={packageId}
+                />
               </CollapsibleContent>
             </div>
           </Collapsible>
         );
       })}
+      <LegacyDataDiagnostics
+        tenantId={tenantId}
+        packageId={packageId}
+        stageInstanceIds={stages.map(s => s.id)}
+      />
     </div>
   );
 }
