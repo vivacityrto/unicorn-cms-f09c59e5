@@ -30774,6 +30774,35 @@ export type Database = {
         }
         Relationships: []
       }
+      v_exec_alignment_signals_7d: {
+        Row: {
+          delta_text: string | null
+          happened_at: string | null
+          owner_user_id: string | null
+          package_instance_id: number | null
+          severity: string | null
+          signal_type: string | null
+          tenant_id: number | null
+          title: string | null
+          window_days: number | null
+        }
+        Relationships: []
+      }
+      v_exec_execution_momentum_7d: {
+        Row: {
+          document_events_7d: number | null
+          document_events_delta: number | null
+          document_events_prev_7d: number | null
+          documents_generated_7d: number | null
+          documents_generated_delta: number | null
+          documents_generated_prev_7d: number | null
+          risks_resolved_7d: number | null
+          risks_resolved_delta: number | null
+          risks_resolved_prev_7d: number | null
+          tenant_id: number | null
+        }
+        Relationships: []
+      }
       v_executive_anomalies_30d: {
         Row: {
           anomaly_rank: number | null
