@@ -157,3 +157,6 @@ verify_jwt = false
 
 [functions.chunk-document]
 verify_jwt = false
+
+[functions.ai-orchestrator]
+verify_jwt = false
