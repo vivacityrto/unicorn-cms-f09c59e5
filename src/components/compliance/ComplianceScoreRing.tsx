@@ -21,16 +21,19 @@ const SIZES = {
 };
 
 function scoreStroke(value: number): string {
-  if (value >= 80) return 'stroke-primary';
-  if (value >= 60) return 'stroke-brand-macaron';
-  return 'stroke-destructive';
+  if (value >= 85) return 'stroke-primary';
+  if (value >= 70) return 'stroke-brand-aqua';
+  if (value >= 50) return 'stroke-brand-macaron';
+  return 'stroke-brand-fucia';
 }
 
 function scoreText(value: number): string {
-  if (value >= 80) return 'text-primary';
-  if (value >= 60) return 'text-brand-macaron-700';
-  return 'text-destructive';
+  if (value >= 85) return 'text-primary';
+  if (value >= 70) return 'text-brand-aqua-700';
+  if (value >= 50) return 'text-brand-macaron-700';
+  return 'text-brand-fucia';
 }
+
 
 function scoreLabel(value: number): string {
   if (value >= 90) return 'Excellent';
@@ -46,7 +49,7 @@ export function ComplianceScoreRing({ score, size = 'md', showLabel, className }
   return (
     <Tooltip>
       <TooltipTrigger asChild>
-        <div className={cn('inline-flex flex-col items-center gap-1', className)}>
+        <div className={cn('inline-flex flex-col items-center gap-1', className)} role="img" aria-label={`Compliance Score: ${score} out of 100, ${scoreLabel(score)}`}>
           <div className="relative flex items-center justify-center">
             <svg className={cn(s.svg, '-rotate-90')} viewBox="0 0 36 36">
               <path
