@@ -759,6 +759,243 @@ export type Database = {
           },
         ]
       }
+      ai_event_payloads: {
+        Row: {
+          ai_event_id: string
+          citations_json: Json | null
+          context_json: Json | null
+          error_json: Json | null
+          request_json: Json
+          response_json: Json | null
+        }
+        Insert: {
+          ai_event_id: string
+          citations_json?: Json | null
+          context_json?: Json | null
+          error_json?: Json | null
+          request_json: Json
+          response_json?: Json | null
+        }
+        Update: {
+          ai_event_id?: string
+          citations_json?: Json | null
+          context_json?: Json | null
+          error_json?: Json | null
+          request_json?: Json
+          response_json?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_event_payloads_ai_event_id_fkey"
+            columns: ["ai_event_id"]
+            isOneToOne: true
+            referencedRelation: "ai_events"
+            referencedColumns: ["ai_event_id"]
+          },
+        ]
+      }
+      ai_events: {
+        Row: {
+          actor_user_id: string
+          ai_event_id: string
+          confidence: number | null
+          context_hash: string
+          created_at: string
+          feature: string
+          input_hash: string
+          latency_ms: number | null
+          model_name: string
+          request_id: string
+          status: string
+          task_type: string
+          tenant_id: number
+        }
+        Insert: {
+          actor_user_id: string
+          ai_event_id?: string
+          confidence?: number | null
+          context_hash: string
+          created_at?: string
+          feature: string
+          input_hash: string
+          latency_ms?: number | null
+          model_name: string
+          request_id: string
+          status: string
+          task_type: string
+          tenant_id: number
+        }
+        Update: {
+          actor_user_id?: string
+          ai_event_id?: string
+          confidence?: number | null
+          context_hash?: string
+          created_at?: string
+          feature?: string
+          input_hash?: string
+          latency_ms?: number | null
+          model_name?: string
+          request_id?: string
+          status?: string
+          task_type?: string
+          tenant_id?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_events_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_events_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_engagement_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "ai_events_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_eos_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "ai_events_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_compliance_entitlements"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "ai_events_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "ai_events_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "ai_events_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_membership_usage"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "ai_events_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_membership_usage"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
+      ai_feedback: {
+        Row: {
+          actor_user_id: string
+          ai_event_id: string
+          ai_feedback_id: string
+          corrected_output: Json | null
+          created_at: string
+          override_reason: string | null
+          rating: number | null
+          tenant_id: number
+        }
+        Insert: {
+          actor_user_id: string
+          ai_event_id: string
+          ai_feedback_id?: string
+          corrected_output?: Json | null
+          created_at?: string
+          override_reason?: string | null
+          rating?: number | null
+          tenant_id: number
+        }
+        Update: {
+          actor_user_id?: string
+          ai_event_id?: string
+          ai_feedback_id?: string
+          corrected_output?: Json | null
+          created_at?: string
+          override_reason?: string | null
+          rating?: number | null
+          tenant_id?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_feedback_ai_event_id_fkey"
+            columns: ["ai_event_id"]
+            isOneToOne: false
+            referencedRelation: "ai_events"
+            referencedColumns: ["ai_event_id"]
+          },
+          {
+            foreignKeyName: "ai_feedback_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_feedback_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_engagement_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "ai_feedback_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_eos_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "ai_feedback_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_compliance_entitlements"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "ai_feedback_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "ai_feedback_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "ai_feedback_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_membership_usage"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "ai_feedback_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_membership_usage"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
       ai_interaction_logs: {
         Row: {
           chunks_used: number | null
