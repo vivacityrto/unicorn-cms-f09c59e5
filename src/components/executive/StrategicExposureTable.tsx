@@ -2,7 +2,7 @@
  * StrategicExposureTable – Unicorn 2.0
  *
  * Simplified, scannable exposure view. Top 15 max.
- * Renamed from Priority Queue.
+ * 4px left severity bar per row. Owner + Hours columns.
  */
 
 import { useMemo } from 'react';
@@ -28,6 +28,20 @@ const bandVariant: Record<string, string> = {
   immediate_attention: 'bg-brand-fuchsia-100 text-brand-fuchsia-700 dark:bg-brand-fuchsia-900 dark:text-brand-fuchsia-200',
 };
 
+const rowBorderColor: Record<string, string> = {
+  stable: 'border-l-[hsl(275,55%,41%)]',
+  watch: 'border-l-[hsl(190,74%,50%)]',
+  at_risk: 'border-l-[hsl(48,96%,52%)]',
+  immediate_attention: 'border-l-[hsl(333,86%,51%)]',
+};
+
+function scoreColor(score: number): string {
+  if (score >= 80) return 'text-[hsl(275,55%,41%)]';
+  if (score >= 60) return 'text-foreground';
+  if (score >= 40) return 'text-[hsl(48,96%,52%)]';
+  return 'text-[hsl(333,86%,51%)]';
+}
+
 function TrendIcon({ value }: { value: number }) {
   if (value > 0) return <ArrowUp className="w-3 h-3 text-[hsl(275,55%,41%)]" />;
   if (value < 0) return <ArrowDown className="w-3 h-3 text-[hsl(333,86%,51%)]" />;
@@ -43,12 +57,9 @@ export function StrategicExposureTable({ data, onRowClick, weeklyMode }: Strateg
     return [...filtered].sort((a, b) => {
       const bandDiff = (bandOrder[a.risk_band] ?? 3) - (bandOrder[b.risk_band] ?? 3);
       if (bandDiff !== 0) return bandDiff;
-      // Worsening first
       if (a.risk_band_change_7d === 'changed' && b.risk_band_change_7d !== 'changed') return -1;
       if (b.risk_band_change_7d === 'changed' && a.risk_band_change_7d !== 'changed') return 1;
-      // Higher predictive increase
       if (b.delta_operational_risk_7d !== a.delta_operational_risk_7d) return b.delta_operational_risk_7d - a.delta_operational_risk_7d;
-      // Then stalled
       return b.days_stale - a.days_stale;
     }).slice(0, 15);
   }, [data, weeklyMode]);
@@ -71,18 +82,24 @@ export function StrategicExposureTable({ data, onRowClick, weeklyMode }: Strateg
                 <th className="text-center px-3 py-2.5 font-medium text-muted-foreground">7d Trend</th>
                 <th className="text-center px-3 py-2.5 font-medium text-muted-foreground">Actions</th>
                 <th className="text-center px-3 py-2.5 font-medium text-muted-foreground">Critical</th>
-                <th className="text-center px-3 py-2.5 font-medium text-muted-foreground">Stale</th>
+                <th className="text-center px-3 py-2.5 font-medium text-muted-foreground">Hours</th>
+                <th className="text-center px-3 py-2.5 font-medium text-muted-foreground">Owner</th>
               </tr>
             </thead>
             <tbody>
               {sorted.map(row => (
                 <tr
                   key={`${row.tenant_id}-${row.package_instance_id}`}
-                  className="border-b border-border last:border-0 hover:bg-muted/20 cursor-pointer transition-colors"
+                  className={cn(
+                    'border-b border-border last:border-0 hover:bg-muted/20 cursor-pointer transition-colors border-l-4',
+                    rowBorderColor[row.risk_band] ?? rowBorderColor.stable
+                  )}
                   onClick={() => onRowClick(row)}
                 >
                   <td className="px-4 py-3">
-                    <p className="font-medium text-foreground truncate max-w-[200px]">{row.client_name}</p>
+                    <p className={cn('font-medium truncate max-w-[200px]', scoreColor(row.overall_score))}>
+                      {row.client_name}
+                    </p>
                     <p className="text-xs text-muted-foreground truncate">{row.package_name}</p>
                   </td>
                   <td className="px-3 py-3 text-center">
@@ -102,14 +119,17 @@ export function StrategicExposureTable({ data, onRowClick, weeklyMode }: Strateg
                       <span className="inline-block w-2 h-2 rounded-full bg-[hsl(333,86%,51%)]" title="Has critical risk" />
                     )}
                   </td>
-                  <td className="px-3 py-3 text-center text-muted-foreground tabular-nums">
-                    {row.days_stale > 14 ? `${row.days_stale}d` : '–'}
+                  <td className="px-3 py-3 text-center tabular-nums text-muted-foreground">
+                    {row.hours_included > 0 ? `${row.hours_remaining}h` : '—'}
+                  </td>
+                  <td className="px-3 py-3 text-center text-muted-foreground text-xs truncate max-w-[80px]">
+                    {row.owner_user_uuid ? row.owner_user_uuid.slice(0, 8) + '…' : '—'}
                   </td>
                 </tr>
               ))}
               {sorted.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="px-4 py-8 text-center text-muted-foreground">
+                  <td colSpan={7} className="px-4 py-8 text-center text-muted-foreground">
                     {weeklyMode ? 'No significant movement this week.' : 'No active packages match filters.'}
                   </td>
                 </tr>

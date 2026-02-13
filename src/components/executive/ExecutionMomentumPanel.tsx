@@ -2,6 +2,7 @@
  * ExecutionMomentumPanel – Unicorn 2.0
  *
  * 7-day delivery metrics with prior-week comparison.
+ * Shows neutral "Delivery slowing" note when 3+ metrics are down.
  */
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -35,7 +36,7 @@ export function ExecutionMomentumPanel({ data, isLoading, weeklyMode }: Executio
         <CardHeader className="pb-2">
           <CardTitle className="text-base flex items-center gap-2">
             <Activity className="w-4 h-4 text-primary" />
-            Execution Momentum
+            Execution Momentum (7d)
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -49,12 +50,12 @@ export function ExecutionMomentumPanel({ data, isLoading, weeklyMode }: Executio
     { label: 'Phases Completed', current: data.phases_completed_7d, previous: data.phases_completed_prev_7d },
     { label: 'Documents Generated', current: data.documents_generated_7d, previous: data.documents_generated_prev_7d },
     { label: 'Clients Moved Forward', current: data.clients_moved_forward_7d, previous: data.clients_moved_forward_prev_7d },
+    { label: 'Rocks Closed', current: data.rocks_closed_7d, previous: data.rocks_closed_prev_7d },
     { label: 'Hours Logged', current: Number(data.hours_logged_7d), previous: Number(data.hours_logged_prev_7d), unit: 'h' },
   ];
 
-  const totalCurrent = metrics.reduce((s, m) => s + (m.unit ? 0 : m.current), 0);
-  const totalPrevious = metrics.reduce((s, m) => s + (m.unit ? 0 : m.previous), 0);
-  const overallTrend = totalCurrent - totalPrevious;
+  const decliningCount = metrics.filter(m => m.current < m.previous).length;
+  const isSlowing = decliningCount >= 3;
 
   return (
     <Card>
@@ -62,32 +63,23 @@ export function ExecutionMomentumPanel({ data, isLoading, weeklyMode }: Executio
         <div className="flex items-center justify-between">
           <CardTitle className="text-base flex items-center gap-2">
             <Activity className="w-4 h-4 text-primary" />
-            Execution Momentum
+            Execution Momentum (7d)
           </CardTitle>
-          {overallTrend !== 0 && (
-            <div className={cn(
-              'flex items-center gap-1 text-xs font-medium',
-              overallTrend > 0 ? 'text-[hsl(275,55%,41%)]' : 'text-[hsl(333,86%,51%)]'
-            )}>
-              <TrendIcon delta={overallTrend} />
-              {overallTrend > 0 ? 'Accelerating' : 'Slowing'}
-            </div>
-          )}
         </div>
-        <p className="text-xs text-muted-foreground">Last 7 days vs previous 7 days</p>
+        <p className="text-xs text-muted-foreground">Current vs previous 7 days</p>
       </CardHeader>
       <CardContent className="p-0">
         <div className="divide-y divide-border">
           {metrics.map(m => {
             const delta = m.current - m.previous;
             return (
-              <div key={m.label} className="flex items-center justify-between px-4 py-3">
+              <div key={m.label} className="flex items-center justify-between px-4 py-2.5">
                 <span className="text-sm text-foreground">{m.label}</span>
                 <div className="flex items-center gap-3">
                   <span className="text-sm font-semibold text-foreground tabular-nums">
                     {m.current}{m.unit ?? ''}
                   </span>
-                  <div className="flex items-center gap-1 min-w-[60px] justify-end">
+                  <div className="flex items-center gap-1 min-w-[70px] justify-end">
                     <TrendIcon delta={delta} />
                     <span className={cn(
                       'text-xs tabular-nums',
@@ -104,6 +96,11 @@ export function ExecutionMomentumPanel({ data, isLoading, weeklyMode }: Executio
             );
           })}
         </div>
+        {isSlowing && (
+          <div className="px-4 py-2 border-t border-border bg-muted/20">
+            <p className="text-xs text-muted-foreground">Delivery slowing week-on-week.</p>
+          </div>
+        )}
       </CardContent>
     </Card>
   );

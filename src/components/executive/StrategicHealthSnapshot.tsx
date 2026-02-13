@@ -2,10 +2,13 @@
  * StrategicHealthSnapshot – Unicorn 2.0
  *
  * Portfolio health status: band counts with 7-day movement.
+ * Secondary metrics: Avg Compliance Score + Predictive Risk Trend.
  */
 
+import { useMemo } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
+import { ArrowUp, ArrowDown, Minus } from 'lucide-react';
 import type { ExecutiveHealthRow } from '@/hooks/useExecutiveHealth';
 
 interface StrategicHealthSnapshotProps {
@@ -17,7 +20,7 @@ interface BandBlock {
   key: string;
   label: string;
   filterFn: (r: ExecutiveHealthRow) => boolean;
-  intent: string;
+  borderColor: string;
 }
 
 const BANDS: BandBlock[] = [
@@ -25,41 +28,63 @@ const BANDS: BandBlock[] = [
     key: 'immediate',
     label: 'Immediate Attention',
     filterFn: r => r.risk_band === 'immediate_attention',
-    intent: 'border-l-4 border-l-[hsl(333,86%,51%)]', // Fuchsia
+    borderColor: 'border-l-[hsl(333,86%,51%)]',
   },
   {
     key: 'at_risk',
     label: 'At Risk',
     filterFn: r => r.risk_band === 'at_risk',
-    intent: 'border-l-4 border-l-[hsl(48,96%,52%)]', // Macaron
+    borderColor: 'border-l-[hsl(48,96%,52%)]',
   },
   {
     key: 'stable',
     label: 'Stable',
     filterFn: r => r.risk_band === 'stable' || r.risk_band === 'watch',
-    intent: 'border-l-4 border-l-[hsl(275,55%,41%)]', // Purple
+    borderColor: 'border-l-[hsl(275,55%,41%)]',
   },
   {
     key: 'stalled',
     label: 'Stalled >14d',
     filterFn: r => r.days_stale > 14,
-    intent: 'border-l-4 border-l-[hsl(190,74%,50%)]', // Aqua
+    borderColor: 'border-l-[hsl(190,74%,50%)]',
   },
 ];
 
-function getDeltaText(current: number, delta: number): string {
-  if (delta === 0) return 'No change';
-  const sign = delta > 0 ? '+' : '';
-  return `${sign}${delta} this week`;
+function DeltaBadge({ delta }: { delta: number }) {
+  if (delta === 0) return <span className="text-xs text-muted-foreground">No change</span>;
+  const isUp = delta > 0;
+  return (
+    <span className={cn(
+      'inline-flex items-center gap-0.5 text-xs font-medium',
+      isUp ? 'text-[hsl(333,86%,51%)]' : 'text-[hsl(275,55%,41%)]'
+    )}>
+      {isUp ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />}
+      {isUp ? '+' : ''}{delta} this week
+    </span>
+  );
+}
+
+function TrendIndicator({ value, suffix = '' }: { value: number; suffix?: string }) {
+  if (value === 0) return <Minus className="w-3.5 h-3.5 text-muted-foreground inline" />;
+  const isUp = value > 0;
+  return (
+    <span className={cn(
+      'inline-flex items-center gap-0.5 text-xs font-semibold tabular-nums',
+      isUp ? 'text-[hsl(275,55%,41%)]' : 'text-[hsl(333,86%,51%)]'
+    )}>
+      {isUp ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />}
+      {isUp ? '+' : ''}{value}{suffix}
+    </span>
+  );
 }
 
 export function StrategicHealthSnapshot({ data, weeklyMode }: StrategicHealthSnapshotProps) {
-  // Calculate 7d deltas by checking risk_band_change_7d and movement
-  const counts = BANDS.map(band => {
+  const hasAnySnapshot = data.some(r => r.compliance_calculated_at != null);
+
+  const counts = useMemo(() => BANDS.map(band => {
     const matching = data.filter(band.filterFn);
     const count = matching.length;
 
-    // Estimate 7d delta: count how many moved INTO this state
     let delta = 0;
     if (band.key === 'immediate') {
       delta = data.filter(r => r.risk_band === 'immediate_attention' && r.risk_band_change_7d === 'changed').length;
@@ -70,31 +95,80 @@ export function StrategicHealthSnapshot({ data, weeklyMode }: StrategicHealthSna
     }
 
     return { ...band, count, delta };
-  });
+  }), [data]);
+
+  // Secondary metrics
+  const avgScore = useMemo(() => {
+    if (data.length === 0) return 0;
+    return Math.round(data.reduce((s, r) => s + r.overall_score, 0) / data.length);
+  }, [data]);
+
+  const avgScoreDelta = useMemo(() => {
+    if (data.length === 0) return 0;
+    return Math.round(data.reduce((s, r) => s + r.delta_overall_score_7d, 0) / data.length);
+  }, [data]);
+
+  const avgPredictiveDelta = useMemo(() => {
+    if (data.length === 0) return 0;
+    return Math.round(data.reduce((s, r) => s + r.delta_operational_risk_7d, 0) / data.length);
+  }, [data]);
+
+  const immediateCount = counts.find(b => b.key === 'immediate')?.count ?? 0;
 
   return (
-    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-      {counts.map(b => (
-        <Card key={b.key} className={cn('bg-card', b.intent)}>
-          <CardContent className="p-4">
-            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">{b.label}</p>
-            <p className="text-3xl font-bold text-foreground mt-1">{weeklyMode && b.delta !== 0 ? `${b.delta > 0 ? '+' : ''}${b.delta}` : b.count}</p>
-            {!weeklyMode && (
-              <p className={cn(
-                'text-xs mt-1',
-                b.delta > 0 ? 'text-[hsl(333,86%,51%)]' : 'text-muted-foreground'
-              )}>
-                {getDeltaText(b.count, b.delta)}
-              </p>
-            )}
-            {weeklyMode && (
-              <p className="text-xs text-muted-foreground mt-1">
-                {b.count} total
-              </p>
-            )}
-          </CardContent>
-        </Card>
-      ))}
+    <div className="space-y-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        {counts.map(b => (
+          <Card key={b.key} className={cn(
+            'bg-card border-l-4',
+            b.borderColor,
+            b.key === 'immediate' && b.count > 0 && 'ring-1 ring-[hsl(333,86%,51%)]/20'
+          )}>
+            <CardContent className="p-4">
+              <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">{b.label}</p>
+              {!hasAnySnapshot ? (
+                <p className="text-sm text-muted-foreground mt-2 italic">Awaiting first calculation</p>
+              ) : (
+                <>
+                  <p className="text-3xl font-bold text-foreground mt-1 tabular-nums">
+                    {weeklyMode && b.delta !== 0 ? `${b.delta > 0 ? '+' : ''}${b.delta}` : b.count}
+                  </p>
+                  {!weeklyMode && <DeltaBadge delta={b.delta} />}
+                  {weeklyMode && (
+                    <p className="text-xs text-muted-foreground mt-0.5">{b.count} total</p>
+                  )}
+                </>
+              )}
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      {/* Secondary metrics row */}
+      {hasAnySnapshot && (
+        <div className="grid grid-cols-2 gap-3">
+          <Card className="bg-card">
+            <CardContent className="p-3 flex items-center justify-between">
+              <div>
+                <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Avg Compliance Score</p>
+                <p className="text-xl font-bold text-foreground tabular-nums">{avgScore}%</p>
+              </div>
+              <TrendIndicator value={avgScoreDelta} />
+            </CardContent>
+          </Card>
+          <Card className="bg-card">
+            <CardContent className="p-3 flex items-center justify-between">
+              <div>
+                <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Predictive Risk Trend</p>
+                <p className="text-xl font-bold text-foreground tabular-nums">
+                  {avgPredictiveDelta === 0 ? 'Stable' : avgPredictiveDelta > 0 ? 'Rising' : 'Falling'}
+                </p>
+              </div>
+              <TrendIndicator value={avgPredictiveDelta} />
+            </CardContent>
+          </Card>
+        </div>
+      )}
     </div>
   );
 }

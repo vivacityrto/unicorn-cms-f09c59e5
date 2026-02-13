@@ -16,8 +16,6 @@ import { ExecutionMomentumPanel } from '@/components/executive/ExecutionMomentum
 import { ConsultantDistributionTable } from '@/components/executive/ConsultantDistributionTable';
 import { StrategicExposureTable } from '@/components/executive/StrategicExposureTable';
 import { SystemHealthBlock } from '@/components/executive/SystemHealthBlock';
-import { SignalsPanel } from '@/components/executive/SignalsPanel';
-import { WatchlistPanel } from '@/components/executive/WatchlistPanel';
 import { ClientHealthDrawer } from '@/components/executive/ClientHealthDrawer';
 import { ExecutiveFiltersBar } from '@/components/executive/ExecutiveFiltersBar';
 import { Button } from '@/components/ui/button';
@@ -53,7 +51,6 @@ export default function ExecutiveDashboard() {
     );
   }, [selectedRow, anomalies]);
 
-  // Check if filters are active
   const hasFilters = filters.search || filters.riskBands.length > 0 || filters.packageType ||
     filters.staleOnly || filters.criticalOnly || filters.ownerUuid;
 
@@ -70,7 +67,7 @@ export default function ExecutiveDashboard() {
   return (
     <DashboardLayout>
       <div className="space-y-6 p-4 md:p-6 max-w-screen-2xl mx-auto">
-        {/* Header with mode toggles */}
+        {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <h1 className="text-2xl font-bold text-foreground">Executive Dashboard</h1>
@@ -121,36 +118,18 @@ export default function ExecutiveDashboard() {
           <ConsultantDistributionTable data={consultants ?? []} isLoading={consultantsLoading} />
         )}
 
-        {/* 4. Filters (secondary, collapsible feel) */}
-        {hasFilters && (
+        {/* 4. Sticky Filter Bar */}
+        <div className="sticky top-0 z-10">
           <ExecutiveFiltersBar
             filters={filters}
             onFilterChange={updateFilter}
             onReset={resetFilters}
             packageTypes={packageTypes}
           />
-        )}
+        </div>
 
-        {/* 5. Signals + Watchlist */}
-        {(anomalies ?? []).length > 0 || watchlist.length > 0 ? (
-          <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-            <SignalsPanel anomalies={anomalies ?? []} />
-            <WatchlistPanel watchlist={watchlist} healthData={rawData} onItemClick={handleSelect} />
-          </div>
-        ) : null}
-
-        {/* 6. Strategic Exposure Table */}
+        {/* 5. Strategic Exposure Table */}
         <StrategicExposureTable data={data} onRowClick={handleSelect} weeklyMode={weeklyMode} />
-
-        {/* Filters bar (always accessible at bottom when not active) */}
-        {!hasFilters && (
-          <ExecutiveFiltersBar
-            filters={filters}
-            onFilterChange={updateFilter}
-            onReset={resetFilters}
-            packageTypes={packageTypes}
-          />
-        )}
 
         <ClientHealthDrawer
           row={selectedRow}
