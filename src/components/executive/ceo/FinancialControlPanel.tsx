@@ -5,7 +5,9 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { ChevronDown, DollarSign } from 'lucide-react';
+import { ChevronDown, DollarSign, Settings2 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { useRBAC } from '@/hooks/useRBAC';
 import { cn } from '@/lib/utils';
 import { useState } from 'react';
 import type { FinancialControlRow } from '@/hooks/useCeoDashboard';
@@ -31,6 +33,8 @@ function StatusBadge({ status }: { status: string }) {
 
 export function FinancialControlPanel({ controls, isLoading }: Props) {
   const [open, setOpen] = useState(true);
+  const navigate = useNavigate();
+  const { isSuperAdmin } = useRBAC();
 
   if (isLoading) {
     return (
@@ -52,6 +56,11 @@ export function FinancialControlPanel({ controls, isLoading }: Props) {
             <div className="flex items-center gap-2">
               <DollarSign className="w-4 h-4 text-[hsl(var(--brand-purple))]" />
               <CardTitle className="text-sm">Financial Control</CardTitle>
+              {isSuperAdmin && (
+                <button onClick={e => { e.stopPropagation(); navigate('/executive/financial-controls'); }} className="p-1 rounded hover:bg-muted transition-colors" title="Manage Financial Controls">
+                  <Settings2 className="w-3.5 h-3.5 text-muted-foreground hover:text-foreground" />
+                </button>
+              )}
             </div>
             <ChevronDown className={cn('w-4 h-4 text-muted-foreground transition-transform', open && 'rotate-180')} />
           </CardHeader>

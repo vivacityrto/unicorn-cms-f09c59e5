@@ -97,6 +97,9 @@ const EosCalendar = lazy(() => import("./pages/EosCalendar"));
  const ResourceUpdatesLog = lazy(() => import("./pages/ResourceUpdatesLog"));
  const MembershipDashboardWrapper = lazy(() => import("./pages/MembershipDashboardWrapper"));
  const ExecutiveDashboard = lazy(() => import("./pages/ExecutiveDashboard"));
+ const ExecutiveFinancialControls = lazy(() => import("./pages/ExecutiveFinancialControls"));
+ const ExecutiveClientCommitments = lazy(() => import("./pages/ExecutiveClientCommitments"));
+ const ExecutiveDecisionQueue = lazy(() => import("./pages/ExecutiveDecisionQueue"));
  const ClientDetailWrapper = lazy(() => import("./pages/ClientDetailWrapper"));
  const AdminTgaIntegrationWrapper = lazy(() => import("./pages/AdminTgaIntegrationWrapper"));
  const AdminUserAudit = lazy(() => import("./pages/AdminUserAudit"));
@@ -902,6 +905,9 @@ const App = () => (
             <Route path="/membership-dashboard" element={<ProtectedRoute><MembershipDashboardWrapper /></ProtectedRoute>} />
             {/* Executive Dashboard – Internal Only */}
             <Route path="/executive" element={<ProtectedRoute><ExecutiveDashboard /></ProtectedRoute>} />
+            <Route path="/executive/financial-controls" element={<ProtectedRoute requireSuperAdmin><ExecutiveFinancialControls /></ProtectedRoute>} />
+            <Route path="/executive/client-commitments" element={<ProtectedRoute requireSuperAdmin><ExecutiveClientCommitments /></ProtectedRoute>} />
+            <Route path="/executive/decision-queue" element={<ProtectedRoute requireSuperAdmin><ExecutiveDecisionQueue /></ProtectedRoute>} />
             {/* Client Detail route removed — consolidated into /tenant/:tenantId above */}
             {/* Admin Integrations */}
             <Route path="/admin/integrations/tga" element={<ProtectedRoute><AdminTgaIntegrationWrapper /></ProtectedRoute>} />

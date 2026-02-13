@@ -5,7 +5,9 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { ChevronDown, Gem, AlertTriangle } from 'lucide-react';
+import { ChevronDown, Gem, AlertTriangle, Settings2 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { useRBAC } from '@/hooks/useRBAC';
 import { cn } from '@/lib/utils';
 import { useState } from 'react';
 import { format } from 'date-fns';
@@ -17,6 +19,8 @@ interface Props {
 
 export function DiamondClientPanel({ data, isLoading }: Props) {
   const [open, setOpen] = useState(true);
+  const navigate = useNavigate();
+  const { isSuperAdmin } = useRBAC();
 
   if (isLoading) {
     return (
@@ -37,6 +41,11 @@ export function DiamondClientPanel({ data, isLoading }: Props) {
             <div className="flex items-center gap-2">
               <Gem className="w-4 h-4 text-[hsl(var(--brand-purple))]" />
               <CardTitle className="text-sm">Diamond Clients</CardTitle>
+              {isSuperAdmin && (
+                <button onClick={e => { e.stopPropagation(); navigate('/executive/client-commitments'); }} className="p-1 rounded hover:bg-muted transition-colors" title="Manage Client Commitments">
+                  <Settings2 className="w-3.5 h-3.5 text-muted-foreground hover:text-foreground" />
+                </button>
+              )}
               {hasMissed && (
                 <span className="inline-flex items-center gap-1 text-[10px] font-medium text-[hsl(var(--brand-fuchsia))]">
                   <AlertTriangle className="w-3 h-3" /> {data!.missed} missed
