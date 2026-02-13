@@ -5,7 +5,9 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { ChevronDown, Inbox } from 'lucide-react';
+import { ChevronDown, Inbox, Settings2 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { useRBAC } from '@/hooks/useRBAC';
 import { cn } from '@/lib/utils';
 import { useState } from 'react';
 import type { DecisionQueueRow } from '@/hooks/useCeoDashboard';
@@ -36,6 +38,8 @@ function ImpactBadge({ level }: { level: string }) {
 
 export function DecisionQueuePanel({ items, isLoading }: Props) {
   const [open, setOpen] = useState(true);
+  const navigate = useNavigate();
+  const { isSuperAdmin } = useRBAC();
   const rows = items ?? [];
 
   if (isLoading) {
@@ -55,6 +59,11 @@ export function DecisionQueuePanel({ items, isLoading }: Props) {
             <div className="flex items-center gap-2">
               <Inbox className="w-4 h-4 text-[hsl(var(--brand-purple))]" />
               <CardTitle className="text-sm">CEO Decision Queue</CardTitle>
+              {isSuperAdmin && (
+                <button onClick={e => { e.stopPropagation(); navigate('/executive/decision-queue'); }} className="p-1 rounded hover:bg-muted transition-colors" title="Manage Decision Queue">
+                  <Settings2 className="w-3.5 h-3.5 text-muted-foreground hover:text-foreground" />
+                </button>
+              )}
               {rows.length > 0 && (
                 <span className="text-xs text-muted-foreground">{rows.length} pending</span>
               )}
