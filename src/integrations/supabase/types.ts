@@ -21282,6 +21282,77 @@ export type Database = {
           },
         ]
       }
+      risk_items: {
+        Row: {
+          ai_event_id: string | null
+          created_at: string
+          description: string
+          detected_by: string
+          dismissed_reason: string | null
+          explanation_text: string | null
+          package_id: number | null
+          phase_id: number | null
+          resolved_at: string | null
+          resolved_by_user_id: string | null
+          resolved_reason: string | null
+          risk_code: string
+          risk_item_id: string
+          severity: string
+          status: string
+          suggested_action: string | null
+          tenant_id: number
+          title: string
+        }
+        Insert: {
+          ai_event_id?: string | null
+          created_at?: string
+          description: string
+          detected_by?: string
+          dismissed_reason?: string | null
+          explanation_text?: string | null
+          package_id?: number | null
+          phase_id?: number | null
+          resolved_at?: string | null
+          resolved_by_user_id?: string | null
+          resolved_reason?: string | null
+          risk_code: string
+          risk_item_id?: string
+          severity?: string
+          status?: string
+          suggested_action?: string | null
+          tenant_id: number
+          title: string
+        }
+        Update: {
+          ai_event_id?: string | null
+          created_at?: string
+          description?: string
+          detected_by?: string
+          dismissed_reason?: string | null
+          explanation_text?: string | null
+          package_id?: number | null
+          phase_id?: number | null
+          resolved_at?: string | null
+          resolved_by_user_id?: string | null
+          resolved_reason?: string | null
+          risk_code?: string
+          risk_item_id?: string
+          severity?: string
+          status?: string
+          suggested_action?: string | null
+          tenant_id?: number
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "risk_items_ai_event_id_fkey"
+            columns: ["ai_event_id"]
+            isOneToOne: false
+            referencedRelation: "ai_events"
+            referencedColumns: ["ai_event_id"]
+          },
+        ]
+      }
       rock_outcomes: {
         Row: {
           completed_at: string | null
