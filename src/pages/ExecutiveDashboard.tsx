@@ -1,22 +1,25 @@
 /**
  * ExecutiveDashboard – Unicorn 2.0
  *
- * Internal-only view: Compliance + Predictive Risk + 7-Day Deltas.
+ * Internal-only view: Compliance + Predictive Risk + 7-Day Deltas + Anomaly Signals.
  */
 
 import { useState, useMemo } from 'react';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { useExecutiveHealth, type ExecutiveHealthRow } from '@/hooks/useExecutiveHealth';
+import { useExecutiveAnomalies } from '@/hooks/useExecutiveAnomalies';
 import { ExecutiveKpiStrip } from '@/components/executive/ExecutiveKpiStrip';
 import { ClientHealthMatrix } from '@/components/executive/ClientHealthMatrix';
 import { PriorityQueueTable } from '@/components/executive/PriorityQueueTable';
 import { ClientHealthDrawer } from '@/components/executive/ClientHealthDrawer';
 import { ExecutiveFiltersBar } from '@/components/executive/ExecutiveFiltersBar';
 import { WatchlistPanel } from '@/components/executive/WatchlistPanel';
+import { SignalsPanel } from '@/components/executive/SignalsPanel';
 import { Loader2 } from 'lucide-react';
 
 export default function ExecutiveDashboard() {
   const { data, rawData, watchlist, isLoading, kpis, filters, updateFilter, resetFilters } = useExecutiveHealth();
+  const { data: anomalies } = useExecutiveAnomalies();
   const [selectedRow, setSelectedRow] = useState<ExecutiveHealthRow | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
 
@@ -29,6 +32,14 @@ export default function ExecutiveDashboard() {
     const types = new Set(rawData.map(r => r.package_type).filter(Boolean) as string[]);
     return Array.from(types).sort();
   }, [rawData]);
+
+  // Filter anomalies for selected row
+  const selectedAnomalies = useMemo(() => {
+    if (!selectedRow || !anomalies) return [];
+    return anomalies.filter(
+      a => a.tenant_id === selectedRow.tenant_id && a.package_instance_id === selectedRow.package_instance_id
+    );
+  }, [selectedRow, anomalies]);
 
   if (isLoading) {
     return (
@@ -66,15 +77,23 @@ export default function ExecutiveDashboard() {
           packageTypes={packageTypes}
         />
 
-        {/* Watchlist */}
-        <WatchlistPanel watchlist={watchlist} healthData={rawData} onItemClick={handleSelect} />
+        {/* Signals + Watchlist */}
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+          <SignalsPanel anomalies={anomalies ?? []} />
+          <WatchlistPanel watchlist={watchlist} healthData={rawData} onItemClick={handleSelect} />
+        </div>
 
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
           <ClientHealthMatrix data={data} onSelect={handleSelect} />
           <PriorityQueueTable data={data} onRowClick={handleSelect} />
         </div>
 
-        <ClientHealthDrawer row={selectedRow} open={drawerOpen} onOpenChange={setDrawerOpen} />
+        <ClientHealthDrawer
+          row={selectedRow}
+          open={drawerOpen}
+          onOpenChange={setDrawerOpen}
+          anomalies={selectedAnomalies}
+        />
       </div>
     </DashboardLayout>
   );

@@ -29297,6 +29297,20 @@ export type Database = {
         }
         Relationships: []
       }
+      v_compliance_anomalies_30d: {
+        Row: {
+          anomaly_type: string | null
+          baseline_value: number | null
+          current_value: number | null
+          delta_value: number | null
+          detected_at: string | null
+          package_instance_id: number | null
+          severity: string | null
+          tenant_id: number | null
+          window_days: number | null
+        }
+        Relationships: []
+      }
       v_compliance_delta_confidence_7d: {
         Row: {
           days_since_latest: number | null
@@ -30200,6 +30214,22 @@ export type Database = {
         }
         Relationships: []
       }
+      v_executive_anomalies_30d: {
+        Row: {
+          anomaly_rank: number | null
+          anomaly_type: string | null
+          baseline_value: number | null
+          current_value: number | null
+          delta_value: number | null
+          detected_at: string | null
+          package_instance_id: number | null
+          severity: string | null
+          source: string | null
+          tenant_id: number | null
+          window_days: number | null
+        }
+        Relationships: []
+      }
       v_executive_client_health: {
         Row: {
           active_risks: number | null
@@ -30333,6 +30363,20 @@ export type Database = {
           uploaded_by_name: string | null
           uploaded_by_type: string | null
           version_number: number | null
+        }
+        Relationships: []
+      }
+      v_predictive_anomalies_30d: {
+        Row: {
+          anomaly_type: string | null
+          baseline_value: number | null
+          current_value: number | null
+          delta_value: number | null
+          detected_at: string | null
+          package_instance_id: number | null
+          severity: string | null
+          tenant_id: number | null
+          window_days: number | null
         }
         Relationships: []
       }
