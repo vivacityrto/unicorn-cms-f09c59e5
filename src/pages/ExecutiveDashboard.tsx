@@ -6,7 +6,9 @@
  */
 
 import { useState, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { DashboardLayout } from '@/components/DashboardLayout';
+import { useRBAC } from '@/hooks/useRBAC';
 import { useExecutiveHealth, type ExecutiveHealthRow } from '@/hooks/useExecutiveHealth';
 import { useExecutiveAnomalies } from '@/hooks/useExecutiveAnomalies';
 import { useExecutiveMomentum, useConsultantDistribution } from '@/hooks/useExecutiveData';
@@ -21,9 +23,12 @@ import { ExecutiveFiltersBar } from '@/components/executive/ExecutiveFiltersBar'
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
-import { Loader2, Eye, Users } from 'lucide-react';
+import { Loader2, Eye, Users, ShieldAlert } from 'lucide-react';
 
 export default function ExecutiveDashboard() {
+  const { isSuperAdmin } = useRBAC();
+  const navigate = useNavigate();
+
   const { data, rawData, watchlist, isLoading, kpis, filters, updateFilter, resetFilters } = useExecutiveHealth();
   const { data: anomalies } = useExecutiveAnomalies();
   const { data: momentum, isLoading: momentumLoading } = useExecutiveMomentum();
@@ -34,22 +39,33 @@ export default function ExecutiveDashboard() {
   const [weeklyMode, setWeeklyMode] = useState(false);
   const [showConsultants, setShowConsultants] = useState(false);
 
+  if (!isSuperAdmin) {
+    return (
+      <DashboardLayout>
+        <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
+          <ShieldAlert className="h-12 w-12 text-muted-foreground" />
+          <h2 className="text-xl font-semibold text-foreground">Access Restricted</h2>
+          <p className="text-sm text-muted-foreground text-center max-w-md">
+            The Visionary &amp; Integrator Dashboard is available to Super Admins only.
+          </p>
+          <Button variant="outline" onClick={() => navigate('/dashboard')}>
+            Return to Dashboard
+          </Button>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
   const handleSelect = (row: ExecutiveHealthRow) => {
     setSelectedRow(row);
     setDrawerOpen(true);
   };
 
-  const packageTypes = useMemo(() => {
-    const types = new Set(rawData.map(r => r.package_type).filter(Boolean) as string[]);
-    return Array.from(types).sort();
-  }, [rawData]);
+  const packageTypes = Array.from(new Set(rawData.map(r => r.package_type).filter(Boolean) as string[])).sort();
 
-  const selectedAnomalies = useMemo(() => {
-    if (!selectedRow || !anomalies) return [];
-    return anomalies.filter(
-      a => a.tenant_id === selectedRow.tenant_id && a.package_instance_id === selectedRow.package_instance_id
-    );
-  }, [selectedRow, anomalies]);
+  const filteredAnomalies = selectedRow && anomalies
+    ? anomalies.filter(a => a.tenant_id === selectedRow.tenant_id && a.package_instance_id === selectedRow.package_instance_id)
+    : [];
 
   const hasFilters = filters.search || filters.riskBands.length > 0 || filters.packageType ||
     filters.staleOnly || filters.criticalOnly || filters.ownerUuid;
@@ -135,7 +151,7 @@ export default function ExecutiveDashboard() {
           row={selectedRow}
           open={drawerOpen}
           onOpenChange={setDrawerOpen}
-          anomalies={selectedAnomalies}
+          anomalies={filteredAnomalies}
         />
       </div>
     </DashboardLayout>
