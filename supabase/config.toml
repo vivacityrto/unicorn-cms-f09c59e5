@@ -163,3 +163,6 @@ verify_jwt = false
 
 [functions.generate-meeting-summary]
 verify_jwt = false
+
+[functions.extract-document-fields]
+verify_jwt = false

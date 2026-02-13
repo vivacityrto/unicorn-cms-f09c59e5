@@ -23862,6 +23862,63 @@ export type Database = {
         }
         Relationships: []
       }
+      tas_extracts: {
+        Row: {
+          ai_event_id: string | null
+          aqf_level: string | null
+          confidence: number | null
+          created_at: string
+          delivery_mode: string | null
+          doc_file_id: string
+          duration_weeks: number | null
+          extracted_json: Json
+          tas_extract_id: string
+          tenant_id: number
+          units: string[]
+        }
+        Insert: {
+          ai_event_id?: string | null
+          aqf_level?: string | null
+          confidence?: number | null
+          created_at?: string
+          delivery_mode?: string | null
+          doc_file_id: string
+          duration_weeks?: number | null
+          extracted_json: Json
+          tas_extract_id?: string
+          tenant_id: number
+          units?: string[]
+        }
+        Update: {
+          ai_event_id?: string | null
+          aqf_level?: string | null
+          confidence?: number | null
+          created_at?: string
+          delivery_mode?: string | null
+          doc_file_id?: string
+          duration_weeks?: number | null
+          extracted_json?: Json
+          tas_extract_id?: string
+          tenant_id?: number
+          units?: string[]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tas_extracts_ai_event_id_fkey"
+            columns: ["ai_event_id"]
+            isOneToOne: false
+            referencedRelation: "ai_events"
+            referencedColumns: ["ai_event_id"]
+          },
+          {
+            foreignKeyName: "tas_extracts_doc_file_id_fkey"
+            columns: ["doc_file_id"]
+            isOneToOne: false
+            referencedRelation: "doc_files"
+            referencedColumns: ["doc_file_id"]
+          },
+        ]
+      }
       task_evidence: {
         Row: {
           file_name: string
@@ -28498,6 +28555,57 @@ export type Database = {
           utc_offset_minutes?: number
         }
         Relationships: []
+      }
+      trainer_matrix_extracts: {
+        Row: {
+          ai_event_id: string | null
+          confidence: number | null
+          created_at: string
+          doc_file_id: string
+          extracted_json: Json
+          tenant_id: number
+          trainer_matrix_extract_id: string
+          trainer_unit_links: Json
+          trainers: Json
+        }
+        Insert: {
+          ai_event_id?: string | null
+          confidence?: number | null
+          created_at?: string
+          doc_file_id: string
+          extracted_json: Json
+          tenant_id: number
+          trainer_matrix_extract_id?: string
+          trainer_unit_links?: Json
+          trainers?: Json
+        }
+        Update: {
+          ai_event_id?: string | null
+          confidence?: number | null
+          created_at?: string
+          doc_file_id?: string
+          extracted_json?: Json
+          tenant_id?: number
+          trainer_matrix_extract_id?: string
+          trainer_unit_links?: Json
+          trainers?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "trainer_matrix_extracts_ai_event_id_fkey"
+            columns: ["ai_event_id"]
+            isOneToOne: false
+            referencedRelation: "ai_events"
+            referencedColumns: ["ai_event_id"]
+          },
+          {
+            foreignKeyName: "trainer_matrix_extracts_doc_file_id_fkey"
+            columns: ["doc_file_id"]
+            isOneToOne: false
+            referencedRelation: "doc_files"
+            referencedColumns: ["doc_file_id"]
+          },
+        ]
       }
       trainer_training_products: {
         Row: {
