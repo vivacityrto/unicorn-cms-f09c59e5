@@ -80,7 +80,9 @@ export function ExecutionMomentumPanel({ data, systemHealth, isLoading, weeklyMo
   ];
 
   const decliningCount = metrics.filter(m => m.current < m.previous).length;
-  const isSlowing = decliningCount >= 3;
+  const improvingCount = metrics.filter(m => m.current > m.previous).length;
+  const momentumLabel = decliningCount >= 3 ? 'Momentum down' : improvingCount >= 3 ? 'Momentum up' : 'Momentum flat';
+  const momentumColor = decliningCount >= 3 ? 'text-[hsl(333,86%,51%)]' : improvingCount >= 3 ? 'text-[hsl(275,55%,41%)]' : 'text-muted-foreground';
 
   return (
     <Card>
@@ -123,11 +125,9 @@ export function ExecutionMomentumPanel({ data, systemHealth, isLoading, weeklyMo
             );
           })}
         </div>
-        {isSlowing && (
-          <div className="px-4 py-2 border-t border-border bg-muted/20">
-            <p className="text-xs text-muted-foreground">Delivery slowing week-on-week.</p>
-          </div>
-        )}
+        <div className="px-4 py-2 border-t border-border bg-muted/20">
+          <p className={cn('text-xs font-medium', momentumColor)}>{momentumLabel}</p>
+        </div>
         {systemHealth && systemHealth.length > 0 && (() => {
           const totalCoverage = systemHealth.reduce((sum, s) => sum + Number(s.compliance_coverage_pct ?? 0), 0) / systemHealth.length;
           const latestAt = systemHealth
