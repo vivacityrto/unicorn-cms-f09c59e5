@@ -169,3 +169,6 @@ verify_jwt = false
 
 [functions.calculate-phase-completeness]
 verify_jwt = false
+
+[functions.scan-risk-radar]
+verify_jwt = false
