@@ -30,7 +30,7 @@ export interface CreateRockInput {
   quarter_year?: number;
   quarter_number?: number;
   due_date: string;
-  client_id?: string | null;
+  client_id?: number | null;
 }
 
 export function useEosRocksHierarchy(options?: { quarterYear?: number; quarterNumber?: number }) {

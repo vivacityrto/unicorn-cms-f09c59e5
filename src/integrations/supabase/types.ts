@@ -13723,7 +13723,7 @@ export type Database = {
       eos_rocks: {
         Row: {
           archived_at: string | null
-          client_id: string | null
+          client_id: number | null
           completed_date: string | null
           completion_percentage: number | null
           created_at: string | null
@@ -13758,7 +13758,7 @@ export type Database = {
         }
         Insert: {
           archived_at?: string | null
-          client_id?: string | null
+          client_id?: number | null
           completed_date?: string | null
           completion_percentage?: number | null
           created_at?: string | null
@@ -13793,7 +13793,7 @@ export type Database = {
         }
         Update: {
           archived_at?: string | null
-          client_id?: string | null
+          client_id?: number | null
           completed_date?: string | null
           completion_percentage?: number | null
           created_at?: string | null
@@ -13831,15 +13831,57 @@ export type Database = {
             foreignKeyName: "eos_rocks_client_id_fkey"
             columns: ["client_id"]
             isOneToOne: false
-            referencedRelation: "clients_legacy"
+            referencedRelation: "tenants"
             referencedColumns: ["id"]
           },
           {
             foreignKeyName: "eos_rocks_client_id_fkey"
             columns: ["client_id"]
             isOneToOne: false
-            referencedRelation: "dashboard_client_snapshot"
-            referencedColumns: ["id"]
+            referencedRelation: "v_client_engagement_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "eos_rocks_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_eos_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "eos_rocks_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_compliance_entitlements"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "eos_rocks_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "eos_rocks_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "eos_rocks_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_membership_usage"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "eos_rocks_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_membership_usage"
+            referencedColumns: ["tenant_id"]
           },
           {
             foreignKeyName: "eos_rocks_function_id_fkey"
