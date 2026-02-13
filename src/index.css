@@ -171,68 +171,177 @@
 
 @layer base {
   :root {
+    /* ============================================================
+       UNICORN 2.0 DESIGN SYSTEM – BRAND TOKEN FOUNDATION
+       ============================================================
+       
+       PRIMARY ACTION:    Purple #7130A0  – Buttons, active states
+       STRUCTURAL BASE:   Acai   #44235F  – Headers, navigation, strong anchors
+       SURFACE TINT:      Light Purple #DFD8E8 – Background panels
+       ACCENT HIGHLIGHT:  Fuchsia #ED1878 – Important actions only
+       WARNING:           Macaron #F9CB0C – Incomplete, pending
+       INFO:              Aqua   #23C0DD  – Guidance, system messages
+       ============================================================ */
+
     --background: 0 0% 100%;
-    --foreground: 270 47% 26%; /* #44235F - ACAI - Body Text */
+    --foreground: 270 47% 26%; /* Acai #44235F */
 
     --card: 0 0% 100%;
-    --card-foreground: 270 47% 26%; /* #44235F - ACAI */
+    --card-foreground: 270 47% 26%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 270 47% 26%; /* #44235F - ACAI */
+    --popover-foreground: 270 47% 26%;
 
-    --primary: 187 74% 50%; /* #23c0dd - CYAN - Buttons */
-    --primary-foreground: 0 0% 100%; /* White text on buttons */
+    /* PRIMARY = Purple #7130A0 – main action colour */
+    --primary: 275 55% 41%;
+    --primary-foreground: 0 0% 100%;
 
-    --secondary: 270 55% 41%; /* #7130A0 - Purple - Headings */
+    /* SECONDARY = Acai #44235F – structural, headings */
+    --secondary: 270 47% 26%;
     --secondary-foreground: 0 0% 100%;
 
-    --muted: 270 30% 91%; /* #DFD8E8 - Light Purple - Backgrounds */
-    --muted-foreground: 270 47% 26%; /* #44235F - ACAI */
+    /* MUTED = Light Purple #DFD8E8 – surface tint */
+    --muted: 270 30% 91%;
+    --muted-foreground: 270 47% 36%;
 
-    --accent: 187 100% 83%; /* #A6F1FF - Light CYAN - Backgrounds */
-    --accent-foreground: 270 47% 26%; /* #44235F - ACAI */
+    /* ACCENT = Aqua #23C0DD – info states */
+    --accent: 190 74% 50%;
+    --accent-foreground: 0 0% 100%;
 
-    --destructive: 0 84.2% 60.2%;
+    /* DESTRUCTIVE = Fuchsia #ED1878 – errors, risk */
+    --destructive: 333 86% 51%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 270 30% 85%;
-    --input: 270 30% 91%;
-    --ring: 187 74% 50%; /* #23c0dd - CYAN */
+    --border: 270 20% 87%;
+    --input: 270 20% 91%;
+    --ring: 275 55% 41%; /* Purple – focus rings match primary */
 
-    --radius: 1rem;
+    --radius: 0.75rem; /* 12px card radius */
 
-    --gradient-brand: linear-gradient(135deg, hsl(270 55% 41%), hsl(330 86% 51%)); /* #7130A0 to #ed1878 */
-    --gradient-card: linear-gradient(180deg, hsl(270 30% 91% / 0.5), hsl(187 100% 83% / 0.3));
+    /* ============================================================
+       BRAND COLOR SCALES (50–900)
+       Each derived from the base brand hex with controlled lightness.
+       ============================================================ */
+
+    /* --- Purple #7130A0 --- */
+    --brand-purple-50:  275 40% 97%;
+    --brand-purple-100: 275 40% 93%;
+    --brand-purple-200: 275 42% 84%;
+    --brand-purple-300: 275 45% 72%;
+    --brand-purple-400: 275 50% 58%;
+    --brand-purple-500: 275 55% 48%;
+    --brand-purple-600: 275 55% 41%; /* Base #7130A0 */
+    --brand-purple-700: 275 55% 34%;
+    --brand-purple-800: 275 50% 27%;
+    --brand-purple-900: 275 47% 20%;
+
+    /* --- Acai #44235F --- */
+    --brand-acai-50:  270 30% 97%;
+    --brand-acai-100: 270 30% 92%;
+    --brand-acai-200: 270 35% 82%;
+    --brand-acai-300: 270 38% 68%;
+    --brand-acai-400: 270 42% 52%;
+    --brand-acai-500: 270 45% 38%;
+    --brand-acai-600: 270 47% 30%;
+    --brand-acai-700: 270 47% 26%; /* Base #44235F */
+    --brand-acai-800: 270 47% 20%;
+    --brand-acai-900: 270 47% 14%;
+
+    /* --- Light Purple #DFD8E8 --- */
+    --brand-light-purple-50:  270 30% 99%;
+    --brand-light-purple-100: 270 30% 96%;
+    --brand-light-purple-200: 270 30% 93%;
+    --brand-light-purple-300: 270 30% 91%; /* Base #DFD8E8 */
+    --brand-light-purple-400: 270 28% 85%;
+    --brand-light-purple-500: 270 25% 78%;
+    --brand-light-purple-600: 270 22% 68%;
+    --brand-light-purple-700: 270 20% 58%;
+    --brand-light-purple-800: 270 18% 48%;
+    --brand-light-purple-900: 270 16% 38%;
+
+    /* --- Fuchsia #ED1878 --- */
+    --brand-fuchsia-50:  333 80% 97%;
+    --brand-fuchsia-100: 333 82% 92%;
+    --brand-fuchsia-200: 333 84% 82%;
+    --brand-fuchsia-300: 333 85% 70%;
+    --brand-fuchsia-400: 333 86% 60%;
+    --brand-fuchsia-500: 333 86% 54%;
+    --brand-fuchsia-600: 333 86% 51%; /* Base #ED1878 */
+    --brand-fuchsia-700: 333 80% 42%;
+    --brand-fuchsia-800: 333 75% 34%;
+    --brand-fuchsia-900: 333 70% 26%;
+
+    /* --- Macaron #F9CB0C --- */
+    --brand-macaron-50:  48 96% 97%;
+    --brand-macaron-100: 48 96% 90%;
+    --brand-macaron-200: 48 96% 78%;
+    --brand-macaron-300: 48 96% 66%;
+    --brand-macaron-400: 48 96% 58%;
+    --brand-macaron-500: 48 96% 52%; /* Base #F9CB0C */
+    --brand-macaron-600: 48 90% 46%;
+    --brand-macaron-700: 48 85% 38%;
+    --brand-macaron-800: 48 80% 30%;
+    --brand-macaron-900: 48 75% 22%;
+
+    /* --- Aqua #23C0DD --- */
+    --brand-aqua-50:  190 70% 97%;
+    --brand-aqua-100: 190 72% 90%;
+    --brand-aqua-200: 190 74% 80%;
+    --brand-aqua-300: 190 74% 68%;
+    --brand-aqua-400: 190 74% 58%;
+    --brand-aqua-500: 190 74% 50%; /* Base #23C0DD */
+    --brand-aqua-600: 190 74% 42%;
+    --brand-aqua-700: 190 70% 34%;
+    --brand-aqua-800: 190 65% 26%;
+    --brand-aqua-900: 190 60% 18%;
+
+    /* Legacy aliases (backward compat) */
+    --brand-cyan: 190 74% 50%;
+    --brand-light-cyan: 190 100% 83%;
+    --brand-acai: 270 47% 26%;
+    --brand-purple: 275 55% 41%;
+    --brand-light-purple: 270 30% 91%;
+    --brand-fuchsia: 333 86% 51%;
+    --brand-macaron: 48 96% 52%;
+
+    /* ============================================================
+       SEMANTIC COMPLIANCE STATE TOKENS
+       ============================================================ */
+    --state-compliant: var(--brand-purple-600);
+    --state-compliant-fg: 0 0% 100%;
+    --state-review: var(--brand-macaron-600);
+    --state-review-fg: 270 47% 26%;
+    --state-risk: var(--brand-fuchsia-600);
+    --state-risk-fg: 0 0% 100%;
+    --state-info: var(--brand-aqua-500);
+    --state-info-fg: 0 0% 100%;
+    --state-draft: var(--brand-light-purple-400);
+    --state-draft-fg: 270 47% 26%;
 
     /* Status colors */
     --success: 142 76% 36%;
     --success-foreground: 0 0% 100%;
-    --warning: 48 96% 52%; /* #f9cb0c - MACARON */
+    --warning: var(--brand-macaron-500);
     --warning-foreground: 270 47% 26%;
-    --info: 187 74% 50%; /* #23c0dd - CYAN */
+    --info: var(--brand-aqua-500);
     --info-foreground: 0 0% 100%;
 
-    /* Brand colors - Unicorn palette */
-    --brand-cyan: 187 74% 50%; /* #23c0dd - Buttons */
-    --brand-light-cyan: 187 100% 83%; /* #A6F1FF - Backgrounds */
-    --brand-acai: 270 47% 26%; /* #44235F - Body Text */
-    --brand-purple: 270 55% 41%; /* #7130A0 - Headings */
-    --brand-light-purple: 270 30% 91%; /* #DFD8E8 - Backgrounds */
-    --brand-fuchsia: 330 86% 51%; /* #ed1878 - Headings and Icons */
-    --brand-macaron: 48 96% 52%; /* #f9cb0c - Highlighted images */
+    /* Gradients */
+    --gradient-brand: linear-gradient(135deg, hsl(275 55% 41%), hsl(333 86% 51%));
+    --gradient-card: linear-gradient(180deg, hsl(270 30% 91% / 0.5), hsl(190 74% 50% / 0.15));
 
-    /* Sidebar gradient - Purple to Fuchsia */
-    --gradient-sidebar: linear-gradient(180deg, hsl(270 55% 41%), hsl(330 86% 51%));
+    /* Sidebar gradient – Purple to Fuchsia */
+    --gradient-sidebar: linear-gradient(180deg, hsl(275 55% 41%), hsl(333 86% 51%));
 
-    /* Sidebar colors - for gradient purple-to-pink sidebar */
-    --sidebar-background: 270 55% 41%;
+    /* Sidebar colors */
+    --sidebar-background: 275 55% 41%;
     --sidebar-foreground: 0 0% 100%;
-    --sidebar-primary: 330 86% 51%;
+    --sidebar-primary: 333 86% 51%;
     --sidebar-primary-foreground: 0 0% 100%;
     --sidebar-accent: 0 0% 100% / 0.1;
     --sidebar-accent-foreground: 0 0% 100%;
     --sidebar-border: 0 0% 100% / 0.2;
-    --sidebar-ring: 187 74% 50%;
+    --sidebar-ring: 275 55% 41%;
 
     /* Animation durations */
     --duration-fast: 150ms;
@@ -241,33 +350,41 @@
   }
 
   .dark {
-    --background: 270 47% 12%;
+    --background: 270 47% 8%;
     --foreground: 0 0% 95%;
 
-    --card: 270 47% 16%;
+    --card: 270 40% 12%;
     --card-foreground: 0 0% 95%;
 
-    --popover: 270 47% 16%;
+    --popover: 270 40% 12%;
     --popover-foreground: 0 0% 95%;
 
-    --primary: 187 74% 50%; /* #23c0dd - CYAN - Buttons */
+    /* Purple 500-600 adjusted for dark contrast */
+    --primary: 275 55% 55%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 270 55% 55%; /* Lighter purple for dark mode */
+    --secondary: 270 35% 50%;
     --secondary-foreground: 0 0% 100%;
 
-    --muted: 270 30% 22%;
-    --muted-foreground: 270 20% 70%;
+    --muted: 270 30% 18%;
+    --muted-foreground: 270 15% 65%;
 
-    --accent: 187 74% 35%;
+    --accent: 190 74% 40%;
     --accent-foreground: 0 0% 100%;
 
-    --destructive: 0 84.2% 60.2%;
+    --destructive: 333 86% 55%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 270 30% 28%;
-    --input: 270 30% 25%;
-    --ring: 187 74% 50%;
+    --border: 270 25% 22%;
+    --input: 270 25% 20%;
+    --ring: 275 55% 55%;
+
+    /* Dark mode compliance states */
+    --state-compliant: var(--brand-purple-500);
+    --state-review: var(--brand-macaron-500);
+    --state-risk: var(--brand-fuchsia-500);
+    --state-info: var(--brand-aqua-400);
+    --state-draft: var(--brand-light-purple-600);
   }
 }
 
@@ -276,9 +393,12 @@
     @apply border-border;
   }
   
-  /* Responsive typography - minimum 14px font size */
+  /* ============================================================
+     TYPOGRAPHY SYSTEM – 1.25 Ratio Scale
+     12px / 15px / 18px / 24px / 30px / 37px / 46px
+     ============================================================ */
   html {
-    font-size: clamp(87.5%, 0.875rem + 0.25vw, 108%);
+    font-size: 100%; /* 16px base */
     -webkit-text-size-adjust: 100%;
     text-size-adjust: 100%;
   }
@@ -288,6 +408,7 @@
     min-height: 100vh;
     min-height: 100dvh;
     overflow-x: hidden;
+    font-size: 0.9375rem; /* 15px – Body */
     line-height: 1.5;
   }
   
@@ -296,24 +417,35 @@
     max-width: 75ch;
   }
   
-  /* Responsive headings */
+  /* Typography scale: 46 / 37 / 30 / 24 / 18 / 15 / 12 */
   h1 {
-    @apply text-2xl sm:text-3xl md:text-4xl;
+    font-size: 1.875rem; /* 30px – Page title */
+    font-weight: 600;
     line-height: 1.2;
+    color: hsl(var(--secondary)); /* Acai for major headings */
   }
   
   h2 {
-    @apply text-xl sm:text-2xl md:text-3xl;
+    font-size: 1.5rem; /* 24px – Section title */
+    font-weight: 600;
     line-height: 1.25;
+    color: hsl(var(--secondary));
   }
   
   h3 {
-    @apply text-lg sm:text-xl md:text-2xl;
+    font-size: 1.125rem; /* 18px – Card title */
+    font-weight: 600;
     line-height: 1.3;
   }
   
   h4, h5, h6 {
-    @apply text-base sm:text-lg;
+    font-size: 0.9375rem; /* 15px */
+    font-weight: 600;
+    line-height: 1.4;
+  }
+  
+  small, .text-meta {
+    font-size: 0.75rem; /* 12px – Metadata */
     line-height: 1.4;
   }
   
@@ -339,7 +471,7 @@
   input[type="datetime-local"],
   textarea,
   select {
-    min-height: 2.75rem; /* 44px at base font size */
+    min-height: 2.5rem; /* 40px standard */
   }
 
   /* Note: Buttons, checkboxes, switches, and radios handle their own sizing.

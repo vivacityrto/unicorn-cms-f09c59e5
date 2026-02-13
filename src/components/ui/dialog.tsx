@@ -4,6 +4,14 @@ import { X } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 
+/**
+ * Dialog/Modal – Unicorn 2.0 Design System
+ *
+ * Overlay: Acai at 40% opacity
+ * Surface: White, 16px radius
+ * Primary CTA: Purple
+ * Cancel: Ghost or Secondary
+ */
 const Dialog = DialogPrimitive.Root;
 
 const DialogTrigger = DialogPrimitive.Trigger;
@@ -19,7 +27,7 @@ const DialogOverlay = React.forwardRef<
   <DialogPrimitive.Overlay
     ref={ref}
     className={cn(
-      "fixed inset-0 z-50 bg-black/80 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
+      "fixed inset-0 z-50 bg-secondary/40 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
       className,
     )}
     {...props}
@@ -34,13 +42,12 @@ const DialogContent = React.forwardRef<
     size?: "sm" | "md" | "lg" | "xl" | "full";
   }
 >(({ className, children, size = "md", ...props }, ref) => {
-  // Standard modal sizing: w-[min(92vw, maxWidth)]
   const sizeClasses = {
-    sm: "w-[min(92vw,24rem)]",   // 384px
-    md: "w-[min(92vw,32rem)]",   // 512px - default
-    lg: "w-[min(92vw,40rem)]",   // 640px
-    xl: "w-[min(92vw,48rem)]",   // 768px
-    full: "w-[min(96vw,64rem)]", // 1024px
+    sm: "w-[min(92vw,24rem)]",
+    md: "w-[min(92vw,32rem)]",
+    lg: "w-[min(92vw,40rem)]",
+    xl: "w-[min(92vw,48rem)]",
+    full: "w-[min(96vw,64rem)]",
   };
 
   return (
@@ -49,17 +56,11 @@ const DialogContent = React.forwardRef<
       <DialogPrimitive.Content
         ref={ref}
         className={cn(
-          // Base positioning
           "fixed left-[50%] top-[50%] z-50 grid translate-x-[-50%] translate-y-[-50%]",
-          // Responsive width with safe margins - standard shell
           sizeClasses[size],
-          // Viewport-constrained height: max-h-[85vh]
           "max-h-[85vh] max-h-[85dvh]",
-          // Content handling with internal scroll
           "overflow-y-auto overflow-x-hidden overscroll-contain",
-          // Styling - responsive padding: p-4 md:p-6
-          "gap-4 border bg-background p-4 md:p-6 shadow-lg rounded-lg",
-          // Animations
+          "gap-4 border bg-background p-6 shadow-lg rounded-2xl",
           "duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out",
           "data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
           "data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95",
@@ -96,7 +97,7 @@ const DialogTitle = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <DialogPrimitive.Title
     ref={ref}
-    className={cn("text-lg font-semibold leading-none tracking-tight", className)}
+    className={cn("text-lg font-semibold leading-none tracking-tight text-secondary", className)}
     {...props}
   />
 ));
