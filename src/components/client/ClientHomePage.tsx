@@ -9,6 +9,8 @@ import { useClientActingUser } from "@/hooks/useClientActingUser";
 import { useClientTenant } from "@/contexts/ClientTenantContext";
 import { ClientProgressSummary } from "./ClientProgressSummary";
 import { ProgressAnchors } from "@/components/compliance/ProgressAnchors";
+import { MomentumBanner } from "@/components/dashboard/MomentumBanner";
+import { useMomentumState } from "@/hooks/useMomentumState";
 
 export function ClientHomePage() {
   const { openHelpCenter } = useHelpCenter();
@@ -18,6 +20,8 @@ export function ClientHomePage() {
   const openDocumentRequest = useOpenDocumentRequest();
 
   const displayName = actingUser?.first_name || profile?.first_name;
+  const { data: momentumStates } = useMomentumState(activeTenantId);
+  const primaryMomentum = momentumStates?.[0] ?? null;
 
   return (
     <div className="space-y-8 max-w-5xl">
@@ -31,6 +35,11 @@ export function ClientHomePage() {
 
       {/* Progress Summary */}
       <ClientProgressSummary tenantId={activeTenantId} />
+
+      {/* Momentum Banner (client variant) */}
+      {primaryMomentum && (
+        <MomentumBanner state={primaryMomentum} variant="client" />
+      )}
 
       {/* Progress Anchors */}
       <ProgressAnchors tenantId={activeTenantId} variant="client" />
