@@ -1,35 +1,50 @@
 
-
-## Fix Client Commitments Form: Searchable Client + Team Member Dropdown
+## Fix Rock Update Not Saving
 
 ### Problem
-1. **Client dropdown is not searchable** -- with many tenants, users cannot type to filter. Should use the existing `Combobox` component (already used elsewhere, e.g., `InviteUserDialog`).
-2. **"Assigned To" is a free-text Input** -- the `assigned_to` column stores a UUID (`user_uuid`), but the form renders a plain text input. Typing a name like "Angela" causes a database error: `invalid input syntax for type uuid: "Angela"`. This needs to be a dropdown of Vivacity team members.
+When editing a Rock and changing the Team Member Responsible, the change does not persist. The DB shows `updated_at` changing but `owner_id` remaining the same, suggesting the update either errors silently or the payload is incorrect.
 
-### Changes
+### Root Causes Identified
 
-**File: `src/pages/ExecutiveClientCommitments.tsx`**
+1. **No error handling in handleSubmit**: The `handleSubmit` function in `RockFormDialog.tsx` calls `updateRock.mutateAsync()` without try/catch. If the mutation fails, the error is thrown but not caught -- the dialog stays open and the user gets no clear feedback about what went wrong.
 
-1. **Import `Combobox`** from `@/components/ui/combobox` (replacing the need for the plain Select for tenants).
+2. **RockProgressControl uses wrong status values**: This separate component sends lowercase status values (`on_track`, `off_track`, `complete`, `abandoned`) directly to the DB, but the DB enum expects PascalCase (`On_Track`, `Off_Track`, `Complete`). The value `abandoned` doesn't even exist in the enum. If this component was ever used to update status, it could corrupt the row state.
 
-2. **Import `useTenantUsers`** (or fetch Vivacity team members directly) to populate the "Assigned To" dropdown. Since this is a SuperAdmin context, fetch users from the Vivacity tenant (ID 6372) to list internal staff as assignees.
+### Plan
 
-3. **Add state for team members** -- fetch Vivacity team users on mount, similar to how `fetchTenants` works.
+**File: `src/components/eos/RockFormDialog.tsx`**
+- Wrap `handleSubmit` in try/catch to properly handle errors and show feedback
+- Add explicit error toast on failure so the user knows the save failed
+- Only close the dialog and reset the form on successful save
 
-4. **Replace Client (Tenant) Select with Combobox** (lines 191-197):
-   - Convert `tenants` array to `ComboboxOption[]` format (`{ value, label }`)
-   - Use the `Combobox` component with search functionality
-   - This allows typing to filter the tenant list
+**File: `src/components/eos/RockProgressControl.tsx`**
+- Replace hardcoded lowercase status values with proper `DB_ROCK_STATUS` constants and `getStatusOptions()` helper
+- Remove the non-existent `abandoned` status option
+- Use `uiToDbStatus()` conversion where needed
 
-5. **Replace "Assigned To" Input with Select dropdown** (lines 231-233):
-   - Change from `<Input>` to a `<Select>` populated with fetched team members
-   - Include an "Unassigned" option
-   - Each option value is the user's `user_uuid`
-   - Display format: "First Last"
+### Technical Details
 
-6. **Update table display** for the "Assigned To" column to resolve UUIDs to names using the fetched team members list.
+```text
+handleSubmit changes:
+  Before:  await updateRock.mutateAsync({ ... });
+           onOpenChange(false);
+           resetForm();
+  
+  After:   try {
+             await updateRock.mutateAsync({ ... });
+             onOpenChange(false);
+             resetForm();
+           } catch (error) {
+             // onError callback shows toast, dialog stays open
+             console.error('Rock save failed:', error);
+           }
+```
 
-### Technical Detail
-- The `Combobox` component at `src/components/ui/combobox.tsx` already supports search filtering, grouped options, and custom placeholders
-- Team members will be fetched from the `users` table filtered by `tenant_id = 6372` (Vivacity tenant)
-- No database changes required -- `assigned_to` already expects a UUID
+```text
+RockProgressControl status fix:
+  Before:  <SelectItem value="on_track">On Track</SelectItem>
+           <SelectItem value="abandoned">Abandoned</SelectItem>
+  
+  After:   Uses getStatusOptions() from rockStatusUtils
+           to generate correct PascalCase enum values
+```
