@@ -20,6 +20,8 @@ import {
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
+import { Combobox } from '@/components/ui/combobox';
+import { useVivacityTeamUsers } from '@/hooks/useVivacityTeamUsers';
 import { Pencil, Trash2, Plus, Search, ArrowLeft } from 'lucide-react';
 import { format } from 'date-fns';
 
@@ -67,6 +69,19 @@ export default function ExecutiveClientCommitments() {
   const [selected, setSelected] = useState<Commitment | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [formData, setFormData] = useState(defaultForm);
+  const { data: teamUsers = [] } = useVivacityTeamUsers();
+
+  const getTeamUserName = (uuid: string | null) => {
+    if (!uuid) return '—';
+    const user = teamUsers.find(u => u.user_uuid === uuid);
+    if (!user) return uuid;
+    return `${user.first_name || ''} ${user.last_name || ''}`.trim() || user.email;
+  };
+
+  const tenantOptions = tenants.map(t => ({
+    value: t.id.toString(),
+    label: t.name,
+  }));
 
   useEffect(() => { fetchRecords(); fetchTenants(); }, []);
 
@@ -115,7 +130,7 @@ export default function ExecutiveClientCommitments() {
         due_date: formData.due_date,
         status: formData.status,
         impact_level: formData.impact_level || null,
-        assigned_to: formData.assigned_to || null,
+        assigned_to: formData.assigned_to && formData.assigned_to !== 'unassigned' ? formData.assigned_to : null,
       }]);
       if (error) throw error;
       toast({ title: 'Success', description: 'Commitment created' });
@@ -137,7 +152,7 @@ export default function ExecutiveClientCommitments() {
         due_date: formData.due_date,
         status: formData.status,
         impact_level: formData.impact_level || null,
-        assigned_to: formData.assigned_to || null,
+        assigned_to: formData.assigned_to && formData.assigned_to !== 'unassigned' ? formData.assigned_to : null,
         completed_at: formData.status === 'met' ? new Date().toISOString() : null,
       }).eq('id', selected.id);
       if (error) throw error;
@@ -189,12 +204,14 @@ export default function ExecutiveClientCommitments() {
     <div className="space-y-4">
       <div className="space-y-2">
         <Label>Client (Tenant) *</Label>
-        <Select value={formData.tenant_id} onValueChange={v => setFormData({ ...formData, tenant_id: v })}>
-          <SelectTrigger className="bg-background"><SelectValue placeholder="Select client" /></SelectTrigger>
-          <SelectContent className="bg-background z-50 max-h-60">
-            {tenants.map(t => <SelectItem key={t.id} value={t.id.toString()}>{t.name}</SelectItem>)}
-          </SelectContent>
-        </Select>
+        <Combobox
+          options={tenantOptions}
+          value={formData.tenant_id}
+          onValueChange={v => setFormData({ ...formData, tenant_id: v })}
+          placeholder="Search clients..."
+          searchPlaceholder="Type to filter clients..."
+          emptyText="No clients found."
+        />
       </div>
       <div className="space-y-2">
         <Label>Title *</Label>
@@ -230,7 +247,17 @@ export default function ExecutiveClientCommitments() {
       </div>
       <div className="space-y-2">
         <Label>Assigned To</Label>
-        <Input value={formData.assigned_to} onChange={e => setFormData({ ...formData, assigned_to: e.target.value })} placeholder="Person responsible" />
+        <Select value={formData.assigned_to} onValueChange={v => setFormData({ ...formData, assigned_to: v })}>
+          <SelectTrigger className="bg-background"><SelectValue placeholder="Select team member" /></SelectTrigger>
+          <SelectContent className="bg-background z-50 max-h-60">
+            <SelectItem value="unassigned">Unassigned</SelectItem>
+            {teamUsers.map(u => (
+              <SelectItem key={u.user_uuid} value={u.user_uuid}>
+                {`${u.first_name || ''} ${u.last_name || ''}`.trim() || u.email}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
     </div>
   );
@@ -306,7 +333,7 @@ export default function ExecutiveClientCommitments() {
                       }`}>{r.impact_level}</span>
                     )}
                   </TableCell>
-                  <TableCell className="text-muted-foreground text-sm">{r.assigned_to ?? '—'}</TableCell>
+                  <TableCell className="text-muted-foreground text-sm">{getTeamUserName(r.assigned_to)}</TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-1">
                       <Button variant="ghost" size="icon" onClick={() => openEdit(r)}><Pencil className="h-4 w-4" /></Button>
