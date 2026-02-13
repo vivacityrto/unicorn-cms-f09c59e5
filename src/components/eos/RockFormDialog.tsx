@@ -228,11 +228,6 @@ export function RockFormDialog({ open, onOpenChange, rock }: RockFormDialogProps
     enabled: !!profile && open && rockLevel === 'team',
   });
 
-  // Get selected seat info
-  const selectedSeat = useMemo(() => 
-    seats?.find(s => s.id === seatId), 
-    [seats, seatId]
-  );
 
   // Get user info helper
   const getUserInfo = (userId: string) => {
@@ -247,9 +242,7 @@ export function RockFormDialog({ open, onOpenChange, rock }: RockFormDialogProps
   };
 
   // Validation states
-  const seatHasNoOwner = selectedSeat && !selectedSeat.primary_owner_id;
-  const isExistingRockWithoutSeat = rock && !rock.seat_id && !seatId;
-  const canSubmit = title.trim() && dueDate && seatId && !seatHasNoOwner;
+  const canSubmit = title.trim() && dueDate && ownerId;
 
   // Milestone handlers
   const addMilestone = () => {
@@ -330,16 +323,6 @@ export function RockFormDialog({ open, onOpenChange, rock }: RockFormDialogProps
         </DialogHeader>
         
         <div className="space-y-4 py-4">
-          {/* Warning for existing rocks without seat */}
-          {isExistingRockWithoutSeat && (
-            <Alert variant="default" className="border-amber-300 bg-amber-50 dark:bg-amber-950/30">
-              <AlertTriangle className="h-4 w-4 text-amber-600" />
-              <AlertDescription className="text-amber-700 dark:text-amber-300">
-                This Rock is not linked to an Accountability Seat. 
-                Select a seat to ensure proper ownership and tracking.
-              </AlertDescription>
-            </Alert>
-          )}
 
           {/* Parent Company Rock (for Team rocks only) */}
           {rockLevel === 'team' && (
@@ -462,89 +445,21 @@ export function RockFormDialog({ open, onOpenChange, rock }: RockFormDialogProps
             </div>
           </div>
 
-          {/* Seat Selection - Required */}
-          <div className="space-y-2">
-            <Label htmlFor="seat" className="flex items-center gap-2">
-              <Armchair className="h-4 w-4" />
-              Accountability Seat *
-            </Label>
-            <Select value={seatId || "none"} onValueChange={(v) => setSeatId(v === "none" ? "" : v)}>
-              <SelectTrigger className={!seatId ? 'border-amber-300' : ''}>
-                <SelectValue placeholder="Select accountability seat..." />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="none" disabled>Select a seat...</SelectItem>
-                {seats?.map((seat) => (
-                  <SelectItem key={seat.id} value={seat.id}>
-                    <div className="flex items-center gap-2">
-                      <span>{seat.seat_name}</span>
-                      <Badge variant="outline" className="text-[10px]">{seat.function_name}</Badge>
-                      {seat.primary_owner_name && (
-                        <span className="text-muted-foreground text-xs">
-                          — {seat.primary_owner_name}
-                        </span>
-                      )}
-                      {!seat.primary_owner_id && (
-                        <Badge variant="destructive" className="text-[10px]">No Owner</Badge>
-                      )}
-                    </div>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            
-            {/* Seat owner display */}
-            {selectedSeat && (
-              <div className="flex items-center gap-2 p-2 rounded-md bg-muted/50">
-                <User className="h-4 w-4 text-muted-foreground" />
-                {selectedSeat.primary_owner_name ? (
-                  <span className="text-sm">
-                    Seat Owner: <strong>{selectedSeat.primary_owner_name}</strong>
-                  </span>
-                ) : (
-                  <span className="text-sm text-destructive">
-                    This seat has no primary owner. Assign a seat owner before creating Rocks.
-                  </span>
-                )}
-              </div>
-            )}
-
-            {seatHasNoOwner && (
-              <Alert variant="destructive" className="py-2">
-                <AlertTriangle className="h-4 w-4" />
-                <AlertDescription>
-                  Cannot save Rock until this seat has a primary owner assigned.
-                </AlertDescription>
-              </Alert>
-            )}
-          </div>
-
-          {/* Team Member Responsible */}
+          {/* Owner - Required, single source of truth */}
           <div className="space-y-2">
             <Label htmlFor="owner" className="flex items-center gap-2">
               <User className="h-4 w-4" />
-              Team Member Responsible
+              Owner *
             </Label>
             <Select 
               value={ownerId || "none"} 
-              onValueChange={(v) => {
-                const newOwnerId = v === "none" ? "" : v;
-                setOwnerId(newOwnerId);
-                
-                // Auto-select the seat this user occupies (as primary owner)
-                if (newOwnerId && seats) {
-                  const userSeat = seats.find(s => s.primary_owner_id === newOwnerId);
-                  if (userSeat) {
-                    setSeatId(userSeat.id);
-                  }
-                }
-              }}
+              onValueChange={(v) => setOwnerId(v === "none" ? "" : v)}
             >
-              <SelectTrigger>
-                <SelectValue placeholder="Select team member..." />
+              <SelectTrigger className={!ownerId ? 'border-amber-300' : ''}>
+                <SelectValue placeholder="Select owner..." />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="none">Use seat owner</SelectItem>
+                <SelectItem value="none" disabled>Select owner...</SelectItem>
                 {vivacityUsers?.map((user) => {
                   const info = getUserInfo(user.user_uuid);
                   return (
@@ -564,17 +479,30 @@ export function RockFormDialog({ open, onOpenChange, rock }: RockFormDialogProps
                 })}
               </SelectContent>
             </Select>
-            {ownerId && getUserInfo(ownerId) && (
-              <div className="flex items-center gap-2 p-2 rounded-md bg-muted/50">
-                <Avatar className="h-6 w-6">
-                  <AvatarImage src={getUserInfo(ownerId)?.avatarUrl || undefined} />
-                  <AvatarFallback className="text-xs">{getUserInfo(ownerId)?.initials}</AvatarFallback>
-                </Avatar>
-                <span className="text-sm">
-                  Assigned to: <strong>{getUserInfo(ownerId)?.name}</strong>
-                </span>
-              </div>
-            )}
+          </div>
+
+          {/* Seat Selection - Optional, for reporting only */}
+          <div className="space-y-2">
+            <Label htmlFor="seat" className="flex items-center gap-2">
+              <Armchair className="h-4 w-4" />
+              Accountability Seat (Optional)
+            </Label>
+            <Select value={seatId || "none"} onValueChange={(v) => setSeatId(v === "none" ? "" : v)}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select accountability seat..." />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">None</SelectItem>
+                {seats?.map((seat) => (
+                  <SelectItem key={seat.id} value={seat.id}>
+                    <div className="flex items-center gap-2">
+                      <span>{seat.seat_name}</span>
+                      <Badge variant="outline" className="text-[10px]">{seat.function_name}</Badge>
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
