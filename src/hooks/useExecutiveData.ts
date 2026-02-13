@@ -51,6 +51,28 @@ export function useExecutiveMomentum() {
   });
 }
 
+export interface SystemHealthData {
+  tenant_id: number;
+  active_clients: number;
+  clients_with_compliance_snapshot: number;
+  compliance_coverage_pct: number;
+  latest_compliance_snapshot_at: string | null;
+}
+
+export function useExecSystemHealth() {
+  return useQuery({
+    queryKey: ['exec-system-health'],
+    queryFn: async (): Promise<SystemHealthData[]> => {
+      const { data, error } = await supabase
+        .from('v_exec_system_health' as any)
+        .select('*');
+      if (error) throw error;
+      return (data ?? []) as unknown as SystemHealthData[];
+    },
+    staleTime: 30_000,
+  });
+}
+
 export function useConsultantDistribution() {
   return useQuery({
     queryKey: ['executive-consultant-dist'],

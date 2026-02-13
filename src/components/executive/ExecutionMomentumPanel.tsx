@@ -8,10 +8,12 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { Activity, ArrowDown, ArrowUp, Minus } from 'lucide-react';
-import type { MomentumData } from '@/hooks/useExecutiveData';
+import type { MomentumData, SystemHealthData } from '@/hooks/useExecutiveData';
+import { formatDistanceToNow } from 'date-fns';
 
 interface ExecutionMomentumPanelProps {
   data: MomentumData[] | undefined;
+  systemHealth: SystemHealthData[] | undefined;
   isLoading: boolean;
   weeklyMode: boolean;
 }
@@ -29,7 +31,7 @@ function TrendIcon({ delta }: { delta: number }) {
   return <Minus className="w-3.5 h-3.5 text-muted-foreground" />;
 }
 
-export function ExecutionMomentumPanel({ data, isLoading, weeklyMode }: ExecutionMomentumPanelProps) {
+export function ExecutionMomentumPanel({ data, systemHealth, isLoading, weeklyMode }: ExecutionMomentumPanelProps) {
   if (isLoading || !data) {
     return (
       <Card>
@@ -89,7 +91,9 @@ export function ExecutionMomentumPanel({ data, isLoading, weeklyMode }: Executio
             Execution Momentum (7d)
           </CardTitle>
         </div>
-        <p className="text-xs text-muted-foreground">Current vs previous 7 days</p>
+        <p className="text-xs text-muted-foreground">
+          {weeklyMode ? 'This week vs last week' : 'Current vs previous 7 days'}
+        </p>
       </CardHeader>
       <CardContent className="p-0">
         <div className="divide-y divide-border">
@@ -124,6 +128,22 @@ export function ExecutionMomentumPanel({ data, isLoading, weeklyMode }: Executio
             <p className="text-xs text-muted-foreground">Delivery slowing week-on-week.</p>
           </div>
         )}
+        {systemHealth && systemHealth.length > 0 && (() => {
+          const totalCoverage = systemHealth.reduce((sum, s) => sum + Number(s.compliance_coverage_pct ?? 0), 0) / systemHealth.length;
+          const latestAt = systemHealth
+            .map(s => s.latest_compliance_snapshot_at)
+            .filter(Boolean)
+            .sort()
+            .reverse()[0];
+          const agoText = latestAt ? formatDistanceToNow(new Date(latestAt), { addSuffix: true }) : 'never';
+          return (
+            <div className="px-4 py-2 border-t border-border">
+              <p className="text-xs text-muted-foreground">
+                Coverage {Math.round(totalCoverage)}%. Updated {agoText}.
+              </p>
+            </div>
+          );
+        })()}
       </CardContent>
     </Card>
   );
