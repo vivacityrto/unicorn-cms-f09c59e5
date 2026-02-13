@@ -11,7 +11,7 @@ import { DashboardLayout } from '@/components/DashboardLayout';
 import { useRBAC } from '@/hooks/useRBAC';
 import { useExecutiveHealth, type ExecutiveHealthRow } from '@/hooks/useExecutiveHealth';
 import { useExecutiveAnomalies } from '@/hooks/useExecutiveAnomalies';
-import { useExecutiveMomentum, useConsultantDistribution } from '@/hooks/useExecutiveData';
+import { useExecutiveMomentum, useConsultantDistribution, useExecSystemHealth } from '@/hooks/useExecutiveData';
 import { StrategicHealthSnapshot } from '@/components/executive/StrategicHealthSnapshot';
 import { AlignmentSignalsPanel } from '@/components/executive/AlignmentSignalsPanel';
 import { ExecutionMomentumPanel } from '@/components/executive/ExecutionMomentumPanel';
@@ -33,6 +33,7 @@ export default function ExecutiveDashboard() {
   const { data: anomalies } = useExecutiveAnomalies();
   const { data: momentum, isLoading: momentumLoading } = useExecutiveMomentum();
   const { data: consultants, isLoading: consultantsLoading } = useConsultantDistribution();
+  const { data: execSystemHealth } = useExecSystemHealth();
 
   const [selectedRow, setSelectedRow] = useState<ExecutiveHealthRow | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -124,7 +125,7 @@ export default function ExecutiveDashboard() {
             <AlignmentSignalsPanel data={rawData} anomalies={anomalies ?? []} />
           </div>
           <div className="space-y-6">
-            <ExecutionMomentumPanel data={momentum} isLoading={momentumLoading} weeklyMode={weeklyMode} />
+            <ExecutionMomentumPanel data={momentum} systemHealth={execSystemHealth} isLoading={momentumLoading} weeklyMode={weeklyMode} />
             <SystemHealthBlock data={rawData} />
           </div>
         </div>

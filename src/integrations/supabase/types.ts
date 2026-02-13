@@ -30827,6 +30827,16 @@ export type Database = {
         }
         Relationships: []
       }
+      v_exec_system_health: {
+        Row: {
+          active_clients: number | null
+          clients_with_compliance_snapshot: number | null
+          compliance_coverage_pct: number | null
+          latest_compliance_snapshot_at: string | null
+          tenant_id: number | null
+        }
+        Relationships: []
+      }
       v_executive_anomalies_30d: {
         Row: {
           anomaly_rank: number | null
