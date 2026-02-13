@@ -9087,6 +9087,202 @@ export type Database = {
         }
         Relationships: []
       }
+      doc_chunks: {
+        Row: {
+          chunk_index: number
+          chunk_text: string
+          created_at: string
+          doc_chunk_id: string
+          doc_file_id: string
+          page_ref: string | null
+          tenant_id: number
+        }
+        Insert: {
+          chunk_index: number
+          chunk_text: string
+          created_at?: string
+          doc_chunk_id?: string
+          doc_file_id: string
+          page_ref?: string | null
+          tenant_id: number
+        }
+        Update: {
+          chunk_index?: number
+          chunk_text?: string
+          created_at?: string
+          doc_chunk_id?: string
+          doc_file_id?: string
+          page_ref?: string | null
+          tenant_id?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "doc_chunks_doc_file_id_fkey"
+            columns: ["doc_file_id"]
+            isOneToOne: false
+            referencedRelation: "doc_files"
+            referencedColumns: ["doc_file_id"]
+          },
+          {
+            foreignKeyName: "doc_chunks_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "doc_chunks_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_engagement_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "doc_chunks_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_eos_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "doc_chunks_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_compliance_entitlements"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "doc_chunks_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "doc_chunks_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "doc_chunks_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_membership_usage"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "doc_chunks_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_membership_usage"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
+      doc_files: {
+        Row: {
+          created_at: string
+          doc_file_id: string
+          doc_type: string
+          filename: string
+          mime_type: string
+          package_id: number | null
+          phase_id: number | null
+          source: string
+          source_url: string | null
+          storage_path: string | null
+          tenant_id: number
+          uploader_user_id: string
+        }
+        Insert: {
+          created_at?: string
+          doc_file_id?: string
+          doc_type: string
+          filename: string
+          mime_type: string
+          package_id?: number | null
+          phase_id?: number | null
+          source: string
+          source_url?: string | null
+          storage_path?: string | null
+          tenant_id: number
+          uploader_user_id: string
+        }
+        Update: {
+          created_at?: string
+          doc_file_id?: string
+          doc_type?: string
+          filename?: string
+          mime_type?: string
+          package_id?: number | null
+          phase_id?: number | null
+          source?: string
+          source_url?: string | null
+          storage_path?: string | null
+          tenant_id?: number
+          uploader_user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "doc_files_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "doc_files_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_engagement_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "doc_files_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_eos_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "doc_files_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_compliance_entitlements"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "doc_files_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "doc_files_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "doc_files_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_membership_usage"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "doc_files_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_membership_usage"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
       document_activity_log: {
         Row: {
           activity_type: string
