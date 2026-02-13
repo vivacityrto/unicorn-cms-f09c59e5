@@ -18374,6 +18374,132 @@ export type Database = {
           },
         ]
       }
+      package_instance_state_log: {
+        Row: {
+          changed_at: string
+          changed_by: string | null
+          id: string
+          new_state: Database["public"]["Enums"]["membership_state_enum"]
+          old_state: Database["public"]["Enums"]["membership_state_enum"] | null
+          package_instance_id: number
+          reason: string | null
+        }
+        Insert: {
+          changed_at?: string
+          changed_by?: string | null
+          id?: string
+          new_state: Database["public"]["Enums"]["membership_state_enum"]
+          old_state?:
+            | Database["public"]["Enums"]["membership_state_enum"]
+            | null
+          package_instance_id: number
+          reason?: string | null
+        }
+        Update: {
+          changed_at?: string
+          changed_by?: string | null
+          id?: string
+          new_state?: Database["public"]["Enums"]["membership_state_enum"]
+          old_state?:
+            | Database["public"]["Enums"]["membership_state_enum"]
+            | null
+          package_instance_id?: number
+          reason?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "package_instance_state_log_package_instance_id_fkey"
+            columns: ["package_instance_id"]
+            isOneToOne: false
+            referencedRelation: "package_instances"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "package_instance_state_log_package_instance_id_fkey"
+            columns: ["package_instance_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_dashboard_progress"
+            referencedColumns: ["package_instance_id"]
+          },
+          {
+            foreignKeyName: "package_instance_state_log_package_instance_id_fkey"
+            columns: ["package_instance_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_package_usage_summary"
+            referencedColumns: ["instance_id"]
+          },
+          {
+            foreignKeyName: "package_instance_state_log_package_instance_id_fkey"
+            columns: ["package_instance_id"]
+            isOneToOne: false
+            referencedRelation: "v_completion_eligibility"
+            referencedColumns: ["package_instance_id"]
+          },
+          {
+            foreignKeyName: "package_instance_state_log_package_instance_id_fkey"
+            columns: ["package_instance_id"]
+            isOneToOne: false
+            referencedRelation: "v_consult_hours_remaining"
+            referencedColumns: ["package_instance_id"]
+          },
+          {
+            foreignKeyName: "package_instance_state_log_package_instance_id_fkey"
+            columns: ["package_instance_id"]
+            isOneToOne: false
+            referencedRelation: "v_dashboard_consultant_momentum"
+            referencedColumns: ["package_instance_id"]
+          },
+          {
+            foreignKeyName: "package_instance_state_log_package_instance_id_fkey"
+            columns: ["package_instance_id"]
+            isOneToOne: false
+            referencedRelation: "v_documents_pending"
+            referencedColumns: ["package_instance_id"]
+          },
+          {
+            foreignKeyName: "package_instance_state_log_package_instance_id_fkey"
+            columns: ["package_instance_id"]
+            isOneToOne: false
+            referencedRelation: "v_executive_client_health"
+            referencedColumns: ["package_instance_id"]
+          },
+          {
+            foreignKeyName: "package_instance_state_log_package_instance_id_fkey"
+            columns: ["package_instance_id"]
+            isOneToOne: false
+            referencedRelation: "v_momentum_state"
+            referencedColumns: ["package_instance_id"]
+          },
+          {
+            foreignKeyName: "package_instance_state_log_package_instance_id_fkey"
+            columns: ["package_instance_id"]
+            isOneToOne: false
+            referencedRelation: "v_phase_actions_remaining"
+            referencedColumns: ["package_instance_id"]
+          },
+          {
+            foreignKeyName: "package_instance_state_log_package_instance_id_fkey"
+            columns: ["package_instance_id"]
+            isOneToOne: false
+            referencedRelation: "v_predictive_signal_inputs"
+            referencedColumns: ["package_instance_id"]
+          },
+          {
+            foreignKeyName: "package_instance_state_log_package_instance_id_fkey"
+            columns: ["package_instance_id"]
+            isOneToOne: false
+            referencedRelation: "v_progress_anchor_inputs"
+            referencedColumns: ["package_instance_id"]
+          },
+          {
+            foreignKeyName: "package_instance_state_log_package_instance_id_fkey"
+            columns: ["package_instance_id"]
+            isOneToOne: false
+            referencedRelation: "v_score_consult"
+            referencedColumns: ["package_instance_id"]
+          },
+        ]
+      }
       package_instances: {
         Row: {
           clo_id: number
@@ -18386,6 +18512,7 @@ export type Database = {
           is_complete: boolean
           last_document_update_email: string | null
           manager_id: string | null
+          membership_state: Database["public"]["Enums"]["membership_state_enum"]
           package_id: number
           release_documents_office: boolean
           release_documents_pdf: boolean
@@ -18405,6 +18532,7 @@ export type Database = {
           is_complete: boolean
           last_document_update_email?: string | null
           manager_id?: string | null
+          membership_state?: Database["public"]["Enums"]["membership_state_enum"]
           package_id: number
           release_documents_office?: boolean
           release_documents_pdf?: boolean
@@ -18424,6 +18552,7 @@ export type Database = {
           is_complete?: boolean
           last_document_update_email?: string | null
           manager_id?: string | null
+          membership_state?: Database["public"]["Enums"]["membership_state_enum"]
           package_id?: number
           release_documents_office?: boolean
           release_documents_pdf?: boolean
@@ -34047,6 +34176,14 @@ export type Database = {
         Args: { p_release_id: string }
         Returns: undefined
       }
+      transition_membership_state: {
+        Args: {
+          p_instance_id: number
+          p_new_state: Database["public"]["Enums"]["membership_state_enum"]
+          p_reason?: string
+        }
+        Returns: undefined
+      }
       transition_stage_state: {
         Args: {
           p_new_status: string
@@ -34301,6 +34438,12 @@ export type Database = {
         | "closed"
         | "locked"
       meeting_type: "level_10" | "quarterly" | "annual"
+      membership_state_enum:
+        | "active"
+        | "at_risk"
+        | "paused"
+        | "exiting"
+        | "complete"
       notification_delivery_target: "dm" | "channel"
       notification_event_type:
         | "task_assigned"
@@ -34593,6 +34736,13 @@ export const Constants = {
         "locked",
       ],
       meeting_type: ["level_10", "quarterly", "annual"],
+      membership_state_enum: [
+        "active",
+        "at_risk",
+        "paused",
+        "exiting",
+        "complete",
+      ],
       notification_delivery_target: ["dm", "channel"],
       notification_event_type: [
         "task_assigned",
