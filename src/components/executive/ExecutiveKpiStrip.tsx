@@ -1,21 +1,25 @@
 /**
  * ExecutiveKpiStrip – Unicorn 2.0
  *
- * Four KPI tiles with 7-day trend deltas.
+ * Four KPI tiles with 7-day trend deltas and confidence.
  */
 
 import { StatCard } from '@/components/ui/stat-card';
 import { BarChart3, AlertTriangle, ShieldAlert, Clock } from 'lucide-react';
+import type { DeltaConfidence } from '@/hooks/useExecutiveHealth';
 
 interface KpiStripProps {
   avgScore: number;
   avgScoreDelta: number;
+  avgScoreConfidence: DeltaConfidence;
   atRiskCount: number;
   criticalRisks: number;
   staleCount: number;
 }
 
-export function ExecutiveKpiStrip({ avgScore, avgScoreDelta, atRiskCount, criticalRisks, staleCount }: KpiStripProps) {
+export function ExecutiveKpiStrip({ avgScore, avgScoreDelta, avgScoreConfidence, atRiskCount, criticalRisks, staleCount }: KpiStripProps) {
+  const showTrend = avgScoreDelta !== 0 && avgScoreConfidence !== 'none';
+
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
       <StatCard
@@ -23,7 +27,7 @@ export function ExecutiveKpiStrip({ avgScore, avgScoreDelta, atRiskCount, critic
         value={`${avgScore}%`}
         icon={BarChart3}
         intent="default"
-        trend={avgScoreDelta !== 0 ? { value: Math.abs(avgScoreDelta), positive: avgScoreDelta > 0 } : undefined}
+        trend={showTrend ? { value: Math.abs(avgScoreDelta), positive: avgScoreDelta > 0 } : undefined}
       />
       <StatCard
         label="Clients At Risk"
