@@ -20,6 +20,7 @@ export interface ComplianceScore {
   consult_health: number;
   overall_score: number;
   days_stale: number;
+  is_stale: boolean;
   caps_applied: Array<{ type: string; cap: number; [key: string]: any }>;
   inputs: {
     total_stages: number;

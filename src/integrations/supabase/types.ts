@@ -7150,6 +7150,13 @@ export type Database = {
             referencedColumns: ["instance_id"]
           },
           {
+            foreignKeyName: "compliance_score_snapshots_package_instance_id_fkey"
+            columns: ["package_instance_id"]
+            isOneToOne: false
+            referencedRelation: "v_score_consult"
+            referencedColumns: ["package_instance_id"]
+          },
+          {
             foreignKeyName: "compliance_score_snapshots_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
@@ -16983,6 +16990,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_client_package_usage_summary"
             referencedColumns: ["instance_id"]
+          },
+          {
+            foreignKeyName: "package_notes_package_instance_id_fkey"
+            columns: ["package_instance_id"]
+            isOneToOne: false
+            referencedRelation: "v_score_consult"
+            referencedColumns: ["package_instance_id"]
           },
         ]
       }
@@ -27901,6 +27915,7 @@ export type Database = {
           documentation_coverage: number | null
           id: string | null
           inputs: Json | null
+          is_stale: boolean | null
           overall_score: number | null
           package_instance_id: number | null
           phase_completion: number | null
@@ -27921,6 +27936,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_client_package_usage_summary"
             referencedColumns: ["instance_id"]
+          },
+          {
+            foreignKeyName: "compliance_score_snapshots_package_instance_id_fkey"
+            columns: ["package_instance_id"]
+            isOneToOne: false
+            referencedRelation: "v_score_consult"
+            referencedColumns: ["package_instance_id"]
           },
           {
             foreignKeyName: "compliance_score_snapshots_tenant_id_fkey"
@@ -28006,6 +28028,83 @@ export type Database = {
           uploaded_by_name: string | null
           uploaded_by_type: string | null
           version_number: number | null
+        }
+        Relationships: []
+      }
+      v_score_consult: {
+        Row: {
+          data_available: boolean | null
+          hours_added: number | null
+          hours_included: number | null
+          hours_used: number | null
+          package_id: number | null
+          package_instance_id: number | null
+          tenant_id: number | null
+          usage_ratio: number | null
+        }
+        Insert: {
+          data_available?: never
+          hours_added?: never
+          hours_included?: never
+          hours_used?: never
+          package_id?: number | null
+          package_instance_id?: number | null
+          tenant_id?: number | null
+          usage_ratio?: never
+        }
+        Update: {
+          data_available?: never
+          hours_added?: never
+          hours_included?: never
+          hours_used?: never
+          package_id?: number | null
+          package_instance_id?: number | null
+          tenant_id?: number | null
+          usage_ratio?: never
+        }
+        Relationships: []
+      }
+      v_score_last_activity: {
+        Row: {
+          data_available: boolean | null
+          days_stale: number | null
+          last_activity_at: string | null
+          package_id: number | null
+          tenant_id: number | null
+        }
+        Relationships: []
+      }
+      v_score_phase_items: {
+        Row: {
+          completed_stages: number | null
+          current_phase_completion: number | null
+          data_available: boolean | null
+          package_id: number | null
+          tenant_id: number | null
+          total_stages: number | null
+        }
+        Relationships: []
+      }
+      v_score_required_docs: {
+        Row: {
+          data_available: boolean | null
+          package_id: number | null
+          required_present: number | null
+          required_total: number | null
+          tenant_id: number | null
+        }
+        Relationships: []
+      }
+      v_score_risks: {
+        Row: {
+          active_critical: number | null
+          active_high: number | null
+          active_low: number | null
+          active_medium: number | null
+          data_available: boolean | null
+          has_active_critical: boolean | null
+          risk_points: number | null
+          tenant_id: number | null
         }
         Relationships: []
       }
