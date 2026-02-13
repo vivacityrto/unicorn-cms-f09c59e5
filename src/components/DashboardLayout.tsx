@@ -23,6 +23,7 @@ import { cn } from "@/lib/utils";
 // 1. WORK Section - All Vivacity Team Roles
 const workMenuItems = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/dashboard" },
+  { icon: BarChart3, label: "Executive Dashboard", path: "/executive", leadershipOnly: true },
   { icon: Briefcase, label: "My Work", path: "/my-work" },
   { icon: ListTodo, label: "Tasks", path: "/tasks" },
   { icon: Inbox, label: "Time Inbox", path: "/time-inbox" },
@@ -188,6 +189,16 @@ export const DashboardLayout = ({
     return eosMenuItems.filter(item => {
       if (item.leadershipOnly) {
         // Only Super Admin and Team Leader can see leadership-only items
+        return isSuperAdmin || isTeamLeader;
+      }
+      return true;
+    });
+  }, [isSuperAdmin, isTeamLeader]);
+
+  // Filter Work items based on role
+  const filteredWorkItems = useMemo(() => {
+    return workMenuItems.filter(item => {
+      if ((item as any).leadershipOnly) {
         return isSuperAdmin || isTeamLeader;
       }
       return true;
@@ -416,7 +427,7 @@ export const DashboardLayout = ({
                   </CollapsibleTrigger>
                 )}
                 <CollapsibleContent>
-                  {workMenuItems.map(renderMenuItem)}
+                  {filteredWorkItems.map(renderMenuItem)}
                 </CollapsibleContent>
               </Collapsible>
 
