@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Combobox } from '@/components/ui/combobox';
 import { Slider } from '@/components/ui/slider';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
@@ -610,19 +611,20 @@ export function RockFormDialog({ open, onOpenChange, rock }: RockFormDialogProps
 
           <div className="space-y-2">
             <Label htmlFor="client">Client (Optional)</Label>
-            <Select value={clientId || "none"} onValueChange={(v) => setClientId(v === "none" ? "" : v)}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select a client..." />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="none">None</SelectItem>
-                {clients?.map((client) => (
-                  <SelectItem key={client.id} value={client.id}>
-                    {client.companyname || client.contactname}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Combobox
+              options={[
+                { value: "none", label: "None" },
+                ...(clients?.map((client) => ({
+                  value: client.id,
+                  label: client.companyname || client.contactname || client.id,
+                })) || []),
+              ]}
+              value={clientId || "none"}
+              onValueChange={(v) => setClientId(v === "none" ? "" : v)}
+              placeholder="Search clients..."
+              searchPlaceholder="Type to filter clients..."
+              emptyText="No clients found."
+            />
           </div>
 
           <div className="space-y-2">
