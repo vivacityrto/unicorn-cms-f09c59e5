@@ -62,7 +62,13 @@ export function CelebrationProvider({ children }: { children: React.ReactNode })
   const cleanupRef = useRef<(() => void) | null>(null);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const canAnimate = prefs.celebrations_enabled && !prefs.reduce_motion;
+  // OS prefers-reduced-motion is an absolute override
+  const osReducedMotion =
+    typeof window !== 'undefined' &&
+    window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  const effectiveReducedMotion = prefs.reduce_motion || osReducedMotion;
+  const canAnimate = prefs.celebrations_enabled && !effectiveReducedMotion;
   const celebrationsEnabled = prefs.celebrations_enabled;
 
   // Clean old dedup entries periodically
@@ -169,7 +175,7 @@ export function CelebrationProvider({ children }: { children: React.ReactNode })
         dismiss,
         isShowing: !!active,
         currentEvent: active,
-        reducedCelebration: prefs.reduce_motion,
+        reducedCelebration: effectiveReducedMotion,
         setReducedCelebration: () => {},
         celebrate: trigger, // backward compat
       }}

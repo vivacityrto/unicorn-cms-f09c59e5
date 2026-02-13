@@ -7,6 +7,7 @@
  */
 
 import { supabase } from '@/integrations/supabase/client';
+import { ALLOWED_CELEBRATION_EVENTS, type AllowedCelebrationEvent } from '@/lib/engagement-guardrails';
 
 export type CelebrationSourceModule = 'compliance' | 'eos' | 'time' | 'documents' | 'integrations' | 'admin';
 
@@ -34,6 +35,12 @@ export interface EmitCelebrationPayload {
 }
 
 export async function emitCelebration(payload: EmitCelebrationPayload) {
+  // Guardrail: check event is whitelisted
+  if (!(payload.event_type in ALLOWED_CELEBRATION_EVENTS)) {
+    console.warn(`[Celebration] Blocked non-whitelisted event: ${payload.event_type}`);
+    return null;
+  }
+
   // Insert celebration event
   const { data, error } = await supabase
     .from('celebration_events' as any)

@@ -10474,6 +10474,45 @@ export type Database = {
         }
         Relationships: []
       }
+      engagement_audit_log: {
+        Row: {
+          actor_user_uuid: string | null
+          client_id: number | null
+          created_at: string
+          event_type: string
+          id: string
+          integrity_validation_passed: boolean
+          package_instance_id: number | null
+          tenant_id: number
+          tier: string | null
+          validation_notes: Json
+        }
+        Insert: {
+          actor_user_uuid?: string | null
+          client_id?: number | null
+          created_at?: string
+          event_type: string
+          id?: string
+          integrity_validation_passed?: boolean
+          package_instance_id?: number | null
+          tenant_id: number
+          tier?: string | null
+          validation_notes?: Json
+        }
+        Update: {
+          actor_user_uuid?: string | null
+          client_id?: number | null
+          created_at?: string
+          event_type?: string
+          id?: string
+          integrity_validation_passed?: boolean
+          package_instance_id?: number | null
+          tenant_id?: number
+          tier?: string | null
+          validation_notes?: Json
+        }
+        Relationships: []
+      }
       eos_accountability_chart: {
         Row: {
           assigned_user_id: string | null
@@ -23183,6 +23222,99 @@ export type Database = {
             foreignKeyName: "tenant_documents_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
+            referencedRelation: "vw_client_membership_usage"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
+      tenant_engagement_settings: {
+        Row: {
+          celebrations_enabled: boolean
+          completion_cascade_enabled: boolean
+          id: string
+          leaderboard_enabled: boolean
+          sound_enabled: boolean
+          tenant_id: number
+          updated_at: string
+          updated_by: string | null
+          weekly_win_tracker_enabled: boolean
+        }
+        Insert: {
+          celebrations_enabled?: boolean
+          completion_cascade_enabled?: boolean
+          id?: string
+          leaderboard_enabled?: boolean
+          sound_enabled?: boolean
+          tenant_id: number
+          updated_at?: string
+          updated_by?: string | null
+          weekly_win_tracker_enabled?: boolean
+        }
+        Update: {
+          celebrations_enabled?: boolean
+          completion_cascade_enabled?: boolean
+          id?: string
+          leaderboard_enabled?: boolean
+          sound_enabled?: boolean
+          tenant_id?: number
+          updated_at?: string
+          updated_by?: string | null
+          weekly_win_tracker_enabled?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tenant_engagement_settings_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: true
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tenant_engagement_settings_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: true
+            referencedRelation: "v_client_engagement_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "tenant_engagement_settings_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: true
+            referencedRelation: "v_client_eos_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "tenant_engagement_settings_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: true
+            referencedRelation: "v_tenant_compliance_entitlements"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "tenant_engagement_settings_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: true
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "tenant_engagement_settings_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: true
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "tenant_engagement_settings_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: true
+            referencedRelation: "vw_client_membership_usage"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "tenant_engagement_settings_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: true
             referencedRelation: "vw_client_membership_usage"
             referencedColumns: ["tenant_id"]
           },
