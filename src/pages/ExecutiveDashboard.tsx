@@ -6,7 +6,7 @@
  * Weekly Review Mode default ON. No scrolling required at 1440px.
  */
 
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, lazy, Suspense } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { useRBAC } from '@/hooks/useRBAC';
@@ -25,6 +25,7 @@ import { ClientHealthDrawer } from '@/components/executive/ClientHealthDrawer';
 import { ExecutiveFiltersBar } from '@/components/executive/ExecutiveFiltersBar';
 import { WeeklySummaryFooter } from '@/components/executive/WeeklySummaryFooter';
 import { WeeklyReviewNotesPanel } from '@/components/executive/WeeklyReviewNotesPanel';
+import { CeoDashboardSection } from '@/components/executive/ceo/CeoDashboardSection';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
@@ -228,6 +229,9 @@ export default function ExecutiveDashboard() {
 
         {/* Weekly Summary Footer */}
         <WeeklySummaryFooter data={rawData} />
+
+        {/* CEO Executive Dashboard Panels */}
+        <CeoDashboardSection />
 
         {/* Weekly Review Notes Panel — visible in weekly mode */}
         {weeklyMode && (
