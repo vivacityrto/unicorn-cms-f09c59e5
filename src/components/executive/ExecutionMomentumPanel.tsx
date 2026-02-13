@@ -11,7 +11,7 @@ import { Activity, ArrowDown, ArrowUp, Minus } from 'lucide-react';
 import type { MomentumData } from '@/hooks/useExecutiveData';
 
 interface ExecutionMomentumPanelProps {
-  data: MomentumData | undefined;
+  data: MomentumData[] | undefined;
   isLoading: boolean;
   weeklyMode: boolean;
 }
@@ -46,12 +46,35 @@ export function ExecutionMomentumPanel({ data, isLoading, weeklyMode }: Executio
     );
   }
 
+  // Aggregate across all tenants
+  const agg = data.reduce(
+    (acc, r) => ({
+      phases_completed_7d: acc.phases_completed_7d + Number(r.phases_completed_7d),
+      phases_completed_prev_7d: acc.phases_completed_prev_7d + Number(r.phases_completed_prev_7d),
+      documents_generated_7d: acc.documents_generated_7d + Number(r.documents_generated_7d),
+      documents_generated_prev_7d: acc.documents_generated_prev_7d + Number(r.documents_generated_prev_7d),
+      risks_resolved_7d: acc.risks_resolved_7d + Number(r.risks_resolved_7d),
+      risks_resolved_prev_7d: acc.risks_resolved_prev_7d + Number(r.risks_resolved_prev_7d),
+      document_events_7d: acc.document_events_7d + Number(r.document_events_7d),
+      document_events_prev_7d: acc.document_events_prev_7d + Number(r.document_events_prev_7d),
+      consult_hours_logged_7d: acc.consult_hours_logged_7d + Number(r.consult_hours_logged_7d),
+      consult_hours_logged_prev_7d: acc.consult_hours_logged_prev_7d + Number(r.consult_hours_logged_prev_7d),
+    }),
+    {
+      phases_completed_7d: 0, phases_completed_prev_7d: 0,
+      documents_generated_7d: 0, documents_generated_prev_7d: 0,
+      risks_resolved_7d: 0, risks_resolved_prev_7d: 0,
+      document_events_7d: 0, document_events_prev_7d: 0,
+      consult_hours_logged_7d: 0, consult_hours_logged_prev_7d: 0,
+    }
+  );
+
   const metrics: MetricRow[] = [
-    { label: 'Phases Completed', current: data.phases_completed_7d, previous: data.phases_completed_prev_7d },
-    { label: 'Documents Generated', current: data.documents_generated_7d, previous: data.documents_generated_prev_7d },
-    { label: 'Clients Moved Forward', current: data.clients_moved_forward_7d, previous: data.clients_moved_forward_prev_7d },
-    { label: 'Rocks Closed', current: data.rocks_closed_7d, previous: data.rocks_closed_prev_7d },
-    { label: 'Hours Logged', current: Number(data.hours_logged_7d), previous: Number(data.hours_logged_prev_7d), unit: 'h' },
+    { label: 'Phases Completed', current: agg.phases_completed_7d, previous: agg.phases_completed_prev_7d },
+    { label: 'Documents Generated', current: agg.documents_generated_7d, previous: agg.documents_generated_prev_7d },
+    { label: 'Document Events', current: agg.document_events_7d, previous: agg.document_events_prev_7d },
+    { label: 'Risks Resolved', current: agg.risks_resolved_7d, previous: agg.risks_resolved_prev_7d },
+    { label: 'Hours Logged', current: agg.consult_hours_logged_7d, previous: agg.consult_hours_logged_prev_7d, unit: 'h' },
   ];
 
   const decliningCount = metrics.filter(m => m.current < m.previous).length;
