@@ -154,3 +154,6 @@ verify_jwt = false
 
 [functions.calculate-predictive-risk]
 verify_jwt = false
+
+[functions.chunk-document]
+verify_jwt = false
