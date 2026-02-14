@@ -13,9 +13,10 @@ export interface StageDocument {
 interface UseStageDocumentsOptions {
   stageInstanceId: number;
   tenantId: number;
+  debug?: boolean;
 }
 
-export function useStageDocuments({ stageInstanceId, tenantId }: UseStageDocumentsOptions) {
+export function useStageDocuments({ stageInstanceId, tenantId, debug }: UseStageDocumentsOptions) {
   const [documents, setDocuments] = useState<StageDocument[]>([]);
   const [loading, setLoading] = useState(true);
   const [totalCount, setTotalCount] = useState(0);
@@ -27,13 +28,21 @@ export function useStageDocuments({ stageInstanceId, tenantId }: UseStageDocumen
   const fetchDocuments = async () => {
     setLoading(true);
     try {
+      if (debug) {
+        console.log('[StageDocuments] querying stageinstance_id:', stageInstanceId, 'tenant_id:', tenantId);
+      }
+
       // Fetch document_instances for this stage_instance, scoped to tenant
-      const { data: instances, error } = await supabase
+      const { data: instances, error, count } = await supabase
         .from('document_instances')
-        .select('id, document_id, isgenerated, status, created_at')
+        .select('id, document_id, isgenerated, status, created_at', { count: 'exact' })
         .eq('stageinstance_id', stageInstanceId)
         .eq('tenant_id', tenantId)
         .order('created_at', { ascending: false });
+
+      if (debug) {
+        console.log('[StageDocuments] rows returned:', count, 'error:', error?.message ?? 'none');
+      }
 
       if (error) throw error;
       if (!instances || instances.length === 0) {
@@ -43,7 +52,7 @@ export function useStageDocuments({ stageInstanceId, tenantId }: UseStageDocumen
         return;
       }
 
-      setTotalCount(instances.length);
+      setTotalCount(count ?? instances.length);
 
       // Get document titles from documents table
       const docIds = [...new Set(instances.map(i => i.document_id))];

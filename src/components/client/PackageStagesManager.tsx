@@ -332,6 +332,7 @@ export function PackageStagesManager({ tenantId, packageId, packageName }: Packa
                 <StageDocumentsSection
                   stageInstanceId={stage.id}
                   tenantId={tenantId}
+                  debug={profile?.unicorn_role === 'Super Admin' || profile?.global_role === 'SuperAdmin'}
                 />
                 <StageEmailsSection
                   stageInstanceId={stage.id}

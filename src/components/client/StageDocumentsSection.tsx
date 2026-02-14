@@ -8,6 +8,7 @@ import { format } from 'date-fns';
 interface StageDocumentsSectionProps {
   stageInstanceId: number;
   tenantId: number;
+  debug?: boolean;
 }
 
 const STATUS_BADGE: Record<string, { label: string; variant: 'default' | 'secondary' | 'outline' }> = {
@@ -16,8 +17,8 @@ const STATUS_BADGE: Record<string, { label: string; variant: 'default' | 'second
   released: { label: 'Released', variant: 'outline' },
 };
 
-export function StageDocumentsSection({ stageInstanceId, tenantId }: StageDocumentsSectionProps) {
-  const { documents, loading, totalCount } = useStageDocuments({ stageInstanceId, tenantId });
+export function StageDocumentsSection({ stageInstanceId, tenantId, debug }: StageDocumentsSectionProps) {
+  const { documents, loading, totalCount } = useStageDocuments({ stageInstanceId, tenantId, debug });
 
   if (loading) {
     return (
