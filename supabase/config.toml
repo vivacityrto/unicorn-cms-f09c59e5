@@ -172,3 +172,6 @@ verify_jwt = false
 
 [functions.scan-risk-radar]
 verify_jwt = false
+
+[functions.bulk-generate-phase-documents]
+verify_jwt = false
