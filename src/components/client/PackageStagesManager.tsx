@@ -332,7 +332,9 @@ export function PackageStagesManager({ tenantId, packageId, packageName }: Packa
                 <StageDocumentsSection
                   stageInstanceId={stage.id}
                   tenantId={tenantId}
+                  packageId={packageId}
                   debug={profile?.unicorn_role === 'Super Admin' || profile?.global_role === 'SuperAdmin'}
+                  isVivacityStaff={profile?.unicorn_role === 'Super Admin' || profile?.unicorn_role === 'Team Leader' || profile?.unicorn_role === 'Team Member'}
                 />
                 <StageEmailsSection
                   stageInstanceId={stage.id}
