@@ -158,7 +158,6 @@ Deno.serve(async (req: Request) => {
     const eligible = instances.filter(inst => {
       const doc = docMap.get(inst.document_id);
       if (!doc) return false;
-      if (!doc.is_auto_generated) return false;
       const fmt = (doc.format || '').toLowerCase();
       if (!['xlsx', 'xls', 'xlsm', 'docx'].includes(fmt)) return false;
       if (mode === 'pending_only' && inst.isgenerated) return false;
