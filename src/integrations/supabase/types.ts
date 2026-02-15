@@ -33621,6 +33621,10 @@ export type Database = {
         }
         Returns: string[]
       }
+      change_meeting_facilitator: {
+        Args: { p_meeting_id: string; p_new_facilitator_id: string }
+        Returns: boolean
+      }
       check_ai_rate_limit: {
         Args: {
           p_max_per_hour?: number
