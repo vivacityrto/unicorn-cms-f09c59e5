@@ -1,94 +1,83 @@
 
 
-# Bulk Document Generation per Phase
+# Fix: Create Missing `change_meeting_facilitator` RPC Function
 
-## Summary
-Add a "Generate All Documents" action at the phase (stage) level, so consultants can trigger generation for all auto-generated documents in a phase at once, instead of generating them one-by-one per client.
+## Problem
+The "Start Meeting" flow calls `supabase.rpc('change_meeting_facilitator', ...)` but this function does not exist in the database. The migration file is present (`20260127000857`) but the function was never persisted.
 
-## Current State
-- `generate-excel-document` edge function processes one document at a time (single `document_id`)
-- `StageDocumentsSection` lists documents per phase but has no generation actions
-- `GeneratedDocumentsTab` has individual "Generate" buttons per document
-- No bulk/batch generation endpoint exists
+## Solution
+Create a new database migration that re-creates the `change_meeting_facilitator` PL/pgSQL function exactly as defined in the original migration.
 
-## Plan
+### SQL Migration
 
-### 1. New Edge Function: `bulk-generate-phase-documents`
+```sql
+CREATE OR REPLACE FUNCTION public.change_meeting_facilitator(
+  p_meeting_id UUID,
+  p_new_facilitator_id UUID
+)
+RETURNS BOOLEAN
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_meeting RECORD;
+  v_old_leader_id UUID;
+BEGIN
+  SELECT m.*, emp.role, emp.user_id INTO v_meeting
+  FROM eos_meetings m
+  LEFT JOIN eos_meeting_participants emp 
+    ON emp.meeting_id = m.id AND emp.user_id = auth.uid()
+  WHERE m.id = p_meeting_id;
 
-Create `supabase/functions/bulk-generate-phase-documents/index.ts`:
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'Meeting not found';
+  END IF;
 
-- Accepts: `tenant_id`, `stageinstance_id`, `package_id` (optional), `mode` (`all` or `pending_only`)
-- Fetches all `document_instances` for that `stageinstance_id` + `tenant_id`
-- Joins to `documents` table to get template metadata (format, `is_auto_generated`, merge fields, file paths)
-- Filters to only auto-generatable documents (Excel/DOCX with `is_auto_generated = true`)
-- For each eligible document, calls the existing `processExcelTemplate` logic inline (or invokes `generate-excel-document` per doc)
-- Returns a summary: `{ total, generated, skipped, failed, results[] }`
-- Logs a single `audit_events` entry for the bulk action
+  IF v_meeting.role IS DISTINCT FROM 'Leader' AND NOT is_super_admin() THEN
+    RAISE EXCEPTION 'Only current facilitator or admin can change facilitator';
+  END IF;
 
-### 2. Update `StageDocumentsSection` UI
+  SELECT user_id INTO v_old_leader_id
+  FROM eos_meeting_participants
+  WHERE meeting_id = p_meeting_id AND role = 'Leader';
 
-Add a "Generate All" button in the documents header bar (next to the count badge):
+  UPDATE eos_meeting_participants
+  SET role = 'Member'
+  WHERE meeting_id = p_meeting_id AND role = 'Leader';
 
-- Button text: "Generate All" with a Sparkles icon
-- Only visible for SuperAdmin / Vivacity staff roles
-- Shows a confirmation dialog: "Generate all eligible documents for this phase? X documents will be processed."
-- During generation: shows progress (e.g., "Generating 12/195...")
-- On completion: shows toast with summary and triggers refetch
-- Skips documents that are already generated (unless a "Regenerate" option is checked)
+  UPDATE eos_meeting_participants
+  SET role = 'Leader'
+  WHERE meeting_id = p_meeting_id AND user_id = p_new_facilitator_id;
 
-### 3. New Hook: `useBulkGeneration`
+  IF NOT FOUND THEN
+    INSERT INTO eos_meeting_participants (meeting_id, user_id, role, attended)
+    VALUES (p_meeting_id, p_new_facilitator_id, 'Leader', false);
+  END IF;
 
-Create `src/hooks/useBulkGeneration.ts`:
+  INSERT INTO audit_eos_events (
+    tenant_id, user_id, meeting_id, entity, action, details
+  ) VALUES (
+    v_meeting.tenant_id,
+    auth.uid(),
+    p_meeting_id,
+    'meeting',
+    'facilitator_changed',
+    jsonb_build_object(
+      'old_facilitator', v_old_leader_id,
+      'new_facilitator', p_new_facilitator_id
+    )
+  );
 
-- Wraps the call to `bulk-generate-phase-documents`
-- Manages loading/progress state
-- Returns `{ bulkGenerate, generating, progress }`
-
-### 4. Update `supabase/config.toml`
-
-Register the new `bulk-generate-phase-documents` function.
-
-## Technical Details
-
-### Edge Function Flow
-
+  RETURN true;
+END;
+$$;
 ```
-1. Validate auth + tenant access
-2. Query document_instances WHERE stageinstance_id = X AND tenant_id = Y
-3. Join documents table for template info
-4. Filter: is_auto_generated = true AND format IN ('xlsx','xls','docx')
-5. For each document:
-   a. Resolve merge data (tenant fields, client fields)
-   b. Download template from storage
-   c. Process template with merge data
-   d. Upload generated file
-   e. Update document_instance status to 'generated'
-   f. Record in generated_documents table
-6. Return summary
-```
 
-### UI Component Changes
-
-In `StageDocumentsSection.tsx`:
-- Add props: `packageId` (needed for generation context)
-- Add "Generate All" button in the header bar
-- Add confirmation dialog before triggering
-- Add progress indicator during bulk generation
-
-### Safety
-
-- Rate limited: one bulk generation per tenant per 5 minutes (checked server-side)
-- Max batch size: 500 documents per call
-- Existing generated documents are skipped by default
-- Full audit trail logged to `audit_events`
-
-## Files to Create/Edit
+### Files Changed
 
 | File | Action |
 |------|--------|
-| `supabase/functions/bulk-generate-phase-documents/index.ts` | Create |
-| `src/hooks/useBulkGeneration.ts` | Create |
-| `src/components/client/StageDocumentsSection.tsx` | Edit - add Generate All button |
-| `src/components/client/PackageStagesManager.tsx` | Edit - pass packageId to StageDocumentsSection |
-| `supabase/config.toml` | Edit - register new function |
+| New SQL migration | Create the `change_meeting_facilitator` function |
 
+No frontend changes needed -- the hook (`useFacilitatorChange.tsx`) and dialog (`FacilitatorSelectDialog.tsx`) are already wired correctly.
