@@ -23995,6 +23995,87 @@ export type Database = {
           },
         ]
       }
+      stage_health_rules: {
+        Row: {
+          comparison_operator: string
+          created_at: string
+          id: string
+          metric_key: string
+          rule_name: string
+          severity_impact: string
+          threshold_value: number
+        }
+        Insert: {
+          comparison_operator?: string
+          created_at?: string
+          id?: string
+          metric_key: string
+          rule_name: string
+          severity_impact?: string
+          threshold_value: number
+        }
+        Update: {
+          comparison_operator?: string
+          created_at?: string
+          id?: string
+          metric_key?: string
+          rule_name?: string
+          severity_impact?: string
+          threshold_value?: number
+        }
+        Relationships: []
+      }
+      stage_health_snapshots: {
+        Row: {
+          consult_hours_logged: number
+          days_since_last_activity: number
+          evidence_gap_mandatory_count: number
+          expected_consult_hours: number | null
+          generated_at: string
+          health_status: string
+          high_risk_count: number
+          id: string
+          progress_percentage: number
+          snapshot_date: string
+          stage_instance_id: number
+          tasks_open_count: number
+          tasks_overdue_count: number
+          tenant_id: number
+        }
+        Insert: {
+          consult_hours_logged?: number
+          days_since_last_activity?: number
+          evidence_gap_mandatory_count?: number
+          expected_consult_hours?: number | null
+          generated_at?: string
+          health_status?: string
+          high_risk_count?: number
+          id?: string
+          progress_percentage?: number
+          snapshot_date?: string
+          stage_instance_id: number
+          tasks_open_count?: number
+          tasks_overdue_count?: number
+          tenant_id: number
+        }
+        Update: {
+          consult_hours_logged?: number
+          days_since_last_activity?: number
+          evidence_gap_mandatory_count?: number
+          expected_consult_hours?: number | null
+          generated_at?: string
+          health_status?: string
+          high_risk_count?: number
+          id?: string
+          progress_percentage?: number
+          snapshot_date?: string
+          stage_instance_id?: number
+          tasks_open_count?: number
+          tasks_overdue_count?: number
+          tenant_id?: number
+        }
+        Relationships: []
+      }
       stage_instances: {
         Row: {
           comment: string | null
@@ -34506,6 +34587,18 @@ export type Database = {
           data_available: boolean | null
           has_active_critical: boolean | null
           risk_points: number | null
+          tenant_id: number | null
+        }
+        Relationships: []
+      }
+      v_stage_health_trends: {
+        Row: {
+          avg_days_stalled: number | null
+          avg_overdue_tasks: number | null
+          avg_progress: number | null
+          avg_risk_per_stage: number | null
+          health_status: string | null
+          status_count: number | null
           tenant_id: number | null
         }
         Relationships: []
