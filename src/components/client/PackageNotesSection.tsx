@@ -67,7 +67,6 @@ export function PackageNotesSection({ tenantId, packageInstanceId, packageId }: 
     parentType: 'package_instance',
     parentId: packageInstanceId,
     tenantId,
-    packageId
   });
 
   const [searchQuery, setSearchQuery] = useState('');
