@@ -34,12 +34,14 @@ import {
   Loader2,
   Mail,
   FolderOpen,
-  ShieldAlert
+  ShieldAlert,
+  Clock
 } from 'lucide-react';
 import { ClientProfileForm } from '@/components/client/ClientProfileForm';
 import { ClientAddressSection } from '@/components/client/ClientAddressSection';
 import { ClientPackagesTab } from '@/components/client/ClientPackagesTab';
 import { ClientIntegrationsTab } from '@/components/client/ClientIntegrationsTab';
+import { ClientTimeTab } from '@/components/client/ClientTimeTab';
 import { DocumentsHub } from '@/components/documents/DocumentsHub';
 import { TenantUsersTab } from '@/components/client/TenantUsersTab';
 import { TenantTimeTrackerBar } from '@/components/client/TenantTimeTrackerBar';
@@ -328,6 +330,13 @@ export default function ClientDetail() {
                 <Link2 className="h-4 w-4 mr-2" />
                 Integrations
               </TabsTrigger>
+              <TabsTrigger
+                value="time"
+                className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none bg-transparent px-1 pb-3"
+              >
+                <Clock className="h-4 w-4 mr-2" />
+                Time
+              </TabsTrigger>
             </TabsList>
           </Tabs>
         </div>
@@ -438,6 +447,10 @@ export default function ClientDetail() {
               canVerify={canVerifyTga}
               loading={profileLoading}
             />
+          </TabsContent>
+
+          <TabsContent value="time" className="mt-0">
+            <ClientTimeTab tenantId={tenantIdNum!} tenantName={tenant.name} />
           </TabsContent>
         </Tabs>
       </div>
