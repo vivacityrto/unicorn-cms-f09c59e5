@@ -21233,6 +21233,42 @@ export type Database = {
         }
         Relationships: []
       }
+      regulator_watchlist: {
+        Row: {
+          check_frequency: string
+          created_at: string
+          created_by: string
+          id: string
+          is_active: boolean
+          last_checked_at: string | null
+          last_content_hash: string | null
+          name: string
+          url: string
+        }
+        Insert: {
+          check_frequency?: string
+          created_at?: string
+          created_by: string
+          id?: string
+          is_active?: boolean
+          last_checked_at?: string | null
+          last_content_hash?: string | null
+          name: string
+          url: string
+        }
+        Update: {
+          check_frequency?: string
+          created_at?: string
+          created_by?: string
+          id?: string
+          is_active?: boolean
+          last_checked_at?: string | null
+          last_content_hash?: string | null
+          name?: string
+          url?: string
+        }
+        Relationships: []
+      }
       research_findings: {
         Row: {
           citations_json: Json | null

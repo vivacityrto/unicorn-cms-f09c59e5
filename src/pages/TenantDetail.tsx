@@ -17,6 +17,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import TenantProgressTable from "@/components/tenant/TenantProgressTable";
 import { CSCProfileCard } from "@/components/csc/CSCProfileCard";
 import { ViewAsClientButton } from "@/components/client/ViewAsClientButton";
+import { EnrichTenantButton } from "@/components/tenant/EnrichTenantButton";
 import type { TenantType } from "@/contexts/TenantTypeContext";
 interface ClientData {
   id: string;
@@ -524,6 +525,15 @@ export default function TenantDetail() {
                 </div>
               </div>
               <div className="flex items-center gap-2.5">
+                {/* Enrich Tenant — SuperAdmin only */}
+                {tenantId && (
+                  <EnrichTenantButton
+                    tenantId={parseInt(tenantId)}
+                    website={clientData.website}
+                    abn={clientData.abn}
+                    rtoCode={clientData.rtoid}
+                  />
+                )}
                 {/* View as Client Button - Only for Super Admin and Team Leader */}
                 {tenantId && (
                   <ViewAsClientButton

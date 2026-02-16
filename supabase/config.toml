@@ -181,3 +181,12 @@ verify_jwt = false
 
 [functions.research-answer]
 verify_jwt = false
+
+[functions.regulator-watch-check]
+verify_jwt = false
+
+[functions.research-enrich-tenant]
+verify_jwt = false
+
+[functions.research-public-snapshot]
+verify_jwt = false
