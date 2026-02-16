@@ -34489,11 +34489,28 @@ export type Database = {
         }
         Returns: Json
       }
+      move_time_entry_package: {
+        Args: {
+          p_new_package_id: number
+          p_reason: string
+          p_time_entry_id: string
+        }
+        Returns: Json
+      }
       normalise_abn: { Args: { p: string }; Returns: string }
       normalise_name: { Args: { p: string }; Returns: string }
       normalize_company_key: { Args: { txt: string }; Returns: string }
       persist_tga_scope_items: {
         Args: { p_scope_items: Json; p_scope_type: string; p_tenant_id: number }
+        Returns: Json
+      }
+      post_time_draft: {
+        Args: {
+          p_draft_id: string
+          p_note?: string
+          p_package_instance_id: number
+          p_stage_instance_id?: number
+        }
         Returns: Json
       }
       propose_chart_change: {
@@ -35002,6 +35019,10 @@ export type Database = {
         Returns: undefined
       }
       set_user_notification_prefs: { Args: { p_prefs: Json }; Returns: string }
+      split_time_entry: {
+        Args: { p_reason?: string; p_splits: Json; p_time_entry_id: string }
+        Returns: Json
+      }
       start_client_package: {
         Args: {
           p_assigned_csc_user_id?: string
