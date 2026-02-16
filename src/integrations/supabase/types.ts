@@ -2360,6 +2360,130 @@ export type Database = {
           },
         ]
       }
+      audit_intelligence_packs: {
+        Row: {
+          audit_type: string
+          created_at: string
+          cricos_flag: boolean
+          delivery_mode: string | null
+          focus_areas_json: Json | null
+          generated_at: string
+          generated_by_user_id: string
+          id: string
+          preparation_checklist_json: Json | null
+          research_job_id: string
+          reviewed_at: string | null
+          reviewed_by_user_id: string | null
+          risk_trends_json: Json | null
+          status: string
+          summary_markdown: string
+          tenant_id: number
+          updated_at: string
+        }
+        Insert: {
+          audit_type: string
+          created_at?: string
+          cricos_flag?: boolean
+          delivery_mode?: string | null
+          focus_areas_json?: Json | null
+          generated_at?: string
+          generated_by_user_id: string
+          id?: string
+          preparation_checklist_json?: Json | null
+          research_job_id: string
+          reviewed_at?: string | null
+          reviewed_by_user_id?: string | null
+          risk_trends_json?: Json | null
+          status?: string
+          summary_markdown?: string
+          tenant_id: number
+          updated_at?: string
+        }
+        Update: {
+          audit_type?: string
+          created_at?: string
+          cricos_flag?: boolean
+          delivery_mode?: string | null
+          focus_areas_json?: Json | null
+          generated_at?: string
+          generated_by_user_id?: string
+          id?: string
+          preparation_checklist_json?: Json | null
+          research_job_id?: string
+          reviewed_at?: string | null
+          reviewed_by_user_id?: string | null
+          risk_trends_json?: Json | null
+          status?: string
+          summary_markdown?: string
+          tenant_id?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "audit_intelligence_packs_research_job_id_fkey"
+            columns: ["research_job_id"]
+            isOneToOne: false
+            referencedRelation: "research_jobs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "audit_intelligence_packs_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "audit_intelligence_packs_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_engagement_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "audit_intelligence_packs_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_eos_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "audit_intelligence_packs_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_compliance_entitlements"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "audit_intelligence_packs_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "audit_intelligence_packs_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "audit_intelligence_packs_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_membership_usage"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "audit_intelligence_packs_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_membership_usage"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
       audit_invites: {
         Row: {
           actor_user_id: string | null
