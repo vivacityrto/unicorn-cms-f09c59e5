@@ -12,6 +12,7 @@ import { useMeetingOutcomes } from '@/hooks/useMeetingOutcomes';
 import { useMeetingAttendance } from '@/hooks/useMeetingAttendance';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -75,6 +76,31 @@ export const LiveMeetingView = () => {
   const { saveRating, getUserRating } = useMeetingOutcomes(meetingId);
   const { rocks } = useEosRocks();
   const { metrics } = useEosScorecardMetrics();
+
+  // Fetch owner names for rocks
+  const ownerIds = useMemo(() => {
+    const ids = new Set<string>();
+    rocks?.forEach(r => { if (r.owner_id) ids.add(r.owner_id); });
+    return Array.from(ids);
+  }, [rocks]);
+
+  const { data: rockOwners } = useQuery({
+    queryKey: ['rock-owners', ownerIds],
+    queryFn: async () => {
+      if (ownerIds.length === 0) return {};
+      const { data, error } = await supabase
+        .from('users')
+        .select('user_uuid, first_name, last_name')
+        .in('user_uuid', ownerIds);
+      if (error) throw error;
+      const map: Record<string, string> = {};
+      data?.forEach(u => {
+        map[u.user_uuid] = `${u.first_name || ''} ${u.last_name || ''}`.trim() || 'Unknown';
+      });
+      return map;
+    },
+    enabled: ownerIds.length > 0,
+  });
 
   // Fetch participants with explicit FK join
   const { data: participants } = useQuery({
@@ -340,6 +366,23 @@ export const LiveMeetingView = () => {
         );
 
       case 'rocks':
+        const now = new Date();
+        const currentQuarter = Math.ceil((now.getMonth() + 1) / 3);
+        const currentYear = now.getFullYear();
+        
+        // Filter to current quarter only, exclude completed, sort by owner name
+        const currentQuarterRocks = rocks
+          ?.filter(r => 
+            r.quarter_year === currentYear && 
+            r.quarter_number === currentQuarter && 
+            r.status !== 'complete'
+          )
+          .sort((a, b) => {
+            const nameA = rockOwners?.[a.owner_id || ''] || '';
+            const nameB = rockOwners?.[b.owner_id || ''] || '';
+            return nameA.localeCompare(nameB);
+          }) || [];
+
         return (
           <Card className="p-6">
             <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
@@ -350,7 +393,7 @@ export const LiveMeetingView = () => {
               Quick status update only - On Track or Off Track. No discussion.
             </p>
             <div className="space-y-3">
-              {rocks?.filter(r => r.status !== 'complete').map((rock) => (
+              {currentQuarterRocks.map((rock) => (
                 <Card key={rock.id} className="p-4 bg-muted/20">
                   <div className="space-y-3">
                     <div className="flex items-start justify-between gap-4">
@@ -358,6 +401,9 @@ export const LiveMeetingView = () => {
                         <div className="flex items-center gap-2 flex-wrap mb-1">
                           <p className="font-medium">{rock.title}</p>
                           <ClientBadge clientId={rock.client_id} />
+                          <Badge variant="outline" className="text-xs">
+                            Q{rock.quarter_number} {rock.quarter_year}
+                          </Badge>
                         </div>
                         {rock.description && (
                           <p className="text-sm text-muted-foreground line-clamp-2">{rock.description}</p>
@@ -365,17 +411,34 @@ export const LiveMeetingView = () => {
                       </div>
                     </div>
                     <div className="flex items-center justify-between gap-4">
-                      <p className="text-xs text-muted-foreground">
-                        Due: {rock.due_date ? new Date(rock.due_date).toLocaleDateString() : 'Not set'}
-                      </p>
+                      <div className="flex items-center gap-2">
+                        {rock.owner_id && rockOwners?.[rock.owner_id] && (
+                          <div className="flex items-center gap-1.5">
+                            <Avatar className="w-5 h-5">
+                              <AvatarFallback className="text-[10px] bg-primary/10 text-primary">
+                                {rockOwners[rock.owner_id]
+                                  .split(' ')
+                                  .map((n: string) => n[0])
+                                  .join('')
+                                  .toUpperCase()
+                                  .slice(0, 2)}
+                              </AvatarFallback>
+                            </Avatar>
+                            <span className="text-xs text-muted-foreground">{rockOwners[rock.owner_id]}</span>
+                          </div>
+                        )}
+                        <span className="text-xs text-muted-foreground">
+                          Due: {rock.due_date ? new Date(rock.due_date).toLocaleDateString() : 'Not set'}
+                        </span>
+                      </div>
                       <RockProgressControl rock={rock} compact />
                     </div>
                   </div>
                 </Card>
               ))}
-              {(!rocks || rocks.filter(r => r.status !== 'complete').length === 0) && (
+              {currentQuarterRocks.length === 0 && (
                 <p className="text-muted-foreground text-sm text-center py-4">
-                  No active rocks for this quarter
+                  No active rocks for Q{currentQuarter} {currentYear}
                 </p>
               )}
             </div>
