@@ -130,6 +130,8 @@ const EosHealthCheck = lazy(() => import("./pages/EosHealthCheck"));
 const QAResponsiveHarness = lazy(() => import("./pages/admin/QAResponsiveHarness"));
 const QASmokeTest = lazy(() => import("./pages/admin/QASmokeTest"));
 const AskVivFlags = lazy(() => import("./pages/internal/AskVivFlags"));
+const ResearchJobs = lazy(() => import("./pages/ResearchJobs"));
+const ResearchJobDetail = lazy(() => import("./pages/ResearchJobDetail"));
 
 // Academy pages (placeholder)
 const AcademyDashboard = lazy(() => import("./pages/academy/AcademyDashboard"));
@@ -937,6 +939,9 @@ const App = () => (
             <Route path="/admin/addin-diagnostics" element={<ProtectedRoute requireSuperAdmin><AddinDiagnostics /></ProtectedRoute>} />
             {/* Internal Ask Viv Flags - Vivacity Team only */}
             <Route path="/internal/ask-viv/flags" element={<ProtectedRoute requireSuperAdmin><AskVivFlags /></ProtectedRoute>} />
+            {/* Research Jobs */}
+            <Route path="/admin/research-jobs" element={<ProtectedRoute><ResearchJobs /></ProtectedRoute>} />
+            <Route path="/admin/research-jobs/:jobId" element={<ProtectedRoute><ResearchJobDetail /></ProtectedRoute>} />
             {/* Academy Routes */}
             <Route path="/academy" element={<ProtectedRoute><AcademyDashboard /></ProtectedRoute>} />
             <Route path="/academy/courses" element={<ProtectedRoute><AcademyCourses /></ProtectedRoute>} />

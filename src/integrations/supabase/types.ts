@@ -24353,6 +24353,176 @@ export type Database = {
         }
         Relationships: []
       }
+      tas_context_briefs: {
+        Row: {
+          audience_notes: string | null
+          brief_json: Json | null
+          brief_markdown: string
+          created_at: string
+          created_by_user_id: string
+          delivery_mode: string | null
+          generated_from_job_id: string | null
+          id: string
+          qualification_code: string | null
+          qualification_title: string | null
+          reviewed_at: string | null
+          reviewed_by_user_id: string | null
+          stage_instance_id: number
+          status: string
+          tenant_id: number
+          updated_at: string
+        }
+        Insert: {
+          audience_notes?: string | null
+          brief_json?: Json | null
+          brief_markdown?: string
+          created_at?: string
+          created_by_user_id: string
+          delivery_mode?: string | null
+          generated_from_job_id?: string | null
+          id?: string
+          qualification_code?: string | null
+          qualification_title?: string | null
+          reviewed_at?: string | null
+          reviewed_by_user_id?: string | null
+          stage_instance_id: number
+          status?: string
+          tenant_id: number
+          updated_at?: string
+        }
+        Update: {
+          audience_notes?: string | null
+          brief_json?: Json | null
+          brief_markdown?: string
+          created_at?: string
+          created_by_user_id?: string
+          delivery_mode?: string | null
+          generated_from_job_id?: string | null
+          id?: string
+          qualification_code?: string | null
+          qualification_title?: string | null
+          reviewed_at?: string | null
+          reviewed_by_user_id?: string | null
+          stage_instance_id?: number
+          status?: string
+          tenant_id?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tas_context_briefs_generated_from_job_id_fkey"
+            columns: ["generated_from_job_id"]
+            isOneToOne: false
+            referencedRelation: "research_jobs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tas_context_briefs_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tas_context_briefs_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_engagement_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "tas_context_briefs_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_eos_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "tas_context_briefs_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_compliance_entitlements"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "tas_context_briefs_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "tas_context_briefs_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "tas_context_briefs_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_membership_usage"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "tas_context_briefs_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_membership_usage"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
+      tas_context_sources: {
+        Row: {
+          created_at: string
+          id: string
+          job_id: string
+          source_id: string
+          source_role: string
+          tas_context_brief_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          job_id: string
+          source_id: string
+          source_role?: string
+          tas_context_brief_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          job_id?: string
+          source_id?: string
+          source_role?: string
+          tas_context_brief_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tas_context_sources_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "research_jobs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tas_context_sources_source_id_fkey"
+            columns: ["source_id"]
+            isOneToOne: false
+            referencedRelation: "research_sources"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tas_context_sources_tas_context_brief_id_fkey"
+            columns: ["tas_context_brief_id"]
+            isOneToOne: false
+            referencedRelation: "tas_context_briefs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tas_extracts: {
         Row: {
           ai_event_id: string | null
