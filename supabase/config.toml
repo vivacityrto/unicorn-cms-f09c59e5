@@ -199,3 +199,6 @@ verify_jwt = false
 
 [functions.research-evidence-gap-check]
 verify_jwt = false
+
+[functions.research-template-gap-analysis]
+verify_jwt = false
