@@ -190,3 +190,6 @@ verify_jwt = false
 
 [functions.research-public-snapshot]
 verify_jwt = false
+
+[functions.research-tas-context]
+verify_jwt = false
