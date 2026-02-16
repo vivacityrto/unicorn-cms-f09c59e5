@@ -69,7 +69,7 @@ export const LiveMeetingView = () => {
   });
 
   // Use custom hooks
-  const { segments, isLoading: segmentsLoading, advanceSegment, goToPreviousSegment } = useEosMeetingSegments(meetingId);
+  const { segments, isLoading: segmentsLoading, isFetching: segmentsFetching, advanceSegment, goToPreviousSegment } = useEosMeetingSegments(meetingId);
   const { headlines, createHeadline, deleteHeadline } = useEosHeadlines(meetingId);
   const { issues } = useMeetingIssues(meetingId, meeting?.tenant_id);
   const { todos, createTodo, updateTodo } = useMeetingTodos(meetingId);
@@ -272,23 +272,23 @@ export const LiveMeetingView = () => {
 
   // Throttled segment navigation handlers to prevent double-clicks
   const handleAdvanceSegment = async () => {
-    if (isNavigating) return;
+    if (isNavigating || segmentsFetching) return;
     setIsNavigating(true);
     try {
       await advanceSegment.mutateAsync();
     } finally {
-      // Keep disabled briefly to prevent double-clicks during re-render
-      setTimeout(() => setIsNavigating(false), 500);
+      // Keep disabled until the next refetch settles (1s safety window)
+      setTimeout(() => setIsNavigating(false), 1000);
     }
   };
 
   const handlePreviousSegment = async () => {
-    if (isNavigating) return;
+    if (isNavigating || segmentsFetching) return;
     setIsNavigating(true);
     try {
       await goToPreviousSegment.mutateAsync();
     } finally {
-      setTimeout(() => setIsNavigating(false), 500);
+      setTimeout(() => setIsNavigating(false), 1000);
     }
   };
 
@@ -734,7 +734,7 @@ export const LiveMeetingView = () => {
                 onClick={handlePreviousSegment} 
                 size="sm" 
                 variant="outline"
-                disabled={isNavigating || goToPreviousSegment.isPending}
+                disabled={isNavigating || goToPreviousSegment.isPending || segmentsFetching}
               >
                 <SkipBack className="h-4 w-4 mr-2" />
                 Previous
@@ -746,7 +746,7 @@ export const LiveMeetingView = () => {
                 onClick={handleAdvanceSegment} 
                 size="sm" 
                 variant="outline"
-                disabled={isNavigating || advanceSegment.isPending}
+                disabled={isNavigating || advanceSegment.isPending || segmentsFetching}
               >
                 <SkipForward className="h-4 w-4 mr-2" />
                 Next Segment
