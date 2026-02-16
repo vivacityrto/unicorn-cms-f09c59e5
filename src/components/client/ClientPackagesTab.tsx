@@ -20,7 +20,9 @@ import {
   Settings,
   Rocket,
   StickyNote,
-  Timer
+  Timer,
+  History,
+  Archive
 } from 'lucide-react';
 import { ClientPackage } from '@/hooks/useClientManagement';
 import { PackageStagesManager } from './PackageStagesManager';
@@ -44,14 +46,16 @@ const STATE_COLORS: Record<string, string> = {
   active: 'bg-green-500/10 text-green-600 border-green-500',
   at_risk: 'bg-amber-500/10 text-amber-600 border-amber-500',
   paused: 'bg-gray-500/10 text-gray-600 border-gray-500',
-  exiting: 'bg-red-500/10 text-red-600 border-red-500'
+  exiting: 'bg-red-500/10 text-red-600 border-red-500',
+  complete: 'bg-muted text-muted-foreground border-border'
 };
 
 const STATE_ICONS: Record<string, React.ReactNode> = {
   active: <PlayCircle className="h-3 w-3" />,
   at_risk: <AlertCircle className="h-3 w-3" />,
   paused: <PauseCircle className="h-3 w-3" />,
-  exiting: <AlertCircle className="h-3 w-3" />
+  exiting: <AlertCircle className="h-3 w-3" />,
+  complete: <CheckCircle2 className="h-3 w-3" />
 };
 
 export function ClientPackagesTab({ tenantId, tenantName, packages, loading, onAddPackage }: ClientPackagesTabProps) {
@@ -60,6 +64,11 @@ export function ClientPackagesTab({ tenantId, tenantName, packages, loading, onA
   const [expandedPackages, setExpandedPackages] = useState<Set<number>>(new Set());
   const [startPackageOpen, setStartPackageOpen] = useState(false);
   const [packageNoteCounts, setPackageNoteCounts] = useState<Record<string, number>>({});
+  const [viewMode, setViewMode] = useState<'active' | 'history'>('active');
+
+  const activePackages = packages.filter(p => !p.is_complete);
+  const historyPackages = packages.filter(p => p.is_complete);
+  const displayedPackages = viewMode === 'active' ? activePackages : historyPackages;
 
   // Fetch note counts for all package instances
   useEffect(() => {
@@ -133,20 +142,40 @@ export function ClientPackagesTab({ tenantId, tenantName, packages, loading, onA
 
   return (
     <div className="space-y-4">
-      {/* Header with buttons */}
-      <div className="flex justify-end gap-2">
-        {isSuperAdmin() && (
-          <Button onClick={() => setStartPackageOpen(true)}>
-            <Rocket className="h-4 w-4 mr-2" />
-            Start Package
+      {/* Header with view toggle and buttons */}
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <Button 
+            variant={viewMode === 'active' ? 'default' : 'outline'} 
+            size="sm"
+            onClick={() => setViewMode('active')}
+          >
+            <Package2 className="h-4 w-4 mr-1" />
+            Active ({activePackages.length})
           </Button>
-        )}
-        {onAddPackage && (
-          <Button variant="outline" onClick={onAddPackage}>
-            <Plus className="h-4 w-4 mr-2" />
-            Add Package
+          <Button 
+            variant={viewMode === 'history' ? 'default' : 'outline'} 
+            size="sm"
+            onClick={() => setViewMode('history')}
+          >
+            <Archive className="h-4 w-4 mr-1" />
+            History ({historyPackages.length})
           </Button>
-        )}
+        </div>
+        <div className="flex items-center gap-2">
+          {isSuperAdmin() && viewMode === 'active' && (
+            <Button onClick={() => setStartPackageOpen(true)}>
+              <Rocket className="h-4 w-4 mr-2" />
+              Start Package
+            </Button>
+          )}
+          {onAddPackage && viewMode === 'active' && (
+            <Button variant="outline" onClick={onAddPackage}>
+              <Plus className="h-4 w-4 mr-2" />
+              Add Package
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* Start Package Dialog */}
@@ -158,9 +187,19 @@ export function ClientPackagesTab({ tenantId, tenantName, packages, loading, onA
       />
 
       {/* Package Cards */}
-      {packages.map((pkg) => {
+      {displayedPackages.length === 0 && viewMode === 'history' && (
+        <Card>
+          <CardContent className="flex flex-col items-center justify-center py-12">
+            <Archive className="h-12 w-12 text-muted-foreground mb-4" />
+            <p className="text-lg font-medium mb-2">No package history</p>
+            <p className="text-sm text-muted-foreground">
+              Completed packages will appear here.
+            </p>
+          </CardContent>
+        </Card>
+      )}
+      {displayedPackages.map((pkg) => {
         const isExpanded = expandedPackages.has(pkg.package_id);
-        
         return (
           <Collapsible key={pkg.id} open={isExpanded} onOpenChange={() => togglePackage(pkg.package_id)}>
             <Card className="hover:shadow-md transition-shadow">
@@ -182,10 +221,10 @@ export function ClientPackagesTab({ tenantId, tenantName, packages, loading, onA
                       </div>
                       <Badge 
                         variant="outline"
-                        className={`${STATE_COLORS[pkg.membership_state] || ''}`}
+                        className={`${STATE_COLORS[pkg.is_complete ? 'complete' : pkg.membership_state] || ''}`}
                       >
-                        {STATE_ICONS[pkg.membership_state]}
-                        <span className="ml-1 capitalize">{pkg.membership_state}</span>
+                        {STATE_ICONS[pkg.is_complete ? 'complete' : pkg.membership_state]}
+                        <span className="ml-1 capitalize">{pkg.is_complete ? 'Complete' : pkg.membership_state}</span>
                       </Badge>
                     </div>
 
@@ -195,6 +234,12 @@ export function ClientPackagesTab({ tenantId, tenantName, packages, loading, onA
                         <Calendar className="h-4 w-4" />
                         <span>Started {new Date(pkg.membership_started_at).toLocaleDateString()}</span>
                       </div>
+                      {pkg.is_complete && pkg.completed_at && (
+                        <div className="flex items-center gap-1 text-muted-foreground">
+                          <CheckCircle2 className="h-4 w-4" />
+                          <span>Completed {new Date(pkg.completed_at).toLocaleDateString()}</span>
+                        </div>
+                      )}
                       <div className="flex items-center gap-1 text-muted-foreground">
                         <Clock className="h-4 w-4" />
                         <span>{pkg.hours_used.toFixed(2)}/{pkg.hours_included} hrs used</span>

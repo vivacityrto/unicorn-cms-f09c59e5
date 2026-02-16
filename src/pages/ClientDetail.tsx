@@ -261,7 +261,7 @@ export default function ClientDetail() {
                 className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none bg-transparent px-1 pb-3"
               >
                 <Package2 className="h-4 w-4 mr-2" />
-                Packages ({packages.length})
+                Packages ({packages.filter(p => !p.is_complete).length})
               </TabsTrigger>
               <TabsTrigger
                 value="documents"
