@@ -310,20 +310,20 @@ export const AttendancePanel = ({
 
             {/* Quick Actions - During live meeting */}
             {isLive && canEdit && (
-              <div className="flex gap-2">
+              <div className="flex flex-col gap-2">
                 <Button
                   size="sm"
                   variant="outline"
                   onClick={() => markAllPresent.mutate()}
                   disabled={markAllPresent.isPending}
-                  className="text-xs"
+                  className="text-xs w-full justify-start"
                 >
                   <UserCheck className="w-3 h-3 mr-1" />
                   Mark All Present
                 </Button>
                 <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
                   <DialogTrigger asChild>
-                    <Button size="sm" variant="outline" className="text-xs">
+                    <Button size="sm" variant="outline" className="text-xs w-full justify-start">
                       <UserPlus className="w-3 h-3 mr-1" />
                       Add Guest
                     </Button>
