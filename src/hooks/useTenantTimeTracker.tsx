@@ -7,6 +7,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useQueryClient } from '@tanstack/react-query';
 import { packageUsageKeys } from '@/hooks/usePackageUsageQuery';
+import { useSearchParams } from 'react-router-dom';
 
 const STORAGE_KEY_PREFIX = 'tenant:';
 const STORAGE_KEY_SUFFIX = ':active_package';
@@ -37,24 +38,43 @@ export function useTenantTimeTracker(tenantId: number) {
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [searchParams, setSearchParams] = useSearchParams();
 
   // Packages
   const { data: packages = [], isLoading: packagesLoading } = useClientPackagesQuery(tenantId);
 
-  // Package selection with localStorage persistence
-  const [selectedPackageId, setSelectedPackageIdRaw] = useState<number | null>(() =>
-    getStoredPackageId(tenantId)
-  );
+  // "all" = show all packages aggregated; number = specific package
+  const [selectedPackageId, setSelectedPackageIdRaw] = useState<number | 'all' | null>(() => {
+    const urlPkg = searchParams.get('package');
+    if (urlPkg === 'all') return 'all';
+    if (urlPkg) return Number(urlPkg);
+    return getStoredPackageId(tenantId);
+  });
 
-  const setSelectedPackageId = useCallback((id: number | null) => {
+  const setSelectedPackageId = useCallback((id: number | 'all' | null) => {
     setSelectedPackageIdRaw(id);
-    setStoredPackageId(tenantId, id);
-  }, [tenantId]);
+    // Sync to URL
+    setSearchParams(prev => {
+      const next = new URLSearchParams(prev);
+      if (id === 'all') {
+        next.set('package', 'all');
+      } else if (id) {
+        next.set('package', String(id));
+      } else {
+        next.delete('package');
+      }
+      return next;
+    }, { replace: true });
+    // Persist to localStorage (only numeric IDs)
+    setStoredPackageId(tenantId, typeof id === 'number' ? id : null);
+  }, [tenantId, setSearchParams]);
 
-  // Auto-select: stored → most recent → first
+  // Auto-select: URL → stored → first package
   useEffect(() => {
     if (packages.length === 0) return;
-    const stored = getStoredPackageId(tenantId);
+    // If already set to 'all', keep it
+    if (selectedPackageId === 'all') return;
+    const stored = typeof selectedPackageId === 'number' ? selectedPackageId : getStoredPackageId(tenantId);
     const valid = packages.find(p => p.id === stored);
     if (valid) {
       setSelectedPackageIdRaw(stored);
@@ -62,18 +82,19 @@ export function useTenantTimeTracker(tenantId: number) {
       // Default to first (already sorted by start_date desc)
       setSelectedPackageId(packages[0].id);
     }
-  }, [packages, tenantId, setSelectedPackageId]);
+  }, [packages, tenantId, setSelectedPackageId, selectedPackageId]);
 
-  const effectivePackageId = selectedPackageId;
-  const selectedPackage = packages.find(p => p.id === effectivePackageId) || null;
+  const isAllPackages = selectedPackageId === 'all';
+  const effectivePackageId = isAllPackages ? null : selectedPackageId;
+  const selectedPackage = effectivePackageId ? packages.find(p => p.id === effectivePackageId) || null : null;
   const hasMultiplePackages = packages.length > 1;
-  const needsPackageSelection = hasMultiplePackages && !effectivePackageId;
+  const needsPackageSelection = hasMultiplePackages && !selectedPackageId;
 
-  // Usage for selected package
+  // Usage for selected package (null when "all")
   const { data: usage = null, isLoading: usageLoading } = usePackageUsageDataQuery(tenantId, effectivePackageId);
 
-  // Time summary (tenant-wide)
-  const { data: summary, isLoading: summaryLoading } = useTimeSummaryQuery(tenantId);
+  // Time summary — filtered by package or tenant-wide
+  const { data: summary, isLoading: summaryLoading } = useTimeSummaryQuery(tenantId, effectivePackageId);
 
   // Active timer
   const { data: activeTimer = null, isLoading: timerLoading } = useActiveTimerQuery();
@@ -93,8 +114,8 @@ export function useTenantTimeTracker(tenantId: number) {
 
   // Timer actions
   const startTimer = async (workType: string = 'general') => {
-    if (needsPackageSelection) {
-      toast({ title: 'Select a package', description: 'Choose a package before tracking time.', variant: 'destructive' });
+    if (needsPackageSelection || isAllPackages) {
+      toast({ title: 'Select a package', description: 'Choose a specific package before tracking time.', variant: 'destructive' });
       return { success: false, error: 'no_package' };
     }
 
@@ -152,11 +173,12 @@ export function useTenantTimeTracker(tenantId: number) {
   return {
     // Packages
     packages,
-    selectedPackageId: effectivePackageId,
+    selectedPackageId: selectedPackageId,
     setSelectedPackageId,
     selectedPackage,
     hasMultiplePackages,
     needsPackageSelection,
+    isAllPackages,
 
     // Usage
     usage,

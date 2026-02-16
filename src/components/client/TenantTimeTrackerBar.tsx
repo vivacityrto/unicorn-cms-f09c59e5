@@ -56,6 +56,7 @@ export function TenantTimeTrackerBar({ tenantId, tenantName }: TenantTimeTracker
     selectedPackage,
     hasMultiplePackages,
     needsPackageSelection,
+    isAllPackages,
     usage,
     summary,
     activeTimer,
@@ -115,12 +116,13 @@ export function TenantTimeTrackerBar({ tenantId, tenantName }: TenantTimeTracker
               {hasMultiplePackages ? (
                 <Select
                   value={selectedPackageId?.toString() || ''}
-                  onValueChange={(v) => setSelectedPackageId(v ? Number(v) : null)}
+                  onValueChange={(v) => setSelectedPackageId(v === 'all' ? 'all' : v ? Number(v) : null)}
                 >
-                  <SelectTrigger className="w-[160px] h-8 text-xs">
+                  <SelectTrigger className="w-[180px] h-8 text-xs">
                     <SelectValue placeholder="Select package" />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="bg-popover z-50">
+                    <SelectItem value="all">All packages</SelectItem>
                     {packages.map(pkg => (
                       <SelectItem key={pkg.id} value={pkg.id.toString()}>
                         {pkg.package_name}
@@ -180,10 +182,10 @@ export function TenantTimeTrackerBar({ tenantId, tenantName }: TenantTimeTracker
           <div className="flex-1" />
 
           {/* No package warning */}
-          {needsPackageSelection && (
+          {(needsPackageSelection || isAllPackages) && (
             <span className="text-xs text-muted-foreground flex items-center gap-1">
               <Info className="h-3 w-3" />
-              Select a package to track time.
+              {isAllPackages ? 'Select a specific package to track time.' : 'Select a package to track time.'}
             </span>
           )}
 
@@ -203,7 +205,7 @@ export function TenantTimeTrackerBar({ tenantId, tenantName }: TenantTimeTracker
               variant="default"
               size="sm"
               onClick={() => startTimer()}
-              disabled={hasActiveTimer || needsPackageSelection}
+              disabled={hasActiveTimer || needsPackageSelection || isAllPackages}
               className="gap-1.5 h-8"
             >
               <Play className="h-3.5 w-3.5 fill-current" />
