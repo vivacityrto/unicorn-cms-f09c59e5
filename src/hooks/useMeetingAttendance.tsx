@@ -60,7 +60,11 @@ export const useMeetingAttendance = (meetingId: string | undefined) => {
         `)
         .eq('meeting_id', meetingId!);
       
-      if (error) throw error;
+      if (error) {
+        console.error('[AttendanceQuery] Error fetching attendees:', error.message, error.details, error.hint);
+        throw error;
+      }
+      console.log('[AttendanceQuery] Fetched attendees:', data?.length, 'for meeting', meetingId);
       return (data || []) as unknown as MeetingAttendee[];
     },
     enabled: !!meetingId,
@@ -155,6 +159,7 @@ export const useMeetingAttendance = (meetingId: string | undefined) => {
   // Add guest attendee (during live meeting)
   const addGuest = useMutation({
     mutationFn: async ({ userId, notes }: { userId: string; notes?: string }) => {
+      console.log('[AddGuest] Calling add_meeting_guest RPC:', { meetingId, userId, notes });
       const { data, error } = await supabase
         .rpc('add_meeting_guest', {
           p_meeting_id: meetingId!,
@@ -162,7 +167,11 @@ export const useMeetingAttendance = (meetingId: string | undefined) => {
           p_notes: notes || null,
         });
       
-      if (error) throw error;
+      if (error) {
+        console.error('[AddGuest] RPC error:', error.message, error.details, error.hint);
+        throw error;
+      }
+      console.log('[AddGuest] RPC result:', data);
       return data;
     },
     onSuccess: () => {
