@@ -232,3 +232,6 @@ verify_jwt = false
 
 [functions.client-ai-companion]
 verify_jwt = false
+
+[functions.strategic-orchestration]
+verify_jwt = false

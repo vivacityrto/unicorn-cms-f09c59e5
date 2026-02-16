@@ -25185,6 +25185,89 @@ export type Database = {
         }
         Relationships: []
       }
+      strategic_decision_log: {
+        Row: {
+          action_taken: string
+          created_at: string
+          decision_summary: string
+          id: string
+          outcome_review_date: string | null
+          priority_id: string
+          recorded_by_user_id: string
+        }
+        Insert: {
+          action_taken?: string
+          created_at?: string
+          decision_summary: string
+          id?: string
+          outcome_review_date?: string | null
+          priority_id: string
+          recorded_by_user_id: string
+        }
+        Update: {
+          action_taken?: string
+          created_at?: string
+          decision_summary?: string
+          id?: string
+          outcome_review_date?: string | null
+          priority_id?: string
+          recorded_by_user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "strategic_decision_log_priority_id_fkey"
+            columns: ["priority_id"]
+            isOneToOne: false
+            referencedRelation: "strategic_priorities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      strategic_priorities: {
+        Row: {
+          affected_entities_json: Json
+          created_at: string
+          dedupe_hash: string | null
+          id: string
+          impact_scope: string
+          priority_summary: string
+          priority_type: string
+          recommended_actions_json: Json
+          resolved_at: string | null
+          resolved_by_user_id: string | null
+          resolved_flag: boolean
+          severity_level: string
+        }
+        Insert: {
+          affected_entities_json?: Json
+          created_at?: string
+          dedupe_hash?: string | null
+          id?: string
+          impact_scope?: string
+          priority_summary?: string
+          priority_type: string
+          recommended_actions_json?: Json
+          resolved_at?: string | null
+          resolved_by_user_id?: string | null
+          resolved_flag?: boolean
+          severity_level?: string
+        }
+        Update: {
+          affected_entities_json?: Json
+          created_at?: string
+          dedupe_hash?: string | null
+          id?: string
+          impact_scope?: string
+          priority_summary?: string
+          priority_type?: string
+          recommended_actions_json?: Json
+          resolved_at?: string | null
+          resolved_by_user_id?: string | null
+          resolved_flag?: boolean
+          severity_level?: string
+        }
+        Relationships: []
+      }
       strategic_signal_summary: {
         Row: {
           affected_entities_json: Json | null
@@ -35936,6 +36019,20 @@ export type Database = {
         }
         Relationships: []
       }
+      v_strategic_orchestration_summary: {
+        Row: {
+          active_count: number | null
+          avg_hours_to_resolve: number | null
+          impact_scope: string | null
+          last_30d_count: number | null
+          last_30d_resolved: number | null
+          priority_type: string | null
+          resolved_count: number | null
+          severity_level: string | null
+          total_count: number | null
+        }
+        Relationships: []
+      }
       v_strategic_portfolio_risk: {
         Row: {
           avg_index: number | null
@@ -36664,6 +36761,15 @@ export type Database = {
           p_alert_id: string
           p_metadata?: Json
           p_tenant_id: number
+        }
+        Returns: undefined
+      }
+      fn_audit_strategic_orchestration: {
+        Args: {
+          p_action: string
+          p_actor_user_id: string
+          p_metadata?: Json
+          p_priority_id: string
         }
         Returns: undefined
       }

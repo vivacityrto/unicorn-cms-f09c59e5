@@ -40,6 +40,7 @@ import { CommercialRiskWidget } from '@/components/executive/CommercialRiskWidge
 import { WorkflowEfficiencyWidget } from '@/components/executive/WorkflowEfficiencyWidget';
 import { RiskCommandWidget } from '@/components/executive/RiskCommandWidget';
 import { PlaybookActivationWidget } from '@/components/executive/PlaybookActivationWidget';
+import { StrategicOrchestrationWidget } from '@/components/executive/StrategicOrchestrationWidget';
 import { CopilotPanel } from '@/components/copilot/CopilotPanel';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
@@ -264,6 +265,7 @@ export default function ExecutiveDashboard() {
           <WorkflowEfficiencyWidget />
           <RiskCommandWidget />
           <PlaybookActivationWidget />
+          <StrategicOrchestrationWidget />
         </div>
 
         {/* Team Capacity Overview */}
