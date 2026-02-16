@@ -22,6 +22,11 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
+import {
   Clock,
   Play,
   Square,
@@ -31,7 +36,6 @@ import {
   AlertTriangle,
   Calendar,
   BarChart3,
-  Info,
 } from 'lucide-react';
 import { useTenantTimeTracker } from '@/hooks/useTenantTimeTracker';
 import { formatHours } from '@/hooks/usePackageUsageQuery';
@@ -75,6 +79,7 @@ export function TenantTimeTrackerBar({ tenantId, tenantName }: TenantTimeTracker
   const [logOpen, setLogOpen] = useState(false);
   const [meetingTimeOpen, setMeetingTimeOpen] = useState(false);
   const [breakdownOpen, setBreakdownOpen] = useState(false);
+  const [timerPickerOpen, setTimerPickerOpen] = useState(false);
 
   // Membership usage metrics
   const totalUsed = membershipUsage?.total_used_minutes ?? 0;
@@ -182,7 +187,7 @@ export function TenantTimeTrackerBar({ tenantId, tenantName }: TenantTimeTracker
           {/* Spacer */}
           <div className="flex-1" />
 
-          {/* Timer button — no package required, just scope */}
+          {/* Timer button — package picker when multiple */}
           {isTimerForThisTenant ? (
             <Button
               variant="destructive"
@@ -193,6 +198,36 @@ export function TenantTimeTrackerBar({ tenantId, tenantName }: TenantTimeTracker
               <Square className="h-3.5 w-3.5 fill-current" />
               <span className="font-mono text-sm">{elapsed}</span>
             </Button>
+          ) : hasMultiplePackages ? (
+            <Popover open={timerPickerOpen} onOpenChange={setTimerPickerOpen}>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="default"
+                  size="sm"
+                  disabled={hasActiveTimer}
+                  className="gap-1.5 h-8"
+                >
+                  <Play className="h-3.5 w-3.5 fill-current" />
+                  Start
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent align="end" className="w-56 p-1">
+                <p className="px-2 py-1.5 text-xs font-medium text-muted-foreground">Select package</p>
+                {packages.map(pkg => (
+                  <button
+                    key={pkg.id}
+                    className="w-full text-left px-2 py-1.5 text-sm rounded-sm hover:bg-accent transition-colors"
+                    onClick={async () => {
+                      setTimerPickerOpen(false);
+                      setSelectedPackageId(pkg.id);
+                      await startTimer('general', pkg.id);
+                    }}
+                  >
+                    {pkg.package_name}
+                  </button>
+                ))}
+              </PopoverContent>
+            </Popover>
           ) : (
             <Button
               variant="default"
