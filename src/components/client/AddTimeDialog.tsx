@@ -87,7 +87,8 @@ export function AddTimeDialog({
         .eq('tenant_id', tenantId)
         .eq('is_complete', false)
         .order('start_date', { ascending: false })
-        .then(({ data }) => {
+        .then(({ data, error }) => {
+          console.log('[AddTimeDialog] package_instances query', { tenantId, data, error });
           const instances: PackageInstance[] = (data || []).map((pi: any) => ({
             id: pi.id,
             package_name: pi.packages?.name || `Package #${pi.id}`,
