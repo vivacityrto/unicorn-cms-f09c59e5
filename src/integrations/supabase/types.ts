@@ -7324,7 +7324,7 @@ export type Database = {
           completion_date?: string | null
           created_at?: string | null
           due_date?: string | null
-          id: number
+          id?: number
           stageinstance_id: number
           status?: number
           u1_id?: number | null
@@ -9650,6 +9650,7 @@ export type Database = {
           coments: string | null
           created_at: string
           document_id: number | null
+          generated_by: string | null
           generationdate: string | null
           id: number
           isgenerated: boolean | null
@@ -9662,8 +9663,9 @@ export type Database = {
           coments?: string | null
           created_at?: string
           document_id?: number | null
+          generated_by?: string | null
           generationdate?: string | null
-          id: number
+          id?: number
           isgenerated?: boolean | null
           stageinstance_id?: number | null
           status?: string | null
@@ -9674,6 +9676,7 @@ export type Database = {
           coments?: string | null
           created_at?: string
           document_id?: number | null
+          generated_by?: string | null
           generationdate?: string | null
           id?: number
           isgenerated?: boolean | null
@@ -33892,6 +33895,18 @@ export type Database = {
       close_meeting_with_validation: {
         Args: { p_meeting_id: string }
         Returns: Json
+      }
+      compare_unicorn_import_prefix: {
+        Args: { prefix?: string }
+        Returns: {
+          notes: string
+          source_max_id: number
+          source_rows: number
+          source_table: string
+          target_max_id: number
+          target_rows: number
+          target_table: string
+        }[]
       }
       complete_meeting_instance: {
         Args: { p_meeting_id: string }
