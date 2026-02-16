@@ -31948,6 +31948,135 @@ export type Database = {
           },
         ]
       }
+      workflow_optimisation_signals: {
+        Row: {
+          consultant_user_id: string | null
+          created_at: string
+          id: string
+          resolved_at: string | null
+          resolved_flag: boolean
+          signal_severity: string
+          signal_summary: string
+          signal_type: string
+          stage_instance_id: number | null
+          suggested_action_json: Json | null
+          tenant_id: number | null
+        }
+        Insert: {
+          consultant_user_id?: string | null
+          created_at?: string
+          id?: string
+          resolved_at?: string | null
+          resolved_flag?: boolean
+          signal_severity?: string
+          signal_summary: string
+          signal_type: string
+          stage_instance_id?: number | null
+          suggested_action_json?: Json | null
+          tenant_id?: number | null
+        }
+        Update: {
+          consultant_user_id?: string | null
+          created_at?: string
+          id?: string
+          resolved_at?: string | null
+          resolved_flag?: boolean
+          signal_severity?: string
+          signal_summary?: string
+          signal_type?: string
+          stage_instance_id?: number | null
+          suggested_action_json?: Json | null
+          tenant_id?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workflow_optimisation_signals_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workflow_optimisation_signals_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_engagement_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "workflow_optimisation_signals_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_eos_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "workflow_optimisation_signals_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_compliance_entitlements"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "workflow_optimisation_signals_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "workflow_optimisation_signals_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "workflow_optimisation_signals_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_membership_usage"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "workflow_optimisation_signals_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_membership_usage"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
+      workflow_performance_metrics: {
+        Row: {
+          average_completion_days: number | null
+          average_consult_hours: number | null
+          average_rework_rate: number | null
+          average_tasks_per_stage: number | null
+          id: string
+          stage_type: string
+          updated_at: string
+        }
+        Insert: {
+          average_completion_days?: number | null
+          average_consult_hours?: number | null
+          average_rework_rate?: number | null
+          average_tasks_per_stage?: number | null
+          id?: string
+          stage_type: string
+          updated_at?: string
+        }
+        Update: {
+          average_completion_days?: number | null
+          average_consult_hours?: number | null
+          average_rework_rate?: number | null
+          average_tasks_per_stage?: number | null
+          id?: string
+          stage_type?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       workload_snapshots: {
         Row: {
           active_stages_count: number
@@ -35427,6 +35556,17 @@ export type Database = {
           count_stale_over_2_days: number | null
           tenant_id: number | null
           user_id: string | null
+        }
+        Relationships: []
+      }
+      v_workflow_efficiency_trends: {
+        Row: {
+          signal_count: number | null
+          signal_date: string | null
+          signal_severity: string | null
+          signal_type: string | null
+          unresolved_14d: number | null
+          unresolved_count: number | null
         }
         Relationships: []
       }
