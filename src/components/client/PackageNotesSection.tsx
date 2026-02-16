@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { format } from 'date-fns';
+import { useNavigate } from 'react-router-dom';
 import { useNotes, Note, CreateNoteInput, filterNotes } from '@/hooks/useNotes';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -63,6 +64,7 @@ const PRIORITY_OPTIONS = [
 ];
 
 export function PackageNotesSection({ tenantId, packageInstanceId, packageId }: PackageNotesSectionProps) {
+  const navigate = useNavigate();
   const { notes, loading, createNote, updateNote, deleteNote, togglePin } = useNotes({
     parentType: 'package_instance',
     parentId: packageInstanceId,
@@ -213,6 +215,23 @@ export function PackageNotesSection({ tenantId, packageInstanceId, packageId }: 
                           )}
                           {note.is_pinned && (
                             <Pin className="h-3 w-3 text-primary" />
+                          )}
+                          {note.note_type && (
+                            <Badge variant="outline" className="text-xs capitalize">
+                              {note.note_type}
+                            </Badge>
+                          )}
+                          {note.parent_type === 'package_instance' && (
+                            <Badge
+                              variant="outline"
+                              className="text-xs cursor-pointer bg-primary/10 text-primary border-primary/40 hover:bg-primary/20"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                navigate(`/admin/client-packages/${note.parent_id}`);
+                              }}
+                            >
+                              Package
+                            </Badge>
                           )}
                           {priorityOption && priorityOption.value !== 'normal' && (
                             <Badge variant="outline" className={cn("text-xs", priorityOption.color)}>
