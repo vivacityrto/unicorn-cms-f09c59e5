@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { format } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTimeTracking, formatDuration, TimeEntry } from '@/hooks/useTimeTracking';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
@@ -26,6 +26,8 @@ import {
   Scissors,
   Plus,
   AlertTriangle,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -33,6 +35,8 @@ interface ClientTimeTabProps {
   tenantId: number;
   tenantName: string;
 }
+
+const PAGE_SIZE = 20;
 
 // ── Burndown Summary per package ────────────────────────────────────
 function PackageBurndownCards({ tenantId }: { tenantId: number }) {
@@ -45,7 +49,6 @@ function PackageBurndownCards({ tenantId }: { tenantId: number }) {
         .eq('tenant_id', tenantId);
       if (error) throw error;
 
-      // Fetch package names
       const instanceIds = (data || []).map(r => r.package_instance_id).filter(Boolean) as number[];
       if (instanceIds.length === 0) return [];
 
@@ -110,11 +113,7 @@ function PackageBurndownCards({ tenantId }: { tenantId: number }) {
               />
               <div className="flex justify-between text-xs text-muted-foreground">
                 <span>{Math.round(pct)}% used</span>
-                <span
-                  className={cn(
-                    isOver ? 'text-destructive font-medium' : 'text-emerald-600'
-                  )}
-                >
+                <span className={cn(isOver ? 'text-destructive font-medium' : 'text-primary')}>
                   {isOver
                     ? `${formatDuration(Math.abs(row.remaining_minutes ?? 0))} over`
                     : `${formatDuration(row.remaining_minutes ?? 0)} remaining`}
@@ -211,7 +210,7 @@ function StaleDraftsWarning({ tenantId }: { tenantId: number }) {
   if (totalStale === 0) return null;
 
   return (
-    <div className="flex items-center gap-2 p-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg text-sm text-amber-700 dark:text-amber-400">
+    <div className="flex items-center gap-2 p-3 bg-accent/50 border border-border rounded-lg text-sm text-accent-foreground">
       <AlertTriangle className="h-4 w-4 shrink-0" />
       <span>{totalStale} draft time {totalStale === 1 ? 'entry' : 'entries'} older than 2 days need attention.</span>
     </div>
@@ -447,7 +446,7 @@ function SplitEntryDialog({
                 'text-sm font-medium',
                 entry && totalMinutes !== entry.duration_minutes
                   ? 'text-destructive'
-                  : 'text-emerald-600'
+                  : 'text-primary'
               )}
             >
               Total: {totalMinutes} / {entry?.duration_minutes ?? 0} min
@@ -475,11 +474,59 @@ function SplitEntryDialog({
   );
 }
 
+// ── Pagination Controls ─────────────────────────────────────────────
+function PaginationBar({
+  page,
+  totalPages,
+  totalItems,
+  onPageChange,
+}: {
+  page: number;
+  totalPages: number;
+  totalItems: number;
+  onPageChange: (p: number) => void;
+}) {
+  if (totalPages <= 1) return null;
+
+  return (
+    <div className="flex items-center justify-between px-4 py-3 border-t">
+      <p className="text-sm text-muted-foreground">
+        {totalItems} {totalItems === 1 ? 'entry' : 'entries'}
+      </p>
+      <div className="flex items-center gap-2">
+        <Button
+          variant="outline"
+          size="sm"
+          className="h-8"
+          disabled={page <= 1}
+          onClick={() => onPageChange(page - 1)}
+        >
+          <ChevronLeft className="h-4 w-4" />
+        </Button>
+        <span className="text-sm text-muted-foreground">
+          {page} of {totalPages}
+        </span>
+        <Button
+          variant="outline"
+          size="sm"
+          className="h-8"
+          disabled={page >= totalPages}
+          onClick={() => onPageChange(page + 1)}
+        >
+          <ChevronRight className="h-4 w-4" />
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 // ── Main Tab Component ──────────────────────────────────────────────
 export function ClientTimeTab({ tenantId, tenantName }: ClientTimeTabProps) {
   const { entries, loading } = useTimeTracking(tenantId);
+  const queryClient = useQueryClient();
   const [packageFilter, setPackageFilter] = useState('all');
   const [workTypeFilter, setWorkTypeFilter] = useState('all');
+  const [page, setPage] = useState(1);
   const [moveEntry, setMoveEntry] = useState<TimeEntry | null>(null);
   const [splitEntry, setSplitEntry] = useState<TimeEntry | null>(null);
 
@@ -516,9 +563,21 @@ export function ClientTimeTab({ tenantId, tenantName }: ClientTimeTabProps) {
     });
   }, [entries, packageFilter, workTypeFilter]);
 
+  // Pagination
+  const totalPages = Math.max(1, Math.ceil(filteredEntries.length / PAGE_SIZE));
+  const paginatedEntries = useMemo(() => {
+    const start = (page - 1) * PAGE_SIZE;
+    return filteredEntries.slice(start, start + PAGE_SIZE);
+  }, [filteredEntries, page]);
+
+  // Reset page when filters change
+  const handlePackageFilter = (v: string) => { setPackageFilter(v); setPage(1); };
+  const handleWorkTypeFilter = (v: string) => { setWorkTypeFilter(v); setPage(1); };
+
   const handleRefresh = () => {
-    // Entries come from useTimeTracking which auto-refetches
-    window.location.reload();
+    queryClient.invalidateQueries({ queryKey: ['package-burndown', tenantId] });
+    queryClient.invalidateQueries({ queryKey: ['package-time-summary', tenantId] });
+    queryClient.invalidateQueries({ queryKey: ['stale-drafts', tenantId] });
   };
 
   if (loading) {
@@ -558,7 +617,7 @@ export function ClientTimeTab({ tenantId, tenantName }: ClientTimeTabProps) {
             <CardTitle className="text-base">Time Entries</CardTitle>
             <div className="flex items-center gap-2">
               {hasMultiplePackages && (
-                <Select value={packageFilter} onValueChange={setPackageFilter}>
+                <Select value={packageFilter} onValueChange={handlePackageFilter}>
                   <SelectTrigger className="w-[180px]">
                     <SelectValue placeholder="All Packages" />
                   </SelectTrigger>
@@ -572,7 +631,7 @@ export function ClientTimeTab({ tenantId, tenantName }: ClientTimeTabProps) {
                   </SelectContent>
                 </Select>
               )}
-              <Select value={workTypeFilter} onValueChange={setWorkTypeFilter}>
+              <Select value={workTypeFilter} onValueChange={handleWorkTypeFilter}>
                 <SelectTrigger className="w-[150px]">
                   <SelectValue placeholder="Work type" />
                 </SelectTrigger>
@@ -595,84 +654,91 @@ export function ClientTimeTab({ tenantId, tenantName }: ClientTimeTabProps) {
               <p>No time entries found</p>
             </div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Date</TableHead>
-                  <TableHead>Duration</TableHead>
-                  <TableHead>Type</TableHead>
-                  <TableHead>Source</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Notes</TableHead>
-                  {hasMultiplePackages && <TableHead className="text-right">Actions</TableHead>}
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredEntries.map(entry => (
-                  <TableRow key={entry.id}>
-                    <TableCell className="whitespace-nowrap">
-                      {entry.start_at
-                        ? format(new Date(entry.start_at), 'd MMM yyyy')
-                        : 'N/A'}
-                    </TableCell>
-                    <TableCell className="font-medium">
-                      {formatDuration(entry.duration_minutes)}
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="secondary" className="capitalize">
-                        {entry.work_type.replace('_', ' ')}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="outline" className="text-xs">
-                        {entry.source === 'timer' ? (
-                          <><Timer className="h-3 w-3 mr-1" /> Timer</>
-                        ) : (
-                          <><FileText className="h-3 w-3 mr-1" /> Manual</>
-                        )}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-1">
-                        {entry.is_billable && (
-                          <DollarSign className="h-3.5 w-3.5 text-emerald-600" />
-                        )}
-                        <Badge variant="outline" className="text-xs capitalize">
-                          {entry.source}
-                        </Badge>
-                      </div>
-                    </TableCell>
-                    <TableCell className="max-w-[200px] truncate text-sm text-muted-foreground">
-                      {entry.notes || '—'}
-                    </TableCell>
-                    {hasMultiplePackages && (
-                      <TableCell className="text-right">
-                        <div className="flex items-center justify-end gap-1">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-7 px-2"
-                            onClick={() => setMoveEntry(entry)}
-                            title="Move to another package"
-                          >
-                            <ArrowRightLeft className="h-3.5 w-3.5" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-7 px-2"
-                            onClick={() => setSplitEntry(entry)}
-                            title="Split across packages"
-                          >
-                            <Scissors className="h-3.5 w-3.5" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    )}
+            <>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Date</TableHead>
+                    <TableHead>Duration</TableHead>
+                    <TableHead>Type</TableHead>
+                    <TableHead>Source</TableHead>
+                    <TableHead>Billable</TableHead>
+                    <TableHead>Notes</TableHead>
+                    {hasMultiplePackages && <TableHead className="text-right">Actions</TableHead>}
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {paginatedEntries.map(entry => (
+                    <TableRow key={entry.id}>
+                      <TableCell className="whitespace-nowrap">
+                        {entry.start_at
+                          ? format(new Date(entry.start_at), 'd MMM yyyy')
+                          : 'N/A'}
+                      </TableCell>
+                      <TableCell className="font-medium">
+                        {formatDuration(entry.duration_minutes)}
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="secondary" className="capitalize">
+                          {entry.work_type.replace('_', ' ')}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className="text-xs">
+                          {entry.source === 'timer' ? (
+                            <><Timer className="h-3 w-3 mr-1" /> Timer</>
+                          ) : (
+                            <><FileText className="h-3 w-3 mr-1" /> Manual</>
+                          )}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        {entry.is_billable ? (
+                          <Badge variant="default" className="text-xs gap-1">
+                            <DollarSign className="h-3 w-3" /> Yes
+                          </Badge>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">No</span>
+                        )}
+                      </TableCell>
+                      <TableCell className="max-w-[200px] truncate text-sm text-muted-foreground">
+                        {entry.notes || '—'}
+                      </TableCell>
+                      {hasMultiplePackages && (
+                        <TableCell className="text-right">
+                          <div className="flex items-center justify-end gap-1">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-7 px-2"
+                              onClick={() => setMoveEntry(entry)}
+                              title="Move to another package"
+                            >
+                              <ArrowRightLeft className="h-3.5 w-3.5" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-7 px-2"
+                              onClick={() => setSplitEntry(entry)}
+                              title="Split across packages"
+                            >
+                              <Scissors className="h-3.5 w-3.5" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      )}
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+              <PaginationBar
+                page={page}
+                totalPages={totalPages}
+                totalItems={filteredEntries.length}
+                onPageChange={setPage}
+              />
+            </>
           )}
         </CardContent>
       </Card>
