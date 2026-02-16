@@ -6,7 +6,7 @@ import type { EosMeetingSegment } from '@/types/eos';
 export const useEosMeetingSegments = (meetingId: string | undefined) => {
   const queryClient = useQueryClient();
 
-  const { data: segments, isLoading } = useQuery({
+  const { data: segments, isLoading, isFetching } = useQuery({
     queryKey: ['eos-meeting-segments', meetingId],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -63,6 +63,7 @@ export const useEosMeetingSegments = (meetingId: string | undefined) => {
   return {
     segments,
     isLoading,
+    isFetching,
     advanceSegment,
     goToPreviousSegment,
   };
