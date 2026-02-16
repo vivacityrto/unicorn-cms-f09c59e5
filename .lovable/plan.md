@@ -1,83 +1,37 @@
 
 
-# Fix: Create Missing `change_meeting_facilitator` RPC Function
+# Improve Issues Queue: Show Who Raised Each Issue and When
 
 ## Problem
-The "Start Meeting" flow calls `supabase.rpc('change_meeting_facilitator', ...)` but this function does not exist in the database. The migration file is present (`20260127000857`) but the function was never persisted.
+The Issues Queue cards in the meeting IDS section don't show who raised the issue or when it was created, making it hard to understand context at a glance.
 
 ## Solution
-Create a new database migration that re-creates the `change_meeting_facilitator` PL/pgSQL function exactly as defined in the original migration.
+Enhance each issue card in `IssuesQueue.tsx` to display:
+- The **name and avatar** of the person who raised it (using `raised_by` field, falling back to `created_by`)
+- The **relative date** it was created (e.g. "3 days ago")
 
-### SQL Migration
+## Changes
 
-```sql
-CREATE OR REPLACE FUNCTION public.change_meeting_facilitator(
-  p_meeting_id UUID,
-  p_new_facilitator_id UUID
-)
-RETURNS BOOLEAN
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path = public
-AS $$
-DECLARE
-  v_meeting RECORD;
-  v_old_leader_id UUID;
-BEGIN
-  SELECT m.*, emp.role, emp.user_id INTO v_meeting
-  FROM eos_meetings m
-  LEFT JOIN eos_meeting_participants emp 
-    ON emp.meeting_id = m.id AND emp.user_id = auth.uid()
-  WHERE m.id = p_meeting_id;
+### 1. `src/components/eos/IssuesQueue.tsx`
+- Import `useOwnerProfiles` hook to batch-resolve `raised_by` / `created_by` UUIDs into names and avatars
+- Import `Avatar` and `AvatarFallback` from UI components
+- Import `formatDistanceToNow` from `date-fns` for relative timestamps
+- Extract unique raiser UUIDs from the issues list and pass to `useOwnerProfiles`
+- Add a new row below each issue title showing:
+  - Avatar with initials of the raiser
+  - "Raised by [Name]" text
+  - Relative timestamp (e.g. "3 days ago")
 
-  IF NOT FOUND THEN
-    RAISE EXCEPTION 'Meeting not found';
-  END IF;
+### Visual Layout (per issue card)
 
-  IF v_meeting.role IS DISTINCT FROM 'Leader' AND NOT is_super_admin() THEN
-    RAISE EXCEPTION 'Only current facilitator or admin can change facilitator';
-  END IF;
-
-  SELECT user_id INTO v_old_leader_id
-  FROM eos_meeting_participants
-  WHERE meeting_id = p_meeting_id AND role = 'Leader';
-
-  UPDATE eos_meeting_participants
-  SET role = 'Member'
-  WHERE meeting_id = p_meeting_id AND role = 'Leader';
-
-  UPDATE eos_meeting_participants
-  SET role = 'Leader'
-  WHERE meeting_id = p_meeting_id AND user_id = p_new_facilitator_id;
-
-  IF NOT FOUND THEN
-    INSERT INTO eos_meeting_participants (meeting_id, user_id, role, attended)
-    VALUES (p_meeting_id, p_new_facilitator_id, 'Leader', false);
-  END IF;
-
-  INSERT INTO audit_eos_events (
-    tenant_id, user_id, meeting_id, entity, action, details
-  ) VALUES (
-    v_meeting.tenant_id,
-    auth.uid(),
-    p_meeting_id,
-    'meeting',
-    'facilitator_changed',
-    jsonb_build_object(
-      'old_facilitator', v_old_leader_id,
-      'new_facilitator', p_new_facilitator_id
-    )
-  );
-
-  RETURN true;
-END;
-$$;
+```text
++-------------------------------------------------------+
+| [grip]  Issue Title          [Low] [Backlog]    [Open] |
+|         Raised by Jane Smith - 3 days ago              |
+|         Description preview text...                    |
++-------------------------------------------------------+
 ```
 
-### Files Changed
+### No database or type changes required
+The `raised_by`, `created_by`, and `created_at` fields already exist on the `eos_issues` table and the `EosIssue` TypeScript type.
 
-| File | Action |
-|------|--------|
-| New SQL migration | Create the `change_meeting_facilitator` function |
-
-No frontend changes needed -- the hook (`useFacilitatorChange.tsx`) and dialog (`FacilitatorSelectDialog.tsx`) are already wired correctly.
