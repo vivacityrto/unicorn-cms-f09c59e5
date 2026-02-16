@@ -8909,6 +8909,77 @@ export type Database = {
         }
         Relationships: []
       }
+      copilot_messages: {
+        Row: {
+          citations_json: Json | null
+          created_at: string
+          id: string
+          message_content: string
+          role: string
+          session_id: string
+        }
+        Insert: {
+          citations_json?: Json | null
+          created_at?: string
+          id?: string
+          message_content: string
+          role: string
+          session_id: string
+        }
+        Update: {
+          citations_json?: Json | null
+          created_at?: string
+          id?: string
+          message_content?: string
+          role?: string
+          session_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "copilot_messages_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "copilot_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      copilot_sessions: {
+        Row: {
+          context_mode: string
+          ended_at: string | null
+          id: string
+          message_count: number
+          stage_instance_id: string | null
+          started_at: string
+          template_id: string | null
+          tenant_id: number | null
+          user_id: string
+        }
+        Insert: {
+          context_mode?: string
+          ended_at?: string | null
+          id?: string
+          message_count?: number
+          stage_instance_id?: string | null
+          started_at?: string
+          template_id?: string | null
+          tenant_id?: number | null
+          user_id: string
+        }
+        Update: {
+          context_mode?: string
+          ended_at?: string | null
+          id?: string
+          message_count?: number
+          stage_instance_id?: string | null
+          started_at?: string
+          template_id?: string | null
+          tenant_id?: number | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       course_cache: {
         Row: {
           course_code: string
