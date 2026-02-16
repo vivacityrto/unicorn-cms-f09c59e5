@@ -21929,6 +21929,84 @@ export type Database = {
           },
         ]
       }
+      risk_forecast_history: {
+        Row: {
+          composite_risk_index: number
+          id: string
+          snapshot_date: string
+          tenant_id: number
+        }
+        Insert: {
+          composite_risk_index?: number
+          id?: string
+          snapshot_date?: string
+          tenant_id: number
+        }
+        Update: {
+          composite_risk_index?: number
+          id?: string
+          snapshot_date?: string
+          tenant_id?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "risk_forecast_history_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "risk_forecast_history_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_engagement_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "risk_forecast_history_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_eos_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "risk_forecast_history_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_compliance_entitlements"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "risk_forecast_history_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "risk_forecast_history_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "risk_forecast_history_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_membership_usage"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "risk_forecast_history_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_membership_usage"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
       risk_items: {
         Row: {
           ai_event_id: string | null
@@ -27106,6 +27184,108 @@ export type Database = {
           verified_by?: string | null
         }
         Relationships: []
+      }
+      tenant_risk_forecasts: {
+        Row: {
+          composite_risk_index: number
+          evidence_instability_score: number
+          forecast_date: string
+          forecast_risk_status: string
+          generated_at: string
+          id: string
+          key_risk_drivers_json: Json | null
+          regulator_exposure_score: number
+          risk_concentration_score: number
+          risk_velocity_score: number
+          stagnation_score: number
+          tenant_id: number
+        }
+        Insert: {
+          composite_risk_index?: number
+          evidence_instability_score?: number
+          forecast_date?: string
+          forecast_risk_status?: string
+          generated_at?: string
+          id?: string
+          key_risk_drivers_json?: Json | null
+          regulator_exposure_score?: number
+          risk_concentration_score?: number
+          risk_velocity_score?: number
+          stagnation_score?: number
+          tenant_id: number
+        }
+        Update: {
+          composite_risk_index?: number
+          evidence_instability_score?: number
+          forecast_date?: string
+          forecast_risk_status?: string
+          generated_at?: string
+          id?: string
+          key_risk_drivers_json?: Json | null
+          regulator_exposure_score?: number
+          risk_concentration_score?: number
+          risk_velocity_score?: number
+          stagnation_score?: number
+          tenant_id?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tenant_risk_forecasts_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tenant_risk_forecasts_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_engagement_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "tenant_risk_forecasts_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_eos_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "tenant_risk_forecasts_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_compliance_entitlements"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "tenant_risk_forecasts_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "tenant_risk_forecasts_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "tenant_risk_forecasts_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_membership_usage"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "tenant_risk_forecasts_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_membership_usage"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
       }
       tenant_rto_scope: {
         Row: {
@@ -34507,6 +34687,78 @@ export type Database = {
           tenant_id: number | null
         }
         Relationships: []
+      }
+      v_risk_forecast_trends: {
+        Row: {
+          composite_risk_index: number | null
+          evidence_instability_score: number | null
+          forecast_date: string | null
+          forecast_risk_status: string | null
+          regulator_exposure_score: number | null
+          risk_concentration_score: number | null
+          risk_velocity_score: number | null
+          stagnation_score: number | null
+          tenant_id: number | null
+          tenant_name: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tenant_risk_forecasts_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tenant_risk_forecasts_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_engagement_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "tenant_risk_forecasts_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_eos_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "tenant_risk_forecasts_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_compliance_entitlements"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "tenant_risk_forecasts_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "tenant_risk_forecasts_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "tenant_risk_forecasts_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_membership_usage"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "tenant_risk_forecasts_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_membership_usage"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
       }
       v_risk_trends_7d: {
         Row: {
