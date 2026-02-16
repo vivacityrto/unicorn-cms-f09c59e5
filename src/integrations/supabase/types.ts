@@ -21297,12 +21297,18 @@ export type Database = {
       }
       portal_documents: {
         Row: {
+          ai_category_confirmed: boolean | null
+          ai_suggested_category_id: string | null
           category_id: string | null
           created_at: string
           deleted_at: string | null
           deleted_by: string | null
           description: string | null
           direction: string
+          document_owner: string | null
+          document_type: string | null
+          evidence_category_id: string | null
+          evidence_metadata_json: Json | null
           evidence_request_item_id: string | null
           file_name: string
           file_size: number | null
@@ -21314,6 +21320,7 @@ export type Database = {
           linked_stage_id: number | null
           linked_support_request_id: string | null
           linked_task_id: string | null
+          related_qualification: string | null
           shared_at: string | null
           shared_by: string | null
           source: string
@@ -21325,16 +21332,23 @@ export type Database = {
           updated_at: string
           uploaded_at: string
           uploaded_by: string | null
+          version_date: string | null
           version_group_id: string | null
           version_number: number
         }
         Insert: {
+          ai_category_confirmed?: boolean | null
+          ai_suggested_category_id?: string | null
           category_id?: string | null
           created_at?: string
           deleted_at?: string | null
           deleted_by?: string | null
           description?: string | null
           direction?: string
+          document_owner?: string | null
+          document_type?: string | null
+          evidence_category_id?: string | null
+          evidence_metadata_json?: Json | null
           evidence_request_item_id?: string | null
           file_name: string
           file_size?: number | null
@@ -21346,6 +21360,7 @@ export type Database = {
           linked_stage_id?: number | null
           linked_support_request_id?: string | null
           linked_task_id?: string | null
+          related_qualification?: string | null
           shared_at?: string | null
           shared_by?: string | null
           source?: string
@@ -21357,16 +21372,23 @@ export type Database = {
           updated_at?: string
           uploaded_at?: string
           uploaded_by?: string | null
+          version_date?: string | null
           version_group_id?: string | null
           version_number?: number
         }
         Update: {
+          ai_category_confirmed?: boolean | null
+          ai_suggested_category_id?: string | null
           category_id?: string | null
           created_at?: string
           deleted_at?: string | null
           deleted_by?: string | null
           description?: string | null
           direction?: string
+          document_owner?: string | null
+          document_type?: string | null
+          evidence_category_id?: string | null
+          evidence_metadata_json?: Json | null
           evidence_request_item_id?: string | null
           file_name?: string
           file_size?: number | null
@@ -21378,6 +21400,7 @@ export type Database = {
           linked_stage_id?: number | null
           linked_support_request_id?: string | null
           linked_task_id?: string | null
+          related_qualification?: string | null
           shared_at?: string | null
           shared_by?: string | null
           source?: string
@@ -21389,10 +21412,18 @@ export type Database = {
           updated_at?: string
           uploaded_at?: string
           uploaded_by?: string | null
+          version_date?: string | null
           version_group_id?: string | null
           version_number?: number
         }
         Relationships: [
+          {
+            foreignKeyName: "portal_documents_ai_suggested_category_id_fkey"
+            columns: ["ai_suggested_category_id"]
+            isOneToOne: false
+            referencedRelation: "stage_required_evidence_categories"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "portal_documents_category_id_fkey"
             columns: ["category_id"]
@@ -21434,6 +21465,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "vw_consultant_load"
             referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "portal_documents_evidence_category_id_fkey"
+            columns: ["evidence_category_id"]
+            isOneToOne: false
+            referencedRelation: "stage_required_evidence_categories"
+            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "portal_documents_evidence_item_fk"
@@ -25471,27 +25509,33 @@ export type Database = {
           category_description: string
           category_name: string
           created_at: string
+          document_type: string | null
           id: string
           mandatory_flag: boolean
           related_standard_clause: string
+          required_metadata_json: Json | null
           stage_type: string
         }
         Insert: {
           category_description?: string
           category_name: string
           created_at?: string
+          document_type?: string | null
           id?: string
           mandatory_flag?: boolean
           related_standard_clause?: string
+          required_metadata_json?: Json | null
           stage_type: string
         }
         Update: {
           category_description?: string
           category_name?: string
           created_at?: string
+          document_type?: string | null
           id?: string
           mandatory_flag?: boolean
           related_standard_clause?: string
+          required_metadata_json?: Json | null
           stage_type?: string
         }
         Relationships: []
@@ -28748,6 +28792,103 @@ export type Database = {
           },
           {
             foreignKeyName: "tenant_retention_forecasts_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_membership_usage"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
+      tenant_review_sessions: {
+        Row: {
+          created_at: string
+          id: string
+          review_completed_at: string | null
+          review_mode: string
+          review_started_at: string
+          reviewer_user_id: string
+          summary_json: Json | null
+          tenant_id: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          review_completed_at?: string | null
+          review_mode?: string
+          review_started_at?: string
+          reviewer_user_id: string
+          summary_json?: Json | null
+          tenant_id: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          review_completed_at?: string | null
+          review_mode?: string
+          review_started_at?: string
+          reviewer_user_id?: string
+          summary_json?: Json | null
+          tenant_id?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tenant_review_sessions_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tenant_review_sessions_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_engagement_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "tenant_review_sessions_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_eos_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "tenant_review_sessions_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_dashboard_tenant_recent_comms"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "tenant_review_sessions_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_compliance_entitlements"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "tenant_review_sessions_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "tenant_review_sessions_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "tenant_review_sessions_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_membership_usage"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "tenant_review_sessions_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "vw_client_membership_usage"
