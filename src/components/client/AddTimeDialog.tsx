@@ -87,6 +87,7 @@ export function AddTimeDialog({
           .select('id, package_id')
           .eq('tenant_id', tenantId)
           .eq('is_complete', false)
+          .eq('is_active', true)
           .order('start_date', { ascending: false });
 
         if (!piData || piData.length === 0) {
@@ -98,7 +99,7 @@ export function AddTimeDialog({
         // Fetch package names separately (no FK relationship)
         const pkgIds = [...new Set(piData.map((pi) => Number(pi.package_id)).filter(Boolean))];
         const { data: pkgData, error: pkgErr } = pkgIds.length > 0
-          ? await supabase.from('packages').select('id, name, code').in('id', pkgIds)
+          ? await supabase.from('packages').select('id, name, package_type').in('id', pkgIds)
           : { data: [], error: null };
 
         console.log('[AddTimeDialog] packages lookup', { pkgIds, pkgData, pkgErr });
@@ -109,7 +110,7 @@ export function AddTimeDialog({
           return {
             id: pi.id,
             package_name: pkg?.name || `Package #${pi.id}`,
-            is_kickstart: (pkg?.code || '').toLowerCase().includes('kickstart'),
+            is_kickstart: (pkg?.package_type || '').toLowerCase() === 'kickstart',
           };
         });
 
