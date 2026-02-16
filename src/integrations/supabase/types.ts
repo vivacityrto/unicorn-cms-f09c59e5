@@ -21269,6 +21269,41 @@ export type Database = {
         }
         Relationships: []
       }
+      research_audit_log: {
+        Row: {
+          action: string
+          created_at: string
+          details: Json | null
+          id: string
+          job_id: string | null
+          user_id: string
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          details?: Json | null
+          id?: string
+          job_id?: string | null
+          user_id: string
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          details?: Json | null
+          id?: string
+          job_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "research_audit_log_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "research_jobs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       research_findings: {
         Row: {
           citations_json: Json | null
@@ -21279,6 +21314,7 @@ export type Database = {
           review_status: string
           reviewed_at: string | null
           reviewed_by: string | null
+          risk_flags_json: Json | null
           summary_md: string | null
         }
         Insert: {
@@ -21290,6 +21326,7 @@ export type Database = {
           review_status?: string
           reviewed_at?: string | null
           reviewed_by?: string | null
+          risk_flags_json?: Json | null
           summary_md?: string | null
         }
         Update: {
@@ -21301,6 +21338,7 @@ export type Database = {
           review_status?: string
           reviewed_at?: string | null
           reviewed_by?: string | null
+          risk_flags_json?: Json | null
           summary_md?: string | null
         }
         Relationships: [
@@ -21322,6 +21360,8 @@ export type Database = {
           input_json: Json | null
           job_type: string
           output_json: Json | null
+          stage_instance_id: string | null
+          standards_version: string
           status: string
           tenant_id: number | null
         }
@@ -21333,6 +21373,8 @@ export type Database = {
           input_json?: Json | null
           job_type: string
           output_json?: Json | null
+          stage_instance_id?: string | null
+          standards_version?: string
           status?: string
           tenant_id?: number | null
         }
@@ -21344,6 +21386,8 @@ export type Database = {
           input_json?: Json | null
           job_type?: string
           output_json?: Json | null
+          stage_instance_id?: string | null
+          standards_version?: string
           status?: string
           tenant_id?: number | null
         }
