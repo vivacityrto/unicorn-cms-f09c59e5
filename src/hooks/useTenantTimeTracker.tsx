@@ -113,13 +113,18 @@ export function useTenantTimeTracker(tenantId: number) {
   }, [isTimerForThisTenant, activeTimer]);
 
   // Timer actions
-  const startTimer = async (workType: string = 'general') => {
-    if (needsPackageSelection || isAllPackages) {
+  const startTimer = async (workType: string = 'general', overridePackageInstanceId?: number) => {
+    // If an override is provided, use it directly; otherwise check current selection
+    const targetPkg = overridePackageInstanceId
+      ? packages.find(p => p.id === overridePackageInstanceId) || null
+      : selectedPackage;
+
+    if (!overridePackageInstanceId && (needsPackageSelection || isAllPackages)) {
       toast({ title: 'Select a package', description: 'Choose a specific package before tracking time.', variant: 'destructive' });
       return { success: false, error: 'no_package' };
     }
 
-    const packageId = selectedPackage?.package_id || null;
+    const packageId = targetPkg?.package_id || null;
 
     const { data, error } = await supabase.rpc('rpc_start_timer', {
       p_tenant_id: tenantId,
