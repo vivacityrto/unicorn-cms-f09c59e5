@@ -28,24 +28,22 @@ export const QuorumStartGate = ({
   meetingType,
   onStartConfirmed,
 }: QuorumStartGateProps) => {
-  const [overrideReason, setOverrideReason] = useState('');
-  const [showOverrideInput, setShowOverrideInput] = useState(false);
+  const [_overrideReason] = useState('');
+  const [showOverrideInput] = useState(false);
 
   const { quorumStatus, startMeetingWithQuorum, attendees, presentCount, invitedCount } = 
     useMeetingAttendance(meetingId);
 
   const handleStartMeeting = async () => {
-    const reason = showOverrideInput ? overrideReason : undefined;
+    const reason = showOverrideInput ? _overrideReason : undefined;
     const result = await startMeetingWithQuorum.mutateAsync(reason);
     
     if (result.success) {
       onStartConfirmed();
       onOpenChange(false);
     } else if (result.blocked) {
-      // Same Page meeting blocked - can't proceed
+      // Only Same Page meetings are hard-blocked
       return;
-    } else if (result.requires_override) {
-      setShowOverrideInput(true);
     }
   };
 
@@ -107,8 +105,8 @@ export const QuorumStartGate = ({
 
                   {/* Role indicators */}
                   <div className="flex flex-wrap gap-2 mt-3">
-                    <Badge variant={quorumStatus.owner_present ? 'default' : 'secondary'}>
-                      Owner: {quorumStatus.owner_present ? '✓' : '✗'}
+                    <Badge variant={quorumStatus.owner_present ? 'default' : 'outline'}>
+                      Owner: {quorumStatus.owner_present ? '✓' : '—'}
                     </Badge>
                     {(meetingType === 'Same_Page' || meetingType === 'Annual') && (
                       <>
@@ -131,7 +129,7 @@ export const QuorumStartGate = ({
             </div>
           )}
 
-          {/* Blocked Message for Same Page */}
+          {/* Blocked Message for Same Page only */}
           {isBlocked && (
             <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-lg">
               <p className="text-sm text-destructive font-medium">
@@ -142,21 +140,6 @@ export const QuorumStartGate = ({
               </p>
             </div>
           )}
-
-          {/* Override Input */}
-          {showOverrideInput && !isBlocked && (
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-amber-700 dark:text-amber-400">
-                Proceeding without quorum requires justification:
-              </label>
-              <Textarea
-                value={overrideReason}
-                onChange={(e) => setOverrideReason(e.target.value)}
-                placeholder="Explain why this meeting should proceed without full quorum..."
-                rows={3}
-              />
-            </div>
-          )}
         </div>
 
         <DialogFooter>
@@ -165,14 +148,10 @@ export const QuorumStartGate = ({
           </Button>
           <Button
             onClick={handleStartMeeting}
-            disabled={
-              startMeetingWithQuorum.isPending || 
-              isBlocked || 
-              (showOverrideInput && !overrideReason.trim())
-            }
+            disabled={startMeetingWithQuorum.isPending || isBlocked}
           >
             {startMeetingWithQuorum.isPending ? 'Starting...' : 
-             showOverrideInput ? 'Start Without Quorum' : 'Start Meeting'}
+             (quorumStatus && !quorumStatus.quorum_met && !isBlocked) ? 'Start Without Full Quorum' : 'Start Meeting'}
           </Button>
         </DialogFooter>
       </DialogContent>

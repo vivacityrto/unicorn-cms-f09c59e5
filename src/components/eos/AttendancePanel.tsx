@@ -30,8 +30,7 @@ import {
   ChevronDown, ChevronUp, AlertTriangle, UserCheck, Trash2, RefreshCw
 } from 'lucide-react';
 import { useMeetingAttendance, AttendanceStatus, MeetingAttendee, MeetingRole } from '@/hooks/useMeetingAttendance';
-import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
+import { useVivacityTeamUsers } from '@/hooks/useVivacityTeamUsers';
 import type { OnlineUser } from '@/hooks/useMeetingRealtime';
 
 interface AttendancePanelProps {
@@ -127,19 +126,13 @@ export const AttendancePanel = ({
     }
   }, [isLive, onlineUsers, attendees, attendeesLoading]);
 
-  // Fetch available users for adding attendees/guests
-  const { data: availableUsers } = useQuery({
-    queryKey: ['tenant-users-for-attendee', meetingId],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('users')
-        .select('user_uuid, first_name, last_name')
-        .order('first_name');
-      if (error) throw error;
-      return data;
-    },
-    enabled: addDialogOpen,
-  });
+  // Fetch Vivacity team users only for EOS meeting attendee picker
+  const { data: vivacityUsers } = useVivacityTeamUsers();
+  const availableUsers = vivacityUsers?.map(u => ({
+    user_uuid: u.user_uuid,
+    first_name: u.first_name,
+    last_name: u.last_name,
+  }));
 
   // Filter out users already in attendees list
   const availableToAdd = availableUsers?.filter(
@@ -218,13 +211,19 @@ export const AttendancePanel = ({
 
         <CollapsibleContent>
           <CardContent className="pt-0 space-y-3">
-            {/* Quorum Issues Warning */}
-            {quorumStatus && !quorumStatus.quorum_met && quorumStatus.issues.length > 0 && (
-              <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-3">
+            {/* Quorum Issues Warning - informational only, never blocks */}
+            {quorumStatus && quorumStatus.issues.length > 0 && (
+              <div className={`border rounded-lg p-3 ${
+                quorumStatus.quorum_met 
+                  ? 'bg-amber-50/50 border-amber-200 dark:bg-amber-950/20 dark:border-amber-800' 
+                  : 'bg-amber-50 border-amber-200 dark:bg-amber-950/20 dark:border-amber-800'
+              }`}>
                 <div className="flex items-start gap-2">
-                  <AlertTriangle className="w-4 h-4 text-destructive mt-0.5" />
+                  <AlertTriangle className="w-4 h-4 text-amber-600 mt-0.5" />
                   <div className="text-sm">
-                    <p className="font-medium text-destructive">Quorum Requirements Not Met</p>
+                    <p className="font-medium text-amber-700 dark:text-amber-400">
+                      {quorumStatus.quorum_met ? 'Attendance Notes' : 'Quorum Not Met'}
+                    </p>
                     <ul className="mt-1 space-y-0.5 text-muted-foreground">
                       {quorumStatus.issues.map((issue, idx) => (
                         <li key={idx}>• {issue}</li>
