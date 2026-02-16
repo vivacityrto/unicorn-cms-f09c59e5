@@ -31,6 +31,7 @@ import { RegulatorActivityWidget } from '@/components/executive/RegulatorActivit
 import { AuditPreparationWidget } from '@/components/executive/AuditPreparationWidget';
 import { EvidenceReadinessWidget } from '@/components/executive/EvidenceReadinessWidget';
 import { SystemicRiskSignalsWidget } from '@/components/executive/SystemicRiskSignalsWidget';
+import { TemplateHealthWidget } from '@/components/executive/TemplateHealthWidget';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
@@ -242,10 +243,11 @@ export default function ExecutiveDashboard() {
         </div>
 
         {/* Audit Preparation + Evidence Readiness + Systemic Risk */}
-        <div className="grid grid-cols-1 xl:grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">
           <AuditPreparationWidget />
           <EvidenceReadinessWidget />
           <SystemicRiskSignalsWidget />
+          <TemplateHealthWidget />
         </div>
 
         {/* CEO Executive Dashboard Panels */}

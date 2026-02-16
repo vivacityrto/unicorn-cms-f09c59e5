@@ -25329,6 +25329,144 @@ export type Database = {
           },
         ]
       }
+      template_analysis_jobs: {
+        Row: {
+          created_at: string
+          generated_at: string
+          generated_by_user_id: string | null
+          id: string
+          research_job_id: string | null
+          reviewed_at: string | null
+          reviewed_by_user_id: string | null
+          standards_version: string
+          status: string
+          template_id: string | null
+          template_version_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          generated_at?: string
+          generated_by_user_id?: string | null
+          id?: string
+          research_job_id?: string | null
+          reviewed_at?: string | null
+          reviewed_by_user_id?: string | null
+          standards_version?: string
+          status?: string
+          template_id?: string | null
+          template_version_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          generated_at?: string
+          generated_by_user_id?: string | null
+          id?: string
+          research_job_id?: string | null
+          reviewed_at?: string | null
+          reviewed_by_user_id?: string | null
+          standards_version?: string
+          status?: string
+          template_id?: string | null
+          template_version_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "template_analysis_jobs_research_job_id_fkey"
+            columns: ["research_job_id"]
+            isOneToOne: false
+            referencedRelation: "research_jobs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      template_clause_mappings: {
+        Row: {
+          confidence_level: string
+          coverage_status: string
+          created_at: string
+          id: string
+          improvement_note: string | null
+          standard_clause: string
+          supporting_excerpt: string | null
+          template_analysis_job_id: string
+        }
+        Insert: {
+          confidence_level?: string
+          coverage_status: string
+          created_at?: string
+          id?: string
+          improvement_note?: string | null
+          standard_clause: string
+          supporting_excerpt?: string | null
+          template_analysis_job_id: string
+        }
+        Update: {
+          confidence_level?: string
+          coverage_status?: string
+          created_at?: string
+          id?: string
+          improvement_note?: string | null
+          standard_clause?: string
+          supporting_excerpt?: string | null
+          template_analysis_job_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "template_clause_mappings_template_analysis_job_id_fkey"
+            columns: ["template_analysis_job_id"]
+            isOneToOne: false
+            referencedRelation: "template_analysis_jobs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      template_gap_summary: {
+        Row: {
+          created_at: string
+          explicit_count: number
+          high_risk_gaps_count: number
+          id: string
+          missing_count: number
+          summary_markdown: string
+          template_analysis_job_id: string
+          total_clauses_checked: number
+          weak_count: number
+        }
+        Insert: {
+          created_at?: string
+          explicit_count?: number
+          high_risk_gaps_count?: number
+          id?: string
+          missing_count?: number
+          summary_markdown?: string
+          template_analysis_job_id: string
+          total_clauses_checked?: number
+          weak_count?: number
+        }
+        Update: {
+          created_at?: string
+          explicit_count?: number
+          high_risk_gaps_count?: number
+          id?: string
+          missing_count?: number
+          summary_markdown?: string
+          template_analysis_job_id?: string
+          total_clauses_checked?: number
+          weak_count?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "template_gap_summary_template_analysis_job_id_fkey"
+            columns: ["template_analysis_job_id"]
+            isOneToOne: false
+            referencedRelation: "template_analysis_jobs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tenant_addresses: {
         Row: {
           address_type: string
