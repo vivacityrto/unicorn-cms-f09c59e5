@@ -214,3 +214,6 @@ verify_jwt = false
 
 [functions.run-tenant-risk-forecast]
 verify_jwt = false
+
+[functions.run-strategic-signal-analysis]
+verify_jwt = false

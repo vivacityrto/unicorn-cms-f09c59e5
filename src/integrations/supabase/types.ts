@@ -24564,6 +24564,33 @@ export type Database = {
         }
         Relationships: []
       }
+      strategic_signal_summary: {
+        Row: {
+          affected_entities_json: Json | null
+          generated_at: string
+          id: string
+          signal_severity: string
+          signal_summary: string
+          signal_type: string
+        }
+        Insert: {
+          affected_entities_json?: Json | null
+          generated_at?: string
+          id?: string
+          signal_severity?: string
+          signal_summary: string
+          signal_type: string
+        }
+        Update: {
+          affected_entities_json?: Json | null
+          generated_at?: string
+          id?: string
+          signal_severity?: string
+          signal_summary?: string
+          signal_type?: string
+        }
+        Relationships: []
+      }
       support_requests: {
         Row: {
           assigned_to_user_id: string | null
@@ -34857,6 +34884,26 @@ export type Database = {
           health_status: string | null
           status_count: number | null
           tenant_id: number | null
+        }
+        Relationships: []
+      }
+      v_strategic_capacity_pressure: {
+        Row: {
+          capacity_utilisation_percentage: number | null
+          consultant_name: string | null
+          high_risk_stages_count: number | null
+          overdue_tasks_count: number | null
+          overload_risk_status: string | null
+          user_id: string | null
+        }
+        Relationships: []
+      }
+      v_strategic_portfolio_risk: {
+        Row: {
+          avg_index: number | null
+          elevated_plus_count: number | null
+          forecast_risk_status: string | null
+          tenant_count: number | null
         }
         Relationships: []
       }
