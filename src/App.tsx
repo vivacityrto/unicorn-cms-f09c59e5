@@ -136,6 +136,7 @@ const RegulatorWatchDashboard = lazy(() => import("./pages/RegulatorWatchDashboa
 const RegulatorChangeEventDetail = lazy(() => import("./pages/RegulatorChangeEventDetail"));
 const CrossTenantRiskRadar = lazy(() => import("./pages/CrossTenantRiskRadar"));
 const TemplateGapAnalysis = lazy(() => import("./pages/TemplateGapAnalysis"));
+const KnowledgeExplorer = lazy(() => import("./pages/KnowledgeExplorer"));
 
 // Academy pages (placeholder)
 const AcademyDashboard = lazy(() => import("./pages/academy/AcademyDashboard"));
@@ -950,6 +951,7 @@ const App = () => (
             <Route path="/admin/regulator-watch/:eventId" element={<ProtectedRoute requireSuperAdmin><RegulatorChangeEventDetail /></ProtectedRoute>} />
             <Route path="/admin/risk-radar" element={<ProtectedRoute requireSuperAdmin><CrossTenantRiskRadar /></ProtectedRoute>} />
             <Route path="/admin/template-gap-analysis" element={<ProtectedRoute requireSuperAdmin><TemplateGapAnalysis /></ProtectedRoute>} />
+            <Route path="/admin/knowledge-explorer" element={<ProtectedRoute requireSuperAdmin><KnowledgeExplorer /></ProtectedRoute>} />
             {/* Academy Routes */}
             <Route path="/academy" element={<ProtectedRoute><AcademyDashboard /></ProtectedRoute>} />
             <Route path="/academy/courses" element={<ProtectedRoute><AcademyCourses /></ProtectedRoute>} />
