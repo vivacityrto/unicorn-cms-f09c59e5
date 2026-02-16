@@ -205,3 +205,6 @@ verify_jwt = false
 
 [functions.run-stage-health-monitor]
 verify_jwt = false
+
+[functions.run-workload-forecast]
+verify_jwt = false

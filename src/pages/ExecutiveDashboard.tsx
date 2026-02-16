@@ -33,6 +33,7 @@ import { EvidenceReadinessWidget } from '@/components/executive/EvidenceReadines
 import { SystemicRiskSignalsWidget } from '@/components/executive/SystemicRiskSignalsWidget';
 import { TemplateHealthWidget } from '@/components/executive/TemplateHealthWidget';
 import { PortfolioHealthWidget } from '@/components/executive/PortfolioHealthWidget';
+import { TeamCapacityWidget } from '@/components/executive/TeamCapacityWidget';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
@@ -251,6 +252,9 @@ export default function ExecutiveDashboard() {
           <TemplateHealthWidget />
           <PortfolioHealthWidget />
         </div>
+
+        {/* Team Capacity Overview */}
+        <TeamCapacityWidget />
 
         {/* CEO Executive Dashboard Panels */}
         <CeoDashboardSection />
