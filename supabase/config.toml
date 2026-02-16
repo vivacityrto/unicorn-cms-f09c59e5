@@ -223,3 +223,6 @@ verify_jwt = false
 
 [functions.run-retention-forecast]
 verify_jwt = false
+
+[functions.run-workflow-optimisation]
+verify_jwt = false
