@@ -17882,6 +17882,36 @@ export type Database = {
         }
         Relationships: []
       }
+      membership_allocation_groups: {
+        Row: {
+          cricos_weight: number
+          id: string
+          mode: string
+          rto_weight: number
+          tenant_id: number
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          cricos_weight?: number
+          id?: string
+          mode?: string
+          rto_weight?: number
+          tenant_id: number
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          cricos_weight?: number
+          id?: string
+          mode?: string
+          rto_weight?: number
+          tenant_id?: number
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
       membership_entitlements: {
         Row: {
           created_at: string
@@ -19068,6 +19098,8 @@ export type Database = {
       }
       package_instances: {
         Row: {
+          billing_category: string | null
+          billing_type: string
           clo_id: number
           duration: number | null
           end_date: string | null
@@ -19075,6 +19107,8 @@ export type Database = {
           hours_included: number | null
           hours_used: number | null
           id: number
+          included_minutes: number
+          is_active: boolean
           is_complete: boolean
           last_document_update_email: string | null
           manager_id: string | null
@@ -19088,6 +19122,8 @@ export type Database = {
           u2tid: number | null
         }
         Insert: {
+          billing_category?: string | null
+          billing_type?: string
           clo_id: number
           duration?: number | null
           end_date?: string | null
@@ -19095,6 +19131,8 @@ export type Database = {
           hours_included?: number | null
           hours_used?: number | null
           id?: number
+          included_minutes?: number
+          is_active?: boolean
           is_complete: boolean
           last_document_update_email?: string | null
           manager_id?: string | null
@@ -19108,6 +19146,8 @@ export type Database = {
           u2tid?: number | null
         }
         Update: {
+          billing_category?: string | null
+          billing_type?: string
           clo_id?: number
           duration?: number | null
           end_date?: string | null
@@ -19115,6 +19155,8 @@ export type Database = {
           hours_included?: number | null
           hours_used?: number | null
           id?: number
+          included_minutes?: number
+          is_active?: boolean
           is_complete?: boolean
           last_document_update_email?: string | null
           manager_id?: string | null
@@ -28574,6 +28616,7 @@ export type Database = {
           is_billable: boolean
           notes: string | null
           package_id: number | null
+          scope_tag: string
           source: string
           stage_id: number | null
           start_at: string | null
@@ -28593,6 +28636,7 @@ export type Database = {
           is_billable?: boolean
           notes?: string | null
           package_id?: number | null
+          scope_tag?: string
           source?: string
           stage_id?: number | null
           start_at?: string | null
@@ -28612,6 +28656,7 @@ export type Database = {
           is_billable?: boolean
           notes?: string | null
           package_id?: number | null
+          scope_tag?: string
           source?: string
           stage_id?: number | null
           start_at?: string | null
@@ -28641,6 +28686,44 @@ export type Database = {
             columns: ["stage_id"]
             isOneToOne: false
             referencedRelation: "documents_stages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      time_entry_allocations: {
+        Row: {
+          allocated_minutes: number
+          allocation_reason: string
+          created_at: string
+          id: string
+          package_instance_id: number
+          tenant_id: number
+          time_entry_id: string
+        }
+        Insert: {
+          allocated_minutes: number
+          allocation_reason?: string
+          created_at?: string
+          id?: string
+          package_instance_id: number
+          tenant_id: number
+          time_entry_id: string
+        }
+        Update: {
+          allocated_minutes?: number
+          allocation_reason?: string
+          created_at?: string
+          id?: string
+          package_instance_id?: number
+          tenant_id?: number
+          time_entry_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "time_entry_allocations_time_entry_id_fkey"
+            columns: ["time_entry_id"]
+            isOneToOne: false
+            referencedRelation: "time_entries"
             referencedColumns: ["id"]
           },
         ]
@@ -32733,6 +32816,15 @@ export type Database = {
         }
         Relationships: []
       }
+      v_membership_combined_usage: {
+        Row: {
+          remaining_minutes: number | null
+          tenant_id: number | null
+          total_included_minutes: number | null
+          total_used_minutes: number | null
+        }
+        Relationships: []
+      }
       v_momentum_state: {
         Row: {
           client_name: string | null
@@ -32761,6 +32853,17 @@ export type Database = {
           remaining_minutes: number | null
           tenant_id: number | null
           used_minutes: number | null
+        }
+        Relationships: []
+      }
+      v_package_minutes_used: {
+        Row: {
+          last_logged_at: string | null
+          minutes_used_month: number | null
+          minutes_used_total: number | null
+          minutes_used_ytd: number | null
+          package_instance_id: number | null
+          tenant_id: number | null
         }
         Relationships: []
       }
@@ -33565,6 +33668,10 @@ export type Database = {
         Returns: Json
       }
       advance_segment: { Args: { p_meeting_id: string }; Returns: string }
+      allocate_time_entry: {
+        Args: { p_actor?: string; p_reason?: string; p_time_entry_id: string }
+        Returns: undefined
+      }
       apply_document_ai_analysis: {
         Args: {
           p_category_confidence: number
@@ -34034,6 +34141,13 @@ export type Database = {
       generate_username: {
         Args: { p_email: string; p_user_id: string }
         Returns: string
+      }
+      get_active_membership_packages: {
+        Args: { p_tenant_id: number }
+        Returns: {
+          cricos_package_instance_id: number
+          rto_package_instance_id: number
+        }[]
       }
       get_all_resources: {
         Args: never
