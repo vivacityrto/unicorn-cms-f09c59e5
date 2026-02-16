@@ -129,7 +129,7 @@ export function ClientPackagesTab({ tenantId, tenantName, packages, loading, onA
           <p className="text-sm text-muted-foreground mb-4">
             This client doesn't have any packages yet.
           </p>
-          {onAddPackage && (
+          {onAddPackage && isSuperAdmin() && (
             <Button onClick={onAddPackage}>
               <Plus className="h-4 w-4 mr-2" />
               Add Package
@@ -169,7 +169,7 @@ export function ClientPackagesTab({ tenantId, tenantName, packages, loading, onA
               Start Package
             </Button>
           )}
-          {onAddPackage && viewMode === 'active' && (
+          {onAddPackage && viewMode === 'active' && isSuperAdmin() && (
             <Button variant="outline" onClick={onAddPackage}>
               <Plus className="h-4 w-4 mr-2" />
               Add Package
@@ -293,13 +293,15 @@ export function ClientPackagesTab({ tenantId, tenantName, packages, loading, onA
 
                   {/* Right: Actions */}
                   <div className="flex items-center gap-2">
-                    <CollapsibleTrigger asChild>
-                      <Button variant="outline" size="sm" className="gap-1">
-                        <Settings className="h-4 w-4" />
-                        Manage
-                        {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-                      </Button>
-                    </CollapsibleTrigger>
+                    {isSuperAdmin() && (
+                      <CollapsibleTrigger asChild>
+                        <Button variant="outline" size="sm" className="gap-1">
+                          <Settings className="h-4 w-4" />
+                          Manage
+                          {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                        </Button>
+                      </CollapsibleTrigger>
+                    )}
                     <Button 
                       variant="ghost" 
                       size="sm"
