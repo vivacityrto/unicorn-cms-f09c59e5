@@ -202,3 +202,6 @@ verify_jwt = false
 
 [functions.research-template-gap-analysis]
 verify_jwt = false
+
+[functions.run-stage-health-monitor]
+verify_jwt = false
