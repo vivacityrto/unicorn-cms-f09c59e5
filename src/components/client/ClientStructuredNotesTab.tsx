@@ -67,6 +67,7 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
   const [selectedNote, setSelectedNote] = useState<Note | null>(null);
   const [saving, setSaving] = useState(false);
   const [selectedPackageInfo, setSelectedPackageInfo] = useState<PackageInfo | null>(null);
+  const [packageNameMap, setPackageNameMap] = useState<Record<number, string>>({});
   
   // Form state
   const [noteType, setNoteType] = useState('general');
@@ -81,15 +82,50 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
   const [actionTitle, setActionTitle] = useState('');
   const [actionDescription, setActionDescription] = useState('');
 
+  // Batch-fetch package names for all package_instance notes
+  useEffect(() => {
+    const fetchPackageNames = async () => {
+      const packageNoteIds = notes
+        .filter(n => n.parent_type === 'package_instance' && n.parent_id)
+        .map(n => n.parent_id);
+      
+      const uniqueIds = [...new Set(packageNoteIds)];
+      if (uniqueIds.length === 0) return;
+
+      const { data: instances } = await supabase
+        .from('package_instances')
+        .select('id, package_id')
+        .in('id', uniqueIds);
+
+      if (!instances || instances.length === 0) return;
+
+      const pkgIds = [...new Set(instances.map(i => i.package_id).filter(Boolean))];
+      if (pkgIds.length === 0) return;
+
+      const { data: packages } = await supabase
+        .from('packages')
+        .select('id, name')
+        .in('id', pkgIds);
+
+      if (!packages) return;
+
+      const pkgMap = new Map(packages.map(p => [p.id, p.name]));
+      const nameMap: Record<number, string> = {};
+      instances.forEach(inst => {
+        if (inst.package_id && pkgMap.has(inst.package_id)) {
+          nameMap[inst.id] = pkgMap.get(inst.package_id)!;
+        }
+      });
+      setPackageNameMap(nameMap);
+    };
+
+    fetchPackageNames();
+  }, [notes]);
+
   // Fetch package info when a package note is selected
-  // For package_instance notes, parent_id refers to package_instances.id
-  // We need to join through package_instances to get to packages
-  // Fetch package info when a package note is selected
-  // Two-step query: package_instances -> packages (no FK relationship for PostgREST join)
   useEffect(() => {
     const fetchPackageInfo = async () => {
       if (selectedNote?.parent_type === 'package_instance' && selectedNote?.parent_id) {
-        // Step 1: Get package_id from package_instances
         const { data: instanceData } = await supabase
           .from('package_instances')
           .select('id, package_id')
@@ -97,7 +133,6 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
           .single();
         
         if (instanceData?.package_id) {
-          // Step 2: Get package details from packages
           const { data: packageData } = await supabase
             .from('packages')
             .select('id, name, full_text')
@@ -393,6 +428,14 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
                               >
                                 {isTenantNote ? 'Client' : 'Package'}
                               </Badge>
+                              {isPackageNote && packageNameMap[note.parent_id] && (
+                                <Badge 
+                                  variant="outline" 
+                                  className="text-xs bg-primary/10 text-primary border-primary/40"
+                                >
+                                  {packageNameMap[note.parent_id]}
+                                </Badge>
+                              )}
                             </div>
                             <p className="text-sm text-muted-foreground mt-1 line-clamp-3">
                               {note.note_details}
