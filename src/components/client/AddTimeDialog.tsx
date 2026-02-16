@@ -19,21 +19,24 @@ import {
   SelectTrigger,
   SelectValue
 } from '@/components/ui/select';
-import { useTimeTracking } from '@/hooks/useTimeTracking';
-
-interface PackageOption {
-  id: number;
-  package_id: number;
-  package_name: string;
-}
+import { ScopeSelectorBadge } from './ScopeSelectorBadge';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
+import { useToast } from '@/hooks/use-toast';
+import type { ScopeTag } from '@/hooks/useTenantMemberships';
 
 interface AddTimeDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   tenantId: number;
   clientId: number;
+  defaultScopeTag?: ScopeTag;
+  showScopeSelector?: boolean;
+  onSuccess?: () => void;
+  /** @deprecated kept for backward compat */
   defaultPackageId?: number | null;
-  packages?: PackageOption[];
+  /** @deprecated kept for backward compat */
+  packages?: { id: number; package_id: number; package_name: string }[];
 }
 
 const WORK_TYPES = [
@@ -46,50 +49,69 @@ const WORK_TYPES = [
   { value: 'admin', label: 'Admin' }
 ];
 
-export function AddTimeDialog({ open, onOpenChange, tenantId, clientId, defaultPackageId, packages = [] }: AddTimeDialogProps) {
-  const { addTimeEntry } = useTimeTracking(clientId);
+export function AddTimeDialog({
+  open,
+  onOpenChange,
+  tenantId,
+  clientId,
+  defaultScopeTag = 'both',
+  showScopeSelector = false,
+  onSuccess,
+}: AddTimeDialogProps) {
+  const { user } = useAuth();
+  const { toast } = useToast();
   const [hours, setHours] = useState('0');
   const [minutes, setMinutes] = useState('30');
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [workType, setWorkType] = useState('general');
   const [notes, setNotes] = useState('');
   const [isBillable, setIsBillable] = useState(true);
+  const [scopeTag, setScopeTag] = useState<ScopeTag>(defaultScopeTag);
   const [saving, setSaving] = useState(false);
-  const [selectedPackageId, setSelectedPackageId] = useState<number | null>(defaultPackageId || null);
 
-  // Sync default when dialog opens
+  // Sync defaults when dialog opens
   useEffect(() => {
     if (open) {
-      setSelectedPackageId(defaultPackageId || null);
+      setScopeTag(defaultScopeTag);
     }
-  }, [open, defaultPackageId]);
+  }, [open, defaultScopeTag]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+    if (!user) return;
+
     const totalMinutes = (parseInt(hours) || 0) * 60 + (parseInt(minutes) || 0);
     if (totalMinutes <= 0) return;
 
-    // Require package if packages exist
-    if (packages.length > 0 && !selectedPackageId) return;
-    
     setSaving(true);
-    const result = await addTimeEntry(
-      tenantId,
-      totalMinutes,
-      date,
-      selectedPackageId,
-      null,
-      null,
-      workType,
-      notes || null,
-      isBillable
-    );
-    setSaving(false);
-    
-    if (result.success) {
+    try {
+      // Insert directly into time_entries — allocation happens via DB trigger
+      const { error } = await supabase.from('time_entries').insert({
+        tenant_id: tenantId,
+        client_id: clientId,
+        user_id: user.id,
+        duration_minutes: totalMinutes,
+        start_at: `${date}T00:00:00`,
+        work_type: workType,
+        notes: notes || null,
+        is_billable: isBillable,
+        scope_tag: scopeTag,
+        source: 'manual',
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: 'Time added',
+        description: `${Math.floor(totalMinutes / 60)}h ${totalMinutes % 60}m logged`,
+      });
       resetForm();
       onOpenChange(false);
+      onSuccess?.();
+    } catch (err: any) {
+      toast({ title: 'Failed to add time', description: err.message, variant: 'destructive' });
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -100,10 +122,8 @@ export function AddTimeDialog({ open, onOpenChange, tenantId, clientId, defaultP
     setWorkType('general');
     setNotes('');
     setIsBillable(true);
-    setSelectedPackageId(defaultPackageId || null);
+    setScopeTag(defaultScopeTag);
   };
-
-  const needsPackage = packages.length > 0 && !selectedPackageId;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -111,36 +131,20 @@ export function AddTimeDialog({ open, onOpenChange, tenantId, clientId, defaultP
         <DialogHeader>
           <DialogTitle>Add Time Entry</DialogTitle>
           <DialogDescription>
-            Log time manually for this client.
+            Log time for this tenant. Allocation is handled automatically.
           </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Package selector */}
-          {packages.length > 0 && (
-            <div className="space-y-2">
-              <Label htmlFor="package">Package *</Label>
-              {packages.length === 1 ? (
-                <div className="text-sm font-medium py-2">{packages[0].package_name}</div>
-              ) : (
-                <Select
-                  value={selectedPackageId?.toString() || ''}
-                  onValueChange={(v) => setSelectedPackageId(v ? Number(v) : null)}
-                >
-                  <SelectTrigger id="package">
-                    <SelectValue placeholder="Select package" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {packages.map(pkg => (
-                      <SelectItem key={pkg.id} value={pkg.id.toString()}>
-                        {pkg.package_name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              )}
-            </div>
-          )}
+          {/* Scope selector */}
+          <div className="space-y-2">
+            <Label>Allocation</Label>
+            <ScopeSelectorBadge
+              value={scopeTag}
+              onChange={setScopeTag}
+              showSelector={showScopeSelector}
+            />
+          </div>
 
           {/* Duration */}
           <div className="space-y-2">
@@ -229,7 +233,7 @@ export function AddTimeDialog({ open, onOpenChange, tenantId, clientId, defaultP
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
-            <Button type="submit" disabled={saving || needsPackage}>
+            <Button type="submit" disabled={saving}>
               {saving ? 'Saving...' : 'Add Time'}
             </Button>
           </DialogFooter>

@@ -18,6 +18,7 @@ export interface TimeEntry {
   duration_minutes: number;
   notes: string | null;
   source: string;
+  scope_tag: string;
   created_at: string;
   updated_at: string;
 }

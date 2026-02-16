@@ -35,6 +35,8 @@ import {
 } from 'lucide-react';
 import { useTenantTimeTracker } from '@/hooks/useTenantTimeTracker';
 import { formatHours } from '@/hooks/usePackageUsageQuery';
+import { useTenantMemberships, useMembershipUsage, type ScopeTag } from '@/hooks/useTenantMemberships';
+import { ScopeSelectorBadge } from './ScopeSelectorBadge';
 import { AddTimeDialog } from './AddTimeDialog';
 import { TimeLogDrawer } from './TimeLogDrawer';
 import { AddTimeFromMeetingDialog } from './AddTimeFromMeetingDialog';
@@ -55,10 +57,6 @@ export function TenantTimeTrackerBar({ tenantId, tenantName }: TenantTimeTracker
     setSelectedPackageId,
     selectedPackage,
     hasMultiplePackages,
-    needsPackageSelection,
-    isAllPackages,
-    usage,
-    summary,
     activeTimer,
     isTimerForThisTenant,
     hasActiveTimer,
@@ -68,22 +66,31 @@ export function TenantTimeTrackerBar({ tenantId, tenantName }: TenantTimeTracker
     loading,
   } = useTenantTimeTracker(tenantId);
 
+  const membership = useTenantMemberships(tenantId);
+  const { data: membershipUsage } = useMembershipUsage(tenantId);
+
   const queryClient = useQueryClient();
+  const [scopeTag, setScopeTag] = useState<ScopeTag>(membership.defaultScope);
   const [addTimeOpen, setAddTimeOpen] = useState(false);
   const [logOpen, setLogOpen] = useState(false);
   const [meetingTimeOpen, setMeetingTimeOpen] = useState(false);
   const [breakdownOpen, setBreakdownOpen] = useState(false);
 
-  const monthHours = summary.thisMonth / 60;
-  const usedPercent = usage?.used_percent || 0;
+  // Membership usage metrics
+  const totalUsed = membershipUsage?.total_used_minutes ?? 0;
+  const totalIncluded = membershipUsage?.total_included_minutes ?? 0;
+  const remaining = membershipUsage?.remaining_minutes ?? 0;
+  const usedPercent = totalIncluded > 0 ? (totalUsed / totalIncluded) * 100 : 0;
   const isOverBudget = usedPercent >= 100;
   const isNearLimit = usedPercent >= 80;
+  const monthHours = totalUsed / 60;
 
   const handleSuccess = async () => {
     await Promise.all([
       queryClient.invalidateQueries({ queryKey: timeTrackingKeys.summary(tenantId), refetchType: 'all' }),
       queryClient.invalidateQueries({ queryKey: timeTrackingKeys.entries(tenantId), refetchType: 'all' }),
       queryClient.invalidateQueries({ queryKey: packageUsageKeys.packages(tenantId), refetchType: 'all' }),
+      queryClient.invalidateQueries({ queryKey: ['membership-combined-usage', tenantId], refetchType: 'all' }),
       queryClient.invalidateQueries({
         predicate: (query) => {
           const key = query.queryKey;
@@ -94,7 +101,7 @@ export function TenantTimeTrackerBar({ tenantId, tenantName }: TenantTimeTracker
     ]);
   };
 
-  if (loading) {
+  if (loading || membership.loading) {
     return (
       <div className="sticky top-0 z-20 border-b bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/80">
         <div className="flex items-center gap-3 px-6 py-2">
@@ -110,32 +117,32 @@ export function TenantTimeTrackerBar({ tenantId, tenantName }: TenantTimeTracker
     <>
       <div className="sticky top-0 z-20 border-b bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/80">
         <div className="flex items-center gap-2 px-6 py-2 flex-wrap">
-          {/* Package selector */}
-          {packages.length > 0 && (
-            <>
-              {hasMultiplePackages ? (
-                <Select
-                  value={selectedPackageId?.toString() || ''}
-                  onValueChange={(v) => setSelectedPackageId(v === 'all' ? 'all' : v ? Number(v) : null)}
-                >
-                  <SelectTrigger className="w-[180px] h-8 text-xs">
-                    <SelectValue placeholder="Select package" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-popover z-50">
-                    <SelectItem value="all">All packages</SelectItem>
-                    {packages.map(pkg => (
-                      <SelectItem key={pkg.id} value={pkg.id.toString()}>
-                        {pkg.package_name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              ) : (
-                <Badge variant="outline" className="h-8 px-3 text-xs font-medium">
-                  {packages[0]?.package_name}
-                </Badge>
-              )}
-            </>
+          {/* Scope selector (replaces package selector for time logging) */}
+          <ScopeSelectorBadge
+            value={scopeTag}
+            onChange={setScopeTag}
+            showSelector={membership.showScopeSelector}
+            size="sm"
+          />
+
+          {/* Package filter (kept for browsing packages) */}
+          {hasMultiplePackages && (
+            <Select
+              value={selectedPackageId?.toString() || ''}
+              onValueChange={(v) => setSelectedPackageId(v === 'all' ? 'all' : v ? Number(v) : null)}
+            >
+              <SelectTrigger className="w-[160px] h-7 text-xs">
+                <SelectValue placeholder="Filter package" />
+              </SelectTrigger>
+              <SelectContent className="bg-popover z-50">
+                <SelectItem value="all">All packages</SelectItem>
+                {packages.map(pkg => (
+                  <SelectItem key={pkg.id} value={pkg.id.toString()}>
+                    {pkg.package_name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           )}
 
           {/* Divider */}
@@ -145,11 +152,11 @@ export function TenantTimeTrackerBar({ tenantId, tenantName }: TenantTimeTracker
           <div className="flex items-center gap-1.5 px-2 py-1 bg-muted rounded-md">
             <Clock className="h-3.5 w-3.5 text-muted-foreground" />
             <span className="text-sm font-medium">{monthHours.toFixed(1)}h</span>
-            <span className="text-xs text-muted-foreground hidden sm:inline">this month</span>
+            <span className="text-xs text-muted-foreground hidden sm:inline">used</span>
           </div>
 
-          {/* Package usage */}
-          {usage && usage.included_minutes > 0 && (
+          {/* Membership usage */}
+          {totalIncluded > 0 && (
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -158,20 +165,14 @@ export function TenantTimeTrackerBar({ tenantId, tenantName }: TenantTimeTracker
                     className={`text-xs gap-1 cursor-default ${isNearLimit && !isOverBudget ? 'border-yellow-500 text-yellow-700' : ''}`}
                   >
                     {isOverBudget && <AlertTriangle className="h-3 w-3" />}
-                    {formatHours(usage.used_minutes)} / {formatHours(usage.included_minutes)}
+                    {formatHours(totalUsed)} / {formatHours(totalIncluded)}
                     <span className="text-muted-foreground">({usedPercent.toFixed(0)}%)</span>
                   </Badge>
                 </TooltipTrigger>
                 <TooltipContent side="bottom" className="max-w-xs">
                   <div className="space-y-1 text-xs">
-                    <p><strong>Remaining:</strong> {formatHours(usage.remaining_minutes)}</p>
-                    <div className="flex gap-2 text-[10px] pt-1 border-t border-border/50">
-                      <span>Calendar {formatHours(usage.calendar_minutes_30d || 0)}</span>
-                      <span>•</span>
-                      <span>Timer {formatHours(usage.timer_minutes_30d || 0)}</span>
-                      <span>•</span>
-                      <span>Manual {formatHours(usage.manual_minutes_30d || 0)}</span>
-                    </div>
+                    <p><strong>Remaining:</strong> {formatHours(remaining)}</p>
+                    <p className="text-muted-foreground">Combined RTO + CRICOS membership hours</p>
                   </div>
                 </TooltipContent>
               </Tooltip>
@@ -181,15 +182,7 @@ export function TenantTimeTrackerBar({ tenantId, tenantName }: TenantTimeTracker
           {/* Spacer */}
           <div className="flex-1" />
 
-          {/* No package warning */}
-          {(needsPackageSelection || isAllPackages) && (
-            <span className="text-xs text-muted-foreground flex items-center gap-1">
-              <Info className="h-3 w-3" />
-              {isAllPackages ? 'Select a specific package to track time.' : 'Select a package to track time.'}
-            </span>
-          )}
-
-          {/* Timer button */}
+          {/* Timer button — no package required, just scope */}
           {isTimerForThisTenant ? (
             <Button
               variant="destructive"
@@ -205,7 +198,7 @@ export function TenantTimeTrackerBar({ tenantId, tenantName }: TenantTimeTracker
               variant="default"
               size="sm"
               onClick={() => startTimer()}
-              disabled={hasActiveTimer || needsPackageSelection || isAllPackages}
+              disabled={hasActiveTimer}
               className="gap-1.5 h-8"
             >
               <Play className="h-3.5 w-3.5 fill-current" />
@@ -253,8 +246,9 @@ export function TenantTimeTrackerBar({ tenantId, tenantName }: TenantTimeTracker
         onOpenChange={setAddTimeOpen}
         tenantId={tenantId}
         clientId={tenantId}
-        defaultPackageId={selectedPackage?.package_id || null}
-        packages={packages}
+        defaultScopeTag={scopeTag}
+        showScopeSelector={membership.showScopeSelector}
+        onSuccess={handleSuccess}
       />
 
       <TimeLogDrawer

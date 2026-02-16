@@ -15,6 +15,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { AppModal, AppModalContent, AppModalHeader, AppModalTitle, AppModalBody, AppModalFooter } from '@/components/ui/app-modal';
+import { ScopeSelectorBadge, SCOPE_SHORT } from './ScopeSelectorBadge';
+import { MembershipWeightsPanel } from './MembershipWeightsPanel';
+import { useTenantMemberships, type ScopeTag } from '@/hooks/useTenantMemberships';
 import {
   Clock,
   Timer,
@@ -28,6 +31,7 @@ import {
   AlertTriangle,
   ChevronLeft,
   ChevronRight,
+  RotateCcw,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -474,6 +478,104 @@ function SplitEntryDialog({
   );
 }
 
+// ── Reallocate Dialog ────────────────────────────────────────────────
+function ReallocateDialog({
+  open,
+  onOpenChange,
+  entry,
+  tenantId,
+  showScopeSelector,
+  onSuccess,
+}: {
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+  entry: TimeEntry | null;
+  tenantId: number;
+  showScopeSelector: boolean;
+  onSuccess: () => void;
+}) {
+  const [newScope, setNewScope] = useState<ScopeTag>('both');
+  const [reason, setReason] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const { toast } = useToast();
+
+  // Sync when entry changes
+  useState(() => {
+    if (entry) setNewScope((entry.scope_tag as ScopeTag) || 'both');
+  });
+
+  const handleReallocate = async () => {
+    if (!entry || !reason.trim()) return;
+    setSubmitting(true);
+    try {
+      const { error } = await supabase
+        .from('time_entries')
+        .update({
+          scope_tag: newScope,
+          notes: entry.notes
+            ? `${entry.notes} [Reallocated: ${reason.trim()}]`
+            : `[Reallocated: ${reason.trim()}]`,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', entry.id);
+      if (error) throw error;
+      toast({ title: 'Entry reallocated', description: `Scope changed to ${SCOPE_SHORT[newScope]}` });
+      onSuccess();
+      onOpenChange(false);
+      setReason('');
+    } catch (err: any) {
+      toast({ title: 'Reallocation failed', description: err.message, variant: 'destructive' });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <AppModal open={open} onOpenChange={onOpenChange}>
+      <AppModalContent size="sm">
+        <AppModalHeader>
+          <AppModalTitle>Reallocate Time Entry</AppModalTitle>
+        </AppModalHeader>
+        <AppModalBody className="space-y-4">
+          {entry && (
+            <p className="text-sm text-muted-foreground">
+              Reallocating {formatDuration(entry.duration_minutes)} ({entry.work_type}) —
+              currently <strong>{SCOPE_SHORT[(entry.scope_tag as ScopeTag) || 'both']}</strong>
+            </p>
+          )}
+          <div className="space-y-2">
+            <label className="text-sm font-medium">New Scope</label>
+            <ScopeSelectorBadge
+              value={newScope}
+              onChange={setNewScope}
+              showSelector={showScopeSelector}
+            />
+          </div>
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Reason (audit trail)</label>
+            <Textarea
+              value={reason}
+              onChange={e => setReason(e.target.value)}
+              placeholder="Why is this entry being reallocated?"
+              rows={2}
+            />
+          </div>
+        </AppModalBody>
+        <AppModalFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
+          <Button
+            onClick={handleReallocate}
+            disabled={submitting || !reason.trim() || (entry && newScope === entry.scope_tag)}
+          >
+            <RotateCcw className="h-4 w-4 mr-2" />
+            Reallocate
+          </Button>
+        </AppModalFooter>
+      </AppModalContent>
+    </AppModal>
+  );
+}
+
 // ── Pagination Controls ─────────────────────────────────────────────
 function PaginationBar({
   page,
@@ -523,12 +625,22 @@ function PaginationBar({
 // ── Main Tab Component ──────────────────────────────────────────────
 export function ClientTimeTab({ tenantId, tenantName }: ClientTimeTabProps) {
   const { entries, loading } = useTimeTracking(tenantId);
+  const { profile } = useAuth();
   const queryClient = useQueryClient();
+  const membership = useTenantMemberships(tenantId);
   const [packageFilter, setPackageFilter] = useState('all');
   const [workTypeFilter, setWorkTypeFilter] = useState('all');
   const [page, setPage] = useState(1);
   const [moveEntry, setMoveEntry] = useState<TimeEntry | null>(null);
   const [splitEntry, setSplitEntry] = useState<TimeEntry | null>(null);
+  const [reallocateEntry, setReallocateEntry] = useState<TimeEntry | null>(null);
+
+  const isAdminOrStaff =
+    profile?.global_role === 'SuperAdmin' ||
+    profile?.unicorn_role === 'Super Admin' ||
+    profile?.unicorn_role === 'Team Leader' ||
+    profile?.unicorn_role === 'Team Member' ||
+    profile?.unicorn_role === 'Admin';
 
   // Fetch active packages for filter dropdown
   const { data: activePackages } = useQuery({
@@ -578,6 +690,7 @@ export function ClientTimeTab({ tenantId, tenantName }: ClientTimeTabProps) {
     queryClient.invalidateQueries({ queryKey: ['package-burndown', tenantId] });
     queryClient.invalidateQueries({ queryKey: ['package-time-summary', tenantId] });
     queryClient.invalidateQueries({ queryKey: ['stale-drafts', tenantId] });
+    queryClient.invalidateQueries({ queryKey: ['membership-combined-usage', tenantId] });
   };
 
   if (loading) {
@@ -594,12 +707,15 @@ export function ClientTimeTab({ tenantId, tenantName }: ClientTimeTabProps) {
       {/* Stale Drafts */}
       <StaleDraftsWarning tenantId={tenantId} />
 
-      {/* Burndown */}
-      <div>
-        <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">
-          Package Burndown
-        </h3>
-        <PackageBurndownCards tenantId={tenantId} />
+      {/* Burndown + Weights side by side */}
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_280px] gap-6">
+        <div>
+          <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">
+            Package Burndown
+          </h3>
+          <PackageBurndownCards tenantId={tenantId} />
+        </div>
+        <MembershipWeightsPanel tenantId={tenantId} />
       </div>
 
       {/* Time Summary */}
@@ -660,11 +776,12 @@ export function ClientTimeTab({ tenantId, tenantName }: ClientTimeTabProps) {
                   <TableRow>
                     <TableHead>Date</TableHead>
                     <TableHead>Duration</TableHead>
+                    <TableHead>Scope</TableHead>
                     <TableHead>Type</TableHead>
                     <TableHead>Source</TableHead>
                     <TableHead>Billable</TableHead>
                     <TableHead>Notes</TableHead>
-                    {hasMultiplePackages && <TableHead className="text-right">Actions</TableHead>}
+                    <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -677,6 +794,11 @@ export function ClientTimeTab({ tenantId, tenantName }: ClientTimeTabProps) {
                       </TableCell>
                       <TableCell className="font-medium">
                         {formatDuration(entry.duration_minutes)}
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className="text-xs">
+                          {SCOPE_SHORT[(entry.scope_tag as ScopeTag) || 'both']}
+                        </Badge>
                       </TableCell>
                       <TableCell>
                         <Badge variant="secondary" className="capitalize">
@@ -704,30 +826,43 @@ export function ClientTimeTab({ tenantId, tenantName }: ClientTimeTabProps) {
                       <TableCell className="max-w-[200px] truncate text-sm text-muted-foreground">
                         {entry.notes || '—'}
                       </TableCell>
-                      {hasMultiplePackages && (
-                        <TableCell className="text-right">
-                          <div className="flex items-center justify-end gap-1">
+                      <TableCell className="text-right">
+                        <div className="flex items-center justify-end gap-1">
+                          {isAdminOrStaff && membership.showScopeSelector && (
                             <Button
                               variant="ghost"
                               size="sm"
                               className="h-7 px-2"
-                              onClick={() => setMoveEntry(entry)}
-                              title="Move to another package"
+                              onClick={() => setReallocateEntry(entry)}
+                              title="Reallocate scope"
                             >
-                              <ArrowRightLeft className="h-3.5 w-3.5" />
+                              <RotateCcw className="h-3.5 w-3.5" />
                             </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-7 px-2"
-                              onClick={() => setSplitEntry(entry)}
-                              title="Split across packages"
-                            >
-                              <Scissors className="h-3.5 w-3.5" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      )}
+                          )}
+                          {hasMultiplePackages && (
+                            <>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-7 px-2"
+                                onClick={() => setMoveEntry(entry)}
+                                title="Move to another package"
+                              >
+                                <ArrowRightLeft className="h-3.5 w-3.5" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-7 px-2"
+                                onClick={() => setSplitEntry(entry)}
+                                title="Split across packages"
+                              >
+                                <Scissors className="h-3.5 w-3.5" />
+                              </Button>
+                            </>
+                          )}
+                        </div>
+                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -758,6 +893,16 @@ export function ClientTimeTab({ tenantId, tenantName }: ClientTimeTabProps) {
         onOpenChange={v => !v && setSplitEntry(null)}
         entry={splitEntry}
         tenantId={tenantId}
+        onSuccess={handleRefresh}
+      />
+
+      {/* Reallocate Dialog */}
+      <ReallocateDialog
+        open={!!reallocateEntry}
+        onOpenChange={v => !v && setReallocateEntry(null)}
+        entry={reallocateEntry}
+        tenantId={tenantId}
+        showScopeSelector={membership.showScopeSelector}
         onSuccess={handleRefresh}
       />
     </div>
