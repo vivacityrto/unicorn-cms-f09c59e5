@@ -5704,6 +5704,131 @@ export type Database = {
           },
         ]
       }
+      client_ai_messages: {
+        Row: {
+          citations_json: Json | null
+          created_at: string
+          id: string
+          message_content: string
+          role: string
+          session_id: string
+        }
+        Insert: {
+          citations_json?: Json | null
+          created_at?: string
+          id?: string
+          message_content: string
+          role: string
+          session_id: string
+        }
+        Update: {
+          citations_json?: Json | null
+          created_at?: string
+          id?: string
+          message_content?: string
+          role?: string
+          session_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_ai_messages_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "client_ai_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      client_ai_sessions: {
+        Row: {
+          ended_at: string | null
+          id: string
+          message_count: number
+          mode: string
+          stage_instance_id: number | null
+          started_at: string
+          tenant_id: number
+          user_id: string
+        }
+        Insert: {
+          ended_at?: string | null
+          id?: string
+          message_count?: number
+          mode?: string
+          stage_instance_id?: number | null
+          started_at?: string
+          tenant_id: number
+          user_id: string
+        }
+        Update: {
+          ended_at?: string | null
+          id?: string
+          message_count?: number
+          mode?: string
+          stage_instance_id?: number | null
+          started_at?: string
+          tenant_id?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_ai_sessions_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_ai_sessions_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_engagement_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "client_ai_sessions_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_eos_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "client_ai_sessions_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_compliance_entitlements"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "client_ai_sessions_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "client_ai_sessions_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "client_ai_sessions_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_membership_usage"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "client_ai_sessions_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_membership_usage"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
       client_alerts: {
         Row: {
           alert_type: string

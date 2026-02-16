@@ -226,3 +226,6 @@ verify_jwt = false
 
 [functions.run-workflow-optimisation]
 verify_jwt = false
+
+[functions.client-ai-companion]
+verify_jwt = false
