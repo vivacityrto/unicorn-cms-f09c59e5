@@ -53,9 +53,9 @@ export const timeTrackingKeys = {
   activeTimer: (userId: string) => [...timeTrackingKeys.all, 'active-timer', userId] as const,
 };
 
-export function useTimeSummaryQuery(clientId: number | null) {
+export function useTimeSummaryQuery(clientId: number | null, packageId?: number | null) {
   return useQuery({
-    queryKey: clientId ? timeTrackingKeys.summary(clientId) : ['time-tracking', 'summary', 'none'],
+    queryKey: clientId ? [...timeTrackingKeys.summary(clientId), packageId ?? 'all'] : ['time-tracking', 'summary', 'none'],
     queryFn: async (): Promise<TimeSummary> => {
       if (!clientId) {
         return {
@@ -76,10 +76,17 @@ export function useTimeSummaryQuery(clientId: number | null) {
       const last90Days = new Date(now);
       last90Days.setDate(now.getDate() - 90);
       
-      const { data, error } = await supabase
+      let query = supabase
         .from('time_entries')
         .select('duration_minutes, is_billable, start_at')
         .eq('client_id', clientId);
+      
+      // Filter by package if specified
+      if (packageId) {
+        query = query.eq('package_id', packageId);
+      }
+      
+      const { data, error } = await query;
       
       if (error) throw error;
       
