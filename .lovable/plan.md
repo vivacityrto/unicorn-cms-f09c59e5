@@ -1,24 +1,43 @@
 
-# Show Only the Most Recent Package Instance Per Package Type
+# Fix EOS Meeting Attendance Panel UI and Backend
 
 ## Problem
-When a client has multiple active instances of the same package (e.g., "Kickstart RTO Package" started 17/09/2024 AND 25/11/2025), both appear in the Packages tab. Only the most recent instance per package type should display.
+Two issues causing attendance to not work:
 
-## Solution
-After fetching all active package instances, deduplicate them by `package_id` -- keeping only the instance with the latest `start_date` for each package type.
+1. **Backend bug**: The `add_meeting_guest` RPC function casts `p_user_id::TEXT` when inserting into `audit_eos_events.entity_id` (which is UUID). This causes a 400 error every time an online user auto-joins or a guest is manually added. Since auto-attendance relies on this RPC, the attendee list stays empty ("No attendees yet") despite users being online.
 
-## Technical Change
+2. **Layout clipping**: The attendance panel sits in a `w-72` (288px) sidebar, which clips the "Mark All Present" and "Add Guest" buttons.
 
-### File: `src/hooks/useClientManagement.tsx`
-In the `useClientPackages` hook, after building the `packageData` array (around line 617), add a deduplication step:
+## Fix 1: Patch `add_meeting_guest` RPC (SQL migration)
 
-- Group all built `ClientPackage` entries by `package_id`
-- For each group, keep only the entry with the most recent `membership_started_at` date
-- Replace the `setPackages(packageData)` call with `setPackages(deduplicatedData)`
+Re-create the `add_meeting_guest` function, removing the `::TEXT` cast on line 398 of the original definition:
 
-This is a small, isolated change (~8 lines) that filters after the existing data build logic, so it does not affect stage resolution, hours calculation, or any other downstream logic.
+```sql
+-- Before (broken):
+entity_id, ...  VALUES ( ... p_user_id::TEXT, ... )
 
-## Impact
-- Only the Packages tab listing is affected
-- The older instance still exists in the database and remains accessible via direct URL or other queries
-- No database changes required
+-- After (fixed):
+entity_id, ...  VALUES ( ... p_user_id, ... )
+```
+
+This is a single-line fix in a new migration file. The function signature stays the same.
+
+## Fix 2: Attendance panel layout for narrow sidebar
+
+In `AttendancePanel.tsx`, adjust the action buttons area:
+- Stack buttons vertically (`flex-col`) instead of horizontally to prevent clipping in the 288px sidebar
+- Make buttons full-width (`w-full`) so they're clearly tappable
+- Reduce internal padding slightly for the narrow context
+
+## Files Changed
+
+| File | Change |
+|------|--------|
+| `supabase/migrations/<new>.sql` | New migration: recreate `add_meeting_guest` without `::TEXT` cast |
+| `src/components/eos/AttendancePanel.tsx` | Stack action buttons vertically for narrow sidebar |
+
+## Expected Outcome
+
+- Online users auto-register as attendees (no more 400 errors)
+- "Mark All Present" and "Add Guest" buttons fully visible and clickable
+- Attendee list populates correctly with avatars, names, and status dropdowns
