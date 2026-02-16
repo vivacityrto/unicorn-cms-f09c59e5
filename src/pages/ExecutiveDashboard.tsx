@@ -38,6 +38,7 @@ import { KnowledgeGraphWidget } from '@/components/executive/KnowledgeGraphWidge
 import { ClientRiskForecastWidget } from '@/components/executive/ClientRiskForecastWidget';
 import { CommercialRiskWidget } from '@/components/executive/CommercialRiskWidget';
 import { WorkflowEfficiencyWidget } from '@/components/executive/WorkflowEfficiencyWidget';
+import { RiskCommandWidget } from '@/components/executive/RiskCommandWidget';
 import { CopilotPanel } from '@/components/copilot/CopilotPanel';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
@@ -260,6 +261,7 @@ export default function ExecutiveDashboard() {
           <ClientRiskForecastWidget />
           <CommercialRiskWidget />
           <WorkflowEfficiencyWidget />
+          <RiskCommandWidget />
         </div>
 
         {/* Team Capacity Overview */}

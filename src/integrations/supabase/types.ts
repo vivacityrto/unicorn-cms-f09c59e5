@@ -21569,6 +21569,120 @@ export type Database = {
         }
         Relationships: []
       }
+      real_time_risk_alerts: {
+        Row: {
+          acknowledged_at: string | null
+          acknowledged_by_user_id: string | null
+          acknowledged_flag: boolean
+          alert_summary: string
+          alert_type: string
+          archived_flag: boolean
+          created_at: string
+          dedupe_hash: string | null
+          id: string
+          recommended_actions_json: Json | null
+          resolved_at: string | null
+          resolved_flag: boolean
+          severity: string
+          source_entity_id: string | null
+          source_type: string | null
+          tenant_id: number
+        }
+        Insert: {
+          acknowledged_at?: string | null
+          acknowledged_by_user_id?: string | null
+          acknowledged_flag?: boolean
+          alert_summary: string
+          alert_type: string
+          archived_flag?: boolean
+          created_at?: string
+          dedupe_hash?: string | null
+          id?: string
+          recommended_actions_json?: Json | null
+          resolved_at?: string | null
+          resolved_flag?: boolean
+          severity?: string
+          source_entity_id?: string | null
+          source_type?: string | null
+          tenant_id: number
+        }
+        Update: {
+          acknowledged_at?: string | null
+          acknowledged_by_user_id?: string | null
+          acknowledged_flag?: boolean
+          alert_summary?: string
+          alert_type?: string
+          archived_flag?: boolean
+          created_at?: string
+          dedupe_hash?: string | null
+          id?: string
+          recommended_actions_json?: Json | null
+          resolved_at?: string | null
+          resolved_flag?: boolean
+          severity?: string
+          source_entity_id?: string | null
+          source_type?: string | null
+          tenant_id?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "real_time_risk_alerts_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "real_time_risk_alerts_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_engagement_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "real_time_risk_alerts_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_eos_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "real_time_risk_alerts_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_compliance_entitlements"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "real_time_risk_alerts_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "real_time_risk_alerts_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "real_time_risk_alerts_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_membership_usage"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "real_time_risk_alerts_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_membership_usage"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
       regulator_change_events: {
         Row: {
           affected_areas_json: Json | null
@@ -36282,6 +36396,16 @@ export type Database = {
       finalise_meeting_minutes: {
         Args: { p_meeting_id: string; p_summary: string }
         Returns: string
+      }
+      fn_audit_risk_command: {
+        Args: {
+          p_action: string
+          p_actor_user_id: string
+          p_alert_id: string
+          p_metadata?: Json
+          p_tenant_id: number
+        }
+        Returns: undefined
       }
       fn_auth_user_id_by_email: { Args: { p_email: string }; Returns: string }
       fn_match_client_for_event: {
