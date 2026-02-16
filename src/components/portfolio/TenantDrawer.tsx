@@ -7,7 +7,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { ExternalLink, AlertTriangle, Activity, FileWarning, MessageSquare, Mail } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { formatDistanceToNow } from 'date-fns';
-import type { PortfolioTenant, TenantComms } from '@/hooks/usePortfolioCockpit';
+import type { AttentionTenant as PortfolioTenant, TenantComms } from '@/hooks/useDashboardTriage';
 import { cn } from '@/lib/utils';
 
 interface Props {

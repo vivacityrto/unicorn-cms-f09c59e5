@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Check, Clock, ChevronDown, Inbox } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
-import type { PriorityInboxItem } from '@/hooks/usePortfolioCockpit';
+import type { PriorityInboxItem } from '@/hooks/useDashboardTriage';
 import { cn } from '@/lib/utils';
 
 interface Props {
@@ -62,7 +62,7 @@ export function PriorityInboxPanel({ items, loading, tenantNames, onAcknowledge,
       </CardHeader>
       <CardContent className="p-0">
         {items.length === 0 ? (
-          <p className="text-sm text-muted-foreground p-4">All clear — no pending items.</p>
+          <p className="text-sm text-muted-foreground p-4">No pending items — behavioural prompts will appear here.</p>
         ) : (
           <div className="max-h-[400px] overflow-y-auto divide-y">
             {items.slice(0, 25).map(item => {

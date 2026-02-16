@@ -1,0 +1,536 @@
+import { useState, useMemo, useCallback } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
+import { useToast } from '@/hooks/use-toast';
+
+// ── Types ──────────────────────────────────────────────────────
+
+export interface AttentionTenant {
+  tenant_id: number;
+  tenant_name: string;
+  tenant_status: string;
+  abn: string | null;
+  rto_id: string | null;
+  cricos_id: string | null;
+  assigned_csc_user_id: string | null;
+  packages_json: any[];
+  risk_status: string;
+  risk_index: number;
+  risk_index_delta_14d: number;
+  worst_stage_health_status: string;
+  critical_stage_count: number;
+  at_risk_stage_count: number;
+  open_tasks_count: number;
+  overdue_tasks_count: number;
+  mandatory_gaps_count: number;
+  consult_hours_30d: number;
+  burn_risk_status: string;
+  projected_exhaustion_date: string | null;
+  retention_status: string;
+  composite_retention_risk_index: number | null;
+  last_activity_at: string | null;
+  attention_score: number;
+  attention_drivers_json: any[];
+  days_since_activity: number;
+}
+
+export interface PriorityInboxItem {
+  item_id: string;
+  item_type: string;
+  severity: string;
+  tenant_id: number | null;
+  stage_instance_id: string | null;
+  standard_clause: string | null;
+  summary: string;
+  owner_user_id: string | null;
+  created_at: string;
+}
+
+export interface RiskCluster {
+  standard_clause: string;
+  tenant_count: number;
+  total_events: number;
+  trend: string;
+  has_regulator_overlap: boolean;
+}
+
+export interface LabourMetric {
+  csc_user_id: string;
+  csc_name: string;
+  client_count: number;
+  weekly_capacity_hours: number;
+  total_overdue_tasks: number;
+  total_open_tasks: number;
+  overdue_ratio_pct: number;
+  intensive_clients: number;
+  low_touch_clients: number;
+}
+
+export interface TenantComms {
+  tenant_id: number;
+  recent_notes_json: any[];
+  recent_emails_json: any[];
+}
+
+export type SavedView = 'my_tenants' | 'all_tenants';
+
+export interface TriageFilters {
+  search: string;
+  riskStatus: string | null;
+  stageHealth: string | null;
+  mandatoryGapsOnly: boolean;
+  burnRiskOnly: boolean;
+}
+
+export interface FocusItem {
+  id: string;
+  severity: 'critical' | 'high' | 'moderate';
+  tenantName: string;
+  tenantId: number;
+  reason: string;
+  age: string;
+  ageMs: number;
+  actionLabel: string;
+  actionType: string;
+}
+
+const SEVERITY_RANK: Record<string, number> = { critical: 3, high: 2, moderate: 1 };
+
+// ── Hook ───────────────────────────────────────────────────────
+export function useDashboardTriage() {
+  const { profile } = useAuth();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  const isVivacityStaff = ['Super Admin', 'Team Leader', 'Team Member'].includes(profile?.unicorn_role || '');
+  const isSuperAdmin = profile?.unicorn_role === 'Super Admin';
+  const isExec = isSuperAdmin || profile?.unicorn_role === 'Team Leader';
+  const canSeeAll = isSuperAdmin;
+
+  const [savedView, setSavedView] = useState<SavedView>('my_tenants');
+  const [filters, setFilters] = useState<TriageFilters>({
+    search: '',
+    riskStatus: null,
+    stageHealth: null,
+    mandatoryGapsOnly: false,
+    burnRiskOnly: false,
+  });
+
+  // ── Attention-ranked tenants ──
+  const { data: rawTenants = [], isLoading: tenantsLoading } = useQuery({
+    queryKey: ['triage-attention-ranked'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('v_dashboard_attention_ranked' as any)
+        .select('*');
+      if (error) throw error;
+      return (data || []) as unknown as AttentionTenant[];
+    },
+    enabled: isVivacityStaff,
+    staleTime: 60_000,
+  });
+
+  // ── CSC name map ──
+  const cscIds = useMemo(() => {
+    const ids = new Set<string>();
+    rawTenants.forEach(t => { if (t.assigned_csc_user_id) ids.add(t.assigned_csc_user_id); });
+    return Array.from(ids);
+  }, [rawTenants]);
+
+  const { data: cscUsers = [] } = useQuery({
+    queryKey: ['triage-csc-users', cscIds],
+    queryFn: async () => {
+      if (cscIds.length === 0) return [];
+      const { data } = await supabase.from('users').select('user_uuid, first_name, last_name').in('user_uuid', cscIds);
+      return data || [];
+    },
+    enabled: cscIds.length > 0,
+  });
+
+  const cscNameMap = useMemo(() => {
+    const map: Record<string, string> = {};
+    cscUsers.forEach((u: any) => { map[u.user_uuid] = `${u.first_name || ''} ${u.last_name || ''}`.trim() || 'Unknown'; });
+    return map;
+  }, [cscUsers]);
+
+  // ── Apply view + filters ──
+  const filteredTenants = useMemo(() => {
+    let list = rawTenants;
+    if (savedView === 'my_tenants' && profile?.user_uuid) {
+      list = list.filter(t => t.assigned_csc_user_id === profile.user_uuid);
+    }
+    if (filters.search) {
+      const q = filters.search.toLowerCase();
+      list = list.filter(t =>
+        t.tenant_name?.toLowerCase().includes(q) ||
+        t.abn?.toLowerCase().includes(q) ||
+        t.rto_id?.toLowerCase().includes(q) ||
+        t.cricos_id?.toLowerCase().includes(q)
+      );
+    }
+    if (filters.riskStatus) list = list.filter(t => t.risk_status === filters.riskStatus);
+    if (filters.stageHealth) list = list.filter(t => t.worst_stage_health_status === filters.stageHealth);
+    if (filters.mandatoryGapsOnly) list = list.filter(t => t.mandatory_gaps_count > 0);
+    if (filters.burnRiskOnly) list = list.filter(t => t.burn_risk_status === 'critical');
+    return list; // already sorted by attention_score DESC from view
+  }, [rawTenants, savedView, filters, profile?.user_uuid]);
+
+  // ── Split into attention (top 5) and low-attention ──
+  const top5 = useMemo(() => filteredTenants.slice(0, 5), [filteredTenants]);
+  const lowAttention = useMemo(() =>
+    filteredTenants.filter(t =>
+      t.risk_status === 'stable' &&
+      t.worst_stage_health_status === 'healthy' &&
+      t.mandatory_gaps_count === 0 &&
+      !['high_risk', 'vulnerable'].includes(t.retention_status) &&
+      t.burn_risk_status !== 'critical'
+    ), [filteredTenants]);
+  const activePortfolio = useMemo(() =>
+    filteredTenants.filter(t => !lowAttention.includes(t)),
+    [filteredTenants, lowAttention]);
+
+  // ── Today's Focus: auto-generate 3-5 items ──
+  const todaysFocus = useMemo((): FocusItem[] => {
+    const items: FocusItem[] = [];
+    const now = Date.now();
+    const tenants = savedView === 'my_tenants' && profile?.user_uuid
+      ? rawTenants.filter(t => t.assigned_csc_user_id === profile.user_uuid)
+      : rawTenants;
+
+    // Critical stages
+    tenants.filter(t => t.worst_stage_health_status === 'critical').slice(0, 2).forEach(t => {
+      items.push({
+        id: `focus-stage-${t.tenant_id}`,
+        severity: 'critical',
+        tenantName: t.tenant_name,
+        tenantId: t.tenant_id,
+        reason: `Stage stalled${t.days_since_activity ? ` ${t.days_since_activity} days` : ''}`,
+        age: t.days_since_activity ? `${t.days_since_activity}d` : '',
+        ageMs: (t.days_since_activity || 0) * 86400000,
+        actionLabel: 'Review Stage',
+        actionType: 'review_stage',
+      });
+    });
+
+    // High severity risk
+    tenants.filter(t => t.risk_status === 'high' && !items.some(i => i.tenantId === t.tenant_id)).slice(0, 1).forEach(t => {
+      items.push({
+        id: `focus-risk-${t.tenant_id}`,
+        severity: 'critical',
+        tenantName: t.tenant_name,
+        tenantId: t.tenant_id,
+        reason: `High risk – index ${t.risk_index}`,
+        age: '',
+        ageMs: 0,
+        actionLabel: 'Review Risk',
+        actionType: 'review_risk',
+      });
+    });
+
+    // Mandatory gaps > 14 days
+    tenants.filter(t => t.mandatory_gaps_count > 0 && t.days_since_activity > 14 && !items.some(i => i.tenantId === t.tenant_id)).slice(0, 1).forEach(t => {
+      items.push({
+        id: `focus-gap-${t.tenant_id}`,
+        severity: 'high',
+        tenantName: t.tenant_name,
+        tenantId: t.tenant_id,
+        reason: `${t.mandatory_gaps_count} mandatory evidence gaps open`,
+        age: `${t.days_since_activity}d inactive`,
+        ageMs: t.days_since_activity * 86400000,
+        actionLabel: 'Check Gaps',
+        actionType: 'check_gaps',
+      });
+    });
+
+    // Burn risk critical
+    tenants.filter(t => t.burn_risk_status === 'critical' && !items.some(i => i.tenantId === t.tenant_id)).slice(0, 1).forEach(t => {
+      items.push({
+        id: `focus-burn-${t.tenant_id}`,
+        severity: 'high',
+        tenantName: t.tenant_name,
+        tenantId: t.tenant_id,
+        reason: `Hours exhaustion: ${t.projected_exhaustion_date || 'imminent'}`,
+        age: '',
+        ageMs: 0,
+        actionLabel: 'Review Hours',
+        actionType: 'review_burn',
+      });
+    });
+
+    // Retention high risk
+    tenants.filter(t => t.retention_status === 'high_risk' && !items.some(i => i.tenantId === t.tenant_id)).slice(0, 1).forEach(t => {
+      items.push({
+        id: `focus-retention-${t.tenant_id}`,
+        severity: 'high',
+        tenantName: t.tenant_name,
+        tenantId: t.tenant_id,
+        reason: 'Retention at high risk',
+        age: '',
+        ageMs: 0,
+        actionLabel: 'Review Retention',
+        actionType: 'review_retention',
+      });
+    });
+
+    // No activity > 21 days
+    tenants.filter(t => t.days_since_activity > 21 && !items.some(i => i.tenantId === t.tenant_id)).slice(0, 1).forEach(t => {
+      items.push({
+        id: `focus-inactive-${t.tenant_id}`,
+        severity: 'moderate',
+        tenantName: t.tenant_name,
+        tenantId: t.tenant_id,
+        reason: `No activity for ${t.days_since_activity} days`,
+        age: `${t.days_since_activity}d`,
+        ageMs: t.days_since_activity * 86400000,
+        actionLabel: 'Check In',
+        actionType: 'check_in',
+      });
+    });
+
+    // If still empty, inject proactive items
+    if (items.length === 0) {
+      const sorted = [...tenants].sort((a, b) => b.attention_score - a.attention_score);
+      sorted.slice(0, 3).forEach(t => {
+        items.push({
+          id: `focus-proactive-${t.tenant_id}`,
+          severity: 'moderate',
+          tenantName: t.tenant_name,
+          tenantId: t.tenant_id,
+          reason: 'Proactive review required',
+          age: t.days_since_activity ? `${t.days_since_activity}d since activity` : '',
+          ageMs: (t.days_since_activity || 0) * 86400000,
+          actionLabel: 'Review',
+          actionType: 'proactive_review',
+        });
+      });
+    }
+
+    return items.slice(0, 5);
+  }, [rawTenants, savedView, profile?.user_uuid]);
+
+  // ── KPIs ──
+  const kpis = useMemo(() => ({
+    highRisk: filteredTenants.filter(t => ['high', 'elevated'].includes(t.risk_status)).length,
+    criticalStages: filteredTenants.reduce((s, t) => s + t.critical_stage_count, 0),
+    mandatoryGaps: filteredTenants.reduce((s, t) => s + t.mandatory_gaps_count, 0),
+    burnCritical: filteredTenants.filter(t => t.burn_risk_status === 'critical').length,
+    retentionHighRisk: filteredTenants.filter(t => ['high_risk', 'vulnerable'].includes(t.retention_status)).length,
+  }), [filteredTenants]);
+
+  // ── Priority Inbox ──
+  const { data: rawInbox = [], isLoading: inboxLoading } = useQuery({
+    queryKey: ['triage-priority-inbox'],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('v_dashboard_priority_inbox' as any).select('*');
+      if (error) throw error;
+      return (data || []) as unknown as PriorityInboxItem[];
+    },
+    enabled: isVivacityStaff,
+    staleTime: 60_000,
+  });
+
+  const { data: inboxActions = [] } = useQuery({
+    queryKey: ['triage-inbox-actions'],
+    queryFn: async () => {
+      const { data } = await (supabase.from as any)('priority_inbox_actions')
+        .select('item_id, action_type, until_at')
+        .eq('user_id', profile?.user_uuid || '');
+      return data || [];
+    },
+    enabled: !!profile?.user_uuid,
+  });
+
+  const priorityInbox = useMemo(() => {
+    const now = new Date();
+    const snoozed = new Set(inboxActions.filter((a: any) => a.action_type === 'snooze' && (!a.until_at || new Date(a.until_at) > now)).map((a: any) => a.item_id));
+    const acked = new Set(inboxActions.filter((a: any) => a.action_type === 'acknowledge').map((a: any) => a.item_id));
+    let items = rawInbox.filter(i => !snoozed.has(i.item_id) && !acked.has(i.item_id));
+
+    if (savedView === 'my_tenants' && profile?.user_uuid) {
+      const myIds = new Set(rawTenants.filter(t => t.assigned_csc_user_id === profile.user_uuid).map(t => t.tenant_id));
+      items = items.filter(i => !i.tenant_id || myIds.has(i.tenant_id));
+    }
+
+    return items.sort((a, b) => {
+      const sr = (SEVERITY_RANK[b.severity] || 0) - (SEVERITY_RANK[a.severity] || 0);
+      if (sr !== 0) return sr;
+      return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+    });
+  }, [rawInbox, inboxActions, savedView, rawTenants, profile?.user_uuid]);
+
+  // ── Inbox never empty: inject behavioural prompts ──
+  const inboxWithFallbacks = useMemo(() => {
+    if (priorityInbox.length > 0) return priorityInbox;
+    const fallbacks: PriorityInboxItem[] = [];
+    const tenants = savedView === 'my_tenants' && profile?.user_uuid
+      ? rawTenants.filter(t => t.assigned_csc_user_id === profile.user_uuid)
+      : rawTenants;
+
+    const noConsult = tenants.filter(t => t.consult_hours_30d === 0).slice(0, 1);
+    noConsult.forEach(t => {
+      fallbacks.push({
+        item_id: `fallback-no-consult-${t.tenant_id}`,
+        item_type: 'behavioural_prompt',
+        severity: 'moderate',
+        tenant_id: t.tenant_id,
+        stage_instance_id: null,
+        standard_clause: null,
+        summary: `No consult logged in 30 days – ${t.tenant_name}`,
+        owner_user_id: null,
+        created_at: new Date().toISOString(),
+      });
+    });
+
+    const inactive = tenants.filter(t => t.days_since_activity > 21).slice(0, 1);
+    inactive.forEach(t => {
+      fallbacks.push({
+        item_id: `fallback-inactive-${t.tenant_id}`,
+        item_type: 'behavioural_prompt',
+        severity: 'moderate',
+        tenant_id: t.tenant_id,
+        stage_instance_id: null,
+        standard_clause: null,
+        summary: `Low engagement on ${t.tenant_name} – ${t.days_since_activity}d inactive`,
+        owner_user_id: null,
+        created_at: new Date().toISOString(),
+      });
+    });
+
+    if (fallbacks.length === 0) {
+      fallbacks.push({
+        item_id: 'fallback-review',
+        item_type: 'behavioural_prompt',
+        severity: 'moderate',
+        tenant_id: null,
+        stage_instance_id: null,
+        standard_clause: null,
+        summary: 'Run evidence gap checks on your oldest tenants',
+        owner_user_id: null,
+        created_at: new Date().toISOString(),
+      });
+    }
+
+    return fallbacks;
+  }, [priorityInbox, rawTenants, savedView, profile?.user_uuid]);
+
+  // ── Risk clusters ──
+  const { data: riskClusters = [] } = useQuery({
+    queryKey: ['triage-risk-clusters'],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('v_dashboard_risk_clusters' as any).select('*');
+      if (error) throw error;
+      return (data || []) as unknown as RiskCluster[];
+    },
+    enabled: isVivacityStaff,
+    staleTime: 300_000,
+  });
+
+  // ── Labour efficiency ──
+  const { data: labourMetrics = [] } = useQuery({
+    queryKey: ['triage-labour-efficiency'],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('v_dashboard_labour_efficiency' as any).select('*');
+      if (error) throw error;
+      return (data || []) as unknown as LabourMetric[];
+    },
+    enabled: isExec,
+    staleTime: 300_000,
+  });
+
+  // Current user's labour metric
+  const myLabour = useMemo(() =>
+    labourMetrics.find(l => l.csc_user_id === profile?.user_uuid) || null,
+    [labourMetrics, profile?.user_uuid]);
+
+  // Overload detection (>110%)
+  const isOverloaded = useMemo(() => {
+    if (!myLabour) return false;
+    if (myLabour.weekly_capacity_hours === 0) return false;
+    // We don't have current_load_hours in the simplified view, so check intensive ratio
+    return myLabour.intensive_clients > myLabour.low_touch_clients * 2;
+  }, [myLabour]);
+
+  // ── Mutations ──
+  const acknowledgeItem = useMutation({
+    mutationFn: async (itemId: string) => {
+      const { error } = await (supabase.from as any)('priority_inbox_actions').insert({
+        item_id: itemId, item_type: 'inbox', user_id: profile!.user_uuid, action_type: 'acknowledge',
+      });
+      if (error) throw error;
+      await logDashboardEvent('inbox_acknowledge', { item_id: itemId });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['triage-inbox-actions'] });
+      toast({ title: 'Acknowledged' });
+    },
+  });
+
+  const snoozeItem = useMutation({
+    mutationFn: async ({ itemId, days }: { itemId: string; days: number }) => {
+      const until = new Date();
+      until.setDate(until.getDate() + days);
+      const { error } = await (supabase.from as any)('priority_inbox_actions').insert({
+        item_id: itemId, item_type: 'inbox', user_id: profile!.user_uuid, action_type: 'snooze', until_at: until.toISOString(),
+      });
+      if (error) throw error;
+      await logDashboardEvent('inbox_snooze', { item_id: itemId, days });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['triage-inbox-actions'] });
+      toast({ title: 'Snoozed' });
+    },
+  });
+
+  // ── Tenant comms ──
+  const fetchTenantComms = useCallback(async (tenantId: number): Promise<TenantComms | null> => {
+    const { data, error } = await supabase.from('v_dashboard_tenant_recent_comms' as any).select('*').eq('tenant_id', tenantId).single();
+    if (error) return null;
+    return data as unknown as TenantComms;
+  }, []);
+
+  // ── Audit ──
+  const logDashboardEvent = useCallback(async (action: string, metadata: Record<string, any> = {}) => {
+    if (!profile?.user_uuid) return;
+    await (supabase.from as any)('audit_dashboard_events').insert({
+      actor_user_id: profile.user_uuid, action, metadata_json: { ...metadata, saved_view: savedView },
+    });
+  }, [profile?.user_uuid, savedView]);
+
+  // ── Tenant name map ──
+  const tenantNames = useMemo(() => {
+    const map: Record<number, string> = {};
+    rawTenants.forEach(t => { map[t.tenant_id] = t.tenant_name; });
+    return map;
+  }, [rawTenants]);
+
+  return {
+    // Data
+    todaysFocus,
+    top5,
+    activePortfolio,
+    lowAttention,
+    filteredTenants,
+    tenantsLoading,
+    priorityInbox: inboxWithFallbacks,
+    inboxLoading,
+    riskClusters,
+    labourMetrics,
+    myLabour,
+    isOverloaded,
+    kpis,
+    tenantNames,
+    cscNameMap,
+    // State
+    filters, setFilters,
+    savedView, setSavedView,
+    // Permissions
+    canSeeAll, isExec, isSuperAdmin, isVivacityStaff,
+    // Actions
+    acknowledgeItem: acknowledgeItem.mutate,
+    snoozeItem: snoozeItem.mutate,
+    fetchTenantComms,
+    logDashboardEvent,
+    profile,
+  };
+}
