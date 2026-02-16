@@ -96,15 +96,15 @@ export function AddTimeDialog({
         }
 
         // Fetch package names separately (no FK relationship)
-        const pkgIds = [...new Set(piData.map((pi) => pi.package_id).filter(Boolean))];
+        const pkgIds = [...new Set(piData.map((pi) => Number(pi.package_id)).filter(Boolean))];
         const { data: pkgData } = pkgIds.length > 0
           ? await supabase.from('packages').select('id, name, code').in('id', pkgIds)
           : { data: [] };
 
-        const pkgMap = new Map((pkgData || []).map((p: any) => [p.id, p]));
+        const pkgMap = new Map((pkgData || []).map((p: any) => [Number(p.id), p]));
 
         const instances: PackageInstance[] = piData.map((pi: any) => {
-          const pkg = pkgMap.get(pi.package_id);
+          const pkg = pkgMap.get(Number(pi.package_id));
           return {
             id: pi.id,
             package_name: pkg?.name || `Package #${pi.id}`,
