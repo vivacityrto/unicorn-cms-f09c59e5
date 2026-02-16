@@ -21938,6 +21938,54 @@ export type Database = {
         }
         Relationships: []
       }
+      risk_events: {
+        Row: {
+          created_at: string
+          detected_at: string
+          detected_by_user_id: string | null
+          id: string
+          notes: string | null
+          risk_category: string | null
+          severity: string
+          source_entity_id: string | null
+          source_type: string
+          standard_clause: string | null
+          status: string
+          tenant_id: number
+          theme_label: string | null
+        }
+        Insert: {
+          created_at?: string
+          detected_at?: string
+          detected_by_user_id?: string | null
+          id?: string
+          notes?: string | null
+          risk_category?: string | null
+          severity?: string
+          source_entity_id?: string | null
+          source_type: string
+          standard_clause?: string | null
+          status?: string
+          tenant_id: number
+          theme_label?: string | null
+        }
+        Update: {
+          created_at?: string
+          detected_at?: string
+          detected_by_user_id?: string | null
+          id?: string
+          notes?: string | null
+          risk_category?: string | null
+          severity?: string
+          source_entity_id?: string | null
+          source_type?: string
+          standard_clause?: string | null
+          status?: string
+          tenant_id?: number
+          theme_label?: string | null
+        }
+        Relationships: []
+      }
       risk_flags: {
         Row: {
           client_id: string | null
@@ -22050,6 +22098,30 @@ export type Database = {
             referencedColumns: ["ai_event_id"]
           },
         ]
+      }
+      risk_theme_catalog: {
+        Row: {
+          created_at: string
+          description: string
+          id: string
+          related_standard_clauses: string[]
+          theme_label: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string
+          id?: string
+          related_standard_clauses?: string[]
+          theme_label: string
+        }
+        Update: {
+          created_at?: string
+          description?: string
+          id?: string
+          related_standard_clauses?: string[]
+          theme_label?: string
+        }
+        Relationships: []
       }
       rock_outcomes: {
         Row: {
@@ -34209,6 +34281,17 @@ export type Database = {
           package_instance_id: number | null
           package_name: string | null
           tenant_id: number | null
+        }
+        Relationships: []
+      }
+      v_risk_trends_7d: {
+        Row: {
+          current_count: number | null
+          prior_count: number | null
+          severity: string | null
+          standard_clause: string | null
+          theme_label: string | null
+          trend_delta: number | null
         }
         Relationships: []
       }
