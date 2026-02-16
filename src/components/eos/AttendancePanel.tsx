@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -91,12 +91,41 @@ export const AttendancePanel = ({
     invitedCount,
     attendanceRate,
     updateAttendance,
+    updateAttendanceSilent,
     markAllPresent,
     addGuest,
+    addGuestSilent,
     addAttendee,
     removeAttendee,
     seedFromRoles,
   } = useMeetingAttendance(meetingId);
+
+  // Track which online users we've already processed to avoid duplicate mutations
+  const processedOnlineUsersRef = useRef<Set<string>>(new Set());
+
+  // Auto-mark online users as attended during live meetings
+  useEffect(() => {
+    if (!isLive || !onlineUsers.length || attendeesLoading || !attendees) return;
+
+    for (const onlineUser of onlineUsers) {
+      const uid = onlineUser.user_id;
+      if (!uid || uid === 'anonymous' || processedOnlineUsersRef.current.has(uid)) continue;
+
+      const existingAttendee = attendees.find(a => a.user_id === uid);
+
+      if (existingAttendee) {
+        // Already in attendee list — mark as attended if not already present
+        if (existingAttendee.attendance_status !== 'attended' && existingAttendee.attendance_status !== 'late') {
+          processedOnlineUsersRef.current.add(uid);
+          updateAttendanceSilent.mutate({ userId: uid, status: 'attended' });
+        }
+      } else {
+        // Not in attendee list — add as guest and mark attended
+        processedOnlineUsersRef.current.add(uid);
+        addGuestSilent.mutate({ userId: uid, notes: 'Auto-added (joined online)' });
+      }
+    }
+  }, [isLive, onlineUsers, attendees, attendeesLoading]);
 
   // Fetch available users for adding attendees/guests
   const { data: availableUsers } = useQuery({
