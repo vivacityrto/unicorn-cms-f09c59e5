@@ -28,6 +28,7 @@ import type { ScopeTag } from '@/hooks/useTenantMemberships';
 interface PackageInstance {
   id: number;
   package_name: string;
+  is_kickstart: boolean;
 }
 
 interface AddTimeDialogProps {
@@ -82,7 +83,7 @@ export function AddTimeDialog({
       setScopeTag(defaultScopeTag);
       supabase
         .from('package_instances')
-        .select('id, packages(name)')
+        .select('id, packages(name, code)')
         .eq('tenant_id', tenantId)
         .eq('is_complete', false)
         .order('start_date', { ascending: false })
@@ -90,10 +91,12 @@ export function AddTimeDialog({
           const instances: PackageInstance[] = (data || []).map((pi: any) => ({
             id: pi.id,
             package_name: pi.packages?.name || `Package #${pi.id}`,
+            is_kickstart: (pi.packages?.code || '').toLowerCase().includes('kickstart'),
           }));
           setActiveInstances(instances);
           if (instances.length === 1) {
             setSelectedInstanceId(instances[0].id);
+            if (instances[0].is_kickstart) setIsBillable(false);
           } else {
             setSelectedInstanceId(null);
           }
@@ -185,7 +188,12 @@ export function AddTimeDialog({
               <Label>Package</Label>
               <Select
                 value={selectedInstanceId?.toString() ?? ''}
-                onValueChange={(v) => setSelectedInstanceId(Number(v))}
+                onValueChange={(v) => {
+                  const id = Number(v);
+                  setSelectedInstanceId(id);
+                  const inst = activeInstances.find((i) => i.id === id);
+                  if (inst?.is_kickstart) setIsBillable(false);
+                }}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select a package..." />
