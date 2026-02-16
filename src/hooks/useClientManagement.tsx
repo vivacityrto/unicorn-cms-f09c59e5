@@ -16,6 +16,8 @@ export interface ClientPackage {
   total_stages: number;
   has_blocked_stages: boolean;
   membership_started_at: string;
+  is_complete: boolean;
+  completed_at?: string | null;
 }
 
 export interface ClientSummary {
@@ -543,12 +545,12 @@ export function useClientPackages(tenantId: number | null) {
     try {
       setLoading(true);
 
-      // Fetch active package instances (without join due to schema cache issue)
+      // Fetch ALL package instances (active + completed) for history support
       const { data: instances, error } = await supabase
         .from('package_instances')
-        .select('id, tenant_id, package_id, start_date, is_complete, hours_included, hours_used, hours_added')
+        .select('id, tenant_id, package_id, start_date, is_complete, hours_included, hours_used, hours_added, membership_state, end_date')
         .eq('tenant_id', tenantId)
-        .eq('is_complete', false) as { data: any[] | null; error: any };
+        .order('start_date', { ascending: false }) as { data: any[] | null; error: any };
 
       if (error) throw error;
 
@@ -612,13 +614,19 @@ export function useClientPackages(tenantId: number | null) {
           completed_stages: completedStages,
           total_stages: totalStages,
           has_blocked_stages: hasBlocked,
-          membership_started_at: inst.start_date
+          membership_started_at: inst.start_date,
+          is_complete: inst.is_complete || false,
+          completed_at: inst.end_date || null
         };
       });
 
-      // Deduplicate: keep only the most recent instance per package_id
-      const deduplicatedData = Object.values(
-        packageData.reduce((acc, pkg) => {
+      // Deduplicate active packages: keep only the most recent instance per package_id
+      // Keep all completed packages for history
+      const activePackages = packageData.filter(p => !p.is_complete);
+      const completedPackages = packageData.filter(p => p.is_complete);
+      
+      const deduplicatedActive = Object.values(
+        activePackages.reduce((acc, pkg) => {
           const key = pkg.package_id;
           if (!acc[key] || new Date(pkg.membership_started_at || 0) > new Date(acc[key].membership_started_at || 0)) {
             acc[key] = pkg;
@@ -627,7 +635,7 @@ export function useClientPackages(tenantId: number | null) {
         }, {} as Record<number, typeof packageData[0]>)
       );
 
-      setPackages(deduplicatedData);
+      setPackages([...deduplicatedActive, ...completedPackages]);
     } catch (error: any) {
       console.error('Error fetching client packages:', error);
       toast({
