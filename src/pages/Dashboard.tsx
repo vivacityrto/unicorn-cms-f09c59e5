@@ -2,12 +2,16 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { useAuth } from "@/hooks/useAuth";
-import { Loader2, BarChart3 } from "lucide-react";
-import { usePortfolioCockpit, type PortfolioTenant } from "@/hooks/usePortfolioCockpit";
+import { Loader2 } from "lucide-react";
+import { useDashboardTriage, type AttentionTenant } from "@/hooks/useDashboardTriage";
 import { PortfolioFilterBar } from "@/components/portfolio/PortfolioFilterBar";
-import { PortfolioSummaryTiles } from "@/components/portfolio/PortfolioSummaryTiles";
+import { TodaysFocusSection } from "@/components/dashboard/TodaysFocusSection";
+import { AttentionRankingSection } from "@/components/dashboard/AttentionRankingSection";
 import { PriorityInboxPanel } from "@/components/portfolio/PriorityInboxPanel";
-import { PortfolioTable } from "@/components/portfolio/PortfolioTable";
+import { LabourEfficiencyPanel } from "@/components/dashboard/LabourEfficiencyPanel";
+import { RiskClusterSnapshot } from "@/components/dashboard/RiskClusterSnapshot";
+import { ExpandablePortfolioSection } from "@/components/dashboard/ExpandablePortfolioSection";
+import { OverloadBanner } from "@/components/dashboard/OverloadBanner";
 import { TenantDrawer } from "@/components/portfolio/TenantDrawer";
 
 const Dashboard = () => {
@@ -15,66 +19,35 @@ const Dashboard = () => {
   const navigate = useNavigate();
   const isAdminOrUser = profile?.unicorn_role === "Admin" || profile?.unicorn_role === "User";
 
-  // Redirect client roles to the isolated client portal
   useEffect(() => {
-    if (isAdminOrUser) {
-      navigate("/client/home", { replace: true });
-    }
+    if (isAdminOrUser) navigate("/client/home", { replace: true });
   }, [isAdminOrUser, navigate]);
 
   const {
-    portfolio,
-    portfolioLoading,
-    priorityInbox,
-    inboxLoading,
-    kpis,
-    filters,
-    setFilters,
-    savedView,
-    setSavedView,
-    canSeeAll,
-    isExec,
-    isVivacityStaff,
-    cscNameMap,
-    acknowledgeItem,
-    snoozeItem,
-    fetchTenantComms,
-    logDashboardEvent,
-  } = usePortfolioCockpit();
+    todaysFocus, top5, activePortfolio, lowAttention,
+    tenantsLoading, priorityInbox, inboxLoading,
+    riskClusters, labourMetrics, isOverloaded,
+    tenantNames, cscNameMap, kpis,
+    filters, setFilters, savedView, setSavedView,
+    canSeeAll, isExec, isVivacityStaff,
+    acknowledgeItem, snoozeItem, fetchTenantComms, logDashboardEvent, profile: userProfile,
+  } = useDashboardTriage();
 
-  // Drawer state
-  const [drawerTenant, setDrawerTenant] = useState<PortfolioTenant | null>(null);
+  const [drawerTenant, setDrawerTenant] = useState<AttentionTenant | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
 
-  const openDrawer = (tenant: PortfolioTenant) => {
+  const openDrawer = (tenant: AttentionTenant) => {
     setDrawerTenant(tenant);
     setDrawerOpen(true);
   };
 
-  const openDrawerByTenantId = (tenantId: number) => {
-    const t = portfolio.find(p => p.tenant_id === tenantId);
+  const openDrawerById = (tenantId: number) => {
+    const t = [...activePortfolio, ...lowAttention].find(p => p.tenant_id === tenantId);
     if (t) openDrawer(t);
   };
 
-  // Tenant name map for inbox
-  const tenantNames: Record<number, string> = {};
-  portfolio.forEach(t => { tenantNames[t.tenant_id] = t.tenant_name; });
-
-  // Tile click applies filters
-  const handleTileClick = (filter: string) => {
-    if (filter === 'risk_high') setFilters({ ...filters, riskStatus: 'high' });
-    else if (filter === 'stage_critical') setFilters({ ...filters, stageHealth: 'critical' });
-    else if (filter === 'gaps') setFilters({ ...filters, mandatoryGapsOnly: true });
-    else if (filter === 'burn') setFilters({ ...filters, burnRiskOnly: true });
-    else if (filter === 'retention') setFilters({ ...filters, riskStatus: null, stageHealth: null, mandatoryGapsOnly: false, burnRiskOnly: false });
-    else setFilters({ search: '', riskStatus: null, stageHealth: null, mandatoryGapsOnly: false, burnRiskOnly: false, renewalDays: null });
-  };
-
-  // Log dashboard view
   useEffect(() => {
-    if (isVivacityStaff) {
-      logDashboardEvent('dashboard_viewed');
-    }
+    if (isVivacityStaff) logDashboardEvent('dashboard_viewed');
   }, [isVivacityStaff]);
 
   if (!isVivacityStaff) {
@@ -90,22 +63,20 @@ const Dashboard = () => {
   return (
     <DashboardLayout>
       <div className="w-full min-w-0 min-h-full bg-background flex flex-col">
-        {/* Header */}
-        <div className="border-b bg-card/50 backdrop-blur-sm px-4 md:px-6 py-4">
-          <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center shrink-0">
-              <BarChart3 className="h-5 w-5 text-primary-foreground" />
-            </div>
+        <OverloadBanner show={isOverloaded} />
+
+        {/* Compact header */}
+        <div className="border-b bg-card/50 backdrop-blur-sm px-4 md:px-6 py-3">
+          <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-lg md:text-xl font-bold text-foreground">Portfolio Review Cockpit</h1>
-              <p className="text-sm text-muted-foreground">
-                {savedView === 'my_tenants' ? 'My Tenants' : 'All Tenants'} · {portfolio.length} active
+              <h1 className="text-base font-bold text-foreground">Triage Dashboard</h1>
+              <p className="text-xs text-muted-foreground">
+                {savedView === 'my_tenants' ? 'My Tenants' : 'All Tenants'} · {activePortfolio.length + lowAttention.length} active
               </p>
             </div>
           </div>
         </div>
 
-        {/* Filter Bar */}
         <PortfolioFilterBar
           filters={filters}
           onFiltersChange={setFilters}
@@ -114,36 +85,53 @@ const Dashboard = () => {
           canSeeAll={canSeeAll}
         />
 
-        {/* Content */}
         <div className="flex-1 p-4 md:p-6 space-y-6 overflow-y-auto">
-          {/* Summary Tiles */}
-          <PortfolioSummaryTiles kpis={kpis} isExec={isExec} onTileClick={handleTileClick} />
-
-          {/* Priority Inbox */}
-          <PriorityInboxPanel
-            items={priorityInbox}
-            loading={inboxLoading}
-            tenantNames={tenantNames}
-            onAcknowledge={acknowledgeItem}
-            onSnooze={snoozeItem}
-            onOpenDrawer={openDrawerByTenantId}
-          />
-
-          {/* Portfolio Table */}
-          {portfolioLoading ? (
+          {tenantsLoading ? (
             <div className="flex justify-center py-12">
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
             </div>
           ) : (
-            <PortfolioTable
-              tenants={portfolio}
-              cscNameMap={cscNameMap}
-              onRowClick={openDrawer}
-            />
+            <>
+              {/* Section 1: Today's Focus */}
+              <TodaysFocusSection items={todaysFocus} onAction={(item) => openDrawerById(item.tenantId)} />
+
+              {/* Section 2: Attention Ranking (Top 5) */}
+              <AttentionRankingSection
+                tenants={top5}
+                cscNameMap={cscNameMap}
+                onRowClick={openDrawer}
+                onViewFullPortfolio={() => document.getElementById('full-portfolio')?.scrollIntoView({ behavior: 'smooth' })}
+              />
+
+              {/* Section 3: Priority Inbox */}
+              <PriorityInboxPanel
+                items={priorityInbox}
+                loading={inboxLoading}
+                tenantNames={tenantNames}
+                onAcknowledge={acknowledgeItem}
+                onSnooze={snoozeItem}
+                onOpenDrawer={openDrawerById}
+              />
+
+              {/* Section 4: Labour Efficiency (exec+) */}
+              {isExec && labourMetrics.length > 0 && (
+                <LabourEfficiencyPanel metrics={labourMetrics} currentUserId={userProfile?.user_uuid} />
+              )}
+
+              {/* Section 5: Risk Cluster Snapshot */}
+              <RiskClusterSnapshot clusters={riskClusters} />
+
+              {/* Section 6: Full Portfolio (expandable) */}
+              <ExpandablePortfolioSection
+                activeTenants={activePortfolio}
+                lowAttentionTenants={lowAttention}
+                cscNameMap={cscNameMap}
+                onRowClick={openDrawer}
+              />
+            </>
           )}
         </div>
 
-        {/* Tenant Drawer */}
         <TenantDrawer
           tenant={drawerTenant}
           open={drawerOpen}

@@ -4,7 +4,16 @@ import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Search, X } from 'lucide-react';
-import type { PortfolioFilters, SavedView } from '@/hooks/usePortfolioCockpit';
+import type { SavedView } from '@/hooks/useDashboardTriage';
+
+interface PortfolioFilters {
+  search: string;
+  riskStatus: string | null;
+  stageHealth: string | null;
+  mandatoryGapsOnly: boolean;
+  burnRiskOnly: boolean;
+  renewalDays?: number | null;
+}
 
 interface Props {
   filters: PortfolioFilters;
