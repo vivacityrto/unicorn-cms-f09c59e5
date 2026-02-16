@@ -26,6 +26,7 @@ const JOB_TYPE_LABELS: Record<string, string> = {
   template_review: "Template Review",
   tas_context_assistant: "TAS Context Assistant",
   audit_intelligence_pack: "Audit Intelligence Pack",
+  evidence_gap_check: "Evidence Gap Check",
 };
 
 const STATUS_VARIANT: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
@@ -156,6 +157,7 @@ export default function ResearchJobs() {
               <SelectItem value="tenant_onboarding">Tenant Enrichment</SelectItem>
               <SelectItem value="tas_context_assistant">TAS Context Assistant</SelectItem>
               <SelectItem value="audit_intelligence_pack">Audit Intelligence Pack</SelectItem>
+              <SelectItem value="evidence_gap_check">Evidence Gap Check</SelectItem>
             </SelectContent>
           </Select>
           <Select value={statusFilter} onValueChange={setStatusFilter}>
