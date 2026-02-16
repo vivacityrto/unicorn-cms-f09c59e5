@@ -616,7 +616,18 @@ export function useClientPackages(tenantId: number | null) {
         };
       });
 
-      setPackages(packageData);
+      // Deduplicate: keep only the most recent instance per package_id
+      const deduplicatedData = Object.values(
+        packageData.reduce((acc, pkg) => {
+          const key = pkg.package_id;
+          if (!acc[key] || new Date(pkg.membership_started_at || 0) > new Date(acc[key].membership_started_at || 0)) {
+            acc[key] = pkg;
+          }
+          return acc;
+        }, {} as Record<number, typeof packageData[0]>)
+      );
+
+      setPackages(deduplicatedData);
     } catch (error: any) {
       console.error('Error fetching client packages:', error);
       toast({
