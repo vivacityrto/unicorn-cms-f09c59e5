@@ -21233,9 +21233,74 @@ export type Database = {
         }
         Relationships: []
       }
+      regulator_change_events: {
+        Row: {
+          affected_areas_json: Json | null
+          change_summary_md: string | null
+          created_at: string
+          detected_at: string
+          id: string
+          impact_level: string
+          new_hash: string
+          previous_hash: string | null
+          research_job_id: string
+          review_status: string
+          reviewed_at: string | null
+          reviewed_by_user_id: string | null
+          watchlist_id: string
+        }
+        Insert: {
+          affected_areas_json?: Json | null
+          change_summary_md?: string | null
+          created_at?: string
+          detected_at?: string
+          id?: string
+          impact_level?: string
+          new_hash: string
+          previous_hash?: string | null
+          research_job_id: string
+          review_status?: string
+          reviewed_at?: string | null
+          reviewed_by_user_id?: string | null
+          watchlist_id: string
+        }
+        Update: {
+          affected_areas_json?: Json | null
+          change_summary_md?: string | null
+          created_at?: string
+          detected_at?: string
+          id?: string
+          impact_level?: string
+          new_hash?: string
+          previous_hash?: string | null
+          research_job_id?: string
+          review_status?: string
+          reviewed_at?: string | null
+          reviewed_by_user_id?: string | null
+          watchlist_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "regulator_change_events_research_job_id_fkey"
+            columns: ["research_job_id"]
+            isOneToOne: false
+            referencedRelation: "research_jobs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "regulator_change_events_watchlist_id_fkey"
+            columns: ["watchlist_id"]
+            isOneToOne: false
+            referencedRelation: "regulator_watchlist"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       regulator_watchlist: {
         Row: {
+          category: string | null
           check_frequency: string
+          check_frequency_days: number | null
           created_at: string
           created_by: string
           id: string
@@ -21246,7 +21311,9 @@ export type Database = {
           url: string
         }
         Insert: {
+          category?: string | null
           check_frequency?: string
+          check_frequency_days?: number | null
           created_at?: string
           created_by: string
           id?: string
@@ -21257,7 +21324,9 @@ export type Database = {
           url: string
         }
         Update: {
+          category?: string | null
           check_frequency?: string
+          check_frequency_days?: number | null
           created_at?: string
           created_by?: string
           id?: string

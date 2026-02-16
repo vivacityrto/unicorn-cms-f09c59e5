@@ -27,6 +27,7 @@ import { WeeklySummaryFooter } from '@/components/executive/WeeklySummaryFooter'
 import { WeeklyReviewNotesPanel } from '@/components/executive/WeeklyReviewNotesPanel';
 import { CeoDashboardSection } from '@/components/executive/ceo/CeoDashboardSection';
 import { RegulatorUpdatesPanel } from '@/components/executive/RegulatorUpdatesPanel';
+import { RegulatorActivityWidget } from '@/components/executive/RegulatorActivityWidget';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
@@ -231,8 +232,11 @@ export default function ExecutiveDashboard() {
         {/* Weekly Summary Footer */}
         <WeeklySummaryFooter data={rawData} />
 
-        {/* Regulator Updates Panel */}
-        <RegulatorUpdatesPanel />
+        {/* Regulator Panels */}
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-3">
+          <RegulatorUpdatesPanel />
+          <RegulatorActivityWidget />
+        </div>
 
         {/* CEO Executive Dashboard Panels */}
         <CeoDashboardSection />
