@@ -8,6 +8,8 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, ChevronRight, ChevronDown, User, Phone, Mail, MapPin, Calendar, Users, FileText, TrendingUp, LogIn, Package as PackageIcon, CheckCircle2, Clock, AlertCircle, Globe, ExternalLink, Facebook, Instagram, Linkedin, ArrowLeft, Timer, Building2, XCircle, Eye, EyeOff } from "lucide-react";
+import { ReviewModePanel } from "@/components/tenant/ReviewModePanel";
+import { useReviewMode } from "@/hooks/useReviewMode";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Separator } from "@/components/ui/separator";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -95,6 +97,8 @@ export default function TenantDetail() {
   const [tenantStatus, setTenantStatus] = useState<string>("active");
   const [tenantTypeValue, setTenantTypeValue] = useState<TenantType>("compliance_system");
   const [loading, setLoading] = useState(false);
+  const parsedTenantIdForReview = tenantId ? parseInt(tenantId) : null;
+  const { reviewMode, toggleReviewMode, reviewSummary, summaryLoading } = useReviewMode(parsedTenantIdForReview);
   const [memberCount, setMemberCount] = useState(0);
   const [documentCount, setDocumentCount] = useState(0);
   const [recentDocuments, setRecentDocuments] = useState<any[]>([]);
@@ -700,6 +704,13 @@ export default function TenantDetail() {
 
           {/* Right: Package Details */}
           <div className="space-y-6">
+            {/* CSC Review Mode Panel */}
+            <ReviewModePanel
+              reviewMode={reviewMode}
+              onToggle={toggleReviewMode}
+              summary={reviewSummary}
+              loading={summaryLoading}
+            />
             {/* Package Time Remaining */}
             <Card className="border-0 shadow-lg overflow-hidden">
               <div className="bg-muted/30 px-6 py-4 border-b border-border/50">

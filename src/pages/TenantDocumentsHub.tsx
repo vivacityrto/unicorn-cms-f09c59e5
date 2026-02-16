@@ -1,9 +1,11 @@
 import { useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Upload, ClipboardList } from 'lucide-react';
+import { ArrowLeft, Upload, ClipboardList, ShieldCheck } from 'lucide-react';
 import { DocumentsHub } from '@/components/documents/DocumentsHub';
 import { UploadDocumentDialog } from '@/components/documents/dialogs/UploadDocumentDialog';
+import { EvidenceUploadWizard } from '@/components/documents/dialogs/EvidenceUploadWizard';
+import { EvidenceCompletenessBar } from '@/components/documents/EvidenceCompletenessBar';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -13,7 +15,7 @@ export default function TenantDocumentsHub() {
   const navigate = useNavigate();
   const parsedTenantId = tenantId ? parseInt(tenantId) : null;
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
-
+  const [evidenceWizardOpen, setEvidenceWizardOpen] = useState(false);
   const { data: tenant, isLoading } = useQuery({
     queryKey: ['tenant', parsedTenantId],
     queryFn: async () => {
@@ -69,6 +71,14 @@ export default function TenantDocumentsHub() {
         </div>
         <div className="flex items-center gap-2">
           <Button 
+            variant="default" 
+            onClick={() => setEvidenceWizardOpen(true)}
+            className="gap-2"
+          >
+            <ShieldCheck className="h-4 w-4" />
+            Upload Evidence
+          </Button>
+          <Button 
             variant="outline" 
             onClick={() => setUploadDialogOpen(true)}
             className="gap-2"
@@ -78,6 +88,9 @@ export default function TenantDocumentsHub() {
           </Button>
         </div>
       </div>
+
+      {/* Evidence Completeness Bar */}
+      <EvidenceCompletenessBar tenantId={parsedTenantId} />
 
       {/* Documents Hub - Staff View */}
       <DocumentsHub 
@@ -92,6 +105,13 @@ export default function TenantDocumentsHub() {
         onOpenChange={setUploadDialogOpen}
         tenantId={parsedTenantId}
         direction="vivacity_to_client"
+      />
+
+      {/* Evidence Upload Wizard */}
+      <EvidenceUploadWizard
+        open={evidenceWizardOpen}
+        onOpenChange={setEvidenceWizardOpen}
+        tenantId={parsedTenantId}
       />
     </div>
   );
