@@ -175,3 +175,9 @@ verify_jwt = false
 
 [functions.bulk-generate-phase-documents]
 verify_jwt = false
+
+[functions.research-scrape]
+verify_jwt = false
+
+[functions.research-answer]
+verify_jwt = false

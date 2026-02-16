@@ -40,6 +40,7 @@ import {
   CheckCircle,
   HelpCircle,
   Link as LinkIcon,
+  Globe,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Link } from "react-router-dom";
@@ -55,6 +56,12 @@ interface FreshnessData {
   derived_at: string;
 }
 
+interface WebCitation {
+  index: number;
+  url: string;
+  retrieved_at: string;
+}
+
 interface Message {
   id: string;
   role: "user" | "assistant" | "system";
@@ -68,6 +75,8 @@ interface Message {
   freshness?: FreshnessData;
   micro_explain?: MicroExplainPayload;
   ai_interaction_log_id?: string | null;
+  web_citations?: WebCitation[];
+  research_job_id?: string;
   created_at: string;
 }
 
@@ -325,6 +334,86 @@ export function AskVivPanel() {
     };
   }
 
+  async function sendWebBackedMessage(userMessage: string) {
+    // Extract URLs from the message
+    const urlRegex = /https?:\/\/[^\s]+/g;
+    const extractedUrls = userMessage.match(urlRegex) || [];
+
+    // 1. Create research job
+    const { data: job, error: jobError } = await supabase
+      .from("research_jobs")
+      .insert({
+        tenant_id: context.tenant_id || null,
+        job_type: "ask_viv_webbacked",
+        status: "pending",
+        created_by: user?.id,
+        input_json: { question: userMessage, urls: extractedUrls },
+      })
+      .select("id")
+      .single();
+
+    if (jobError || !job) {
+      throw new Error("Failed to create research job");
+    }
+
+    const { data: session } = await supabase.auth.getSession();
+    const authToken = session?.session?.access_token;
+
+    // 2. If URLs found, scrape them first
+    let sourceIds: string[] = [];
+    if (extractedUrls.length > 0) {
+      const scrapeResponse = await fetch(
+        "https://yxkgdalkbrriasiyyrwk.supabase.co/functions/v1/research-scrape",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${authToken}`,
+          },
+          body: JSON.stringify({ job_id: job.id, urls: extractedUrls }),
+        }
+      );
+
+      if (scrapeResponse.ok) {
+        const scrapeResult = await scrapeResponse.json();
+        sourceIds = (scrapeResult.results || [])
+          .filter((r: any) => r.success && r.source_id)
+          .map((r: any) => r.source_id);
+      }
+    }
+
+    // 3. Call research-answer with question + context
+    const answerResponse = await fetch(
+      "https://yxkgdalkbrriasiyyrwk.supabase.co/functions/v1/research-answer",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${authToken}`,
+        },
+        body: JSON.stringify({
+          job_id: job.id,
+          question: userMessage,
+          context_sources: sourceIds.length > 0 ? sourceIds : undefined,
+        }),
+      }
+    );
+
+    if (!answerResponse.ok) {
+      const errData = await answerResponse.json();
+      throw new Error(errData.detail || "Web research failed");
+    }
+
+    const answerResult = await answerResponse.json();
+
+    return {
+      content: answerResult.summary_md,
+      web_citations: answerResult.citations as WebCitation[],
+      research_job_id: job.id,
+      confidence: "medium" as const,
+    };
+  }
+
   async function sendMessage() {
     if (!inputMessage.trim()) return;
 
@@ -365,7 +454,18 @@ export function AskVivPanel() {
     try {
       let assistantResponse: Message;
 
-      if (selectedMode === "knowledge" && thread) {
+      if (selectedMode === "web") {
+        const result = await sendWebBackedMessage(userMessage);
+        assistantResponse = {
+          id: "web-" + Date.now(),
+          role: "assistant",
+          content: result.content,
+          confidence: result.confidence,
+          web_citations: result.web_citations,
+          research_job_id: result.research_job_id,
+          created_at: new Date().toISOString(),
+        };
+      } else if (selectedMode === "knowledge" && thread) {
         const result = await sendKnowledgeMessage(userMessage, thread);
         assistantResponse = {
           id: result.savedId || "assistant-" + Date.now(),
@@ -479,8 +579,11 @@ export function AskVivPanel() {
   }
 
   const isComplianceMode = selectedMode === "compliance";
+  const isWebMode = selectedMode === "web";
   const headerSubtitle = isComplianceMode
     ? "Compliance Assistant • Read-only"
+    : isWebMode
+    ? "Web Research • Citations included"
     : "Knowledge Assistant • Internal only";
 
   return (
@@ -497,6 +600,8 @@ export function AskVivPanel() {
         "flex items-center justify-between px-4 py-3 border-b border-border rounded-t-2xl",
         isComplianceMode 
           ? "bg-gradient-to-r from-blue-500/10 to-blue-600/10"
+          : isWebMode
+          ? "bg-gradient-to-r from-emerald-500/10 to-teal-500/10"
           : "bg-gradient-to-r from-primary/10 to-purple-500/10"
       )}>
         <div className="flex items-center gap-3">
@@ -575,11 +680,13 @@ export function AskVivPanel() {
               )} />
             </div>
             <h4 className="font-medium text-foreground mb-2">
-              {isComplianceMode ? "Ask about your tenant data" : "How can I help you?"}
+              {isComplianceMode ? "Ask about your tenant data" : isWebMode ? "Web-backed research" : "How can I help you?"}
             </h4>
             <p className="text-sm text-muted-foreground mb-4">
               {isComplianceMode
                 ? "Query clients, phases, tasks, documents, and time entries."
+                : isWebMode
+                ? "Ask questions with real-time web citations. Paste URLs for targeted scraping."
                 : "Ask about Unicorn procedures, EOS processes, or internal policies."}
             </p>
             <div className="flex flex-wrap gap-2 justify-center">
@@ -588,6 +695,12 @@ export function AskVivPanel() {
                   <Badge variant="outline" className="text-xs">Tenant-scoped</Badge>
                   <Badge variant="outline" className="text-xs">Read-only</Badge>
                   <Badge variant="outline" className="text-xs">Audit logged</Badge>
+                </>
+              ) : isWebMode ? (
+                <>
+                  <Badge variant="outline" className="text-xs">Web citations</Badge>
+                  <Badge variant="outline" className="text-xs">Draft only</Badge>
+                  <Badge variant="outline" className="text-xs">Review required</Badge>
                 </>
               ) : (
                 <>
@@ -612,10 +725,14 @@ export function AskVivPanel() {
                     "h-8 w-8 rounded-full flex items-center justify-center flex-shrink-0",
                     isComplianceMode
                       ? "bg-gradient-to-br from-blue-500 to-blue-600"
+                      : isWebMode
+                      ? "bg-gradient-to-br from-emerald-500 to-teal-600"
                       : "bg-gradient-to-br from-primary to-purple-600"
                   )}>
                     {isComplianceMode ? (
                       <Shield className="h-4 w-4 text-primary-foreground" />
+                    ) : isWebMode ? (
+                      <Globe className="h-4 w-4 text-primary-foreground" />
                     ) : (
                       <Sparkles className="h-4 w-4 text-primary-foreground" />
                     )}
@@ -736,7 +853,7 @@ export function AskVivPanel() {
                   )}
 
                   {/* Knowledge sources */}
-                  {message.role === "assistant" && !isComplianceMode && message.sources_used && message.sources_used.length > 0 && (
+                  {message.role === "assistant" && !isComplianceMode && !isWebMode && message.sources_used && message.sources_used.length > 0 && (
                     <Collapsible className="mt-1.5">
                       <CollapsibleTrigger className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors">
                         <FileText className="h-3 w-3" />
@@ -757,6 +874,68 @@ export function AskVivPanel() {
                         </div>
                       </CollapsibleContent>
                     </Collapsible>
+                  )}
+
+                  {/* Web-backed citations */}
+                  {message.role === "assistant" && isWebMode && (
+                    <div className="mt-2 space-y-1.5">
+                      {/* Confidence indicator */}
+                      {message.confidence && (
+                        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                          {getConfidenceIcon(message.confidence)}
+                          <span>Confidence: {message.confidence}</span>
+                          <Badge variant="outline" className="text-[10px] ml-1">Draft — needs review</Badge>
+                        </div>
+                      )}
+
+                      {/* Citations list */}
+                      {message.web_citations && message.web_citations.length > 0 && (
+                        <Collapsible defaultOpen className="mt-1.5">
+                          <CollapsibleTrigger className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors">
+                            <LinkIcon className="h-3 w-3" />
+                            {message.web_citations.length} citation{message.web_citations.length > 1 ? "s" : ""}
+                            <ChevronRight className="h-3 w-3" />
+                          </CollapsibleTrigger>
+                          <CollapsibleContent className="mt-1">
+                            <div className="space-y-1">
+                              {message.web_citations.map((citation) => {
+                                const retrievedAt = new Date(citation.retrieved_at);
+                                const daysSince = Math.floor((Date.now() - retrievedAt.getTime()) / (1000 * 60 * 60 * 24));
+                                const isStale = daysSince > 7;
+
+                                return (
+                                  <div
+                                    key={citation.index}
+                                    className="text-xs bg-muted/50 rounded-lg p-2 flex items-start gap-2"
+                                  >
+                                    <Badge variant="outline" className="text-[10px] flex-shrink-0">
+                                      [{citation.index}]
+                                    </Badge>
+                                    <div className="min-w-0 flex-1">
+                                      <a
+                                        href={citation.url}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="text-primary hover:underline truncate block"
+                                      >
+                                        {citation.url}
+                                      </a>
+                                      <span className={cn(
+                                        "text-[10px]",
+                                        isStale ? "text-destructive" : "text-muted-foreground"
+                                      )}>
+                                        Retrieved {retrievedAt.toLocaleDateString()}
+                                        {isStale && " ⚠ Older than 7 days"}
+                                      </span>
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </CollapsibleContent>
+                        </Collapsible>
+                      )}
+                    </div>
                   )}
                 </div>
               </div>

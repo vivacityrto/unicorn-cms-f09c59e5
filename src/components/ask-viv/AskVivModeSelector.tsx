@@ -1,6 +1,6 @@
 import { cn } from "@/lib/utils";
 import { useAskViv, AskVivMode } from "@/hooks/useAskViv";
-import { BookOpen, Shield } from "lucide-react";
+import { BookOpen, Shield, Globe } from "lucide-react";
 import {
   Tooltip,
   TooltipContent,
@@ -30,6 +30,13 @@ const modes: ModeOption[] = [
     icon: Shield,
     enabled: true,
     description: "Tenant data + internal knowledge (read-only)",
+  },
+  {
+    id: "web",
+    label: "Web-backed",
+    icon: Globe,
+    enabled: true,
+    description: "Web research with citations (Perplexity + Firecrawl)",
   },
 ];
 
