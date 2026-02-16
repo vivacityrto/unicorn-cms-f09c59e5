@@ -211,3 +211,6 @@ verify_jwt = false
 
 [functions.query-knowledge-graph]
 verify_jwt = false
+
+[functions.run-tenant-risk-forecast]
+verify_jwt = false
