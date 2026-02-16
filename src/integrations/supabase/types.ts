@@ -28619,6 +28619,7 @@ export type Database = {
           is_billable: boolean
           notes: string | null
           package_id: number | null
+          package_instance_id: number | null
           scope_tag: string
           source: string
           stage_id: number | null
@@ -28639,6 +28640,7 @@ export type Database = {
           is_billable?: boolean
           notes?: string | null
           package_id?: number | null
+          package_instance_id?: number | null
           scope_tag?: string
           source?: string
           stage_id?: number | null
@@ -28659,6 +28661,7 @@ export type Database = {
           is_billable?: boolean
           notes?: string | null
           package_id?: number | null
+          package_instance_id?: number | null
           scope_tag?: string
           source?: string
           stage_id?: number | null
@@ -28683,6 +28686,104 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "calendar_events_shared"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "time_entries_package_instance_id_fkey"
+            columns: ["package_instance_id"]
+            isOneToOne: false
+            referencedRelation: "package_instances"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "time_entries_package_instance_id_fkey"
+            columns: ["package_instance_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_dashboard_progress"
+            referencedColumns: ["package_instance_id"]
+          },
+          {
+            foreignKeyName: "time_entries_package_instance_id_fkey"
+            columns: ["package_instance_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_package_usage_summary"
+            referencedColumns: ["instance_id"]
+          },
+          {
+            foreignKeyName: "time_entries_package_instance_id_fkey"
+            columns: ["package_instance_id"]
+            isOneToOne: false
+            referencedRelation: "v_completion_eligibility"
+            referencedColumns: ["package_instance_id"]
+          },
+          {
+            foreignKeyName: "time_entries_package_instance_id_fkey"
+            columns: ["package_instance_id"]
+            isOneToOne: false
+            referencedRelation: "v_consult_hours_remaining"
+            referencedColumns: ["package_instance_id"]
+          },
+          {
+            foreignKeyName: "time_entries_package_instance_id_fkey"
+            columns: ["package_instance_id"]
+            isOneToOne: false
+            referencedRelation: "v_dashboard_consultant_momentum"
+            referencedColumns: ["package_instance_id"]
+          },
+          {
+            foreignKeyName: "time_entries_package_instance_id_fkey"
+            columns: ["package_instance_id"]
+            isOneToOne: false
+            referencedRelation: "v_documents_pending"
+            referencedColumns: ["package_instance_id"]
+          },
+          {
+            foreignKeyName: "time_entries_package_instance_id_fkey"
+            columns: ["package_instance_id"]
+            isOneToOne: false
+            referencedRelation: "v_executive_client_health"
+            referencedColumns: ["package_instance_id"]
+          },
+          {
+            foreignKeyName: "time_entries_package_instance_id_fkey"
+            columns: ["package_instance_id"]
+            isOneToOne: false
+            referencedRelation: "v_momentum_state"
+            referencedColumns: ["package_instance_id"]
+          },
+          {
+            foreignKeyName: "time_entries_package_instance_id_fkey"
+            columns: ["package_instance_id"]
+            isOneToOne: false
+            referencedRelation: "v_package_burndown"
+            referencedColumns: ["package_instance_id"]
+          },
+          {
+            foreignKeyName: "time_entries_package_instance_id_fkey"
+            columns: ["package_instance_id"]
+            isOneToOne: false
+            referencedRelation: "v_phase_actions_remaining"
+            referencedColumns: ["package_instance_id"]
+          },
+          {
+            foreignKeyName: "time_entries_package_instance_id_fkey"
+            columns: ["package_instance_id"]
+            isOneToOne: false
+            referencedRelation: "v_predictive_signal_inputs"
+            referencedColumns: ["package_instance_id"]
+          },
+          {
+            foreignKeyName: "time_entries_package_instance_id_fkey"
+            columns: ["package_instance_id"]
+            isOneToOne: false
+            referencedRelation: "v_progress_anchor_inputs"
+            referencedColumns: ["package_instance_id"]
+          },
+          {
+            foreignKeyName: "time_entries_package_instance_id_fkey"
+            columns: ["package_instance_id"]
+            isOneToOne: false
+            referencedRelation: "v_score_consult"
+            referencedColumns: ["package_instance_id"]
           },
           {
             foreignKeyName: "time_entries_stage_id_fkey"

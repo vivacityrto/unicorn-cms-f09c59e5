@@ -25,6 +25,11 @@ import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import type { ScopeTag } from '@/hooks/useTenantMemberships';
 
+interface PackageInstance {
+  id: number;
+  package_name: string;
+}
+
 interface AddTimeDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -68,13 +73,33 @@ export function AddTimeDialog({
   const [isBillable, setIsBillable] = useState(true);
   const [scopeTag, setScopeTag] = useState<ScopeTag>(defaultScopeTag);
   const [saving, setSaving] = useState(false);
+  const [activeInstances, setActiveInstances] = useState<PackageInstance[]>([]);
+  const [selectedInstanceId, setSelectedInstanceId] = useState<number | null>(null);
 
-  // Sync defaults when dialog opens
+  // Fetch active package instances & sync defaults when dialog opens
   useEffect(() => {
     if (open) {
       setScopeTag(defaultScopeTag);
+      supabase
+        .from('package_instances')
+        .select('id, packages(name)')
+        .eq('tenant_id', tenantId)
+        .eq('is_complete', false)
+        .order('start_date', { ascending: false })
+        .then(({ data }) => {
+          const instances: PackageInstance[] = (data || []).map((pi: any) => ({
+            id: pi.id,
+            package_name: pi.packages?.name || `Package #${pi.id}`,
+          }));
+          setActiveInstances(instances);
+          if (instances.length === 1) {
+            setSelectedInstanceId(instances[0].id);
+          } else {
+            setSelectedInstanceId(null);
+          }
+        });
     }
-  }, [open, defaultScopeTag]);
+  }, [open, defaultScopeTag, tenantId]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -97,7 +122,8 @@ export function AddTimeDialog({
         is_billable: isBillable,
         scope_tag: scopeTag,
         source: 'manual',
-      });
+        package_instance_id: selectedInstanceId,
+      } as any);
 
       if (error) throw error;
 
@@ -123,6 +149,7 @@ export function AddTimeDialog({
     setNotes('');
     setIsBillable(true);
     setScopeTag(defaultScopeTag);
+    setSelectedInstanceId(null);
   };
 
   return (
@@ -145,6 +172,34 @@ export function AddTimeDialog({
               showSelector={showScopeSelector}
             />
           </div>
+
+          {/* Package instance selector */}
+          {activeInstances.length === 1 && (
+            <div className="space-y-2">
+              <Label>Package</Label>
+              <Input value={activeInstances[0].package_name} readOnly className="bg-muted" />
+            </div>
+          )}
+          {activeInstances.length > 1 && (
+            <div className="space-y-2">
+              <Label>Package</Label>
+              <Select
+                value={selectedInstanceId?.toString() ?? ''}
+                onValueChange={(v) => setSelectedInstanceId(Number(v))}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a package..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {activeInstances.map((inst) => (
+                    <SelectItem key={inst.id} value={inst.id.toString()}>
+                      {inst.package_name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
 
           {/* Duration */}
           <div className="space-y-2">
