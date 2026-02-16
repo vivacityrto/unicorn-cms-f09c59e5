@@ -8004,6 +8004,42 @@ export type Database = {
           },
         ]
       }
+      compliance_playbooks: {
+        Row: {
+          active_flag: boolean
+          created_at: string
+          description: string
+          id: string
+          name: string
+          related_standard_clauses: string[] | null
+          severity_level: string
+          trigger_type: string
+          updated_at: string
+        }
+        Insert: {
+          active_flag?: boolean
+          created_at?: string
+          description?: string
+          id?: string
+          name: string
+          related_standard_clauses?: string[] | null
+          severity_level?: string
+          trigger_type: string
+          updated_at?: string
+        }
+        Update: {
+          active_flag?: boolean
+          created_at?: string
+          description?: string
+          id?: string
+          name?: string
+          related_standard_clauses?: string[] | null
+          severity_level?: string
+          trigger_type?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       compliance_score_snapshots: {
         Row: {
           calculated_at: string
@@ -20413,6 +20449,203 @@ export type Database = {
           Value?: string
         }
         Relationships: []
+      }
+      playbook_activations: {
+        Row: {
+          activated_at: string
+          activation_reason: string
+          activation_status: string
+          adaptive_context_json: Json | null
+          completed_at: string | null
+          current_step_order: number
+          id: string
+          playbook_id: string
+          stage_instance_id: string | null
+          tenant_id: number
+          trigger_source_id: string | null
+        }
+        Insert: {
+          activated_at?: string
+          activation_reason?: string
+          activation_status?: string
+          adaptive_context_json?: Json | null
+          completed_at?: string | null
+          current_step_order?: number
+          id?: string
+          playbook_id: string
+          stage_instance_id?: string | null
+          tenant_id: number
+          trigger_source_id?: string | null
+        }
+        Update: {
+          activated_at?: string
+          activation_reason?: string
+          activation_status?: string
+          adaptive_context_json?: Json | null
+          completed_at?: string | null
+          current_step_order?: number
+          id?: string
+          playbook_id?: string
+          stage_instance_id?: string | null
+          tenant_id?: number
+          trigger_source_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "playbook_activations_playbook_id_fkey"
+            columns: ["playbook_id"]
+            isOneToOne: false
+            referencedRelation: "compliance_playbooks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "playbook_activations_playbook_id_fkey"
+            columns: ["playbook_id"]
+            isOneToOne: false
+            referencedRelation: "v_playbook_effectiveness"
+            referencedColumns: ["playbook_id"]
+          },
+          {
+            foreignKeyName: "playbook_activations_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "playbook_activations_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_engagement_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "playbook_activations_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_eos_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "playbook_activations_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_compliance_entitlements"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "playbook_activations_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "playbook_activations_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "playbook_activations_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_membership_usage"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "playbook_activations_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_membership_usage"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
+      playbook_steps: {
+        Row: {
+          id: string
+          playbook_id: string
+          requires_confirmation: boolean
+          step_description: string
+          step_order: number
+          step_type: string
+          suggested_task_template_id: string | null
+        }
+        Insert: {
+          id?: string
+          playbook_id: string
+          requires_confirmation?: boolean
+          step_description: string
+          step_order?: number
+          step_type: string
+          suggested_task_template_id?: string | null
+        }
+        Update: {
+          id?: string
+          playbook_id?: string
+          requires_confirmation?: boolean
+          step_description?: string
+          step_order?: number
+          step_type?: string
+          suggested_task_template_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "playbook_steps_playbook_id_fkey"
+            columns: ["playbook_id"]
+            isOneToOne: false
+            referencedRelation: "compliance_playbooks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "playbook_steps_playbook_id_fkey"
+            columns: ["playbook_id"]
+            isOneToOne: false
+            referencedRelation: "v_playbook_effectiveness"
+            referencedColumns: ["playbook_id"]
+          },
+        ]
+      }
+      playbook_triggers: {
+        Row: {
+          created_at: string
+          id: string
+          playbook_id: string
+          threshold_config_json: Json
+          trigger_source: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          playbook_id: string
+          threshold_config_json?: Json
+          trigger_source: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          playbook_id?: string
+          threshold_config_json?: Json
+          trigger_source?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "playbook_triggers_playbook_id_fkey"
+            columns: ["playbook_id"]
+            isOneToOne: false
+            referencedRelation: "compliance_playbooks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "playbook_triggers_playbook_id_fkey"
+            columns: ["playbook_id"]
+            isOneToOne: false
+            referencedRelation: "v_playbook_effectiveness"
+            referencedColumns: ["playbook_id"]
+          },
+        ]
       }
       portal_document_audit: {
         Row: {
@@ -34983,6 +35216,23 @@ export type Database = {
         }
         Relationships: []
       }
+      v_playbook_effectiveness: {
+        Row: {
+          avg_hours_to_resolve: number | null
+          completed_count: number | null
+          completion_rate_pct: number | null
+          dismissed_count: number | null
+          initiated_count: number | null
+          initiation_rate_pct: number | null
+          playbook_id: string | null
+          playbook_name: string | null
+          severity_level: string | null
+          suggested_count: number | null
+          total_activations: number | null
+          trigger_type: string | null
+        }
+        Relationships: []
+      }
       v_portal_documents_unified: {
         Row: {
           category_name: string | null
@@ -36397,6 +36647,16 @@ export type Database = {
         Args: { p_meeting_id: string; p_summary: string }
         Returns: string
       }
+      fn_audit_playbook: {
+        Args: {
+          p_action: string
+          p_actor_user_id: string
+          p_metadata?: Json
+          p_playbook_id: string
+          p_tenant_id: number
+        }
+        Returns: undefined
+      }
       fn_audit_risk_command: {
         Args: {
           p_action: string
@@ -37011,6 +37271,7 @@ export type Database = {
         Returns: undefined
       }
       refresh_exec_trend_mvs: { Args: never; Returns: undefined }
+      refresh_playbook_effectiveness: { Args: never; Returns: undefined }
       reject_document_ai_suggestions: {
         Args: { p_document_id: number; p_reason?: string; p_user_id?: string }
         Returns: Json

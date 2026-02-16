@@ -357,11 +357,63 @@ Deno.serve(async (req) => {
       }
     }
 
+    // ── PLAYBOOK TRIGGER MATCHING (Phase 19) ──
+    let playbookActivations = 0;
+    try {
+      const { data: triggers } = await sb
+        .from("playbook_triggers")
+        .select("id, playbook_id, trigger_source, threshold_config_json, compliance_playbooks!inner(id, active_flag, trigger_type, severity_level)")
+        .eq("compliance_playbooks.active_flag", true);
+
+      if (triggers && triggers.length > 0 && alerts.length > 0) {
+        const triggerSourceMap: Record<string, string> = {
+          high_severity_risk: "risk_event",
+          critical_stage: "stage_health",
+          regulator_overlap: "regulator_update",
+          repeated_gap: "evidence_gap",
+          rapid_risk_spike: "risk_forecast",
+          consultant_overload_risk: "risk_forecast",
+        };
+
+        for (const alert of alerts) {
+          const mappedSource = triggerSourceMap[alert.alert_type] || "";
+          const matchingTriggers = triggers.filter((t: any) => t.trigger_source === mappedSource);
+
+          for (const trigger of matchingTriggers) {
+            // Check for existing suggested/initiated activation to avoid duplicates
+            const { count: existingCount } = await sb
+              .from("playbook_activations")
+              .select("id", { count: "exact", head: true })
+              .eq("playbook_id", trigger.playbook_id)
+              .eq("tenant_id", alert.tenant_id)
+              .in("activation_status", ["suggested", "initiated"]);
+
+            if ((existingCount || 0) === 0) {
+              const { error: actErr } = await sb
+                .from("playbook_activations")
+                .insert({
+                  playbook_id: trigger.playbook_id,
+                  tenant_id: alert.tenant_id,
+                  trigger_source_id: alert.source_entity_id,
+                  stage_instance_id: alert.source_type === "stage_health_snapshot" ? alert.source_entity_id : null,
+                  activation_reason: alert.alert_summary,
+                  activation_status: "suggested",
+                });
+              if (!actErr) playbookActivations++;
+            }
+          }
+        }
+      }
+    } catch (pbErr) {
+      console.error("Playbook trigger matching error:", pbErr);
+    }
+
     return new Response(
       JSON.stringify({
         message: "Risk command engine completed",
         alerts_generated: inserted,
         alerts_evaluated: alerts.length,
+        playbook_activations: playbookActivations,
         summary: {
           high_severity_risk: alerts.filter(a => a.alert_type === "high_severity_risk").length,
           critical_stage: alerts.filter(a => a.alert_type === "critical_stage").length,
