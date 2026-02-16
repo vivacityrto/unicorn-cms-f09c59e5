@@ -1,9 +1,12 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { AlertCircle, GripVertical, Plus } from 'lucide-react';
 import { ClientBadge } from './ClientBadge';
+import { useOwnerProfiles } from '@/hooks/useOwnerProfiles';
+import { formatDistanceToNow } from 'date-fns';
 import type { EosIssue } from '@/types/eos';
 
 interface IssuesQueueProps {
@@ -16,6 +19,13 @@ interface IssuesQueueProps {
 
 export function IssuesQueue({ issues, onSelectIssue, onCreateIssue, isFacilitator, currentMeetingId }: IssuesQueueProps) {
   const [filter, setFilter] = useState<'all' | string>('all');
+
+  // Batch-resolve raiser UUIDs for display
+  const raiserUuids = useMemo(
+    () => (issues ?? []).map(i => i.raised_by || i.created_by || ''),
+    [issues]
+  );
+  const { data: raiserProfiles } = useOwnerProfiles(raiserUuids);
 
   // Priority is stored as integer: 3=High, 2=Medium, 1=Low
   // Also supports legacy string values: 'high', 'medium', 'low'
@@ -110,6 +120,26 @@ export function IssuesQueue({ issues, onSelectIssue, onCreateIssue, isFacilitato
                   )}
                   <ClientBadge clientId={issue.client_id} />
                 </div>
+                {/* Raiser + timestamp row */}
+                {(() => {
+                  const raiserId = issue.raised_by || issue.created_by;
+                  const profile = raiserId ? raiserProfiles?.[raiserId] : null;
+                  const name = profile?.first_name || 'Unknown';
+                  const initials = name.charAt(0).toUpperCase();
+                  return (
+                    <div className="flex items-center gap-1.5 mt-0.5">
+                      <Avatar className="h-4 w-4 text-[8px]">
+                        <AvatarFallback className="text-[8px]">{initials}</AvatarFallback>
+                      </Avatar>
+                      <span className="text-xs text-muted-foreground">
+                        Raised by {name}
+                        {issue.created_at && (
+                          <> · {formatDistanceToNow(new Date(issue.created_at), { addSuffix: true })}</>
+                        )}
+                      </span>
+                    </div>
+                  );
+                })()}
                 {issue.description && (
                   <p className="text-xs text-muted-foreground line-clamp-2">
                     {issue.description}
