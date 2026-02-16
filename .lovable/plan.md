@@ -1,37 +1,24 @@
 
-
-# Improve Issues Queue: Show Who Raised Each Issue and When
+# Show Only the Most Recent Package Instance Per Package Type
 
 ## Problem
-The Issues Queue cards in the meeting IDS section don't show who raised the issue or when it was created, making it hard to understand context at a glance.
+When a client has multiple active instances of the same package (e.g., "Kickstart RTO Package" started 17/09/2024 AND 25/11/2025), both appear in the Packages tab. Only the most recent instance per package type should display.
 
 ## Solution
-Enhance each issue card in `IssuesQueue.tsx` to display:
-- The **name and avatar** of the person who raised it (using `raised_by` field, falling back to `created_by`)
-- The **relative date** it was created (e.g. "3 days ago")
+After fetching all active package instances, deduplicate them by `package_id` -- keeping only the instance with the latest `start_date` for each package type.
 
-## Changes
+## Technical Change
 
-### 1. `src/components/eos/IssuesQueue.tsx`
-- Import `useOwnerProfiles` hook to batch-resolve `raised_by` / `created_by` UUIDs into names and avatars
-- Import `Avatar` and `AvatarFallback` from UI components
-- Import `formatDistanceToNow` from `date-fns` for relative timestamps
-- Extract unique raiser UUIDs from the issues list and pass to `useOwnerProfiles`
-- Add a new row below each issue title showing:
-  - Avatar with initials of the raiser
-  - "Raised by [Name]" text
-  - Relative timestamp (e.g. "3 days ago")
+### File: `src/hooks/useClientManagement.tsx`
+In the `useClientPackages` hook, after building the `packageData` array (around line 617), add a deduplication step:
 
-### Visual Layout (per issue card)
+- Group all built `ClientPackage` entries by `package_id`
+- For each group, keep only the entry with the most recent `membership_started_at` date
+- Replace the `setPackages(packageData)` call with `setPackages(deduplicatedData)`
 
-```text
-+-------------------------------------------------------+
-| [grip]  Issue Title          [Low] [Backlog]    [Open] |
-|         Raised by Jane Smith - 3 days ago              |
-|         Description preview text...                    |
-+-------------------------------------------------------+
-```
+This is a small, isolated change (~8 lines) that filters after the existing data build logic, so it does not affect stage resolution, hours calculation, or any other downstream logic.
 
-### No database or type changes required
-The `raised_by`, `created_by`, and `created_at` fields already exist on the `eos_issues` table and the `EosIssue` TypeScript type.
-
+## Impact
+- Only the Packages tab listing is affected
+- The older instance still exists in the database and remains accessible via direct URL or other queries
+- No database changes required
