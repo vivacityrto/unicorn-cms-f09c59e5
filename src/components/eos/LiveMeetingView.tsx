@@ -370,12 +370,13 @@ export const LiveMeetingView = () => {
         const currentQuarter = Math.ceil((now.getMonth() + 1) / 3);
         const currentYear = now.getFullYear();
         
-        // Filter to current quarter only, exclude completed, sort by owner name
+        // Filter to current quarter, Company + Team only (no Individual), exclude completed, sort by owner name
         const currentQuarterRocks = rocks
           ?.filter(r => 
             r.quarter_year === currentYear && 
             r.quarter_number === currentQuarter && 
-            r.status !== 'complete'
+            r.status !== 'complete' &&
+            (r.rock_level === 'company' || r.rock_level === 'team')
           )
           .sort((a, b) => {
             const nameA = rockOwners?.[a.owner_id || ''] || '';
@@ -401,6 +402,13 @@ export const LiveMeetingView = () => {
                         <div className="flex items-center gap-2 flex-wrap mb-1">
                           <p className="font-medium">{rock.title}</p>
                           <ClientBadge clientId={rock.client_id} />
+                          <Badge variant="outline" className={`text-xs ${
+                            rock.rock_level === 'company' 
+                              ? 'border-primary/40 text-primary' 
+                              : 'border-accent-foreground/30 text-accent-foreground'
+                          }`}>
+                            {rock.rock_level === 'company' ? 'Company' : 'Team'}
+                          </Badge>
                           <Badge variant="outline" className="text-xs">
                             Q{rock.quarter_number} {rock.quarter_year}
                           </Badge>
