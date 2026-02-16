@@ -298,10 +298,11 @@ export default function ManageTenants() {
       // Calculate stats
       const totalMembers = tenantsWithCounts.reduce((sum, t) => sum + t.member_count, 0);
       const active = tenantsWithCounts.filter(t => t.status === "active").length;
+      const inactive = tenantsWithCounts.filter(t => t.status === "inactive" || t.status === "archived").length;
       setStats({
         total: tenantsWithCounts.length,
         active,
-        inactive: tenantsWithCounts.length - active,
+        inactive,
         totalMembers
       });
     } catch (error: any) {
@@ -792,8 +793,9 @@ export default function ManageTenants() {
           options={[
             { value: "all", label: "All Status", icon: Activity, iconColor: "text-muted-foreground" },
             { value: "active", label: "Active", icon: CheckCircle2, iconColor: "text-green-600" },
-            { value: "inactive", label: "Inactive", icon: XCircle, iconColor: "text-red-600" }
-          ]} 
+            { value: "inactive", label: "Inactive", icon: XCircle, iconColor: "text-red-600" },
+            { value: "archived", label: "Archived", icon: Archive, iconColor: "text-muted-foreground" }
+          ]}
           value={statusFilter} 
           onValueChange={setStatusFilter} 
           placeholder="Filter by status..." 
@@ -871,14 +873,18 @@ export default function ManageTenants() {
                     </TableCell>
                     <TableCell className="py-6 border-r border-border/50 text-center whitespace-nowrap">
                       <Badge 
-                        variant={tenant.status === "active" ? "default" : "destructive"} 
-                        className={tenant.status === "active" 
-                          ? "bg-green-500/10 text-green-600 hover:bg-green-500/20 border border-green-600 text-[0.75rem] py-[2px] px-[0.625rem] rounded-[11px]"
-                          : "bg-red-500/10 text-red-600 hover:bg-red-500/20 border border-red-600 text-[0.75rem] py-[2px] px-[0.625rem] rounded-[11px]"
-                        }
+                        variant={tenant.status === "active" ? "default" : tenant.status === "archived" ? "secondary" : "destructive"} 
+                        className={cn(
+                          "text-[0.75rem] py-[2px] px-[0.625rem] rounded-[11px] border",
+                          tenant.status === "active" && "bg-green-500/10 text-green-600 hover:bg-green-500/20 border-green-600",
+                          tenant.status === "inactive" && "bg-red-500/10 text-red-600 hover:bg-red-500/20 border-red-600",
+                          tenant.status === "archived" && "bg-muted text-muted-foreground hover:bg-muted/80 border-border"
+                        )}
                       >
                         {tenant.status === "active" ? (
                           <CheckCircle2 className="mr-1 h-3 w-3" />
+                        ) : tenant.status === "archived" ? (
+                          <Archive className="mr-1 h-3 w-3" />
                         ) : (
                           <XCircle className="mr-1 h-3 w-3" />
                         )}
