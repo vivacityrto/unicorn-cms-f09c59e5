@@ -220,3 +220,6 @@ verify_jwt = false
 
 [functions.copilot-chat]
 verify_jwt = false
+
+[functions.run-retention-forecast]
+verify_jwt = false
