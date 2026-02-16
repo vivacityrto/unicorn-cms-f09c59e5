@@ -28,6 +28,7 @@ import { WeeklyReviewNotesPanel } from '@/components/executive/WeeklyReviewNotes
 import { CeoDashboardSection } from '@/components/executive/ceo/CeoDashboardSection';
 import { RegulatorUpdatesPanel } from '@/components/executive/RegulatorUpdatesPanel';
 import { RegulatorActivityWidget } from '@/components/executive/RegulatorActivityWidget';
+import { AuditPreparationWidget } from '@/components/executive/AuditPreparationWidget';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
@@ -237,6 +238,9 @@ export default function ExecutiveDashboard() {
           <RegulatorUpdatesPanel />
           <RegulatorActivityWidget />
         </div>
+
+        {/* Audit Preparation Widget */}
+        <AuditPreparationWidget />
 
         {/* CEO Executive Dashboard Panels */}
         <CeoDashboardSection />

@@ -193,3 +193,6 @@ verify_jwt = false
 
 [functions.research-tas-context]
 verify_jwt = false
+
+[functions.research-audit-intelligence]
+verify_jwt = false
