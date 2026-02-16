@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
-export type AskVivMode = 'knowledge' | 'compliance';
+export type AskVivMode = 'knowledge' | 'compliance' | 'web';
 
 interface AskVivState {
   isOpen: boolean;

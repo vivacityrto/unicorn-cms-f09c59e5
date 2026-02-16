@@ -21233,6 +21233,184 @@ export type Database = {
         }
         Relationships: []
       }
+      research_findings: {
+        Row: {
+          citations_json: Json | null
+          created_at: string
+          id: string
+          job_id: string
+          review_reason: string | null
+          review_status: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          summary_md: string | null
+        }
+        Insert: {
+          citations_json?: Json | null
+          created_at?: string
+          id?: string
+          job_id: string
+          review_reason?: string | null
+          review_status?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          summary_md?: string | null
+        }
+        Update: {
+          citations_json?: Json | null
+          created_at?: string
+          id?: string
+          job_id?: string
+          review_reason?: string | null
+          review_status?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          summary_md?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "research_findings_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "research_jobs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      research_jobs: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          created_by: string
+          id: string
+          input_json: Json | null
+          job_type: string
+          output_json: Json | null
+          status: string
+          tenant_id: number | null
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          created_by: string
+          id?: string
+          input_json?: Json | null
+          job_type: string
+          output_json?: Json | null
+          status?: string
+          tenant_id?: number | null
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string
+          id?: string
+          input_json?: Json | null
+          job_type?: string
+          output_json?: Json | null
+          status?: string
+          tenant_id?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "research_jobs_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "research_jobs_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_engagement_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "research_jobs_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_eos_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "research_jobs_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_compliance_entitlements"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "research_jobs_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "research_jobs_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "research_jobs_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_membership_usage"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "research_jobs_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_membership_usage"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
+      research_sources: {
+        Row: {
+          content_hash: string | null
+          created_at: string
+          id: string
+          job_id: string
+          raw_markdown: string | null
+          retrieved_at: string
+          title: string | null
+          url: string
+        }
+        Insert: {
+          content_hash?: string | null
+          created_at?: string
+          id?: string
+          job_id: string
+          raw_markdown?: string | null
+          retrieved_at?: string
+          title?: string | null
+          url: string
+        }
+        Update: {
+          content_hash?: string | null
+          created_at?: string
+          id?: string
+          job_id?: string
+          raw_markdown?: string | null
+          retrieved_at?: string
+          title?: string | null
+          url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "research_sources_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "research_jobs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       resource_favourites: {
         Row: {
           created_at: string | null
