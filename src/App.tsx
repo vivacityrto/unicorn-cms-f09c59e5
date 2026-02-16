@@ -134,6 +134,7 @@ const ResearchJobs = lazy(() => import("./pages/ResearchJobs"));
 const ResearchJobDetail = lazy(() => import("./pages/ResearchJobDetail"));
 const RegulatorWatchDashboard = lazy(() => import("./pages/RegulatorWatchDashboard"));
 const RegulatorChangeEventDetail = lazy(() => import("./pages/RegulatorChangeEventDetail"));
+const CrossTenantRiskRadar = lazy(() => import("./pages/CrossTenantRiskRadar"));
 
 // Academy pages (placeholder)
 const AcademyDashboard = lazy(() => import("./pages/academy/AcademyDashboard"));
@@ -946,6 +947,7 @@ const App = () => (
             <Route path="/admin/research-jobs/:jobId" element={<ProtectedRoute><ResearchJobDetail /></ProtectedRoute>} />
             <Route path="/admin/regulator-watch" element={<ProtectedRoute requireSuperAdmin><RegulatorWatchDashboard /></ProtectedRoute>} />
             <Route path="/admin/regulator-watch/:eventId" element={<ProtectedRoute requireSuperAdmin><RegulatorChangeEventDetail /></ProtectedRoute>} />
+            <Route path="/admin/risk-radar" element={<ProtectedRoute requireSuperAdmin><CrossTenantRiskRadar /></ProtectedRoute>} />
             {/* Academy Routes */}
             <Route path="/academy" element={<ProtectedRoute><AcademyDashboard /></ProtectedRoute>} />
             <Route path="/academy/courses" element={<ProtectedRoute><AcademyCourses /></ProtectedRoute>} />
