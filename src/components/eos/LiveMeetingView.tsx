@@ -787,6 +787,7 @@ export const LiveMeetingView = () => {
               isLive={meetingStarted}
               canEdit={isFacilitator}
               onlineUsers={onlineUsers}
+              participants={participants?.map(p => ({ user_id: p.user_id, role: p.role })) || []}
             />
             <div className="flex items-center justify-between mb-4">
               <h2 className="font-semibold">Agenda</h2>

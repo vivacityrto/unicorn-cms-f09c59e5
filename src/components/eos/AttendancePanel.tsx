@@ -33,6 +33,11 @@ import { useMeetingAttendance, AttendanceStatus, MeetingAttendee, MeetingRole } 
 import { useVivacityTeamUsers } from '@/hooks/useVivacityTeamUsers';
 import type { OnlineUser } from '@/hooks/useMeetingRealtime';
 
+interface MeetingParticipant {
+  user_id: string;
+  role: string;
+}
+
 interface AttendancePanelProps {
   meetingId: string;
   meetingType: string;
@@ -40,6 +45,7 @@ interface AttendancePanelProps {
   isLive?: boolean;
   canEdit?: boolean;
   onlineUsers?: OnlineUser[];
+  participants?: MeetingParticipant[];
 }
 
 const statusConfig: Record<AttendanceStatus, { label: string; icon: React.ReactNode; color: string }> = {
@@ -67,7 +73,8 @@ export const AttendancePanel = ({
   meetingStatus = 'scheduled',
   isLive = false,
   canEdit = true,
-  onlineUsers = []
+  onlineUsers = [],
+  participants = []
 }: AttendancePanelProps) => {
   const [isExpanded, setIsExpanded] = useState(true);
   const [addDialogOpen, setAddDialogOpen] = useState(false);
@@ -99,6 +106,17 @@ export const AttendancePanel = ({
     seedFromRoles,
   } = useMeetingAttendance(meetingId);
 
+  // Auto-seed attendees from participants when list is empty
+  const autoSeededRef = useRef(false);
+  useEffect(() => {
+    if (autoSeededRef.current || attendeesLoading || !attendees) return;
+    if (attendees.length === 0 && meetingId) {
+      autoSeededRef.current = true;
+      console.log('[AttendancePanel] Auto-seeding attendees from participants');
+      seedFromRoles.mutate();
+    }
+  }, [attendees, attendeesLoading, meetingId]);
+
   // Track which online users we've already processed to avoid duplicate mutations
   const processedOnlineUsersRef = useRef<Set<string>>(new Set());
 
@@ -119,12 +137,20 @@ export const AttendancePanel = ({
           updateAttendanceSilent.mutate({ userId: uid, status: 'attended' });
         }
       } else {
-        // Not in attendee list — add as guest and mark attended
+        // Not in attendee list — check participants for correct role
+        const participant = participants.find(p => p.user_id === uid);
         processedOnlineUsersRef.current.add(uid);
-        addGuestSilent.mutate({ userId: uid, notes: 'Auto-added (joined online)' });
+        if (participant) {
+          // Known participant: add as attendee with proper role, not guest
+          const role: MeetingRole = participant.role === 'Leader' ? 'owner' : 'attendee';
+          addAttendee.mutate({ userId: uid, role });
+        } else {
+          // Unknown: add as guest
+          addGuestSilent.mutate({ userId: uid, notes: 'Auto-added (joined online)' });
+        }
       }
     }
-  }, [isLive, onlineUsers, attendees, attendeesLoading]);
+  }, [isLive, onlineUsers, attendees, attendeesLoading, participants]);
 
   // Fetch Vivacity team users only for EOS meeting attendee picker
   const { data: vivacityUsers } = useVivacityTeamUsers();
@@ -235,20 +261,18 @@ export const AttendancePanel = ({
             )}
 
             {/* Quick Actions - Before meeting starts */}
-            {isScheduled && canEdit && (
+            {canEdit && (
               <div className="flex flex-wrap gap-2">
-                {attendees?.length === 0 && (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={handleSeedFromRoles}
-                    disabled={seedFromRoles.isPending}
-                    className="text-xs"
-                  >
-                    <RefreshCw className="w-3 h-3 mr-1" />
-                    {seedFromRoles.isPending ? 'Loading...' : 'Seed from EOS Roles'}
-                  </Button>
-                )}
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={handleSeedFromRoles}
+                  disabled={seedFromRoles.isPending}
+                  className="text-xs"
+                >
+                  <RefreshCw className="w-3 h-3 mr-1" />
+                  {seedFromRoles.isPending ? 'Syncing...' : 'Resync Attendees'}
+                </Button>
                 <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
                   <DialogTrigger asChild>
                     <Button size="sm" variant="outline" className="text-xs">
@@ -308,69 +332,18 @@ export const AttendancePanel = ({
               </div>
             )}
 
-            {/* Quick Actions - During live meeting */}
+            {/* Mark All Present - During live meeting */}
             {isLive && canEdit && (
-              <div className="flex flex-col gap-2">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => markAllPresent.mutate()}
-                  disabled={markAllPresent.isPending}
-                  className="text-xs w-full justify-start"
-                >
-                  <UserCheck className="w-3 h-3 mr-1" />
-                  Mark All Present
-                </Button>
-                <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
-                  <DialogTrigger asChild>
-                    <Button size="sm" variant="outline" className="text-xs w-full justify-start">
-                      <UserPlus className="w-3 h-3 mr-1" />
-                      Add Guest
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent>
-                    <DialogHeader>
-                      <DialogTitle>Add Guest Attendee</DialogTitle>
-                      <DialogDescription>
-                        Add a guest who was not originally invited to this meeting.
-                      </DialogDescription>
-                    </DialogHeader>
-                    <div className="space-y-4 py-4">
-                      <div className="space-y-2">
-                        <label className="text-sm font-medium">Select User</label>
-                        <Select value={selectedUserId} onValueChange={setSelectedUserId}>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Choose a user..." />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {availableToAdd?.map((user) => (
-                              <SelectItem key={user.user_uuid} value={user.user_uuid}>
-                                {user.first_name} {user.last_name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="space-y-2">
-                        <label className="text-sm font-medium">Notes (optional)</label>
-                        <Input
-                          value={guestNotes}
-                          onChange={(e) => setGuestNotes(e.target.value)}
-                          placeholder="Reason for attending..."
-                        />
-                      </div>
-                    </div>
-                    <DialogFooter>
-                      <Button variant="outline" onClick={() => setAddDialogOpen(false)}>
-                        Cancel
-                      </Button>
-                      <Button onClick={handleAddAttendee} disabled={!selectedUserId || addGuest.isPending}>
-                        Add Guest
-                      </Button>
-                    </DialogFooter>
-                  </DialogContent>
-                </Dialog>
-              </div>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => markAllPresent.mutate()}
+                disabled={markAllPresent.isPending}
+                className="text-xs w-full justify-start"
+              >
+                <UserCheck className="w-3 h-3 mr-1" />
+                Mark All Present
+              </Button>
             )}
 
             {/* Attendee List */}
