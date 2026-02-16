@@ -34,6 +34,7 @@ import { SystemicRiskSignalsWidget } from '@/components/executive/SystemicRiskSi
 import { TemplateHealthWidget } from '@/components/executive/TemplateHealthWidget';
 import { PortfolioHealthWidget } from '@/components/executive/PortfolioHealthWidget';
 import { TeamCapacityWidget } from '@/components/executive/TeamCapacityWidget';
+import { KnowledgeGraphWidget } from '@/components/executive/KnowledgeGraphWidget';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
@@ -245,12 +246,13 @@ export default function ExecutiveDashboard() {
         </div>
 
         {/* Audit Preparation + Evidence Readiness + Systemic Risk + Template Health + Portfolio Health */}
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-3">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-6 gap-3">
           <AuditPreparationWidget />
           <EvidenceReadinessWidget />
           <SystemicRiskSignalsWidget />
           <TemplateHealthWidget />
           <PortfolioHealthWidget />
+          <KnowledgeGraphWidget />
         </div>
 
         {/* Team Capacity Overview */}

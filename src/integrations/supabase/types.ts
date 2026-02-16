@@ -16419,6 +16419,48 @@ export type Database = {
           },
         ]
       }
+      knowledge_edges: {
+        Row: {
+          created_at: string
+          from_node_id: string
+          id: string
+          relationship_type: string
+          to_node_id: string
+          weight: number
+        }
+        Insert: {
+          created_at?: string
+          from_node_id: string
+          id?: string
+          relationship_type: string
+          to_node_id: string
+          weight?: number
+        }
+        Update: {
+          created_at?: string
+          from_node_id?: string
+          id?: string
+          relationship_type?: string
+          to_node_id?: string
+          weight?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "knowledge_edges_from_node_id_fkey"
+            columns: ["from_node_id"]
+            isOneToOne: false
+            referencedRelation: "knowledge_nodes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "knowledge_edges_to_node_id_fkey"
+            columns: ["to_node_id"]
+            isOneToOne: false
+            referencedRelation: "knowledge_nodes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       knowledge_item_audit_log: {
         Row: {
           action: string
@@ -16543,6 +16585,93 @@ export type Database = {
           version?: string
         }
         Relationships: []
+      }
+      knowledge_nodes: {
+        Row: {
+          created_at: string
+          entity_id: string
+          id: string
+          label: string
+          metadata_json: Json | null
+          node_type: string
+          tenant_id: number | null
+        }
+        Insert: {
+          created_at?: string
+          entity_id: string
+          id?: string
+          label: string
+          metadata_json?: Json | null
+          node_type: string
+          tenant_id?: number | null
+        }
+        Update: {
+          created_at?: string
+          entity_id?: string
+          id?: string
+          label?: string
+          metadata_json?: Json | null
+          node_type?: string
+          tenant_id?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "knowledge_nodes_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "knowledge_nodes_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_engagement_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "knowledge_nodes_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_eos_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "knowledge_nodes_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_compliance_entitlements"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "knowledge_nodes_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "knowledge_nodes_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "knowledge_nodes_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_membership_usage"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "knowledge_nodes_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_membership_usage"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
       }
       labels: {
         Row: {
