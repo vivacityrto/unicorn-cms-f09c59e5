@@ -8133,6 +8133,13 @@ export type Database = {
             foreignKeyName: "compliance_score_snapshots_package_instance_id_fkey"
             columns: ["package_instance_id"]
             isOneToOne: false
+            referencedRelation: "v_package_burndown"
+            referencedColumns: ["package_instance_id"]
+          },
+          {
+            foreignKeyName: "compliance_score_snapshots_package_instance_id_fkey"
+            columns: ["package_instance_id"]
+            isOneToOne: false
             referencedRelation: "v_phase_actions_remaining"
             referencedColumns: ["package_instance_id"]
           },
@@ -19026,6 +19033,13 @@ export type Database = {
             foreignKeyName: "package_instance_state_log_package_instance_id_fkey"
             columns: ["package_instance_id"]
             isOneToOne: false
+            referencedRelation: "v_package_burndown"
+            referencedColumns: ["package_instance_id"]
+          },
+          {
+            foreignKeyName: "package_instance_state_log_package_instance_id_fkey"
+            columns: ["package_instance_id"]
+            isOneToOne: false
             referencedRelation: "v_phase_actions_remaining"
             referencedColumns: ["package_instance_id"]
           },
@@ -19199,6 +19213,13 @@ export type Database = {
             columns: ["package_instance_id"]
             isOneToOne: false
             referencedRelation: "v_momentum_state"
+            referencedColumns: ["package_instance_id"]
+          },
+          {
+            foreignKeyName: "package_notes_package_instance_id_fkey"
+            columns: ["package_instance_id"]
+            isOneToOne: false
+            referencedRelation: "v_package_burndown"
             referencedColumns: ["package_instance_id"]
           },
           {
@@ -28624,6 +28645,42 @@ export type Database = {
           },
         ]
       }
+      time_entry_audit_log: {
+        Row: {
+          action: string
+          actor_user_id: string
+          created_at: string
+          id: string
+          new_row: Json | null
+          old_row: Json | null
+          reason: string | null
+          tenant_id: number
+          time_entry_id: string
+        }
+        Insert: {
+          action: string
+          actor_user_id: string
+          created_at?: string
+          id?: string
+          new_row?: Json | null
+          old_row?: Json | null
+          reason?: string | null
+          tenant_id: number
+          time_entry_id: string
+        }
+        Update: {
+          action?: string
+          actor_user_id?: string
+          created_at?: string
+          id?: string
+          new_row?: Json | null
+          old_row?: Json | null
+          reason?: string | null
+          tenant_id?: number
+          time_entry_id?: string
+        }
+        Relationships: []
+      }
       time_tracking: {
         Row: {
           client_id: string | null
@@ -30851,6 +30908,13 @@ export type Database = {
             foreignKeyName: "compliance_score_snapshots_package_instance_id_fkey"
             columns: ["package_instance_id"]
             isOneToOne: false
+            referencedRelation: "v_package_burndown"
+            referencedColumns: ["package_instance_id"]
+          },
+          {
+            foreignKeyName: "compliance_score_snapshots_package_instance_id_fkey"
+            columns: ["package_instance_id"]
+            isOneToOne: false
             referencedRelation: "v_phase_actions_remaining"
             referencedColumns: ["package_instance_id"]
           },
@@ -31595,6 +31659,13 @@ export type Database = {
             foreignKeyName: "compliance_score_snapshots_package_instance_id_fkey"
             columns: ["package_instance_id"]
             isOneToOne: false
+            referencedRelation: "v_package_burndown"
+            referencedColumns: ["package_instance_id"]
+          },
+          {
+            foreignKeyName: "compliance_score_snapshots_package_instance_id_fkey"
+            columns: ["package_instance_id"]
+            isOneToOne: false
             referencedRelation: "v_phase_actions_remaining"
             referencedColumns: ["package_instance_id"]
           },
@@ -31770,6 +31841,13 @@ export type Database = {
             foreignKeyName: "compliance_score_snapshots_package_instance_id_fkey"
             columns: ["package_instance_id"]
             isOneToOne: false
+            referencedRelation: "v_package_burndown"
+            referencedColumns: ["package_instance_id"]
+          },
+          {
+            foreignKeyName: "compliance_score_snapshots_package_instance_id_fkey"
+            columns: ["package_instance_id"]
+            isOneToOne: false
             referencedRelation: "v_phase_actions_remaining"
             referencedColumns: ["package_instance_id"]
           },
@@ -31931,6 +32009,13 @@ export type Database = {
             columns: ["package_instance_id"]
             isOneToOne: false
             referencedRelation: "v_momentum_state"
+            referencedColumns: ["package_instance_id"]
+          },
+          {
+            foreignKeyName: "compliance_score_snapshots_package_instance_id_fkey"
+            columns: ["package_instance_id"]
+            isOneToOne: false
+            referencedRelation: "v_package_burndown"
             referencedColumns: ["package_instance_id"]
           },
           {
@@ -32108,6 +32193,13 @@ export type Database = {
             foreignKeyName: "compliance_score_snapshots_package_instance_id_fkey"
             columns: ["package_instance_id"]
             isOneToOne: false
+            referencedRelation: "v_package_burndown"
+            referencedColumns: ["package_instance_id"]
+          },
+          {
+            foreignKeyName: "compliance_score_snapshots_package_instance_id_fkey"
+            columns: ["package_instance_id"]
+            isOneToOne: false
             referencedRelation: "v_phase_actions_remaining"
             referencedColumns: ["package_instance_id"]
           },
@@ -32261,6 +32353,13 @@ export type Database = {
             columns: ["package_instance_id"]
             isOneToOne: false
             referencedRelation: "v_momentum_state"
+            referencedColumns: ["package_instance_id"]
+          },
+          {
+            foreignKeyName: "compliance_score_snapshots_package_instance_id_fkey"
+            columns: ["package_instance_id"]
+            isOneToOne: false
+            referencedRelation: "v_package_burndown"
             referencedColumns: ["package_instance_id"]
           },
           {
@@ -32650,6 +32749,28 @@ export type Database = {
           package_name: string | null
           pause_reason: string[] | null
           recovery_eligible: boolean | null
+          tenant_id: number | null
+        }
+        Relationships: []
+      }
+      v_package_burndown: {
+        Row: {
+          included_minutes: number | null
+          package_instance_id: number | null
+          percent_used: number | null
+          remaining_minutes: number | null
+          tenant_id: number | null
+          used_minutes: number | null
+        }
+        Relationships: []
+      }
+      v_package_time_summary: {
+        Row: {
+          last_entry_at: string | null
+          minutes_month: number | null
+          minutes_total: number | null
+          minutes_ytd: number | null
+          package_instance_id: number | null
           tenant_id: number | null
         }
         Relationships: []
@@ -33289,6 +33410,14 @@ export type Database = {
             referencedColumns: ["user_uuid"]
           },
         ]
+      }
+      v_time_drafts_stale: {
+        Row: {
+          count_stale_over_2_days: number | null
+          tenant_id: number | null
+          user_id: string | null
+        }
+        Relationships: []
       }
       vw_client_capacity_diagnostics: {
         Row: {
