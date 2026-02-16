@@ -81,27 +81,45 @@ export function AddTimeDialog({
   useEffect(() => {
     if (open) {
       setScopeTag(defaultScopeTag);
-      supabase
-        .from('package_instances')
-        .select('id, packages(name, code)')
-        .eq('tenant_id', tenantId)
-        .eq('is_complete', false)
-        .order('start_date', { ascending: false })
-        .then(({ data, error }) => {
-          console.log('[AddTimeDialog] package_instances query', { tenantId, data, error });
-          const instances: PackageInstance[] = (data || []).map((pi: any) => ({
+      (async () => {
+        const { data: piData } = await supabase
+          .from('package_instances')
+          .select('id, package_id')
+          .eq('tenant_id', tenantId)
+          .eq('is_complete', false)
+          .order('start_date', { ascending: false });
+
+        if (!piData || piData.length === 0) {
+          setActiveInstances([]);
+          setSelectedInstanceId(null);
+          return;
+        }
+
+        // Fetch package names separately (no FK relationship)
+        const pkgIds = [...new Set(piData.map((pi) => pi.package_id).filter(Boolean))];
+        const { data: pkgData } = pkgIds.length > 0
+          ? await supabase.from('packages').select('id, name, code').in('id', pkgIds)
+          : { data: [] };
+
+        const pkgMap = new Map((pkgData || []).map((p: any) => [p.id, p]));
+
+        const instances: PackageInstance[] = piData.map((pi: any) => {
+          const pkg = pkgMap.get(pi.package_id);
+          return {
             id: pi.id,
-            package_name: pi.packages?.name || `Package #${pi.id}`,
-            is_kickstart: (pi.packages?.code || '').toLowerCase().includes('kickstart'),
-          }));
-          setActiveInstances(instances);
-          if (instances.length === 1) {
-            setSelectedInstanceId(instances[0].id);
-            if (instances[0].is_kickstart) setIsBillable(false);
-          } else {
-            setSelectedInstanceId(null);
-          }
+            package_name: pkg?.name || `Package #${pi.id}`,
+            is_kickstart: (pkg?.code || '').toLowerCase().includes('kickstart'),
+          };
         });
+
+        setActiveInstances(instances);
+        if (instances.length === 1) {
+          setSelectedInstanceId(instances[0].id);
+          if (instances[0].is_kickstart) setIsBillable(false);
+        } else {
+          setSelectedInstanceId(null);
+        }
+      })();
     }
   }, [open, defaultScopeTag, tenantId]);
 
