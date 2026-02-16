@@ -36,6 +36,7 @@ import { PortfolioHealthWidget } from '@/components/executive/PortfolioHealthWid
 import { TeamCapacityWidget } from '@/components/executive/TeamCapacityWidget';
 import { KnowledgeGraphWidget } from '@/components/executive/KnowledgeGraphWidget';
 import { ClientRiskForecastWidget } from '@/components/executive/ClientRiskForecastWidget';
+import { CommercialRiskWidget } from '@/components/executive/CommercialRiskWidget';
 import { CopilotPanel } from '@/components/copilot/CopilotPanel';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
@@ -256,6 +257,7 @@ export default function ExecutiveDashboard() {
           <PortfolioHealthWidget />
           <KnowledgeGraphWidget />
           <ClientRiskForecastWidget />
+          <CommercialRiskWidget />
         </div>
 
         {/* Team Capacity Overview */}

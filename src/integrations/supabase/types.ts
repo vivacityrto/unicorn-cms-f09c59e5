@@ -21874,6 +21874,84 @@ export type Database = {
           },
         ]
       }
+      retention_forecast_history: {
+        Row: {
+          composite_retention_risk_index: number | null
+          id: string
+          snapshot_date: string
+          tenant_id: number
+        }
+        Insert: {
+          composite_retention_risk_index?: number | null
+          id?: string
+          snapshot_date?: string
+          tenant_id: number
+        }
+        Update: {
+          composite_retention_risk_index?: number | null
+          id?: string
+          snapshot_date?: string
+          tenant_id?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "retention_forecast_history_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "retention_forecast_history_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_engagement_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "retention_forecast_history_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_eos_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "retention_forecast_history_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_compliance_entitlements"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "retention_forecast_history_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "retention_forecast_history_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "retention_forecast_history_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_membership_usage"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "retention_forecast_history_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_membership_usage"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
       reusable_audit_templates: {
         Row: {
           created_at: string
@@ -25711,6 +25789,102 @@ export type Database = {
           },
         ]
       }
+      tenant_commercial_profiles: {
+        Row: {
+          average_monthly_revenue: number | null
+          contract_end_date: string | null
+          contract_start_date: string | null
+          created_at: string
+          id: string
+          package_type: string | null
+          renewal_window_end: string | null
+          renewal_window_start: string | null
+          tenant_id: number
+          updated_at: string
+        }
+        Insert: {
+          average_monthly_revenue?: number | null
+          contract_end_date?: string | null
+          contract_start_date?: string | null
+          created_at?: string
+          id?: string
+          package_type?: string | null
+          renewal_window_end?: string | null
+          renewal_window_start?: string | null
+          tenant_id: number
+          updated_at?: string
+        }
+        Update: {
+          average_monthly_revenue?: number | null
+          contract_end_date?: string | null
+          contract_start_date?: string | null
+          created_at?: string
+          id?: string
+          package_type?: string | null
+          renewal_window_end?: string | null
+          renewal_window_start?: string | null
+          tenant_id?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tenant_commercial_profiles_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tenant_commercial_profiles_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_engagement_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "tenant_commercial_profiles_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_eos_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "tenant_commercial_profiles_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_compliance_entitlements"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "tenant_commercial_profiles_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "tenant_commercial_profiles_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "tenant_commercial_profiles_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_membership_usage"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "tenant_commercial_profiles_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_membership_usage"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
       tenant_compliance_memberships: {
         Row: {
           assigned_csc_user_id: string | null
@@ -27282,6 +27456,105 @@ export type Database = {
           verified_by?: string | null
         }
         Relationships: []
+      }
+      tenant_retention_forecasts: {
+        Row: {
+          composite_retention_risk_index: number | null
+          engagement_score: number | null
+          forecast_date: string
+          generated_at: string
+          id: string
+          key_drivers_json: Json | null
+          retention_status: string
+          risk_stress_overlap_score: number | null
+          service_pressure_score: number | null
+          tenant_id: number
+          value_utilisation_score: number | null
+        }
+        Insert: {
+          composite_retention_risk_index?: number | null
+          engagement_score?: number | null
+          forecast_date?: string
+          generated_at?: string
+          id?: string
+          key_drivers_json?: Json | null
+          retention_status?: string
+          risk_stress_overlap_score?: number | null
+          service_pressure_score?: number | null
+          tenant_id: number
+          value_utilisation_score?: number | null
+        }
+        Update: {
+          composite_retention_risk_index?: number | null
+          engagement_score?: number | null
+          forecast_date?: string
+          generated_at?: string
+          id?: string
+          key_drivers_json?: Json | null
+          retention_status?: string
+          risk_stress_overlap_score?: number | null
+          service_pressure_score?: number | null
+          tenant_id?: number
+          value_utilisation_score?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tenant_retention_forecasts_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tenant_retention_forecasts_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_engagement_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "tenant_retention_forecasts_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_eos_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "tenant_retention_forecasts_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_compliance_entitlements"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "tenant_retention_forecasts_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "tenant_retention_forecasts_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "tenant_retention_forecasts_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_membership_usage"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "tenant_retention_forecasts_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_membership_usage"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
       }
       tenant_risk_forecasts: {
         Row: {
@@ -34785,6 +35058,82 @@ export type Database = {
           tenant_id: number | null
         }
         Relationships: []
+      }
+      v_retention_risk_trends: {
+        Row: {
+          average_monthly_revenue: number | null
+          composite_retention_risk_index: number | null
+          contract_end_date: string | null
+          engagement_score: number | null
+          forecast_date: string | null
+          renewal_window_end: string | null
+          renewal_window_start: string | null
+          retention_status: string | null
+          risk_stress_overlap_score: number | null
+          service_pressure_score: number | null
+          tenant_id: number | null
+          tenant_name: string | null
+          value_utilisation_score: number | null
+          within_renewal_window: boolean | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tenant_retention_forecasts_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tenant_retention_forecasts_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_engagement_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "tenant_retention_forecasts_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_eos_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "tenant_retention_forecasts_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_compliance_entitlements"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "tenant_retention_forecasts_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "tenant_retention_forecasts_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "tenant_retention_forecasts_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_membership_usage"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "tenant_retention_forecasts_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_membership_usage"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
       }
       v_risk_forecast_trends: {
         Row: {
