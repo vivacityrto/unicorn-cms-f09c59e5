@@ -15356,6 +15356,121 @@ export type Database = {
         }
         Relationships: []
       }
+      evidence_gap_checks: {
+        Row: {
+          created_at: string
+          detected_categories_json: Json
+          generated_at: string
+          generated_by_user_id: string
+          id: string
+          missing_categories_json: Json
+          required_categories_json: Json
+          research_job_id: string
+          reviewed_at: string | null
+          reviewed_by_user_id: string | null
+          stage_instance_id: number
+          status: string
+          tenant_id: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          detected_categories_json?: Json
+          generated_at?: string
+          generated_by_user_id: string
+          id?: string
+          missing_categories_json?: Json
+          required_categories_json?: Json
+          research_job_id: string
+          reviewed_at?: string | null
+          reviewed_by_user_id?: string | null
+          stage_instance_id: number
+          status?: string
+          tenant_id: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          detected_categories_json?: Json
+          generated_at?: string
+          generated_by_user_id?: string
+          id?: string
+          missing_categories_json?: Json
+          required_categories_json?: Json
+          research_job_id?: string
+          reviewed_at?: string | null
+          reviewed_by_user_id?: string | null
+          stage_instance_id?: number
+          status?: string
+          tenant_id?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "evidence_gap_checks_research_job_id_fkey"
+            columns: ["research_job_id"]
+            isOneToOne: false
+            referencedRelation: "research_jobs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "evidence_gap_checks_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "evidence_gap_checks_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_engagement_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "evidence_gap_checks_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_eos_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "evidence_gap_checks_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_compliance_entitlements"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "evidence_gap_checks_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "evidence_gap_checks_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "evidence_gap_checks_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_membership_usage"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "evidence_gap_checks_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_membership_usage"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
       evidence_request_items: {
         Row: {
           accepted_file_types: string[] | null
@@ -24044,6 +24159,36 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      stage_required_evidence_categories: {
+        Row: {
+          category_description: string
+          category_name: string
+          created_at: string
+          id: string
+          mandatory_flag: boolean
+          related_standard_clause: string
+          stage_type: string
+        }
+        Insert: {
+          category_description?: string
+          category_name: string
+          created_at?: string
+          id?: string
+          mandatory_flag?: boolean
+          related_standard_clause?: string
+          stage_type: string
+        }
+        Update: {
+          category_description?: string
+          category_name?: string
+          created_at?: string
+          id?: string
+          mandatory_flag?: boolean
+          related_standard_clause?: string
+          stage_type?: string
+        }
+        Relationships: []
       }
       stage_state_audit_log: {
         Row: {

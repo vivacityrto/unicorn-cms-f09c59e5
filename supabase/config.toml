@@ -196,3 +196,6 @@ verify_jwt = false
 
 [functions.research-audit-intelligence]
 verify_jwt = false
+
+[functions.research-evidence-gap-check]
+verify_jwt = false
