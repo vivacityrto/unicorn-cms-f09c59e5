@@ -1,0 +1,1 @@
+DELETE FROM active_timers WHERE id = '5c20e19e-86fc-4f86-95b6-479393b4249f';
