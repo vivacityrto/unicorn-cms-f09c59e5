@@ -5315,132 +5315,6 @@ export type Database = {
           due_date_ts: string | null
           folder_name_path: string | null
           id: string
-          import_id: number
-          inserted_at: string | null
-          list_name: string | null
-          parent_id: string | null
-          priority: string | null
-          rolled_up_time: string | null
-          rolled_up_time_text: string | null
-          space_name: string | null
-          start_date: string | null
-          start_date_at: string | null
-          start_date_text: string | null
-          start_date_ts: string | null
-          status: string | null
-          tags: Json | null
-          task_content: string | null
-          task_custom_id: string | null
-          task_id: string | null
-          task_name: string | null
-          time_estimated: string | null
-          time_estimated_text: string | null
-          time_spent: string | null
-          time_spent_text: string | null
-          updated_at: string | null
-        }
-        Insert: {
-          assigned_comments?: Json | null
-          assignees?: Json | null
-          attachments?: Json | null
-          checklists?: Json | null
-          comments?: Json | null
-          date_created?: string | null
-          date_created_at?: string | null
-          date_created_text?: string | null
-          date_created_ts?: string | null
-          date_imported?: string | null
-          due_date?: string | null
-          due_date_at?: string | null
-          due_date_text?: string | null
-          due_date_ts?: string | null
-          folder_name_path?: string | null
-          id?: string
-          import_id?: number
-          inserted_at?: string | null
-          list_name?: string | null
-          parent_id?: string | null
-          priority?: string | null
-          rolled_up_time?: string | null
-          rolled_up_time_text?: string | null
-          space_name?: string | null
-          start_date?: string | null
-          start_date_at?: string | null
-          start_date_text?: string | null
-          start_date_ts?: string | null
-          status?: string | null
-          tags?: Json | null
-          task_content?: string | null
-          task_custom_id?: string | null
-          task_id?: string | null
-          task_name?: string | null
-          time_estimated?: string | null
-          time_estimated_text?: string | null
-          time_spent?: string | null
-          time_spent_text?: string | null
-          updated_at?: string | null
-        }
-        Update: {
-          assigned_comments?: Json | null
-          assignees?: Json | null
-          attachments?: Json | null
-          checklists?: Json | null
-          comments?: Json | null
-          date_created?: string | null
-          date_created_at?: string | null
-          date_created_text?: string | null
-          date_created_ts?: string | null
-          date_imported?: string | null
-          due_date?: string | null
-          due_date_at?: string | null
-          due_date_text?: string | null
-          due_date_ts?: string | null
-          folder_name_path?: string | null
-          id?: string
-          import_id?: number
-          inserted_at?: string | null
-          list_name?: string | null
-          parent_id?: string | null
-          priority?: string | null
-          rolled_up_time?: string | null
-          rolled_up_time_text?: string | null
-          space_name?: string | null
-          start_date?: string | null
-          start_date_at?: string | null
-          start_date_text?: string | null
-          start_date_ts?: string | null
-          status?: string | null
-          tags?: Json | null
-          task_content?: string | null
-          task_custom_id?: string | null
-          task_id?: string | null
-          task_name?: string | null
-          time_estimated?: string | null
-          time_estimated_text?: string | null
-          time_spent?: string | null
-          time_spent_text?: string | null
-          updated_at?: string | null
-        }
-        Relationships: []
-      }
-      clickup_tasks_260210: {
-        Row: {
-          assigned_comments: Json | null
-          assignees: Json | null
-          attachments: Json | null
-          checklists: Json | null
-          comments: Json | null
-          date_created: string | null
-          date_created_at: string | null
-          date_created_text: string | null
-          date_created_ts: string | null
-          date_imported: string | null
-          due_date: string | null
-          due_date_at: string | null
-          due_date_text: string | null
-          due_date_ts: string | null
-          folder_name_path: string | null
-          id: string
           inserted_at: string | null
           list_name: string | null
           package_id: number | null
@@ -5561,145 +5435,7 @@ export type Database = {
         }
         Relationships: []
       }
-      clickup_tasks_260213: {
-        Row: {
-          assigned_comments: Json | null
-          assignees: Json | null
-          attachments: Json | null
-          checklists: Json | null
-          comments: Json | null
-          date_created: string | null
-          date_created_at: string | null
-          date_created_text: string | null
-          date_created_ts: string | null
-          date_imported: string | null
-          due_date: string | null
-          due_date_at: string | null
-          due_date_text: string | null
-          due_date_ts: string | null
-          folder_name_path: string | null
-          id: string
-          inserted_at: string | null
-          list_name: string | null
-          package_id: number | null
-          parent_id: string | null
-          priority: string | null
-          rolled_up_time: string | null
-          rolled_up_time_minutes: number | null
-          rolled_up_time_text: string | null
-          space_name: string | null
-          start_date: string | null
-          start_date_at: string | null
-          start_date_text: string | null
-          start_date_ts: string | null
-          status: string | null
-          tags: Json | null
-          task_content: string | null
-          task_custom_id: string | null
-          task_id: string | null
-          task_name: string | null
-          tenant_id: number | null
-          time_estimated: string | null
-          time_estimated_minutes: number | null
-          time_estimated_text: string | null
-          time_spent: string | null
-          time_spent_minutes: number | null
-          time_spent_text: string | null
-          updated_at: string | null
-        }
-        Insert: {
-          assigned_comments?: Json | null
-          assignees?: Json | null
-          attachments?: Json | null
-          checklists?: Json | null
-          comments?: Json | null
-          date_created?: string | null
-          date_created_at?: string | null
-          date_created_text?: string | null
-          date_created_ts?: string | null
-          date_imported?: string | null
-          due_date?: string | null
-          due_date_at?: string | null
-          due_date_text?: string | null
-          due_date_ts?: string | null
-          folder_name_path?: string | null
-          id?: string
-          inserted_at?: string | null
-          list_name?: string | null
-          package_id?: number | null
-          parent_id?: string | null
-          priority?: string | null
-          rolled_up_time?: string | null
-          rolled_up_time_minutes?: number | null
-          rolled_up_time_text?: string | null
-          space_name?: string | null
-          start_date?: string | null
-          start_date_at?: string | null
-          start_date_text?: string | null
-          start_date_ts?: string | null
-          status?: string | null
-          tags?: Json | null
-          task_content?: string | null
-          task_custom_id?: string | null
-          task_id?: string | null
-          task_name?: string | null
-          tenant_id?: number | null
-          time_estimated?: string | null
-          time_estimated_minutes?: number | null
-          time_estimated_text?: string | null
-          time_spent?: string | null
-          time_spent_minutes?: number | null
-          time_spent_text?: string | null
-          updated_at?: string | null
-        }
-        Update: {
-          assigned_comments?: Json | null
-          assignees?: Json | null
-          attachments?: Json | null
-          checklists?: Json | null
-          comments?: Json | null
-          date_created?: string | null
-          date_created_at?: string | null
-          date_created_text?: string | null
-          date_created_ts?: string | null
-          date_imported?: string | null
-          due_date?: string | null
-          due_date_at?: string | null
-          due_date_text?: string | null
-          due_date_ts?: string | null
-          folder_name_path?: string | null
-          id?: string
-          inserted_at?: string | null
-          list_name?: string | null
-          package_id?: number | null
-          parent_id?: string | null
-          priority?: string | null
-          rolled_up_time?: string | null
-          rolled_up_time_minutes?: number | null
-          rolled_up_time_text?: string | null
-          space_name?: string | null
-          start_date?: string | null
-          start_date_at?: string | null
-          start_date_text?: string | null
-          start_date_ts?: string | null
-          status?: string | null
-          tags?: Json | null
-          task_content?: string | null
-          task_custom_id?: string | null
-          task_id?: string | null
-          task_name?: string | null
-          tenant_id?: number | null
-          time_estimated?: string | null
-          time_estimated_minutes?: number | null
-          time_estimated_text?: string | null
-          time_spent?: string | null
-          time_spent_minutes?: number | null
-          time_spent_text?: string | null
-          updated_at?: string | null
-        }
-        Relationships: []
-      }
-      clickup_taskstimes_260213: {
+      clickup_taskstimes: {
         Row: {
           assigned_comments: Json | null
           assignees: Json | null
@@ -9025,6 +8761,42 @@ export type Database = {
             referencedColumns: ["tenant_id"]
           },
         ]
+      }
+      consultant_capacity_profiles: {
+        Row: {
+          admin_buffer_percentage: number
+          created_at: string
+          effective_weekly_capacity_hours: number | null
+          id: string
+          max_concurrent_high_risk_stages: number
+          standard_daily_hours: number
+          updated_at: string
+          user_id: string
+          work_days_per_week: number
+        }
+        Insert: {
+          admin_buffer_percentage?: number
+          created_at?: string
+          effective_weekly_capacity_hours?: number | null
+          id?: string
+          max_concurrent_high_risk_stages?: number
+          standard_daily_hours?: number
+          updated_at?: string
+          user_id: string
+          work_days_per_week?: number
+        }
+        Update: {
+          admin_buffer_percentage?: number
+          created_at?: string
+          effective_weekly_capacity_hours?: number | null
+          id?: string
+          max_concurrent_high_risk_stages?: number
+          standard_daily_hours?: number
+          updated_at?: string
+          user_id?: string
+          work_days_per_week?: number
+        }
+        Relationships: []
       }
       consults: {
         Row: {
@@ -27053,6 +26825,42 @@ export type Database = {
         }
         Relationships: []
       }
+      tenant_package_burn_forecast: {
+        Row: {
+          average_monthly_usage: number
+          burn_risk_status: string
+          generated_at: string
+          hours_used_to_date: number
+          id: string
+          package_id: number
+          projected_exhaustion_date: string | null
+          tenant_id: number
+          total_hours_allocated: number
+        }
+        Insert: {
+          average_monthly_usage?: number
+          burn_risk_status?: string
+          generated_at?: string
+          hours_used_to_date?: number
+          id?: string
+          package_id: number
+          projected_exhaustion_date?: string | null
+          tenant_id: number
+          total_hours_allocated?: number
+        }
+        Update: {
+          average_monthly_usage?: number
+          burn_risk_status?: string
+          generated_at?: string
+          hours_used_to_date?: number
+          id?: string
+          package_id?: number
+          projected_exhaustion_date?: string | null
+          tenant_id?: number
+          total_hours_allocated?: number
+        }
+        Relationships: []
+      }
       tenant_profile: {
         Row: {
           abn: string | null
@@ -31460,6 +31268,51 @@ export type Database = {
           },
         ]
       }
+      workload_snapshots: {
+        Row: {
+          active_stages_count: number
+          capacity_utilisation_percentage: number
+          consult_hours_last_30_days: number
+          forecast_hours_next_30_days: number
+          generated_at: string
+          high_risk_stages_count: number
+          id: string
+          open_tasks_count: number
+          overdue_tasks_count: number
+          overload_risk_status: string
+          snapshot_date: string
+          user_id: string
+        }
+        Insert: {
+          active_stages_count?: number
+          capacity_utilisation_percentage?: number
+          consult_hours_last_30_days?: number
+          forecast_hours_next_30_days?: number
+          generated_at?: string
+          high_risk_stages_count?: number
+          id?: string
+          open_tasks_count?: number
+          overdue_tasks_count?: number
+          overload_risk_status?: string
+          snapshot_date?: string
+          user_id: string
+        }
+        Update: {
+          active_stages_count?: number
+          capacity_utilisation_percentage?: number
+          consult_hours_last_30_days?: number
+          forecast_hours_next_30_days?: number
+          generated_at?: string
+          high_risk_stages_count?: number
+          id?: string
+          open_tasks_count?: number
+          overdue_tasks_count?: number
+          overload_risk_status?: string
+          snapshot_date?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       auth_tokens_safe: {
@@ -33719,6 +33572,18 @@ export type Database = {
         }
         Relationships: []
       }
+      v_consultant_capacity_trends: {
+        Row: {
+          avg_high_risk_stages: number | null
+          avg_overdue_tasks: number | null
+          avg_utilisation: number | null
+          critical_days: number | null
+          high_days: number | null
+          peak_utilisation: number | null
+          user_id: string | null
+        }
+        Relationships: []
+      }
       v_dashboard_consultant_momentum: {
         Row: {
           caps_applied: Json | null
@@ -34003,6 +33868,17 @@ export type Database = {
           pause_reason: string[] | null
           recovery_eligible: boolean | null
           tenant_id: number | null
+        }
+        Relationships: []
+      }
+      v_package_burn_trends: {
+        Row: {
+          accelerated_burn_count: number | null
+          avg_monthly_usage: number | null
+          critical_burn_count: number | null
+          earliest_exhaustion: string | null
+          tenant_id: number | null
+          total_packages: number | null
         }
         Relationships: []
       }
