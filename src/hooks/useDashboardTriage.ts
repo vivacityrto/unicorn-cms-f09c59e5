@@ -30,9 +30,18 @@ export interface AttentionTenant {
   retention_status: string;
   composite_retention_risk_index: number | null;
   last_activity_at: string | null;
+  renewal_window_start: string | null;
+  high_severity_open_risks: number;
+  days_since_activity: number;
+  days_to_renewal: number | null;
+  stage_score: number;
+  gaps_score: number;
+  risk_score: number;
+  staleness_score: number;
+  renewal_score: number;
+  burn_score: number;
   attention_score: number;
   attention_drivers_json: any[];
-  days_since_activity: number;
 }
 
 export interface PriorityInboxItem {
