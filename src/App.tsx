@@ -63,6 +63,7 @@ const NotificationSettings = lazy(() => import("./pages/NotificationSettings"));
 const IntegrationSettings = lazy(() => import("./pages/IntegrationSettings"));
 const AddinSettings = lazy(() => import("./pages/admin/AddinSettings"));
 const AddinDiagnostics = lazy(() => import("./pages/admin/AddinDiagnostics"));
+const ClickUpTenantMapping = lazy(() => import("./pages/admin/ClickUpTenantMapping"));
 const AddinShell = lazy(() => import("./pages/addin/AddinShell"));
 const TeamsShell = lazy(() => import("./pages/teams/TeamsShell"));
 const EosCalendar = lazy(() => import("./pages/EosCalendar"));
@@ -946,6 +947,7 @@ const App = () => (
             {/* Add-in Settings - SuperAdmin only */}
             <Route path="/admin/addin-settings" element={<ProtectedRoute requireSuperAdmin><AddinSettings /></ProtectedRoute>} />
             <Route path="/admin/addin-diagnostics" element={<ProtectedRoute requireSuperAdmin><AddinDiagnostics /></ProtectedRoute>} />
+            <Route path="/admin/clickup-mapping" element={<ProtectedRoute requireSuperAdmin><ClickUpTenantMapping /></ProtectedRoute>} />
             {/* Internal Ask Viv Flags - Vivacity Team only */}
             <Route path="/internal/ask-viv/flags" element={<ProtectedRoute requireSuperAdmin><AskVivFlags /></ProtectedRoute>} />
             {/* Research Jobs */}
