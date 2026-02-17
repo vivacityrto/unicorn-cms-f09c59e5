@@ -198,7 +198,7 @@ export function TenantTimeTrackerBar({ tenantId, tenantName }: TenantTimeTracker
               <Square className="h-3.5 w-3.5 fill-current" />
               <span className="font-mono text-sm">{elapsed}</span>
             </Button>
-          ) : hasMultiplePackages ? (
+          ) : (
             <Popover open={timerPickerOpen} onOpenChange={setTimerPickerOpen}>
               <PopoverTrigger asChild>
                 <Button
@@ -226,19 +226,18 @@ export function TenantTimeTrackerBar({ tenantId, tenantName }: TenantTimeTracker
                     {pkg.package_name}
                   </button>
                 ))}
+                <div className="h-px bg-border my-1" />
+                <button
+                  className="w-full text-left px-2 py-1.5 text-sm rounded-sm hover:bg-accent transition-colors text-muted-foreground"
+                  onClick={async () => {
+                    setTimerPickerOpen(false);
+                    await startTimer('general');
+                  }}
+                >
+                  No package (client only)
+                </button>
               </PopoverContent>
             </Popover>
-          ) : (
-            <Button
-              variant="default"
-              size="sm"
-              onClick={() => startTimer()}
-              disabled={hasActiveTimer}
-              className="gap-1.5 h-8"
-            >
-              <Play className="h-3.5 w-3.5 fill-current" />
-              Start
-            </Button>
           )}
 
           {/* Actions dropdown */}

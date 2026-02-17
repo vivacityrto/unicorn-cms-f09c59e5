@@ -119,11 +119,6 @@ export function useTenantTimeTracker(tenantId: number) {
       ? packages.find(p => p.id === overridePackageInstanceId) || null
       : selectedPackage;
 
-    if (!overridePackageInstanceId && (needsPackageSelection || isAllPackages)) {
-      toast({ title: 'Select a package', description: 'Choose a specific package before tracking time.', variant: 'destructive' });
-      return { success: false, error: 'no_package' };
-    }
-
     const packageId = targetPkg?.package_id || null;
 
     const { data, error } = await supabase.rpc('rpc_start_timer', {
