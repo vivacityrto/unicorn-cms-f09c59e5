@@ -40,6 +40,10 @@ export interface AttentionTenant {
   staleness_score: number;
   renewal_score: number;
   burn_score: number;
+  task_score: number;
+  compliance_overdue_tasks: number;
+  compliance_blocked_tasks: number;
+  compliance_open_tasks: number;
   attention_score: number;
   attention_drivers_json: any[];
 }
@@ -286,6 +290,22 @@ export function useDashboardTriage() {
         actionLabel: 'Review Retention',
         actionType: 'review_retention',
         whyText: `Retention status: high_risk. Renewal score: ${t.renewal_score}/100 (weight 10%).${t.days_to_renewal != null ? ` ${t.days_to_renewal}d to renewal.` : ''}`,
+      });
+    });
+
+    // Overdue compliance escalation (>= 5 overdue compliance tasks) — always pinned
+    tenants.filter(t => (t.compliance_overdue_tasks ?? 0) >= 5 && !items.some(i => i.tenantId === t.tenant_id)).slice(0, 2).forEach(t => {
+      items.push({
+        id: `focus-compliance-${t.tenant_id}`,
+        severity: 'critical',
+        tenantName: t.tenant_name,
+        tenantId: t.tenant_id,
+        reason: `${t.compliance_overdue_tasks} overdue compliance tasks`,
+        age: '',
+        ageMs: 0,
+        actionLabel: 'Triage Now',
+        actionType: 'triage_compliance',
+        whyText: `${t.compliance_overdue_tasks} overdue compliance tasks. Task score: ${t.task_score}/100 (weight 15%). Escalation threshold: 5+.`,
       });
     });
 
