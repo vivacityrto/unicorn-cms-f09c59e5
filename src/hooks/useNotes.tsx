@@ -48,6 +48,8 @@ export interface CreateNoteInput {
   file_names?: string[];
   assignees?: string[];
   package_id?: number | null;
+  parent_type_override?: NoteParentType;
+  parent_id_override?: number;
 }
 
 export interface UpdateNoteInput {
@@ -266,14 +268,15 @@ export function useNotes({ parentType, parentId, tenantId, packageId }: UseNotes
       if (!userData.user) throw new Error('Not authenticated');
 
       // For multi-parent-type mode, default to 'tenant' for new notes
-      const effectiveParentType = Array.isArray(parentType) ? 'tenant' : parentType;
+      const effectiveParentType = input.parent_type_override || (Array.isArray(parentType) ? 'tenant' : parentType);
+      const effectiveParentId = input.parent_id_override || parentId;
       
       const { data, error } = await supabase
         .from('notes')
         .insert({
           tenant_id: tenantId,
           parent_type: effectiveParentType,
-          parent_id: parentId,
+          parent_id: effectiveParentId,
           package_id: input.package_id || packageId || null,
           title: input.title || null,
           note_details: input.note_details,
