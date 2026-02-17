@@ -1,50 +1,46 @@
 
 
-## Show Primary Contact in Tenant Detail Header
+## Fix Unmapped unicorn1.users Records
 
-### What
-Add the primary contact from `tenant_users` to the header card on the Tenant Detail page, displayed to the right of the existing CSC/Liaison Officer info area -- specifically in the gradient header section (lines 508-561) next to the tenant name.
+### Problem
+There are **83 active unicorn1.users** with `mapped_user_uuid = NULL`. These are legacy records that were never linked to their corresponding `public.users` records.
 
-### Where it appears
-In the header card's gradient bar, after the tenant name/company info on the left side, we'll add a "Primary Contact" chip showing the user's name (and optionally email). This sits naturally alongside the existing layout.
+### Breakdown
 
-### How
+| Category | Count | Action |
+|----------|-------|--------|
+| Have matching email in public.users | 49 | Update `mapped_user_uuid` on unicorn1.users |
+| Already linked in tenant_users | 40 of 49 | No tenant_users change needed |
+| Missing from tenant_users | 9 of 49 | Mostly Vivacity internal staff (not client tenants) |
+| No match in public.users at all | 29 | Skip for now (would need new user creation) |
 
-**File: `src/pages/TenantDetail.tsx`**
+### What We Will Do
 
-1. Add state for the primary contact:
-   - `primaryContactName`, `primaryContactEmail`, `primaryContactAvatar`
+**Step 1: Update `mapped_user_uuid` on unicorn1.users**
 
-2. In the `fetchTenantData` function, after existing data fetching, query:
-   ```sql
-   SELECT user_id FROM tenant_users
-   WHERE tenant_id = :tenantId AND primary_contact = true
-   ORDER BY created_at ASC
-   LIMIT 1
-   ```
-   Then fetch the user's name/email/avatar from the `users` table using that `user_id`.
+For the 49 records that match by email, set their `mapped_user_uuid` to the corresponding `public.users.user_uuid`:
 
-3. In the header card gradient section (around line 525-529, after the company name row), add a new line showing:
-   ```
-   [User icon] Primary Contact: Jane Smith
-   ```
-   Styled with `text-white/70` to match the existing "Building2 + company name" line. If no primary contact is set, show "No primary contact" in a muted style.
-
-### Layout in the header
-
-```text
-+-------------------------------------------------------+
-| [Avatar]  Hello, Contact Name                         |
-|           [Building] Company Name                      |
-|           [User] Primary Contact: Jane Smith           |
-|                                          [social icons]|
-+-------------------------------------------------------+
+```sql
+UPDATE unicorn1.users u1
+SET mapped_user_uuid = pu.user_uuid
+FROM public.users pu
+WHERE lower(pu.email) = lower(u1.email)
+  AND u1.mapped_user_uuid IS NULL
+  AND u1."Archived" = false
+  AND u1."Disabled" = false;
 ```
 
-### Edge cases
-- No primary contact set: show "No primary contact" in muted text
-- Multiple primary contacts (data issue): `LIMIT 1` with `ORDER BY created_at ASC` picks the first one
-- Primary contact user deleted from users table: gracefully show nothing
+**Step 2: No tenant_users changes needed**
 
-### Files changed
-- `src/pages/TenantDetail.tsx` only
+The 9 unlinked records are mostly Vivacity internal staff (e.g., Dave Richards, Sam Holtham, Kelly Xu) whose legacy IDs don't correspond to client tenant IDs. The 40 that matter (client contacts) are already correctly linked in `tenant_users`. No inserts are needed.
+
+### What This Fixes
+- The primary contact lookup for the header will now resolve correctly for all tenants that have a `tenant_users` entry with a user whose `mapped_user_uuid` was previously null
+- Future data migrations can rely on the `mapped_user_uuid` linkage being complete
+
+### Technical Details
+- Only `unicorn1.users` is modified (one column: `mapped_user_uuid`)
+- No schema changes required
+- No public.users or tenant_users modifications
+- The 29 users with no email match in public.users will be left as-is (they may be obsolete or require manual review)
+
