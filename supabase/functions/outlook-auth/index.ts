@@ -2,7 +2,6 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { buildScopeString, type SurfaceFlags } from "../_shared/microsoft-scopes.ts";
 import { emitTimelineEvent } from "../_shared/emit-timeline-event.ts";
-import { buildScopeString, type SurfaceFlags } from "../_shared/microsoft-scopes.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
