@@ -255,20 +255,35 @@ export default function CalendarTimeCapture() {
   };
 
   const fetchStagesForPackage = async (packageId: number) => {
-    const { data } = await supabase
+    // Load stages via package_stages -> stages (by name) -> documents_stages
+    // calendar_time_drafts.stage_id references documents_stages, not stages
+    const { data: psData } = await supabase
       .from('package_stages')
       .select('stage:stages(id, name)')
       .eq('package_id', packageId);
-    if (data) {
-      setStages(data.map(s => ({ 
-        id: (s.stage as { id: number; name: string }).id, 
-        name: (s.stage as { id: number; name: string }).name 
-      })));
+    
+    if (psData && psData.length > 0) {
+      const stageNames = psData
+        .map(s => (s.stage as { id: number; name: string })?.name)
+        .filter(Boolean);
+      
+      if (stageNames.length > 0) {
+        const { data: dsData } = await supabase
+          .from('documents_stages')
+          .select('id, title')
+          .in('title', stageNames);
+        
+        setStages((dsData || []).map(ds => ({ id: ds.id, name: ds.title })));
+      } else {
+        setStages([]);
+      }
+    } else {
+      setStages([]);
     }
   };
 
   const handleConnect = async () => {
-    const tenantId = profile?.tenant_id || 1; // Default to 1 for now
+    const tenantId = profile?.tenant_id || 6372; // Default to Vivacity tenant
     const result = await connect(tenantId);
     
     if (result) {
