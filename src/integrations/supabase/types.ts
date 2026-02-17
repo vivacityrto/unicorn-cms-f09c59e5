@@ -44072,6 +44072,7 @@ export type Database = {
         Args: { p_draft_id: string; p_fields: Json }
         Returns: Json
       }
+      run_seed_compliance_tasks_job: { Args: never; Returns: undefined }
       save_meeting_minutes: {
         Args: {
           p_change_summary?: string
@@ -44147,6 +44148,7 @@ export type Database = {
           tenant_id: number
         }[]
       }
+      seed_compliance_task_instances: { Args: never; Returns: number }
       seed_default_meeting_templates: { Args: never; Returns: undefined }
       seed_default_qc_template: { Args: never; Returns: undefined }
       seed_eos_accountability_chart: {
