@@ -41217,10 +41217,12 @@ export type Database = {
       }
       v_client_engagement_summary: {
         Row: {
+          access_status: string | null
           active_packages: number | null
           client_name: string | null
           client_since: string | null
           client_status: string | null
+          lifecycle_status: string | null
           rto_id: string | null
           tenant_id: number | null
           total_issues: number | null
@@ -41229,10 +41231,12 @@ export type Database = {
           total_rocks: number | null
         }
         Insert: {
+          access_status?: string | null
           active_packages?: never
           client_name?: string | null
           client_since?: string | null
           client_status?: string | null
+          lifecycle_status?: string | null
           rto_id?: string | null
           tenant_id?: number | null
           total_issues?: never
@@ -41241,10 +41245,12 @@ export type Database = {
           total_rocks?: never
         }
         Update: {
+          access_status?: string | null
           active_packages?: never
           client_name?: string | null
           client_since?: string | null
           client_status?: string | null
+          lifecycle_status?: string | null
           rto_id?: string | null
           tenant_id?: number | null
           total_issues?: never
@@ -42719,6 +42725,7 @@ export type Database = {
       v_dashboard_tenant_portfolio: {
         Row: {
           abn: string | null
+          access_status: string | null
           assigned_csc_user_id: string | null
           at_risk_stage_count: number | null
           burn_risk_status: string | null
@@ -42727,6 +42734,7 @@ export type Database = {
           cricos_id: string | null
           critical_stage_count: number | null
           last_activity_at: string | null
+          lifecycle_status: string | null
           mandatory_gaps_count: number | null
           open_tasks_count: number | null
           overdue_tasks_count: number | null
@@ -44330,14 +44338,17 @@ export type Database = {
       v_tenant_last_activity: {
         Row: {
           last_activity_at: string | null
+          lifecycle_status: string | null
           tenant_id: number | null
         }
         Insert: {
           last_activity_at?: never
+          lifecycle_status?: string | null
           tenant_id?: number | null
         }
         Update: {
           last_activity_at?: never
+          lifecycle_status?: string | null
           tenant_id?: number | null
         }
         Relationships: []
