@@ -1,5 +1,5 @@
 import { useState, useMemo, useRef, useLayoutEffect } from "react";
-import { LayoutDashboard, FileText, BarChart3, Calendar, Menu, X, Users, Building2, Package2, Blocks, ScrollText, Flag, ChevronDown, ChevronRight, Target, TrendingUp, ListTodo, Lightbulb, Sparkles, Library, CheckSquare, ClipboardList, Search, Video, BookOpen, ShieldCheck, Shield, Briefcase, Inbox, Rocket, Bot, Cog, Mail, Puzzle, Bell } from "lucide-react";
+import { LayoutDashboard, FileText, BarChart3, Calendar, Menu, X, Users, Building2, Package2, Blocks, ScrollText, Flag, ChevronDown, ChevronRight, Target, TrendingUp, ListTodo, Lightbulb, Sparkles, Library, CheckSquare, ClipboardList, Search, Video, BookOpen, ShieldCheck, Shield, Briefcase, Inbox, Rocket, Bot, Cog, Mail, Puzzle, Bell, MapPin } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
@@ -98,6 +98,7 @@ const systemConfigMenuItems = [
   { icon: Library, label: "Knowledge Library", path: "/admin/knowledge" },
   { icon: Bot, label: "AI Assistant", path: "/admin/assistant" },
   { icon: Puzzle, label: "Add-in Settings", path: "/admin/addin-settings" },
+  { icon: MapPin, label: "ClickUp Mapping", path: "/admin/clickup-mapping" },
 ];
 
 // Client-facing menu items (for Admin/User roles and "View as Client" mode)
