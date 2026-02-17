@@ -11847,6 +11847,30 @@ export type Database = {
         }
         Relationships: []
       }
+      dd_access_status: {
+        Row: {
+          id: number
+          is_default: boolean
+          label: string
+          seq: number
+          value: string
+        }
+        Insert: {
+          id?: number
+          is_default?: boolean
+          label: string
+          seq?: number
+          value: string
+        }
+        Update: {
+          id?: number
+          is_default?: boolean
+          label?: string
+          seq?: number
+          value?: string
+        }
+        Relationships: []
+      }
       dd_address_type: {
         Row: {
           code: string
@@ -11901,6 +11925,30 @@ export type Database = {
           id?: number
           name?: string | null
           tag?: string | null
+        }
+        Relationships: []
+      }
+      dd_lifecycle_status: {
+        Row: {
+          id: number
+          is_default: boolean
+          label: string
+          seq: number
+          value: string
+        }
+        Insert: {
+          id?: number
+          is_default?: boolean
+          label: string
+          seq?: number
+          value: string
+        }
+        Update: {
+          id?: number
+          is_default?: boolean
+          label?: string
+          seq?: number
+          value?: string
         }
         Relationships: []
       }
@@ -35781,6 +35829,20 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "fk_tenant_access_status"
+            columns: ["access_status"]
+            isOneToOne: false
+            referencedRelation: "dd_access_status"
+            referencedColumns: ["value"]
+          },
+          {
+            foreignKeyName: "fk_tenant_lifecycle_status"
+            columns: ["lifecycle_status"]
+            isOneToOne: false
+            referencedRelation: "dd_lifecycle_status"
+            referencedColumns: ["value"]
+          },
+          {
             foreignKeyName: "tenants_assigned_consultant_user_id_fkey"
             columns: ["assigned_consultant_user_id"]
             isOneToOne: false
@@ -41258,7 +41320,22 @@ export type Database = {
           total_packages?: never
           total_rocks?: never
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "fk_tenant_access_status"
+            columns: ["access_status"]
+            isOneToOne: false
+            referencedRelation: "dd_access_status"
+            referencedColumns: ["value"]
+          },
+          {
+            foreignKeyName: "fk_tenant_lifecycle_status"
+            columns: ["lifecycle_status"]
+            isOneToOne: false
+            referencedRelation: "dd_lifecycle_status"
+            referencedColumns: ["value"]
+          },
+        ]
       }
       v_client_eos_summary: {
         Row: {
@@ -42751,6 +42828,20 @@ export type Database = {
           worst_stage_health_status: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "fk_tenant_access_status"
+            columns: ["access_status"]
+            isOneToOne: false
+            referencedRelation: "dd_access_status"
+            referencedColumns: ["value"]
+          },
+          {
+            foreignKeyName: "fk_tenant_lifecycle_status"
+            columns: ["lifecycle_status"]
+            isOneToOne: false
+            referencedRelation: "dd_lifecycle_status"
+            referencedColumns: ["value"]
+          },
           {
             foreignKeyName: "tenants_assigned_consultant_user_id_fkey"
             columns: ["assigned_csc_user_id"]
@@ -44351,7 +44442,15 @@ export type Database = {
           lifecycle_status?: string | null
           tenant_id?: number | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "fk_tenant_lifecycle_status"
+            columns: ["lifecycle_status"]
+            isOneToOne: false
+            referencedRelation: "dd_lifecycle_status"
+            referencedColumns: ["value"]
+          },
+        ]
       }
       v_tenant_task_requirements: {
         Row: {

@@ -77,12 +77,25 @@ export default function ManageTenants() {
   const isSuperAdmin = profile?.unicorn_role === "Super Admin";
   const isTeamLeader = profile?.unicorn_role === "Team Leader";
 
+  const [lifecycleStatuses, setLifecycleStatuses] = useState<{ value: string; label: string; seq: number }[]>([]);
+  const [accessStatuses, setAccessStatuses] = useState<{ value: string; label: string; seq: number }[]>([]);
+
   useEffect(() => {
     fetchTenants();
     fetchPackages();
     fetchCSCOptions();
     checkConnectedTenant();
+    fetchCodeTables();
   }, []);
+
+  const fetchCodeTables = async () => {
+    const [lcRes, acRes] = await Promise.all([
+      supabase.from("dd_lifecycle_status").select("value, label, seq").order("seq"),
+      supabase.from("dd_access_status").select("value, label, seq").order("seq"),
+    ]);
+    if (lcRes.data) setLifecycleStatuses(lcRes.data);
+    if (acRes.data) setAccessStatuses(acRes.data);
+  };
 
   const checkConnectedTenant = async () => {
     try {
@@ -414,18 +427,19 @@ export default function ManageTenants() {
   };
 
   const getLifecycleBadge = (lifecycle: string) => {
-    const config: Record<string, { icon: typeof CheckCircle2; className: string; label: string }> = {
-      active: { icon: CheckCircle2, className: "bg-green-500/10 text-green-600 hover:bg-green-500/20 border-green-600", label: "Active" },
-      suspended: { icon: Pause, className: "bg-amber-500/10 text-amber-600 hover:bg-amber-500/20 border-amber-600", label: "Suspended" },
-      closed: { icon: XCircle, className: "bg-red-500/10 text-red-600 hover:bg-red-500/20 border-red-600", label: "Closed" },
-      archived: { icon: Archive, className: "bg-muted text-muted-foreground hover:bg-muted/80 border-border", label: "Archived" },
+    const styleConfig: Record<string, { icon: typeof CheckCircle2; className: string }> = {
+      active: { icon: CheckCircle2, className: "bg-green-500/10 text-green-600 hover:bg-green-500/20 border-green-600" },
+      suspended: { icon: Pause, className: "bg-amber-500/10 text-amber-600 hover:bg-amber-500/20 border-amber-600" },
+      closed: { icon: XCircle, className: "bg-red-500/10 text-red-600 hover:bg-red-500/20 border-red-600" },
+      archived: { icon: Archive, className: "bg-muted text-muted-foreground hover:bg-muted/80 border-border" },
     };
-    const c = config[lifecycle] || config.active;
-    const Icon = c.icon;
+    const dynamicLabel = lifecycleStatuses.find(s => s.value === lifecycle)?.label;
+    const style = styleConfig[lifecycle] || styleConfig.active;
+    const Icon = style.icon;
     return (
-      <Badge variant="outline" className={cn("text-[0.75rem] py-[2px] px-[0.625rem] rounded-[11px] border", c.className)}>
+      <Badge variant="outline" className={cn("text-[0.75rem] py-[2px] px-[0.625rem] rounded-[11px] border", style.className)}>
         <Icon className="mr-1 h-3 w-3" />
-        {c.label}
+        {dynamicLabel || lifecycle.charAt(0).toUpperCase() + lifecycle.slice(1)}
       </Badge>
     );
   };
@@ -619,10 +633,13 @@ export default function ManageTenants() {
         <Combobox
           options={[
             { value: "all", label: "All Status", icon: Activity, iconColor: "text-muted-foreground" },
-            { value: "active", label: "Active", icon: CheckCircle2, iconColor: "text-green-600" },
-            { value: "suspended", label: "Suspended", icon: Pause, iconColor: "text-amber-600" },
-            { value: "closed", label: "Closed", icon: XCircle, iconColor: "text-red-600" },
-            ...(isSuperAdmin ? [{ value: "archived", label: "Archived", icon: Archive, iconColor: "text-muted-foreground" }] : [])
+            ...lifecycleStatuses
+              .filter(s => isSuperAdmin || s.value !== "archived")
+              .map(s => {
+                const iconMap: Record<string, typeof CheckCircle2> = { active: CheckCircle2, suspended: Pause, closed: XCircle, archived: Archive };
+                const colorMap: Record<string, string> = { active: "text-green-600", suspended: "text-amber-600", closed: "text-red-600", archived: "text-muted-foreground" };
+                return { value: s.value, label: s.label, icon: iconMap[s.value] || Activity, iconColor: colorMap[s.value] || "text-muted-foreground" };
+              })
           ]}
           value={statusFilter}
           onValueChange={setStatusFilter}
