@@ -91,7 +91,7 @@ export function TenantDrawer({ tenant, open, onOpenChange, fetchComms, onLogEven
         <SheetHeader>
           <SheetTitle className="flex items-center gap-2">
             {tenant.tenant_name}
-            <Button variant="ghost" size="sm" className="ml-auto gap-1" onClick={() => navigate(`/admin/tenant/${tenant.tenant_id}`)}>
+            <Button variant="ghost" size="sm" className="ml-auto gap-1" onClick={() => navigate(`/tenant/${tenant.tenant_id}`)}>
               Open Tenant <ExternalLink className="h-3.5 w-3.5" />
             </Button>
           </SheetTitle>
@@ -182,7 +182,7 @@ export function TenantDrawer({ tenant, open, onOpenChange, fetchComms, onLogEven
               <div className="space-y-2">
                 {(comms?.recent_notes_json || []).map((note: any) => (
                   <div key={note.id} className="border rounded-md p-2.5 text-sm hover:bg-muted/30 transition-colors cursor-pointer"
-                       onClick={() => navigate(`/admin/tenant/${tenant.tenant_id}`)}>
+                       onClick={() => navigate(`/tenant/${tenant.tenant_id}`)}>
                     <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
                       <Badge variant="outline" className="text-[10px]">{note.type || 'Note'}</Badge>
                       <span>{formatDistanceToNow(new Date(note.created_at), { addSuffix: true })}</span>
@@ -230,7 +230,7 @@ export function TenantDrawer({ tenant, open, onOpenChange, fetchComms, onLogEven
           <section>
             <h3 className="text-sm font-semibold mb-3">Quick Actions</h3>
             <div className="flex flex-wrap gap-2">
-              <Button variant="outline" size="sm" onClick={() => navigate(`/admin/tenant/${tenant.tenant_id}`)}>
+              <Button variant="outline" size="sm" onClick={() => navigate(`/tenant/${tenant.tenant_id}`)}>
                 Open Tenant
               </Button>
             </div>
