@@ -79,7 +79,7 @@ export function LinkEventToClientDialog({
           </div>
 
           {/* Client list */}
-          <ScrollArea className="h-[300px] border rounded-md">
+          <ScrollArea className="max-h-[40vh] min-h-[150px] border rounded-md">
             {isLoading ? (
               <div className="p-4 text-center text-muted-foreground">
                 Loading clients...
