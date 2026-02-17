@@ -41941,6 +41941,14 @@ export type Database = {
         }
         Relationships: []
       }
+      v_tenant_required_tasks: {
+        Row: {
+          calculated_due_at: string | null
+          task_requirement_id: string | null
+          tenant_id: number | null
+        }
+        Relationships: []
+      }
       v_tenant_task_requirements: {
         Row: {
           assignment_id: string | null
