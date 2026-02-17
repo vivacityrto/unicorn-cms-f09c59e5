@@ -1,16 +1,17 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Combobox } from "@/components/ui/combobox";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
-import { Building2, Users, Search, CheckCircle2, XCircle, Activity, Link as LinkIcon, AlertCircle, Calendar, Package2, UserPlus, Archive } from "lucide-react";
+import { Building2, Users, Search, CheckCircle2, XCircle, Activity, Link as LinkIcon, AlertCircle, Calendar, Package2, UserPlus, Archive, Pause } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { AddTenantDialog } from "@/components/AddTenantDialog";
@@ -19,11 +20,15 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from "@/components/ui/pagination";
 import { cn } from "@/lib/utils";
 import { CSCQuickAssignDialog } from "@/components/client/CSCQuickAssignDialog";
+import { TenantLifecycleActions } from "@/components/tenant/TenantLifecycleActions";
+
 interface Tenant {
   id: number;
   name: string;
   slug: string;
   status: string;
+  lifecycle_status: string;
+  access_status: string;
   risk_level: string;
   created_at: string;
   member_count: number;
@@ -43,72 +48,48 @@ interface CSCFilterOption {
   last_name: string;
   archived: boolean;
 }
+
 export default function ManageTenants() {
   const [tenants, setTenants] = useState<Tenant[]>([]);
   const [filteredTenants, setFilteredTenants] = useState<Tenant[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState<string>("active"); // Default to active
+  const [statusFilter, setStatusFilter] = useState<string>("active");
   const [packageFilter, setPackageFilter] = useState<string>("all");
   const [cscFilter, setCscFilter] = useState<string>("all");
   const [cscFilterOptions, setCscFilterOptions] = useState<CSCFilterOption[]>([]);
-  const [packages, setPackages] = useState<{
-    id: number;
-    name: string;
-    created_at?: string;
-  }[]>([]);
+  const [showArchived, setShowArchived] = useState(false);
+  const [packages, setPackages] = useState<{ id: number; name: string; created_at?: string }[]>([]);
   const [sortField, setSortField] = useState<"status" | "member_count" | "created_at">("status");
   const [viewMode, setViewMode] = useState<"grid" | "table">("table");
   const [connectedTenantIds, setConnectedTenantIds] = useState<number[]>([]);
   const [assignedTenants, setAssignedTenants] = useState<Record<number, { userId: string; userName: string }>>({});
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 20;
-  const [disconnectDialog, setDisconnectDialog] = useState<{
-    open: boolean;
-    tenant: Tenant | null;
-  }>({
-    open: false,
-    tenant: null
-  });
+  const [disconnectDialog, setDisconnectDialog] = useState<{ open: boolean; tenant: Tenant | null }>({ open: false, tenant: null });
   const [connectAllDialog, setConnectAllDialog] = useState(false);
   const [addTenantDialog, setAddTenantDialog] = useState(false);
-  const [cscAssignDialog, setCscAssignDialog] = useState<{ open: boolean; tenant: Tenant | null }>({
-    open: false,
-    tenant: null
-  });
-  const [stats, setStats] = useState({
-    total: 0,
-    active: 0,
-    inactive: 0,
-    totalMembers: 0
-  });
-  const {
-    toast
-  } = useToast();
+  const [cscAssignDialog, setCscAssignDialog] = useState<{ open: boolean; tenant: Tenant | null }>({ open: false, tenant: null });
+  const [stats, setStats] = useState({ total: 0, active: 0, suspended: 0, closed: 0, totalMembers: 0 });
+  const { toast } = useToast();
   const navigate = useNavigate();
-  const {
-    profile
-  } = useAuth();
+  const { profile } = useAuth();
   const isSuperAdmin = profile?.unicorn_role === "Super Admin";
   const isTeamLeader = profile?.unicorn_role === "Team Leader";
+
   useEffect(() => {
     fetchTenants();
     fetchPackages();
     fetchCSCOptions();
     checkConnectedTenant();
   }, []);
+
   const checkConnectedTenant = async () => {
     try {
-      const {
-        data: session
-      } = await supabase.auth.getSession();
+      const { data: session } = await supabase.auth.getSession();
       if (!session?.session?.user) return;
       
-      // Get current user's connections
-      const {
-        data,
-        error
-      } = await supabase.from("connected_tenants").select("tenant_id").eq("user_uuid", session.session.user.id);
+      const { data, error } = await supabase.from("connected_tenants").select("tenant_id").eq("user_uuid", session.session.user.id);
       if (error && error.code !== "PGRST116") {
         console.error("Error checking connection:", error);
       }
@@ -116,14 +97,12 @@ export default function ManageTenants() {
         setConnectedTenantIds(data.map(item => item.tenant_id));
       }
 
-      // Get all tenant assignments (for other users)
       const { data: allAssignments } = await supabase
         .from("connected_tenants")
         .select("tenant_id, user_uuid")
         .neq("user_uuid", session.session.user.id);
 
       if (allAssignments && allAssignments.length > 0) {
-        // Get user details for those assignments
         const userUuids = allAssignments.map(a => a.user_uuid);
         const { data: usersData } = await supabase
           .from("users")
@@ -146,64 +125,45 @@ export default function ManageTenants() {
       console.error("Error checking connected tenant:", error);
     }
   };
+
   useEffect(() => {
     applyFiltersAndSort();
     setCurrentPage(1);
-  }, [tenants, searchQuery, statusFilter, packageFilter, cscFilter, sortField]);
+  }, [tenants, searchQuery, statusFilter, packageFilter, cscFilter, sortField, showArchived]);
+
   const fetchTenants = async () => {
     try {
       setLoading(true);
-
-      // Fetch tenants (without direct package join - packages are in package_instances)
-      const {
-        data: tenantsData,
-        error: tenantsError
-      } = await supabase.from("tenants").select("*").order("name");
+      const { data: tenantsData, error: tenantsError } = await supabase.from("tenants").select("*").order("name");
       if (tenantsError) throw tenantsError;
       if (!tenantsData || tenantsData.length === 0) {
         setTenants([]);
-        setStats({
-          total: 0,
-          active: 0,
-          inactive: 0,
-          totalMembers: 0
-        });
+        setStats({ total: 0, active: 0, suspended: 0, closed: 0, totalMembers: 0 });
         setLoading(false);
         return;
       }
       const tenantIds = tenantsData.map(t => t.id);
 
-      // Fetch active package instances for each tenant (is_complete = false)
-      const {
-        data: packageInstancesData
-      } = await supabase
+      const { data: packageInstancesData } = await supabase
         .from("package_instances")
         .select("tenant_id, package_id")
         .eq("is_complete", false)
         .in("tenant_id", tenantIds);
 
-      // Get unique package IDs to fetch package names
       const packageIds = [...new Set((packageInstancesData || []).map(pi => pi.package_id).filter(Boolean))];
       
-      // Fetch package details
-      const {
-        data: packagesData
-      } = await supabase
+      const { data: packagesData } = await supabase
         .from("packages")
         .select("id, name, full_text, slug")
         .in("id", packageIds);
 
-      // Build package lookup map
       const packageLookup = (packagesData || []).reduce((acc, pkg) => {
         acc[pkg.id] = { name: pkg.name, full_text: pkg.full_text, slug: pkg.slug };
         return acc;
       }, {} as Record<number, { name: string; full_text: string | null; slug: string | null }>);
 
-      // Build tenant -> packages map (a tenant can have multiple active packages)
       const tenantPackagesMap = (packageInstancesData || []).reduce((acc, pi) => {
-        if (!acc[pi.tenant_id]) {
-          acc[pi.tenant_id] = [];
-        }
+        if (!acc[pi.tenant_id]) acc[pi.tenant_id] = [];
         if (pi.package_id && packageLookup[pi.package_id]) {
           acc[pi.tenant_id].push({
             id: pi.package_id,
@@ -214,19 +174,13 @@ export default function ManageTenants() {
         return acc;
       }, {} as Record<number, { id: number; name: string; full_text: string | null }[]>);
 
-      // Batch fetch all member counts
-      const {
-        data: memberCounts
-      } = await supabase.from("users").select("tenant_id").in("tenant_id", tenantIds);
+      const { data: memberCounts } = await supabase.from("users").select("tenant_id").in("tenant_id", tenantIds);
       const memberCountMap = (memberCounts || []).reduce((acc, user) => {
         acc[user.tenant_id] = (acc[user.tenant_id] || 0) + 1;
         return acc;
       }, {} as Record<number, number>);
 
-      // Batch fetch CSC data from tenant_csc_assignments (primary only)
-      const {
-        data: cscAssignments
-      } = await supabase
+      const { data: cscAssignments } = await supabase
         .from("tenant_csc_assignments")
         .select("tenant_id, csc_user_id")
         .in("tenant_id", tenantIds)
@@ -236,11 +190,8 @@ export default function ManageTenants() {
         return acc;
       }, {} as Record<number, string>);
 
-      // Batch fetch all CSC user names, avatars, and archived status
       const userUuids = Object.values(cscMap).filter(Boolean);
-      const {
-        data: usersData
-      } = await supabase.from("users").select("user_uuid, first_name, last_name, avatar_url, archived").in("user_uuid", userUuids);
+      const { data: usersData } = await supabase.from("users").select("user_uuid, first_name, last_name, avatar_url, archived").in("user_uuid", userUuids);
       const userDataMap = (usersData || []).reduce((acc, user) => {
         acc[user.user_uuid] = {
           name: `${user.first_name} ${user.last_name}`,
@@ -250,19 +201,9 @@ export default function ManageTenants() {
         return acc;
       }, {} as Record<string, { name: string; avatar: string | null; archived: boolean }>);
 
-      // Fetch state from first admin user for each tenant with state name
-      const {
-        data: adminUsersData
-      } = await supabase.from("users").select("tenant_id, state").eq("unicorn_role", "Admin").in("tenant_id", tenantIds);
-      
-      // Get unique state codes
+      const { data: adminUsersData } = await supabase.from("users").select("tenant_id, state").eq("unicorn_role", "Admin").in("tenant_id", tenantIds);
       const stateCodes = [...new Set(adminUsersData?.map(u => u.state).filter(Boolean) || [])];
-      
-      // Fetch state descriptions
-      const {
-        data: statesData
-      } = await supabase.from("ctstates").select("Code, Description").in("Code", stateCodes);
-      
+      const { data: statesData } = await supabase.from("ctstates").select("Code, Description").in("Code", stateCodes);
       const stateDescMap = (statesData || []).reduce((acc, state) => {
         acc[state.Code] = state.Description;
         return acc;
@@ -275,13 +216,14 @@ export default function ManageTenants() {
         return acc;
       }, {} as Record<number, string | null>);
 
-      // Merge all data - use first active package for display
       const tenantsWithCounts = tenantsData.map(tenant => {
         const activePackages = tenantPackagesMap[tenant.id] || [];
         const firstPackage = activePackages[0];
         const cscUserId = cscMap[tenant.id];
         return {
           ...tenant,
+          lifecycle_status: tenant.lifecycle_status || 'active',
+          access_status: tenant.access_status || 'enabled',
           member_count: memberCountMap[tenant.id] || 0,
           csc_user_id: cscUserId || null,
           csc_name: cscUserId ? userDataMap[cscUserId]?.name : null,
@@ -295,32 +237,21 @@ export default function ManageTenants() {
       });
       setTenants(tenantsWithCounts);
 
-      // Calculate stats
       const totalMembers = tenantsWithCounts.reduce((sum, t) => sum + t.member_count, 0);
-      const active = tenantsWithCounts.filter(t => t.status === "active").length;
-      const inactive = tenantsWithCounts.filter(t => t.status === "inactive" || t.status === "archived").length;
-      setStats({
-        total: tenantsWithCounts.length,
-        active,
-        inactive,
-        totalMembers
-      });
+      const active = tenantsWithCounts.filter(t => t.lifecycle_status === "active").length;
+      const suspended = tenantsWithCounts.filter(t => t.lifecycle_status === "suspended").length;
+      const closed = tenantsWithCounts.filter(t => t.lifecycle_status === "closed" || t.lifecycle_status === "archived").length;
+      setStats({ total: tenantsWithCounts.length, active, suspended, closed, totalMembers });
     } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive"
-      });
+      toast({ title: "Error", description: error.message, variant: "destructive" });
     } finally {
       setLoading(false);
     }
   };
+
   const fetchPackages = async () => {
     try {
-      const {
-        data,
-        error
-      } = await supabase.from("packages").select("id, name, created_at").order("name");
+      const { data, error } = await supabase.from("packages").select("id, name, created_at").order("name");
       if (error) throw error;
       setPackages(data || []);
     } catch (error: any) {
@@ -330,7 +261,6 @@ export default function ManageTenants() {
 
   const fetchCSCOptions = async () => {
     try {
-      // Fetch CSC users - those with client_success in staff_teams or staff_team
       const { data, error } = await supabase
         .from("users")
         .select("user_uuid, first_name, last_name, staff_teams, staff_team, archived")
@@ -340,7 +270,6 @@ export default function ManageTenants() {
       
       if (error) throw error;
       
-      // Filter to users with client_success
       const cscUsers = (data || []).filter(user => {
         const hasInTeams = user.staff_teams?.includes('client_success');
         const hasInTeam = user.staff_team === 'client_success';
@@ -358,76 +287,55 @@ export default function ManageTenants() {
     }
   };
 
-  // Subscribe to package changes for real-time updates
   useEffect(() => {
     const packagesChannel = supabase
       .channel('packages-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'packages'
-        },
-        () => {
-          fetchPackages();
-        }
-      )
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'packages' }, () => { fetchPackages(); })
       .subscribe();
-
-    return () => {
-      supabase.removeChannel(packagesChannel);
-    };
+    return () => { supabase.removeChannel(packagesChannel); };
   }, []);
 
-  // Subscribe to tenant_csc_assignments changes for real-time CSC updates
   useEffect(() => {
     const cscChannel = supabase
       .channel('csc-assignments-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'tenant_csc_assignments'
-        },
-        () => {
-          fetchTenants();
-        }
-      )
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'tenant_csc_assignments' }, () => { fetchTenants(); })
       .subscribe();
-
-    return () => {
-      supabase.removeChannel(cscChannel);
-    };
+    return () => { supabase.removeChannel(cscChannel); };
   }, []);
+
   const applyFiltersAndSort = () => {
     let filtered = [...tenants];
 
-    // Apply search filter
+    // Search
     if (searchQuery) {
       filtered = filtered.filter(tenant => tenant.name.toLowerCase().includes(searchQuery.toLowerCase()) || tenant.slug.toLowerCase().includes(searchQuery.toLowerCase()));
     }
 
-    // Apply status filter
+    // Lifecycle status filter
     if (statusFilter !== "all") {
-      filtered = filtered.filter(tenant => tenant.status === statusFilter);
+      filtered = filtered.filter(tenant => tenant.lifecycle_status === statusFilter);
     }
 
-    // Apply package filter
+    // Hide archived/closed unless "Show Archived" is on or specifically filtered
+    if (!showArchived && statusFilter === "all") {
+      filtered = filtered.filter(tenant => tenant.lifecycle_status !== "archived");
+    }
+
+    // Package filter
     if (packageFilter !== "all") {
       filtered = filtered.filter(tenant => tenant.package_id?.toString() === packageFilter);
     }
 
-    // Apply CSC filter
+    // CSC filter
     if (cscFilter !== "all") {
       filtered = filtered.filter(tenant => tenant.csc_user_id === cscFilter);
     }
 
-    // Apply sorting
+    // Sort
     filtered.sort((a, b) => {
       if (sortField === "status") {
-        return a.status.localeCompare(b.status);
+        const order = { active: 0, suspended: 1, closed: 2, archived: 3 };
+        return (order[a.lifecycle_status as keyof typeof order] ?? 4) - (order[b.lifecycle_status as keyof typeof order] ?? 4);
       } else if (sortField === "member_count") {
         return b.member_count - a.member_count;
       } else if (sortField === "created_at") {
@@ -437,152 +345,94 @@ export default function ManageTenants() {
     });
     setFilteredTenants(filtered);
   };
-  const handleStatusToggle = async (tenantId: number, currentStatus: string) => {
-    try {
-      const newStatus = currentStatus === "active" ? "inactive" : "active";
-      const {
-        error
-      } = await supabase.from("tenants").update({
-        status: newStatus
-      }).eq("id", tenantId);
-      if (error) throw error;
-      toast({
-        title: "Success",
-        description: `Tenant ${newStatus === "active" ? "activated" : "deactivated"} successfully`
-      });
-      fetchTenants();
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive"
-      });
-    }
-  };
+
   const handleConnect = async (tenant: Tenant) => {
     if (!isSuperAdmin && !isTeamLeader) {
-      toast({
-        title: "Access Denied",
-        description: "Only Super Admins and Team Leaders can connect to tenants",
-        variant: "destructive"
-      });
+      toast({ title: "Access Denied", description: "Only Super Admins and Team Leaders can connect to tenants", variant: "destructive" });
       return;
     }
-
-    // Check if already connected - show disconnect dialog
     if (connectedTenantIds.includes(tenant.id)) {
-      setDisconnectDialog({
-        open: true,
-        tenant
-      });
+      setDisconnectDialog({ open: true, tenant });
       return;
     }
     try {
-      const {
-        data: session
-      } = await supabase.auth.getSession();
+      const { data: session } = await supabase.auth.getSession();
       if (!session?.session?.user) return;
-      const {
-        error
-      } = await supabase.from("connected_tenants").upsert({
+      const { error } = await supabase.from("connected_tenants").upsert({
         user_uuid: session.session.user.id,
         tenant_id: tenant.id,
         tenant_name: tenant.name,
         email: session.session.user.email || ""
-      }, {
-        onConflict: "user_uuid,tenant_id"
-      });
+      }, { onConflict: "user_uuid,tenant_id" });
       if (error) throw error;
       setConnectedTenantIds(prev => [...prev, tenant.id]);
-      // Refresh tenants so CSC column updates immediately
       fetchTenants();
-      toast({
-        title: "Connected",
-        description: `You are now connected to "${tenant.name}" workspace`
-      });
+      toast({ title: "Connected", description: `You are now connected to "${tenant.name}" workspace` });
     } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive"
-      });
+      toast({ title: "Error", description: error.message, variant: "destructive" });
     }
   };
+
   const handleDisconnect = async () => {
     if (!disconnectDialog.tenant) return;
     try {
-      const {
-        data: session
-      } = await supabase.auth.getSession();
+      const { data: session } = await supabase.auth.getSession();
       if (!session?.session?.user) return;
-      const {
-        error
-      } = await supabase.from("connected_tenants").delete().eq("user_uuid", session.session.user.id).eq("tenant_id", disconnectDialog.tenant.id);
+      const { error } = await supabase.from("connected_tenants").delete().eq("user_uuid", session.session.user.id).eq("tenant_id", disconnectDialog.tenant.id);
       if (error) throw error;
       setConnectedTenantIds(prev => prev.filter(id => id !== disconnectDialog.tenant!.id));
-      toast({
-        title: "Disconnected",
-        description: `Disconnected from "${disconnectDialog.tenant.name}" workspace`
-      });
-      setDisconnectDialog({
-        open: false,
-        tenant: null
-      });
+      toast({ title: "Disconnected", description: `Disconnected from "${disconnectDialog.tenant.name}" workspace` });
+      setDisconnectDialog({ open: false, tenant: null });
     } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive"
-      });
+      toast({ title: "Error", description: error.message, variant: "destructive" });
     }
   };
+
   const handleConnectToAll = async () => {
     if (!isSuperAdmin && !isTeamLeader) {
-      toast({
-        title: "Access Denied",
-        description: "Only Super Admins and Team Leaders can connect to tenants",
-        variant: "destructive"
-      });
+      toast({ title: "Access Denied", description: "Only Super Admins and Team Leaders can connect to tenants", variant: "destructive" });
       return;
     }
     try {
-      const {
-        data: session
-      } = await supabase.auth.getSession();
+      const { data: session } = await supabase.auth.getSession();
       if (!session?.session?.user) return;
-
-      // Get all active tenants
-      const activeTenants = tenants.filter(t => t.status === "active");
-
-      // Connect to all active tenants
+      const activeTenants = tenants.filter(t => t.lifecycle_status === "active");
       const connections = activeTenants.map(tenant => ({
         user_uuid: session.session.user.id,
         tenant_id: tenant.id,
         tenant_name: tenant.name,
         email: session.session.user.email || ""
       }));
-      const {
-        error
-      } = await supabase.from("connected_tenants").upsert(connections, {
-        onConflict: "user_uuid,tenant_id"
-      });
+      const { error } = await supabase.from("connected_tenants").upsert(connections, { onConflict: "user_uuid,tenant_id" });
       if (error) throw error;
       setConnectedTenantIds(activeTenants.map(t => t.id));
       setConnectAllDialog(false);
-      toast({
-        title: "Success",
-        description: `Connected to ${activeTenants.length} active tenant${activeTenants.length !== 1 ? "s" : ""}`
-      });
+      toast({ title: "Success", description: `Connected to ${activeTenants.length} active tenant${activeTenants.length !== 1 ? "s" : ""}` });
     } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive"
-      });
+      toast({ title: "Error", description: error.message, variant: "destructive" });
     }
   };
+
+  const getLifecycleBadge = (lifecycle: string) => {
+    const config: Record<string, { icon: typeof CheckCircle2; className: string; label: string }> = {
+      active: { icon: CheckCircle2, className: "bg-green-500/10 text-green-600 hover:bg-green-500/20 border-green-600", label: "Active" },
+      suspended: { icon: Pause, className: "bg-amber-500/10 text-amber-600 hover:bg-amber-500/20 border-amber-600", label: "Suspended" },
+      closed: { icon: XCircle, className: "bg-red-500/10 text-red-600 hover:bg-red-500/20 border-red-600", label: "Closed" },
+      archived: { icon: Archive, className: "bg-muted text-muted-foreground hover:bg-muted/80 border-border", label: "Archived" },
+    };
+    const c = config[lifecycle] || config.active;
+    const Icon = c.icon;
+    return (
+      <Badge variant="outline" className={cn("text-[0.75rem] py-[2px] px-[0.625rem] rounded-[11px] border", c.className)}>
+        <Icon className="mr-1 h-3 w-3" />
+        {c.label}
+      </Badge>
+    );
+  };
+
   if (loading) {
-    return <div className="p-6 space-y-6 animate-fade-in">
+    return (
+      <div className="p-6 space-y-6 animate-fade-in">
         <Skeleton className="h-12 w-64" />
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           {[...Array(4)].map((_, i) => <Skeleton key={i} className="h-32" />)}
@@ -590,17 +440,20 @@ export default function ManageTenants() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {[...Array(6)].map((_, i) => <Skeleton key={i} className="h-48" />)}
         </div>
-      </div>;
+      </div>
+    );
   }
-  return <div className="p-6 space-y-6 animate-fade-in">
+
+  return (
+    <div className="p-6 space-y-6 animate-fade-in">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-[28px] font-bold">Manage Clients</h1>
           <p className="text-muted-foreground">View and manage all client organisations</p>
         </div>
-        {(isSuperAdmin || isTeamLeader) && <div className="flex gap-2">
-            
+        {(isSuperAdmin || isTeamLeader) && (
+          <div className="flex gap-2">
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -611,21 +464,17 @@ export default function ManageTenants() {
                     </Button>
                   </span>
                 </TooltipTrigger>
-                {isTeamLeader && <TooltipContent>
-                    <p>Please contact Super Admins.</p>
-                  </TooltipContent>}
+                {isTeamLeader && <TooltipContent><p>Please contact Super Admins.</p></TooltipContent>}
               </Tooltip>
             </TooltipProvider>
-          </div>}
+          </div>
+        )}
       </div>
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div 
-          onClick={() => {
-            setStatusFilter("all");
-            setSearchQuery("");
-          }}
+        <div
+          onClick={() => { setStatusFilter("all"); setSearchQuery(""); }}
           className="p-4 rounded-lg border bg-card hover:shadow-md transition-all cursor-pointer group animate-scale-in"
         >
           <div className="flex items-center justify-between mb-2">
@@ -638,11 +487,8 @@ export default function ManageTenants() {
           <p className="text-xs text-muted-foreground">Organizations registered</p>
         </div>
 
-        <div 
-          onClick={() => {
-            setStatusFilter("active");
-            setSearchQuery("");
-          }}
+        <div
+          onClick={() => { setStatusFilter("active"); setSearchQuery(""); }}
           className="p-4 rounded-lg border bg-card hover:shadow-md transition-all cursor-pointer group animate-scale-in"
           style={{ animationDelay: "50ms" }}
         >
@@ -656,42 +502,40 @@ export default function ManageTenants() {
           <p className="text-xs text-muted-foreground">Currently active clients</p>
         </div>
 
-        <div 
-          onClick={() => {
-            setStatusFilter("inactive");
-            setSearchQuery("");
-          }}
+        <div
+          onClick={() => { setStatusFilter("suspended"); setSearchQuery(""); }}
           className="p-4 rounded-lg border bg-card hover:shadow-md transition-all cursor-pointer group animate-scale-in"
           style={{ animationDelay: "100ms" }}
         >
           <div className="flex items-center justify-between mb-2">
-            <span className="text-sm font-medium text-muted-foreground">Inactive</span>
-            <div className="p-2 bg-red-500/10 rounded-lg group-hover:bg-red-500/20 transition-colors">
-              <XCircle className="h-5 w-5 text-red-500" />
+            <span className="text-sm font-medium text-muted-foreground">Suspended</span>
+            <div className="p-2 bg-amber-500/10 rounded-lg group-hover:bg-amber-500/20 transition-colors">
+              <Pause className="h-5 w-5 text-amber-500" />
             </div>
           </div>
-          <p className="text-2xl font-bold mb-1">{stats.inactive}</p>
-          <p className="text-xs text-muted-foreground">Deactivated clients</p>
+          <p className="text-2xl font-bold mb-1">{stats.suspended}</p>
+          <p className="text-xs text-muted-foreground">Temporarily suspended</p>
         </div>
 
-        <div 
+        <div
+          onClick={() => { setStatusFilter("closed"); setSearchQuery(""); }}
           className="p-4 rounded-lg border bg-card hover:shadow-md transition-all cursor-pointer group animate-scale-in"
           style={{ animationDelay: "150ms" }}
         >
           <div className="flex items-center justify-between mb-2">
-            <span className="text-sm font-medium text-muted-foreground">Total Members</span>
-            <div className="p-2 bg-purple-500/10 rounded-lg group-hover:bg-purple-500/20 transition-colors">
-              <Users className="h-5 w-5 text-purple-500" />
+            <span className="text-sm font-medium text-muted-foreground">Closed / Archived</span>
+            <div className="p-2 bg-red-500/10 rounded-lg group-hover:bg-red-500/20 transition-colors">
+              <XCircle className="h-5 w-5 text-red-500" />
             </div>
           </div>
-          <p className="text-2xl font-bold mb-1">{stats.totalMembers}</p>
-          <p className="text-xs text-muted-foreground">Across all clients</p>
+          <p className="text-2xl font-bold mb-1">{stats.closed}</p>
+          <p className="text-xs text-muted-foreground">Closed or archived clients</p>
         </div>
       </div>
 
       {/* CSC Client Distribution */}
       {(() => {
-        const activeTenantsList = tenants.filter(t => t.status === 'active');
+        const activeTenantsList = tenants.filter(t => t.lifecycle_status === 'active');
         const cscCounts: Record<string, { name: string; count: number }> = {};
         let unassigned = 0;
         activeTenantsList.forEach(t => {
@@ -732,125 +576,113 @@ export default function ManageTenants() {
           <Input placeholder="Search clients by name or slug..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="pl-10 h-[48px]" />
         </div>
 
-        <Combobox 
+        <Combobox
           options={[
             { value: "all", label: "All Packages", icon: Package2, iconColor: "text-muted-foreground" },
             ...packages.map(pkg => {
               const isNew = pkg.created_at && new Date().getTime() - new Date(pkg.created_at).getTime() < 7 * 24 * 60 * 60 * 1000;
-              return {
-                value: pkg.id.toString(),
-                label: pkg.name,
-                badge: isNew ? "NEW" : undefined,
-                icon: Package2,
-                iconColor: "text-blue-600"
-              };
+              return { value: pkg.id.toString(), label: pkg.name, badge: isNew ? "NEW" : undefined, icon: Package2, iconColor: "text-blue-600" };
             })
-          ]} 
-          value={packageFilter} 
-          onValueChange={setPackageFilter} 
-          placeholder="Filter by package..." 
-          searchPlaceholder="Search packages..." 
-          emptyText="No packages found." 
+          ]}
+          value={packageFilter}
+          onValueChange={setPackageFilter}
+          placeholder="Filter by package..."
+          searchPlaceholder="Search packages..."
+          emptyText="No packages found."
           className="w-full md:w-[220px] h-[48px]"
           showIcons
           showSeparators
         />
 
-        <Combobox 
+        <Combobox
           options={[
             { value: "all", label: "All CSC", icon: Users, iconColor: "text-muted-foreground" },
             ...cscFilterOptions.filter(u => !u.archived).map(csc => {
-              const clientCount = tenants.filter(t => t.status === 'active' && t.csc_user_id === csc.user_uuid).length;
-              return {
-                value: csc.user_uuid,
-                label: `${csc.first_name} ${csc.last_name} (${clientCount})`,
-                icon: Users,
-                iconColor: "text-primary"
-              };
+              const clientCount = tenants.filter(t => t.lifecycle_status === 'active' && t.csc_user_id === csc.user_uuid).length;
+              return { value: csc.user_uuid, label: `${csc.first_name} ${csc.last_name} (${clientCount})`, icon: Users, iconColor: "text-primary" };
             }),
             ...cscFilterOptions.filter(u => u.archived).map(csc => {
-              const clientCount = tenants.filter(t => t.status === 'active' && t.csc_user_id === csc.user_uuid).length;
-              return {
-                value: csc.user_uuid,
-                label: `${csc.first_name} ${csc.last_name} (${clientCount})`,
-                badge: "Archived",
-                icon: Archive,
-                iconColor: "text-muted-foreground"
-              };
+              const clientCount = tenants.filter(t => t.lifecycle_status === 'active' && t.csc_user_id === csc.user_uuid).length;
+              return { value: csc.user_uuid, label: `${csc.first_name} ${csc.last_name} (${clientCount})`, badge: "Archived", icon: Archive, iconColor: "text-muted-foreground" };
             })
-          ]} 
-          value={cscFilter} 
-          onValueChange={setCscFilter} 
-          placeholder="Filter by CSC..." 
-          searchPlaceholder="Search CSC..." 
-          emptyText="No CSC users found." 
+          ]}
+          value={cscFilter}
+          onValueChange={setCscFilter}
+          placeholder="Filter by CSC..."
+          searchPlaceholder="Search CSC..."
+          emptyText="No CSC users found."
           className="w-full md:w-[220px] h-[48px]"
           showIcons
           showSeparators
         />
 
-        <Combobox 
+        <Combobox
           options={[
             { value: "all", label: "All Status", icon: Activity, iconColor: "text-muted-foreground" },
             { value: "active", label: "Active", icon: CheckCircle2, iconColor: "text-green-600" },
-            { value: "inactive", label: "Inactive", icon: XCircle, iconColor: "text-red-600" },
-            { value: "archived", label: "Archived", icon: Archive, iconColor: "text-muted-foreground" }
+            { value: "suspended", label: "Suspended", icon: Pause, iconColor: "text-amber-600" },
+            { value: "closed", label: "Closed", icon: XCircle, iconColor: "text-red-600" },
+            ...(isSuperAdmin ? [{ value: "archived", label: "Archived", icon: Archive, iconColor: "text-muted-foreground" }] : [])
           ]}
-          value={statusFilter} 
-          onValueChange={setStatusFilter} 
-          placeholder="Filter by status..." 
-          searchPlaceholder="Search filters..." 
-          emptyText="No filters found." 
+          value={statusFilter}
+          onValueChange={setStatusFilter}
+          placeholder="Filter by status..."
+          searchPlaceholder="Search filters..."
+          emptyText="No filters found."
           className="w-full md:w-[220px] h-[48px]"
           showIcons
           showSeparators
         />
+
+        {/* Show Archived toggle - SuperAdmin only */}
+        {isSuperAdmin && statusFilter === "all" && (
+          <div className="flex items-center gap-2 h-[48px]">
+            <Switch id="show-archived" checked={showArchived} onCheckedChange={setShowArchived} />
+            <Label htmlFor="show-archived" className="text-sm whitespace-nowrap cursor-pointer">Show Archived</Label>
+          </div>
+        )}
       </div>
 
       {/* Clients Table */}
-      {filteredTenants.length === 0 ? <Card>
+      {filteredTenants.length === 0 ? (
+        <Card>
           <CardContent className="flex flex-col items-center justify-center py-12">
             <Building2 className="h-12 w-12 text-muted-foreground mb-4" />
             <p className="text-lg font-medium">No clients found</p>
             <p className="text-sm text-muted-foreground">Try adjusting your search or filters</p>
           </CardContent>
-        </Card> : <div className="rounded-lg border bg-card shadow-lg overflow-hidden">
+        </Card>
+      ) : (
+        <div className="rounded-lg border bg-card shadow-lg overflow-hidden">
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow className="border-b-2 hover:bg-transparent">
-                  <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-r border-border/50">
-                    Tenant Name
-                  </TableHead>
-                  <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-r border-border/50">
-                    Package
-                  </TableHead>
-                  <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-r border-border/50 text-center">
-                    Status
-                  </TableHead>
-                  <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-r border-border/50 text-center">
-                    CSC
-                  </TableHead>
-                  <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-r border-border/50 text-center">
-                    Members
-                  </TableHead>
-                  <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-r border-border/50 text-center">
-                    Risk Level
-                  </TableHead>
-                  <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-r border-border/50">
-                    Created
-                  </TableHead>
-                  <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-border/50 text-center">
-                  </TableHead>
+                  <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-r border-border/50">Tenant Name</TableHead>
+                  <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-r border-border/50">Package</TableHead>
+                  <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-r border-border/50 text-center">Status</TableHead>
+                  <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-r border-border/50 text-center">CSC</TableHead>
+                  <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-r border-border/50 text-center">Members</TableHead>
+                  <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-r border-border/50 text-center">Risk Level</TableHead>
+                  <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-r border-border/50">Created</TableHead>
+                  <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-border/50 text-center">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredTenants.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage).map((tenant, index) => <TableRow key={tenant.id} className={cn("group transition-all duration-200 cursor-pointer border-b border-border/50", index % 2 === 0 ? "bg-background" : "bg-muted/20", "hover:bg-primary/5 animate-fade-in")} onClick={() => navigate(`/tenant/${tenant.id}`)}>
+                {filteredTenants.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage).map((tenant, index) => (
+                  <TableRow
+                    key={tenant.id}
+                    className={cn(
+                      "group transition-all duration-200 cursor-pointer border-b border-border/50",
+                      index % 2 === 0 ? "bg-background" : "bg-muted/20",
+                      "hover:bg-primary/5 animate-fade-in",
+                      (tenant.lifecycle_status === "closed" || tenant.lifecycle_status === "archived") && "opacity-60"
+                    )}
+                    onClick={() => navigate(`/tenant/${tenant.id}`)}
+                  >
                     <TableCell className="py-6 border-r border-border/50 min-w-[280px] pr-8">
                       <div>
-                        <div className="font-semibold text-foreground pb-[10px] whitespace-nowrap">
-                          {tenant.name}
-                        </div>
+                        <div className="font-semibold text-foreground pb-[10px] whitespace-nowrap">{tenant.name}</div>
                         <div className="flex items-center justify-between text-xs text-muted-foreground mt-1 whitespace-nowrap">
                           <span className="flex items-center gap-1">
                             <Calendar className="w-3 h-3" />
@@ -872,26 +704,9 @@ export default function ManageTenants() {
                       </div>
                     </TableCell>
                     <TableCell className="py-6 border-r border-border/50 text-center whitespace-nowrap">
-                      <Badge 
-                        variant={tenant.status === "active" ? "default" : tenant.status === "archived" ? "secondary" : "destructive"} 
-                        className={cn(
-                          "text-[0.75rem] py-[2px] px-[0.625rem] rounded-[11px] border",
-                          tenant.status === "active" && "bg-green-500/10 text-green-600 hover:bg-green-500/20 border-green-600",
-                          tenant.status === "inactive" && "bg-red-500/10 text-red-600 hover:bg-red-500/20 border-red-600",
-                          tenant.status === "archived" && "bg-muted text-muted-foreground hover:bg-muted/80 border-border"
-                        )}
-                      >
-                        {tenant.status === "active" ? (
-                          <CheckCircle2 className="mr-1 h-3 w-3" />
-                        ) : tenant.status === "archived" ? (
-                          <Archive className="mr-1 h-3 w-3" />
-                        ) : (
-                          <XCircle className="mr-1 h-3 w-3" />
-                        )}
-                        {tenant.status}
-                      </Badge>
+                      {getLifecycleBadge(tenant.lifecycle_status)}
                     </TableCell>
-                    <TableCell 
+                    <TableCell
                       className="py-6 border-r border-border/50 whitespace-nowrap"
                       onClick={(e) => {
                         if (isSuperAdmin || isTeamLeader) {
@@ -924,12 +739,8 @@ export default function ManageTenants() {
                             </TooltipTrigger>
                             <TooltipContent>
                               <p>{tenant.csc_name}</p>
-                              {tenant.csc_archived && (
-                                <p className="text-xs text-amber-500">This CSC is archived</p>
-                              )}
-                              {(isSuperAdmin || isTeamLeader) && (
-                                <p className="text-xs text-muted-foreground">Click to change</p>
-                              )}
+                              {tenant.csc_archived && <p className="text-xs text-amber-500">This CSC is archived</p>}
+                              {(isSuperAdmin || isTeamLeader) && <p className="text-xs text-muted-foreground">Click to change</p>}
                             </TooltipContent>
                           </Tooltip>
                         </TooltipProvider>
@@ -939,10 +750,7 @@ export default function ManageTenants() {
                             variant="ghost"
                             size="sm"
                             className="text-xs text-muted-foreground hover:text-primary"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setCscAssignDialog({ open: true, tenant });
-                            }}
+                            onClick={(e) => { e.stopPropagation(); setCscAssignDialog({ open: true, tenant }); }}
                           >
                             <UserPlus className="h-3 w-3 mr-1" />
                             Assign
@@ -958,64 +766,67 @@ export default function ManageTenants() {
                       <span className="font-semibold">{tenant.member_count}</span>
                     </TableCell>
                     <TableCell className="py-6 border-r border-border/50 text-center whitespace-nowrap">
-                      <Badge variant="outline" className="capitalize py-[3px] rounded-[9px]">
-                        {tenant.risk_level}
-                      </Badge>
+                      <Badge variant="outline" className="capitalize py-[3px] rounded-[9px]">{tenant.risk_level}</Badge>
                     </TableCell>
                     <TableCell className="py-6 border-r border-border/50 whitespace-nowrap">
-                      <div className="text-sm text-muted-foreground">
-                        {new Date(tenant.created_at).toLocaleDateString()}
-                      </div>
+                      <div className="text-sm text-muted-foreground">{new Date(tenant.created_at).toLocaleDateString()}</div>
                     </TableCell>
                     <TableCell className="py-6 px-4 text-center whitespace-nowrap">
-                      {connectedTenantIds.includes(tenant.id) ? (
-                        <Button 
-                          size="sm" 
-                          className="border-green-500 bg-green-500/10 text-green-600 hover:bg-green-500/20 hover:text-green-700 border px-6" 
-                          variant="outline" 
-                          onClick={e => {
-                            e.stopPropagation();
-                            handleConnect(tenant);
-                          }}
-                        >
-                          <CheckCircle2 className="h-4 w-4 mr-1" />
-                          Connected
-                        </Button>
-                      ) : assignedTenants[tenant.id] ? (
-                        <Button 
-                          variant="outline" 
-                          size="sm" 
-                          className="px-6 border-[rgb(37,99,235)] bg-[rgb(37,99,235)]/10 text-[rgb(37,99,235)] hover:bg-[rgb(37,99,235)]/20 cursor-not-allowed" 
-                          disabled
-                          title={`Assigned to ${assignedTenants[tenant.id].userName}`}
-                        >
-                          <LinkIcon className="h-4 w-4 mr-1" />
-                          Assigned
-                        </Button>
-                      ) : (
-                        <Button 
-                          variant="outline" 
-                          size="sm" 
-                          className="px-6 hover:bg-[#00c4ff0f] hover:text-black" 
-                          onClick={e => {
-                            e.stopPropagation();
-                            handleConnect(tenant);
-                          }} 
-                          disabled={!isSuperAdmin && !isTeamLeader}
-                        >
-                          <LinkIcon className="h-4 w-4 mr-1" />
-                          Connect
-                        </Button>
-                      )}
+                      <div className="flex items-center justify-center gap-1" onClick={(e) => e.stopPropagation()}>
+                        {/* Connect button */}
+                        {connectedTenantIds.includes(tenant.id) ? (
+                          <Button
+                            size="sm"
+                            className="border-green-500 bg-green-500/10 text-green-600 hover:bg-green-500/20 hover:text-green-700 border px-4"
+                            variant="outline"
+                            onClick={() => handleConnect(tenant)}
+                          >
+                            <CheckCircle2 className="h-4 w-4 mr-1" />
+                            Connected
+                          </Button>
+                        ) : assignedTenants[tenant.id] ? (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="px-4 border-[rgb(37,99,235)] bg-[rgb(37,99,235)]/10 text-[rgb(37,99,235)] hover:bg-[rgb(37,99,235)]/20 cursor-not-allowed"
+                            disabled
+                            title={`Assigned to ${assignedTenants[tenant.id].userName}`}
+                          >
+                            <LinkIcon className="h-4 w-4 mr-1" />
+                            Assigned
+                          </Button>
+                        ) : (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="px-4 hover:bg-[#00c4ff0f] hover:text-black"
+                            onClick={() => handleConnect(tenant)}
+                            disabled={!isSuperAdmin && !isTeamLeader}
+                          >
+                            <LinkIcon className="h-4 w-4 mr-1" />
+                            Connect
+                          </Button>
+                        )}
+                        {/* Lifecycle actions dropdown */}
+                        <TenantLifecycleActions
+                          tenantId={tenant.id}
+                          tenantName={tenant.name}
+                          lifecycleStatus={tenant.lifecycle_status}
+                          onSuccess={fetchTenants}
+                        />
+                      </div>
                     </TableCell>
-                  </TableRow>)}
+                  </TableRow>
+                ))}
               </TableBody>
             </Table>
           </div>
-        </div>}
+        </div>
+      )}
 
       {/* Pagination */}
-      {filteredTenants.length > 0 && <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mt-6">
+      {filteredTenants.length > 0 && (
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mt-6">
           <div className="text-sm text-muted-foreground whitespace-nowrap">
             Showing {Math.min((currentPage - 1) * itemsPerPage + 1, filteredTenants.length)}–{Math.min(currentPage * itemsPerPage, filteredTenants.length)} of {filteredTenants.length} results
           </div>
@@ -1024,42 +835,39 @@ export default function ManageTenants() {
               <PaginationItem>
                 <PaginationPrevious onClick={() => setCurrentPage(p => Math.max(1, p - 1))} className={currentPage === 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'} />
               </PaginationItem>
-              {Array.from({
-            length: Math.ceil(filteredTenants.length / itemsPerPage)
-          }, (_, i) => i + 1).filter(page => {
-            const totalPages = Math.ceil(filteredTenants.length / itemsPerPage);
-            if (totalPages <= 7) return true;
-            if (page === 1 || page === totalPages) return true;
-            if (page >= currentPage - 1 && page <= currentPage + 1) return true;
-            return false;
-          }).map((page, index, array) => {
-            if (index > 0 && array[index - 1] !== page - 1) {
-              return [<PaginationItem key={`ellipsis-${page}`}>
-                        <span className="px-4">...</span>
-                      </PaginationItem>, <PaginationItem key={page}>
-                        <PaginationLink onClick={() => setCurrentPage(page)} isActive={currentPage === page} className="cursor-pointer">
-                          {page}
-                        </PaginationLink>
-                      </PaginationItem>];
-            }
-            return <PaginationItem key={page}>
-                      <PaginationLink onClick={() => setCurrentPage(page)} isActive={currentPage === page} className="cursor-pointer">
-                        {page}
-                      </PaginationLink>
-                    </PaginationItem>;
-          })}
+              {Array.from({ length: Math.ceil(filteredTenants.length / itemsPerPage) }, (_, i) => i + 1)
+                .filter(page => {
+                  const totalPages = Math.ceil(filteredTenants.length / itemsPerPage);
+                  if (totalPages <= 7) return true;
+                  if (page === 1 || page === totalPages) return true;
+                  if (page >= currentPage - 1 && page <= currentPage + 1) return true;
+                  return false;
+                })
+                .map((page, index, array) => {
+                  if (index > 0 && array[index - 1] !== page - 1) {
+                    return [
+                      <PaginationItem key={`ellipsis-${page}`}><span className="px-4">...</span></PaginationItem>,
+                      <PaginationItem key={page}>
+                        <PaginationLink onClick={() => setCurrentPage(page)} isActive={currentPage === page} className="cursor-pointer">{page}</PaginationLink>
+                      </PaginationItem>
+                    ];
+                  }
+                  return (
+                    <PaginationItem key={page}>
+                      <PaginationLink onClick={() => setCurrentPage(page)} isActive={currentPage === page} className="cursor-pointer">{page}</PaginationLink>
+                    </PaginationItem>
+                  );
+                })}
               <PaginationItem>
                 <PaginationNext onClick={() => setCurrentPage(p => Math.min(Math.ceil(filteredTenants.length / itemsPerPage), p + 1))} className={currentPage === Math.ceil(filteredTenants.length / itemsPerPage) ? 'pointer-events-none opacity-50' : 'cursor-pointer'} />
               </PaginationItem>
             </PaginationContent>
           </Pagination>
-        </div>}
+        </div>
+      )}
 
       {/* Disconnect Confirmation Dialog */}
-      <AlertDialog open={disconnectDialog.open} onOpenChange={open => setDisconnectDialog({
-      open,
-      tenant: null
-    })}>
+      <AlertDialog open={disconnectDialog.open} onOpenChange={open => setDisconnectDialog({ open, tenant: null })}>
         <AlertDialogContent className="max-w-md">
           <AlertDialogHeader>
             <div className="flex items-center gap-3 mb-2">
@@ -1076,9 +884,7 @@ export default function ManageTenants() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDisconnect} className="bg-destructive hover:bg-destructive/90 text-destructive-foreground">
-              Disconnect
-            </AlertDialogAction>
+            <AlertDialogAction onClick={handleDisconnect} className="bg-destructive hover:bg-destructive/90 text-destructive-foreground">Disconnect</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
@@ -1099,9 +905,7 @@ export default function ManageTenants() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleConnectToAll} className="bg-primary hover:bg-primary/90">
-              Connect to All
-            </AlertDialogAction>
+            <AlertDialogAction onClick={handleConnectToAll} className="bg-primary hover:bg-primary/90">Connect to All</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
@@ -1120,5 +924,6 @@ export default function ManageTenants() {
           onSuccess={fetchTenants}
         />
       )}
-    </div>;
+    </div>
+  );
 }
