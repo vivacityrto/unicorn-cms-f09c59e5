@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -22,6 +22,7 @@ import {
   CheckCircle2, 
   XCircle, 
   Users, 
+  User,
   Package2, 
   FileText, 
   Link2,
@@ -67,6 +68,8 @@ export default function ClientDetail() {
   const [tenant, setTenant] = useState<TenantBasic | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('overview');
+  const [primaryContactName, setPrimaryContactName] = useState<string>('');
+  const [primaryContactEmail, setPrimaryContactEmail] = useState<string>('');
   const [assignPackageOpen, setAssignPackageOpen] = useState(false);
   const [profileHasChanges, setProfileHasChanges] = useState(false);
   const [profileSaving, setProfileSaving] = useState(false);
@@ -108,6 +111,7 @@ export default function ClientDetail() {
   useEffect(() => {
     if (tenantIdNum) {
       fetchTenantBasic();
+      fetchPrimaryContact();
     }
   }, [tenantIdNum]);
 
@@ -129,6 +133,34 @@ export default function ClientDetail() {
       navigate('/manage-tenants');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchPrimaryContact = async () => {
+    if (!tenantIdNum) return;
+    try {
+      const { data: pcRow } = await supabase
+        .from('tenant_users')
+        .select('user_id')
+        .eq('tenant_id', tenantIdNum)
+        .eq('primary_contact', true)
+        .order('created_at', { ascending: true })
+        .limit(1)
+        .maybeSingle();
+
+      if (pcRow?.user_id) {
+        const { data: userData } = await supabase
+          .from('users')
+          .select('first_name, last_name, email')
+          .eq('user_uuid', pcRow.user_id)
+          .maybeSingle();
+        if (userData) {
+          setPrimaryContactName(`${userData.first_name || ''} ${userData.last_name || ''}`.trim());
+          setPrimaryContactEmail(userData.email || '');
+        }
+      }
+    } catch (err) {
+      console.error('Error fetching primary contact:', err);
     }
   };
 
@@ -212,6 +244,15 @@ export default function ClientDetail() {
                     canEdit={canEdit}
                     canRemove={isSuperAdminUser}
                   />
+                </div>
+
+                {/* Primary Contact */}
+                <div className="flex items-center gap-2 mt-1 text-sm text-muted-foreground">
+                  <User className="h-4 w-4" />
+                  {primaryContactName
+                    ? <span>Primary Contact: {primaryContactName}</span>
+                    : <span className="text-muted-foreground/50">No primary contact</span>
+                  }
                 </div>
               </div>
             </div>
