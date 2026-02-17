@@ -93,7 +93,11 @@ const Dashboard = () => {
           ) : (
             <>
               {/* Section 1: Today's Focus */}
-              <TodaysFocusSection items={todaysFocus} onAction={(item) => openDrawerById(item.tenantId)} />
+              <TodaysFocusSection
+                items={todaysFocus}
+                onAction={(item) => openDrawerById(item.tenantId)}
+                onSnooze={(item, days) => snoozeItem({ itemId: item.id, days })}
+              />
 
               {/* Section 2: Attention Ranking (Top 5) */}
               <AttentionRankingSection

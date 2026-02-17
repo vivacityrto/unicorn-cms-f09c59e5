@@ -235,3 +235,6 @@ verify_jwt = false
 
 [functions.strategic-orchestration]
 verify_jwt = false
+
+[functions.dashboard-test-seed]
+verify_jwt = false
