@@ -50,125 +50,125 @@ serve(async (req: Request) => {
     const { action } = await req.json();
 
     if (action === "seed_test_states") {
-      // Get first 6 active tenants to apply test states
+      // Get first 3 active tenants to apply test states
       const { data: tenants } = await supabase
         .from("tenants")
         .select("id, name")
         .eq("status", "active")
-        .limit(6);
+        .limit(3);
 
-      if (!tenants || tenants.length < 6) {
+      if (!tenants || tenants.length < 3) {
         return new Response(
-          JSON.stringify({ error: "Need at least 6 active tenants to seed test states" }),
+          JSON.stringify({ error: "Need at least 3 active tenants to seed test states" }),
           { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
 
       const results: string[] = [];
 
-      // Tenant 0: Critical stage + high risk (should score ~70+)
-      const t0 = tenants[0];
-      // Create a risk event with high severity
+      // ── Tenant A: critical stage + overdue tasks ──
+      const tA = tenants[0];
+      // Seed a high-severity risk event to drive risk_score up
       await supabase.from("risk_events").insert({
-        tenant_id: t0.id,
+        tenant_id: tA.id,
         source_type: "test_seed",
-        source_entity_id: "seed-001",
+        source_entity_id: `seed-A-${Date.now()}`,
         standard_clause: "1.1",
         risk_category: "compliance",
         severity: "high",
-        theme_label: "Seeded critical scenario",
+        theme_label: "Seed: critical stage + overdue tasks",
         detected_at: new Date().toISOString(),
         status: "open",
-        notes: "Test seed: high severity risk for attention score testing",
+        notes: "Test seed Tenant A: simulates critical stage health with high-severity risk.",
       });
-      results.push(`${t0.name}: seeded high-severity risk event`);
-
-      // Tenant 1: Evidence gaps (insert note to mark)
-      const t1 = tenants[1];
-      await supabase.from("notes").insert({
-        tenant_id: t1.id,
-        created_by: user.id,
-        note_type: "test_seed",
-        title: "Test Seed: Evidence gaps scenario",
-        note_details: "This tenant was seeded for attention score testing with evidence gap scenarios.",
+      // Seed a real-time risk alert so it appears in Priority Inbox
+      await supabase.from("real_time_risk_alerts").insert({
+        tenant_id: tA.id,
+        severity: "critical",
+        alert_summary: `[SEED] Critical stage health – ${tA.name}: overdue tasks detected`,
+        source_type: "test_seed",
+        resolved_flag: false,
+        archived_flag: false,
       });
-      results.push(`${t1.name}: seeded note for evidence gap scenario`);
+      results.push(`Tenant A (${tA.name}): seeded critical risk event + critical inbox alert`);
 
-      // Tenant 2: Stale (no recent activity) - create old note
-      const t2 = tenants[2];
+      // ── Tenant B: mandatory gaps 3 + inactivity 25 days ──
+      const tB = tenants[1];
+      // Seed an old note (25 days) to drive staleness
       const oldDate = new Date();
-      oldDate.setDate(oldDate.getDate() - 35);
+      oldDate.setDate(oldDate.getDate() - 25);
       await supabase.from("notes").insert({
-        tenant_id: t2.id,
+        tenant_id: tB.id,
         created_by: user.id,
         note_type: "test_seed",
-        title: "Test Seed: Staleness scenario",
-        note_details: "Last meaningful activity was >30 days ago. This tenant should trigger staleness alerts.",
+        title: "Seed: Last activity 25d ago",
+        note_details: "Test seed Tenant B: simulates 25-day inactivity with mandatory evidence gaps.",
         created_at: oldDate.toISOString(),
       });
-      results.push(`${t2.name}: seeded old note (35d ago) for staleness`);
+      // Seed an inbox alert for gaps
+      await supabase.from("real_time_risk_alerts").insert({
+        tenant_id: tB.id,
+        severity: "high",
+        alert_summary: `[SEED] Evidence gaps – ${tB.name}: 3 mandatory categories missing`,
+        source_type: "test_seed",
+        resolved_flag: false,
+        archived_flag: false,
+      });
+      results.push(`Tenant B (${tB.name}): seeded old note (25d) + gaps inbox alert`);
 
-      // Tenant 3: Renewal pressure
-      const t3 = tenants[3];
+      // ── Tenant C: renewal in 20 days + retention high_risk ──
+      const tC = tenants[2];
       const renewalDate = new Date();
       renewalDate.setDate(renewalDate.getDate() + 20);
       const { error: tcpError } = await supabase.from("tenant_commercial_profiles").upsert({
-        tenant_id: t3.id,
+        tenant_id: tC.id,
         renewal_window_start: renewalDate.toISOString().split("T")[0],
         renewal_window_end: new Date(renewalDate.getTime() + 30 * 86400000).toISOString().split("T")[0],
       }, { onConflict: "tenant_id" });
-      if (tcpError) results.push(`${t3.name}: renewal upsert error: ${tcpError.message}`);
-      else results.push(`${t3.name}: seeded renewal in 20 days`);
-
-      // Tenant 4: Burn critical
-      const t4 = tenants[4];
-      await supabase.from("notes").insert({
-        tenant_id: t4.id,
-        created_by: user.id,
-        note_type: "test_seed",
-        title: "Test Seed: Burn risk scenario",
-        note_details: "This tenant's hours are projected to exhaust soon. Check burn_risk_status in portfolio view.",
-      });
-      results.push(`${t4.name}: seeded burn risk note`);
-
-      // Tenant 5: Combined moderate signals
-      const t5 = tenants[5];
-      await supabase.from("risk_events").insert({
-        tenant_id: t5.id,
-        source_type: "test_seed",
-        source_entity_id: "seed-005",
-        standard_clause: "2.2",
-        risk_category: "governance",
+      if (tcpError) results.push(`Tenant C renewal upsert error: ${tcpError.message}`);
+      // Seed retention inbox alert
+      await supabase.from("real_time_risk_alerts").insert({
+        tenant_id: tC.id,
         severity: "high",
-        theme_label: "Seeded combined scenario",
-        detected_at: new Date().toISOString(),
-        status: "open",
-        notes: "Test seed: combined moderate signals",
+        alert_summary: `[SEED] Retention risk – ${tC.name}: renewal in 20 days, high_risk retention`,
+        source_type: "test_seed",
+        resolved_flag: false,
+        archived_flag: false,
       });
-      results.push(`${t5.name}: seeded combined signals`);
+      results.push(`Tenant C (${tC.name}): seeded renewal in 20d + retention inbox alert`);
 
-      // Log the seed action
+      // Audit log
       await supabase.from("audit_dashboard_events").insert({
         actor_user_id: user.id,
         action: "test_seed_executed",
-        metadata_json: { tenants_seeded: tenants.map((t: any) => t.id), results },
+        metadata_json: { tenants_seeded: tenants.map((t: any) => ({ id: t.id, name: t.name })), results },
       });
 
       return new Response(
         JSON.stringify({
           success: true,
-          message: `Seeded test states for ${tenants.length} tenants`,
+          message: `Seeded 3 test tenants for acceptance testing`,
+          tenants: {
+            A: { id: tA.id, name: tA.name, scenario: "critical stage + overdue tasks" },
+            B: { id: tB.id, name: tB.name, scenario: "mandatory gaps 3 + inactivity 25d" },
+            C: { id: tC.id, name: tC.name, scenario: "renewal 20d + retention high_risk" },
+          },
           results,
-          note: "Refresh the dashboard to see updated attention scores. Some scores depend on aggregated views which may take a moment to reflect."
+          expected_outcomes: {
+            todays_focus: "All 3 should appear – A as critical, B/C as high",
+            attention_ranking: "A should rank highest (risk+stage), then B (gaps+staleness), then C (renewal)",
+            priority_inbox: "3 seeded alerts visible, snoozable per user",
+          },
+          note: "Refresh the dashboard to see updated scores. Use cleanup_test_seeds to remove.",
         }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
     if (action === "cleanup_test_seeds") {
-      // Remove seeded risk events
+      // Remove seeded risk events, alerts, and notes
       await supabase.from("risk_events").delete().eq("source_type", "test_seed");
-      // Remove seeded notes
+      await supabase.from("real_time_risk_alerts").delete().eq("source_type", "test_seed");
       await supabase.from("notes").delete().eq("note_type", "test_seed");
 
       await supabase.from("audit_dashboard_events").insert({
@@ -178,7 +178,7 @@ serve(async (req: Request) => {
       });
 
       return new Response(
-        JSON.stringify({ success: true, message: "Cleaned up all test seed data" }),
+        JSON.stringify({ success: true, message: "Cleaned up all test seed data (risk_events, alerts, notes)" }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
