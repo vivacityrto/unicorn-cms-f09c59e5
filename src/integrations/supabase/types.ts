@@ -6593,6 +6593,7 @@ export type Database = {
           time_spent: string | null
           time_spent_minutes: number | null
           time_spent_text: string | null
+          unicorn_id: number | null
           updated_at: string | null
         }
         Insert: {
@@ -6638,6 +6639,7 @@ export type Database = {
           time_spent?: string | null
           time_spent_minutes?: number | null
           time_spent_text?: string | null
+          unicorn_id?: number | null
           updated_at?: string | null
         }
         Update: {
@@ -6683,7 +6685,146 @@ export type Database = {
           time_spent?: string | null
           time_spent_minutes?: number | null
           time_spent_text?: string | null
+          unicorn_id?: number | null
           updated_at?: string | null
+        }
+        Relationships: []
+      }
+      clickup_tasksdb: {
+        Row: {
+          assigned_comment_count: string | null
+          assignee: Json | null
+          comment_count: string | null
+          created_by: string | null
+          cricos_rereg_date_date: string | null
+          date_closed: string | null
+          date_created: string | null
+          date_done: string | null
+          date_updated: string | null
+          due_date: string | null
+          folder: string | null
+          id: number
+          imported_at: string
+          latest_comment: string | null
+          linked_docs: string | null
+          linked_tasks: string | null
+          list: string | null
+          lists: Json | null
+          mb_level_drop_down: string | null
+          mock_audit_date: string | null
+          notes_short_text: string | null
+          points_estimate: string | null
+          points_estimate_rolled_up: string | null
+          priority: string | null
+          space: string | null
+          sprints: Json | null
+          start_date: string | null
+          status: string | null
+          subtask_ids: Json | null
+          subtask_urls: Json | null
+          tags: string | null
+          task_content: string | null
+          task_custom_id: string | null
+          task_id: string | null
+          task_name: string | null
+          task_type: string | null
+          time_estimate: string | null
+          time_estimate_rolled_up: string | null
+          time_in_status: string | null
+          time_logged: string | null
+          time_logged_rolled_up: string | null
+          unicorn_url: string | null
+          working_hours_short_text: string | null
+        }
+        Insert: {
+          assigned_comment_count?: string | null
+          assignee?: Json | null
+          comment_count?: string | null
+          created_by?: string | null
+          cricos_rereg_date_date?: string | null
+          date_closed?: string | null
+          date_created?: string | null
+          date_done?: string | null
+          date_updated?: string | null
+          due_date?: string | null
+          folder?: string | null
+          id?: number
+          imported_at?: string
+          latest_comment?: string | null
+          linked_docs?: string | null
+          linked_tasks?: string | null
+          list?: string | null
+          lists?: Json | null
+          mb_level_drop_down?: string | null
+          mock_audit_date?: string | null
+          notes_short_text?: string | null
+          points_estimate?: string | null
+          points_estimate_rolled_up?: string | null
+          priority?: string | null
+          space?: string | null
+          sprints?: Json | null
+          start_date?: string | null
+          status?: string | null
+          subtask_ids?: Json | null
+          subtask_urls?: Json | null
+          tags?: string | null
+          task_content?: string | null
+          task_custom_id?: string | null
+          task_id?: string | null
+          task_name?: string | null
+          task_type?: string | null
+          time_estimate?: string | null
+          time_estimate_rolled_up?: string | null
+          time_in_status?: string | null
+          time_logged?: string | null
+          time_logged_rolled_up?: string | null
+          unicorn_url?: string | null
+          working_hours_short_text?: string | null
+        }
+        Update: {
+          assigned_comment_count?: string | null
+          assignee?: Json | null
+          comment_count?: string | null
+          created_by?: string | null
+          cricos_rereg_date_date?: string | null
+          date_closed?: string | null
+          date_created?: string | null
+          date_done?: string | null
+          date_updated?: string | null
+          due_date?: string | null
+          folder?: string | null
+          id?: number
+          imported_at?: string
+          latest_comment?: string | null
+          linked_docs?: string | null
+          linked_tasks?: string | null
+          list?: string | null
+          lists?: Json | null
+          mb_level_drop_down?: string | null
+          mock_audit_date?: string | null
+          notes_short_text?: string | null
+          points_estimate?: string | null
+          points_estimate_rolled_up?: string | null
+          priority?: string | null
+          space?: string | null
+          sprints?: Json | null
+          start_date?: string | null
+          status?: string | null
+          subtask_ids?: Json | null
+          subtask_urls?: Json | null
+          tags?: string | null
+          task_content?: string | null
+          task_custom_id?: string | null
+          task_id?: string | null
+          task_name?: string | null
+          task_type?: string | null
+          time_estimate?: string | null
+          time_estimate_rolled_up?: string | null
+          time_in_status?: string | null
+          time_logged?: string | null
+          time_logged_rolled_up?: string | null
+          unicorn_url?: string | null
+          working_hours_short_text?: string | null
         }
         Relationships: []
       }

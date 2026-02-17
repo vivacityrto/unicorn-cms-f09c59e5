@@ -77,10 +77,48 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
   const [tags, setTags] = useState<string[]>([]);
   const { tags: availableNoteTags, loading: noteTagsLoading } = useNoteTags();
   const [isPinned, setIsPinned] = useState(false);
+  const [selectedPackageInstanceId, setSelectedPackageInstanceId] = useState<string>('none');
+  const [activePackages, setActivePackages] = useState<{ instance_id: number; package_id: number; name: string }[]>([]);
   
   // Convert to action item state
   const [actionTitle, setActionTitle] = useState('');
   const [actionDescription, setActionDescription] = useState('');
+
+  // Fetch active packages for this tenant
+  useEffect(() => {
+    const fetchActivePackages = async () => {
+      const { data: instances } = await supabase
+        .from('package_instances')
+        .select('id, package_id')
+        .eq('tenant_id', tenantId)
+        .eq('is_complete', false)
+        .eq('is_active', true);
+
+      if (!instances || instances.length === 0) {
+        setActivePackages([]);
+        return;
+      }
+
+      const pkgIds = [...new Set(instances.map(i => i.package_id).filter(Boolean))];
+      if (pkgIds.length === 0) return;
+
+      const { data: packages } = await supabase
+        .from('packages')
+        .select('id, name')
+        .in('id', pkgIds);
+
+      if (!packages) return;
+
+      const pkgMap = new Map(packages.map(p => [p.id, p.name]));
+      setActivePackages(
+        instances
+          .filter(i => i.package_id && pkgMap.has(i.package_id))
+          .map(i => ({ instance_id: i.id, package_id: i.package_id!, name: pkgMap.get(i.package_id!)! }))
+          .sort((a, b) => a.name.localeCompare(b.name))
+      );
+    };
+    fetchActivePackages();
+  }, [tenantId]);
 
   // Batch-fetch package names for all package_instance notes
   useEffect(() => {
@@ -161,8 +199,8 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
     setContent('');
     setPriority('normal');
     setTags([]);
-    
     setIsPinned(false);
+    setSelectedPackageInstanceId('none');
     setSelectedNote(null);
   };
 
@@ -179,6 +217,12 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
     setPriority(note.priority || 'normal');
     setTags(note.tags || []);
     setIsPinned(note.is_pinned);
+    // Pre-populate package selection when editing a package note
+    if (note.parent_type === 'package_instance' && note.parent_id) {
+      setSelectedPackageInstanceId(String(note.parent_id));
+    } else {
+      setSelectedPackageInstanceId('none');
+    }
     setIsAddDialogOpen(true);
   };
 
@@ -187,6 +231,7 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
     
     setSaving(true);
     try {
+      const selectedPkg = activePackages.find(p => String(p.instance_id) === selectedPackageInstanceId);
       if (selectedNote) {
         await updateNote(selectedNote.id, {
           note_type: noteType,
@@ -194,7 +239,8 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
           note_details: content,
           priority: priority || null,
           tags,
-          is_pinned: isPinned
+          is_pinned: isPinned,
+          package_id: selectedPkg?.package_id || null
         });
       } else {
         await createNote({
@@ -203,7 +249,10 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
           note_details: content,
           priority: priority || undefined,
           tags,
-          is_pinned: isPinned
+          is_pinned: isPinned,
+          package_id: selectedPkg?.package_id || undefined,
+          parent_type_override: selectedPkg ? 'package_instance' : undefined,
+          parent_id_override: selectedPkg ? selectedPkg.instance_id : undefined
         });
       }
       setIsAddDialogOpen(false);
@@ -647,6 +696,29 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
                 </Select>
               </div>
             </div>
+
+            {/* Package selector */}
+            {activePackages.length > 0 && (
+              <div className="space-y-2">
+                <Label>Package</Label>
+                <Select value={selectedPackageInstanceId} onValueChange={setSelectedPackageInstanceId}>
+                  <SelectTrigger>
+                    <div className="flex items-center gap-2">
+                      <Package className="h-4 w-4 text-muted-foreground" />
+                      <SelectValue placeholder="Select package..." />
+                    </div>
+                  </SelectTrigger>
+                  <SelectContent className="bg-background">
+                    <SelectItem value="none">None (Client Note)</SelectItem>
+                    {activePackages.map(pkg => (
+                      <SelectItem key={pkg.instance_id} value={String(pkg.instance_id)}>
+                        {pkg.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
             
             {/* Title field - now full width below Type/Priority */}
             <div className="space-y-2">
