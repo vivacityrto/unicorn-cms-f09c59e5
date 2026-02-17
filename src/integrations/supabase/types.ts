@@ -9602,6 +9602,429 @@ export type Database = {
           },
         ]
       }
+      compliance_task_definitions: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          risk_weight: number
+          standards_2025_clause: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          risk_weight?: number
+          standards_2025_clause?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          risk_weight?: number
+          standards_2025_clause?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "compliance_task_definitions_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "compliance_task_definitions_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "v_dashboard_labour_efficiency"
+            referencedColumns: ["csc_user_id"]
+          },
+          {
+            foreignKeyName: "compliance_task_definitions_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "v_dashboard_weekly_wins"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "compliance_task_definitions_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "v_executive_consultant_distribution"
+            referencedColumns: ["consultant_uuid"]
+          },
+          {
+            foreignKeyName: "compliance_task_definitions_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "vw_consultant_capacity"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "compliance_task_definitions_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "vw_consultant_load"
+            referencedColumns: ["user_uuid"]
+          },
+        ]
+      }
+      compliance_task_instances: {
+        Row: {
+          completed_at: string | null
+          completed_by: string | null
+          created_at: string
+          due_at: string | null
+          id: string
+          requirement_id: string
+          status: string
+          tenant_id: number
+          updated_at: string
+        }
+        Insert: {
+          completed_at?: string | null
+          completed_by?: string | null
+          created_at?: string
+          due_at?: string | null
+          id?: string
+          requirement_id: string
+          status?: string
+          tenant_id: number
+          updated_at?: string
+        }
+        Update: {
+          completed_at?: string | null
+          completed_by?: string | null
+          created_at?: string
+          due_at?: string | null
+          id?: string
+          requirement_id?: string
+          status?: string
+          tenant_id?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "compliance_task_instances_completed_by_fkey"
+            columns: ["completed_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "compliance_task_instances_completed_by_fkey"
+            columns: ["completed_by"]
+            isOneToOne: false
+            referencedRelation: "v_dashboard_labour_efficiency"
+            referencedColumns: ["csc_user_id"]
+          },
+          {
+            foreignKeyName: "compliance_task_instances_completed_by_fkey"
+            columns: ["completed_by"]
+            isOneToOne: false
+            referencedRelation: "v_dashboard_weekly_wins"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "compliance_task_instances_completed_by_fkey"
+            columns: ["completed_by"]
+            isOneToOne: false
+            referencedRelation: "v_executive_consultant_distribution"
+            referencedColumns: ["consultant_uuid"]
+          },
+          {
+            foreignKeyName: "compliance_task_instances_completed_by_fkey"
+            columns: ["completed_by"]
+            isOneToOne: false
+            referencedRelation: "vw_consultant_capacity"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "compliance_task_instances_completed_by_fkey"
+            columns: ["completed_by"]
+            isOneToOne: false
+            referencedRelation: "vw_consultant_load"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "compliance_task_instances_requirement_id_fkey"
+            columns: ["requirement_id"]
+            isOneToOne: false
+            referencedRelation: "compliance_task_requirements"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "compliance_task_instances_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "compliance_task_instances_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_engagement_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "compliance_task_instances_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_eos_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "compliance_task_instances_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_dashboard_attention_ranked"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "compliance_task_instances_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_dashboard_tenant_portfolio"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "compliance_task_instances_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_dashboard_tenant_recent_comms"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "compliance_task_instances_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_compliance_entitlements"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "compliance_task_instances_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_last_activity"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "compliance_task_instances_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "compliance_task_instances_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "compliance_task_instances_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_membership_usage"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "compliance_task_instances_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_membership_usage"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
+      compliance_task_requirements: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          due_days_after_start: number | null
+          id: string
+          is_required: boolean
+          package_id: number | null
+          scope_type: string
+          task_definition_id: string
+          tenant_id: number | null
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          due_days_after_start?: number | null
+          id?: string
+          is_required?: boolean
+          package_id?: number | null
+          scope_type: string
+          task_definition_id: string
+          tenant_id?: number | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          due_days_after_start?: number | null
+          id?: string
+          is_required?: boolean
+          package_id?: number | null
+          scope_type?: string
+          task_definition_id?: string
+          tenant_id?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "compliance_task_requirements_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "compliance_task_requirements_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "v_dashboard_labour_efficiency"
+            referencedColumns: ["csc_user_id"]
+          },
+          {
+            foreignKeyName: "compliance_task_requirements_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "v_dashboard_weekly_wins"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "compliance_task_requirements_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "v_executive_consultant_distribution"
+            referencedColumns: ["consultant_uuid"]
+          },
+          {
+            foreignKeyName: "compliance_task_requirements_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "vw_consultant_capacity"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "compliance_task_requirements_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "vw_consultant_load"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "compliance_task_requirements_package_id_fkey"
+            columns: ["package_id"]
+            isOneToOne: false
+            referencedRelation: "packages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "compliance_task_requirements_task_definition_id_fkey"
+            columns: ["task_definition_id"]
+            isOneToOne: false
+            referencedRelation: "compliance_task_definitions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "compliance_task_requirements_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "compliance_task_requirements_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_engagement_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "compliance_task_requirements_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_eos_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "compliance_task_requirements_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_dashboard_attention_ranked"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "compliance_task_requirements_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_dashboard_tenant_portfolio"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "compliance_task_requirements_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_dashboard_tenant_recent_comms"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "compliance_task_requirements_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_compliance_entitlements"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "compliance_task_requirements_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_last_activity"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "compliance_task_requirements_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "compliance_task_requirements_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "compliance_task_requirements_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_membership_usage"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "compliance_task_requirements_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_membership_usage"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
       connected_tenants: {
         Row: {
           connected_at: string
@@ -21729,6 +22152,405 @@ export type Database = {
         }
         Relationships: []
       }
+      ops_time_logs: {
+        Row: {
+          created_at: string
+          id: string
+          minutes: number
+          note: string | null
+          user_uuid: string
+          work_item_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          minutes: number
+          note?: string | null
+          user_uuid: string
+          work_item_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          minutes?: number
+          note?: string | null
+          user_uuid?: string
+          work_item_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ops_time_logs_user_uuid_fkey"
+            columns: ["user_uuid"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "ops_time_logs_user_uuid_fkey"
+            columns: ["user_uuid"]
+            isOneToOne: false
+            referencedRelation: "v_dashboard_labour_efficiency"
+            referencedColumns: ["csc_user_id"]
+          },
+          {
+            foreignKeyName: "ops_time_logs_user_uuid_fkey"
+            columns: ["user_uuid"]
+            isOneToOne: false
+            referencedRelation: "v_dashboard_weekly_wins"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "ops_time_logs_user_uuid_fkey"
+            columns: ["user_uuid"]
+            isOneToOne: false
+            referencedRelation: "v_executive_consultant_distribution"
+            referencedColumns: ["consultant_uuid"]
+          },
+          {
+            foreignKeyName: "ops_time_logs_user_uuid_fkey"
+            columns: ["user_uuid"]
+            isOneToOne: false
+            referencedRelation: "vw_consultant_capacity"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "ops_time_logs_user_uuid_fkey"
+            columns: ["user_uuid"]
+            isOneToOne: false
+            referencedRelation: "vw_consultant_load"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "ops_time_logs_work_item_id_fkey"
+            columns: ["work_item_id"]
+            isOneToOne: false
+            referencedRelation: "ops_work_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ops_work_items: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          description: string | null
+          due_at: string | null
+          id: string
+          linked_compliance_task_instance_id: string | null
+          owner_user_uuid: string | null
+          package_instance_id: number | null
+          priority: string | null
+          status: string
+          tenant_id: number | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          due_at?: string | null
+          id?: string
+          linked_compliance_task_instance_id?: string | null
+          owner_user_uuid?: string | null
+          package_instance_id?: number | null
+          priority?: string | null
+          status?: string
+          tenant_id?: number | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          due_at?: string | null
+          id?: string
+          linked_compliance_task_instance_id?: string | null
+          owner_user_uuid?: string | null
+          package_instance_id?: number | null
+          priority?: string | null
+          status?: string
+          tenant_id?: number | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ops_work_items_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "ops_work_items_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "v_dashboard_labour_efficiency"
+            referencedColumns: ["csc_user_id"]
+          },
+          {
+            foreignKeyName: "ops_work_items_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "v_dashboard_weekly_wins"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "ops_work_items_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "v_executive_consultant_distribution"
+            referencedColumns: ["consultant_uuid"]
+          },
+          {
+            foreignKeyName: "ops_work_items_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "vw_consultant_capacity"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "ops_work_items_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "vw_consultant_load"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "ops_work_items_linked_compliance_task_instance_id_fkey"
+            columns: ["linked_compliance_task_instance_id"]
+            isOneToOne: false
+            referencedRelation: "compliance_task_instances"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ops_work_items_owner_user_uuid_fkey"
+            columns: ["owner_user_uuid"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "ops_work_items_owner_user_uuid_fkey"
+            columns: ["owner_user_uuid"]
+            isOneToOne: false
+            referencedRelation: "v_dashboard_labour_efficiency"
+            referencedColumns: ["csc_user_id"]
+          },
+          {
+            foreignKeyName: "ops_work_items_owner_user_uuid_fkey"
+            columns: ["owner_user_uuid"]
+            isOneToOne: false
+            referencedRelation: "v_dashboard_weekly_wins"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "ops_work_items_owner_user_uuid_fkey"
+            columns: ["owner_user_uuid"]
+            isOneToOne: false
+            referencedRelation: "v_executive_consultant_distribution"
+            referencedColumns: ["consultant_uuid"]
+          },
+          {
+            foreignKeyName: "ops_work_items_owner_user_uuid_fkey"
+            columns: ["owner_user_uuid"]
+            isOneToOne: false
+            referencedRelation: "vw_consultant_capacity"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "ops_work_items_owner_user_uuid_fkey"
+            columns: ["owner_user_uuid"]
+            isOneToOne: false
+            referencedRelation: "vw_consultant_load"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "ops_work_items_package_instance_id_fkey"
+            columns: ["package_instance_id"]
+            isOneToOne: false
+            referencedRelation: "package_instances"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ops_work_items_package_instance_id_fkey"
+            columns: ["package_instance_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_dashboard_progress"
+            referencedColumns: ["package_instance_id"]
+          },
+          {
+            foreignKeyName: "ops_work_items_package_instance_id_fkey"
+            columns: ["package_instance_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_package_usage_summary"
+            referencedColumns: ["instance_id"]
+          },
+          {
+            foreignKeyName: "ops_work_items_package_instance_id_fkey"
+            columns: ["package_instance_id"]
+            isOneToOne: false
+            referencedRelation: "v_completion_eligibility"
+            referencedColumns: ["package_instance_id"]
+          },
+          {
+            foreignKeyName: "ops_work_items_package_instance_id_fkey"
+            columns: ["package_instance_id"]
+            isOneToOne: false
+            referencedRelation: "v_consult_hours_remaining"
+            referencedColumns: ["package_instance_id"]
+          },
+          {
+            foreignKeyName: "ops_work_items_package_instance_id_fkey"
+            columns: ["package_instance_id"]
+            isOneToOne: false
+            referencedRelation: "v_dashboard_consultant_momentum"
+            referencedColumns: ["package_instance_id"]
+          },
+          {
+            foreignKeyName: "ops_work_items_package_instance_id_fkey"
+            columns: ["package_instance_id"]
+            isOneToOne: false
+            referencedRelation: "v_documents_pending"
+            referencedColumns: ["package_instance_id"]
+          },
+          {
+            foreignKeyName: "ops_work_items_package_instance_id_fkey"
+            columns: ["package_instance_id"]
+            isOneToOne: false
+            referencedRelation: "v_executive_client_health"
+            referencedColumns: ["package_instance_id"]
+          },
+          {
+            foreignKeyName: "ops_work_items_package_instance_id_fkey"
+            columns: ["package_instance_id"]
+            isOneToOne: false
+            referencedRelation: "v_momentum_state"
+            referencedColumns: ["package_instance_id"]
+          },
+          {
+            foreignKeyName: "ops_work_items_package_instance_id_fkey"
+            columns: ["package_instance_id"]
+            isOneToOne: false
+            referencedRelation: "v_package_burndown"
+            referencedColumns: ["package_instance_id"]
+          },
+          {
+            foreignKeyName: "ops_work_items_package_instance_id_fkey"
+            columns: ["package_instance_id"]
+            isOneToOne: false
+            referencedRelation: "v_phase_actions_remaining"
+            referencedColumns: ["package_instance_id"]
+          },
+          {
+            foreignKeyName: "ops_work_items_package_instance_id_fkey"
+            columns: ["package_instance_id"]
+            isOneToOne: false
+            referencedRelation: "v_predictive_signal_inputs"
+            referencedColumns: ["package_instance_id"]
+          },
+          {
+            foreignKeyName: "ops_work_items_package_instance_id_fkey"
+            columns: ["package_instance_id"]
+            isOneToOne: false
+            referencedRelation: "v_progress_anchor_inputs"
+            referencedColumns: ["package_instance_id"]
+          },
+          {
+            foreignKeyName: "ops_work_items_package_instance_id_fkey"
+            columns: ["package_instance_id"]
+            isOneToOne: false
+            referencedRelation: "v_score_consult"
+            referencedColumns: ["package_instance_id"]
+          },
+          {
+            foreignKeyName: "ops_work_items_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ops_work_items_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_engagement_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "ops_work_items_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_eos_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "ops_work_items_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_dashboard_attention_ranked"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "ops_work_items_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_dashboard_tenant_portfolio"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "ops_work_items_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_dashboard_tenant_recent_comms"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "ops_work_items_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_compliance_entitlements"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "ops_work_items_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_last_activity"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "ops_work_items_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "ops_work_items_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "ops_work_items_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_membership_usage"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "ops_work_items_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_membership_usage"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
       package_builder_audit_log: {
         Row: {
           action: string
@@ -29240,39 +30062,6 @@ export type Database = {
           },
         ]
       }
-      task_definitions: {
-        Row: {
-          compliance_clause: string | null
-          created_at: string
-          created_by: string | null
-          description: string | null
-          id: string
-          risk_weight: number
-          title: string
-          updated_at: string
-        }
-        Insert: {
-          compliance_clause?: string | null
-          created_at?: string
-          created_by?: string | null
-          description?: string | null
-          id?: string
-          risk_weight?: number
-          title: string
-          updated_at?: string
-        }
-        Update: {
-          compliance_clause?: string | null
-          created_at?: string
-          created_by?: string | null
-          description?: string | null
-          id?: string
-          risk_weight?: number
-          title?: string
-          updated_at?: string
-        }
-        Relationships: []
-      }
       task_evidence: {
         Row: {
           file_name: string
@@ -29317,141 +30106,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "tasks_tenants"
             referencedColumns: ["id"]
-          },
-        ]
-      }
-      task_requirements: {
-        Row: {
-          created_at: string
-          created_by: string | null
-          due_days_after_start: number | null
-          id: string
-          is_required: boolean
-          package_id: number | null
-          scope_type: string
-          task_definition_id: string
-          tenant_id: number | null
-        }
-        Insert: {
-          created_at?: string
-          created_by?: string | null
-          due_days_after_start?: number | null
-          id?: string
-          is_required?: boolean
-          package_id?: number | null
-          scope_type: string
-          task_definition_id: string
-          tenant_id?: number | null
-        }
-        Update: {
-          created_at?: string
-          created_by?: string | null
-          due_days_after_start?: number | null
-          id?: string
-          is_required?: boolean
-          package_id?: number | null
-          scope_type?: string
-          task_definition_id?: string
-          tenant_id?: number | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "task_requirements_package_id_fkey"
-            columns: ["package_id"]
-            isOneToOne: false
-            referencedRelation: "packages"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "task_requirements_task_definition_id_fkey"
-            columns: ["task_definition_id"]
-            isOneToOne: false
-            referencedRelation: "task_definitions"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "task_requirements_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenants"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "task_requirements_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_client_engagement_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "task_requirements_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_client_eos_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "task_requirements_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_dashboard_attention_ranked"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "task_requirements_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_dashboard_tenant_portfolio"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "task_requirements_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_dashboard_tenant_recent_comms"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "task_requirements_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_compliance_entitlements"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "task_requirements_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_last_activity"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "task_requirements_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "vw_client_capacity_diagnostics"
-            referencedColumns: ["client_id"]
-          },
-          {
-            foreignKeyName: "task_requirements_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "vw_client_capacity_diagnostics"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "task_requirements_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "vw_client_membership_usage"
-            referencedColumns: ["client_id"]
-          },
-          {
-            foreignKeyName: "task_requirements_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "vw_client_membership_usage"
-            referencedColumns: ["tenant_id"]
           },
         ]
       }
@@ -33170,173 +33824,6 @@ export type Database = {
           },
           {
             foreignKeyName: "tenant_support_inclusions_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "vw_client_membership_usage"
-            referencedColumns: ["tenant_id"]
-          },
-        ]
-      }
-      tenant_task_instances: {
-        Row: {
-          completed_at: string | null
-          completed_by: string | null
-          created_at: string
-          due_at: string | null
-          id: string
-          status: string
-          task_requirement_id: string
-          tenant_id: number
-        }
-        Insert: {
-          completed_at?: string | null
-          completed_by?: string | null
-          created_at?: string
-          due_at?: string | null
-          id?: string
-          status?: string
-          task_requirement_id: string
-          tenant_id: number
-        }
-        Update: {
-          completed_at?: string | null
-          completed_by?: string | null
-          created_at?: string
-          due_at?: string | null
-          id?: string
-          status?: string
-          task_requirement_id?: string
-          tenant_id?: number
-        }
-        Relationships: [
-          {
-            foreignKeyName: "tenant_task_instances_completed_by_fkey"
-            columns: ["completed_by"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["user_uuid"]
-          },
-          {
-            foreignKeyName: "tenant_task_instances_completed_by_fkey"
-            columns: ["completed_by"]
-            isOneToOne: false
-            referencedRelation: "v_dashboard_labour_efficiency"
-            referencedColumns: ["csc_user_id"]
-          },
-          {
-            foreignKeyName: "tenant_task_instances_completed_by_fkey"
-            columns: ["completed_by"]
-            isOneToOne: false
-            referencedRelation: "v_dashboard_weekly_wins"
-            referencedColumns: ["user_uuid"]
-          },
-          {
-            foreignKeyName: "tenant_task_instances_completed_by_fkey"
-            columns: ["completed_by"]
-            isOneToOne: false
-            referencedRelation: "v_executive_consultant_distribution"
-            referencedColumns: ["consultant_uuid"]
-          },
-          {
-            foreignKeyName: "tenant_task_instances_completed_by_fkey"
-            columns: ["completed_by"]
-            isOneToOne: false
-            referencedRelation: "vw_consultant_capacity"
-            referencedColumns: ["user_uuid"]
-          },
-          {
-            foreignKeyName: "tenant_task_instances_completed_by_fkey"
-            columns: ["completed_by"]
-            isOneToOne: false
-            referencedRelation: "vw_consultant_load"
-            referencedColumns: ["user_uuid"]
-          },
-          {
-            foreignKeyName: "tenant_task_instances_task_requirement_id_fkey"
-            columns: ["task_requirement_id"]
-            isOneToOne: false
-            referencedRelation: "task_requirements"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "tenant_task_instances_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenants"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "tenant_task_instances_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_client_engagement_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "tenant_task_instances_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_client_eos_summary"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "tenant_task_instances_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_dashboard_attention_ranked"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "tenant_task_instances_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_dashboard_tenant_portfolio"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "tenant_task_instances_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_dashboard_tenant_recent_comms"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "tenant_task_instances_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_compliance_entitlements"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "tenant_task_instances_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "v_tenant_last_activity"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "tenant_task_instances_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "vw_client_capacity_diagnostics"
-            referencedColumns: ["client_id"]
-          },
-          {
-            foreignKeyName: "tenant_task_instances_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "vw_client_capacity_diagnostics"
-            referencedColumns: ["tenant_id"]
-          },
-          {
-            foreignKeyName: "tenant_task_instances_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "vw_client_membership_usage"
-            referencedColumns: ["client_id"]
-          },
-          {
-            foreignKeyName: "tenant_task_instances_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "vw_client_membership_usage"
@@ -40224,6 +40711,15 @@ export type Database = {
           },
         ]
       }
+      v_compliance_task_requirements_expanded: {
+        Row: {
+          calculated_due_at: string | null
+          requirement_id: string | null
+          task_definition_id: string | null
+          tenant_id: number | null
+        }
+        Relationships: []
+      }
       v_consult_hours_remaining: {
         Row: {
           hours_included: number | null
@@ -40272,6 +40768,9 @@ export type Database = {
           attention_score: number | null
           burn_risk_status: string | null
           burn_score: number | null
+          compliance_blocked_tasks: number | null
+          compliance_open_tasks: number | null
+          compliance_overdue_tasks: number | null
           composite_retention_risk_index: number | null
           consult_hours_30d: number | null
           cricos_id: string | null
@@ -40282,9 +40781,6 @@ export type Database = {
           high_severity_open_risks: number | null
           last_activity_at: string | null
           mandatory_gaps_count: number | null
-          native_blocked_tasks: number | null
-          native_open_tasks: number | null
-          native_overdue_tasks: number | null
           open_tasks_count: number | null
           overdue_tasks_count: number | null
           packages_json: Json | null
@@ -41942,14 +42438,6 @@ export type Database = {
         Update: {
           last_activity_at?: never
           tenant_id?: number | null
-        }
-        Relationships: []
-      }
-      v_tenant_required_tasks: {
-        Row: {
-          calculated_due_at: string | null
-          task_requirement_id: string | null
-          tenant_id: number | null
         }
         Relationships: []
       }
