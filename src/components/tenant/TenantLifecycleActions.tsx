@@ -3,8 +3,9 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/textarea';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { CloseClientModal } from './CloseClientModal';
 import { MoreHorizontal, Pause, XCircle, Archive, RotateCcw } from 'lucide-react';
 
@@ -21,15 +22,17 @@ export function TenantLifecycleActions({ tenantId, tenantName, lifecycleStatus, 
   const isSuperAdmin = profile?.unicorn_role === 'Super Admin';
 
   const [confirmAction, setConfirmAction] = useState<string | null>(null);
+  const [actionReason, setActionReason] = useState('');
   const [closeModalOpen, setCloseModalOpen] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  const executeAction = async (action: string) => {
+  const executeAction = async (action: string, reason?: string) => {
     setLoading(true);
     try {
-      const response = await supabase.functions.invoke('tenant-lifecycle', {
-        body: { tenant_id: tenantId, action },
-      });
+      const body: Record<string, unknown> = { tenant_id: tenantId, action };
+      if (reason) body.reason = reason;
+
+      const response = await supabase.functions.invoke('tenant-lifecycle', { body });
 
       if (response.error) throw new Error(response.error.message);
 
@@ -58,10 +61,10 @@ export function TenantLifecycleActions({ tenantId, tenantName, lifecycleStatus, 
     } finally {
       setLoading(false);
       setConfirmAction(null);
+      setActionReason('');
     }
   };
 
-  // Determine available actions based on lifecycle_status
   const canSuspend = lifecycleStatus === 'active';
   const canClose = lifecycleStatus === 'active';
   const canArchive = lifecycleStatus === 'closed' && isSuperAdmin;
@@ -70,23 +73,30 @@ export function TenantLifecycleActions({ tenantId, tenantName, lifecycleStatus, 
   const hasAnyAction = canSuspend || canClose || canArchive || canReactivate;
   if (!hasAnyAction) return null;
 
-  const confirmLabels: Record<string, { title: string; description: string; actionLabel: string }> = {
+  const needsReason = confirmAction === 'reactivate';
+
+  const confirmConfig: Record<string, { title: string; description: string; actionLabel: string; variant: 'default' | 'destructive' }> = {
     suspend: {
       title: 'Suspend Client',
       description: `Are you sure you want to suspend "${tenantName}"? This will disable access but preserve all data. The client can be reactivated later.`,
       actionLabel: 'Suspend',
+      variant: 'destructive',
     },
     archive: {
       title: 'Archive Client',
       description: `Are you sure you want to archive "${tenantName}"? This is a permanent administrative action. Only SuperAdmins can reactivate archived clients.`,
       actionLabel: 'Archive',
+      variant: 'destructive',
     },
     reactivate: {
       title: 'Reactivate Client',
-      description: `Are you sure you want to reactivate "${tenantName}"? This will re-enable access and set the client back to active status.`,
+      description: `Reactivating "${tenantName}" will re-enable access and set the client back to active status. Please provide a reason for reactivation.`,
       actionLabel: 'Reactivate',
+      variant: 'default',
     },
   };
+
+  const currentConfig = confirmAction ? confirmConfig[confirmAction] : null;
 
   return (
     <>
@@ -125,29 +135,47 @@ export function TenantLifecycleActions({ tenantId, tenantName, lifecycleStatus, 
         </DropdownMenuContent>
       </DropdownMenu>
 
-      {/* Simple confirm dialog for suspend/archive/reactivate */}
-      {confirmAction && confirmLabels[confirmAction] && (
-        <AlertDialog open={!!confirmAction} onOpenChange={(open) => { if (!open) setConfirmAction(null); }}>
-          <AlertDialogContent className="max-w-md" onClick={(e) => e.stopPropagation()}>
-            <AlertDialogHeader>
-              <AlertDialogTitle>{confirmLabels[confirmAction].title}</AlertDialogTitle>
-              <AlertDialogDescription>{confirmLabels[confirmAction].description}</AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel disabled={loading}>Cancel</AlertDialogCancel>
-              <AlertDialogAction
-                onClick={() => executeAction(confirmAction)}
-                disabled={loading}
-                className={confirmAction === 'reactivate' ? 'bg-green-600 hover:bg-green-700' : 'bg-destructive hover:bg-destructive/90 text-destructive-foreground'}
+      {/* Confirm dialog with optional reason */}
+      {confirmAction && currentConfig && (
+        <Dialog open={!!confirmAction} onOpenChange={(open) => { if (!open) { setConfirmAction(null); setActionReason(''); } }}>
+          <DialogContent className="max-w-md" onClick={(e) => e.stopPropagation()}>
+            <DialogHeader>
+              <DialogTitle>{currentConfig.title}</DialogTitle>
+              <DialogDescription>{currentConfig.description}</DialogDescription>
+            </DialogHeader>
+
+            {needsReason && (
+              <div className="space-y-2">
+                <label className="text-sm font-medium">
+                  Reason <span className="text-destructive">*</span>
+                </label>
+                <Textarea
+                  placeholder="e.g. Contract renewed, Error correction, Client requested reactivation..."
+                  value={actionReason}
+                  onChange={(e) => setActionReason(e.target.value)}
+                  rows={3}
+                />
+              </div>
+            )}
+
+            <DialogFooter>
+              <Button variant="outline" onClick={() => { setConfirmAction(null); setActionReason(''); }} disabled={loading}>
+                Cancel
+              </Button>
+              <Button
+                variant={currentConfig.variant === 'destructive' ? 'destructive' : 'default'}
+                onClick={() => executeAction(confirmAction, needsReason ? actionReason.trim() : undefined)}
+                disabled={loading || (needsReason && !actionReason.trim())}
+                className={currentConfig.variant === 'default' ? 'bg-green-600 hover:bg-green-700 text-white' : ''}
               >
-                {loading ? 'Processing...' : confirmLabels[confirmAction].actionLabel}
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
+                {loading ? 'Processing...' : currentConfig.actionLabel}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       )}
 
-      {/* Close modal with full details */}
+      {/* Close modal */}
       <CloseClientModal
         open={closeModalOpen}
         onOpenChange={setCloseModalOpen}
