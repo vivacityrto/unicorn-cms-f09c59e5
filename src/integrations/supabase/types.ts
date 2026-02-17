@@ -9741,28 +9741,34 @@ export type Database = {
           client_id: string | null
           consult_id: string
           consultant: string
+          consultant_user_uuid: string | null
           created_at: string | null
           date: string
           hours: number | null
           task: string | null
+          tenant_id: number
         }
         Insert: {
           client_id?: string | null
           consult_id?: string
           consultant: string
+          consultant_user_uuid?: string | null
           created_at?: string | null
           date: string
           hours?: number | null
           task?: string | null
+          tenant_id: number
         }
         Update: {
           client_id?: string | null
           consult_id?: string
           consultant?: string
+          consultant_user_uuid?: string | null
           created_at?: string | null
           date?: string
           hours?: number | null
           task?: string | null
+          tenant_id?: number
         }
         Relationships: [
           {
@@ -9786,7 +9792,127 @@ export type Database = {
             referencedRelation: "v_client_to_tenant"
             referencedColumns: ["client_id"]
           },
+          {
+            foreignKeyName: "consult_logs_tenant_fk"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "consult_logs_tenant_fk"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_engagement_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "consult_logs_tenant_fk"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_eos_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "consult_logs_tenant_fk"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_dashboard_attention_ranked"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "consult_logs_tenant_fk"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_dashboard_tenant_portfolio"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "consult_logs_tenant_fk"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_dashboard_tenant_recent_comms"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "consult_logs_tenant_fk"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_compliance_entitlements"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "consult_logs_tenant_fk"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_last_activity"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "consult_logs_tenant_fk"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "consult_logs_tenant_fk"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "consult_logs_tenant_fk"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_membership_usage"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "consult_logs_tenant_fk"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_membership_usage"
+            referencedColumns: ["tenant_id"]
+          },
         ]
+      }
+      consult_logs_unmapped_quarantine: {
+        Row: {
+          client_id: string | null
+          consult_id: string
+          consultant: string
+          consultant_user_uuid: string | null
+          created_at: string | null
+          date: string
+          hours: number | null
+          task: string | null
+          tenant_id: number | null
+        }
+        Insert: {
+          client_id?: string | null
+          consult_id?: string
+          consultant: string
+          consultant_user_uuid?: string | null
+          created_at?: string | null
+          date: string
+          hours?: number | null
+          task?: string | null
+          tenant_id?: number | null
+        }
+        Update: {
+          client_id?: string | null
+          consult_id?: string
+          consultant?: string
+          consultant_user_uuid?: string | null
+          created_at?: string | null
+          date?: string
+          hours?: number | null
+          task?: string | null
+          tenant_id?: number | null
+        }
+        Relationships: []
       }
       consult_time_entries: {
         Row: {
