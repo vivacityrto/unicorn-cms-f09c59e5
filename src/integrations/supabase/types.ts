@@ -38164,22 +38164,31 @@ export type Database = {
           attention_drivers_json: Json | null
           attention_score: number | null
           burn_risk_status: string | null
+          burn_score: number | null
           composite_retention_risk_index: number | null
           consult_hours_30d: number | null
           cricos_id: string | null
           critical_stage_count: number | null
           days_since_activity: number | null
+          days_to_renewal: number | null
+          gaps_score: number | null
+          high_severity_open_risks: number | null
           last_activity_at: string | null
           mandatory_gaps_count: number | null
           open_tasks_count: number | null
           overdue_tasks_count: number | null
           packages_json: Json | null
           projected_exhaustion_date: string | null
+          renewal_score: number | null
+          renewal_window_start: string | null
           retention_status: string | null
           risk_index: number | null
           risk_index_delta_14d: number | null
+          risk_score: number | null
           risk_status: string | null
           rto_id: string | null
+          stage_score: number | null
+          staleness_score: number | null
           tenant_id: number | null
           tenant_name: string | null
           tenant_status: string | null
@@ -39996,6 +40005,17 @@ export type Database = {
           p_standard_set?: string
         }
         Returns: Json
+      }
+      calculate_attention_score: {
+        Args: {
+          p_burn_score: number
+          p_gaps_score: number
+          p_renewal_score: number
+          p_risk_score: number
+          p_stage_score: number
+          p_staleness_score: number
+        }
+        Returns: number
       }
       calculate_compliance_score: {
         Args: {
