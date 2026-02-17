@@ -43709,13 +43709,14 @@ export type Database = {
       }
       calculate_attention_score: {
         Args: {
-          p_burn_score: number
-          p_gaps_score: number
-          p_renewal_score: number
-          p_risk_score: number
-          p_stage_score: number
-          p_staleness_score: number
-          p_tasks_score: number
+          p_burn: number
+          p_gaps: number
+          p_overdue_tasks?: number
+          p_renewal: number
+          p_risk: number
+          p_stage: number
+          p_staleness: number
+          p_tasks: number
         }
         Returns: number
       }
