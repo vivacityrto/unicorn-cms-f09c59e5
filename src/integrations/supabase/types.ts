@@ -38239,6 +38239,21 @@ export type Database = {
           },
         ]
       }
+      v_dashboard_behavioural_prompts: {
+        Row: {
+          created_at: string | null
+          item_id: string | null
+          item_type: string | null
+          owner_user_id: string | null
+          severity: string | null
+          stage_instance_id: string | null
+          standard_clause: string | null
+          summary: string | null
+          tenant_id: number | null
+          why_text: string | null
+        }
+        Relationships: []
+      }
       v_dashboard_consultant_momentum: {
         Row: {
           caps_applied: Json | null

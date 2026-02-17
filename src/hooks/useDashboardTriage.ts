@@ -54,6 +54,7 @@ export interface PriorityInboxItem {
   summary: string;
   owner_user_id: string | null;
   created_at: string;
+  why_text?: string;
 }
 
 export interface RiskCluster {
@@ -102,6 +103,7 @@ export interface FocusItem {
   ageMs: number;
   actionLabel: string;
   actionType: string;
+  whyText?: string;
 }
 
 const SEVERITY_RANK: Record<string, number> = { critical: 3, high: 2, moderate: 1 };
@@ -219,6 +221,7 @@ export function useDashboardTriage() {
         ageMs: (t.days_since_activity || 0) * 86400000,
         actionLabel: 'Review Stage',
         actionType: 'review_stage',
+        whyText: `${t.critical_stage_count} critical stage(s). Stage health score: ${t.stage_score}/100 (weight 30%). Attention score: ${t.attention_score}.`,
       });
     });
 
@@ -234,6 +237,7 @@ export function useDashboardTriage() {
         ageMs: 0,
         actionLabel: 'Review Risk',
         actionType: 'review_risk',
+        whyText: `Risk index ${t.risk_index} with ${t.high_severity_open_risks} high-severity open risks. Delta: ${t.risk_index_delta_14d > 0 ? '+' : ''}${t.risk_index_delta_14d} over 14d. Risk score: ${t.risk_score}/100 (weight 20%).`,
       });
     });
 
@@ -249,6 +253,7 @@ export function useDashboardTriage() {
         ageMs: t.days_since_activity * 86400000,
         actionLabel: 'Check Gaps',
         actionType: 'check_gaps',
+        whyText: `${t.mandatory_gaps_count} mandatory evidence categories missing. Gaps score: ${t.gaps_score}/100 (weight 20%). Inactive for ${t.days_since_activity} days.`,
       });
     });
 
@@ -264,6 +269,7 @@ export function useDashboardTriage() {
         ageMs: 0,
         actionLabel: 'Review Hours',
         actionType: 'review_burn',
+        whyText: `Burn status critical. Projected exhaustion: ${t.projected_exhaustion_date || 'unknown'}. Burn score: ${t.burn_score}/100 (weight 5%).`,
       });
     });
 
@@ -279,6 +285,7 @@ export function useDashboardTriage() {
         ageMs: 0,
         actionLabel: 'Review Retention',
         actionType: 'review_retention',
+        whyText: `Retention status: high_risk. Renewal score: ${t.renewal_score}/100 (weight 10%).${t.days_to_renewal != null ? ` ${t.days_to_renewal}d to renewal.` : ''}`,
       });
     });
 
@@ -294,6 +301,7 @@ export function useDashboardTriage() {
         ageMs: t.days_since_activity * 86400000,
         actionLabel: 'Check In',
         actionType: 'check_in',
+        whyText: `No task updates, uploads, or notes for ${t.days_since_activity} days. Staleness score: ${t.staleness_score}/100 (weight 15%).${t.open_tasks_count > 0 ? ` ${t.open_tasks_count} open tasks pending.` : ''}`,
       });
     });
 
@@ -301,6 +309,7 @@ export function useDashboardTriage() {
     if (items.length === 0) {
       const sorted = [...tenants].sort((a, b) => b.attention_score - a.attention_score);
       sorted.slice(0, 3).forEach(t => {
+        const topDriver = Array.isArray(t.attention_drivers_json) && t.attention_drivers_json[0];
         items.push({
           id: `focus-proactive-${t.tenant_id}`,
           severity: 'moderate',
@@ -311,6 +320,7 @@ export function useDashboardTriage() {
           ageMs: (t.days_since_activity || 0) * 86400000,
           actionLabel: 'Review',
           actionType: 'proactive_review',
+          whyText: topDriver ? `Top driver: ${topDriver.driver} (${topDriver.value}). Attention score: ${t.attention_score}.` : `Attention score: ${t.attention_score}. No critical signals but due for review.`,
         });
       });
     }
@@ -368,46 +378,37 @@ export function useDashboardTriage() {
     });
   }, [rawInbox, inboxActions, savedView, rawTenants, profile?.user_uuid]);
 
-  // ── Inbox never empty: inject behavioural prompts ──
+  // ── Backend-backed behavioural prompts ──
+  const { data: backendPrompts = [] } = useQuery({
+    queryKey: ['triage-behavioural-prompts'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('v_dashboard_behavioural_prompts' as any)
+        .select('*');
+      if (error) throw error;
+      return (data || []) as unknown as PriorityInboxItem[];
+    },
+    enabled: isVivacityStaff,
+    staleTime: 120_000,
+  });
+
+  // ── Inbox never empty: use backend prompts as fallback ──
   const inboxWithFallbacks = useMemo(() => {
     if (priorityInbox.length > 0) return priorityInbox;
-    const fallbacks: PriorityInboxItem[] = [];
-    const tenants = savedView === 'my_tenants' && profile?.user_uuid
-      ? rawTenants.filter(t => t.assigned_csc_user_id === profile.user_uuid)
-      : rawTenants;
 
-    const noConsult = tenants.filter(t => t.consult_hours_30d === 0).slice(0, 1);
-    noConsult.forEach(t => {
-      fallbacks.push({
-        item_id: `fallback-no-consult-${t.tenant_id}`,
-        item_type: 'behavioural_prompt',
-        severity: 'moderate',
-        tenant_id: t.tenant_id,
-        stage_instance_id: null,
-        standard_clause: null,
-        summary: `No consult logged in 30 days – ${t.tenant_name}`,
-        owner_user_id: null,
-        created_at: new Date().toISOString(),
-      });
-    });
+    let prompts = backendPrompts;
+    if (savedView === 'my_tenants' && profile?.user_uuid) {
+      prompts = prompts.filter((p: any) => p.owner_user_id === profile.user_uuid || !p.owner_user_id);
+    }
 
-    const inactive = tenants.filter(t => t.days_since_activity > 21).slice(0, 1);
-    inactive.forEach(t => {
-      fallbacks.push({
-        item_id: `fallback-inactive-${t.tenant_id}`,
-        item_type: 'behavioural_prompt',
-        severity: 'moderate',
-        tenant_id: t.tenant_id,
-        stage_instance_id: null,
-        standard_clause: null,
-        summary: `Low engagement on ${t.tenant_name} – ${t.days_since_activity}d inactive`,
-        owner_user_id: null,
-        created_at: new Date().toISOString(),
-      });
-    });
+    // Filter out snoozed/acknowledged prompts
+    const now = new Date();
+    const snoozed = new Set(inboxActions.filter((a: any) => a.action_type === 'snooze' && (!a.until_at || new Date(a.until_at) > now)).map((a: any) => a.item_id));
+    const acked = new Set(inboxActions.filter((a: any) => a.action_type === 'acknowledge').map((a: any) => a.item_id));
+    prompts = prompts.filter((p: any) => !snoozed.has(p.item_id) && !acked.has(p.item_id));
 
-    if (fallbacks.length === 0) {
-      fallbacks.push({
+    if (prompts.length === 0) {
+      return [{
         item_id: 'fallback-review',
         item_type: 'behavioural_prompt',
         severity: 'moderate',
@@ -417,11 +418,12 @@ export function useDashboardTriage() {
         summary: 'Run evidence gap checks on your oldest tenants',
         owner_user_id: null,
         created_at: new Date().toISOString(),
-      });
+        why_text: 'No active inbox items. Proactive gap checks prevent future CSC rework.',
+      } as PriorityInboxItem];
     }
 
-    return fallbacks;
-  }, [priorityInbox, rawTenants, savedView, profile?.user_uuid]);
+    return prompts.slice(0, 10);
+  }, [priorityInbox, backendPrompts, inboxActions, savedView, profile?.user_uuid]);
 
   // ── Risk clusters ──
   const { data: riskClusters = [] } = useQuery({
