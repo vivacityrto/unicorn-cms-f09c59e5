@@ -94,6 +94,9 @@ export default function TenantDetail() {
   const [liaisonName, setLiaisonName] = useState<string>("");
   const [liaisonAvatar, setLiaisonAvatar] = useState<string>("");
   const [liaisonEmail, setLiaisonEmail] = useState<string>("");
+  const [primaryContactName, setPrimaryContactName] = useState<string>("");
+  const [primaryContactEmail, setPrimaryContactEmail] = useState<string>("");
+  const [primaryContactAvatar, setPrimaryContactAvatar] = useState<string>("");
   const [tenantStatus, setTenantStatus] = useState<string>("active");
   const [tenantTypeValue, setTenantTypeValue] = useState<TenantType>("compliance_system");
   const [loading, setLoading] = useState(false);
@@ -389,7 +392,37 @@ export default function TenantDetail() {
             setLiaisonName(`${liaisonUserData.first_name || ''} ${liaisonUserData.last_name || ''}`.trim());
             setLiaisonAvatar(liaisonUserData.avatar_url || "");
             setLiaisonEmail(liaisonUserData.email || "");
+         }
+        }
+
+        // Fetch primary contact from tenant_users
+        const { data: primaryContactData } = await supabase
+          .from("tenant_users")
+          .select("user_id")
+          .eq("tenant_id", parseInt(tenantId))
+          .eq("primary_contact", true)
+          .order("created_at", { ascending: true })
+          .limit(1)
+          .maybeSingle();
+        if (primaryContactData?.user_id) {
+          const { data: pcUser } = await supabase
+            .from("users")
+            .select("first_name, last_name, avatar_url, email")
+            .eq("user_uuid", primaryContactData.user_id)
+            .maybeSingle();
+          if (pcUser) {
+            setPrimaryContactName(`${pcUser.first_name || ''} ${pcUser.last_name || ''}`.trim());
+            setPrimaryContactAvatar(pcUser.avatar_url || "");
+            setPrimaryContactEmail(pcUser.email || "");
+          } else {
+            setPrimaryContactName("");
+            setPrimaryContactAvatar("");
+            setPrimaryContactEmail("");
           }
+        } else {
+          setPrimaryContactName("");
+          setPrimaryContactAvatar("");
+          setPrimaryContactEmail("");
         }
       }
       if (activePackage) {
@@ -525,6 +558,13 @@ export default function TenantDetail() {
                   <div className="flex items-center gap-2 text-sm text-white/70">
                     <Building2 className="h-4 w-4" />
                     {clientData.companyname}
+                  </div>
+                  <div className="flex items-center gap-2 text-sm text-white/70">
+                    <User className="h-4 w-4" />
+                    {primaryContactName
+                      ? <>Primary Contact: {primaryContactName}</>
+                      : <span className="text-white/40">No primary contact</span>
+                    }
                   </div>
                 </div>
               </div>
