@@ -1,0 +1,1 @@
+DELETE FROM public.active_timers WHERE id = 'c8e616b0-6371-476e-b838-1d344b3160d4'
