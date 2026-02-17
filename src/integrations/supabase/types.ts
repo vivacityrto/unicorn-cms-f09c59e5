@@ -40282,6 +40282,9 @@ export type Database = {
           high_severity_open_risks: number | null
           last_activity_at: string | null
           mandatory_gaps_count: number | null
+          native_blocked_tasks: number | null
+          native_open_tasks: number | null
+          native_overdue_tasks: number | null
           open_tasks_count: number | null
           overdue_tasks_count: number | null
           packages_json: Json | null
@@ -40296,6 +40299,7 @@ export type Database = {
           rto_id: string | null
           stage_score: number | null
           staleness_score: number | null
+          task_score: number | null
           tenant_id: number | null
           tenant_name: string | null
           tenant_status: string | null
@@ -42282,6 +42286,7 @@ export type Database = {
           p_risk_score: number
           p_stage_score: number
           p_staleness_score: number
+          p_task_score?: number
         }
         Returns: number
       }
