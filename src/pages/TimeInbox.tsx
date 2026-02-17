@@ -247,8 +247,12 @@ export default function TimeInbox() {
   const handlePost = async () => {
     if (!editingDraft) return;
     setSaving(true);
-    // Save first, then post
-    await updateDraft(editingDraft.id, formData);
+    // Save first, then post — bail if update fails
+    const updated = await updateDraft(editingDraft.id, formData);
+    if (!updated) {
+      setSaving(false);
+      return;
+    }
     const success = await postDraft(editingDraft.id);
     if (success) {
       setDrawerOpen(false);
