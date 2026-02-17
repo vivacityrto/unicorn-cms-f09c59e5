@@ -18,6 +18,7 @@ import { extractToken, verifyAuth, checkSuperAdmin, checkVivacityTeam } from "..
 import { createServiceClient } from "../_shared/supabase-client.ts";
 import { jsonOk, jsonError, handleCors, CommonErrors } from "../_shared/response-helpers.ts";
 
+// Transition rules remain as business logic — only display values are externalised
 const VALID_TRANSITIONS: Record<string, string[]> = {
   active: ["suspended", "closed"],
   suspended: ["active"],
@@ -69,6 +70,21 @@ Deno.serve(async (req: Request) => {
   }
 
   const targetStatus = ACTION_TARGET[action];
+
+  // Validate target status exists in dd_lifecycle_status code table
+  const { data: validStatuses, error: statusError } = await supabase
+    .from("dd_lifecycle_status")
+    .select("value");
+
+  if (statusError) {
+    console.error("Failed to fetch dd_lifecycle_status:", statusError);
+    return CommonErrors.internalError("Failed to validate lifecycle statuses");
+  }
+
+  const validValues = (validStatuses || []).map((s: { value: string }) => s.value);
+  if (!validValues.includes(targetStatus)) {
+    return jsonError(400, "INVALID_STATUS", `Target status '${targetStatus}' is not a valid lifecycle status in the code table.`);
+  }
 
   // Fetch current tenant
   const { data: tenant, error: tenantError } = await supabase
