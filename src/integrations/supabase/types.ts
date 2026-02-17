@@ -35616,12 +35616,16 @@ export type Database = {
           academy_access_enabled: boolean
           academy_max_users: number | null
           academy_subscription_expires_at: string | null
+          access_status: string
           accounting_system: string | null
           acn: string | null
+          archived_at: string | null
           assigned_consultant_user_id: string | null
           billing_status: Database["public"]["Enums"]["billing_status"]
           certificates_issued_count: number
           client_onboarded_at: string | null
+          closed_at: string | null
+          closed_reason: string | null
           compliance_system_enabled: boolean
           consultant_assignment_method: string | null
           courses_enrolled_count: number
@@ -35634,6 +35638,7 @@ export type Database = {
           import_id: number
           is_system_tenant: boolean
           legal_name: string | null
+          lifecycle_status: string
           lms: string | null
           metadata: Json | null
           name: string
@@ -35667,12 +35672,16 @@ export type Database = {
           academy_access_enabled?: boolean
           academy_max_users?: number | null
           academy_subscription_expires_at?: string | null
+          access_status?: string
           accounting_system?: string | null
           acn?: string | null
+          archived_at?: string | null
           assigned_consultant_user_id?: string | null
           billing_status?: Database["public"]["Enums"]["billing_status"]
           certificates_issued_count?: number
           client_onboarded_at?: string | null
+          closed_at?: string | null
+          closed_reason?: string | null
           compliance_system_enabled?: boolean
           consultant_assignment_method?: string | null
           courses_enrolled_count?: number
@@ -35685,6 +35694,7 @@ export type Database = {
           import_id?: number
           is_system_tenant?: boolean
           legal_name?: string | null
+          lifecycle_status?: string
           lms?: string | null
           metadata?: Json | null
           name: string
@@ -35718,12 +35728,16 @@ export type Database = {
           academy_access_enabled?: boolean
           academy_max_users?: number | null
           academy_subscription_expires_at?: string | null
+          access_status?: string
           accounting_system?: string | null
           acn?: string | null
+          archived_at?: string | null
           assigned_consultant_user_id?: string | null
           billing_status?: Database["public"]["Enums"]["billing_status"]
           certificates_issued_count?: number
           client_onboarded_at?: string | null
+          closed_at?: string | null
+          closed_reason?: string | null
           compliance_system_enabled?: boolean
           consultant_assignment_method?: string | null
           courses_enrolled_count?: number
@@ -35736,6 +35750,7 @@ export type Database = {
           import_id?: number
           is_system_tenant?: boolean
           legal_name?: string | null
+          lifecycle_status?: string
           lms?: string | null
           metadata?: Json | null
           name?: string
@@ -46059,6 +46074,7 @@ export type Database = {
         Args: { p_reason?: string; p_splits: Json; p_time_entry_id: string }
         Returns: Json
       }
+      stage_instance_tenant_id: { Args: { p_si_id: number }; Returns: number }
       start_client_package: {
         Args: {
           p_assigned_csc_user_id?: string
@@ -46095,6 +46111,7 @@ export type Database = {
         Args: { p_package_id: number; p_tenant_id: number }
         Returns: boolean
       }
+      tenant_is_writeable: { Args: { p_tenant_id: number }; Returns: boolean }
       tga_get_client_data: { Args: { p_client_id: string }; Returns: Json }
       tga_get_sync_progress: { Args: { p_run_id: string }; Returns: Json }
       tga_get_tenant_data: { Args: { p_tenant_id: number }; Returns: Json }
