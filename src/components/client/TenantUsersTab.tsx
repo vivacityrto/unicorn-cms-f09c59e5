@@ -52,8 +52,8 @@ interface TenantUser {
 
 interface TenantMemberInfo {
   user_id: string;
-  role: 'Admin' | 'General User';
-  joined_at: string;
+  role: string;
+  created_at: string;
   users: TenantUser;
 }
 
@@ -94,13 +94,13 @@ export function TenantUsersTab({ tenantId, tenantName }: TenantUsersTabProps) {
   const fetchMembers = async () => {
     try {
       setLoading(true);
-      // Fetch tenant_members with user details
+      // Fetch tenant_users with user details via junction table
       const { data, error } = await supabase
-        .from('tenant_members')
+        .from('tenant_users')
         .select(`
           user_id,
           role,
-          joined_at,
+          created_at,
           users!inner (
             user_uuid,
             email,
@@ -111,8 +111,7 @@ export function TenantUsersTab({ tenantId, tenantName }: TenantUsersTabProps) {
           )
         `)
         .eq('tenant_id', tenantId)
-        .eq('status', 'active')
-        .order('joined_at', { ascending: false });
+        .order('created_at', { ascending: false });
 
       if (error) throw error;
       setMembers((data || []) as unknown as TenantMemberInfo[]);
@@ -141,13 +140,13 @@ export function TenantUsersTab({ tenantId, tenantName }: TenantUsersTabProps) {
     }
   };
 
-  const handleRoleChange = async (userId: string, newRole: 'Admin' | 'General User') => {
+  const handleRoleChange = async (userId: string, newRole: string) => {
     if (!canChangeRoles) return;
     
     setUpdatingRole(userId);
     try {
       const { error } = await supabase
-        .from('tenant_members')
+        .from('tenant_users')
         .update({ role: newRole })
         .eq('tenant_id', tenantId)
         .eq('user_id', userId);
@@ -170,9 +169,9 @@ export function TenantUsersTab({ tenantId, tenantName }: TenantUsersTabProps) {
     if (!userToRemove) return;
     
     try {
-      // Remove user from tenant_members
+      // Remove user from tenant_users
       const { error } = await supabase
-        .from('tenant_members')
+        .from('tenant_users')
         .delete()
         .eq('tenant_id', tenantId)
         .eq('user_id', userToRemove.user_id);
@@ -389,7 +388,7 @@ export function TenantUsersTab({ tenantId, tenantName }: TenantUsersTabProps) {
                       )}
 
                       <span className="text-xs text-muted-foreground min-w-20">
-                        Joined {formatDate(member.joined_at)}
+                        Added {formatDate(member.created_at)}
                       </span>
 
                       {/* Actions Menu */}
