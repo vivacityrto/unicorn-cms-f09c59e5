@@ -91,17 +91,24 @@ export function TenantUsersTab({ tenantId, tenantName }: TenantUsersTabProps) {
     fetchPendingInvites();
   }, [tenantId]);
 
+  // Map DB role values (parent/child) to readable labels
+  const getRoleLabel = (role: string) => {
+    if (role === 'parent') return 'Primary Contact';
+    if (role === 'child') return 'User';
+    return role;
+  };
+
   const fetchMembers = async () => {
     try {
       setLoading(true);
-      // Fetch tenant_users with user details via junction table
+      // Use explicit FK hint so PostgREST can resolve the join
       const { data, error } = await supabase
         .from('tenant_users')
         .select(`
           user_id,
           role,
           created_at,
-          users!inner (
+          users!tenant_users_user_id_fkey (
             user_uuid,
             email,
             first_name,
@@ -113,7 +120,10 @@ export function TenantUsersTab({ tenantId, tenantName }: TenantUsersTabProps) {
         .eq('tenant_id', tenantId)
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        console.error('tenant_users fetch error:', error);
+        throw error;
+      }
       setMembers((data || []) as unknown as TenantMemberInfo[]);
     } catch (error) {
       console.error('Error fetching members:', error);
@@ -349,23 +359,25 @@ export function TenantUsersTab({ tenantId, tenantName }: TenantUsersTabProps) {
                       {canChangeRoles && member.user_id !== profile?.user_uuid ? (
                         <Select
                           value={member.role}
-                          onValueChange={(value) => handleRoleChange(member.user_id, value as 'Admin' | 'General User')}
+                          onValueChange={(value) => handleRoleChange(member.user_id, value)}
                           disabled={updatingRole === member.user_id}
                         >
-                          <SelectTrigger className="w-32">
-                            <SelectValue />
+                          <SelectTrigger className="w-40">
+                            <SelectValue>
+                              {getRoleLabel(member.role)}
+                            </SelectValue>
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="Admin">
+                            <SelectItem value="parent">
                               <div className="flex items-center gap-2">
                                 <Shield className="h-3 w-3" />
-                                Admin
+                                Primary Contact
                               </div>
                             </SelectItem>
-                            <SelectItem value="General User">
+                            <SelectItem value="child">
                               <div className="flex items-center gap-2">
                                 <UserIcon className="h-3 w-3" />
-                                General User
+                                User
                               </div>
                             </SelectItem>
                           </SelectContent>
@@ -374,15 +386,15 @@ export function TenantUsersTab({ tenantId, tenantName }: TenantUsersTabProps) {
                         <Badge
                           variant="outline"
                           className={
-                            member.role === 'Admin'
-                              ? 'bg-purple-500/10 text-purple-700 border-purple-500/30'
+                            member.role === 'parent'
+                              ? 'bg-primary/10 text-primary border-primary/30'
                               : 'bg-muted'
                           }
                         >
-                          {member.role === 'Admin' ? (
-                            <><Shield className="h-3 w-3 mr-1" /> Admin</>
+                          {member.role === 'parent' ? (
+                            <><Shield className="h-3 w-3 mr-1" /> Primary Contact</>
                           ) : (
-                            <><UserIcon className="h-3 w-3 mr-1" /> General User</>
+                            <><UserIcon className="h-3 w-3 mr-1" /> User</>
                           )}
                         </Badge>
                       )}
