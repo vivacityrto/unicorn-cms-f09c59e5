@@ -49,59 +49,29 @@ export default function TenantMembers() {
         setTenantName(tenantData.name);
       }
 
-      // Fetch members via tenant_users junction table
-      const { data: tenantUsersData, error: tuError } = await supabase
+      // Single join query: tenant_users → users via user_id = user_uuid FK
+      const { data, error } = await supabase
         .from("tenant_users")
-        .select("user_id")
+        .select("user_id, role, users(*)")
         .eq("tenant_id", parseInt(tenantId!));
-
-      if (tuError) throw tuError;
-
-      const userIds = (tenantUsersData || []).map(tu => tu.user_id);
-
-      // Also include users whose users.tenant_id matches (legacy data)
-      const { data: directUsers, error: duError } = await supabase
-        .from("users")
-        .select("*")
-        .eq("tenant_id", parseInt(tenantId!));
-
-      if (duError) throw duError;
-
-      // Fetch users from tenant_users junction
-      let junctionUsers: any[] = [];
-      if (userIds.length > 0) {
-        const { data: jData, error: jError } = await supabase
-          .from("users")
-          .select("*")
-          .in("user_uuid", userIds);
-        if (jError) throw jError;
-        junctionUsers = jData || [];
-      }
-
-      // Merge and deduplicate by user_uuid
-      const seen = new Set<string>();
-      const allUsers: any[] = [];
-      for (const u of [...(directUsers || []), ...junctionUsers]) {
-        if (!seen.has(u.user_uuid)) {
-          seen.add(u.user_uuid);
-          allUsers.push(u);
-        }
-      }
-      const membersData = allUsers;
-      const error = null;
 
       if (error) throw error;
 
-      const formattedMembers: Member[] = (membersData || []).map(user => ({
-        id: user.user_uuid,
-        first_name: user.first_name || "",
-        last_name: user.last_name || "",
-        email: user.email,
-        phone: user.phone || user.mobile_phone || "-",
-        role: user.unicorn_role || "User",
-        status: user.disabled ? "inactive" : "active",
-        created_at: user.created_at
-      }));
+      const formattedMembers: Member[] = (data || [])
+        .filter((tu: any) => tu.users)
+        .map((tu: any) => {
+          const user = tu.users;
+          return {
+            id: user.user_uuid,
+            first_name: user.first_name || "",
+            last_name: user.last_name || "",
+            email: user.email,
+            phone: user.phone || user.mobile_phone || "-",
+            role: user.unicorn_role || tu.role || "User",
+            status: user.disabled ? "inactive" : "active",
+            created_at: user.created_at
+          };
+        });
 
       setMembers(formattedMembers);
     } catch (error: any) {
