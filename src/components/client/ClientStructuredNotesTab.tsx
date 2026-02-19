@@ -22,14 +22,27 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { 
   Plus, StickyNote, Pin, MoreHorizontal, Edit, Trash2, 
   ArrowRight, Tag, Clock, MessageSquare, AlertTriangle, 
-  CheckCircle, Users, FileText, Loader2, Filter, Package
+  CheckCircle, Users, FileText, Loader2, Filter, Package,
+  ListTodo, ChevronDown, ChevronUp
 } from 'lucide-react';
-import { formatDistanceToNow, format } from 'date-fns';
+import { SelectSeparator } from '@/components/ui/select';
+import { formatDistanceToNow, format, fromUnixTime, isValid } from 'date-fns';
 
 interface PackageInfo {
   id: number;
   name: string;
   full_text: string;
+}
+
+interface ClickUpTask {
+  id: string;
+  task_name: string | null;
+  task_content: string | null;
+  date_created_ts: string | null;
+  date_created_text: string | null;
+  comments: unknown;
+  status: string | null;
+  list_name: string | null;
 }
 
 interface ClientStructuredNotesTabProps {
@@ -59,6 +72,11 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
   // Filter state
   const [parentTypeFilter, setParentTypeFilter] = useState<string>('all');
   const [selectedTagFilter, setSelectedTagFilter] = useState<string[]>([]);
+
+  // ClickUp state
+  const [clickupTasks, setClickupTasks] = useState<ClickUpTask[]>([]);
+  const [clickupLoading, setClickupLoading] = useState(false);
+  const [expandedTaskId, setExpandedTaskId] = useState<string | null>(null);
   
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -159,6 +177,29 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
 
     fetchPackageNames();
   }, [notes]);
+
+  // Fetch ClickUp tasks when filter switches to clickup
+  useEffect(() => {
+    if (parentTypeFilter !== 'clickup') return;
+    const fetchClickupTasks = async () => {
+      setClickupLoading(true);
+      try {
+        const { data, error } = await supabase
+          .from('v_clickup_tasks' as never)
+          .select('id, task_name, task_content, date_created_ts, date_created_text, comments, status, list_name')
+          .eq('tenant_id_db', tenantId)
+          .order('date_created_text', { ascending: false });
+        if (error) throw error;
+        setClickupTasks((data as ClickUpTask[]) || []);
+      } catch (err) {
+        console.error('[ClickUp] fetch error:', err);
+        setClickupTasks([]);
+      } finally {
+        setClickupLoading(false);
+      }
+    };
+    fetchClickupTasks();
+  }, [parentTypeFilter, tenantId]);
 
   // Fetch package info when a package note is selected
   useEffect(() => {
@@ -355,49 +396,58 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
                   <SelectItem value="all">All Notes</SelectItem>
                   <SelectItem value="tenant">Client Notes</SelectItem>
                   <SelectItem value="package_instance">Package Notes</SelectItem>
+                  <SelectSeparator />
+                  <SelectItem value="clickup">
+                    <span className="flex items-center gap-2">
+                      <ListTodo className="h-4 w-4" />
+                      ClickUp Tasks
+                    </span>
+                  </SelectItem>
                 </SelectContent>
               </Select>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button variant="outline" size="sm" className="h-9 gap-1.5">
-                    <Tag className="h-4 w-4" />
-                    Tags
-                    {selectedTagFilter.length > 0 && (
-                      <Badge variant="default" className="ml-1 h-5 w-5 rounded-full p-0 flex items-center justify-center text-[10px]">
-                        {selectedTagFilter.length}
-                      </Badge>
-                    )}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-56 p-3 bg-popover" align="end">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm font-medium">Filter by tags</span>
-                    {selectedTagFilter.length > 0 && (
-                      <Button variant="ghost" size="sm" className="h-6 px-2 text-xs" onClick={() => setSelectedTagFilter([])}>
-                        Clear
-                      </Button>
-                    )}
-                  </div>
-                  <div className="space-y-1.5 max-h-[240px] overflow-y-auto">
-                    {availableNoteTags.map(tag => (
-                      <label key={tag.code} className="flex items-center gap-2 rounded-md px-2 py-1.5 hover:bg-muted cursor-pointer text-sm">
-                        <Checkbox
-                          checked={selectedTagFilter.includes(tag.code)}
-                          onCheckedChange={(checked) => {
-                            setSelectedTagFilter(prev =>
-                              checked ? [...prev, tag.code] : prev.filter(t => t !== tag.code)
-                            );
-                          }}
-                        />
-                        {tag.label}
-                      </label>
-                    ))}
-                    {availableNoteTags.length === 0 && (
-                      <p className="text-xs text-muted-foreground py-2 text-center">No tags available</p>
-                    )}
-                  </div>
-                </PopoverContent>
-              </Popover>
+              {parentTypeFilter !== 'clickup' && (
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" size="sm" className="h-9 gap-1.5">
+                      <Tag className="h-4 w-4" />
+                      Tags
+                      {selectedTagFilter.length > 0 && (
+                        <Badge variant="default" className="ml-1 h-5 w-5 rounded-full p-0 flex items-center justify-center text-[10px]">
+                          {selectedTagFilter.length}
+                        </Badge>
+                      )}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-56 p-3 bg-popover" align="end">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-sm font-medium">Filter by tags</span>
+                      {selectedTagFilter.length > 0 && (
+                        <Button variant="ghost" size="sm" className="h-6 px-2 text-xs" onClick={() => setSelectedTagFilter([])}>
+                          Clear
+                        </Button>
+                      )}
+                    </div>
+                    <div className="space-y-1.5 max-h-[240px] overflow-y-auto">
+                      {availableNoteTags.map(tag => (
+                        <label key={tag.code} className="flex items-center gap-2 rounded-md px-2 py-1.5 hover:bg-muted cursor-pointer text-sm">
+                          <Checkbox
+                            checked={selectedTagFilter.includes(tag.code)}
+                            onCheckedChange={(checked) => {
+                              setSelectedTagFilter(prev =>
+                                checked ? [...prev, tag.code] : prev.filter(t => t !== tag.code)
+                              );
+                            }}
+                          />
+                          {tag.label}
+                        </label>
+                      ))}
+                      {availableNoteTags.length === 0 && (
+                        <p className="text-xs text-muted-foreground py-2 text-center">No tags available</p>
+                      )}
+                    </div>
+                  </PopoverContent>
+                </Popover>
+              )}
               <Button size="sm" onClick={handleOpenAdd}>
                 <Plus className="h-4 w-4 mr-1" />
                 Add Note
@@ -406,7 +456,98 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
           </div>
         </CardHeader>
         <CardContent>
-          {filteredNotes.length === 0 ? (
+          {/* ClickUp Tasks Panel */}
+          {parentTypeFilter === 'clickup' ? (
+            <div className="space-y-3">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground mb-1">
+                <ListTodo className="h-4 w-4" />
+                <span>{clickupLoading ? 'Loading...' : `${clickupTasks.length} task${clickupTasks.length !== 1 ? 's' : ''} linked to this tenant`}</span>
+              </div>
+              {clickupLoading ? (
+                <div className="flex items-center justify-center py-12 gap-2 text-muted-foreground">
+                  <Loader2 className="h-5 w-5 animate-spin" />
+                  Loading ClickUp tasks...
+                </div>
+              ) : clickupTasks.length === 0 ? (
+                <div className="text-center py-12 text-muted-foreground">
+                  <ListTodo className="h-10 w-10 mx-auto mb-3 opacity-50" />
+                  <p>No ClickUp tasks linked to this tenant</p>
+                  <p className="text-sm mt-1">Tasks are linked via the ClickUp tenant mapping configuration</p>
+                </div>
+              ) : (
+                <ScrollArea className="h-[500px]">
+                  <div className="space-y-2">
+                    {clickupTasks.map(task => {
+                      const isExpanded = expandedTaskId === task.id;
+                      // date_created_ts is a unix timestamp in ms stored as string
+                      let formattedDate = '—';
+                      if (task.date_created_ts) {
+                        try {
+                          const ts = Number(task.date_created_ts);
+                          const d = isNaN(ts) ? new Date(task.date_created_ts) : fromUnixTime(ts / 1000);
+                          if (isValid(d)) formattedDate = format(d, 'dd MMM yyyy');
+                        } catch { /* fallback */ }
+                      }
+                      const comments = Array.isArray(task.comments) ? task.comments as { comment_text?: string; user?: { username?: string } }[] : [];
+                      return (
+                        <div key={task.id} className="rounded-lg border bg-card">
+                          <div
+                            className="p-4 cursor-pointer hover:bg-muted/30 transition-colors"
+                            onClick={() => setExpandedTaskId(isExpanded ? null : task.id)}
+                          >
+                            <div className="flex items-start justify-between gap-3">
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2 flex-wrap mb-1">
+                                  <span className="font-medium text-sm">{task.task_name || 'Untitled task'}</span>
+                                  {task.list_name && (
+                                    <Badge variant="outline" className="text-xs">{task.list_name}</Badge>
+                                  )}
+                                  {task.status && (
+                                    <Badge variant="secondary" className="text-xs capitalize">{task.status}</Badge>
+                                  )}
+                                  {comments.length > 0 && (
+                                    <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                                      <MessageSquare className="h-3 w-3" />
+                                      {comments.length}
+                                    </span>
+                                  )}
+                                </div>
+                                {task.task_content && (
+                                  <p className={`text-sm text-muted-foreground ${isExpanded ? '' : 'line-clamp-2'}`}>
+                                    {task.task_content}
+                                  </p>
+                                )}
+                                <div className="flex items-center gap-1 mt-2 text-xs text-muted-foreground">
+                                  <Clock className="h-3 w-3" />
+                                  {formattedDate}
+                                </div>
+                              </div>
+                              <div className="shrink-0 text-muted-foreground">
+                                {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                              </div>
+                            </div>
+                          </div>
+                          {isExpanded && comments.length > 0 && (
+                            <div className="border-t px-4 py-3 space-y-2 bg-muted/20">
+                              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Comments</p>
+                              {comments.map((c, i) => (
+                                <div key={i} className="text-sm">
+                                  {c.user?.username && (
+                                    <span className="font-medium mr-1">{c.user.username}:</span>
+                                  )}
+                                  <span className="text-muted-foreground">{c.comment_text || ''}</span>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </ScrollArea>
+              )}
+            </div>
+          ) : filteredNotes.length === 0 ? (
             <div className="text-center py-12 text-muted-foreground">
               <StickyNote className="h-10 w-10 mx-auto mb-3 opacity-50" />
               <p>{notes.length === 0 ? 'No notes yet' : 'No matching notes'}</p>
@@ -564,7 +705,6 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
           )}
         </CardContent>
       </Card>
-
       {/* View Note Dialog */}
       <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
         <DialogContent className="max-w-lg max-h-[85vh] flex flex-col overflow-hidden">
