@@ -1,136 +1,185 @@
 
-## Root Cause Analysis — All Three Blocking Issues Found
+## Edit User Drawer — Corrected Field Mapping
 
-### Issue 1: No Foreign Key — PostgREST Cannot Resolve the Join (PRIMARY CAUSE)
+### What the User Asked For
 
-The `tenant_users` table has **zero foreign key constraints** (confirmed by querying `pg_constraint` — only a primary key and a unique key exist). There is no FK from `tenant_users.user_id` to `public.users(user_uuid)`.
+The drawer should have exactly:
+- **Position** (job title) — editable
+- **Phone** — editable (use `users.phone`, not `mobile_phone`)
+- **Role** — editable (parent/child with readable labels)
+- **Inactive toggle** — the `users.disabled` boolean (no `inactive` column exists; `disabled = true` means inactive)
+- **View Full Profile** button
+- **Login info footer** — read-only: Total Logins + Last Login (from `user_activity`)
 
-PostgREST uses FK constraints to discover relationships. Without one, the query in `TenantUsersTab.tsx`:
-```
-users!inner ( user_uuid, email, first_name, ... )
-```
-...cannot resolve. PostgREST doesn't know `tenant_users.user_id` maps to `users.user_uuid`, so it returns an error or empty set — and since the component only logs but swallows the error, nothing appears in the UI.
+### Confirmed Column Names on `public.users`
 
-### Issue 2: RLS SELECT Policy Blocks SuperAdmin (SECONDARY CAUSE)
+| What user called | Actual column | Type |
+|---|---|---|
+| Phone | `phone` | text, nullable |
+| Position | `job_title` | text, nullable |
+| Inactive | `disabled` | boolean, NOT NULL, default false |
+| Last login | `last_sign_in_at` | timestamptz, nullable (fallback) |
 
-The `tenant_users_select` policy currently reads:
-```sql
-USING ((user_id = auth.uid()) OR is_tenant_parent_safe(tenant_id, auth.uid()))
-```
+Login count and last login date come from `user_activity` (columns: `user_id`, `login_date`) — fetched on drawer open.
 
-Dave (the SuperAdmin) has `auth.uid()` = `551f13b0...`. For tenant 7535:
-- `user_id = auth.uid()` → FALSE (Dave is not in tenant_users for tenant 7535)
-- `is_tenant_parent_safe(7535, Dave's UUID)` → FALSE (Dave has no row in tenant_users for 7535)
-
-**Result: zero rows visible.** The SuperAdmin cannot see any tenant_users records for tenants they are not explicitly a member of.
-
-### Issue 3: Role CHECK Constraint Mismatch (TERTIARY CAUSE)
-
-The `tenant_users` table has a CHECK constraint:
-```sql
-CHECK ((role = ANY (ARRAY['parent'::text, 'child'::text])))
-```
-
-But the component queries and displays roles as `'Admin'` and `'General User'`. The existing data has `role = 'parent'` for Hamid's row. Any role update attempt would fail the constraint. This is a data model mismatch that needs resolving.
+There is no `inactive` column and no `total_logins` column directly on `users`. The `disabled` boolean is what controls active/inactive status.
 
 ---
 
-## The Fix Plan
+## Changes — `src/components/client/TenantUsersTab.tsx` Only
 
-### Fix 1 — Add Foreign Key Constraint (Database Migration)
+### 1. Expand `TenantUser` Interface
 
-Add the FK so PostgREST can resolve the `users!inner` join:
-
-```sql
-ALTER TABLE public.tenant_users
-  ADD CONSTRAINT tenant_users_user_id_fkey
-  FOREIGN KEY (user_id) REFERENCES public.users(user_uuid)
-  ON DELETE CASCADE;
-```
-
-### Fix 2 — Update RLS SELECT Policy to Allow SuperAdmin Access (Database Migration)
-
-Replace the `tenant_users_select` policy to also permit Vivacity staff (using the existing `is_vivacity_staff` and `is_super_admin_safe` helper functions that already exist in the database):
-
-```sql
-DROP POLICY IF EXISTS tenant_users_select ON public.tenant_users;
-
-CREATE POLICY tenant_users_select ON public.tenant_users
-  FOR SELECT TO authenticated
-  USING (
-    user_id = auth.uid()
-    OR is_tenant_parent_safe(tenant_id, auth.uid())
-    OR is_super_admin_safe(auth.uid())
-    OR is_vivacity_staff(auth.uid())
-  );
-```
-
-### Fix 3 — Update Component Query to Use Explicit FK Hint
-
-After the FK is added (named `tenant_users_user_id_fkey`), update the Supabase query in `TenantUsersTab.tsx` to use the explicit FK relationship name, avoiding any ambiguity:
+Add the correct fields from the DB:
 
 ```typescript
-const { data, error } = await supabase
-  .from('tenant_users')
-  .select(`
-    user_id,
-    role,
-    created_at,
-    users!tenant_users_user_id_fkey (
-      user_uuid,
-      email,
-      first_name,
-      last_name,
-      avatar_url,
-      created_at
-    )
-  `)
-  .eq('tenant_id', tenantId)
-  .order('created_at', { ascending: false });
-```
-
-Also add error logging so failures surface in future:
-```typescript
-if (error) {
-  console.error('tenant_users fetch error:', error);
-  throw error;
+interface TenantUser {
+  user_uuid: string;
+  email: string;
+  first_name: string | null;
+  last_name: string | null;
+  avatar_url: string | null;
+  phone: string | null;        // ← correct column name
+  job_title: string | null;
+  disabled: boolean;
+  last_sign_in_at: string | null;
+  created_at: string;
 }
 ```
 
-### Fix 4 — Role Display: Map 'parent'/'child' to Readable Labels
+### 2. Expand `fetchMembers` Query
 
-The existing data uses `role = 'parent'` (from the CHECK constraint). The UI currently tries to match against `'Admin'` and `'General User'`. Rather than breaking the DB constraint, the component should display `parent` as "Primary Contact" and `child` as "User", which reflects the actual meaning:
+Update the select to pull `phone`, `job_title`, `disabled`, and `last_sign_in_at` from the joined `users` table:
 
 ```typescript
-const getRoleLabel = (role: string) => {
-  if (role === 'parent') return 'Primary Contact';
-  if (role === 'child') return 'User';
-  return role;
+users!tenant_users_user_id_fkey (
+  user_uuid,
+  email,
+  first_name,
+  last_name,
+  avatar_url,
+  phone,              ← correct column
+  job_title,
+  disabled,
+  last_sign_in_at,
+  created_at
+)
+```
+
+### 3. Add Drawer Stats State
+
+```typescript
+const [drawerStats, setDrawerStats] = useState<{ totalLogins: number; lastLogin: string | null }>({
+  totalLogins: 0,
+  lastLogin: null,
+});
+```
+
+Fetch on drawer open via a lightweight query to `user_activity`:
+
+```typescript
+const { data: activity } = await supabase
+  .from('user_activity')
+  .select('login_date')
+  .eq('user_id', member.user_id)
+  .order('login_date', { ascending: false });
+
+setDrawerStats({
+  totalLogins: activity?.length ?? 0,
+  lastLogin: activity?.[0]?.login_date ?? member.users.last_sign_in_at ?? null,
+});
+```
+
+### 4. Replace `editForm` State
+
+Remove first_name/last_name. Add phone, job_title, disabled:
+
+```typescript
+const [editForm, setEditForm] = useState({
+  job_title: '',
+  phone: '',
+  role: '',
+  disabled: false,
+});
+```
+
+### 5. Update `openEditDrawer`
+
+Populate the new fields and trigger the login stats fetch:
+
+```typescript
+const openEditDrawer = (member: TenantMemberInfo) => {
+  setEditingMember(member);
+  setEditForm({
+    job_title: member.users.job_title || '',
+    phone: member.users.phone || '',
+    role: member.role,
+    disabled: member.users.disabled,
+  });
+  fetchDrawerStats(member);
 };
 ```
 
-The role-change dropdown will also be updated to use `parent`/`child` values to match the DB constraint.
+### 6. Update `handleSaveEdit`
+
+Save `job_title`, `phone`, and `disabled` to `users` table; `role` to `tenant_users`. Remove first_name/last_name from the update:
+
+```typescript
+await supabase.from('users').update({
+  job_title: editForm.job_title || null,
+  phone: editForm.phone || null,
+  disabled: editForm.disabled,
+}).eq('user_uuid', editingMember.users.user_uuid);
+
+if (editForm.role !== editingMember.role) {
+  await supabase.from('tenant_users').update({ role: editForm.role })
+    .eq('tenant_id', tenantId)
+    .eq('user_id', editingMember.user_id);
+}
+```
+
+### 7. Drawer UI Layout
+
+Replace the two name inputs with the correct fields. Add imports for `Switch`, `ExternalLink`, `useNavigate`, and `Separator`:
+
+```
+┌──────────────────────────────────────────────┐
+│  [Avatar]  Jane Smith                        │
+│            jane@example.com                  │
+│            Member since 3 Jan 2025           │
+├──────────────────────────────────────────────┤
+│  Position (Job Title)  [__________________]  │
+│  Phone                 [__________________]  │
+│  Role                  [Primary Contact ▼]   │
+│  Inactive              [ Toggle ]            │
+├──────────────────────────────────────────────┤
+│  [↗ View Full Profile]                       │
+├──────────────────────────────────────────────┤
+│  ─── Login Information ──────────────────    │
+│  Total Logins    12                          │
+│  Last Login      14 Feb 2026                 │
+└──────────────────────────────────────────────┘
+│  [Cancel]                  [Save Changes]    │
+```
+
+The toggle uses the existing `Switch` component (`import { Switch } from '@/components/ui/switch'`). When `disabled = true` the label shows "Inactive"; when `false` it shows "Active".
+
+The "View Full Profile" button uses `useNavigate` to go to `/user-profile/:uuid`.
+
+The login stats section is a visually separated read-only block — two rows of label + value with a muted text style.
 
 ---
 
-## Files and Changes Summary
+## Files Changed
 
-**Database migrations (2 SQL statements):**
-1. Add FK constraint: `tenant_users.user_id → users.user_uuid`
-2. Update `tenant_users_select` RLS policy to allow SuperAdmin and Vivacity staff
+- **`src/components/client/TenantUsersTab.tsx`** only
+  - Add imports: `Switch`, `ExternalLink`, `Separator`, `useNavigate`
+  - Expand `TenantUser` interface
+  - Update `fetchMembers` select query
+  - Add `drawerStats` state + `fetchDrawerStats` function
+  - Replace `editForm` state (remove names, add phone/job_title/disabled)
+  - Update `openEditDrawer` to populate new fields
+  - Update `handleSaveEdit` to persist correct fields
+  - Replace drawer body UI with the correct 4 fields + "View Full Profile" + login info footer
 
-**`src/components/client/TenantUsersTab.tsx`:**
-- Update join hint from `users!inner` to `users!tenant_users_user_id_fkey`
-- Add visible error logging to `fetchMembers`
-- Update role display to map `parent`/`child` to readable labels
-- Update role-change Select to use `parent`/`child` as values
-
-**No other files change.**
-
----
-
-## Verification Expected After Fix
-
-- Tenant 7535 has 1 row: `user_id = 4c74bb86...` (Hamid Iskeirjeh, hamid@adelaideaviation.com.au, role = parent)
-- After Fix 1 + 2: the network request to `tenant_users?tenant_id=eq.7535&select=user_id,role,created_at,users!...` will return that row
-- After Fix 3: the row will render in the UI showing Hamid with role "Primary Contact"
+No database migrations required. All columns (`phone`, `job_title`, `disabled`, `last_sign_in_at`) already exist on `public.users`.
