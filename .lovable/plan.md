@@ -1,138 +1,92 @@
 
-## Schema Cleanup: `public.users` — Revised Instructions
+## Add ClickUp Tasks to the Admin Notes Tab
 
-### Summary of Your Instructions
+### What the User Wants
 
-| Column | Your Instruction |
-|---|---|
-| `title` | **Keep** — stores Mr/Mrs/Miss honorifics |
-| `phone` | **Drop** — its 1 row moved to `mobile_phone` first (it was actually a mobile number) |
-| `phone_number` | **Keep** — 35 rows, this is the real phone field |
-| `mobile_phone` | **Keep** — leave as-is |
-| `is_team` | **Keep** — but update `user_type` to `Vivacity Team` for those 30 rows where `is_team = true` (currently all show `Client Child`, which is wrong) |
-| `profile_photo` | **Change type** from `boolean` to `text` so it can store an image file path/URL |
-| `avatar_url` | **Keep** — separate concept, leave alone |
-| `head_office_address` | **Drop** — tenant field |
-| `notes` | **Drop** — tenant field |
-| `TS` | **Drop** |
-| `biography` | **Merge into `bio` then drop** |
-| `linkedin` | **Merge into `linkedin_url` then drop** |
-| `last_new_client_tasks_email` | **Drop** — no code references in `src/` |
-| `manager_id` (bigint) | **Drop** — old numeric FK, replaced by `manager_uuid` (UUID). The `manager_id` on other tables like `package_instances` is a different column with a UUID type — not affected |
+The screenshot shows the admin-side **Notes tab** on the tenant detail page (`/tenant/7530`), which renders `ClientStructuredNotesTab`. The "All Notes" filter dropdown (top-right of the Structured Notes card) currently has:
+- All Notes
+- Client Notes
+- Package Notes
 
-### Confirming the `is_team` Situation
+The user wants a **"ClickUp Tasks"** option added to that dropdown. When selected, instead of filtering notes, it replaces the notes list with a ClickUp tasks panel showing: `task_name`, `task_content`, `date_created` (formatted from `date_created_ts`), and `comments`.
 
-All 30 rows where `is_team = true` currently have `user_type = Client Child` and `unicorn_role = User`. These users have no `tenant_id`, which matches Vivacity internal team members. The migration will update them to `user_type = Vivacity Team` since that is the correct enum value (confirmed from your existing data: `Vivacity Team`, `Client Parent`, `Client Child`).
+### File Changed
 
-### Confirming `profile_photo`
-
-Currently a boolean (`false` = 403 rows, `true` = 22 rows, null = 33 rows). Changing to `text` so it can store a storage path or public URL — similar to `avatar_url`. The 22 rows with `true` will become `NULL` as there is no URL to preserve (the boolean only indicated whether a photo existed, not where it was). The 403 false rows also become `NULL`.
+**`src/components/client/ClientStructuredNotesTab.tsx`** — single file, no new files required.
 
 ---
 
-## Migration Operations
+### What Changes Inside the Component
 
-### Phase A — Data Migrations (run before any drops)
+#### 1. Add ClickUp interface and state
 
-```sql
--- 1. Move the 1 phone row into mobile_phone where mobile_phone is null
-UPDATE public.users
-SET mobile_phone = phone
-WHERE mobile_phone IS NULL AND phone IS NOT NULL;
+Add a `ClickUpTask` interface and three new state variables:
 
--- 2. Merge biography into bio where bio is null
-UPDATE public.users
-SET bio = biography
-WHERE bio IS NULL AND biography IS NOT NULL;
+```typescript
+interface ClickUpTask {
+  id: string;
+  task_name: string | null;
+  task_content: string | null;
+  date_created_ts: string | null;
+  date_created_text: string | null;
+  comments: unknown;
+  status: string | null;
+  list_name: string | null;
+}
 
--- 3. Merge linkedin into linkedin_url where linkedin_url is null
-UPDATE public.users
-SET linkedin_url = linkedin
-WHERE linkedin_url IS NULL AND linkedin IS NOT NULL;
-
--- 4. Update user_type for is_team=true rows
-UPDATE public.users
-SET user_type = 'Vivacity Team'
-WHERE is_team = true AND user_type = 'Client Child';
+const [clickupTasks, setClickupTasks] = useState<ClickUpTask[]>([]);
+const [clickupLoading, setClickupLoading] = useState(false);
+const [expandedTaskId, setExpandedTaskId] = useState<string | null>(null);
 ```
 
-### Phase B — Schema Changes
+#### 2. Add fetch function + trigger
 
-```sql
--- Change profile_photo from boolean to text
-ALTER TABLE public.users
-  ALTER COLUMN profile_photo DROP DEFAULT,
-  ALTER COLUMN profile_photo TYPE text USING NULL;
+A `fetchClickupTasks` function that queries `v_clickup_tasks` filtered by `tenant_id_db = tenantId`, ordered by `date_created_text` descending. A `useEffect` fires it when `parentTypeFilter === 'clickup'`.
 
--- Drop all confirmed columns
-ALTER TABLE public.users
-  DROP COLUMN IF EXISTS phone,
-  DROP COLUMN IF EXISTS head_office_address,
-  DROP COLUMN IF EXISTS notes,
-  DROP COLUMN IF EXISTS "TS",
-  DROP COLUMN IF EXISTS biography,
-  DROP COLUMN IF EXISTS linkedin,
-  DROP COLUMN IF EXISTS last_new_client_tasks_email,
-  DROP COLUMN IF EXISTS manager_id,
-  -- Also drop the previously agreed empty org-level columns
-  DROP COLUMN IF EXISTS rto_name,
-  DROP COLUMN IF EXISTS email_address,
-  DROP COLUMN IF EXISTS street_number_and_name,
-  DROP COLUMN IF EXISTS suburb,
-  DROP COLUMN IF EXISTS postcode,
-  DROP COLUMN IF EXISTS acn,
-  DROP COLUMN IF EXISTS abn,
-  DROP COLUMN IF EXISTS website,
-  DROP COLUMN IF EXISTS lms,
-  DROP COLUMN IF EXISTS accounting_system,
-  DROP COLUMN IF EXISTS training_facility_address,
-  DROP COLUMN IF EXISTS po_box_address,
-  DROP COLUMN IF EXISTS legal_name,
-  DROP COLUMN IF EXISTS keap_url,
-  DROP COLUMN IF EXISTS clickup_url,
-  DROP COLUMN IF EXISTS accountable_person,
-  DROP COLUMN IF EXISTS street_address,
-  DROP COLUMN IF EXISTS po_box,
-  DROP COLUMN IF EXISTS rto_id,
-  DROP COLUMN IF EXISTS cricos_id,
-  DROP COLUMN IF EXISTS registration_end_date;
+#### 3. Extend the dropdown
+
+Change `parentTypeFilter` type handling to include `'clickup'`. Add a visual separator and new item in the Select:
+
+```
+All Notes        ← existing
+Client Notes     ← existing
+Package Notes    ← existing
+─────────────── separator
+ClickUp Tasks    ← new, with ListTodo icon
 ```
 
----
+The filter logic already gates on `parentTypeFilter !== 'clickup'` so regular notes won't be affected.
 
-## Code Changes Required
+#### 4. ClickUp tasks panel
 
-### `src/pages/TenantDetail.tsx`
+When `parentTypeFilter === 'clickup'`, instead of the notes `ScrollArea`, render a ClickUp tasks panel inside the same `CardContent`:
 
-This file reads many of the dropped columns from the `users` table. The contact card section maps fields like `head_office_address`, `rto_id`, `abn`, `acn`, `street_number_and_name`, `suburb`, `postcode`, `lms`, `accounting_system`, `training_facility_address`, `po_box_address`, `cricos_id`, `keap_url`, `clickup_url`, `accountable_person`, `registration_end_date`, `rto_name`, `email_address` (line ~323–353). Since all these columns had no data anyway (all returned empty strings), their removal from the mapping just means those fields in the `ClientData` interface return `""` as a constant rather than reading from the database. The `select("*")` call picks these up automatically — after the columns are dropped they simply won't be in the response. The `ClientData` interface fields themselves can stay as-is (they'll just always be empty), so no code change is strictly required here. However, `phone: userData.phone` needs to change to `phone: userData.mobile_phone || ""` since `phone` is being dropped.
+- **Loading state**: spinner with "Loading ClickUp tasks..."
+- **Empty state**: message explaining no tasks are linked to this tenant
+- **Task list**: each task in a card-style row showing:
+  - Task name (bold) + List name badge
+  - `date_created_ts` formatted as `dd MMM yyyy` using `date-fns`
+  - Status badge
+  - Content snippet (2-line clamp)
+  - Chevron to expand and show full content + comments
+  - **Comments section** (expanded): iterates the `comments` JSON array showing commenter name and comment text
 
-### `src/pages/TeamSettings.tsx`
+#### 5. Import additions
 
-Line 105 selects `mobile_phone, rto_name, email, abn, acn, website, lms, accounting_system, street_address, state, legal_name` from `users`. After the migration, `rto_name`, `abn`, `acn`, `website`, `lms`, `accounting_system`, `legal_name` no longer exist. The select needs to be trimmed to only include remaining columns: `mobile_phone, email, street_address, state`.
-
-### `src/hooks/useClientActingUser.ts`
-
-Line ~94 selects `phone, mobile_phone` from `users`. After the migration `phone` no longer exists — remove it from the select. The `ActingUserProfile` interface has a `phone` field — this should be renamed to `mobile_phone` or removed since `phone_number` is now the landline and `mobile_phone` is the mobile.
-
----
-
-## What Is NOT Changing
-
-- `phone_number` — kept as-is (35 rows, your real phone field)
-- `mobile_phone` — kept as-is
-- `title` — kept (honorifics)
-- `is_team` — kept (data updated to correct `user_type`)
-- `avatar_url` — unchanged
-- `tenant_name` — kept for audit purposes (per earlier instruction)
-- `notes` on other tables (EOS, time logs, etc.) — those are different columns on different tables, not affected
-- `manager_id` on `package_instances` and `memberships` tables — different tables, UUID type, not touched
-- All `tenants` table columns — deferred as previously agreed
+- `ListTodo` and `ChevronDown`/`ChevronUp` from `lucide-react`
+- `SelectSeparator` from `@/components/ui/select`
 
 ---
 
-## Files Changed
+### Behaviour Details
 
-1. **Database migration** — data merges + column drops + `profile_photo` type change + `user_type` update for `is_team=true` rows
-2. **`src/pages/TenantDetail.tsx`** — change `userData.phone` to `userData.mobile_phone` on line ~328
-3. **`src/pages/TeamSettings.tsx`** — remove dropped columns from the select query on line ~105
-4. **`src/hooks/useClientActingUser.ts`** — remove `phone` from the select query
+- Selecting "ClickUp Tasks" does NOT affect the Add Note button (it stays visible — ClickUp tasks are read-only, no add action is relevant)
+- The count badge on "Structured Notes" still shows internal notes count when `clickup` is selected (it naturally filters to 0 but the heading badge will show ClickUp task count separately in the panel header)
+- The Tags filter Popover is hidden when ClickUp mode is active (it has no meaning for ClickUp data)
+- The "Add Note" button remains visible at all times (ClickUp panel is read-only, adding notes still makes sense)
+
+---
+
+### No Schema Changes Required
+
+The `v_clickup_tasks` view already exists with the required columns: `id`, `task_name`, `task_content`, `date_created_ts`, `date_created_text`, `comments`, `status`, `list_name`, `tenant_id_db`.
