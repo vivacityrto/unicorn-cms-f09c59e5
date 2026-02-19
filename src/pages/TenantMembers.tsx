@@ -49,11 +49,46 @@ export default function TenantMembers() {
         setTenantName(tenantData.name);
       }
 
-      // Fetch members
-      const { data: membersData, error } = await supabase
+      // Fetch members via tenant_users junction table
+      const { data: tenantUsersData, error: tuError } = await supabase
+        .from("tenant_users")
+        .select("user_id")
+        .eq("tenant_id", parseInt(tenantId!));
+
+      if (tuError) throw tuError;
+
+      const userIds = (tenantUsersData || []).map(tu => tu.user_id);
+
+      // Also include users whose users.tenant_id matches (legacy data)
+      const { data: directUsers, error: duError } = await supabase
         .from("users")
         .select("*")
         .eq("tenant_id", parseInt(tenantId!));
+
+      if (duError) throw duError;
+
+      // Fetch users from tenant_users junction
+      let junctionUsers: any[] = [];
+      if (userIds.length > 0) {
+        const { data: jData, error: jError } = await supabase
+          .from("users")
+          .select("*")
+          .in("user_uuid", userIds);
+        if (jError) throw jError;
+        junctionUsers = jData || [];
+      }
+
+      // Merge and deduplicate by user_uuid
+      const seen = new Set<string>();
+      const allUsers: any[] = [];
+      for (const u of [...(directUsers || []), ...junctionUsers]) {
+        if (!seen.has(u.user_uuid)) {
+          seen.add(u.user_uuid);
+          allUsers.push(u);
+        }
+      }
+      const membersData = allUsers;
+      const error = null;
 
       if (error) throw error;
 
