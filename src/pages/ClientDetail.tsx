@@ -74,6 +74,7 @@ export default function ClientDetail() {
   const [profileHasChanges, setProfileHasChanges] = useState(false);
   const [profileSaving, setProfileSaving] = useState(false);
   const [triggerProfileSave, setTriggerProfileSave] = useState<(() => void) | null>(null);
+  const [userCount, setUserCount] = useState<number | null>(null);
 
   const tenantIdNum = tenantId ? parseInt(tenantId) : null;
   
@@ -316,7 +317,7 @@ export default function ClientDetail() {
                 className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none bg-transparent px-1 pb-3"
               >
                 <Users className="h-4 w-4 mr-2" />
-                Users
+                Users{userCount !== null ? ` (${userCount})` : ''}
               </TabsTrigger>
               <TabsTrigger
                 value="notes"
@@ -451,7 +452,7 @@ export default function ClientDetail() {
           </TabsContent>
 
           <TabsContent value="users" className="mt-0">
-            <TenantUsersTab tenantId={tenantIdNum!} tenantName={tenant.name} />
+            <TenantUsersTab tenantId={tenantIdNum!} tenantName={tenant.name} onCountChange={setUserCount} />
           </TabsContent>
 
           <TabsContent value="notes" className="mt-0">
