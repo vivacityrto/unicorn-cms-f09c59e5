@@ -6728,6 +6728,7 @@ export type Database = {
           task_id: string | null
           task_name: string | null
           task_type: string | null
+          tenant_id: number | null
           time_estimate: string | null
           time_estimate_rolled_up: string | null
           time_in_status: string | null
@@ -6773,6 +6774,7 @@ export type Database = {
           task_id?: string | null
           task_name?: string | null
           task_type?: string | null
+          tenant_id?: number | null
           time_estimate?: string | null
           time_estimate_rolled_up?: string | null
           time_in_status?: string | null
@@ -6818,6 +6820,7 @@ export type Database = {
           task_id?: string | null
           task_name?: string | null
           task_type?: string | null
+          tenant_id?: number | null
           time_estimate?: string | null
           time_estimate_rolled_up?: string | null
           time_in_status?: string | null
@@ -41422,6 +41425,58 @@ export type Database = {
           token_status?: never
           updated_at?: string | null
           user_id?: string | null
+        }
+        Relationships: []
+      }
+      v_clickup_tasks: {
+        Row: {
+          assigned_comments: Json | null
+          assignees: Json | null
+          attachments: Json | null
+          checklists: Json | null
+          comments: Json | null
+          date_created: string | null
+          date_created_at: string | null
+          date_created_text: string | null
+          date_created_ts: string | null
+          date_imported: string | null
+          due_date: string | null
+          due_date_at: string | null
+          due_date_text: string | null
+          due_date_ts: string | null
+          folder_name_path: string | null
+          id: string | null
+          inserted_at: string | null
+          list_name: string | null
+          package_id: number | null
+          parent_id: string | null
+          priority: string | null
+          rolled_up_time: string | null
+          rolled_up_time_minutes: number | null
+          rolled_up_time_text: string | null
+          space_name: string | null
+          start_date: string | null
+          start_date_at: string | null
+          start_date_text: string | null
+          start_date_ts: string | null
+          status: string | null
+          tags: Json | null
+          task_content: string | null
+          task_custom_id: string | null
+          task_id: string | null
+          task_name: string | null
+          tenant_id: number | null
+          tenant_id_db: number | null
+          time_estimate_any: string | null
+          time_estimated: string | null
+          time_estimated_minutes: number | null
+          time_estimated_text: string | null
+          time_spent: string | null
+          time_spent_any: string | null
+          time_spent_minutes: number | null
+          time_spent_text: string | null
+          unicorn_id: number | null
+          updated_at: string | null
         }
         Relationships: []
       }
