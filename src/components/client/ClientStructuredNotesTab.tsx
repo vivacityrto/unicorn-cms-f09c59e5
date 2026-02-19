@@ -527,15 +527,24 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
                               </div>
                             </div>
                           </div>
-                          {isExpanded && comments.length > 0 && (
+                          {comments.length > 0 && (
                             <div className="border-t px-4 py-3 space-y-2 bg-muted/20">
-                              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Comments</p>
+                              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                                Comments ({comments.length})
+                              </p>
                               {comments.map((c, i) => (
-                                <div key={i} className="text-sm">
-                                  {c.user?.username && (
-                                    <span className="font-medium mr-1">{c.user.username}:</span>
-                                  )}
-                                  <span className="text-muted-foreground">{c.comment_text || ''}</span>
+                                <div key={i} className="flex items-start gap-2 text-sm">
+                                  <div className="shrink-0 mt-0.5">
+                                    <div className="h-5 w-5 rounded-full bg-muted flex items-center justify-center text-[10px] font-medium uppercase text-muted-foreground">
+                                      {c.user?.username?.[0] ?? '?'}
+                                    </div>
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    {c.user?.username && (
+                                      <span className="font-medium text-foreground mr-1">{c.user.username}</span>
+                                    )}
+                                    <span className="text-muted-foreground">{c.comment_text || ''}</span>
+                                  </div>
                                 </div>
                               ))}
                             </div>
