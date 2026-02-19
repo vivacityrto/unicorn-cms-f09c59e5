@@ -6,6 +6,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { 
   Select,
   SelectContent,
@@ -23,6 +25,14 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
+  SheetFooter,
+} from '@/components/ui/sheet';
 import { 
   UserPlus, 
   Shield, 
@@ -30,12 +40,14 @@ import {
   Mail, 
   Clock,
   MoreVertical,
-  Trash2
+  Trash2,
+  Pencil,
 } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { toast } from 'sonner';
@@ -87,7 +99,13 @@ export function TenantUsersTab({ tenantId, tenantName, onCountChange }: TenantUs
   const canManageUsers = isSuperAdmin() || hasTenantAdmin(tenantId);
   const canChangeRoles = isSuperAdmin() || hasTenantAdmin(tenantId);
 
+  // Edit drawer state
+  const [editingMember, setEditingMember] = useState<TenantMemberInfo | null>(null);
+  const [editForm, setEditForm] = useState({ first_name: '', last_name: '', role: '' });
+  const [savingEdit, setSavingEdit] = useState(false);
+
   useEffect(() => {
+
     fetchMembers();
     fetchPendingInvites();
   }, [tenantId]);
@@ -198,6 +216,61 @@ export function TenantUsersTab({ tenantId, tenantName, onCountChange }: TenantUs
       toast.error('Failed to remove user');
     } finally {
       setUserToRemove(null);
+    }
+  };
+
+  const openEditDrawer = (member: TenantMemberInfo) => {
+    setEditingMember(member);
+    setEditForm({
+      first_name: member.users.first_name || '',
+      last_name: member.users.last_name || '',
+      role: member.role,
+    });
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editingMember) return;
+    setSavingEdit(true);
+    try {
+      // Update name on users table
+      const { error: userError } = await supabase
+        .from('users')
+        .update({
+          first_name: editForm.first_name,
+          last_name: editForm.last_name,
+        })
+        .eq('user_uuid', editingMember.users.user_uuid);
+
+      if (userError) throw userError;
+
+      // Update role on tenant_users
+      if (editForm.role !== editingMember.role) {
+        const { error: roleError } = await supabase
+          .from('tenant_users')
+          .update({ role: editForm.role })
+          .eq('tenant_id', tenantId)
+          .eq('user_id', editingMember.user_id);
+
+        if (roleError) throw roleError;
+      }
+
+      setMembers(prev => prev.map(m =>
+        m.user_id === editingMember.user_id
+          ? {
+              ...m,
+              role: editForm.role,
+              users: { ...m.users, first_name: editForm.first_name, last_name: editForm.last_name },
+            }
+          : m
+      ));
+      onCountChange?.(members.length);
+      toast.success('User updated successfully');
+      setEditingMember(null);
+    } catch (error) {
+      console.error('Error saving user edit:', error);
+      toast.error('Failed to save changes');
+    } finally {
+      setSavingEdit(false);
     }
   };
 
@@ -338,7 +411,8 @@ export function TenantUsersTab({ tenantId, tenantName, onCountChange }: TenantUs
                 return (
                   <div
                     key={member.user_id}
-                    className="flex items-center justify-between p-4 hover:bg-muted/50 transition-colors"
+                    className="flex items-center justify-between p-4 hover:bg-muted/50 transition-colors cursor-pointer"
+                    onClick={() => canManageUsers && openEditDrawer(member)}
                   >
                     <div className="flex items-center gap-3">
                       <Avatar className="h-10 w-10">
@@ -357,7 +431,7 @@ export function TenantUsersTab({ tenantId, tenantName, onCountChange }: TenantUs
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-3" onClick={e => e.stopPropagation()}>
                       {/* Role Badge/Selector */}
                       {canChangeRoles && member.user_id !== profile?.user_uuid ? (
                         <Select
@@ -407,7 +481,7 @@ export function TenantUsersTab({ tenantId, tenantName, onCountChange }: TenantUs
                       </span>
 
                       {/* Actions Menu */}
-                      {canManageUsers && member.user_id !== profile?.user_uuid && (
+                      {canManageUsers && (
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
                             <Button variant="ghost" size="icon">
@@ -415,13 +489,22 @@ export function TenantUsersTab({ tenantId, tenantName, onCountChange }: TenantUs
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
-                            <DropdownMenuItem
-                              className="text-destructive"
-                              onClick={() => setUserToRemove(member)}
-                            >
-                              <Trash2 className="h-4 w-4 mr-2" />
-                              Remove from tenant
+                            <DropdownMenuItem onClick={() => openEditDrawer(member)}>
+                              <Pencil className="h-4 w-4 mr-2" />
+                              Edit User
                             </DropdownMenuItem>
+                            {member.user_id !== profile?.user_uuid && (
+                              <>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem
+                                  className="text-destructive"
+                                  onClick={() => setUserToRemove(member)}
+                                >
+                                  <Trash2 className="h-4 w-4 mr-2" />
+                                  Remove from tenant
+                                </DropdownMenuItem>
+                              </>
+                            )}
                           </DropdownMenuContent>
                         </DropdownMenu>
                       )}
@@ -433,6 +516,92 @@ export function TenantUsersTab({ tenantId, tenantName, onCountChange }: TenantUs
           )}
         </CardContent>
       </Card>
+
+      {/* Edit User Drawer */}
+      <Sheet open={!!editingMember} onOpenChange={(open) => !open && setEditingMember(null)}>
+        <SheetContent className="w-[420px] sm:w-[480px]">
+          <SheetHeader>
+            <SheetTitle>Edit User</SheetTitle>
+            <SheetDescription>
+              Update details for {editingMember?.users?.first_name} {editingMember?.users?.last_name}
+            </SheetDescription>
+          </SheetHeader>
+
+          <div className="space-y-5 py-6">
+            {/* Avatar preview */}
+            <div className="flex items-center gap-4">
+              <Avatar className="h-14 w-14">
+                <AvatarImage src={editingMember?.users?.avatar_url || undefined} />
+                <AvatarFallback>
+                  {editingMember && getInitials(editingMember.users.first_name, editingMember.users.last_name, editingMember.users.email)}
+                </AvatarFallback>
+              </Avatar>
+              <div>
+                <p className="font-medium">{editingMember?.users?.email}</p>
+                <p className="text-sm text-muted-foreground">Member since {editingMember && formatDate(editingMember.created_at)}</p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="edit-first-name">First Name</Label>
+                <Input
+                  id="edit-first-name"
+                  value={editForm.first_name}
+                  onChange={e => setEditForm(f => ({ ...f, first_name: e.target.value }))}
+                  placeholder="First name"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-last-name">Last Name</Label>
+                <Input
+                  id="edit-last-name"
+                  value={editForm.last_name}
+                  onChange={e => setEditForm(f => ({ ...f, last_name: e.target.value }))}
+                  placeholder="Last name"
+                />
+              </div>
+            </div>
+
+            {canChangeRoles && editingMember?.user_id !== profile?.user_uuid && (
+              <div className="space-y-2">
+                <Label>Role</Label>
+                <Select
+                  value={editForm.role}
+                  onValueChange={value => setEditForm(f => ({ ...f, role: value }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue>{getRoleLabel(editForm.role)}</SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="parent">
+                      <div className="flex items-center gap-2">
+                        <Shield className="h-3 w-3" />
+                        Primary Contact
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="child">
+                      <div className="flex items-center gap-2">
+                        <UserIcon className="h-3 w-3" />
+                        User
+                      </div>
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+          </div>
+
+          <SheetFooter className="gap-2">
+            <Button variant="outline" onClick={() => setEditingMember(null)}>
+              Cancel
+            </Button>
+            <Button onClick={handleSaveEdit} disabled={savingEdit}>
+              {savingEdit ? 'Saving…' : 'Save Changes'}
+            </Button>
+          </SheetFooter>
+        </SheetContent>
+      </Sheet>
 
       {/* Invite Dialog */}
       <TenantInviteDialog
