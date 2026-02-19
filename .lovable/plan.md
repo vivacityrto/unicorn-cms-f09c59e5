@@ -1,25 +1,44 @@
 
+## Simplify TenantMembers.tsx — Junction Table Only
 
-## Fix All Unmapped unicorn1.users Records — COMPLETED
+### What the current code does (wrong)
+The `fetchData` function makes three separate queries:
+1. `tenant_users` to get `user_id`s
+2. `users` filtered by `users.tenant_id` (legacy — to be removed)
+3. `users` filtered by `user_uuid IN (...)` (junction users)
 
-### What Was Done
+Then it merges and deduplicates the two sets. This is unnecessarily complex and the `users.tenant_id` path is being dropped per your instruction.
 
-| Step | Action | Result |
-|------|--------|--------|
-| 1 | Map remaining users by email | ✅ ~331 mapped via `mapped_user_uuid` |
-| 2 | Create public.users for 30 with no email match | ⏭️ Skipped — all 30 have `u2_tenant_id` values that don't exist in `public.tenants` |
-| 3 | Map newly created users | ⏭️ Skipped (Step 2 skipped) |
-| 4 | Sync archived/disabled status | ✅ Done |
-| 5 | Insert missing tenant_users records | ✅ Done |
+### What the new code will do (correct)
+A single query to `tenant_users` using Supabase's relational join syntax to pull user data in one call:
 
-### Final Numbers
+```
+tenant_users
+  .select("user_id, role, users(*)")
+  .eq("tenant_id", <tenantId>)
+```
 
-| Metric | Count |
-|--------|-------|
-| Total mapped Client users | 370 |
-| Still unmapped (no matching tenant) | 30 |
-| tenant_users with role=parent | 369 |
+This joins `tenant_users.user_id = users.user_uuid` via the foreign key, returning the user profile alongside the junction-table role — no merging or deduplication needed.
 
-### The 30 Unmapped Users
+### Technical Details
 
-These 30 users have `u2_tenant_id` values (43, 111, 157, 233, 238, 276, 310, 381–409) that **do not exist** in `public.tenants`. Their tenants were never migrated to Unicorn 2.0. They cannot be inserted into `public.users` due to the FK constraint on `tenant_id`. These would need their tenants created first if they need to be included.
+**File to edit:** `src/pages/TenantMembers.tsx`
+
+**Changes to `fetchData`:**
+- Remove the `directUsers` query (the `users.tenant_id` lookup)
+- Remove the `junctionUsers` two-step fetch
+- Remove the deduplication logic
+- Replace with a single query:
+  ```typescript
+  const { data, error } = await supabase
+    .from("tenant_users")
+    .select("user_id, role, users(*)")
+    .eq("tenant_id", parseInt(tenantId!));
+  ```
+- Map the result directly: each row has a `users` sub-object (the joined user record) and `role` from the junction table
+- Use `tu.users.unicorn_role || tu.role || "User"` for the member role display, preferring the user's own role field, falling back to the junction table role
+
+### What stays the same
+- All UI rendering (table, badges, search, avatar) is unchanged
+- Tenant name fetch is unchanged
+- Error handling and loading state are unchanged
