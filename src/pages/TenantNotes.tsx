@@ -3,7 +3,7 @@ import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Plus, StickyNote, Calendar as CalendarComponent, X, Upload, Flag, Play, Square, Timer, CheckCircle2, Clock, Building2, Search, ArrowUpDown, Loader2 } from "lucide-react";
+import { ArrowLeft, Plus, StickyNote, Calendar as CalendarComponent, X, Upload, Flag, Play, Square, Timer, CheckCircle2, Clock, Building2, Search, ArrowUpDown, Loader2, ExternalLink, MessageSquare, ListTodo } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -19,6 +19,19 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
 import { useNotes, Note, filterNotes, formatDuration, formatElapsedTime } from "@/hooks/useNotes";
+
+interface ClickUpTask {
+  id: string;
+  task_name: string | null;
+  task_content: string | null;
+  date_created_text: string | null;
+  date_created_ts: string | null;
+  comments: unknown;
+  status: string | null;
+  priority: string | null;
+  list_name: string | null;
+  space_name: string | null;
+}
 
 export default function TenantNotes() {
   const { tenantId } = useParams();
@@ -64,6 +77,10 @@ export default function TenantNotes() {
   const [searchQuery, setSearchQuery] = useState("");
   const [sortPriority, setSortPriority] = useState<string>("all");
   const [saving, setSaving] = useState(false);
+  const [noteSource, setNoteSource] = useState<'notes' | 'clickup'>("notes");
+  const [clickupTasks, setClickupTasks] = useState<ClickUpTask[]>([]);
+  const [clickupLoading, setClickupLoading] = useState(false);
+  const [expandedTaskId, setExpandedTaskId] = useState<string | null>(null);
 
   // Filter notes
   const filteredNotes = filterNotes(notes, { searchQuery, priority: sortPriority }).sort((a, b) => {
@@ -145,6 +162,12 @@ export default function TenantNotes() {
     }
   }, [parsedTenantId, urlPackageId]);
 
+  useEffect(() => {
+    if (noteSource === 'clickup' && parsedTenantId) {
+      fetchClickupTasks();
+    }
+  }, [noteSource, parsedTenantId]);
+
   const getCurrentUser = async () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (user) {
@@ -163,6 +186,24 @@ export default function TenantNotes() {
       setVivacityTeam(data || []);
     } catch (error: any) {
       console.error("Error fetching team:", error);
+    }
+  };
+
+  const fetchClickupTasks = async () => {
+    setClickupLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('v_clickup_tasks')
+        .select('id, task_name, task_content, date_created_text, date_created_ts, comments, status, priority, list_name, space_name')
+        .eq('tenant_id_db', parsedTenantId)
+        .order('date_created_text', { ascending: false });
+      if (error) throw error;
+      setClickupTasks((data || []) as ClickUpTask[]);
+    } catch (err: any) {
+      console.error('Error fetching ClickUp tasks:', err);
+      setClickupTasks([]);
+    } finally {
+      setClickupLoading(false);
     }
   };
 
@@ -351,39 +392,69 @@ export default function TenantNotes() {
             </div>
           </div>
           <div className="flex items-center gap-4">
-            <Badge variant="outline" className="bg-orange-50 text-orange-700 border-orange-200 text-[0.8rem] py-1.5 px-3 rounded-full font-medium gap-2">
-              <Timer className="h-4 w-4" />
-              <span>Package used: {formatDuration(totalDuration)}</span>
-            </Badge>
-            <Button onClick={() => setIsAddDialogOpen(true)} className="gap-2"><Plus className="h-4 w-4" />Add Note</Button>
+            {noteSource === 'notes' && (
+              <Badge variant="outline" className="bg-orange-50 text-orange-700 border-orange-200 text-[0.8rem] py-1.5 px-3 rounded-full font-medium gap-2">
+                <Timer className="h-4 w-4" />
+                <span>Package used: {formatDuration(totalDuration)}</span>
+              </Badge>
+            )}
+            {noteSource === 'notes' && (
+              <Button onClick={() => setIsAddDialogOpen(true)} className="gap-2"><Plus className="h-4 w-4" />Add Note</Button>
+            )}
           </div>
         </div>
 
-        {/* Search and Sort */}
+        {/* Source + Search + Sort bar */}
         <div className="flex flex-col md:flex-row gap-4">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input placeholder="Search keyword or by name..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="pl-10 h-[48px]" />
-          </div>
-          <Select value={sortPriority} onValueChange={setSortPriority}>
-            <SelectTrigger className="w-full md:w-[220px] h-[48px]">
+          {/* Source selector */}
+          <Select value={noteSource} onValueChange={(v) => setNoteSource(v as 'notes' | 'clickup')}>
+            <SelectTrigger className="w-full md:w-[200px] h-[48px]">
               <div className="flex items-center gap-2">
-                <ArrowUpDown className="h-4 w-4 text-muted-foreground" />
-                <SelectValue placeholder="All Priorities" />
+                {noteSource === 'notes' ? <StickyNote className="h-4 w-4 text-muted-foreground" /> : <ListTodo className="h-4 w-4 text-muted-foreground" />}
+                <SelectValue />
               </div>
             </SelectTrigger>
             <SelectContent className="bg-background">
-              <SelectItem value="all">All Priorities</SelectItem>
-              <SelectSeparator />
-              <SelectItem value="urgent">Urgent</SelectItem>
-              <SelectItem value="high">High</SelectItem>
-              <SelectItem value="normal">Normal</SelectItem>
-              <SelectItem value="low">Low</SelectItem>
+              <SelectItem value="notes">All Notes</SelectItem>
+              <SelectItem value="clickup">ClickUp Tasks</SelectItem>
             </SelectContent>
           </Select>
+
+          {noteSource === 'notes' && (
+            <>
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input placeholder="Search keyword or by name..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="pl-10 h-[48px]" />
+              </div>
+              <Select value={sortPriority} onValueChange={setSortPriority}>
+                <SelectTrigger className="w-full md:w-[220px] h-[48px]">
+                  <div className="flex items-center gap-2">
+                    <ArrowUpDown className="h-4 w-4 text-muted-foreground" />
+                    <SelectValue placeholder="All Priorities" />
+                  </div>
+                </SelectTrigger>
+                <SelectContent className="bg-background">
+                  <SelectItem value="all">All Priorities</SelectItem>
+                  <SelectSeparator />
+                  <SelectItem value="urgent">Urgent</SelectItem>
+                  <SelectItem value="high">High</SelectItem>
+                  <SelectItem value="normal">Normal</SelectItem>
+                  <SelectItem value="low">Low</SelectItem>
+                </SelectContent>
+              </Select>
+            </>
+          )}
+
+          {noteSource === 'clickup' && (
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input placeholder="Search tasks..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="pl-10 h-[48px]" />
+            </div>
+          )}
         </div>
 
         {/* Notes Table */}
+        {noteSource === 'notes' && (
         <Card className="border shadow-sm overflow-hidden">
           <CardContent className="p-0">
             {loading ? (
@@ -459,6 +530,119 @@ export default function TenantNotes() {
             )}
           </CardContent>
         </Card>
+        )}
+
+        {/* ClickUp Tasks Table */}
+        {noteSource === 'clickup' && (
+        <Card className="border shadow-sm overflow-hidden">
+          <CardContent className="p-0">
+            {clickupLoading ? (
+              <div className="flex items-center justify-center py-12">
+                <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-primary border-r-transparent"></div>
+              </div>
+            ) : clickupTasks.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-12 text-center">
+                <ListTodo className="h-12 w-12 text-muted-foreground/50 mb-4" />
+                <h3 className="text-lg font-medium text-foreground mb-1">No ClickUp tasks found</h3>
+                <p className="text-sm text-muted-foreground">No tasks are linked to this tenant in ClickUp.</p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-muted/50">
+                      <TableHead className="font-semibold">Task Name</TableHead>
+                      <TableHead className="font-semibold">Content</TableHead>
+                      <TableHead className="font-semibold">Date Created</TableHead>
+                      <TableHead className="font-semibold">Comments</TableHead>
+                      <TableHead className="font-semibold">Status</TableHead>
+                      <TableHead className="font-semibold">List</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {clickupTasks
+                      .filter(t => !searchQuery || (t.task_name || '').toLowerCase().includes(searchQuery.toLowerCase()) || (t.task_content || '').toLowerCase().includes(searchQuery.toLowerCase()))
+                      .map((task) => {
+                        const commentList = Array.isArray(task.comments) ? task.comments as Array<{comment_text?: string; date?: string; user?: {username?: string}}> : [];
+                        const isExpanded = expandedTaskId === task.id;
+                        return (
+                          <>
+                            <TableRow
+                              key={task.id}
+                              className="hover:bg-muted/30 cursor-pointer"
+                              onClick={() => setExpandedTaskId(isExpanded ? null : task.id)}
+                            >
+                              <TableCell className="font-medium max-w-[200px]">
+                                <p className="truncate text-sm">{task.task_name || '—'}</p>
+                              </TableCell>
+                              <TableCell className="max-w-[280px]">
+                                <p className="text-sm text-muted-foreground line-clamp-2">{task.task_content || '—'}</p>
+                              </TableCell>
+                              <TableCell className="whitespace-nowrap text-sm text-muted-foreground">
+                                {task.date_created_ts
+                                  ? format(new Date(task.date_created_ts), 'dd MMM yyyy')
+                                  : task.date_created_text || '—'}
+                              </TableCell>
+                              <TableCell>
+                                {commentList.length > 0 ? (
+                                  <Badge variant="outline" className="gap-1 text-xs">
+                                    <MessageSquare className="h-3 w-3" />
+                                    {commentList.length}
+                                  </Badge>
+                                ) : (
+                                  <span className="text-muted-foreground text-xs">None</span>
+                                )}
+                              </TableCell>
+                              <TableCell>
+                                {task.status && (
+                                  <Badge variant="outline" className="text-xs capitalize">{task.status}</Badge>
+                                )}
+                              </TableCell>
+                              <TableCell className="text-sm text-muted-foreground">{task.list_name || '—'}</TableCell>
+                            </TableRow>
+                            {isExpanded && (task.task_content || commentList.length > 0) && (
+                              <TableRow key={`${task.id}-expanded`} className="bg-muted/20">
+                                <TableCell colSpan={6} className="p-4">
+                                  {task.task_content && (
+                                    <div className="mb-3">
+                                      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">Task Content</p>
+                                      <p className="text-sm whitespace-pre-wrap">{task.task_content}</p>
+                                    </div>
+                                  )}
+                                  {commentList.length > 0 && (
+                                    <div>
+                                      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Comments ({commentList.length})</p>
+                                      <div className="space-y-2">
+                                        {commentList.map((c, idx) => (
+                                          <div key={idx} className="flex gap-3 p-2 bg-background rounded border text-sm">
+                                            <MessageSquare className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
+                                            <div className="flex-1 min-w-0">
+                                              {c.user?.username && <p className="text-xs font-medium text-muted-foreground mb-0.5">{c.user.username}</p>}
+                                              <p className="text-sm">{c.comment_text || '—'}</p>
+                                              {c.date && (
+                                                <p className="text-xs text-muted-foreground mt-0.5">
+                                                  {format(new Date(Number(c.date)), 'dd MMM yyyy, h:mm a')}
+                                                </p>
+                                              )}
+                                            </div>
+                                          </div>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  )}
+                                </TableCell>
+                              </TableRow>
+                            )}
+                          </>
+                        );
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+        )}
 
         {/* Add/Edit Note Dialog */}
         <Dialog open={isAddDialogOpen} onOpenChange={(open) => { if (!open) resetForm(); setIsAddDialogOpen(open); }}>
