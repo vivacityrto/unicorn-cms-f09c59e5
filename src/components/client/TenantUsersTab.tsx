@@ -71,9 +71,10 @@ interface PendingInvite {
 interface TenantUsersTabProps {
   tenantId: number;
   tenantName: string;
+  onCountChange?: (count: number) => void;
 }
 
-export function TenantUsersTab({ tenantId, tenantName }: TenantUsersTabProps) {
+export function TenantUsersTab({ tenantId, tenantName, onCountChange }: TenantUsersTabProps) {
   const { profile, isSuperAdmin, hasTenantAdmin } = useAuth();
   const [members, setMembers] = useState<TenantMemberInfo[]>([]);
   const [pendingInvites, setPendingInvites] = useState<PendingInvite[]>([]);
@@ -124,7 +125,9 @@ export function TenantUsersTab({ tenantId, tenantName }: TenantUsersTabProps) {
         console.error('tenant_users fetch error:', error);
         throw error;
       }
-      setMembers((data || []) as unknown as TenantMemberInfo[]);
+      const result = (data || []) as unknown as TenantMemberInfo[];
+      setMembers(result);
+      onCountChange?.(result.length);
     } catch (error) {
       console.error('Error fetching members:', error);
       toast.error('Failed to load users');
