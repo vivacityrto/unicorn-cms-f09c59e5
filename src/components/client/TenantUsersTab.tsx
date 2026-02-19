@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
@@ -8,6 +9,8 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
+import { Separator } from '@/components/ui/separator';
 import { 
   Select,
   SelectContent,
@@ -42,6 +45,7 @@ import {
   MoreVertical,
   Trash2,
   Pencil,
+  ExternalLink,
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -59,6 +63,10 @@ interface TenantUser {
   first_name: string | null;
   last_name: string | null;
   avatar_url: string | null;
+  phone: string | null;
+  job_title: string | null;
+  disabled: boolean;
+  last_sign_in_at: string | null;
   created_at: string;
 }
 
@@ -88,6 +96,7 @@ interface TenantUsersTabProps {
 
 export function TenantUsersTab({ tenantId, tenantName, onCountChange }: TenantUsersTabProps) {
   const { profile, isSuperAdmin, hasTenantAdmin } = useAuth();
+  const navigate = useNavigate();
   const [members, setMembers] = useState<TenantMemberInfo[]>([]);
   const [pendingInvites, setPendingInvites] = useState<PendingInvite[]>([]);
   const [loading, setLoading] = useState(true);
@@ -101,13 +110,14 @@ export function TenantUsersTab({ tenantId, tenantName, onCountChange }: TenantUs
 
   // Edit drawer state
   const [editingMember, setEditingMember] = useState<TenantMemberInfo | null>(null);
-  const [editForm, setEditForm] = useState({ first_name: '', last_name: '', role: '' });
+  const [editForm, setEditForm] = useState({ job_title: '', phone: '', role: '', disabled: false });
+  const [drawerStats, setDrawerStats] = useState<{ totalLogins: number; lastLogin: string | null }>({ totalLogins: 0, lastLogin: null });
   const [savingEdit, setSavingEdit] = useState(false);
 
   useEffect(() => {
-
     fetchMembers();
     fetchPendingInvites();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tenantId]);
 
   // Map DB role values (parent/child) to readable labels
@@ -115,43 +125,6 @@ export function TenantUsersTab({ tenantId, tenantName, onCountChange }: TenantUs
     if (role === 'parent') return 'Primary Contact';
     if (role === 'child') return 'User';
     return role;
-  };
-
-  const fetchMembers = async () => {
-    try {
-      setLoading(true);
-      // Use explicit FK hint so PostgREST can resolve the join
-      const { data, error } = await supabase
-        .from('tenant_users')
-        .select(`
-          user_id,
-          role,
-          created_at,
-          users!tenant_users_user_id_fkey (
-            user_uuid,
-            email,
-            first_name,
-            last_name,
-            avatar_url,
-            created_at
-          )
-        `)
-        .eq('tenant_id', tenantId)
-        .order('created_at', { ascending: false });
-
-      if (error) {
-        console.error('tenant_users fetch error:', error);
-        throw error;
-      }
-      const result = (data || []) as unknown as TenantMemberInfo[];
-      setMembers(result);
-      onCountChange?.(result.length);
-    } catch (error) {
-      console.error('Error fetching members:', error);
-      toast.error('Failed to load users');
-    } finally {
-      setLoading(false);
-    }
   };
 
   const fetchPendingInvites = async () => {
@@ -173,7 +146,6 @@ export function TenantUsersTab({ tenantId, tenantName, onCountChange }: TenantUs
 
   const handleRoleChange = async (userId: string, newRole: string) => {
     if (!canChangeRoles) return;
-    
     setUpdatingRole(userId);
     try {
       const { error } = await supabase
@@ -183,8 +155,7 @@ export function TenantUsersTab({ tenantId, tenantName, onCountChange }: TenantUs
         .eq('user_id', userId);
 
       if (error) throw error;
-      
-      setMembers(prev => prev.map(m => 
+      setMembers(prev => prev.map(m =>
         m.user_id === userId ? { ...m, role: newRole } : m
       ));
       toast.success('Role updated successfully');
@@ -198,9 +169,7 @@ export function TenantUsersTab({ tenantId, tenantName, onCountChange }: TenantUs
 
   const handleRemoveUser = async () => {
     if (!userToRemove) return;
-    
     try {
-      // Remove user from tenant_users
       const { error } = await supabase
         .from('tenant_users')
         .delete()
@@ -208,7 +177,6 @@ export function TenantUsersTab({ tenantId, tenantName, onCountChange }: TenantUs
         .eq('user_id', userToRemove.user_id);
 
       if (error) throw error;
-      
       setMembers(prev => prev.filter(m => m.user_id !== userToRemove.user_id));
       toast.success('User removed from tenant');
     } catch (error) {
@@ -219,31 +187,93 @@ export function TenantUsersTab({ tenantId, tenantName, onCountChange }: TenantUs
     }
   };
 
+
+  const fetchMembers = async () => {
+    try {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from('tenant_users')
+        .select(`
+          user_id,
+          role,
+          created_at,
+          users!tenant_users_user_id_fkey (
+            user_uuid,
+            email,
+            first_name,
+            last_name,
+            avatar_url,
+            phone,
+            job_title,
+            disabled,
+            last_sign_in_at,
+            created_at
+          )
+        `)
+        .eq('tenant_id', tenantId)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('tenant_users fetch error:', error);
+        throw error;
+      }
+      const result = (data || []) as unknown as TenantMemberInfo[];
+      setMembers(result);
+      onCountChange?.(result.length);
+    } catch (error) {
+      console.error('Error fetching members:', error);
+      toast.error('Failed to load users');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchDrawerStats = async (member: TenantMemberInfo) => {
+    try {
+      const { data: activity } = await supabase
+        .from('user_activity')
+        .select('login_date')
+        .eq('user_id', member.user_id)
+        .order('login_date', { ascending: false });
+
+      setDrawerStats({
+        totalLogins: activity?.length ?? 0,
+        lastLogin: activity?.[0]?.login_date ?? member.users.last_sign_in_at ?? null,
+      });
+    } catch {
+      setDrawerStats({ totalLogins: 0, lastLogin: member.users.last_sign_in_at ?? null });
+    }
+  };
+
   const openEditDrawer = (member: TenantMemberInfo) => {
     setEditingMember(member);
     setEditForm({
-      first_name: member.users.first_name || '',
-      last_name: member.users.last_name || '',
+      job_title: member.users.job_title || '',
+      phone: member.users.phone || '',
       role: member.role,
+      disabled: member.users.disabled ?? false,
     });
+    setDrawerStats({ totalLogins: 0, lastLogin: null });
+    fetchDrawerStats(member);
   };
 
   const handleSaveEdit = async () => {
     if (!editingMember) return;
     setSavingEdit(true);
     try {
-      // Update name on users table
+      // Update profile fields on users table
       const { error: userError } = await supabase
         .from('users')
         .update({
-          first_name: editForm.first_name,
-          last_name: editForm.last_name,
+          job_title: editForm.job_title || null,
+          phone: editForm.phone || null,
+          disabled: editForm.disabled,
         })
         .eq('user_uuid', editingMember.users.user_uuid);
 
       if (userError) throw userError;
 
-      // Update role on tenant_users
+      // Update role on tenant_users if changed
       if (editForm.role !== editingMember.role) {
         const { error: roleError } = await supabase
           .from('tenant_users')
@@ -259,7 +289,12 @@ export function TenantUsersTab({ tenantId, tenantName, onCountChange }: TenantUs
           ? {
               ...m,
               role: editForm.role,
-              users: { ...m.users, first_name: editForm.first_name, last_name: editForm.last_name },
+              users: {
+                ...m.users,
+                job_title: editForm.job_title || null,
+                phone: editForm.phone || null,
+                disabled: editForm.disabled,
+              },
             }
           : m
       ));
@@ -542,27 +577,29 @@ export function TenantUsersTab({ tenantId, tenantName, onCountChange }: TenantUs
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="edit-first-name">First Name</Label>
-                <Input
-                  id="edit-first-name"
-                  value={editForm.first_name}
-                  onChange={e => setEditForm(f => ({ ...f, first_name: e.target.value }))}
-                  placeholder="First name"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="edit-last-name">Last Name</Label>
-                <Input
-                  id="edit-last-name"
-                  value={editForm.last_name}
-                  onChange={e => setEditForm(f => ({ ...f, last_name: e.target.value }))}
-                  placeholder="Last name"
-                />
-              </div>
+            {/* Position */}
+            <div className="space-y-2">
+              <Label htmlFor="edit-job-title">Position</Label>
+              <Input
+                id="edit-job-title"
+                value={editForm.job_title}
+                onChange={e => setEditForm(f => ({ ...f, job_title: e.target.value }))}
+                placeholder="e.g. Training Manager"
+              />
             </div>
 
+            {/* Phone */}
+            <div className="space-y-2">
+              <Label htmlFor="edit-phone">Phone</Label>
+              <Input
+                id="edit-phone"
+                value={editForm.phone}
+                onChange={e => setEditForm(f => ({ ...f, phone: e.target.value }))}
+                placeholder="e.g. 0400 000 000"
+              />
+            </div>
+
+            {/* Role */}
             {canChangeRoles && editingMember?.user_id !== profile?.user_uuid && (
               <div className="space-y-2">
                 <Label>Role</Label>
@@ -590,6 +627,50 @@ export function TenantUsersTab({ tenantId, tenantName, onCountChange }: TenantUs
                 </Select>
               </div>
             )}
+
+            {/* Inactive toggle */}
+            <div className="flex items-center justify-between rounded-lg border border-border/50 px-4 py-3">
+              <div>
+                <p className="text-sm font-medium">Inactive</p>
+                <p className="text-xs text-muted-foreground">
+                  {editForm.disabled ? 'User is currently inactive' : 'User is currently active'}
+                </p>
+              </div>
+              <Switch
+                checked={editForm.disabled}
+                onCheckedChange={checked => setEditForm(f => ({ ...f, disabled: checked }))}
+              />
+            </div>
+
+            <Separator />
+
+            {/* View Full Profile */}
+            <Button
+              variant="outline"
+              className="w-full"
+              onClick={() => {
+                setEditingMember(null);
+                navigate(`/user-profile/${editingMember?.users?.user_uuid}`);
+              }}
+            >
+              <ExternalLink className="h-4 w-4 mr-2" />
+              View Full Profile
+            </Button>
+
+            <Separator />
+
+            {/* Login Information — read-only */}
+            <div className="space-y-3">
+              <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground/80">Login Information</p>
+              <div className="grid grid-cols-2 gap-y-2">
+                <span className="text-sm text-muted-foreground">Total Logins</span>
+                <span className="text-sm font-medium text-right">{drawerStats.totalLogins}</span>
+                <span className="text-sm text-muted-foreground">Last Login</span>
+                <span className="text-sm font-medium text-right">
+                  {drawerStats.lastLogin ? formatDate(drawerStats.lastLogin) : '—'}
+                </span>
+              </div>
+            </div>
           </div>
 
           <SheetFooter className="gap-2">
