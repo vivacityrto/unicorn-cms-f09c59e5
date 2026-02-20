@@ -22,6 +22,7 @@ import { useNotes, Note, filterNotes, formatDuration, formatElapsedTime } from "
 
 interface ClickUpTask {
   id: string;
+  custom_task_id: string | null;
   task_name: string | null;
   task_content: string | null;
   date_created_text: string | null;
@@ -193,12 +194,12 @@ export default function TenantNotes() {
     setClickupLoading(true);
     try {
       const { data, error } = await supabase
-        .from('v_clickup_tasks')
-        .select('id, task_name, task_content, date_created_text, date_created_ts, comments, status, priority, list_name, space_name')
+        .from('v_clickup_tasks' as never)
+        .select('id, custom_task_id, task_name, task_content, date_created_text, date_created_ts, comments, status, priority, list_name, space_name')
         .eq('tenant_id_db', parsedTenantId)
         .order('date_created_text', { ascending: false });
       if (error) throw error;
-      setClickupTasks((data || []) as ClickUpTask[]);
+      setClickupTasks(((data || []) as unknown) as ClickUpTask[]);
     } catch (err: any) {
       console.error('Error fetching ClickUp tasks:', err);
       setClickupTasks([]);
@@ -573,7 +574,9 @@ export default function TenantNotes() {
                               onClick={() => setExpandedTaskId(isExpanded ? null : task.id)}
                             >
                               <TableCell className="font-medium max-w-[200px]">
-                                <p className="truncate text-sm">{task.task_name || '—'}</p>
+                                <p className="truncate text-sm font-medium">
+                                  {[task.custom_task_id, task.task_name].filter(Boolean).join(' - ') || '—'}
+                                </p>
                               </TableCell>
                               <TableCell className="max-w-[280px]">
                                 <p className="text-sm text-muted-foreground line-clamp-2">{task.task_content || '—'}</p>
