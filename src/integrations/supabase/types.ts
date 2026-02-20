@@ -41491,6 +41491,7 @@ export type Database = {
           assignees: Json | null
           attachments: Json | null
           checklists: Json | null
+          comment_count: string | null
           comments: Json | null
           date_created: string | null
           date_created_at: string | null
@@ -41504,6 +41505,7 @@ export type Database = {
           folder_name_path: string | null
           id: string | null
           inserted_at: string | null
+          latest_comment: string | null
           list_name: string | null
           package_id: number | null
           parent_id: string | null
