@@ -1,92 +1,81 @@
 
-## Add ClickUp Tasks to the Admin Notes Tab
+## Fix: ClickUp Tasks Not Rendering — Root Cause & Solution
 
-### What the User Wants
+### Confirmed Root Cause
 
-The screenshot shows the admin-side **Notes tab** on the tenant detail page (`/tenant/7530`), which renders `ClientStructuredNotesTab`. The "All Notes" filter dropdown (top-right of the Structured Notes card) currently has:
-- All Notes
-- Client Notes
-- Package Notes
+The database query as a superuser confirms data **does exist** for tenant 7449 in `v_clickup_tasks`. The component query is also correct. The problem is purely a database access control issue:
 
-The user wants a **"ClickUp Tasks"** option added to that dropdown. When selected, instead of filtering notes, it replaces the notes list with a ClickUp tasks panel showing: `task_name`, `task_content`, `date_created` (formatted from `date_created_ts`), and `comments`.
+- Both `clickup_tasks` and `clickup_tasksdb` have **Row Level Security (RLS) enabled**
+- Neither table has **any SELECT policy** defined for the `authenticated` role
+- When the Supabase JS client queries `v_clickup_tasks` (which JOINs both tables), Postgres enforces RLS on the underlying tables and silently returns zero rows — no error, just empty results
+- The previous migration only granted SELECT on the view itself, but did not address RLS on the base tables the view reads from
 
-### File Changed
-
-**`src/components/client/ClientStructuredNotesTab.tsx`** — single file, no new files required.
+This explains every symptom: no error shown in the UI, no console error thrown, just an empty list.
 
 ---
 
-### What Changes Inside the Component
+### The Fix — One Migration
 
-#### 1. Add ClickUp interface and state
+A single database migration that adds SELECT policies to both base tables, scoped correctly to Vivacity staff only (since ClickUp tasks in the admin Notes tab is a SuperAdmin/staff-only feature).
 
-Add a `ClickUpTask` interface and three new state variables:
+```sql
+-- Allow Vivacity staff to read ClickUp tasks
+CREATE POLICY "vivacity_staff_select_clickup_tasks"
+  ON public.clickup_tasks
+  FOR SELECT
+  TO authenticated
+  USING (public.is_vivacity_staff(auth.uid()));
 
-```typescript
-interface ClickUpTask {
-  id: string;
-  task_name: string | null;
-  task_content: string | null;
-  date_created_ts: string | null;
-  date_created_text: string | null;
-  comments: unknown;
-  status: string | null;
-  list_name: string | null;
-}
+-- Allow Vivacity staff to read ClickUp tasks DB records
+CREATE POLICY "vivacity_staff_select_clickup_tasksdb"
+  ON public.clickup_tasksdb
+  FOR SELECT
+  TO authenticated
+  USING (public.is_vivacity_staff(auth.uid()));
 
-const [clickupTasks, setClickupTasks] = useState<ClickUpTask[]>([]);
-const [clickupLoading, setClickupLoading] = useState(false);
-const [expandedTaskId, setExpandedTaskId] = useState<string | null>(null);
+-- Reload PostgREST schema cache
+NOTIFY pgrst, 'reload schema';
 ```
 
-#### 2. Add fetch function + trigger
-
-A `fetchClickupTasks` function that queries `v_clickup_tasks` filtered by `tenant_id_db = tenantId`, ordered by `date_created_text` descending. A `useEffect` fires it when `parentTypeFilter === 'clickup'`.
-
-#### 3. Extend the dropdown
-
-Change `parentTypeFilter` type handling to include `'clickup'`. Add a visual separator and new item in the Select:
-
-```
-All Notes        ← existing
-Client Notes     ← existing
-Package Notes    ← existing
-─────────────── separator
-ClickUp Tasks    ← new, with ListTodo icon
-```
-
-The filter logic already gates on `parentTypeFilter !== 'clickup'` so regular notes won't be affected.
-
-#### 4. ClickUp tasks panel
-
-When `parentTypeFilter === 'clickup'`, instead of the notes `ScrollArea`, render a ClickUp tasks panel inside the same `CardContent`:
-
-- **Loading state**: spinner with "Loading ClickUp tasks..."
-- **Empty state**: message explaining no tasks are linked to this tenant
-- **Task list**: each task in a card-style row showing:
-  - Task name (bold) + List name badge
-  - `date_created_ts` formatted as `dd MMM yyyy` using `date-fns`
-  - Status badge
-  - Content snippet (2-line clamp)
-  - Chevron to expand and show full content + comments
-  - **Comments section** (expanded): iterates the `comments` JSON array showing commenter name and comment text
-
-#### 5. Import additions
-
-- `ListTodo` and `ChevronDown`/`ChevronUp` from `lucide-react`
-- `SelectSeparator` from `@/components/ui/select`
+The `is_vivacity_staff()` function already exists in the database (it is part of the established RLS helper library). It checks that the user has a Super Admin, Team Leader, or Team Member role — exactly right for this admin-side feature. No code changes are needed; only the migration is required.
 
 ---
 
-### Behaviour Details
+### Why This Is Correct
 
-- Selecting "ClickUp Tasks" does NOT affect the Add Note button (it stays visible — ClickUp tasks are read-only, no add action is relevant)
-- The count badge on "Structured Notes" still shows internal notes count when `clickup` is selected (it naturally filters to 0 but the heading badge will show ClickUp task count separately in the panel header)
-- The Tags filter Popover is hidden when ClickUp mode is active (it has no meaning for ClickUp data)
-- The "Add Note" button remains visible at all times (ClickUp panel is read-only, adding notes still makes sense)
+- Previous attempts granted permissions on the view but not the base tables — Postgres enforces RLS at the table level regardless of view-level grants
+- Scoping to `is_vivacity_staff()` is correct: ClickUp task data is internal Vivacity operational data and should not be visible to client Admin or General User roles
+- No component code needs to change — the query is already filtering by `tenant_id_db = tenantId` correctly and data exists for tenant 7449
 
 ---
 
-### No Schema Changes Required
+### Technical Detail
 
-The `v_clickup_tasks` view already exists with the required columns: `id`, `task_name`, `task_content`, `date_created_ts`, `date_created_text`, `comments`, `status`, `list_name`, `tenant_id_db`.
+```text
+API Request (authenticated role)
+        │
+        ▼
+v_clickup_tasks (view, SELECT granted) ← previous migration handled this
+        │
+        ├── JOIN clickup_tasks        ← RLS ON, no SELECT policy → returns 0 rows
+        └── JOIN clickup_tasksdb     ← RLS ON, no SELECT policy → returns 0 rows
+```
+
+After the migration:
+
+```text
+API Request (authenticated role, is_vivacity_staff = true)
+        │
+        ▼
+v_clickup_tasks (view, SELECT granted)
+        │
+        ├── JOIN clickup_tasks        ← RLS policy allows → returns rows
+        └── JOIN clickup_tasksdb     ← RLS policy allows → returns rows
+```
+
+---
+
+### Files Changed
+
+- **Database only** — one migration SQL file
+- No TypeScript or component changes required
