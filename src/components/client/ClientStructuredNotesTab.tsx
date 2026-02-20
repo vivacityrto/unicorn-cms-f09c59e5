@@ -36,7 +36,7 @@ interface PackageInfo {
 
 interface ClickUpTask {
   id: string;
-  custom_task_id: string | null;
+  task_custom_id: string | null;
   task_name: string | null;
   task_content: string | null;
   date_created_ts: string | null;
@@ -189,7 +189,7 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
       try {
   const { data, error } = await supabase
           .from('v_clickup_tasks' as never)
-          .select('id, custom_task_id, task_name, task_content, date_created_ts, date_created, date_created_text, comments, assigned_comments, status, list_name')
+          .select('id, task_custom_id, task_name, task_content, date_created_ts, date_created, date_created_text, comments, assigned_comments, status, list_name')
           .eq('tenant_id_db', tenantId)
           .order('date_created', { ascending: false });
         if (error) throw error;
@@ -508,7 +508,7 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
                               <div className="flex-1 min-w-0">
                                 <div className="flex items-center gap-2 flex-wrap mb-1">
                                   <span className="font-medium text-sm">
-                                    {[task.custom_task_id, task.task_name].filter(Boolean).join(' - ') || 'Untitled task'}
+                                    {[task.task_custom_id, task.task_name].filter(Boolean).join(' - ') || 'Untitled task'}
                                   </span>
                                   {task.list_name && (
                                     <Badge variant="outline" className="text-xs">{task.list_name}</Badge>
