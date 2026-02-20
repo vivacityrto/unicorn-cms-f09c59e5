@@ -388,7 +388,7 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
             </CardTitle>
             <div className="flex items-center gap-2">
               <Select value={parentTypeFilter} onValueChange={setParentTypeFilter}>
-                <SelectTrigger className="w-[160px] h-9">
+                <SelectTrigger className="w-[200px] h-9">
                   <div className="flex items-center gap-2">
                     <Filter className="h-4 w-4 text-muted-foreground" />
                     <SelectValue placeholder="All Notes" />
