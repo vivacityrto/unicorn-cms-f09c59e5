@@ -1,81 +1,89 @@
 
-## Fix: ClickUp Tasks Not Rendering — Root Cause & Solution
+## Add Voice-to-Text to Add Note and Log Consult Dialogs
 
-### Confirmed Root Cause
+### Overview
 
-The database query as a superuser confirms data **does exist** for tenant 7449 in `v_clickup_tasks`. The component query is also correct. The problem is purely a database access control issue:
-
-- Both `clickup_tasks` and `clickup_tasksdb` have **Row Level Security (RLS) enabled**
-- Neither table has **any SELECT policy** defined for the `authenticated` role
-- When the Supabase JS client queries `v_clickup_tasks` (which JOINs both tables), Postgres enforces RLS on the underlying tables and silently returns zero rows — no error, just empty results
-- The previous migration only granted SELECT on the view itself, but did not address RLS on the base tables the view reads from
-
-This explains every symptom: no error shown in the UI, no console error thrown, just an empty list.
+Using the browser's built-in Web Speech API (`SpeechRecognition` / `webkitSpeechRecognition`), a microphone button will be added next to the notes textarea in both the **Add Note** dialog and the **Log Consultation Hours** notes field. No API keys, no backend changes, no extra cost.
 
 ---
 
-### The Fix — One Migration
-
-A single database migration that adds SELECT policies to both base tables, scoped correctly to Vivacity staff only (since ClickUp tasks in the admin Notes tab is a SuperAdmin/staff-only feature).
-
-```sql
--- Allow Vivacity staff to read ClickUp tasks
-CREATE POLICY "vivacity_staff_select_clickup_tasks"
-  ON public.clickup_tasks
-  FOR SELECT
-  TO authenticated
-  USING (public.is_vivacity_staff(auth.uid()));
-
--- Allow Vivacity staff to read ClickUp tasks DB records
-CREATE POLICY "vivacity_staff_select_clickup_tasksdb"
-  ON public.clickup_tasksdb
-  FOR SELECT
-  TO authenticated
-  USING (public.is_vivacity_staff(auth.uid()));
-
--- Reload PostgREST schema cache
-NOTIFY pgrst, 'reload schema';
-```
-
-The `is_vivacity_staff()` function already exists in the database (it is part of the established RLS helper library). It checks that the user has a Super Admin, Team Leader, or Team Member role — exactly right for this admin-side feature. No code changes are needed; only the migration is required.
-
----
-
-### Why This Is Correct
-
-- Previous attempts granted permissions on the view but not the base tables — Postgres enforces RLS at the table level regardless of view-level grants
-- Scoping to `is_vivacity_staff()` is correct: ClickUp task data is internal Vivacity operational data and should not be visible to client Admin or General User roles
-- No component code needs to change — the query is already filtering by `tenant_id_db = tenantId` correctly and data exists for tenant 7449
-
----
-
-### Technical Detail
+### How It Works
 
 ```text
-API Request (authenticated role)
+User clicks mic button
         │
         ▼
-v_clickup_tasks (view, SELECT granted) ← previous migration handled this
-        │
-        ├── JOIN clickup_tasks        ← RLS ON, no SELECT policy → returns 0 rows
-        └── JOIN clickup_tasksdb     ← RLS ON, no SELECT policy → returns 0 rows
-```
-
-After the migration:
-
-```text
-API Request (authenticated role, is_vivacity_staff = true)
+Browser requests microphone permission (once, browser handles this)
         │
         ▼
-v_clickup_tasks (view, SELECT granted)
+SpeechRecognition starts capturing audio from device mic
         │
-        ├── JOIN clickup_tasks        ← RLS policy allows → returns rows
-        └── JOIN clickup_tasksdb     ← RLS policy allows → returns rows
+        ▼
+Interim transcription appears in textarea in real time (greyed out style)
+        │
+        ▼
+User stops speaking → final transcript appended to existing note text
+        │
+        ▼
+User clicks mic again (or it auto-stops) → recording ends
 ```
+
+---
+
+### New File: `src/hooks/useSpeechToText.ts`
+
+A reusable custom hook that encapsulates the Web Speech API:
+
+- `isRecording` — boolean, true while mic is active
+- `isSupported` — boolean, false if the browser does not support the API (hides the button gracefully)
+- `transcript` — interim text being captured right now
+- `startRecording(onResult: (text: string) => void)` — starts listening; calls `onResult` with the final text when speech ends
+- `stopRecording()` — stops listening manually
+- Configured for `lang: 'en-AU'` (Australian English) and `continuous: false` (single utterance per press)
+- Handles errors gracefully (permission denied, not supported, etc.) with a toast notification
+
+---
+
+### Changes to `src/components/membership/MembershipDialogs.tsx`
+
+**Add Note dialog — notes textarea:**
+
+The textarea label row gets a mic button on the right side:
+
+```
+Note                              [🎤 Speak]
+┌─────────────────────────────────────────┐
+│ Enter your note...                      │
+│                                         │
+└─────────────────────────────────────────┘
+```
+
+- While recording, the button shows a pulsing red mic icon (`🔴 Recording...`) with a stop action
+- Final transcript is **appended** to any existing text in the field (does not overwrite)
+- If the browser does not support speech recognition, the button is hidden — no disruption to existing UX
+
+**Log Consultation Hours dialog — notes textarea:**
+
+Same mic button treatment applied to the "Notes (optional)" field.
+
+---
+
+### Technical Details
+
+- `SpeechRecognition` is a browser API — no network call, works offline
+- `interimResults: true` gives live preview as the user speaks
+- `lang: 'en-AU'` sets Australian English for best accent matching
+- The hook cleans up automatically when the dialog closes (calls `stopRecording` in a `useEffect` cleanup)
+- Graceful degradation: if `window.SpeechRecognition` and `window.webkitSpeechRecognition` are both undefined (e.g., Firefox), `isSupported` is `false` and the mic button does not render at all
+- No changes to the submit logic, no changes to RLS, no database changes
 
 ---
 
 ### Files Changed
 
-- **Database only** — one migration SQL file
-- No TypeScript or component changes required
+| File | Change |
+|---|---|
+| `src/hooks/useSpeechToText.ts` | New — reusable Web Speech API hook |
+| `src/components/membership/MembershipDialogs.tsx` | Add mic button + hook to Add Note and Log Consult notes fields |
+
+No backend, no migration, no secrets required.
