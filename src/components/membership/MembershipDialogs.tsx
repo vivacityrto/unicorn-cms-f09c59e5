@@ -5,7 +5,10 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Mic, MicOff } from 'lucide-react';
 import { MembershipWithDetails } from '@/types/membership';
+import { useSpeechToText } from '@/hooks/useSpeechToText';
+import { cn } from '@/lib/utils';
 
 interface LogConsultDialogProps {
   open: boolean;
@@ -27,6 +30,7 @@ export function LogConsultDialog({
   );
   const [minutes, setMinutes] = useState('30');
   const [notes, setNotes] = useState('');
+  const speech = useSpeechToText();
 
   const handleSubmit = () => {
     if (!selectedId || !minutes) return;
@@ -37,6 +41,16 @@ export function LogConsultDialog({
     setMinutes('30');
     setNotes('');
     onOpenChange(false);
+  };
+
+  const toggleRecording = () => {
+    if (speech.isRecording) {
+      speech.stopRecording();
+    } else {
+      speech.startRecording((text) => {
+        setNotes(prev => prev ? `${prev} ${text}` : text);
+      });
+    }
   };
 
   return (
@@ -76,13 +90,33 @@ export function LogConsultDialog({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="notes">Notes (optional)</Label>
+            <div className="flex items-center justify-between">
+              <Label htmlFor="notes">Notes (optional)</Label>
+              {speech.isSupported && (
+                <Button
+                  type="button"
+                  variant={speech.isRecording ? "destructive" : "outline"}
+                  size="sm"
+                  onClick={toggleRecording}
+                  className={cn("gap-1.5 h-7 text-xs", speech.isRecording && "animate-pulse")}
+                >
+                  {speech.isRecording ? (
+                    <><MicOff className="h-3.5 w-3.5" /> Stop</>
+                  ) : (
+                    <><Mic className="h-3.5 w-3.5" /> Speak</>
+                  )}
+                </Button>
+              )}
+            </div>
             <Textarea
               id="notes"
-              value={notes}
+              value={speech.isRecording && speech.interimTranscript
+                ? (notes ? `${notes} ${speech.interimTranscript}` : speech.interimTranscript)
+                : notes}
               onChange={(e) => setNotes(e.target.value)}
               placeholder="What was discussed?"
               rows={3}
+              className={cn(speech.isRecording && "border-destructive")}
             />
           </div>
         </div>
@@ -119,6 +153,7 @@ export function AddNoteDialog({
     selectedMembership ? `${selectedMembership.tenant_id}-${selectedMembership.package_id}` : ''
   );
   const [content, setContent] = useState('');
+  const speech = useSpeechToText();
 
   const handleSubmit = () => {
     if (!selectedId || !content.trim()) return;
@@ -128,6 +163,16 @@ export function AddNoteDialog({
     
     setContent('');
     onOpenChange(false);
+  };
+
+  const toggleRecording = () => {
+    if (speech.isRecording) {
+      speech.stopRecording();
+    } else {
+      speech.startRecording((text) => {
+        setContent(prev => prev ? `${prev} ${text}` : text);
+      });
+    }
   };
 
   return (
@@ -155,13 +200,33 @@ export function AddNoteDialog({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="content">Note</Label>
+            <div className="flex items-center justify-between">
+              <Label htmlFor="content">Note</Label>
+              {speech.isSupported && (
+                <Button
+                  type="button"
+                  variant={speech.isRecording ? "destructive" : "outline"}
+                  size="sm"
+                  onClick={toggleRecording}
+                  className={cn("gap-1.5 h-7 text-xs", speech.isRecording && "animate-pulse")}
+                >
+                  {speech.isRecording ? (
+                    <><MicOff className="h-3.5 w-3.5" /> Stop</>
+                  ) : (
+                    <><Mic className="h-3.5 w-3.5" /> Speak</>
+                  )}
+                </Button>
+              )}
+            </div>
             <Textarea
               id="content"
-              value={content}
+              value={speech.isRecording && speech.interimTranscript
+                ? (content ? `${content} ${speech.interimTranscript}` : speech.interimTranscript)
+                : content}
               onChange={(e) => setContent(e.target.value)}
               placeholder="Enter your note..."
               rows={4}
+              className={cn(speech.isRecording && "border-destructive")}
             />
           </div>
         </div>
