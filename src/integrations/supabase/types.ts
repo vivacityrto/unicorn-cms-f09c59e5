@@ -6694,32 +6694,49 @@ export type Database = {
         Row: {
           assigned_comment_count: string | null
           assignee: Json | null
+          audit_date: string | null
+          client_meeting_attendance: string | null
           comment_count: string | null
           created_by: string | null
-          cricos_rereg_date_date: string | null
+          cricos_rereg_date: string | null
           date_closed: string | null
           date_created: string | null
           date_done: string | null
+          date_of_last_contact: string | null
+          date_of_last_systemscheck: string | null
           date_updated: string | null
           due_date: string | null
+          email_address: string | null
           folder: string | null
           id: number
           imported_at: string
+          infusionsoft_url: string | null
           latest_comment: string | null
           linked_docs: string | null
           linked_tasks: string | null
           list: string | null
           lists: Json | null
-          mb_level_drop_down: string | null
-          mock_audit_date: string | null
-          notes_short_text: string | null
+          mb_level: string | null
+          mock_audit: string | null
+          notes: string | null
+          nothing_here: string | null
+          on_hold_end_date: string | null
+          on_hold_start_date: string | null
+          phone: string | null
           points_estimate: string | null
           points_estimate_rolled_up: string | null
           priority: string | null
+          re_reg_due_date: string | null
+          registered_spr: string | null
+          registration_date: string | null
+          risk: string | null
+          rto_id: string | null
+          sharepoint_url: string | null
           space: string | null
           sprints: Json | null
           start_date: string | null
           status: string | null
+          submission_date: string | null
           subtask_ids: Json | null
           subtask_urls: Json | null
           tags: string | null
@@ -6734,38 +6751,57 @@ export type Database = {
           time_in_status: string | null
           time_logged: string | null
           time_logged_rolled_up: string | null
+          time_remaining: number | null
+          time_with_vivacity: string | null
           unicorn_url: string | null
-          working_hours_short_text: string | null
+          working_hours: string | null
         }
         Insert: {
           assigned_comment_count?: string | null
           assignee?: Json | null
+          audit_date?: string | null
+          client_meeting_attendance?: string | null
           comment_count?: string | null
           created_by?: string | null
-          cricos_rereg_date_date?: string | null
+          cricos_rereg_date?: string | null
           date_closed?: string | null
           date_created?: string | null
           date_done?: string | null
+          date_of_last_contact?: string | null
+          date_of_last_systemscheck?: string | null
           date_updated?: string | null
           due_date?: string | null
+          email_address?: string | null
           folder?: string | null
           id?: number
           imported_at?: string
+          infusionsoft_url?: string | null
           latest_comment?: string | null
           linked_docs?: string | null
           linked_tasks?: string | null
           list?: string | null
           lists?: Json | null
-          mb_level_drop_down?: string | null
-          mock_audit_date?: string | null
-          notes_short_text?: string | null
+          mb_level?: string | null
+          mock_audit?: string | null
+          notes?: string | null
+          nothing_here?: string | null
+          on_hold_end_date?: string | null
+          on_hold_start_date?: string | null
+          phone?: string | null
           points_estimate?: string | null
           points_estimate_rolled_up?: string | null
           priority?: string | null
+          re_reg_due_date?: string | null
+          registered_spr?: string | null
+          registration_date?: string | null
+          risk?: string | null
+          rto_id?: string | null
+          sharepoint_url?: string | null
           space?: string | null
           sprints?: Json | null
           start_date?: string | null
           status?: string | null
+          submission_date?: string | null
           subtask_ids?: Json | null
           subtask_urls?: Json | null
           tags?: string | null
@@ -6780,38 +6816,57 @@ export type Database = {
           time_in_status?: string | null
           time_logged?: string | null
           time_logged_rolled_up?: string | null
+          time_remaining?: number | null
+          time_with_vivacity?: string | null
           unicorn_url?: string | null
-          working_hours_short_text?: string | null
+          working_hours?: string | null
         }
         Update: {
           assigned_comment_count?: string | null
           assignee?: Json | null
+          audit_date?: string | null
+          client_meeting_attendance?: string | null
           comment_count?: string | null
           created_by?: string | null
-          cricos_rereg_date_date?: string | null
+          cricos_rereg_date?: string | null
           date_closed?: string | null
           date_created?: string | null
           date_done?: string | null
+          date_of_last_contact?: string | null
+          date_of_last_systemscheck?: string | null
           date_updated?: string | null
           due_date?: string | null
+          email_address?: string | null
           folder?: string | null
           id?: number
           imported_at?: string
+          infusionsoft_url?: string | null
           latest_comment?: string | null
           linked_docs?: string | null
           linked_tasks?: string | null
           list?: string | null
           lists?: Json | null
-          mb_level_drop_down?: string | null
-          mock_audit_date?: string | null
-          notes_short_text?: string | null
+          mb_level?: string | null
+          mock_audit?: string | null
+          notes?: string | null
+          nothing_here?: string | null
+          on_hold_end_date?: string | null
+          on_hold_start_date?: string | null
+          phone?: string | null
           points_estimate?: string | null
           points_estimate_rolled_up?: string | null
           priority?: string | null
+          re_reg_due_date?: string | null
+          registered_spr?: string | null
+          registration_date?: string | null
+          risk?: string | null
+          rto_id?: string | null
+          sharepoint_url?: string | null
           space?: string | null
           sprints?: Json | null
           start_date?: string | null
           status?: string | null
+          submission_date?: string | null
           subtask_ids?: Json | null
           subtask_urls?: Json | null
           tags?: string | null
@@ -6826,8 +6881,10 @@ export type Database = {
           time_in_status?: string | null
           time_logged?: string | null
           time_logged_rolled_up?: string | null
+          time_remaining?: number | null
+          time_with_vivacity?: string | null
           unicorn_url?: string | null
-          working_hours_short_text?: string | null
+          working_hours?: string | null
         }
         Relationships: []
       }

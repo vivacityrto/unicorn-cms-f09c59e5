@@ -39,8 +39,10 @@ interface ClickUpTask {
   task_name: string | null;
   task_content: string | null;
   date_created_ts: string | null;
+  date_created: string | null;
   date_created_text: string | null;
   comments: unknown;
+  assigned_comments: unknown;
   status: string | null;
   list_name: string | null;
 }
@@ -186,9 +188,9 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
       try {
         const { data, error } = await supabase
           .from('v_clickup_tasks' as never)
-          .select('id, task_name, task_content, date_created_ts, date_created_text, comments, status, list_name')
+          .select('id, task_name, task_content, date_created_ts, date_created, date_created_text, comments, assigned_comments, status, list_name')
           .eq('tenant_id_db', tenantId)
-          .order('date_created_text', { ascending: false });
+          .order('date_created', { ascending: false });
         if (error) throw error;
         setClickupTasks((data as ClickUpTask[]) || []);
       } catch (err) {
@@ -481,14 +483,20 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
                       const isExpanded = expandedTaskId === task.id;
                       // date_created_ts is a unix timestamp in ms stored as string
                       let formattedDate = '—';
-                      if (task.date_created_ts) {
+                      const rawTs = task.date_created_ts || task.date_created;
+                      if (rawTs) {
                         try {
-                          const ts = Number(task.date_created_ts);
-                          const d = isNaN(ts) ? new Date(task.date_created_ts) : fromUnixTime(ts / 1000);
+                          const ts = Number(rawTs);
+                          const d = isNaN(ts) ? new Date(rawTs) : fromUnixTime(ts / 1000);
                           if (isValid(d)) formattedDate = format(d, 'dd MMM yyyy');
-                        } catch { /* fallback */ }
+                        } catch { /* fallback to text */ }
                       }
-                      const comments = Array.isArray(task.comments) ? task.comments as { comment_text?: string; user?: { username?: string } }[] : [];
+                      if (formattedDate === '—' && task.date_created_text) {
+                        formattedDate = task.date_created_text;
+                      }
+                      // comments column may be null; fall back to assigned_comments
+                      const rawComments = task.comments ?? task.assigned_comments;
+                      const comments = Array.isArray(rawComments) ? rawComments as { comment_text?: string; user?: { username?: string } }[] : [];
                       return (
                         <div key={task.id} className="rounded-lg border bg-card">
                           <div
