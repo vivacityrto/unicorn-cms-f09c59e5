@@ -25,8 +25,7 @@ interface ClickUpTask {
   task_custom_id: string | null;
   task_name: string | null;
   task_content: string | null;
-  date_created_text: string | null;
-  date_created_ts: string | null;
+  date_created: string | null;
   comments: unknown;
   status: string | null;
   priority: string | null;
@@ -195,9 +194,9 @@ export default function TenantNotes() {
     try {
       const { data, error } = await supabase
         .from('v_clickup_tasks' as never)
-        .select('id, task_custom_id, task_name, task_content, date_created_text, date_created_ts, comments, status, priority, list_name, space_name')
-        .eq('tenant_id_db', parsedTenantId)
-        .order('date_created_text', { ascending: false });
+        .select('id, task_custom_id, task_name, task_content, date_created, comments, status, priority, list_name, space_name')
+        .eq('tenant_id', parsedTenantId)
+        .order('date_created', { ascending: false });
       if (error) throw error;
       setClickupTasks(((data || []) as unknown) as ClickUpTask[]);
     } catch (err: any) {
@@ -582,9 +581,9 @@ export default function TenantNotes() {
                                 <p className="text-sm text-muted-foreground line-clamp-2">{task.task_content || '—'}</p>
                               </TableCell>
                               <TableCell className="whitespace-nowrap text-sm text-muted-foreground">
-                                {task.date_created_ts
-                                  ? format(new Date(task.date_created_ts), 'dd MMM yyyy')
-                                  : task.date_created_text || '—'}
+                                {task.date_created
+                                  ? format(new Date(Number(task.date_created) > 1e12 ? Number(task.date_created) : task.date_created), 'dd MMM yyyy')
+                                  : '—'}
                               </TableCell>
                               <TableCell>
                                 {commentList.length > 0 ? (
