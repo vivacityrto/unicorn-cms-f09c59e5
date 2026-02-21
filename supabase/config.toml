@@ -241,3 +241,6 @@ verify_jwt = false
 
 [functions.tenant-lifecycle]
 verify_jwt = false
+
+[functions.extract-note-title]
+verify_jwt = false
