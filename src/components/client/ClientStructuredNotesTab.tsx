@@ -23,7 +23,7 @@ import {
   Plus, StickyNote, Pin, MoreHorizontal, Edit, Trash2, 
   ArrowRight, Tag, Clock, MessageSquare, AlertTriangle, 
   CheckCircle, Users, FileText, Loader2, Filter, Package,
-  ListTodo, ChevronDown, ChevronUp, Mic, MicOff
+  ListTodo, ChevronDown, ChevronUp, Mic, MicOff, ExternalLink
 } from 'lucide-react';
 import { useSpeechToText } from '@/hooks/useSpeechToText';
 import { SelectSeparator } from '@/components/ui/select';
@@ -52,6 +52,8 @@ interface ClickUpTask {
   due_date: number | null;
   time_estimate: number | null;
   time_spent: number | null;
+  sharepoint_url: string | null;
+  infusionsoft_url: string | null;
 }
 
 interface ApiComment {
@@ -242,7 +244,7 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
       try {
   const { data, error } = await supabase
           .from('v_clickup_tasks' as never)
-          .select('id, task_id, task_custom_id, task_name, task_content, date_created, status, list_name, date_of_last_contact, date_of_last_systemscheck, due_date, time_estimate, time_spent')
+          .select('id, task_id, task_custom_id, task_name, task_content, date_created, status, list_name, date_of_last_contact, date_of_last_systemscheck, due_date, time_estimate, time_spent, sharepoint_url, infusionsoft_url')
           .eq('tenant_id', tenantId)
           .order('date_created', { ascending: false });
         if (error) throw error;
@@ -719,9 +721,25 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
                                     <span>Consult Limit: <span className="font-medium text-foreground">{Math.round(task.time_estimate / 3600000)}h</span></span>
                                   )}
                                   {task.time_spent != null && task.time_spent > 0 && (
-                                    <span>Consult Time Used: <span className="font-medium text-foreground">{Math.round(task.time_spent / 3600000)}h</span></span>
+                                    <span>Consult Used: <span className="font-medium text-foreground">{Math.round(task.time_spent / 3600000)}h</span></span>
                                   )}
                                 </div>
+                                {(task.sharepoint_url || task.infusionsoft_url) && (
+                                  <div className="flex items-center flex-wrap gap-x-4 gap-y-1 mt-1 text-xs">
+                                    {task.sharepoint_url && (
+                                      <a href={task.sharepoint_url} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="text-primary hover:text-primary/80 underline flex items-center gap-1">
+                                        <ExternalLink className="h-3 w-3" />
+                                        SharePoint
+                                      </a>
+                                    )}
+                                    {task.infusionsoft_url && (
+                                      <a href={task.infusionsoft_url} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="text-primary hover:text-primary/80 underline flex items-center gap-1">
+                                        <ExternalLink className="h-3 w-3" />
+                                        Infusionsoft
+                                      </a>
+                                    )}
+                                  </div>
+                                )}
                               </div>
                               <div className="shrink-0 text-muted-foreground">
                                 {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
