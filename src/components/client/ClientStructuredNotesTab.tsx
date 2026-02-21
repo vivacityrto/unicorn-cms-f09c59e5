@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNotes, Note } from '@/hooks/useNotes';
 import { useNoteTags } from '@/hooks/useNoteTags';
 import { useClientActionItems } from '@/hooks/useClientManagementData';
@@ -102,6 +102,39 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
   const [selectedPackageInstanceId, setSelectedPackageInstanceId] = useState<string>('none');
   const [activePackages, setActivePackages] = useState<{ instance_id: number; package_id: number; name: string }[]>([]);
   const speech = useSpeechToText();
+  const [titleManuallyEdited, setTitleManuallyEdited] = useState(false);
+  const [extractingTitle, setExtractingTitle] = useState(false);
+  const titleExtractTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Auto-extract title from content using AI
+  const extractTitle = useCallback(async (text: string) => {
+    if (!text || text.trim().length < 10) return;
+    setExtractingTitle(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('extract-note-title', {
+        body: { content: text.trim() },
+      });
+      if (!error && data?.title) {
+        setTitle(data.title);
+      }
+    } catch (e) {
+      console.error('Title extraction failed:', e);
+    } finally {
+      setExtractingTitle(false);
+    }
+  }, []);
+
+  // Debounced title extraction when content changes and title hasn't been manually edited
+  useEffect(() => {
+    if (titleManuallyEdited || !content || content.trim().length < 10) return;
+    if (titleExtractTimer.current) clearTimeout(titleExtractTimer.current);
+    titleExtractTimer.current = setTimeout(() => {
+      extractTitle(content);
+    }, 1500);
+    return () => {
+      if (titleExtractTimer.current) clearTimeout(titleExtractTimer.current);
+    };
+  }, [content, titleManuallyEdited, extractTitle]);
   
   // Convert to action item state
   const [actionTitle, setActionTitle] = useState('');
@@ -248,6 +281,7 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
     setIsPinned(false);
     setSelectedPackageInstanceId('none');
     setSelectedNote(null);
+    setTitleManuallyEdited(false);
   };
 
   const handleOpenAdd = () => {
@@ -882,13 +916,24 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
               </div>
             )}
             
-            {/* Title field - now full width below Type/Priority */}
+            {/* Title field - auto-extracted from content */}
             <div className="space-y-2">
-              <Label>Title (optional)</Label>
+              <div className="flex items-center justify-between">
+                <Label>Title (optional)</Label>
+                {extractingTitle && (
+                  <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                    Generating...
+                  </span>
+                )}
+              </div>
               <Input 
                 value={title}
-                onChange={e => setTitle(e.target.value)}
-                placeholder="Note title..."
+                onChange={e => {
+                  setTitle(e.target.value);
+                  setTitleManuallyEdited(true);
+                }}
+                placeholder="Auto-generated from content..."
               />
             </div>
             
