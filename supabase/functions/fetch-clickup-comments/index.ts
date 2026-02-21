@@ -140,43 +140,42 @@ Deno.serve(async (req) => {
       );
     }
 
-    // ─── Mode 2: Bulk fetch for all tasks belonging to a tenant ───
+    // ─── Mode 2: Bulk fetch for a tenant, or ALL tasks if tenant_id is 0 ───
     if (action === "fetch_by_tenant") {
-      if (!tenant_id) {
-        return new Response(
-          JSON.stringify({ error: "tenant_id required" }),
-          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
+      const fetchAll = !tenant_id || tenant_id === 0;
 
-      // Get all task_ids for this tenant from clickup_tasksdb
-      const { data: tasks, error: fetchErr } = await sb
-        .from("clickup_tasksdb")
-        .select("task_id")
-        .eq("tenant_id", tenant_id);
+      // Get task_ids from clickup_tasks_api
+      let query = sb.from("clickup_tasks_api").select("task_id, tenant_id");
+      if (!fetchAll) {
+        query = query.eq("tenant_id", tenant_id);
+      }
+      const { data: tasks, error: fetchErr } = await query;
 
       if (fetchErr) throw fetchErr;
       if (!tasks || tasks.length === 0) {
         return new Response(
-          JSON.stringify({ fetched: 0, stored: 0, errors: [], message: "No tasks found for tenant" }),
+          JSON.stringify({ fetched: 0, stored: 0, errors: [], message: fetchAll ? "No tasks found" : "No tasks found for tenant" }),
           { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
 
-      const taskIds = tasks.map((t: any) => t.task_id).filter(Boolean);
+      const taskEntries = tasks.filter((t: any) => t.task_id).map((t: any) => ({
+        task_id: t.task_id,
+        tenant_id: t.tenant_id ?? null,
+      }));
       let totalFetched = 0;
       let totalStored = 0;
       const errors: string[] = [];
 
-      for (const tid of taskIds) {
+      for (const entry of taskEntries) {
         try {
-          const resp = await fetch(`${CLICKUP_API_BASE}/task/${tid}/comment`, {
+          const resp = await fetch(`${CLICKUP_API_BASE}/task/${entry.task_id}/comment`, {
             headers: { Authorization: CLICKUP_API_KEY },
           });
 
           if (!resp.ok) {
             const errText = await resp.text();
-            errors.push(`Task ${tid}: ${resp.status} ${errText}`);
+            errors.push(`Task ${entry.task_id}: ${resp.status} ${errText}`);
             continue;
           }
 
@@ -187,7 +186,7 @@ Deno.serve(async (req) => {
           if (comments.length === 0) continue;
 
           const rows = comments.flatMap((c: any) =>
-            flattenComment(c, tid, tenant_id)
+            flattenComment(c, entry.task_id, fetchAll ? entry.tenant_id : tenant_id)
           );
 
           const { error: upsertErr } = await sb
@@ -195,7 +194,7 @@ Deno.serve(async (req) => {
             .upsert(rows, { onConflict: "comment_id", ignoreDuplicates: false });
 
           if (upsertErr) {
-            errors.push(`Task ${tid} upsert: ${upsertErr.message}`);
+            errors.push(`Task ${entry.task_id} upsert: ${upsertErr.message}`);
           } else {
             totalStored += rows.length;
           }
@@ -203,12 +202,12 @@ Deno.serve(async (req) => {
           // Rate-limit: ClickUp API allows ~100 req/min
           await new Promise((r) => setTimeout(r, 650));
         } catch (e) {
-          errors.push(`Task ${tid}: ${(e as Error).message}`);
+          errors.push(`Task ${entry.task_id}: ${(e as Error).message}`);
         }
       }
 
       return new Response(
-        JSON.stringify({ fetched: totalFetched, stored: totalStored, task_count: taskIds.length, errors }),
+        JSON.stringify({ fetched: totalFetched, stored: totalStored, task_count: taskEntries.length, errors }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
