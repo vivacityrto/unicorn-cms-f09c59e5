@@ -1,0 +1,1 @@
+ALTER TABLE public.clickup_tasksdb ADD CONSTRAINT clickup_tasksdb_task_id_unique UNIQUE (task_id);
