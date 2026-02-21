@@ -466,9 +466,9 @@ export function TenantUsersTab({ tenantId, tenantName, onCountChange }: TenantUs
                           )}
                         </div>
                         <div className="flex items-center gap-2">
-                          <p className="text-sm text-muted-foreground">{user.email}</p>
+                          <a href={`mailto:${user.email}`} className="text-sm text-muted-foreground hover:text-primary hover:underline" onClick={e => e.stopPropagation()}>{user.email}</a>
                           {user.phone && (
-                            <span className="text-sm text-muted-foreground">• {user.phone}</span>
+                            <a href={`tel:${user.phone}`} className="text-sm text-muted-foreground hover:text-primary hover:underline" onClick={e => e.stopPropagation()}>• {user.phone}</a>
                           )}
                         </div>
                       </div>
