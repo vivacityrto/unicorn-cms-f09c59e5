@@ -57,6 +57,7 @@ export default function TenantNotes() {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [selectedNote, setSelectedNote] = useState<Note | null>(null);
+  const [noteTitle, setNoteTitle] = useState("");
   const [noteText, setNoteText] = useState("");
   const [noteType, setNoteType] = useState("");
   const [priority, setPriority] = useState("");
@@ -92,6 +93,21 @@ export default function TenantNotes() {
     }
     return 0;
   });
+
+  // Auto-open note dialog from URL params (e.g. status change)
+  useEffect(() => {
+    const initNote = searchParams.get('initNote');
+    const urlNoteTitle = searchParams.get('noteTitle');
+    if (initNote === 'true') {
+      setNoteTitle(urlNoteTitle || '');
+      setIsAddDialogOpen(true);
+      // Clean URL params
+      const newParams = new URLSearchParams(searchParams);
+      newParams.delete('initNote');
+      newParams.delete('noteTitle');
+      navigate(`/tenant/${tenantId}/notes${newParams.toString() ? '?' + newParams.toString() : ''}`, { replace: true });
+    }
+  }, [searchParams, tenantId, navigate]);
 
   // Timer effect
   useEffect(() => {
@@ -273,6 +289,7 @@ export default function TenantNotes() {
       const allFileNames = [...remainingExistingFiles.map(f => f.name), ...fileNames];
 
       const noteData = {
+        title: noteTitle.trim() || undefined,
         note_details: noteText.trim(),
         note_type: noteType || undefined,
         priority: priority || undefined,
@@ -298,6 +315,7 @@ export default function TenantNotes() {
   };
 
   const resetForm = () => {
+    setNoteTitle("");
     setNoteText("");
     setNoteType("");
     setPriority("");
@@ -330,6 +348,7 @@ export default function TenantNotes() {
 
   const openEditDialog = (note: Note) => {
     setSelectedNote(note);
+    setNoteTitle(note.title || "");
     setNoteText(note.note_details);
     setNoteType(note.note_type || "");
     setPriority(note.priority || "");
@@ -652,8 +671,12 @@ export default function TenantNotes() {
             <DialogHeader><DialogTitle>{selectedNote ? 'Edit Note' : 'Add Note'}</DialogTitle></DialogHeader>
             <div className="space-y-4 py-4">
               <div className="space-y-2">
+                <Label>Title</Label>
+                <Input value={noteTitle} onChange={(e) => setNoteTitle(e.target.value)} placeholder="Note title (optional)" />
+              </div>
+              <div className="space-y-2">
                 <Label>Note Details *</Label>
-                <Textarea value={noteText} onChange={(e) => setNoteText(e.target.value)} placeholder="Enter note details..." rows={4} />
+                <Textarea id="note-content-field" value={noteText} onChange={(e) => setNoteText(e.target.value)} placeholder="Enter note details..." rows={4} autoFocus={!!noteTitle} />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">

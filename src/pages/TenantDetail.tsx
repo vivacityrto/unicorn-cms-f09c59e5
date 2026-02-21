@@ -531,15 +531,6 @@ export default function TenantDetail() {
       {/* Back Button, Package Tabs and Status Header */}
       
 
-      {/* Status Badge */}
-      <div className="px-6 mb-2 flex justify-end items-center">
-        <TenantStatusDropdown
-          tenantId={parseInt(tenantId!)}
-          currentStatus={tenantStatus}
-          onStatusChange={setTenantStatus}
-        />
-      </div>
-
       {/* Header Card */}
       <div className="px-6">
         <Card className="border-0 shadow-lg overflow-hidden">
@@ -572,6 +563,16 @@ export default function TenantDetail() {
                 </div>
               </div>
               <div className="flex items-center gap-2.5">
+                {/* Status Dropdown */}
+                <TenantStatusDropdown
+                  tenantId={parseInt(tenantId!)}
+                  currentStatus={tenantStatus}
+                  onStatusChange={setTenantStatus}
+                  onNonActiveChange={(statusDescription) => {
+                    const title = `** CLIENT ${statusDescription.toUpperCase()} **`;
+                    navigate(`/tenant/${tenantId}/notes?initNote=true&noteTitle=${encodeURIComponent(title)}`);
+                  }}
+                />
                 {/* Enrich Tenant — SuperAdmin only */}
                 {tenantId && (
                   <EnrichTenantButton
