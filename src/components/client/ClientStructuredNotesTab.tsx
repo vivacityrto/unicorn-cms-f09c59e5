@@ -131,7 +131,7 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [priority, setPriority] = useState('normal');
-  const [noteStatus, setNoteStatus] = useState('');
+  const [noteStatus, setNoteStatus] = useState('noted');
   const [duration, setDuration] = useState<string>('');
   const [tags, setTags] = useState<string[]>([]);
   const { tags: availableNoteTags, loading: noteTagsLoading } = useNoteTags();
@@ -1203,7 +1203,7 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent className="bg-background">
-                    {noteTypeOptions.map(type => {
+                    {noteTypeOptions.filter(type => type.code).map(type => {
                       const style = NOTE_TYPE_STYLES[type.code] || DEFAULT_NOTE_STYLE;
                       const TypeIcon = style.icon;
                       return (
@@ -1241,7 +1241,7 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
                     <SelectValue placeholder="Select status..." />
                   </SelectTrigger>
                   <SelectContent className="bg-background">
-                    {noteStatusOptions.map(opt => (
+                    {noteStatusOptions.filter(opt => opt.code).map(opt => (
                       <SelectItem key={opt.code} value={opt.code}>
                         {opt.label}
                       </SelectItem>
