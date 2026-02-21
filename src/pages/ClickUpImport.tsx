@@ -116,7 +116,7 @@ export default function ClickUpImport() {
   const handleFetchComments = async () => {
     const tid = parseInt(commentTenantId, 10);
     if (isNaN(tid)) {
-      toast({ title: "Invalid tenant ID", description: "Please enter a numeric tenant ID.", variant: "destructive" });
+      toast({ title: "Invalid tenant ID", description: "Enter a tenant ID, or 0 to fetch all.", variant: "destructive" });
       return;
     }
     setFetchingComments(true);
@@ -129,7 +129,7 @@ export default function ClickUpImport() {
       setCommentResult(data);
       fetchCounts();
       toast({
-        title: "Comments Fetched",
+        title: tid === 0 ? "All Comments Fetched" : "Comments Fetched",
         description: `${data?.stored ?? 0} comments stored from ${data?.task_count ?? 0} tasks.`,
       });
     } catch (err) {
@@ -234,21 +234,21 @@ export default function ClickUpImport() {
           </CardHeader>
           <CardContent className="space-y-4">
             <p className="text-sm text-muted-foreground">
-              Fetch threaded comments for all tasks belonging to a tenant. Linked via <code className="text-xs bg-muted px-1 rounded">task_id</code>.
+              Fetch threaded comments for tasks. Enter a tenant ID, or <strong>0</strong> to fetch comments for <strong>all</strong> tasks. Upserts on <code className="text-xs bg-muted px-1 rounded">comment_id</code> — safe to re-run.
             </p>
             <div className="flex items-end gap-3">
               <div className="flex-1 max-w-xs">
-                <label className="text-xs font-medium text-muted-foreground mb-1 block">Tenant ID</label>
+                <label className="text-xs font-medium text-muted-foreground mb-1 block">Tenant ID (0 = all)</label>
                 <Input
                   type="number"
-                  placeholder="e.g. 7530"
+                  placeholder="0 for all, or e.g. 7530"
                   value={commentTenantId}
                   onChange={(e) => setCommentTenantId(e.target.value)}
                 />
               </div>
               <Button onClick={handleFetchComments} disabled={fetchingComments || !commentTenantId} variant="outline">
                 <Download className={`h-4 w-4 mr-2 ${fetchingComments ? "animate-spin" : ""}`} />
-                {fetchingComments ? "Fetching…" : "Fetch Comments"}
+                {fetchingComments ? "Fetching…" : commentTenantId === "0" ? "Fetch All Comments" : "Fetch Comments"}
               </Button>
             </div>
             {commentResult && (
