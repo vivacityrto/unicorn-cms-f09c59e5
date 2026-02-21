@@ -1238,7 +1238,7 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
 
             {/* Package and optional Duration row */}
             {(activePackages.length > 0 || showsDuration) && (
-              <div className={`grid gap-4 ${activePackages.length > 0 && showsDuration ? 'grid-cols-2' : 'grid-cols-1'}`}>
+              <div className={`grid gap-4 ${activePackages.length > 0 && showsDuration ? 'grid-cols-[2fr_1fr]' : 'grid-cols-1'}`}>
                 {activePackages.length > 0 && (
                   <div className="space-y-2">
                     <Label>Package</Label>
