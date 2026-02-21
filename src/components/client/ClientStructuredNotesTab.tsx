@@ -23,8 +23,9 @@ import {
   Plus, StickyNote, Pin, MoreHorizontal, Edit, Trash2, 
   ArrowRight, Tag, Clock, MessageSquare, AlertTriangle, 
   CheckCircle, Users, FileText, Loader2, Filter, Package,
-  ListTodo, ChevronDown, ChevronUp
+  ListTodo, ChevronDown, ChevronUp, Mic, MicOff
 } from 'lucide-react';
+import { useSpeechToText } from '@/hooks/useSpeechToText';
 import { SelectSeparator } from '@/components/ui/select';
 import { formatDistanceToNow, format, fromUnixTime, isValid } from 'date-fns';
 
@@ -100,6 +101,7 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
   const [isPinned, setIsPinned] = useState(false);
   const [selectedPackageInstanceId, setSelectedPackageInstanceId] = useState<string>('none');
   const [activePackages, setActivePackages] = useState<{ instance_id: number; package_id: number; name: string }[]>([]);
+  const speech = useSpeechToText();
   
   // Convert to action item state
   const [actionTitle, setActionTitle] = useState('');
@@ -891,12 +893,40 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
             </div>
             
             <div className="space-y-2">
-              <Label>Content *</Label>
+              <div className="flex items-center justify-between">
+                <Label>Content *</Label>
+                {speech.isSupported && (
+                  <Button
+                    type="button"
+                    variant={speech.isRecording ? "destructive" : "ghost"}
+                    size="sm"
+                    className="gap-1.5 h-7 text-xs"
+                    onClick={() => {
+                      if (speech.isRecording) {
+                        speech.stopRecording();
+                      } else {
+                        speech.startRecording((text) => {
+                          setContent(prev => prev ? `${prev} ${text}` : text);
+                        });
+                      }
+                    }}
+                  >
+                    {speech.isRecording ? (
+                      <><MicOff className="h-3.5 w-3.5" /> Stop</>
+                    ) : (
+                      <><Mic className="h-3.5 w-3.5" /> Speak</>
+                    )}
+                  </Button>
+                )}
+              </div>
               <Textarea 
-                value={content}
+                value={speech.isRecording && speech.interimTranscript 
+                  ? (content ? `${content} ${speech.interimTranscript}` : speech.interimTranscript)
+                  : content}
                 onChange={e => setContent(e.target.value)}
                 placeholder="Write your note..."
                 rows={4}
+                className={speech.isRecording ? 'border-destructive' : ''}
               />
             </div>
             
