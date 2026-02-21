@@ -22,7 +22,8 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Loader2, Shield, User as UserIcon, AlertTriangle, ArrowUpRight, Users } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Loader2, Shield, User as UserIcon, AlertTriangle, ArrowUpRight, Users, UserPlus } from 'lucide-react';
 import { toast } from 'sonner';
 import type { TenantType } from '@/contexts/TenantTypeContext';
 import { UpgradeModal } from '@/components/billing/UpgradeModal';
@@ -53,6 +54,7 @@ export function TenantInviteDialog({
   const [email, setEmail] = useState('');
   const [role, setRole] = useState('User');
   const [isSending, setIsSending] = useState(false);
+  const [sendInvitation, setSendInvitation] = useState(false);
   
   // Seat limit state
   const [checkingSeats, setCheckingSeats] = useState(true);
@@ -150,13 +152,14 @@ export function TenantInviteDialog({
           invite_as: 'CLIENT',
           tenant_id: tenantId,
           unicorn_role: role,
+          skip_email: !sendInvitation,
         },
       });
 
       if (error) throw error;
 
       if (data?.ok) {
-        toast.success(`Invitation sent to ${email}`);
+        toast.success(sendInvitation ? `Invitation sent to ${email}` : `${firstName} added to ${tenantName}`);
         handleClose();
         onSuccess?.();
       } else {
@@ -297,6 +300,20 @@ export function TenantInviteDialog({
                 </SelectContent>
               </Select>
             </div>
+
+            <div className="flex items-center space-x-2 pt-2">
+              <Checkbox
+                id="tenantSendInvitation"
+                checked={sendInvitation}
+                onCheckedChange={(checked) => setSendInvitation(checked === true)}
+              />
+              <Label
+                htmlFor="tenantSendInvitation"
+                className="text-sm font-normal cursor-pointer"
+              >
+                Send Invitation Email
+              </Label>
+            </div>
           </div>
         )}
 
@@ -309,10 +326,13 @@ export function TenantInviteDialog({
               {isSending ? (
                 <>
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Sending...
+                  {sendInvitation ? 'Sending...' : 'Adding...'}
                 </>
               ) : (
-                'Send Invitation'
+                <>
+                  <UserPlus className="h-4 w-4 mr-2" />
+                  {sendInvitation ? 'Send Invitation' : 'Add User'}
+                </>
               )}
             </Button>
           )}
