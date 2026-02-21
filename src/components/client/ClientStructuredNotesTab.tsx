@@ -1278,18 +1278,14 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
                 {showsDuration && (
                   <div className="space-y-2">
                     <Label>Duration (mins)</Label>
-                    <Select value={duration} onValueChange={setDuration}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select duration..." />
-                      </SelectTrigger>
-                      <SelectContent className="bg-background">
-                        {[15, 30, 45, 60, 75, 90, 105, 120].map(mins => (
-                          <SelectItem key={mins} value={String(mins)}>
-                            {mins} mins
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <Input 
+                      type="number"
+                      min={0}
+                      step={15}
+                      value={duration}
+                      onChange={e => setDuration(e.target.value)}
+                      placeholder="0"
+                    />
                   </div>
                 )}
               </div>
