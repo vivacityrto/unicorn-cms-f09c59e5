@@ -38,9 +38,10 @@ interface TenantStatusDropdownProps {
   tenantId: number;
   currentStatus: string;
   onStatusChange: (newStatus: string) => void;
+  onNonActiveChange?: (statusDescription: string) => void;
 }
 
-export function TenantStatusDropdown({ tenantId, currentStatus, onStatusChange }: TenantStatusDropdownProps) {
+export function TenantStatusDropdown({ tenantId, currentStatus, onStatusChange, onNonActiveChange }: TenantStatusDropdownProps) {
   const { toast } = useToast();
   const { profile } = useAuth();
   const [options, setOptions] = useState<StatusOption[]>([]);
@@ -120,6 +121,12 @@ export function TenantStatusDropdown({ tenantId, currentStatus, onStatusChange }
         title: 'Status Updated',
         description: `Tenant status changed to ${newStatus}${closePackages ? ' and open packages closed' : ''}.`,
       });
+
+      // Trigger note initiation for non-active statuses
+      if (newStatus !== 'active' && onNonActiveChange) {
+        const statusDesc = options.find(o => o.value === newStatus)?.description || newStatus;
+        onNonActiveChange(statusDesc);
+      }
     } catch (err: any) {
       toast({ title: 'Error', description: err.message, variant: 'destructive' });
     } finally {
