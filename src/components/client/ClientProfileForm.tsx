@@ -264,8 +264,16 @@ export function ClientProfileForm({ profile, onSave, loading, tgaLinked, onState
             />
           </div>
 
-          {/* Empty space for Row 3 */}
-          <div></div>
+          <div className="space-y-2">
+            <Label htmlFor="phone1">Phone</Label>
+            <Input
+              id="phone1"
+              value={formData.phone1 || ''}
+              onChange={(e) => handleChange('phone1', e.target.value)}
+              placeholder="e.g. +61 8 1234 5678"
+              disabled={loading}
+            />
+          </div>
 
           {/* Row 4: SMS, LMS, Accounting System */}
           <div className="space-y-2">

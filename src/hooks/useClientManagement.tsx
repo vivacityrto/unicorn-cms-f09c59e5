@@ -60,6 +60,7 @@ export interface ClientProfile {
   accounting_system: string | null;
   risk_level: string | null;
   updated_at: string | null;
+  phone1: string | null;
 }
 
 export interface RegistryLink {
@@ -261,7 +262,7 @@ export function useClientProfile(tenantId: number | null) {
     try {
       setLoading(true);
       
-      const [tenantResult, linkResult, tgaSummaryResult] = await Promise.all([
+      const [tenantResult, linkResult, tgaSummaryResult, tpResult] = await Promise.all([
         supabase
           .from('tenants')
           .select('id, legal_name, rto_name, abn, acn, website, state, rto_id, cricos_id, lms, sms, accounting_system, risk_level, updated_at, tga_status')
@@ -276,6 +277,11 @@ export function useClientProfile(tenantId: number | null) {
         supabase
           .from('tga_rto_summary')
           .select('legal_name, trading_name, abn, acn, web_address, organisation_type')
+          .eq('tenant_id', tenantId)
+          .maybeSingle(),
+        supabase
+          .from('tenant_profile')
+          .select('phone1')
           .eq('tenant_id', tenantId)
           .maybeSingle()
       ]);
@@ -317,7 +323,8 @@ export function useClientProfile(tenantId: number | null) {
         sms: tenant.sms,
         accounting_system: tenant.accounting_system,
         risk_level: tenant.risk_level,
-        updated_at: tenant.updated_at
+        updated_at: tenant.updated_at,
+        phone1: tpResult.data?.phone1 || null
       };
 
       setProfile(profileData);
@@ -361,6 +368,14 @@ export function useClientProfile(tenantId: number | null) {
       if ('accounting_system' in updates) tenantUpdates.accounting_system = updates.accounting_system;
       if ('risk_level' in updates) tenantUpdates.risk_level = updates.risk_level;
       tenantUpdates.updated_at = new Date().toISOString();
+
+      // Handle phone1 separately (stored in tenant_profile)
+      if ('phone1' in updates) {
+        const { error: phoneError } = await supabase
+          .from('tenant_profile')
+          .upsert({ tenant_id: tenantId, phone1: updates.phone1 }, { onConflict: 'tenant_id' });
+        if (phoneError) throw phoneError;
+      }
 
       const { error } = await supabase
         .from('tenants')
