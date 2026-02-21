@@ -56,8 +56,12 @@ export function ClientActionItemsTab({ tenantId, clientId }: ClientActionItemsTa
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [priority, setPriority] = useState('normal');
+  const [actionStatus, setActionStatus] = useState('open');
   const [dueDate, setDueDate] = useState<Date | undefined>();
   const [ownerUserId, setOwnerUserId] = useState<string | undefined>();
+  
+  // Status options from dd_status
+  const [statusOptions, setStatusOptions] = useState<{ value: string; description: string }[]>([]);
   
   // Team members for assignment
   const [teamMembers, setTeamMembers] = useState<Array<{
@@ -69,6 +73,7 @@ export function ClientActionItemsTab({ tenantId, clientId }: ClientActionItemsTa
 
   useEffect(() => {
     fetchTeamMembers();
+    fetchStatusOptions();
   }, []);
 
   const fetchTeamMembers = async () => {
@@ -81,10 +86,19 @@ export function ClientActionItemsTab({ tenantId, clientId }: ClientActionItemsTa
     setTeamMembers(data || []);
   };
 
+  const fetchStatusOptions = async () => {
+    const { data } = await supabase
+      .from('dd_status')
+      .select('value, description')
+      .order('code');
+    if (data) setStatusOptions(data.filter(s => s.value));
+  };
+
   const resetForm = () => {
     setTitle('');
     setDescription('');
     setPriority('normal');
+    setActionStatus('open');
     setDueDate(undefined);
     setOwnerUserId(undefined);
     setSelectedItem(null);
@@ -100,6 +114,7 @@ export function ClientActionItemsTab({ tenantId, clientId }: ClientActionItemsTa
     setTitle(item.title);
     setDescription(item.description || '');
     setPriority(item.priority);
+    setActionStatus(item.status || 'open');
     setDueDate(item.due_date ? new Date(item.due_date) : undefined);
     setOwnerUserId(item.owner_user_id || undefined);
     setIsAddDialogOpen(true);
@@ -115,6 +130,7 @@ export function ClientActionItemsTab({ tenantId, clientId }: ClientActionItemsTa
           title,
           description: description || null,
           priority: priority as ActionItem['priority'],
+          status: actionStatus as ActionItem['status'],
           due_date: dueDate ? format(dueDate, 'yyyy-MM-dd') : null,
           owner_user_id: ownerUserId || null
         });
@@ -391,7 +407,7 @@ export function ClientActionItemsTab({ tenantId, clientId }: ClientActionItemsTa
               />
             </div>
             
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-3 gap-4">
               <div className="space-y-2">
                 <Label>Priority</Label>
                 <Select value={priority} onValueChange={setPriority}>
@@ -406,6 +422,22 @@ export function ClientActionItemsTab({ tenantId, clientId }: ClientActionItemsTa
                   </SelectContent>
                 </Select>
               </div>
+
+              <div className="space-y-2">
+                <Label>Status</Label>
+                <Select value={actionStatus} onValueChange={setActionStatus}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {statusOptions.map(opt => (
+                      <SelectItem key={opt.value} value={opt.value}>
+                        {opt.description}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
               
               <div className="space-y-2">
                 <Label>Due Date</Label>
@@ -413,7 +445,7 @@ export function ClientActionItemsTab({ tenantId, clientId }: ClientActionItemsTa
                   <PopoverTrigger asChild>
                     <Button variant="outline" className="w-full justify-start">
                       <CalendarIcon className="h-4 w-4 mr-2" />
-                      {dueDate ? format(dueDate, 'MMM d, yyyy') : 'Select date'}
+                      {dueDate ? format(dueDate, 'dd MMM yyyy') : 'Select date'}
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0">
