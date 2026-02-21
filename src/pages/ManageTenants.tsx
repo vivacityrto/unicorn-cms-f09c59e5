@@ -79,6 +79,7 @@ export default function ManageTenants() {
 
   const [lifecycleStatuses, setLifecycleStatuses] = useState<{ value: string; label: string; seq: number }[]>([]);
   const [accessStatuses, setAccessStatuses] = useState<{ value: string; label: string; seq: number }[]>([]);
+  const [statusOptions, setStatusOptions] = useState<{ code: number; value: string; description: string }[]>([]);
 
   useEffect(() => {
     fetchTenants();
@@ -89,12 +90,14 @@ export default function ManageTenants() {
   }, []);
 
   const fetchCodeTables = async () => {
-    const [lcRes, acRes] = await Promise.all([
+    const [lcRes, acRes, stRes] = await Promise.all([
       supabase.from("dd_lifecycle_status").select("value, label, seq").order("seq"),
       supabase.from("dd_access_status").select("value, label, seq").order("seq"),
+      supabase.from("dd_status").select("code, value, description").gte("code", 100).order("code"),
     ]);
     if (lcRes.data) setLifecycleStatuses(lcRes.data);
     if (acRes.data) setAccessStatuses(acRes.data);
+    if (stRes.data) setStatusOptions(stRes.data);
   };
 
   const checkConnectedTenant = async () => {
@@ -426,20 +429,22 @@ export default function ManageTenants() {
     }
   };
 
-  const getLifecycleBadge = (lifecycle: string) => {
+  const getStatusBadge = (status: string) => {
     const styleConfig: Record<string, { icon: typeof CheckCircle2; className: string }> = {
       active: { icon: CheckCircle2, className: "bg-green-500/10 text-green-600 hover:bg-green-500/20 border-green-600" },
-      suspended: { icon: Pause, className: "bg-amber-500/10 text-amber-600 hover:bg-amber-500/20 border-amber-600" },
-      closed: { icon: XCircle, className: "bg-red-500/10 text-red-600 hover:bg-red-500/20 border-red-600" },
-      archived: { icon: Archive, className: "bg-muted text-muted-foreground hover:bg-muted/80 border-border" },
+      disabled: { icon: XCircle, className: "bg-red-500/10 text-red-600 hover:bg-red-500/20 border-red-600" },
+      on_hold: { icon: Pause, className: "bg-amber-500/10 text-amber-600 hover:bg-amber-500/20 border-amber-600" },
+      overrun: { icon: AlertCircle, className: "bg-orange-500/10 text-orange-600 hover:bg-orange-500/20 border-orange-600" },
+      terminated: { icon: XCircle, className: "bg-red-500/10 text-red-600 hover:bg-red-500/20 border-red-600" },
+      cancelled: { icon: XCircle, className: "bg-muted text-muted-foreground hover:bg-muted/80 border-border" },
     };
-    const dynamicLabel = lifecycleStatuses.find(s => s.value === lifecycle)?.label;
-    const style = styleConfig[lifecycle] || styleConfig.active;
+    const ddLabel = statusOptions.find(s => s.value === status)?.description;
+    const style = styleConfig[status] || { icon: AlertCircle, className: "bg-muted text-muted-foreground hover:bg-muted/80 border-border" };
     const Icon = style.icon;
     return (
       <Badge variant="outline" className={cn("text-[0.75rem] py-[2px] px-[0.625rem] rounded-[11px] border", style.className)}>
         <Icon className="mr-1 h-3 w-3" />
-        {dynamicLabel || lifecycle.charAt(0).toUpperCase() + lifecycle.slice(1)}
+        {ddLabel || status.charAt(0).toUpperCase() + status.slice(1)}
       </Badge>
     );
   };
@@ -721,7 +726,7 @@ export default function ManageTenants() {
                       </div>
                     </TableCell>
                     <TableCell className="py-6 border-r border-border/50 text-center whitespace-nowrap">
-                      {getLifecycleBadge(tenant.lifecycle_status)}
+                      {getStatusBadge(tenant.status)}
                     </TableCell>
                     <TableCell
                       className="py-6 border-r border-border/50 whitespace-nowrap"
