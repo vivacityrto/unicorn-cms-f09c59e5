@@ -265,7 +265,7 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
         .from('clickup_task_comments' as never)
         .select('*')
         .eq('tenant_id', tenantId)
-        .order('date_created', { ascending: true });
+        .order('date_created', { ascending: false });
       if (data && Array.isArray(data)) {
         const grouped: Record<string, ApiComment[]> = {};
         for (const c of data as any[]) {
