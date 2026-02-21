@@ -18,9 +18,6 @@ type TargetTable = (typeof ALLOWED_TABLES)[number];
 async function resolveTenantIds(sb: ReturnType<typeof createServiceClient>, insertedIds: number[]) {
   if (insertedIds.length === 0) return;
 
-  // 1. Direct /clients/N pattern
-  await sb.rpc("execute_sql" as any, {}).catch(() => {}); // no-op, we use typed queries below
-
   // Fetch rows that need tenant resolution
   const { data: rows } = await sb
     .from("clickup_tasksdb")
