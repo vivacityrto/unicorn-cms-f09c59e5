@@ -1,32 +1,35 @@
-import { useState, useCallback } from "react";
-import Papa from "papaparse";
+import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Upload, FileUp, CheckCircle2, AlertTriangle, ArrowLeft, RefreshCw, MessageSquare, Download, CloudDownload, Loader2 } from "lucide-react";
+import { ArrowLeft, CloudDownload, Loader2, MessageSquare, Download, CheckCircle2, ExternalLink, RefreshCw } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useNavigate } from "react-router-dom";
-import { mapRowForTable, getPreviewColumns, type ImportMode } from "@/utils/clickup-import-mappings";
 
-const BATCH_SIZE = 50;
+interface TableCount {
+  clickup_tasks_api: number;
+  clickup_task_comments: number;
+  clickup_tasks: number;
+  clickup_tasksdb: number;
+}
+
+interface ClickUpTask {
+  id: number;
+  task_id: string;
+  custom_id: string | null;
+  name: string | null;
+  description: string | null;
+  status: string | null;
+  url: string | null;
+  tenant_id: number | null;
+}
 
 export default function ClickUpImport() {
-  const [mode, setMode] = useState<ImportMode>("clickup_tasks");
-  const [file, setFile] = useState<File | null>(null);
-  const [parsedRows, setParsedRows] = useState<Record<string, unknown>[]>([]);
-  const [csvHeaders, setCsvHeaders] = useState<string[]>([]);
-  const [importing, setImporting] = useState(false);
-  const [progress, setProgress] = useState(0);
-  const [result, setResult] = useState<{ inserted: number; errors: number; resolved?: number } | null>(null);
-  const [resolving, setResolving] = useState(false);
-  const [fetchingComments, setFetchingComments] = useState(false);
-  const [commentTenantId, setCommentTenantId] = useState("");
-  const [commentResult, setCommentResult] = useState<{ fetched: number; stored: number; task_count?: number; errors: string[] } | null>(null);
   const [apiSyncing, setApiSyncing] = useState(false);
   const [apiSyncResult, setApiSyncResult] = useState<{
     tasks_fetched: number;
@@ -34,92 +37,85 @@ export default function ClickUpImport() {
     tenants_resolved: number;
     errors: string[];
   } | null>(null);
+  const [fetchingComments, setFetchingComments] = useState(false);
+  const [commentTenantId, setCommentTenantId] = useState("");
+  const [commentResult, setCommentResult] = useState<{ fetched: number; stored: number; task_count?: number; errors: string[] } | null>(null);
+  const [counts, setCounts] = useState<TableCount | null>(null);
+  const [tasks, setTasks] = useState<ClickUpTask[]>([]);
+  const [tasksLoading, setTasksLoading] = useState(true);
+  const [tenants, setTenants] = useState<{ id: number; name: string }[]>([]);
+  const [filterTenant, setFilterTenant] = useState<string>("unresolved");
+  const [updatingTaskId, setUpdatingTaskId] = useState<number | null>(null);
   const { toast } = useToast();
   const navigate = useNavigate();
 
-  const handleFile = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const f = e.target.files?.[0];
-    if (!f) return;
-    setFile(f);
-    setResult(null);
-
-    Papa.parse(f, {
-      header: true,
-      skipEmptyLines: true,
-      transformHeader: (h) => h.trim().toLowerCase(),
-      complete(results) {
-        const headers = results.meta.fields ?? [];
-        setCsvHeaders(headers);
-        const mapped = (results.data as Record<string, string>[]).map((row) =>
-          mapRowForTable(row, mode)
-        );
-        // Filter out rows with no task_id
-        const valid = mapped.filter((r) => r.task_id);
-        setParsedRows(valid);
-      },
-      error(err) {
-        toast({ title: "CSV parse error", description: err.message, variant: "destructive" });
-      },
+  // Fetch table counts
+  const fetchCounts = useCallback(async () => {
+    const [r1, r2, r3, r4] = await Promise.all([
+      supabase.from("clickup_tasks_api").select("id", { count: "exact", head: true }),
+      supabase.from("clickup_task_comments").select("id", { count: "exact", head: true }),
+      supabase.from("clickup_tasks").select("id", { count: "exact", head: true }),
+      supabase.from("clickup_tasksdb").select("id", { count: "exact", head: true }),
+    ]);
+    setCounts({
+      clickup_tasks_api: r1.count ?? 0,
+      clickup_task_comments: r2.count ?? 0,
+      clickup_tasks: r3.count ?? 0,
+      clickup_tasksdb: r4.count ?? 0,
     });
-  }, [toast, mode]);
+  }, []);
 
-  const handleImport = async () => {
-    if (parsedRows.length === 0) return;
-    setImporting(true);
-    setProgress(0);
-    let totalInserted = 0;
-    let totalErrors = 0;
+  // Fetch tenants for dropdown
+  useEffect(() => {
+    supabase.from("tenants").select("id, name").order("name").then(({ data }) => {
+      if (data) setTenants(data);
+    });
+    fetchCounts();
+  }, [fetchCounts]);
 
-    const batches = [];
-    for (let i = 0; i < parsedRows.length; i += BATCH_SIZE) {
-      batches.push(parsedRows.slice(i, i + BATCH_SIZE));
+  // Fetch tasks based on filter
+  const fetchTasks = useCallback(async () => {
+    setTasksLoading(true);
+    let query = supabase
+      .from("clickup_tasks_api")
+      .select("id, task_id, custom_id, name, description, status, url, tenant_id")
+      .order("name", { ascending: true })
+      .limit(200);
+
+    if (filterTenant === "unresolved") {
+      query = query.is("tenant_id", null);
+    } else if (filterTenant && filterTenant !== "all") {
+      query = query.eq("tenant_id", parseInt(filterTenant, 10));
     }
 
-    for (let i = 0; i < batches.length; i++) {
-      const { data, error } = await supabase.functions.invoke("import-clickup-csv", {
-        body: { rows: batches[i], target_table: mode },
-      });
+    const { data } = await query;
+    setTasks(data ?? []);
+    setTasksLoading(false);
+  }, [filterTenant]);
 
-      if (error) {
-        totalErrors += batches[i].length;
-      } else {
-        totalInserted += data?.inserted ?? 0;
-        totalErrors += data?.errors ?? 0;
-      }
+  useEffect(() => {
+    fetchTasks();
+  }, [fetchTasks]);
 
-      setProgress(Math.round(((i + 1) / batches.length) * 100));
-    }
-
-    setResult({ inserted: totalInserted, errors: totalErrors });
-    setImporting(false);
-    toast({
-      title: "Import complete",
-      description: `${totalInserted} rows imported, ${totalErrors} errors.`,
-    });
-  };
-
-  const handleResolveTenants = async () => {
-    setResolving(true);
+  const handleApiSync = async () => {
+    setApiSyncing(true);
+    setApiSyncResult(null);
     try {
-      const { data, error } = await supabase.functions.invoke("import-clickup-csv", {
-        body: { action: "resolve_tenants" },
+      const { data, error } = await supabase.functions.invoke("sync-clickup-tasks", {
+        body: { mode: "sync_all" },
       });
       if (error) throw error;
-      const resolved = data?.resolved ?? 0;
+      setApiSyncResult(data);
+      fetchCounts();
+      fetchTasks();
       toast({
-        title: "Tenant Resolution Complete",
-        description: resolved > 0
-          ? `${resolved} tenant ID${resolved === 1 ? "" : "s"} resolved from unicorn_url.`
-          : "No unresolved rows found — all tenant IDs are already set or URLs could not be matched.",
+        title: "API Sync Complete",
+        description: `${data?.tasks_upserted ?? 0} tasks synced, ${data?.tenants_resolved ?? 0} tenants resolved.`,
       });
     } catch (err) {
-      toast({
-        title: "Resolution failed",
-        description: (err as Error).message,
-        variant: "destructive",
-      });
+      toast({ title: "API Sync failed", description: (err as Error).message, variant: "destructive" });
     } finally {
-      setResolving(false);
+      setApiSyncing(false);
     }
   };
 
@@ -137,6 +133,7 @@ export default function ClickUpImport() {
       });
       if (error) throw error;
       setCommentResult(data);
+      fetchCounts();
       toast({
         title: "Comments Fetched",
         description: `${data?.stored ?? 0} comments stored from ${data?.task_count ?? 0} tasks.`,
@@ -148,59 +145,55 @@ export default function ClickUpImport() {
     }
   };
 
-  const handleApiSync = async () => {
-    setApiSyncing(true);
-    setApiSyncResult(null);
-    try {
-      const { data, error } = await supabase.functions.invoke("sync-clickup-tasks", {
-        body: { mode: "sync_all" },
-      });
-      if (error) throw error;
-      setApiSyncResult(data);
-      toast({
-        title: "API Sync Complete",
-        description: `${data?.tasks_upserted ?? 0} tasks synced, ${data?.tenants_resolved ?? 0} tenants resolved.`,
-      });
-    } catch (err) {
-      toast({ title: "API Sync failed", description: (err as Error).message, variant: "destructive" });
-    } finally {
-      setApiSyncing(false);
+  const handleAssignTenant = async (taskId: number, tenantId: number) => {
+    setUpdatingTaskId(taskId);
+    const { error } = await supabase
+      .from("clickup_tasks_api")
+      .update({ tenant_id: tenantId })
+      .eq("id", taskId);
+
+    if (error) {
+      toast({ title: "Update failed", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: "Tenant assigned" });
+      setTasks(prev => prev.map(t => t.id === taskId ? { ...t, tenant_id: tenantId } : t));
     }
+    setUpdatingTaskId(null);
   };
-
-  const handleModeChange = (newMode: ImportMode) => {
-    setMode(newMode);
-    setFile(null);
-    setParsedRows([]);
-    setCsvHeaders([]);
-    setResult(null);
-  };
-
-  const previewCols = getPreviewColumns(mode);
-  const previewRows = parsedRows.slice(0, 5);
-
-  // Count mapped vs unmapped headers
-  const mappedCount = csvHeaders.filter((h) => {
-    const row = { [h]: "test" };
-    const result = mapRowForTable(row as any, mode);
-    return Object.keys(result).length > 0;
-  }).length;
-  const unmappedCount = csvHeaders.length - mappedCount;
 
   return (
     <AppLayout>
-      <div className="max-w-5xl mx-auto p-4 md:p-6 space-y-6">
+      <div className="max-w-6xl mx-auto p-4 md:p-6 space-y-6">
         {/* Header */}
         <div className="flex items-center gap-3">
           <Button variant="ghost" size="icon" onClick={() => navigate("/tasks")}>
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <div>
-            <h1 className="text-2xl font-bold text-foreground">ClickUp Import & Sync</h1>
+            <h1 className="text-2xl font-bold text-foreground">ClickUp Sync</h1>
             <p className="text-sm text-muted-foreground">
-              Sync tasks from ClickUp API or import CSV data into Unicorn 2.0
+              Sync tasks and comments from ClickUp API
             </p>
           </div>
+        </div>
+
+        {/* Table Counts */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          {[
+            { label: "Tasks (API)", key: "clickup_tasks_api" as const, primary: true },
+            { label: "Comments", key: "clickup_task_comments" as const },
+            { label: "Tasks (Legacy)", key: "clickup_tasks" as const },
+            { label: "TasksDB (Legacy)", key: "clickup_tasksdb" as const },
+          ].map(({ label, key, primary }) => (
+            <Card key={key} className={primary ? "border-primary/30" : "opacity-70"}>
+              <CardContent className="pt-4 pb-3 px-4">
+                <p className="text-xs text-muted-foreground">{label}</p>
+                <p className="text-2xl font-bold text-foreground">
+                  {counts ? counts[key].toLocaleString() : "…"}
+                </p>
+              </CardContent>
+            </Card>
+          ))}
         </div>
 
         {/* API Sync */}
@@ -212,33 +205,20 @@ export default function ClickUpImport() {
           </CardHeader>
           <CardContent className="space-y-4">
             <p className="text-sm text-muted-foreground">
-              Pull all tasks (including custom fields) from the <strong>Membership</strong> list via the ClickUp API.
-              Tasks are upserted into <code className="text-xs bg-muted px-1 rounded">clickup_tasks_api</code> and tenant IDs are resolved from <code className="text-xs bg-muted px-1 rounded">unicorn_url</code>.
+              Pull all tasks from the <strong>Membership</strong> list. Tasks upserted into <code className="text-xs bg-muted px-1 rounded">clickup_tasks_api</code>, tenant IDs resolved from <code className="text-xs bg-muted px-1 rounded">unicorn_url</code>.
             </p>
-            <Button
-              onClick={handleApiSync}
-              disabled={apiSyncing}
-              variant="default"
-            >
+            <Button onClick={handleApiSync} disabled={apiSyncing}>
               {apiSyncing ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Syncing…
-                </>
+                <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Syncing…</>
               ) : (
-                <>
-                  <CloudDownload className="h-4 w-4 mr-2" />
-                  Full Sync
-                </>
+                <><CloudDownload className="h-4 w-4 mr-2" />Full Sync</>
               )}
             </Button>
             {apiSyncResult && (
               <div className="rounded-md border p-3 space-y-1 text-sm">
                 <div className="flex items-center gap-2">
                   <CheckCircle2 className="h-4 w-4 text-green-600" />
-                  <span>
-                    {apiSyncResult.tasks_fetched} fetched, {apiSyncResult.tasks_upserted} upserted, {apiSyncResult.tenants_resolved} tenants resolved
-                  </span>
+                  <span>{apiSyncResult.tasks_fetched} fetched, {apiSyncResult.tasks_upserted} upserted, {apiSyncResult.tenants_resolved} tenants resolved</span>
                 </div>
                 {apiSyncResult.errors.length > 0 && (
                   <div className="text-xs text-destructive mt-1">
@@ -253,56 +233,7 @@ export default function ClickUpImport() {
           </CardContent>
         </Card>
 
-        {/* Mode Selector */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">Import Type</CardTitle>
-          </CardHeader>
-          <CardContent className="flex gap-3">
-            <Button
-              variant={mode === "clickup_tasks" ? "default" : "outline"}
-              onClick={() => handleModeChange("clickup_tasks")}
-              className="flex-1"
-            >
-              <div className="text-left">
-                <div className="font-medium">ClickUp Export</div>
-                <div className="text-xs opacity-70">Raw task data → clickup_tasks</div>
-              </div>
-            </Button>
-            <Button
-              variant={mode === "clickup_tasksdb" ? "default" : "outline"}
-              onClick={() => handleModeChange("clickup_tasksdb")}
-              className="flex-1"
-            >
-              <div className="text-left">
-                <div className="font-medium">Dashboard Export</div>
-                <div className="text-xs opacity-70">Enriched data → clickup_tasksdb</div>
-              </div>
-            </Button>
-          </CardContent>
-        </Card>
-
-        {/* Manual Tenant Resolution */}
-        <Card>
-          <CardContent className="pt-6 flex items-center justify-between">
-            <div>
-              <p className="font-medium text-sm">Resolve Tenant IDs</p>
-              <p className="text-xs text-muted-foreground">
-                Scan all clickup_tasksdb rows with missing tenant_id and resolve from unicorn_url
-              </p>
-            </div>
-            <Button
-              variant="outline"
-              onClick={handleResolveTenants}
-              disabled={resolving}
-            >
-              <RefreshCw className={`h-4 w-4 mr-2 ${resolving ? "animate-spin" : ""}`} />
-              {resolving ? "Resolving…" : "Resolve Now"}
-            </Button>
-          </CardContent>
-        </Card>
-
-        {/* Fetch ClickUp Comments via API */}
+        {/* Fetch Comments */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-lg">
@@ -311,8 +242,7 @@ export default function ClickUpImport() {
           </CardHeader>
           <CardContent className="space-y-4">
             <p className="text-sm text-muted-foreground">
-              Fetch individual threaded comments from the ClickUp API for all tasks belonging to a tenant.
-              Comments are stored in <code className="text-xs bg-muted px-1 rounded">clickup_task_comments</code> with author, timestamp, and thread context.
+              Fetch threaded comments for all tasks belonging to a tenant. Linked via <code className="text-xs bg-muted px-1 rounded">task_id</code>.
             </p>
             <div className="flex items-end gap-3">
               <div className="flex-1 max-w-xs">
@@ -324,11 +254,7 @@ export default function ClickUpImport() {
                   onChange={(e) => setCommentTenantId(e.target.value)}
                 />
               </div>
-              <Button
-                onClick={handleFetchComments}
-                disabled={fetchingComments || !commentTenantId}
-                variant="outline"
-              >
+              <Button onClick={handleFetchComments} disabled={fetchingComments || !commentTenantId} variant="outline">
                 <Download className={`h-4 w-4 mr-2 ${fetchingComments ? "animate-spin" : ""}`} />
                 {fetchingComments ? "Fetching…" : "Fetch Comments"}
               </Button>
@@ -337,11 +263,10 @@ export default function ClickUpImport() {
               <div className="rounded-md border p-3 space-y-1 text-sm">
                 <div className="flex items-center gap-2">
                   <CheckCircle2 className="h-4 w-4 text-green-600" />
-                  <span>{commentResult.stored} comments stored from {commentResult.task_count ?? '?'} tasks ({commentResult.fetched} fetched from API)</span>
+                  <span>{commentResult.stored} comments stored from {commentResult.task_count ?? '?'} tasks ({commentResult.fetched} fetched)</span>
                 </div>
                 {commentResult.errors.length > 0 && (
                   <div className="text-xs text-destructive mt-1">
-                    <p className="font-medium">{commentResult.errors.length} errors:</p>
                     <ul className="list-disc pl-4 max-h-24 overflow-y-auto">
                       {commentResult.errors.slice(0, 10).map((e, i) => <li key={i}>{e}</li>)}
                     </ul>
@@ -352,117 +277,98 @@ export default function ClickUpImport() {
           </CardContent>
         </Card>
 
-
+        {/* Task List with Tenant Assignment */}
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-lg">
-              <Upload className="h-5 w-5" /> Upload CSV
-            </CardTitle>
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-lg">Tasks — Manual Tenant Assignment</CardTitle>
+              <div className="flex items-center gap-2">
+                <Select value={filterTenant} onValueChange={setFilterTenant}>
+                  <SelectTrigger className="w-[200px]">
+                    <SelectValue placeholder="Filter tasks" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="unresolved">Unresolved only</SelectItem>
+                    <SelectItem value="all">All tasks</SelectItem>
+                    {tenants.slice(0, 50).map(t => (
+                      <SelectItem key={t.id} value={String(t.id)}>{t.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Button variant="ghost" size="icon" onClick={fetchTasks} disabled={tasksLoading}>
+                  <RefreshCw className={`h-4 w-4 ${tasksLoading ? "animate-spin" : ""}`} />
+                </Button>
+              </div>
+            </div>
           </CardHeader>
           <CardContent>
-            <label className="flex flex-col items-center justify-center border-2 border-dashed border-muted-foreground/25 rounded-lg p-10 cursor-pointer hover:border-primary/50 transition-colors">
-              <FileUp className="h-10 w-10 text-muted-foreground mb-2" />
-              <span className="text-sm text-muted-foreground">
-                {file ? file.name : "Click or drag a .csv file here"}
-              </span>
-              <input
-                type="file"
-                accept=".csv"
-                className="hidden"
-                onChange={handleFile}
-              />
-            </label>
+            {tasksLoading ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+              </div>
+            ) : tasks.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-8">No tasks found for this filter.</p>
+            ) : (
+              <>
+                <p className="text-xs text-muted-foreground mb-2">{tasks.length} tasks shown (max 200)</p>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Custom ID</TableHead>
+                      <TableHead>Name</TableHead>
+                      <TableHead className="hidden md:table-cell">Status</TableHead>
+                      <TableHead>ClickUp</TableHead>
+                      <TableHead>Tenant</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {tasks.map(task => (
+                      <TableRow key={task.id}>
+                        <TableCell className="font-mono text-xs">{task.custom_id || "—"}</TableCell>
+                        <TableCell className="max-w-[250px]">
+                          <div className="truncate text-sm font-medium">{task.name || "—"}</div>
+                          {task.description && (
+                            <div className="truncate text-xs text-muted-foreground">{task.description.slice(0, 80)}</div>
+                          )}
+                        </TableCell>
+                        <TableCell className="hidden md:table-cell">
+                          {task.status ? (
+                            <Badge variant="outline" className="text-xs">{task.status}</Badge>
+                          ) : "—"}
+                        </TableCell>
+                        <TableCell>
+                          {task.url ? (
+                            <a href={task.url} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline inline-flex items-center gap-1 text-xs">
+                              <ExternalLink className="h-3 w-3" /> Open
+                            </a>
+                          ) : "—"}
+                        </TableCell>
+                        <TableCell className="min-w-[180px]">
+                          <Select
+                            value={task.tenant_id ? String(task.tenant_id) : ""}
+                            onValueChange={(val) => handleAssignTenant(task.id, parseInt(val, 10))}
+                            disabled={updatingTaskId === task.id}
+                          >
+                            <SelectTrigger className="h-8 text-xs">
+                              <SelectValue placeholder="Assign tenant…" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {tenants.map(t => (
+                                <SelectItem key={t.id} value={String(t.id)} className="text-xs">
+                                  {t.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </>
+            )}
           </CardContent>
         </Card>
-
-        {/* Summary */}
-        {parsedRows.length > 0 && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">Mapping Summary</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="flex flex-wrap gap-2 text-sm">
-                <Badge variant="secondary">{parsedRows.length} rows parsed</Badge>
-                <Badge className="bg-green-100 text-green-800">{mappedCount} mapped columns</Badge>
-                {unmappedCount > 0 && (
-                  <Badge variant="outline" className="text-amber-600 border-amber-300">
-                    {unmappedCount} unmapped (ignored)
-                  </Badge>
-                )}
-                <Badge variant="outline">
-                  Target: {mode === "clickup_tasks" ? "clickup_tasks" : "clickup_tasksdb"}
-                </Badge>
-              </div>
-              {mode === "clickup_tasksdb" && (
-                <p className="text-xs text-muted-foreground">
-                  tenant_id will be auto-resolved from unicorn_url after import.
-                </p>
-              )}
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Preview */}
-        {previewRows.length > 0 && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">Preview (first 5 rows)</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    {previewCols.map((c) => (
-                      <TableHead key={c}>{c}</TableHead>
-                    ))}
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {previewRows.map((row, i) => (
-                    <TableRow key={i}>
-                      {previewCols.map((c) => (
-                        <TableCell key={c} className="max-w-[200px] truncate">
-                          {String(row[c] ?? "")}
-                        </TableCell>
-                      ))}
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Import */}
-        {parsedRows.length > 0 && (
-          <Card>
-            <CardContent className="pt-6 space-y-4">
-              {importing && (
-                <Progress value={progress} showValue label="Importing…" />
-              )}
-              {result && (
-                <div className="flex items-center gap-3 text-sm">
-                  <CheckCircle2 className="h-5 w-5 text-green-600" />
-                  <span>{result.inserted} rows imported</span>
-                  {result.errors > 0 && (
-                    <>
-                      <AlertTriangle className="h-5 w-5 text-amber-500" />
-                      <span>{result.errors} errors</span>
-                    </>
-                  )}
-                </div>
-              )}
-              <Button
-                onClick={handleImport}
-                isLoading={importing}
-                disabled={importing || parsedRows.length === 0}
-              >
-                Import {parsedRows.length} Rows to {mode === "clickup_tasks" ? "clickup_tasks" : "clickup_tasksdb"}
-              </Button>
-            </CardContent>
-          </Card>
-        )}
       </div>
     </AppLayout>
   );
