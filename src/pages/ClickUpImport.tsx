@@ -8,7 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Upload, FileUp, CheckCircle2, AlertTriangle, ArrowLeft } from "lucide-react";
+import { Upload, FileUp, CheckCircle2, AlertTriangle, ArrowLeft, RefreshCw } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { mapRowForTable, getPreviewColumns, type ImportMode } from "@/utils/clickup-import-mappings";
 
@@ -21,7 +21,8 @@ export default function ClickUpImport() {
   const [csvHeaders, setCsvHeaders] = useState<string[]>([]);
   const [importing, setImporting] = useState(false);
   const [progress, setProgress] = useState(0);
-  const [result, setResult] = useState<{ inserted: number; errors: number } | null>(null);
+  const [result, setResult] = useState<{ inserted: number; errors: number; resolved?: number } | null>(null);
+  const [resolving, setResolving] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -86,6 +87,31 @@ export default function ClickUpImport() {
     });
   };
 
+  const handleResolveTenants = async () => {
+    setResolving(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("import-clickup-csv", {
+        body: { action: "resolve_tenants" },
+      });
+      if (error) throw error;
+      const resolved = data?.resolved ?? 0;
+      toast({
+        title: "Tenant Resolution Complete",
+        description: resolved > 0
+          ? `${resolved} tenant ID${resolved === 1 ? "" : "s"} resolved from unicorn_url.`
+          : "No unresolved rows found — all tenant IDs are already set or URLs could not be matched.",
+      });
+    } catch (err) {
+      toast({
+        title: "Resolution failed",
+        description: (err as Error).message,
+        variant: "destructive",
+      });
+    } finally {
+      setResolving(false);
+    }
+  };
+
   const handleModeChange = (newMode: ImportMode) => {
     setMode(newMode);
     // Reset file state when switching modes
@@ -147,6 +173,26 @@ export default function ClickUpImport() {
                 <div className="font-medium">Dashboard Export</div>
                 <div className="text-xs opacity-70">Enriched data → clickup_tasksdb</div>
               </div>
+            </Button>
+          </CardContent>
+        </Card>
+
+        {/* Manual Tenant Resolution */}
+        <Card>
+          <CardContent className="pt-6 flex items-center justify-between">
+            <div>
+              <p className="font-medium text-sm">Resolve Tenant IDs</p>
+              <p className="text-xs text-muted-foreground">
+                Scan all clickup_tasksdb rows with missing tenant_id and resolve from unicorn_url
+              </p>
+            </div>
+            <Button
+              variant="outline"
+              onClick={handleResolveTenants}
+              disabled={resolving}
+            >
+              <RefreshCw className={`h-4 w-4 mr-2 ${resolving ? "animate-spin" : ""}`} />
+              {resolving ? "Resolving…" : "Resolve Now"}
             </Button>
           </CardContent>
         </Card>
