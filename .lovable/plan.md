@@ -1,91 +1,126 @@
 
 
-## Add Status Field, Duration, and Time Log Prompt to Notes
+# Code Tables Manager — Implementation Plan
 
-### Overview
+## Overview
 
-This plan adds three enhancements to the Add Note dialog:
-- A **Status** dropdown populated from a new `dd_note_status` lookup table
-- A **Duration (mins)** field that appears for Meeting, Phone Call, and Action note types
-- A **prompt to log time** after creating notes of those three types
+Build a Super Admin interface at `/admin/code-tables` to discover, browse, and manage all `dd_` prefixed lookup tables. This replaces manual database edits with a dynamic, auditable UI that adapts to any table shape.
 
-### Database Changes
+---
 
-**1. Create `dd_note_status` lookup table**
+## What Gets Built
 
-A new dropdown/code table with these rows:
-- attended
-- not_attended
-- late
-- completed
-- scheduled
-- abandoned
+### 1. Database Layer (Migration)
 
-Columns: `id` (serial PK), `code` (text, unique), `label` (text), `sort_order` (int), `is_active` (boolean, default true)
+Three new RPC functions:
 
-**2. Add `status` column to `notes` table**
+- **`list_code_tables()`** — Returns metadata (table name, row count, RLS status, column definitions) for every `dd_*` table in the public schema. Super Admin gated via `is_super_admin_safe()`.
+- **`code_table_operation(p_table_name, p_operation, p_data, p_where_clause)`** — Generic CRUD RPC accepting `select`, `insert`, `update`, or `delete`. Validates the table name matches `dd_%` before executing dynamic SQL. Soft-deletes (sets `is_active = false`) when the column exists, otherwise hard-deletes.
+- **`format_code_label(input_label text)`** and **`standardize_code_value(input_label text)`** — Helper functions for auto-formatting label text and generating value slugs.
 
-Add a nullable `text` column `status` to the existing `notes` table to store the selected status value.
+All functions use `SECURITY DEFINER` with `SET search_path = ''` and fully qualified `public.*` references. All are gated to Super Admin only.
 
-### Frontend Changes
+### 2. Service Layer
 
-**3. Widen the Add/Edit Note dialog**
+**New file: `src/services/codeTablesService.ts`**
 
-Change `max-w-lg` to `max-w-2xl` to accommodate the extra fields on one row.
+Thin wrapper around the RPCs providing typed methods: `getCodeTables()`, `getTableData()`, `createRow()`, `updateRow()`, `deleteRow()`, `formatLabel()`, `generateValue()`.
 
-**4. Update the Type/Priority row to include Status**
+### 3. Hook Layer
 
-Change the first row from a 2-column grid to a 3-column grid containing:
-- Type (existing)
-- Priority (existing)
-- Status (new -- populated from `dd_note_status`)
+**New file: `src/hooks/useCodeTables.ts`**
 
-**5. Conditionally show Duration field**
+Two hooks:
+- `useCodeTables()` — Fetches all table metadata. Returns `{ tables, loading, error, refetch }`.
+- `useTableData(tableName)` — Fetches rows for the selected table. Returns `{ data, loading, error, refetch, createRow, updateRow, deleteRow }`. Mutations show toast notifications and auto-refetch.
 
-When `noteType` is `meeting`, `phone-call`, or `action`:
-- Expand the row to 4 columns: Type | Priority | Status | Duration (mins)
-- Duration is a numeric `Input` field
+### 4. UI Components (4 files)
 
-**6. Add form state for `status` and `duration`**
+| File | Purpose |
+|------|---------|
+| `src/pages/CodeTablesAdmin.tsx` | Page component — layout, dialog state, wires hooks |
+| `src/components/admin/CodeTableSidebar.tsx` | Left panel — searchable list of dd_ tables with row counts and RLS indicators |
+| `src/components/admin/CodeTableDataGrid.tsx` | Main area — dynamic table rendering with sort, search, action buttons |
+| `src/components/admin/CodeRowDialog.tsx` | Create/Edit/Duplicate modal — dynamic form fields based on column metadata |
 
-New state variables:
-- `noteStatus` (string, default empty)
-- `duration` (number or empty string)
+### 5. Routing
 
-Both included in `resetForm()` and `handleSave()`.
+- Add route `/admin/code-tables` in `App.tsx` wrapped with `<ProtectedRoute requireSuperAdmin>`.
+- Add navigation entry in `navigationConfig.ts` under the admin section.
 
-**7. Persist status and duration on save**
+---
 
-Pass `status` and `duration` to `createNote()` / `updateNote()`. The `notes` table already has a `duration` column (integer). The `status` column will be added by migration.
+## UI Behaviour
 
-Update `useNotes.tsx`:
-- Add `status` to `Note` interface, `CreateNoteInput`, and `UpdateNoteInput`
-- Include `status` in the SELECT query and in create/update operations
+**Sidebar (left, w-80):**
+- Search input filters table names
+- Each table card shows: name, row count, RLS status (green shield = policies exist, amber = RLS on but no policies, red = no RLS)
+- Selected table highlighted with `ring-2 ring-primary`
 
-**8. Time log prompt after save**
+**Data Grid (main area):**
+- Empty state when no table selected
+- Header shows table name, security badge, row/column counts, search, "Add Row" button
+- Columns generated dynamically from table metadata
+- Booleans render as Active/Inactive badges
+- Timestamps formatted as dates
+- Actions column: Edit, Duplicate, Delete icons
 
-After successfully creating a note with type `meeting`, `phone-call`, or `action` and a duration > 0:
-- Show a confirmation dialog: "Would you like to log this as a time entry?"
-- If yes, call the existing time tracking RPC to add a manual time entry for the tenant with the specified duration
-- If no, just close
+**Row Dialog (modal):**
+- Fields generated from column metadata
+- `label` field auto-formats and auto-generates `value` on change (debounced 300ms)
+- Booleans use Switch toggles
+- `description` fields use Textarea
+- Skips `id` on create/duplicate, skips `created_at`/`updated_at`/`created_by`/`updated_by`
+- Validates required fields (non-nullable without defaults)
 
-**9. Pre-populate edit form**
+---
 
-When editing a note, pre-populate `noteStatus` from `note.status` and `duration` from `note.duration`.
+## Existing dd_ Tables (9 tables)
 
-### Files to Modify
+| Table | Key Columns |
+|-------|-------------|
+| dd_access_status | id, label, value, seq, is_default |
+| dd_address_type | id, code, label, description |
+| dd_document_categories | id, label, value |
+| dd_fields | id, name, tag |
+| dd_lifecycle_status | id, label, value, seq, is_default |
+| dd_note_status | id, code, label, sort_order, is_active |
+| dd_note_tags | id, code, label, description, is_active, sort_order |
+| dd_note_types | id, code, label, sort_order, is_active |
+| dd_status | code, description, seq, value |
 
-| File | Change |
-|------|--------|
-| `supabase/migrations/` | New migration: create `dd_note_status`, seed rows, add `status` column to `notes` |
-| `src/hooks/useNotes.tsx` | Add `status` to Note interface, CreateNoteInput, UpdateNoteInput, and queries |
-| `src/components/client/ClientStructuredNotesTab.tsx` | Widen dialog, add Status and Duration fields, add time log prompt dialog |
+All 9 tables already have RLS enabled with read (authenticated) and write (super admin) policies in place. No new RLS policies needed.
 
-### Technical Details
+---
 
-- The `dd_note_status` table follows existing code table conventions (`dd_` prefix, `code`/`label`/`sort_order`/`is_active` columns)
-- Status values are stored as text codes in the `notes.status` column (not foreign key IDs) to match existing patterns (e.g., `note_type`, `priority`)
-- Duration is already an integer column on `notes` -- no migration needed for that field
-- The time log prompt uses a separate `AlertDialog` shown after the note is saved, containing a summary and Yes/No buttons
-- The responsive grid uses `grid-cols-3` normally and `grid-cols-4` when duration is visible (meeting/phone-call/action types)
+## Technical Details
+
+**RPC Security Model:**
+- All RPCs check `is_super_admin_safe(auth.uid())` before executing
+- Dynamic SQL in `code_table_operation` validates table name against `information_schema.tables` with `LIKE 'dd\_%'` pattern before constructing queries
+- Parameters are sanitised using `format()` with `%I` (identifier) and `%L` (literal) placeholders to prevent SQL injection
+
+**Auto-format behaviour:**
+- `format_code_label('health check status')` returns `Health Check Status`
+- `standardize_code_value('Health Check Status')` returns `health_check_status`
+- "and" is replaced with "&" in labels
+
+**Soft delete logic:**
+- If table has an `is_active` column, DELETE sets `is_active = false`
+- Otherwise performs a hard DELETE
+
+**Files created (6 new):**
+1. `src/services/codeTablesService.ts`
+2. `src/hooks/useCodeTables.ts`
+3. `src/pages/CodeTablesAdmin.tsx`
+4. `src/components/admin/CodeTableSidebar.tsx`
+5. `src/components/admin/CodeTableDataGrid.tsx`
+6. `src/components/admin/CodeRowDialog.tsx`
+
+**Files modified (2):**
+1. `src/App.tsx` — Add route
+2. `src/config/navigationConfig.ts` — Add nav entry
+
+**Database migration (1):**
+- Creates `list_code_tables()`, `code_table_operation()`, `format_code_label()`, `standardize_code_value()` RPCs
 
