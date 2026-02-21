@@ -41,9 +41,7 @@ interface ClickUpTask {
   task_custom_id: string | null;
   task_name: string | null;
   task_content: string | null;
-  date_created_ts: string | null;
   date_created: string | null;
-  date_created_text: string | null;
   comments: unknown;
   assigned_comments: unknown;
   status: string | null;
@@ -238,8 +236,8 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
       try {
   const { data, error } = await supabase
           .from('v_clickup_tasks' as never)
-          .select('id, task_id, task_custom_id, task_name, task_content, date_created_ts, date_created, date_created_text, comments, assigned_comments, status, list_name')
-          .eq('tenant_id_db', tenantId)
+          .select('id, task_id, task_custom_id, task_name, task_content, date_created, comments, assigned_comments, status, list_name')
+          .eq('tenant_id', tenantId)
           .order('date_created', { ascending: false });
         if (error) throw error;
         setClickupTasks((data as ClickUpTask[]) || []);
@@ -578,18 +576,15 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
                   <div className="space-y-2">
                     {clickupTasks.map(task => {
                       const isExpanded = expandedTaskId === task.id;
-                      // date_created_ts is a unix timestamp in ms stored as string
+                      // date_created is a unix timestamp in ms stored as string
                       let formattedDate = '—';
-                      const rawTs = task.date_created_ts || task.date_created;
+                      const rawTs = task.date_created;
                       if (rawTs) {
                         try {
                           const ts = Number(rawTs);
                           const d = isNaN(ts) ? new Date(rawTs) : fromUnixTime(ts / 1000);
                           if (isValid(d)) formattedDate = format(d, 'dd MMM yyyy');
-                        } catch { /* fallback to text */ }
-                      }
-                      if (formattedDate === '—' && task.date_created_text) {
-                        formattedDate = task.date_created_text;
+                        } catch { /* fallback */ }
                       }
                       // Determine task_id for API comment lookup
                       const rawTaskId = (task as any).task_id as string | undefined;
