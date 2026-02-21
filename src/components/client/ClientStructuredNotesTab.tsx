@@ -1190,36 +1190,6 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
               />
             </div>
             
-            <div className="space-y-2">
-              <Label>Tags</Label>
-              <Select onValueChange={(value) => handleAddTag(value)} value="">
-                <SelectTrigger className="bg-background">
-                  <SelectValue placeholder={noteTagsLoading ? "Loading tags..." : "Select a tag..."} />
-                </SelectTrigger>
-                <SelectContent className="bg-popover z-[100]">
-                  {availableNoteTags
-                    .filter(t => !tags.includes(t.code))
-                    .map(t => (
-                      <SelectItem key={t.code} value={t.code}>{t.label}</SelectItem>
-                    ))}
-                  {availableNoteTags.filter(t => !tags.includes(t.code)).length === 0 && (
-                    <div className="px-3 py-2 text-sm text-muted-foreground">No more tags available</div>
-                  )}
-                </SelectContent>
-              </Select>
-              {tags.length > 0 && (
-                <div className="flex flex-wrap gap-1 mt-2">
-                  {tags.map(tag => {
-                    const tagMeta = availableNoteTags.find(t => t.code === tag);
-                    return (
-                      <Badge key={tag} variant="secondary" className="cursor-pointer" onClick={() => handleRemoveTag(tag)}>
-                        {tagMeta?.label || tag} ×
-                      </Badge>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
             
             <div className="flex items-center gap-2">
               <Switch 
