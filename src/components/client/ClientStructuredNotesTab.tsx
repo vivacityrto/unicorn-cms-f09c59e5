@@ -28,6 +28,7 @@ import {
 import { useSpeechToText } from '@/hooks/useSpeechToText';
 import { SelectSeparator } from '@/components/ui/select';
 import { formatDistanceToNow, format, fromUnixTime, isValid } from 'date-fns';
+import { TenantClickUpAISearch } from '@/components/tenant/TenantClickUpAISearch';
 
 interface PackageInfo {
   id: number;
@@ -560,6 +561,7 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
                 <ListTodo className="h-4 w-4" />
                 <span>{clickupLoading ? 'Loading...' : `${clickupTasks.length} task${clickupTasks.length !== 1 ? 's' : ''} linked to this tenant`}</span>
               </div>
+              <TenantClickUpAISearch tenantId={tenantId} />
               {clickupLoading ? (
                 <div className="flex items-center justify-center py-12 gap-2 text-muted-foreground">
                   <Loader2 className="h-5 w-5 animate-spin" />
