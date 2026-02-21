@@ -41574,7 +41574,7 @@ export type Database = {
           task_id: string | null
           task_name: string | null
           tenant_id: number | null
-          tenant_id_db: number | null
+          tenant_id_ct: number | null
           time_estimate_any: string | null
           time_estimated: string | null
           time_estimated_minutes: number | null
