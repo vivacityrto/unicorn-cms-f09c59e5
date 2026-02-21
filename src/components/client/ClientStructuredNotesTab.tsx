@@ -376,6 +376,7 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
     setSaving(true);
     try {
       const selectedPkg = activePackages.find(p => String(p.instance_id) === selectedPackageInstanceId);
+      let noteId: string | null = null;
       if (selectedNote) {
         await updateNote(selectedNote.id, {
           note_type: noteType,
@@ -387,7 +388,7 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
           package_id: selectedPkg?.package_id || null
         });
       } else {
-        await createNote({
+        noteId = await createNote({
           note_type: noteType,
           title: title || undefined,
           note_details: content,
@@ -398,6 +399,48 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
           parent_type_override: selectedPkg ? 'package_instance' : undefined,
           parent_id_override: selectedPkg ? selectedPkg.instance_id : undefined
         });
+
+        // Notify CSC if note was created by someone else
+        if (noteId) {
+          try {
+            const { data: userData } = await supabase.auth.getUser();
+            const currentUserId = userData.user?.id;
+            if (currentUserId) {
+              const { data: cscData } = await supabase
+                .from('client_packages')
+                .select('assigned_csc_user_id')
+                .eq('tenant_id', tenantId)
+                .not('assigned_csc_user_id', 'is', null)
+                .limit(1);
+
+              const cscUserId = cscData?.[0]?.assigned_csc_user_id;
+              if (cscUserId && cscUserId !== currentUserId) {
+                // Get current user's name for the notification
+                const { data: authorUser } = await supabase
+                  .from('users')
+                  .select('first_name, last_name')
+                  .eq('user_uuid', currentUserId)
+                  .single();
+
+                const authorName = authorUser
+                  ? `${authorUser.first_name || ''} ${authorUser.last_name || ''}`.trim()
+                  : 'A team member';
+
+                await supabase.from('user_notifications').insert({
+                  user_id: cscUserId,
+                  tenant_id: tenantId,
+                  title: 'New note added to your client',
+                  message: `${authorName} added a note: "${(title || content.substring(0, 60)).trim()}${!title && content.length > 60 ? '...' : ''}"`,
+                  type: 'note_added',
+                  link: `/tenant/${tenantId}`,
+                  created_by: currentUserId
+                });
+              }
+            }
+          } catch (notifErr) {
+            console.error('Failed to send CSC notification:', notifErr);
+          }
+        }
       }
       setIsAddDialogOpen(false);
       resetForm();
@@ -772,25 +815,30 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
               )}
             </div>
           ) : filteredNotes.length === 0 ? (
-            <div className="text-center py-12 text-muted-foreground">
-              <StickyNote className="h-10 w-10 mx-auto mb-3 opacity-50" />
-              <p>{notes.length === 0 ? 'No notes yet' : 'No matching notes'}</p>
-              <p className="text-sm mt-1">
-                {notes.length === 0 
-                  ? 'Create notes to track meetings, decisions, and follow-ups'
-                  : selectedTagFilter.length > 0
-                    ? 'Try removing some tag filters or changing the note type filter'
-                    : 'Try changing the filter to see more notes'}
-              </p>
-              {notes.length === 0 && (
-                <Button size="sm" className="mt-4" onClick={handleOpenAdd}>
-                  <Plus className="h-4 w-4 mr-1" />
-                  Create First Note
-                </Button>
-              )}
+            <div className="space-y-3">
+              <TenantClickUpAISearch tenantId={tenantId} />
+              <div className="text-center py-12 text-muted-foreground">
+                <StickyNote className="h-10 w-10 mx-auto mb-3 opacity-50" />
+                <p>{notes.length === 0 ? 'No notes yet' : 'No matching notes'}</p>
+                <p className="text-sm mt-1">
+                  {notes.length === 0 
+                    ? 'Create notes to track meetings, decisions, and follow-ups'
+                    : selectedTagFilter.length > 0
+                      ? 'Try removing some tag filters or changing the note type filter'
+                      : 'Try changing the filter to see more notes'}
+                </p>
+                {notes.length === 0 && (
+                  <Button size="sm" className="mt-4" onClick={handleOpenAdd}>
+                    <Plus className="h-4 w-4 mr-1" />
+                    Create First Note
+                  </Button>
+                )}
+              </div>
             </div>
           ) : (
-            <ScrollArea className="h-[500px]">
+            <div className="space-y-3">
+              <TenantClickUpAISearch tenantId={tenantId} />
+              <ScrollArea className="h-[500px]">
               <div className="space-y-3">
                 {filteredNotes.map(note => {
                   const typeConfig = getNoteTypeConfig(note.note_type);
@@ -926,6 +974,7 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
                 })}
               </div>
             </ScrollArea>
+            </div>
           )}
         </CardContent>
       </Card>
