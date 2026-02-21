@@ -380,12 +380,25 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
     fetchPackageInfo();
   }, [selectedNote]);
 
+  const DURATION_TYPES = ['phone-call', 'meeting', 'action'];
+  
+  const getDefaultStatus = (type: string) => 
+    DURATION_TYPES.includes(type) ? 'completed' : 'noted';
+
+  const handleNoteTypeChange = (type: string) => {
+    setNoteType(type);
+    // Only update status default when adding (not editing)
+    if (!selectedNote) {
+      setNoteStatus(getDefaultStatus(type));
+    }
+  };
+
   const resetForm = () => {
     setNoteType('general');
     setTitle('');
     setContent('');
     setPriority('normal');
-    setNoteStatus('');
+    setNoteStatus('noted');
     setDuration('');
     setTags([]);
     setIsPinned(false);
@@ -1183,7 +1196,7 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
             <div className="grid grid-cols-3 gap-4">
               <div className="space-y-2">
                 <Label>Type</Label>
-                <Select value={noteType} onValueChange={setNoteType}>
+                <Select value={noteType} onValueChange={handleNoteTypeChange}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
