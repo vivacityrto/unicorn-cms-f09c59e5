@@ -12302,6 +12302,30 @@ export type Database = {
         }
         Relationships: []
       }
+      dd_note_types: {
+        Row: {
+          code: string
+          id: number
+          is_active: boolean
+          label: string
+          sort_order: number
+        }
+        Insert: {
+          code: string
+          id?: number
+          is_active?: boolean
+          label: string
+          sort_order?: number
+        }
+        Update: {
+          code?: string
+          id?: number
+          is_active?: boolean
+          label?: string
+          sort_order?: number
+        }
+        Relationships: []
+      }
       dd_status: {
         Row: {
           code: number

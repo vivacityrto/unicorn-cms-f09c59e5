@@ -24,7 +24,7 @@ import {
   Plus, StickyNote, Pin, MoreHorizontal, Edit, Trash2, 
   ArrowRight, Tag, Clock, MessageSquare, AlertTriangle, 
   CheckCircle, Users, FileText, Loader2, Filter, Package,
-  ListTodo, ChevronDown, ChevronUp, Mic, MicOff, ExternalLink
+  ListTodo, ChevronDown, ChevronUp, Mic, MicOff, ExternalLink, Mail
 } from 'lucide-react';
 import { useSpeechToText } from '@/hooks/useSpeechToText';
 import { SelectSeparator } from '@/components/ui/select';
@@ -73,16 +73,20 @@ interface ClientStructuredNotesTabProps {
   clientId: string;
 }
 
-const NOTE_TYPES = [
-  { value: 'general', label: 'General', icon: StickyNote, color: 'bg-slate-100 text-slate-700' },
-  { value: 'follow-up', label: 'Follow-up', icon: ArrowRight, color: 'bg-purple-100 text-purple-700' },
-  { value: 'phone-call', label: 'Phone Call', icon: MessageSquare, color: 'bg-cyan-100 text-cyan-700' },
-  { value: 'meeting', label: 'Meeting', icon: Users, color: 'bg-blue-100 text-blue-700' },
-  { value: 'action', label: 'Action', icon: CheckCircle, color: 'bg-green-100 text-green-700' },
-  { value: 'tenant', label: 'Tenant', icon: FileText, color: 'bg-amber-100 text-amber-700' },
-  { value: 'risk', label: 'Risk', icon: AlertTriangle, color: 'bg-red-100 text-red-700' },
-  { value: 'escalation', label: 'Escalation', icon: AlertTriangle, color: 'bg-orange-100 text-orange-700' }
-];
+// Icon and color mapping for note types (visual only)
+const NOTE_TYPE_STYLES: Record<string, { icon: typeof StickyNote; color: string }> = {
+  'general': { icon: StickyNote, color: 'bg-slate-100 text-slate-700' },
+  'follow-up': { icon: ArrowRight, color: 'bg-purple-100 text-purple-700' },
+  'phone-call': { icon: MessageSquare, color: 'bg-cyan-100 text-cyan-700' },
+  'meeting': { icon: Users, color: 'bg-blue-100 text-blue-700' },
+  'action': { icon: CheckCircle, color: 'bg-green-100 text-green-700' },
+  'email': { icon: Mail, color: 'bg-indigo-100 text-indigo-700' },
+  'tenant': { icon: FileText, color: 'bg-amber-100 text-amber-700' },
+  'risk': { icon: AlertTriangle, color: 'bg-red-100 text-red-700' },
+  'escalation': { icon: AlertTriangle, color: 'bg-orange-100 text-orange-700' },
+};
+
+const DEFAULT_NOTE_STYLE = { icon: StickyNote, color: 'bg-slate-100 text-slate-700' };
 
 export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructuredNotesTabProps) {
   const { notes, loading, createNote, updateNote, deleteNote, refresh } = useNotes({
@@ -114,6 +118,9 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
   const [saving, setSaving] = useState(false);
   const [selectedPackageInfo, setSelectedPackageInfo] = useState<PackageInfo | null>(null);
   const [packageNameMap, setPackageNameMap] = useState<Record<number, string>>({});
+  
+  // Note type options from dd_note_types
+  const [noteTypeOptions, setNoteTypeOptions] = useState<{ code: string; label: string }[]>([]);
   
   // Note status options from dd_note_status
   const [noteStatusOptions, setNoteStatusOptions] = useState<{ code: string; label: string }[]>([]);
@@ -165,6 +172,19 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
     };
   }, [content, titleManuallyEdited, extractTitle]);
   
+  // Fetch note type options
+  useEffect(() => {
+    const fetchTypeOptions = async () => {
+      const { data } = await supabase
+        .from('dd_note_types')
+        .select('code, label')
+        .eq('is_active', true)
+        .order('sort_order');
+      if (data) setNoteTypeOptions(data);
+    };
+    fetchTypeOptions();
+  }, []);
+
   // Fetch note status options
   useEffect(() => {
     const fetchStatusOptions = async () => {
@@ -560,7 +580,9 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
   };
 
   const getNoteTypeConfig = (type: string) => {
-    return NOTE_TYPES.find(t => t.value === type) || NOTE_TYPES[0];
+    const style = NOTE_TYPE_STYLES[type] || DEFAULT_NOTE_STYLE;
+    const opt = noteTypeOptions.find(t => t.code === type);
+    return { ...style, label: opt?.label || type, value: type };
   };
 
   // Filter notes by parent type and tags
@@ -1166,14 +1188,18 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent className="bg-background">
-                    {NOTE_TYPES.map(type => (
-                      <SelectItem key={type.value} value={type.value}>
-                        <span className="flex items-center gap-2">
-                          <type.icon className="h-4 w-4" />
-                          {type.label}
-                        </span>
-                      </SelectItem>
-                    ))}
+                    {noteTypeOptions.map(type => {
+                      const style = NOTE_TYPE_STYLES[type.code] || DEFAULT_NOTE_STYLE;
+                      const TypeIcon = style.icon;
+                      return (
+                        <SelectItem key={type.code} value={type.code}>
+                          <span className="flex items-center gap-2">
+                            <TypeIcon className="h-4 w-4" />
+                            {type.label}
+                          </span>
+                        </SelectItem>
+                      );
+                    })}
                   </SelectContent>
                 </Select>
               </div>
