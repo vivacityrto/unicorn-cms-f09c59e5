@@ -47,6 +47,11 @@ interface ClickUpTask {
   assigned_comments: unknown;
   status: string | null;
   list_name: string | null;
+  date_of_last_contact: string | null;
+  date_of_last_systemscheck: string | null;
+  due_date: number | null;
+  time_estimate: number | null;
+  time_spent: number | null;
 }
 
 interface ApiComment {
@@ -237,7 +242,7 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
       try {
   const { data, error } = await supabase
           .from('v_clickup_tasks' as never)
-          .select('id, task_id, task_custom_id, task_name, task_content, date_created, status, list_name')
+          .select('id, task_id, task_custom_id, task_name, task_content, date_created, status, list_name, date_of_last_contact, date_of_last_systemscheck, due_date, time_estimate, time_spent')
           .eq('tenant_id', tenantId)
           .order('date_created', { ascending: false });
         if (error) throw error;
@@ -642,9 +647,29 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
                                     {task.task_content}
                                   </p>
                                 )}
-                                <div className="flex items-center gap-1 mt-2 text-xs text-muted-foreground">
-                                  <Clock className="h-3 w-3" />
-                                  {formattedDate}
+                                <div className="flex items-center flex-wrap gap-x-4 gap-y-1 mt-2 text-xs text-muted-foreground">
+                                  <span className="flex items-center gap-1">
+                                    <Clock className="h-3 w-3" />
+                                    {formattedDate}
+                                  </span>
+                                  {task.date_of_last_contact && (
+                                    <span>Last Contact: <span className="font-medium text-foreground">{task.date_of_last_contact}</span></span>
+                                  )}
+                                  {task.date_of_last_systemscheck && (
+                                    <span>Last Systems Check: <span className="font-medium text-foreground">{task.date_of_last_systemscheck}</span></span>
+                                  )}
+                                  {task.due_date && (() => {
+                                    try {
+                                      const d = fromUnixTime(task.due_date / 1000);
+                                      return isValid(d) ? <span>Expiry: <span className="font-medium text-foreground">{format(d, 'dd MMM yyyy')}</span></span> : null;
+                                    } catch { return null; }
+                                  })()}
+                                  {task.time_estimate != null && task.time_estimate > 0 && (
+                                    <span>Consult Hours: <span className="font-medium text-foreground">{Math.round(task.time_estimate / 3600000)}h</span></span>
+                                  )}
+                                  {task.time_spent != null && task.time_spent > 0 && (
+                                    <span>Time Used: <span className="font-medium text-foreground">{Math.round(task.time_spent / 3600000)}h</span></span>
+                                  )}
                                 </div>
                               </div>
                               <div className="shrink-0 text-muted-foreground">
