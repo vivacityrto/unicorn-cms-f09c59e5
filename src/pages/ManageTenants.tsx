@@ -254,9 +254,9 @@ export default function ManageTenants() {
       setTenants(tenantsWithCounts);
 
       const totalMembers = tenantsWithCounts.reduce((sum, t) => sum + t.member_count, 0);
-      const active = tenantsWithCounts.filter(t => t.lifecycle_status === "active").length;
-      const suspended = tenantsWithCounts.filter(t => t.lifecycle_status === "suspended").length;
-      const closed = tenantsWithCounts.filter(t => t.lifecycle_status === "closed" || t.lifecycle_status === "archived").length;
+      const active = tenantsWithCounts.filter(t => t.status === "active").length;
+      const suspended = tenantsWithCounts.filter(t => t.status === "inactive" || t.status === "on_hold" || t.status === "disabled").length;
+      const closed = tenantsWithCounts.filter(t => t.status === "terminated" || t.status === "cancelled").length;
       setStats({ total: tenantsWithCounts.length, active, suspended, closed, totalMembers });
     } catch (error: any) {
       toast({ title: "Error", description: error.message, variant: "destructive" });
@@ -327,14 +327,9 @@ export default function ManageTenants() {
       filtered = filtered.filter(tenant => tenant.name.toLowerCase().includes(searchQuery.toLowerCase()) || tenant.slug.toLowerCase().includes(searchQuery.toLowerCase()));
     }
 
-    // Lifecycle status filter
+    // Status filter (using tenants.status column)
     if (statusFilter !== "all") {
-      filtered = filtered.filter(tenant => tenant.lifecycle_status === statusFilter);
-    }
-
-    // Hide archived/closed unless "Show Archived" is on or specifically filtered
-    if (!showArchived && statusFilter === "all") {
-      filtered = filtered.filter(tenant => tenant.lifecycle_status !== "archived");
+      filtered = filtered.filter(tenant => tenant.status === statusFilter);
     }
 
     // Package filter
@@ -350,8 +345,8 @@ export default function ManageTenants() {
     // Sort
     filtered.sort((a, b) => {
       if (sortField === "status") {
-        const order = { active: 0, suspended: 1, closed: 2, archived: 3 };
-        return (order[a.lifecycle_status as keyof typeof order] ?? 4) - (order[b.lifecycle_status as keyof typeof order] ?? 4);
+        const order: Record<string, number> = { active: 0, on_hold: 1, overrun: 2, disabled: 3, terminated: 4, cancelled: 5 };
+        return (order[a.status] ?? 6) - (order[b.status] ?? 6);
       } else if (sortField === "member_count") {
         return b.member_count - a.member_count;
       } else if (sortField === "created_at") {
@@ -638,13 +633,11 @@ export default function ManageTenants() {
         <Combobox
           options={[
             { value: "all", label: "All Status", icon: Activity, iconColor: "text-muted-foreground" },
-            ...lifecycleStatuses
-              .filter(s => isSuperAdmin || s.value !== "archived")
-              .map(s => {
-                const iconMap: Record<string, typeof CheckCircle2> = { active: CheckCircle2, suspended: Pause, closed: XCircle, archived: Archive };
-                const colorMap: Record<string, string> = { active: "text-green-600", suspended: "text-amber-600", closed: "text-red-600", archived: "text-muted-foreground" };
-                return { value: s.value, label: s.label, icon: iconMap[s.value] || Activity, iconColor: colorMap[s.value] || "text-muted-foreground" };
-              })
+            ...statusOptions.map(s => {
+              const iconMap: Record<string, typeof CheckCircle2> = { active: CheckCircle2, disabled: XCircle, on_hold: Pause, overrun: AlertCircle, terminated: XCircle, cancelled: Archive };
+              const colorMap: Record<string, string> = { active: "text-green-600", disabled: "text-red-600", on_hold: "text-amber-600", overrun: "text-orange-600", terminated: "text-red-600", cancelled: "text-muted-foreground" };
+              return { value: s.value, label: s.description, icon: iconMap[s.value] || Activity, iconColor: colorMap[s.value] || "text-muted-foreground" };
+            })
           ]}
           value={statusFilter}
           onValueChange={setStatusFilter}
@@ -698,7 +691,7 @@ export default function ManageTenants() {
                       "group transition-all duration-200 cursor-pointer border-b border-border/50",
                       index % 2 === 0 ? "bg-background" : "bg-muted/20",
                       "hover:bg-primary/5 animate-fade-in",
-                      (tenant.lifecycle_status === "closed" || tenant.lifecycle_status === "archived") && "opacity-60"
+                      (tenant.status !== "active") && "opacity-60"
                     )}
                     onClick={() => navigate(`/tenant/${tenant.id}`)}
                   >
@@ -788,7 +781,20 @@ export default function ManageTenants() {
                       <span className="font-semibold">{tenant.member_count}</span>
                     </TableCell>
                     <TableCell className="py-6 border-r border-border/50 text-center whitespace-nowrap">
-                      <Badge variant="outline" className="capitalize py-[3px] rounded-[9px]">{tenant.risk_level}</Badge>
+                      {(() => {
+                        const riskColors: Record<string, string> = {
+                          low: "bg-emerald-500/10 text-emerald-600 border-emerald-600",
+                          medium: "bg-amber-500/10 text-amber-600 border-amber-600",
+                          high: "bg-orange-500/10 text-orange-600 border-orange-600",
+                          critical: "bg-red-500/10 text-red-600 border-red-600",
+                        };
+                        const riskClass = riskColors[tenant.risk_level] || "bg-muted text-muted-foreground border-border";
+                        return (
+                          <Badge variant="outline" className={cn("capitalize py-[3px] rounded-[9px] border", riskClass)}>
+                            {tenant.risk_level}
+                          </Badge>
+                        );
+                      })()}
                     </TableCell>
                     <TableCell className="py-6 border-r border-border/50 whitespace-nowrap">
                       <div className="text-sm text-muted-foreground">{new Date(tenant.created_at).toLocaleDateString()}</div>
