@@ -194,7 +194,7 @@ export default function TenantNotes() {
     try {
       const { data, error } = await supabase
         .from('v_clickup_tasks' as never)
-        .select('id, task_custom_id, task_name, task_content, date_created, comments, status, priority, list_name, space_name')
+        .select('id, task_custom_id, task_name, task_content, date_created, status, priority, list_name, space_name')
         .eq('tenant_id', parsedTenantId)
         .order('date_created', { ascending: false });
       if (error) throw error;
