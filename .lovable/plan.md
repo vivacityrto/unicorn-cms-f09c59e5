@@ -1,117 +1,189 @@
 
 
-# Fix ClickUp CSV Importer: Two Tables, Tenant Resolution
+# Pull All ClickUp Tasks via API with Custom Fields
 
-## Problem
+## Overview
 
-The current importer sends everything to `clickup_tasksdb`, but the two CSV files serve different purposes:
+Replace the CSV-based import workflow with a direct ClickUp API integration that fetches all tasks (including custom fields) from the "Membership" list. A new unified table will store the full API response, custom fields will be flattened into dedicated columns, and `tenant_id` will be resolved from the `unicorn_url` custom field -- all server-side.
 
-1. **Raw ClickUp Export** (headers: `task_id, task_name, comments, list_name, assignees...`) should go into **`clickup_tasks`** -- this table has JSONB columns for comments/assignees/checklists and stores the raw export data.
+## Current State
 
-2. **Dashboard Export** (headers match DB columns like `unicorn_url, tenant_id, mb_level, cricos_rereg_date...`) should go into **`clickup_tasksdb`** -- this table stores enriched dashboard data with tenant association.
+- **clickup_tasks** (889 rows): CSV-imported raw exports with JSONB blobs for comments/assignees
+- **clickup_tasksdb** (116 rows): Dashboard CSV exports with custom field values as flat columns, tenant_id resolved from unicorn_url
+- **clickup_task_comments** (API-fetched): Individual threaded comments per task
+- **v_clickup_tasks**: View joining clickup_tasks LEFT JOIN clickup_tasksdb on task_id
+- All 116 tasks are in Space: "Client Success Team", List: "Membership"
 
-Additionally, `tenant_id` in `clickup_tasksdb` needs to be **derived from `unicorn_url`** using three URL patterns:
-- `/clients/6278` -- the number IS the tenant_id directly
-- `/stage/21655` -- look up `v_tenant_stage_instances` to get tenant_id
-- `/14972` (bare number, also `/email/XXXXX`) -- look up `package_instances` to get tenant_id
+## What Changes
 
-## Solution
+### 1. New Table: `clickup_tasks_api`
 
-### Step 1: Restructure the Import Page with Two Modes
+A single clean table that stores the full ClickUp API task response. Core fields are flattened into proper columns; the raw API JSON is preserved in a `raw_json` JSONB column for anything we haven't explicitly mapped; custom fields are stored both in a `custom_fields` JSONB column and flattened into named columns.
 
-Update `src/pages/ClickUpImport.tsx` to offer a choice between:
-- **"ClickUp Export"** -- maps to `clickup_tasks` table
-- **"Dashboard Export"** -- maps to `clickup_tasksdb` table
+**Core columns** (from API task object):
+- `task_id` (text, UNIQUE, NOT NULL) -- the ClickUp ID
+- `custom_id` (text) -- custom task ID
+- `name` (text)
+- `description` (text) -- markdown description
+- `text_content` (text) -- plain text version
+- `status` (text)
+- `priority` (text)
+- `parent_task_id` (text)
+- `date_created` (bigint) -- unix ms
+- `date_updated` (bigint)
+- `date_closed` (bigint)
+- `date_done` (bigint)
+- `due_date` (bigint)
+- `start_date` (bigint)
+- `time_estimate` (bigint) -- ms
+- `time_spent` (bigint) -- ms from time tracking
+- `assignees` (jsonb) -- array of user objects
+- `watchers` (jsonb)
+- `tags` (jsonb)
+- `checklists` (jsonb)
+- `list_id` (text), `list_name` (text)
+- `folder_id` (text), `folder_name` (text)
+- `space_id` (text), `space_name` (text)
+- `url` (text) -- ClickUp task URL
+- `creator_id` (bigint), `creator_username` (text)
+- `custom_fields` (jsonb) -- full custom fields array from API
 
-Each mode uses its own column mapping dictionary.
+**Flattened custom field columns** (from your existing clickup_tasksdb):
+- `unicorn_url` (text)
+- `sharepoint_url` (text)
+- `mb_level` (text)
+- `risk` (text)
+- `rto_id` (text)
+- `phone` (text)
+- `email_address` (text)
+- `audit_date` (text)
+- `mock_audit` (text)
+- `cricos_rereg_date` (text)
+- `registration_date` (text)
+- `re_reg_due_date` (text)
+- `submission_date` (text)
+- `working_hours` (text)
+- `notes` (text)
+- `infusionsoft_url` (text)
+- `date_of_last_contact` (text)
+- `date_of_last_systemscheck` (text)
+- `client_meeting_attendance` (text)
+- `time_with_vivacity` (text)
+- `registered_spr` (text)
+- `on_hold_start_date` (text)
+- `on_hold_end_date` (text)
 
-### Step 2: Fix Column Mapping for `clickup_tasks`
+**Derived columns:**
+- `tenant_id` (integer, FK tenants) -- resolved from unicorn_url
+- `raw_json` (jsonb) -- full API response preserved
+- `fetched_at` (timestamptz) -- when last synced
 
-The `clickup_tasks` table columns closely match the raw CSV headers, but some fields need special handling:
-- `comments`, `assignees`, `checklists`, `assigned_comments`, `attachments` are JSONB -- parse as JSON or wrap as arrays
-- `tags` is also JSONB
-- Keep `parent_id` (this table has it, unlike `clickup_tasksdb`)
+### 2. New Edge Function: `sync-clickup-tasks`
 
-### Step 3: Dashboard Export Mapping for `clickup_tasksdb`
+Fetches tasks from the ClickUp API and upserts into `clickup_tasks_api`.
 
-For the dashboard CSV, headers likely match DB columns directly (since it's exported from a dashboard view). A light mapping pass will normalise any differences.
+**Step 1 -- Discover the List ID:**
+- `GET /api/v2/team` to get workspace (team) ID
+- `GET /api/v2/team/{team_id}/space` to find "Client Success Team" space
+- `GET /api/v2/space/{space_id}/folder` to find the folder
+- `GET /api/v2/folder/{folder_id}/list` to find "Membership" list
+- Cache/store the list_id for subsequent calls
 
-### Step 4: Add Tenant Resolution Logic
+**Step 2 -- Fetch all tasks (paginated):**
+- `GET /api/v2/list/{list_id}/task?page=0&include_closed=true&subtasks=true`
+- Page through (100 per page) until empty
+- Rate limited with 650ms delays
 
-After importing dashboard rows into `clickup_tasksdb`, resolve `tenant_id` from `unicorn_url` for rows where `tenant_id` is NULL:
+**Step 3 -- Map each task:**
+- Extract core fields directly from the API response
+- Loop through `custom_fields` array, match by `name` (case-insensitive), extract `value` into the corresponding flattened column
+- Store the full raw JSON
 
-1. Parse the URL to extract the path pattern and numeric ID
-2. `/clients/N` -- set `tenant_id = N`
-3. `/stage/N` -- query `v_tenant_stage_instances` where `stage_instance_id = N` to get `tenant_id`
-4. `/N` or `/email/N` or other patterns -- query `package_instances` where `id = N` to get `tenant_id`
+**Step 4 -- Resolve tenant_id from unicorn_url:**
+- Same patterns as current: `/clients/N`, `/stage/N`, `/N`, `/email/N`
+- Done in the same function after upsert
 
-This resolution will happen in the **edge function** after the upsert, so it runs server-side with service role access.
+**Step 5 -- Also fetch comments:**
+- After task sync, call the existing `fetch-clickup-comments` logic per task (or reuse that function)
 
-### Step 5: Add Unique Constraint on `clickup_tasks.task_id`
+**Modes supported:**
+- `sync_all` -- full sync of all tasks from the list
+- `sync_task` -- sync a single task by task_id
+- `sync_by_tenant` -- re-sync all tasks for a specific tenant_id
 
-The `clickup_tasks` table currently has no unique constraint on `task_id`, which will cause the same upsert error. Add one via migration.
+### 3. Custom Field Name Mapping
 
-### Step 6: Update Edge Function
-
-Modify `supabase/functions/import-clickup-csv/index.ts` to:
-- Accept a `target_table` parameter (`clickup_tasks` or `clickup_tasksdb`)
-- Upsert to the specified table
-- When target is `clickup_tasksdb`, run tenant resolution after upsert
-
-## Technical Details
-
-### Files to Modify
-
-1. **`src/pages/ClickUpImport.tsx`** -- Add table selector toggle, separate mapping dictionaries for each table, pass `target_table` to edge function
-2. **`supabase/functions/import-clickup-csv/index.ts`** -- Accept `target_table` param, add tenant resolution SQL for `clickup_tasksdb`
-3. **Database migration** -- Add unique constraint on `clickup_tasks(task_id)`
-
-### Tenant Resolution SQL (in edge function)
+The edge function will maintain a mapping dictionary from custom field names (as they appear in ClickUp) to database column names:
 
 ```text
-For /clients/N:
-  UPDATE clickup_tasksdb SET tenant_id = N WHERE id = row.id
-
-For /stage/N:
-  SELECT tenant_id FROM v_tenant_stage_instances WHERE stage_instance_id = N
-
-For /N (package):
-  SELECT tenant_id FROM package_instances WHERE id = N
+"Unicorn URL"       -> unicorn_url
+"Sharepoint URL"    -> sharepoint_url
+"MB Level"          -> mb_level
+"Risk"              -> risk
+"RTO ID"            -> rto_id
+"Phone"             -> phone
+"Email Address"     -> email_address
+"Audit Date"        -> audit_date
+"Mock Audit"        -> mock_audit
+"CRICOS ReReg Date" -> cricos_rereg_date
+"Registration Date" -> registration_date
+"Re Reg Due Date"   -> re_reg_due_date
+... (all existing custom fields from clickup_tasksdb)
 ```
 
-### Column Mapping: ClickUp Export to `clickup_tasks`
+Any custom field not in the mapping is still preserved in the `custom_fields` JSONB column -- nothing is lost.
+
+### 4. Updated View: `v_clickup_tasks`
+
+Replace the current view to read from `clickup_tasks_api` instead of the two legacy tables:
 
 ```text
-CSV Header           -->  DB Column          Notes
-task_id              -->  task_id
-task_custom_id       -->  task_custom_id
-task_name            -->  task_name
-task_content         -->  task_content
-status               -->  status
-date_created         -->  date_created
-date_created_text    -->  date_created_text
-due_date             -->  due_date
-due_date_text        -->  due_date_text
-start_date           -->  start_date
-start_date_text      -->  start_date_text
-parent_id            -->  parent_id
-assignees            -->  assignees           (parse as JSONB)
-tags                 -->  tags                (parse as JSONB)
-priority             -->  priority
-list_name            -->  list_name
-folder_name_path     -->  folder_name_path
-space_name           -->  space_name
-time_estimated       -->  time_estimated
-time_estimated_text  -->  time_estimated_text
-checklists           -->  checklists          (parse as JSONB)
-comments             -->  comments            (parse as JSONB)
-assigned_comments    -->  assigned_comments   (parse as JSONB)
-time_spent           -->  time_spent
-time_spent_text      -->  time_spent_text
-rolled_up_time       -->  rolled_up_time
-rolled_up_time_text  -->  rolled_up_time_text
+SELECT
+  id,
+  task_id,
+  custom_id as task_custom_id,
+  name as task_name,
+  description as task_content,
+  status,
+  priority,
+  ...all custom field columns...,
+  tenant_id,
+  fetched_at
+FROM clickup_tasks_api;
 ```
 
-### Column Mapping: Dashboard Export to `clickup_tasksdb`
+This keeps the same column aliases so existing UI code continues to work with minimal changes.
 
-Headers match DB columns directly -- pass through with minimal transformation. The `tenant_id` column will be auto-resolved from `unicorn_url` after import.
+### 5. Updated UI
+
+**ClickUpImport page (`/admin/clickup-import`):**
+- Add a new "Sync from API" section alongside the existing CSV import
+- "Full Sync" button: triggers `sync_all` mode
+- Shows progress: tasks fetched, comments synced, tenants resolved
+- Keep CSV import as a fallback/legacy option
+
+**ClientStructuredNotesTab:**
+- Minimal changes -- the view column names stay the same
+- Comments continue to come from `clickup_task_comments` (already working)
+
+### 6. Keep Legacy Tables
+
+The existing `clickup_tasks` and `clickup_tasksdb` tables are kept as-is (you mentioned you duplicated them). No data is deleted. The new `clickup_tasks_api` table becomes the primary source of truth going forward.
+
+## Sequence of Implementation
+
+1. **Database migration**: Create `clickup_tasks_api` table with all columns and indexes
+2. **Edge function**: Create `sync-clickup-tasks` with list discovery, task fetching, custom field flattening, and tenant resolution
+3. **View update**: Replace `v_clickup_tasks` to read from the new table
+4. **UI update**: Add API sync controls to the ClickUp Import page
+5. **Backfill**: Run a full sync to populate the new table from the live ClickUp data
+
+## Technical Notes
+
+- The ClickUp API returns 100 tasks per page; with 116 tasks this means 2 API calls for the full list
+- Custom fields in the API response look like: `{ "id": "...", "name": "Unicorn URL", "type": "url", "value": "https://..." }`
+- Rate limiting: ClickUp allows ~100 requests/minute; the function paces with 650ms delays
+- The `CLICKUP_API_KEY` secret is already configured
+- Existing `clickup_task_comments` table and `fetch-clickup-comments` function remain unchanged and continue to work
+- RLS: Staff-only access policy matching existing clickup tables
+
