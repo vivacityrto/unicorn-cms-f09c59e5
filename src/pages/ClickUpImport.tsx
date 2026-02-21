@@ -8,7 +8,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Upload, FileUp, CheckCircle2, AlertTriangle, ArrowLeft, RefreshCw } from "lucide-react";
+import { Upload, FileUp, CheckCircle2, AlertTriangle, ArrowLeft, RefreshCw, MessageSquare, Download } from "lucide-react";
+import { Input } from "@/components/ui/input";
 import { useNavigate } from "react-router-dom";
 import { mapRowForTable, getPreviewColumns, type ImportMode } from "@/utils/clickup-import-mappings";
 
@@ -23,6 +24,9 @@ export default function ClickUpImport() {
   const [progress, setProgress] = useState(0);
   const [result, setResult] = useState<{ inserted: number; errors: number; resolved?: number } | null>(null);
   const [resolving, setResolving] = useState(false);
+  const [fetchingComments, setFetchingComments] = useState(false);
+  const [commentTenantId, setCommentTenantId] = useState("");
+  const [commentResult, setCommentResult] = useState<{ fetched: number; stored: number; task_count?: number; errors: string[] } | null>(null);
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -112,6 +116,31 @@ export default function ClickUpImport() {
     }
   };
 
+  const handleFetchComments = async () => {
+    const tid = parseInt(commentTenantId, 10);
+    if (isNaN(tid)) {
+      toast({ title: "Invalid tenant ID", description: "Please enter a numeric tenant ID.", variant: "destructive" });
+      return;
+    }
+    setFetchingComments(true);
+    setCommentResult(null);
+    try {
+      const { data, error } = await supabase.functions.invoke("fetch-clickup-comments", {
+        body: { action: "fetch_by_tenant", tenant_id: tid },
+      });
+      if (error) throw error;
+      setCommentResult(data);
+      toast({
+        title: "Comments Fetched",
+        description: `${data?.stored ?? 0} comments stored from ${data?.task_count ?? 0} tasks.`,
+      });
+    } catch (err) {
+      toast({ title: "Comment fetch failed", description: (err as Error).message, variant: "destructive" });
+    } finally {
+      setFetchingComments(false);
+    }
+  };
+
   const handleModeChange = (newMode: ImportMode) => {
     setMode(newMode);
     // Reset file state when switching modes
@@ -197,7 +226,57 @@ export default function ClickUpImport() {
           </CardContent>
         </Card>
 
-        {/* Upload */}
+        {/* Fetch ClickUp Comments via API */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <MessageSquare className="h-5 w-5" /> Fetch ClickUp Comments
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Fetch individual threaded comments from the ClickUp API for all tasks belonging to a tenant.
+              Comments are stored in <code className="text-xs bg-muted px-1 rounded">clickup_task_comments</code> with author, timestamp, and thread context.
+            </p>
+            <div className="flex items-end gap-3">
+              <div className="flex-1 max-w-xs">
+                <label className="text-xs font-medium text-muted-foreground mb-1 block">Tenant ID</label>
+                <Input
+                  type="number"
+                  placeholder="e.g. 7530"
+                  value={commentTenantId}
+                  onChange={(e) => setCommentTenantId(e.target.value)}
+                />
+              </div>
+              <Button
+                onClick={handleFetchComments}
+                disabled={fetchingComments || !commentTenantId}
+                variant="outline"
+              >
+                <Download className={`h-4 w-4 mr-2 ${fetchingComments ? "animate-spin" : ""}`} />
+                {fetchingComments ? "Fetching…" : "Fetch Comments"}
+              </Button>
+            </div>
+            {commentResult && (
+              <div className="rounded-md border p-3 space-y-1 text-sm">
+                <div className="flex items-center gap-2">
+                  <CheckCircle2 className="h-4 w-4 text-green-600" />
+                  <span>{commentResult.stored} comments stored from {commentResult.task_count ?? '?'} tasks ({commentResult.fetched} fetched from API)</span>
+                </div>
+                {commentResult.errors.length > 0 && (
+                  <div className="text-xs text-destructive mt-1">
+                    <p className="font-medium">{commentResult.errors.length} errors:</p>
+                    <ul className="list-disc pl-4 max-h-24 overflow-y-auto">
+                      {commentResult.errors.slice(0, 10).map((e, i) => <li key={i}>{e}</li>)}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-lg">
