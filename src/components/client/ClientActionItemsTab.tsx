@@ -89,7 +89,8 @@ export function ClientActionItemsTab({ tenantId, clientId }: ClientActionItemsTa
   const fetchStatusOptions = async () => {
     const { data } = await supabase
       .from('dd_status')
-      .select('value, description')
+      .select('value, description, code')
+      .in('code', [3, 100, 102, 103])
       .order('code');
     if (data) setStatusOptions(data.filter(s => s.value));
   };
