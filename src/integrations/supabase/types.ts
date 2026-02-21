@@ -6834,6 +6834,285 @@ export type Database = {
         }
         Relationships: []
       }
+      clickup_tasks_api: {
+        Row: {
+          assignees: Json | null
+          audit_date: string | null
+          checklists: Json | null
+          client_meeting_attendance: string | null
+          creator_id: number | null
+          creator_username: string | null
+          cricos_rereg_date: string | null
+          custom_fields: Json | null
+          custom_id: string | null
+          date_closed: number | null
+          date_created: number | null
+          date_done: number | null
+          date_of_last_contact: string | null
+          date_of_last_systemscheck: string | null
+          date_updated: number | null
+          description: string | null
+          due_date: number | null
+          email_address: string | null
+          fetched_at: string
+          folder_id: string | null
+          folder_name: string | null
+          id: number
+          infusionsoft_url: string | null
+          list_id: string | null
+          list_name: string | null
+          mb_level: string | null
+          mock_audit: string | null
+          name: string | null
+          notes: string | null
+          on_hold_end_date: string | null
+          on_hold_start_date: string | null
+          parent_task_id: string | null
+          phone: string | null
+          priority: string | null
+          raw_json: Json | null
+          re_reg_due_date: string | null
+          registered_spr: string | null
+          registration_date: string | null
+          risk: string | null
+          rto_id: string | null
+          sharepoint_url: string | null
+          space_id: string | null
+          space_name: string | null
+          start_date: number | null
+          status: string | null
+          submission_date: string | null
+          tags: Json | null
+          task_id: string
+          tenant_id: number | null
+          text_content: string | null
+          time_estimate: number | null
+          time_spent: number | null
+          time_with_vivacity: string | null
+          unicorn_url: string | null
+          url: string | null
+          watchers: Json | null
+          working_hours: string | null
+        }
+        Insert: {
+          assignees?: Json | null
+          audit_date?: string | null
+          checklists?: Json | null
+          client_meeting_attendance?: string | null
+          creator_id?: number | null
+          creator_username?: string | null
+          cricos_rereg_date?: string | null
+          custom_fields?: Json | null
+          custom_id?: string | null
+          date_closed?: number | null
+          date_created?: number | null
+          date_done?: number | null
+          date_of_last_contact?: string | null
+          date_of_last_systemscheck?: string | null
+          date_updated?: number | null
+          description?: string | null
+          due_date?: number | null
+          email_address?: string | null
+          fetched_at?: string
+          folder_id?: string | null
+          folder_name?: string | null
+          id?: never
+          infusionsoft_url?: string | null
+          list_id?: string | null
+          list_name?: string | null
+          mb_level?: string | null
+          mock_audit?: string | null
+          name?: string | null
+          notes?: string | null
+          on_hold_end_date?: string | null
+          on_hold_start_date?: string | null
+          parent_task_id?: string | null
+          phone?: string | null
+          priority?: string | null
+          raw_json?: Json | null
+          re_reg_due_date?: string | null
+          registered_spr?: string | null
+          registration_date?: string | null
+          risk?: string | null
+          rto_id?: string | null
+          sharepoint_url?: string | null
+          space_id?: string | null
+          space_name?: string | null
+          start_date?: number | null
+          status?: string | null
+          submission_date?: string | null
+          tags?: Json | null
+          task_id: string
+          tenant_id?: number | null
+          text_content?: string | null
+          time_estimate?: number | null
+          time_spent?: number | null
+          time_with_vivacity?: string | null
+          unicorn_url?: string | null
+          url?: string | null
+          watchers?: Json | null
+          working_hours?: string | null
+        }
+        Update: {
+          assignees?: Json | null
+          audit_date?: string | null
+          checklists?: Json | null
+          client_meeting_attendance?: string | null
+          creator_id?: number | null
+          creator_username?: string | null
+          cricos_rereg_date?: string | null
+          custom_fields?: Json | null
+          custom_id?: string | null
+          date_closed?: number | null
+          date_created?: number | null
+          date_done?: number | null
+          date_of_last_contact?: string | null
+          date_of_last_systemscheck?: string | null
+          date_updated?: number | null
+          description?: string | null
+          due_date?: number | null
+          email_address?: string | null
+          fetched_at?: string
+          folder_id?: string | null
+          folder_name?: string | null
+          id?: never
+          infusionsoft_url?: string | null
+          list_id?: string | null
+          list_name?: string | null
+          mb_level?: string | null
+          mock_audit?: string | null
+          name?: string | null
+          notes?: string | null
+          on_hold_end_date?: string | null
+          on_hold_start_date?: string | null
+          parent_task_id?: string | null
+          phone?: string | null
+          priority?: string | null
+          raw_json?: Json | null
+          re_reg_due_date?: string | null
+          registered_spr?: string | null
+          registration_date?: string | null
+          risk?: string | null
+          rto_id?: string | null
+          sharepoint_url?: string | null
+          space_id?: string | null
+          space_name?: string | null
+          start_date?: number | null
+          status?: string | null
+          submission_date?: string | null
+          tags?: Json | null
+          task_id?: string
+          tenant_id?: number | null
+          text_content?: string | null
+          time_estimate?: number | null
+          time_spent?: number | null
+          time_with_vivacity?: string | null
+          unicorn_url?: string | null
+          url?: string | null
+          watchers?: Json | null
+          working_hours?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "clickup_tasks_api_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "clickup_tasks_api_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_engagement_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "clickup_tasks_api_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_client_eos_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "clickup_tasks_api_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_dashboard_attention_ranked"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "clickup_tasks_api_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_dashboard_priority_inbox_overdue_compliance"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "clickup_tasks_api_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_dashboard_tenant_portfolio"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "clickup_tasks_api_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_dashboard_tenant_recent_comms"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "clickup_tasks_api_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_compliance_entitlements"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "clickup_tasks_api_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_compliance_task_metrics"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "clickup_tasks_api_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_last_activity"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "clickup_tasks_api_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "clickup_tasks_api_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_capacity_diagnostics"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "clickup_tasks_api_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_membership_usage"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "clickup_tasks_api_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "vw_client_membership_usage"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
       clickup_tasks_duplicate: {
         Row: {
           assigned_comments: Json | null
