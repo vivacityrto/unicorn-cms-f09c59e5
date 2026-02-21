@@ -1157,8 +1157,8 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
           </DialogHeader>
           
           <div className="space-y-4">
-            {/* Type, Priority, Status, and optional Duration row */}
-            <div className={`grid gap-4 ${showsDuration ? 'grid-cols-4' : 'grid-cols-3'}`}>
+            {/* Type, Priority, Status row */}
+            <div className="grid grid-cols-3 gap-4">
               <div className="space-y-2">
                 <Label>Type</Label>
                 <Select value={noteType} onValueChange={setNoteType}>
@@ -1208,41 +1208,44 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
                   </SelectContent>
                 </Select>
               </div>
-              
-              {showsDuration && (
-                <div className="space-y-2">
-                  <Label>Duration (mins)</Label>
-                  <Input 
-                    type="number"
-                    min={0}
-                    value={duration}
-                    onChange={e => setDuration(e.target.value)}
-                    placeholder="0"
-                  />
-                </div>
-              )}
             </div>
 
-            {/* Package selector */}
-            {activePackages.length > 0 && (
-              <div className="space-y-2">
-                <Label>Package</Label>
-                <Select value={selectedPackageInstanceId} onValueChange={setSelectedPackageInstanceId}>
-                  <SelectTrigger>
-                    <div className="flex items-center gap-2">
-                      <Package className="h-4 w-4 text-muted-foreground" />
-                      <SelectValue placeholder="Select package..." />
-                    </div>
-                  </SelectTrigger>
-                  <SelectContent className="bg-background">
-                    <SelectItem value="none">None (Client Note)</SelectItem>
-                    {activePackages.map(pkg => (
-                      <SelectItem key={pkg.instance_id} value={String(pkg.instance_id)}>
-                        {pkg.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+            {/* Package and optional Duration row */}
+            {(activePackages.length > 0 || showsDuration) && (
+              <div className={`grid gap-4 ${activePackages.length > 0 && showsDuration ? 'grid-cols-2' : 'grid-cols-1'}`}>
+                {activePackages.length > 0 && (
+                  <div className="space-y-2">
+                    <Label>Package</Label>
+                    <Select value={selectedPackageInstanceId} onValueChange={setSelectedPackageInstanceId}>
+                      <SelectTrigger>
+                        <div className="flex items-center gap-2">
+                          <Package className="h-4 w-4 text-muted-foreground" />
+                          <SelectValue placeholder="Select package..." />
+                        </div>
+                      </SelectTrigger>
+                      <SelectContent className="bg-background">
+                        <SelectItem value="none">None (Client Note)</SelectItem>
+                        {activePackages.map(pkg => (
+                          <SelectItem key={pkg.instance_id} value={String(pkg.instance_id)}>
+                            {pkg.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+                {showsDuration && (
+                  <div className="space-y-2">
+                    <Label>Duration (mins)</Label>
+                    <Input 
+                      type="number"
+                      min={0}
+                      value={duration}
+                      onChange={e => setDuration(e.target.value)}
+                      placeholder="0"
+                    />
+                  </div>
+                )}
               </div>
             )}
             
