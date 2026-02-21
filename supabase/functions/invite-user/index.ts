@@ -16,6 +16,7 @@ type Payload = {
   invite_as: 'VIVACITY' | 'CLIENT';
   tenant_id: number;
   unicorn_role: UnicornRole;
+  skip_email?: boolean;
 };
 
 const VIVACITY_TENANT_ID = 319;
@@ -216,10 +217,111 @@ serve(async (req) => {
 
     if (existingUser) {
       console.log(`User ${payload.email} already exists with ID ${existingUser.id}. They will be added to the tenant when they accept.`);
-      // Don't create duplicate invitations for existing users
-      // They should accept the invitation to be added to this tenant
     }
 
+    // --- SKIP EMAIL PATH: create users + tenant_users directly ---
+    if (payload.skip_email) {
+      console.log(`[skip_email] Adding ${payload.email} directly without invitation`);
+
+      // Check if user already exists in public.users
+      const { data: existingProfile } = await supabase
+        .from('users')
+        .select('user_uuid')
+        .eq('email', payload.email.toLowerCase())
+        .maybeSingle();
+
+      let userUuid: string;
+
+      if (existingProfile) {
+        userUuid = existingProfile.user_uuid;
+        console.log(`[skip_email] User already exists: ${userUuid}`);
+      } else {
+        // Create a new user record (no auth account)
+        userUuid = crypto.randomUUID();
+        const { error: insertError } = await supabase
+          .from('users')
+          .insert({
+            user_uuid: userUuid,
+            email: payload.email.toLowerCase(),
+            first_name: payload.first_name.trim(),
+            last_name: (payload.last_name || '-').trim(),
+            unicorn_role: payload.unicorn_role,
+            user_type: payload.invite_as === 'VIVACITY' ? 'Vivacity' : 'Client',
+            is_team: payload.invite_as === 'VIVACITY',
+            disabled: false,
+          });
+
+        if (insertError) {
+          console.error('[skip_email] Failed to create user:', insertError);
+          return jsonResponse(500, {
+            ok: false,
+            code: 'USER_CREATE_FAILED',
+            detail: insertError.message,
+          });
+        }
+        console.log(`[skip_email] Created user: ${userUuid}`);
+      }
+
+      // Check if tenant_users row already exists
+      const { data: existingTu } = await supabase
+        .from('tenant_users')
+        .select('id')
+        .eq('user_id', userUuid)
+        .eq('tenant_id', payload.tenant_id)
+        .maybeSingle();
+
+      if (existingTu) {
+        return jsonResponse(409, {
+          ok: false,
+          code: 'ALREADY_MEMBER',
+          detail: `${payload.email} is already a member of this tenant`,
+        });
+      }
+
+      // Create tenant_users association
+      const { error: tuError } = await supabase
+        .from('tenant_users')
+        .insert({
+          user_id: userUuid,
+          tenant_id: payload.tenant_id,
+          role: payload.unicorn_role === 'Admin' ? 'parent' : 'child',
+        });
+
+      if (tuError) {
+        console.error('[skip_email] Failed to create tenant_users:', tuError);
+        return jsonResponse(500, {
+          ok: false,
+          code: 'TENANT_USER_CREATE_FAILED',
+          detail: tuError.message,
+        });
+      }
+
+      // Audit log
+      await supabase.from('audit_eos_events').insert({
+        tenant_id: payload.tenant_id,
+        entity: 'tenant_members',
+        action: 'add_user_no_invite',
+        reason: 'User added directly without invitation email',
+        details: {
+          email: payload.email,
+          tenant_id: payload.tenant_id,
+          unicorn_role: payload.unicorn_role,
+          user_uuid: userUuid,
+          added_by: callerUser.user.id,
+        },
+      });
+
+      console.log(`[skip_email] Successfully added ${payload.email} to tenant ${payload.tenant_id}`);
+
+      return jsonResponse(200, {
+        ok: true,
+        detail: 'User added successfully (no invitation sent)',
+        user_uuid: userUuid,
+        skipped_email: true,
+      });
+    }
+
+    // --- STANDARD INVITATION PATH ---
     // 6b. Check for existing pending invitation for this email/tenant
     const { data: existingInvite } = await supabase
       .from('user_invitations')
@@ -285,7 +387,6 @@ serve(async (req) => {
     }
 
     // 8. Create invite URL using the frontend origin
-    // The origin header should contain the lovable.app domain
     const frontendOrigin = req.headers.get("origin") || req.headers.get("referer")?.split('/').slice(0, 3).join('/');
     
     if (!frontendOrigin) {
@@ -295,7 +396,7 @@ serve(async (req) => {
     const inviteUrl = `${frontendOrigin}/accept-invitation?token=${inviteToken}`;
     console.log('Generated invite URL:', inviteUrl);
     
-    // Try to send custom invitation email (optional - fails gracefully if SendGrid not configured)
+    // Try to send custom invitation email
     try {
       await supabase.functions.invoke('send-invitation-email', {
         body: {
@@ -307,14 +408,9 @@ serve(async (req) => {
       console.log(`Custom invitation email sent to ${payload.email}`);
     } catch (emailError) {
       console.warn('Failed to send invitation email (SendGrid may not be configured):', emailError);
-      // Continue anyway - admin can manually share the invite URL
     }
 
-    // Note: User profile and tenant membership will be created when they accept the invitation
-    // This ensures a clean signup flow without pre-creating user accounts
-
     // 10. Track invite attempts and log
-    // Get previous attempts count for this email/tenant combo
     const { data: prevInvites } = await supabase
       .from("audit_invites")
       .select("invite_attempts")
@@ -326,7 +422,6 @@ serve(async (req) => {
 
     const attemptCount = (prevInvites?.invite_attempts || 0) + 1;
 
-    // Log successful invite with attempt count
     await supabase.from("audit_invites").insert({
       email: payload.email.toLowerCase(),
       tenant_id: payload.tenant_id,
@@ -336,7 +431,6 @@ serve(async (req) => {
       actor_user_id: callerUser.user.id,
     });
 
-    // General audit log
     await supabase.from("audit_eos_events").insert({
       tenant_id: payload.tenant_id,
       entity: "tenant_members",
