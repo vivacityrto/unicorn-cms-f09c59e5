@@ -114,6 +114,7 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
   const [isTimeLogPromptOpen, setIsTimeLogPromptOpen] = useState(false);
   const [pendingTimeLogData, setPendingTimeLogData] = useState<{ duration: number; noteType: string; title: string } | null>(null);
+  const [pendingBillable, setPendingBillable] = useState(true);
   const [selectedNote, setSelectedNote] = useState<Note | null>(null);
   const [saving, setSaving] = useState(false);
   const [selectedPackageInfo, setSelectedPackageInfo] = useState<PackageInfo | null>(null);
@@ -537,7 +538,8 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
         duration_minutes: pendingTimeLogData.duration,
         work_type: pendingTimeLogData.noteType,
         notes: pendingTimeLogData.title,
-        client_id: tenantId
+        client_id: tenantId,
+        is_billable: pendingBillable
       });
       
       toast({ title: 'Time logged', description: `${pendingTimeLogData.duration} minutes logged` });
@@ -1276,13 +1278,18 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
                 {showsDuration && (
                   <div className="space-y-2">
                     <Label>Duration (mins)</Label>
-                    <Input 
-                      type="number"
-                      min={0}
-                      value={duration}
-                      onChange={e => setDuration(e.target.value)}
-                      placeholder="0"
-                    />
+                    <Select value={duration} onValueChange={setDuration}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select duration..." />
+                      </SelectTrigger>
+                      <SelectContent className="bg-background">
+                        {[15, 30, 45, 60, 75, 90, 105, 120].map(mins => (
+                          <SelectItem key={mins} value={String(mins)}>
+                            {mins} mins
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                 )}
               </div>
@@ -1450,6 +1457,7 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
         if (!open) {
           setIsTimeLogPromptOpen(false);
           setPendingTimeLogData(null);
+          setPendingBillable(true);
         }
       }}>
         <AlertDialogContent>
@@ -1459,6 +1467,16 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
               Would you like to log {pendingTimeLogData?.duration} minutes as a time entry for this {pendingTimeLogData?.noteType === 'phone-call' ? 'phone call' : pendingTimeLogData?.noteType}?
             </AlertDialogDescription>
           </AlertDialogHeader>
+          <div className="flex items-center gap-3 px-1 py-2">
+            <Switch
+              id="billable-toggle"
+              checked={pendingBillable}
+              onCheckedChange={setPendingBillable}
+            />
+            <Label htmlFor="billable-toggle" className="text-sm font-medium cursor-pointer">
+              Billable
+            </Label>
+          </div>
           <AlertDialogFooter>
             <AlertDialogCancel>No thanks</AlertDialogCancel>
             <AlertDialogAction onClick={handleTimeLogConfirm}>
