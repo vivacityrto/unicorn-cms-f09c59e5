@@ -652,23 +652,31 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
                                     <Clock className="h-3 w-3" />
                                     {formattedDate}
                                   </span>
-                                  {task.date_of_last_contact && (
-                                    <span>Last Contact: <span className="font-medium text-foreground">{task.date_of_last_contact}</span></span>
-                                  )}
-                                  {task.date_of_last_systemscheck && (
-                                    <span>Last Systems Check: <span className="font-medium text-foreground">{task.date_of_last_systemscheck}</span></span>
-                                  )}
+                                  {task.date_of_last_contact && (() => {
+                                    try {
+                                      const ts = Number(task.date_of_last_contact);
+                                      const d = isNaN(ts) ? new Date(task.date_of_last_contact) : fromUnixTime(ts / 1000);
+                                      return isValid(d) ? <span>Last Contact: <span className="font-medium text-foreground">{format(d, 'dd MMM yyyy')}</span></span> : null;
+                                    } catch { return null; }
+                                  })()}
+                                  {task.date_of_last_systemscheck && (() => {
+                                    try {
+                                      const ts = Number(task.date_of_last_systemscheck);
+                                      const d = isNaN(ts) ? new Date(task.date_of_last_systemscheck) : fromUnixTime(ts / 1000);
+                                      return isValid(d) ? <span>Last Systems Check: <span className="font-medium text-foreground">{format(d, 'dd MMM yyyy')}</span></span> : null;
+                                    } catch { return null; }
+                                  })()}
                                   {task.due_date && (() => {
                                     try {
                                       const d = fromUnixTime(task.due_date / 1000);
-                                      return isValid(d) ? <span>Expiry: <span className="font-medium text-foreground">{format(d, 'dd MMM yyyy')}</span></span> : null;
+                                      return isValid(d) ? <span>Package Expiry: <span className="font-medium text-foreground">{format(d, 'dd MMM yyyy')}</span></span> : null;
                                     } catch { return null; }
                                   })()}
                                   {task.time_estimate != null && task.time_estimate > 0 && (
-                                    <span>Consult Hours: <span className="font-medium text-foreground">{Math.round(task.time_estimate / 3600000)}h</span></span>
+                                    <span>Consult Limit: <span className="font-medium text-foreground">{Math.round(task.time_estimate / 3600000)}h</span></span>
                                   )}
                                   {task.time_spent != null && task.time_spent > 0 && (
-                                    <span>Time Used: <span className="font-medium text-foreground">{Math.round(task.time_spent / 3600000)}h</span></span>
+                                    <span>Consult Time Used: <span className="font-medium text-foreground">{Math.round(task.time_spent / 3600000)}h</span></span>
                                   )}
                                 </div>
                               </div>
