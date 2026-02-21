@@ -244,3 +244,6 @@ verify_jwt = false
 
 [functions.extract-note-title]
 verify_jwt = false
+
+[functions.import-clickup-csv]
+verify_jwt = false
