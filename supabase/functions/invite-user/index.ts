@@ -17,6 +17,8 @@ type Payload = {
   tenant_id: number;
   unicorn_role: UnicornRole;
   skip_email?: boolean;
+  job_title?: string | null;
+  phone_number?: string | null;
 };
 
 const VIVACITY_TENANT_ID = 319;
@@ -249,6 +251,8 @@ serve(async (req) => {
             user_type: payload.invite_as === 'VIVACITY' ? 'Vivacity' : 'Client',
             is_team: payload.invite_as === 'VIVACITY',
             disabled: false,
+            job_title: payload.job_title || null,
+            phone_number: payload.phone_number || null,
           });
 
         if (insertError) {

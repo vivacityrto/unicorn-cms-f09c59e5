@@ -55,6 +55,8 @@ export function TenantInviteDialog({
   const [role, setRole] = useState('User');
   const [isSending, setIsSending] = useState(false);
   const [sendInvitation, setSendInvitation] = useState(false);
+  const [position, setPosition] = useState('');
+  const [phoneNumber, setPhoneNumber] = useState('');
   
   // Seat limit state
   const [checkingSeats, setCheckingSeats] = useState(true);
@@ -101,6 +103,9 @@ export function TenantInviteDialog({
     setLastName('');
     setEmail('');
     setRole('User');
+    setPosition('');
+    setPhoneNumber('');
+    setSendInvitation(false);
     onOpenChange(false);
   };
 
@@ -153,6 +158,8 @@ export function TenantInviteDialog({
           tenant_id: tenantId,
           unicorn_role: role,
           skip_email: !sendInvitation,
+          job_title: position.trim() || null,
+          phone_number: phoneNumber.trim() || null,
         },
       });
 
@@ -275,6 +282,28 @@ export function TenantInviteDialog({
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="john@example.com"
               />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="position">Position</Label>
+                <Input
+                  id="position"
+                  value={position}
+                  onChange={(e) => setPosition(e.target.value)}
+                  placeholder="e.g. Training Manager"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="phoneNumber">Phone Number</Label>
+                <Input
+                  id="phoneNumber"
+                  type="tel"
+                  value={phoneNumber}
+                  onChange={(e) => setPhoneNumber(e.target.value)}
+                  placeholder="e.g. 0412 345 678"
+                />
+              </div>
             </div>
 
             <div className="space-y-2">
