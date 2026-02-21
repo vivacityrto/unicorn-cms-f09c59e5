@@ -332,7 +332,7 @@ export function InviteUserDialog({ open, onOpenChange, onSuccess }: InviteUserDi
                 htmlFor="sendInvitationMain"
                 className="text-sm font-normal cursor-pointer"
               >
-                Send Invitation Email
+                Send Invitation
               </Label>
             </div>
 

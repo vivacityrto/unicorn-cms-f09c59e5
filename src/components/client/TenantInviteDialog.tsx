@@ -311,7 +311,7 @@ export function TenantInviteDialog({
                 htmlFor="tenantSendInvitation"
                 className="text-sm font-normal cursor-pointer"
               >
-                Send Invitation Email
+                Send Invitation
               </Label>
             </div>
           </div>
