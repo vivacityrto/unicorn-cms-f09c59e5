@@ -15,6 +15,7 @@ export interface Note {
   note_details: string;
   note_type: string | null;
   priority: string | null;
+  status: string | null;
   is_pinned: boolean;
   tags: string[];
   started_date: string | null;
@@ -39,6 +40,7 @@ export interface CreateNoteInput {
   note_details: string;
   note_type?: string;
   priority?: string;
+  status?: string;
   is_pinned?: boolean;
   tags?: string[];
   started_date?: string;
@@ -57,6 +59,7 @@ export interface UpdateNoteInput {
   note_details?: string;
   note_type?: string | null;
   priority?: string | null;
+  status?: string | null;
   is_pinned?: boolean;
   tags?: string[];
   started_date?: string | null;
@@ -286,6 +289,7 @@ export function useNotes({ parentType, parentId, tenantId, packageId }: UseNotes
           tags: input.tags || [],
           started_date: input.started_date || null,
           completed_date: input.completed_date || null,
+          status: input.status || null,
           duration: input.duration || 0,
           uploaded_files: input.uploaded_files || [],
           file_names: input.file_names || [],

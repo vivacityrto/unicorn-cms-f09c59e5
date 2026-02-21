@@ -12251,6 +12251,30 @@ export type Database = {
         }
         Relationships: []
       }
+      dd_note_status: {
+        Row: {
+          code: string
+          id: number
+          is_active: boolean
+          label: string
+          sort_order: number
+        }
+        Insert: {
+          code: string
+          id?: number
+          is_active?: boolean
+          label: string
+          sort_order?: number
+        }
+        Update: {
+          code?: string
+          id?: number
+          is_active?: boolean
+          label?: string
+          sort_order?: number
+        }
+        Relationships: []
+      }
       dd_note_tags: {
         Row: {
           code: string
@@ -22814,6 +22838,7 @@ export type Database = {
           parent_uuid: string | null
           priority: string | null
           started_date: string | null
+          status: string | null
           tags: string[]
           tenant_id: number
           tenant_uuid: string | null
@@ -22846,6 +22871,7 @@ export type Database = {
           parent_uuid?: string | null
           priority?: string | null
           started_date?: string | null
+          status?: string | null
           tags?: string[]
           tenant_id: number
           tenant_uuid?: string | null
@@ -22878,6 +22904,7 @@ export type Database = {
           parent_uuid?: string | null
           priority?: string | null
           started_date?: string | null
+          status?: string | null
           tags?: string[]
           tenant_id?: number
           tenant_uuid?: string | null

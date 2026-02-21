@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNotes, Note } from '@/hooks/useNotes';
 import { useNoteTags } from '@/hooks/useNoteTags';
 import { useClientActionItems } from '@/hooks/useClientManagementData';
+import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -89,6 +90,7 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
     parentId: tenantId,
     tenantId
   });
+  const { toast } = useToast();
   const { createItem: createActionItem } = useClientActionItems(tenantId, clientId);
   
   // Filter state
@@ -106,16 +108,23 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isConvertDialogOpen, setIsConvertDialogOpen] = useState(false);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
+  const [isTimeLogPromptOpen, setIsTimeLogPromptOpen] = useState(false);
+  const [pendingTimeLogData, setPendingTimeLogData] = useState<{ duration: number; noteType: string; title: string } | null>(null);
   const [selectedNote, setSelectedNote] = useState<Note | null>(null);
   const [saving, setSaving] = useState(false);
   const [selectedPackageInfo, setSelectedPackageInfo] = useState<PackageInfo | null>(null);
   const [packageNameMap, setPackageNameMap] = useState<Record<number, string>>({});
+  
+  // Note status options from dd_note_status
+  const [noteStatusOptions, setNoteStatusOptions] = useState<{ code: string; label: string }[]>([]);
   
   // Form state
   const [noteType, setNoteType] = useState('general');
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [priority, setPriority] = useState('normal');
+  const [noteStatus, setNoteStatus] = useState('');
+  const [duration, setDuration] = useState<string>('');
   const [tags, setTags] = useState<string[]>([]);
   const { tags: availableNoteTags, loading: noteTagsLoading } = useNoteTags();
   const [isPinned, setIsPinned] = useState(false);
@@ -156,6 +165,19 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
     };
   }, [content, titleManuallyEdited, extractTitle]);
   
+  // Fetch note status options
+  useEffect(() => {
+    const fetchStatusOptions = async () => {
+      const { data } = await supabase
+        .from('dd_note_status')
+        .select('code, label')
+        .eq('is_active', true)
+        .order('sort_order');
+      if (data) setNoteStatusOptions(data);
+    };
+    fetchStatusOptions();
+  }, []);
+
   // Convert to action item state
   const [actionTitle, setActionTitle] = useState('');
   const [actionDescription, setActionDescription] = useState('');
@@ -343,6 +365,8 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
     setTitle('');
     setContent('');
     setPriority('normal');
+    setNoteStatus('');
+    setDuration('');
     setTags([]);
     setIsPinned(false);
     setSelectedPackageInstanceId('none');
@@ -361,6 +385,8 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
     setTitle(note.title || '');
     setContent(note.note_details);
     setPriority(note.priority || 'normal');
+    setNoteStatus(note.status || '');
+    setDuration(note.duration ? String(note.duration) : '');
     setTags(note.tags || []);
     setIsPinned(note.is_pinned);
     // Pre-populate package selection when editing a package note
@@ -372,12 +398,15 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
     setIsAddDialogOpen(true);
   };
 
+  const showsDuration = noteType === 'meeting' || noteType === 'phone-call' || noteType === 'action';
+  
   const handleSave = async () => {
     if (!content.trim()) return;
     
     setSaving(true);
     try {
       const selectedPkg = activePackages.find(p => String(p.instance_id) === selectedPackageInstanceId);
+      const parsedDuration = duration ? parseInt(duration, 10) : 0;
       let noteId: string | null = null;
       if (selectedNote) {
         await updateNote(selectedNote.id, {
@@ -385,6 +414,8 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
           title: title || null,
           note_details: content,
           priority: priority || null,
+          status: noteStatus || null,
+          duration: parsedDuration,
           tags,
           is_pinned: isPinned,
           package_id: selectedPkg?.package_id || null
@@ -395,6 +426,8 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
           title: title || undefined,
           note_details: content,
           priority: priority || undefined,
+          status: noteStatus || undefined,
+          duration: parsedDuration || undefined,
           tags,
           is_pinned: isPinned,
           package_id: selectedPkg?.package_id || undefined,
@@ -445,9 +478,42 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
         }
       }
       setIsAddDialogOpen(false);
+      
+      // Prompt time log for meeting/phone-call/action with duration
+      const parsedDur = duration ? parseInt(duration, 10) : 0;
+      if (!selectedNote && showsDuration && parsedDur > 0) {
+        setPendingTimeLogData({ duration: parsedDur, noteType, title: title || content.substring(0, 60) });
+        setIsTimeLogPromptOpen(true);
+      }
+      
       resetForm();
     } finally {
       setSaving(false);
+    }
+  };
+  
+  const handleTimeLogConfirm = async () => {
+    if (!pendingTimeLogData) return;
+    try {
+      const { data: userData } = await supabase.auth.getUser();
+      if (!userData.user) return;
+      
+      await supabase.from('time_entries').insert({
+        tenant_id: tenantId,
+        user_id: userData.user.id,
+        duration_minutes: pendingTimeLogData.duration,
+        work_type: pendingTimeLogData.noteType,
+        notes: pendingTimeLogData.title,
+        client_id: tenantId
+      });
+      
+      toast({ title: 'Time logged', description: `${pendingTimeLogData.duration} minutes logged` });
+    } catch (err) {
+      console.error('Failed to log time:', err);
+      toast({ title: 'Error', description: 'Failed to log time entry', variant: 'destructive' });
+    } finally {
+      setIsTimeLogPromptOpen(false);
+      setPendingTimeLogData(null);
     }
   };
 
@@ -1070,7 +1136,7 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
 
       {/* Add/Edit Note Dialog */}
       <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle>
               {selectedNote ? 'Edit Note' : 'Add Note'}
@@ -1091,8 +1157,8 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
           </DialogHeader>
           
           <div className="space-y-4">
-            {/* Type and Priority row */}
-            <div className="grid grid-cols-2 gap-4">
+            {/* Type, Priority, Status, and optional Duration row */}
+            <div className={`grid gap-4 ${showsDuration ? 'grid-cols-4' : 'grid-cols-3'}`}>
               <div className="space-y-2">
                 <Label>Type</Label>
                 <Select value={noteType} onValueChange={setNoteType}>
@@ -1126,6 +1192,35 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
                   </SelectContent>
                 </Select>
               </div>
+              
+              <div className="space-y-2">
+                <Label>Status</Label>
+                <Select value={noteStatus} onValueChange={setNoteStatus}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select status..." />
+                  </SelectTrigger>
+                  <SelectContent className="bg-background">
+                    {noteStatusOptions.map(opt => (
+                      <SelectItem key={opt.code} value={opt.code}>
+                        {opt.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              {showsDuration && (
+                <div className="space-y-2">
+                  <Label>Duration (mins)</Label>
+                  <Input 
+                    type="number"
+                    min={0}
+                    value={duration}
+                    onChange={e => setDuration(e.target.value)}
+                    placeholder="0"
+                  />
+                </div>
+              )}
             </div>
 
             {/* Package selector */}
@@ -1307,6 +1402,29 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Time Log Prompt */}
+      <AlertDialog open={isTimeLogPromptOpen} onOpenChange={(open) => {
+        if (!open) {
+          setIsTimeLogPromptOpen(false);
+          setPendingTimeLogData(null);
+        }
+      }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Log Time Entry?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Would you like to log {pendingTimeLogData?.duration} minutes as a time entry for this {pendingTimeLogData?.noteType === 'phone-call' ? 'phone call' : pendingTimeLogData?.noteType}?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>No thanks</AlertDialogCancel>
+            <AlertDialogAction onClick={handleTimeLogConfirm}>
+              Yes, log time
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }
