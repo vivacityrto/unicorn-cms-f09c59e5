@@ -236,7 +236,7 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
       try {
   const { data, error } = await supabase
           .from('v_clickup_tasks' as never)
-          .select('id, task_id, task_custom_id, task_name, task_content, date_created, comments, assigned_comments, status, list_name')
+          .select('id, task_id, task_custom_id, task_name, task_content, date_created, status, list_name')
           .eq('tenant_id', tenantId)
           .order('date_created', { ascending: false });
         if (error) throw error;
