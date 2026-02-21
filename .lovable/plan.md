@@ -1,93 +1,117 @@
 
-# ClickUp CSV Importer
+
+# Fix ClickUp CSV Importer: Two Tables, Tenant Resolution
 
 ## Problem
-When importing ClickUp CSV exports directly via Supabase, column names don't match the `clickup_tasksdb` table schema. This causes large fields like `comments` to be silently dropped (stored as `null`).
+
+The current importer sends everything to `clickup_tasksdb`, but the two CSV files serve different purposes:
+
+1. **Raw ClickUp Export** (headers: `task_id, task_name, comments, list_name, assignees...`) should go into **`clickup_tasks`** -- this table has JSONB columns for comments/assignees/checklists and stores the raw export data.
+
+2. **Dashboard Export** (headers match DB columns like `unicorn_url, tenant_id, mb_level, cricos_rereg_date...`) should go into **`clickup_tasksdb`** -- this table stores enriched dashboard data with tenant association.
+
+Additionally, `tenant_id` in `clickup_tasksdb` needs to be **derived from `unicorn_url`** using three URL patterns:
+- `/clients/6278` -- the number IS the tenant_id directly
+- `/stage/21655` -- look up `v_tenant_stage_instances` to get tenant_id
+- `/14972` (bare number, also `/email/XXXXX`) -- look up `package_instances` to get tenant_id
 
 ## Solution
-Build a dedicated ClickUp CSV import page in the SuperAdmin area that:
-1. Parses the CSV client-side (using PapaParse)
-2. Auto-maps ClickUp CSV headers to `clickup_tasksdb` columns
-3. Shows a preview of mapped data before importing
-4. Inserts rows via an edge function (service role, bypasses RLS)
 
-## Column Mapping (Hardcoded)
+### Step 1: Restructure the Import Page with Two Modes
 
-The importer will use a fixed mapping dictionary:
+Update `src/pages/ClickUpImport.tsx` to offer a choice between:
+- **"ClickUp Export"** -- maps to `clickup_tasks` table
+- **"Dashboard Export"** -- maps to `clickup_tasksdb` table
 
-```text
-CSV Header              -->  DB Column
------------------------------------------------
-task_id                 -->  task_id
-task_custom_id          -->  task_custom_id
-task_name               -->  task_name
-task_content            -->  task_content
-status                  -->  status
-date_created            -->  date_created
-date_created_text       -->  (stored in date_created if date_created is empty)
-due_date                -->  due_date
-due_date_text           -->  (fallback for due_date)
-start_date              -->  start_date
-start_date_text         -->  (fallback for start_date)
-assignees               -->  assignee (parsed as JSON array)
-tags                    -->  tags
-priority                -->  priority
-list_name               -->  list
-folder_name_path        -->  folder
-space_name              -->  space
-time_estimated          -->  time_estimate
-time_estimated_text     -->  (fallback for time_estimate)
-checklists              -->  (ignored - no column)
-comments                -->  latest_comment
-assigned_comments       -->  assigned_comment_count (count only)
-time_spent              -->  time_logged
-time_spent_text         -->  (fallback for time_logged)
-rolled_up_time          -->  time_logged_rolled_up
-rolled_up_time_text     -->  (fallback)
-parent_id               -->  (ignored - no column)
-```
+Each mode uses its own column mapping dictionary.
 
-## Implementation Steps
+### Step 2: Fix Column Mapping for `clickup_tasks`
 
-### 1. Install PapaParse
-Add `papaparse` and `@types/papaparse` for robust CSV parsing that handles quoted fields with commas, newlines, etc.
+The `clickup_tasks` table columns closely match the raw CSV headers, but some fields need special handling:
+- `comments`, `assignees`, `checklists`, `assigned_comments`, `attachments` are JSONB -- parse as JSON or wrap as arrays
+- `tags` is also JSONB
+- Keep `parent_id` (this table has it, unlike `clickup_tasksdb`)
 
-### 2. Create Import Page Component
-**File:** `src/pages/ClickUpImport.tsx`
+### Step 3: Dashboard Export Mapping for `clickup_tasksdb`
 
-- File upload dropzone (accepts `.csv`)
-- Parse CSV using PapaParse with `header: true`
-- Display summary: row count, mapped vs unmapped columns
-- Preview table showing first 5 rows of mapped data
-- "Import" button with progress indicator
-- Option to choose behavior for duplicates (skip or overwrite based on `task_id`)
+For the dashboard CSV, headers likely match DB columns directly (since it's exported from a dashboard view). A light mapping pass will normalise any differences.
 
-### 3. Create Edge Function
-**File:** `supabase/functions/import-clickup-csv/index.ts`
+### Step 4: Add Tenant Resolution Logic
 
-- Accepts JSON array of pre-mapped rows
-- Upserts into `clickup_tasksdb` (using `task_id` as conflict key)
-- Sets `imported_at` to current timestamp
-- Processes in batches of 50 rows
-- Returns success/error counts
+After importing dashboard rows into `clickup_tasksdb`, resolve `tenant_id` from `unicorn_url` for rows where `tenant_id` is NULL:
 
-### 4. Add Route
-Add the import page to the router, accessible from the SuperAdmin Tasks Management area or as a standalone route like `/admin/clickup-import`.
+1. Parse the URL to extract the path pattern and numeric ID
+2. `/clients/N` -- set `tenant_id = N`
+3. `/stage/N` -- query `v_tenant_stage_instances` where `stage_instance_id = N` to get `tenant_id`
+4. `/N` or `/email/N` or other patterns -- query `package_instances` where `id = N` to get `tenant_id`
 
-### 5. Add Navigation Link
-Add an "Import ClickUp CSV" button on the Tasks Management page for easy access.
+This resolution will happen in the **edge function** after the upsert, so it runs server-side with service role access.
+
+### Step 5: Add Unique Constraint on `clickup_tasks.task_id`
+
+The `clickup_tasks` table currently has no unique constraint on `task_id`, which will cause the same upsert error. Add one via migration.
+
+### Step 6: Update Edge Function
+
+Modify `supabase/functions/import-clickup-csv/index.ts` to:
+- Accept a `target_table` parameter (`clickup_tasks` or `clickup_tasksdb`)
+- Upsert to the specified table
+- When target is `clickup_tasksdb`, run tenant resolution after upsert
 
 ## Technical Details
 
-- **PapaParse** handles the core issue: it correctly parses quoted CSV fields containing commas, newlines, and special characters that break Supabase's built-in importer
-- **Client-side mapping** transforms CSV headers to DB column names before sending to the edge function
-- **Upsert on task_id** prevents duplicates when re-importing updated exports
-- **Batch processing** (50 rows per request) avoids payload size limits
-- **Audit trail**: each import sets `imported_at` so you can track when data was loaded
+### Files to Modify
 
-## Files to Create/Modify
-1. **Create** `src/pages/ClickUpImport.tsx` - Import UI with file upload, preview, and mapping
-2. **Create** `supabase/functions/import-clickup-csv/index.ts` - Upsert edge function
-3. **Modify** `supabase/config.toml` - Register new edge function
-4. **Modify** `src/App.tsx` (or router file) - Add route
-5. **Modify** `src/pages/TasksManagement.tsx` - Add navigation button
+1. **`src/pages/ClickUpImport.tsx`** -- Add table selector toggle, separate mapping dictionaries for each table, pass `target_table` to edge function
+2. **`supabase/functions/import-clickup-csv/index.ts`** -- Accept `target_table` param, add tenant resolution SQL for `clickup_tasksdb`
+3. **Database migration** -- Add unique constraint on `clickup_tasks(task_id)`
+
+### Tenant Resolution SQL (in edge function)
+
+```text
+For /clients/N:
+  UPDATE clickup_tasksdb SET tenant_id = N WHERE id = row.id
+
+For /stage/N:
+  SELECT tenant_id FROM v_tenant_stage_instances WHERE stage_instance_id = N
+
+For /N (package):
+  SELECT tenant_id FROM package_instances WHERE id = N
+```
+
+### Column Mapping: ClickUp Export to `clickup_tasks`
+
+```text
+CSV Header           -->  DB Column          Notes
+task_id              -->  task_id
+task_custom_id       -->  task_custom_id
+task_name            -->  task_name
+task_content         -->  task_content
+status               -->  status
+date_created         -->  date_created
+date_created_text    -->  date_created_text
+due_date             -->  due_date
+due_date_text        -->  due_date_text
+start_date           -->  start_date
+start_date_text      -->  start_date_text
+parent_id            -->  parent_id
+assignees            -->  assignees           (parse as JSONB)
+tags                 -->  tags                (parse as JSONB)
+priority             -->  priority
+list_name            -->  list_name
+folder_name_path     -->  folder_name_path
+space_name           -->  space_name
+time_estimated       -->  time_estimated
+time_estimated_text  -->  time_estimated_text
+checklists           -->  checklists          (parse as JSONB)
+comments             -->  comments            (parse as JSONB)
+assigned_comments    -->  assigned_comments   (parse as JSONB)
+time_spent           -->  time_spent
+time_spent_text      -->  time_spent_text
+rolled_up_time       -->  rolled_up_time
+rolled_up_time_text  -->  rolled_up_time_text
+```
+
+### Column Mapping: Dashboard Export to `clickup_tasksdb`
+
+Headers match DB columns directly -- pass through with minimal transformation. The `tenant_id` column will be auto-resolved from `unicorn_url` after import.
