@@ -14,8 +14,6 @@ import { useNavigate } from "react-router-dom";
 interface TableCount {
   clickup_tasks_api: number;
   clickup_task_comments: number;
-  clickup_tasks: number;
-  clickup_tasksdb: number;
 }
 
 interface ClickUpTask {
@@ -51,17 +49,13 @@ export default function ClickUpImport() {
 
   // Fetch table counts
   const fetchCounts = useCallback(async () => {
-    const [r1, r2, r3, r4] = await Promise.all([
+    const [r1, r2] = await Promise.all([
       supabase.from("clickup_tasks_api").select("id", { count: "exact", head: true }),
       supabase.from("clickup_task_comments").select("id", { count: "exact", head: true }),
-      supabase.from("clickup_tasks").select("id", { count: "exact", head: true }),
-      supabase.from("clickup_tasksdb").select("id", { count: "exact", head: true }),
     ]);
     setCounts({
       clickup_tasks_api: r1.count ?? 0,
       clickup_task_comments: r2.count ?? 0,
-      clickup_tasks: r3.count ?? 0,
-      clickup_tasksdb: r4.count ?? 0,
     });
   }, []);
 
@@ -178,14 +172,12 @@ export default function ClickUpImport() {
         </div>
 
         {/* Table Counts */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 gap-3">
           {[
-            { label: "Tasks (API)", key: "clickup_tasks_api" as const, primary: true },
+            { label: "Tasks (API)", key: "clickup_tasks_api" as const },
             { label: "Comments", key: "clickup_task_comments" as const },
-            { label: "Tasks (Legacy)", key: "clickup_tasks" as const },
-            { label: "TasksDB (Legacy)", key: "clickup_tasksdb" as const },
-          ].map(({ label, key, primary }) => (
-            <Card key={key} className={primary ? "border-primary/30" : "opacity-70"}>
+          ].map(({ label, key }) => (
+            <Card key={key} className="border-primary/30">
               <CardContent className="pt-4 pb-3 px-4">
                 <p className="text-xs text-muted-foreground">{label}</p>
                 <p className="text-2xl font-bold text-foreground">
