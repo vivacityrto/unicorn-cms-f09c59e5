@@ -247,3 +247,6 @@ verify_jwt = false
 
 [functions.import-clickup-csv]
 verify_jwt = false
+
+[functions.fetch-clickup-comments]
+verify_jwt = false

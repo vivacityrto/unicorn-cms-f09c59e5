@@ -37,6 +37,7 @@ interface PackageInfo {
 
 interface ClickUpTask {
   id: string;
+  task_id?: string;
   task_custom_id: string | null;
   task_name: string | null;
   task_content: string | null;
@@ -47,6 +48,17 @@ interface ClickUpTask {
   assigned_comments: unknown;
   status: string | null;
   list_name: string | null;
+}
+
+interface ApiComment {
+  id: number;
+  comment_id: string;
+  comment_text: string | null;
+  comment_by: string | null;
+  comment_by_email: string | null;
+  date_created: number | null;
+  resolved: boolean;
+  parent_comment_id: string | null;
 }
 
 interface ClientStructuredNotesTabProps {
@@ -81,6 +93,8 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
   const [clickupTasks, setClickupTasks] = useState<ClickUpTask[]>([]);
   const [clickupLoading, setClickupLoading] = useState(false);
   const [expandedTaskId, setExpandedTaskId] = useState<string | null>(null);
+  const [apiComments, setApiComments] = useState<Record<string, ApiComment[]>>({});
+  const [fetchingCommentsForTask, setFetchingCommentsForTask] = useState<string | null>(null);
   
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -224,7 +238,7 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
       try {
   const { data, error } = await supabase
           .from('v_clickup_tasks' as never)
-          .select('id, task_custom_id, task_name, task_content, date_created_ts, date_created, date_created_text, comments, assigned_comments, status, list_name')
+          .select('id, task_id, task_custom_id, task_name, task_content, date_created_ts, date_created, date_created_text, comments, assigned_comments, status, list_name')
           .eq('tenant_id_db', tenantId)
           .order('date_created', { ascending: false });
         if (error) throw error;
@@ -238,6 +252,52 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
     };
     fetchClickupTasks();
   }, [parentTypeFilter, tenantId]);
+
+  // Load cached API comments for all tasks when clickup tasks are loaded
+  useEffect(() => {
+    if (clickupTasks.length === 0) return;
+    const loadApiComments = async () => {
+      const { data } = await supabase
+        .from('clickup_task_comments' as never)
+        .select('*')
+        .eq('tenant_id', tenantId)
+        .order('date_created', { ascending: true });
+      if (data && Array.isArray(data)) {
+        const grouped: Record<string, ApiComment[]> = {};
+        for (const c of data as any[]) {
+          const tid = c.task_id;
+          if (!grouped[tid]) grouped[tid] = [];
+          grouped[tid].push(c as ApiComment);
+        }
+        setApiComments(grouped);
+      }
+    };
+    loadApiComments();
+  }, [clickupTasks, tenantId]);
+
+  // Fetch comments from ClickUp API for a single task
+  const handleFetchTaskComments = async (taskId: string) => {
+    setFetchingCommentsForTask(taskId);
+    try {
+      const { data, error } = await supabase.functions.invoke('fetch-clickup-comments', {
+        body: { action: 'fetch_by_task_ids', task_ids: [taskId], tenant_id: tenantId },
+      });
+      if (error) throw error;
+      // Reload API comments for this task
+      const { data: refreshed } = await supabase
+        .from('clickup_task_comments' as never)
+        .select('*')
+        .eq('task_id', taskId)
+        .order('date_created', { ascending: true });
+      if (refreshed) {
+        setApiComments(prev => ({ ...prev, [taskId]: refreshed as ApiComment[] }));
+      }
+    } catch (err) {
+      console.error('[ClickUp] comment fetch error:', err);
+    } finally {
+      setFetchingCommentsForTask(null);
+    }
+  };
 
   // Fetch package info when a package note is selected
   useEffect(() => {
@@ -531,10 +591,14 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
                       if (formattedDate === '—' && task.date_created_text) {
                         formattedDate = task.date_created_text;
                       }
-                      // comments column may be null; fall back to assigned_comments
+                      // Determine task_id for API comment lookup
+                      const rawTaskId = (task as any).task_id as string | undefined;
+                      const taskApiComments = rawTaskId ? (apiComments[rawTaskId] || []) : [];
+                      const hasApiComments = taskApiComments.length > 0;
+
+                      // CSV blob comments (fallback)
                       const rawComments = task.comments ?? task.assigned_comments;
-                      // Comments can be: string[], {text,by,date}[], or {comment_text,user}[]
-                      const comments: { text: string; by?: string }[] = Array.isArray(rawComments)
+                      const csvComments: { text: string; by?: string }[] = Array.isArray(rawComments)
                         ? (rawComments as unknown[]).map((c) => {
                             if (typeof c === 'string') return { text: c };
                             if (c && typeof c === 'object') {
@@ -547,6 +611,9 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
                             return { text: String(c) };
                           }).filter((c) => c.text && c.text.trim())
                         : [];
+
+                      const commentCount = hasApiComments ? taskApiComments.length : csvComments.length;
+
                       return (
                         <div key={task.id} className="rounded-lg border bg-card">
                           <div
@@ -565,10 +632,11 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
                                   {task.status && (
                                     <Badge variant="secondary" className="text-xs capitalize">{task.status}</Badge>
                                   )}
-                                  {comments.length > 0 && (
+                                  {commentCount > 0 && (
                                     <span className="flex items-center gap-1 text-xs text-muted-foreground">
                                       <MessageSquare className="h-3 w-3" />
-                                      {comments.length}
+                                      {commentCount}
+                                      {hasApiComments && <span className="text-[10px]">(API)</span>}
                                     </span>
                                   )}
                                 </div>
@@ -587,26 +655,83 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
                               </div>
                             </div>
                           </div>
-                          {comments.length > 0 && (
+                          {isExpanded && (
                             <div className="border-t px-4 py-3 space-y-2 bg-muted/20">
-                              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                                Comments ({comments.length})
-                              </p>
-                              {comments.map((c, i) => (
-                                <div key={i} className="flex items-start gap-2 text-sm">
-                                  <div className="shrink-0 mt-0.5">
-                                    <div className="h-5 w-5 rounded-full bg-muted flex items-center justify-center text-[10px] font-medium uppercase text-muted-foreground">
-                                      {c.by?.[0] ?? '?'}
+                              <div className="flex items-center justify-between">
+                                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                                  Comments ({commentCount})
+                                </p>
+                                {rawTaskId && (
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-6 text-xs"
+                                    onClick={(e) => { e.stopPropagation(); handleFetchTaskComments(rawTaskId); }}
+                                    disabled={fetchingCommentsForTask === rawTaskId}
+                                  >
+                                    {fetchingCommentsForTask === rawTaskId ? (
+                                      <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                                    ) : (
+                                      <MessageSquare className="h-3 w-3 mr-1" />
+                                    )}
+                                    {hasApiComments ? 'Refresh' : 'Fetch from API'}
+                                  </Button>
+                                )}
+                              </div>
+                              {hasApiComments ? (
+                                // Show API-fetched comments with full metadata
+                                taskApiComments.map((c) => {
+                                  let commentDate = '';
+                                  if (c.date_created) {
+                                    try {
+                                      const d = fromUnixTime(c.date_created / 1000);
+                                      if (isValid(d)) commentDate = format(d, 'dd MMM yyyy HH:mm');
+                                    } catch { /* skip */ }
+                                  }
+                                  return (
+                                    <div key={c.comment_id} className={`flex items-start gap-2 text-sm ${c.parent_comment_id ? 'ml-6' : ''}`}>
+                                      <div className="shrink-0 mt-0.5">
+                                        <div className="h-5 w-5 rounded-full bg-muted flex items-center justify-center text-[10px] font-medium uppercase text-muted-foreground">
+                                          {c.comment_by?.[0] ?? '?'}
+                                        </div>
+                                      </div>
+                                      <div className="flex-1 min-w-0">
+                                        <div className="flex items-center gap-2 mb-0.5">
+                                          {c.comment_by && (
+                                            <span className="font-medium text-foreground text-xs">{c.comment_by}</span>
+                                          )}
+                                          {commentDate && (
+                                            <span className="text-[10px] text-muted-foreground">{commentDate}</span>
+                                          )}
+                                          {c.resolved && (
+                                            <Badge variant="outline" className="text-[10px] px-1 py-0">Resolved</Badge>
+                                          )}
+                                        </div>
+                                        <span className="text-muted-foreground whitespace-pre-wrap text-xs">{c.comment_text}</span>
+                                      </div>
+                                    </div>
+                                  );
+                                })
+                              ) : csvComments.length > 0 ? (
+                                // Fallback to CSV blob comments
+                                csvComments.map((c, i) => (
+                                  <div key={i} className="flex items-start gap-2 text-sm">
+                                    <div className="shrink-0 mt-0.5">
+                                      <div className="h-5 w-5 rounded-full bg-muted flex items-center justify-center text-[10px] font-medium uppercase text-muted-foreground">
+                                        {c.by?.[0] ?? '?'}
+                                      </div>
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                      {c.by && (
+                                        <span className="font-medium text-foreground mr-1">{c.by}</span>
+                                      )}
+                                      <span className="text-muted-foreground whitespace-pre-wrap">{c.text}</span>
                                     </div>
                                   </div>
-                                  <div className="flex-1 min-w-0">
-                                    {c.by && (
-                                      <span className="font-medium text-foreground mr-1">{c.by}</span>
-                                    )}
-                                    <span className="text-muted-foreground whitespace-pre-wrap">{c.text}</span>
-                                  </div>
-                                </div>
-                              ))}
+                                ))
+                              ) : (
+                                <p className="text-xs text-muted-foreground italic">No comments yet. Click &quot;Fetch from API&quot; to load.</p>
+                              )}
                             </div>
                           )}
                         </div>
