@@ -17,6 +17,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import TenantProgressTable from "@/components/tenant/TenantProgressTable";
+import { TenantClickUpActivity } from "@/components/tenant/TenantClickUpActivity";
 import { CSCProfileCard } from "@/components/csc/CSCProfileCard";
 import { ViewAsClientButton } from "@/components/client/ViewAsClientButton";
 import { EnrichTenantButton } from "@/components/tenant/EnrichTenantButton";
@@ -740,6 +741,11 @@ export default function TenantDetail() {
 
             {/* Package & Progress Combined - Use activePackageId */}
             <TenantProgressTable key={`progress-${activePackageId}-${tenantId}`} packageId={activePackageId || undefined} tenantId={tenantId ? parseInt(tenantId) : undefined} packageName={tenantPackages.find(p => p.id === activePackageId)?.name || packages[0]?.name} packageDate={packages[0]?.date} documentCount={documentCount} memberCount={memberCount} />
+
+            {/* ClickUp Activity - SuperAdmin only */}
+            {(profile?.global_role === 'SuperAdmin' || profile?.unicorn_role === 'Super Admin') && tenantId && (
+              <TenantClickUpActivity tenantId={parseInt(tenantId)} />
+            )}
           </div>
 
           {/* Right: Package Details */}
