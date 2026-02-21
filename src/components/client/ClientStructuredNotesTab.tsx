@@ -920,12 +920,10 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <Label>Title (optional)</Label>
-                {extractingTitle && (
-                  <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                    <Loader2 className="h-3 w-3 animate-spin" />
-                    Generating...
-                  </span>
-                )}
+                <span className="flex items-center gap-1 text-xs text-muted-foreground italic">
+                  {extractingTitle && <Loader2 className="h-3 w-3 animate-spin" />}
+                  AI generated from Content
+                </span>
               </div>
               <Input 
                 value={title}
