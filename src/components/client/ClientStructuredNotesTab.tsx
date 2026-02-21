@@ -533,7 +533,20 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
                       }
                       // comments column may be null; fall back to assigned_comments
                       const rawComments = task.comments ?? task.assigned_comments;
-                      const comments = Array.isArray(rawComments) ? rawComments as { comment_text?: string; user?: { username?: string } }[] : [];
+                      // Comments can be: string[], {text,by,date}[], or {comment_text,user}[]
+                      const comments: { text: string; by?: string }[] = Array.isArray(rawComments)
+                        ? (rawComments as unknown[]).map((c) => {
+                            if (typeof c === 'string') return { text: c };
+                            if (c && typeof c === 'object') {
+                              const obj = c as Record<string, unknown>;
+                              return {
+                                text: (obj.text as string) || (obj.comment_text as string) || String(c),
+                                by: (obj.by as string) || (obj.user as any)?.username || undefined,
+                              };
+                            }
+                            return { text: String(c) };
+                          }).filter((c) => c.text && c.text.trim())
+                        : [];
                       return (
                         <div key={task.id} className="rounded-lg border bg-card">
                           <div
@@ -583,14 +596,14 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
                                 <div key={i} className="flex items-start gap-2 text-sm">
                                   <div className="shrink-0 mt-0.5">
                                     <div className="h-5 w-5 rounded-full bg-muted flex items-center justify-center text-[10px] font-medium uppercase text-muted-foreground">
-                                      {c.user?.username?.[0] ?? '?'}
+                                      {c.by?.[0] ?? '?'}
                                     </div>
                                   </div>
                                   <div className="flex-1 min-w-0">
-                                    {c.user?.username && (
-                                      <span className="font-medium text-foreground mr-1">{c.user.username}</span>
+                                    {c.by && (
+                                      <span className="font-medium text-foreground mr-1">{c.by}</span>
                                     )}
-                                    <span className="text-muted-foreground">{c.comment_text || ''}</span>
+                                    <span className="text-muted-foreground whitespace-pre-wrap">{c.text}</span>
                                   </div>
                                 </div>
                               ))}
