@@ -141,11 +141,19 @@ Deno.serve(async (req) => {
     }
 
     // ─── Mode 2: Bulk fetch for a tenant, or ALL tasks if tenant_id is 0 ───
+    // Supports batch_size (default 50) and offset (default 0) for resumable pagination.
     if (action === "fetch_by_tenant") {
       const fetchAll = !tenant_id || tenant_id === 0;
+      const batchSize = body.batch_size ?? 50;
+      const offset = body.offset ?? 0;
 
-      // Get task_ids from clickup_tasks_api
-      let query = sb.from("clickup_tasks_api").select("task_id, tenant_id");
+      // Get total count first
+      let countQuery = sb.from("clickup_tasks_api").select("task_id", { count: "exact", head: true });
+      if (!fetchAll) countQuery = countQuery.eq("tenant_id", tenant_id);
+      const { count: totalTasks } = await countQuery;
+
+      // Get task_ids for this batch
+      let query = sb.from("clickup_tasks_api").select("task_id, tenant_id").range(offset, offset + batchSize - 1);
       if (!fetchAll) {
         query = query.eq("tenant_id", tenant_id);
       }
@@ -154,7 +162,7 @@ Deno.serve(async (req) => {
       if (fetchErr) throw fetchErr;
       if (!tasks || tasks.length === 0) {
         return new Response(
-          JSON.stringify({ fetched: 0, stored: 0, errors: [], message: fetchAll ? "No tasks found" : "No tasks found for tenant" }),
+          JSON.stringify({ fetched: 0, stored: 0, errors: [], has_more: false, next_offset: offset, total_tasks: totalTasks ?? 0 }),
           { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
@@ -206,8 +214,11 @@ Deno.serve(async (req) => {
         }
       }
 
+      const nextOffset = offset + taskEntries.length;
+      const hasMore = nextOffset < (totalTasks ?? 0);
+
       return new Response(
-        JSON.stringify({ fetched: totalFetched, stored: totalStored, task_count: taskEntries.length, errors }),
+        JSON.stringify({ fetched: totalFetched, stored: totalStored, task_count: taskEntries.length, errors, has_more: hasMore, next_offset: nextOffset, total_tasks: totalTasks ?? 0 }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }

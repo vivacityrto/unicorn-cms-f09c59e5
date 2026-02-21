@@ -38,6 +38,7 @@ export default function ClickUpImport() {
   const [fetchingComments, setFetchingComments] = useState(false);
   const [commentTenantId, setCommentTenantId] = useState("");
   const [commentResult, setCommentResult] = useState<{ fetched: number; stored: number; task_count?: number; errors: string[] } | null>(null);
+  const [commentProgress, setCommentProgress] = useState<{ processed: number; total: number } | null>(null);
   const [counts, setCounts] = useState<TableCount | null>(null);
   const [tasks, setTasks] = useState<ClickUpTask[]>([]);
   const [tasksLoading, setTasksLoading] = useState(true);
@@ -121,21 +122,48 @@ export default function ClickUpImport() {
     }
     setFetchingComments(true);
     setCommentResult(null);
+    setCommentProgress(null);
+
+    let offset = 0;
+    const batchSize = 50;
+    let totalFetched = 0;
+    let totalStored = 0;
+    let totalTaskCount = 0;
+    const allErrors: string[] = [];
+
     try {
-      const { data, error } = await supabase.functions.invoke("fetch-clickup-comments", {
-        body: { action: "fetch_by_tenant", tenant_id: tid },
-      });
-      if (error) throw error;
-      setCommentResult(data);
+      let hasMore = true;
+      while (hasMore) {
+        const { data, error } = await supabase.functions.invoke("fetch-clickup-comments", {
+          body: { action: "fetch_by_tenant", tenant_id: tid, batch_size: batchSize, offset },
+        });
+        if (error) throw error;
+
+        totalFetched += data?.fetched ?? 0;
+        totalStored += data?.stored ?? 0;
+        totalTaskCount += data?.task_count ?? 0;
+        if (data?.errors?.length) allErrors.push(...data.errors);
+
+        setCommentProgress({ processed: data?.next_offset ?? offset, total: data?.total_tasks ?? 0 });
+
+        hasMore = data?.has_more ?? false;
+        offset = data?.next_offset ?? offset + batchSize;
+
+        // Brief pause between batches
+        if (hasMore) await new Promise(r => setTimeout(r, 500));
+      }
+
+      setCommentResult({ fetched: totalFetched, stored: totalStored, task_count: totalTaskCount, errors: allErrors });
       fetchCounts();
       toast({
         title: tid === 0 ? "All Comments Fetched" : "Comments Fetched",
-        description: `${data?.stored ?? 0} comments stored from ${data?.task_count ?? 0} tasks.`,
+        description: `${totalStored} comments stored from ${totalTaskCount} tasks.`,
       });
     } catch (err) {
       toast({ title: "Comment fetch failed", description: (err as Error).message, variant: "destructive" });
     } finally {
       setFetchingComments(false);
+      setCommentProgress(null);
     }
   };
 
@@ -246,11 +274,25 @@ export default function ClickUpImport() {
                   onChange={(e) => setCommentTenantId(e.target.value)}
                 />
               </div>
-              <Button onClick={handleFetchComments} disabled={fetchingComments || !commentTenantId} variant="outline">
+               <Button onClick={handleFetchComments} disabled={fetchingComments || !commentTenantId} variant="outline">
                 <Download className={`h-4 w-4 mr-2 ${fetchingComments ? "animate-spin" : ""}`} />
                 {fetchingComments ? "Fetching…" : commentTenantId === "0" ? "Fetch All Comments" : "Fetch Comments"}
               </Button>
             </div>
+            {commentProgress && (
+              <div className="space-y-1">
+                <div className="flex justify-between text-xs text-muted-foreground">
+                  <span>Processing tasks: {commentProgress.processed} / {commentProgress.total}</span>
+                  <span>{commentProgress.total > 0 ? Math.round((commentProgress.processed / commentProgress.total) * 100) : 0}%</span>
+                </div>
+                <div className="h-2 rounded-full bg-muted overflow-hidden">
+                  <div
+                    className="h-full bg-primary transition-all duration-300"
+                    style={{ width: `${commentProgress.total > 0 ? (commentProgress.processed / commentProgress.total) * 100 : 0}%` }}
+                  />
+                </div>
+              </div>
+            )}
             {commentResult && (
               <div className="rounded-md border p-3 space-y-1 text-sm">
                 <div className="flex items-center gap-2">
