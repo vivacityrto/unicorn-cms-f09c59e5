@@ -9,6 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import { ArrowLeft, CloudDownload, Loader2, MessageSquare, Download, CheckCircle2, ExternalLink, RefreshCw } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { TenantCombobox } from "@/components/clickup/TenantCombobox";
 import { useNavigate } from "react-router-dom";
 
 interface TableCount {
@@ -378,22 +379,12 @@ export default function ClickUpImport() {
                           ) : "—"}
                         </TableCell>
                         <TableCell className="min-w-[180px]">
-                          <Select
-                            value={task.tenant_id ? String(task.tenant_id) : ""}
-                            onValueChange={(val) => handleAssignTenant(task.id, parseInt(val, 10))}
+                          <TenantCombobox
+                            tenants={tenants}
+                            value={task.tenant_id}
+                            onSelect={(tid) => handleAssignTenant(task.id, tid)}
                             disabled={updatingTaskId === task.id}
-                          >
-                            <SelectTrigger className="h-8 text-xs">
-                              <SelectValue placeholder="Assign tenant…" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {tenants.map(t => (
-                                <SelectItem key={t.id} value={String(t.id)} className="text-xs">
-                                  {t.name}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                          />
                         </TableCell>
                       </TableRow>
                     ))}
