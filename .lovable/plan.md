@@ -1,69 +1,91 @@
 
 
-# AI-Powered ClickUp Task Search and Summarisation
+## Add Status Field, Duration, and Time Log Prompt to Notes
 
-## Overview
-Add an AI chat bar to the ClickUp Activity section on the Tenant Detail page. Users can ask natural language questions about the tenant's ClickUp tasks and comments (e.g. "Summarise all open tasks", "What tasks mention evidence gaps?", "List overdue items"). The AI response can optionally be saved as a note to the tenant's main notes section.
+### Overview
 
-## User Experience
-1. Below the ClickUp Activity header, a collapsible AI search bar appears with an input field and "Ask" button
-2. User types a question about the tenant's ClickUp data
-3. The AI streams a markdown response based on the tenant's tasks and comments
-4. A "Save as Note" button appears alongside the response, which inserts the AI summary into the `notes` table as a tenant note
+This plan adds three enhancements to the Add Note dialog:
+- A **Status** dropdown populated from a new `dd_note_status` lookup table
+- A **Duration (mins)** field that appears for Meeting, Phone Call, and Action note types
+- A **prompt to log time** after creating notes of those three types
 
-## Architecture
+### Database Changes
 
-### New Edge Function: `clickup-ai-search`
-- Receives: `tenant_id`, `question`
-- Authenticates user and verifies Vivacity staff access
-- Fetches all tasks from `clickup_tasks_api` for the tenant (name, status, custom_id, date_created, time_estimate, time_spent, creator_username)
-- Fetches all comments from `v_clickup_comments` for the tenant (task_id, comment_text, comment_date, comment_by)
-- Builds a system prompt instructing the AI to answer questions about the ClickUp data
-- Injects the task and comment data as context
-- Calls Lovable AI Gateway (`google/gemini-3-flash-preview`) with streaming enabled
-- Returns SSE stream to the client
+**1. Create `dd_note_status` lookup table**
+
+A new dropdown/code table with these rows:
+- attended
+- not_attended
+- late
+- completed
+- scheduled
+- abandoned
+
+Columns: `id` (serial PK), `code` (text, unique), `label` (text), `sort_order` (int), `is_active` (boolean, default true)
+
+**2. Add `status` column to `notes` table**
+
+Add a nullable `text` column `status` to the existing `notes` table to store the selected status value.
 
 ### Frontend Changes
 
-**New Component: `TenantClickUpAISearch.tsx`**
-- Props: `tenantId: number`
-- Input field with send button
-- Streams AI response token-by-token using SSE parsing
-- Renders response with `react-markdown`
-- "Save as Note" button that inserts the AI response into `notes` table with `parent_type: 'tenant'` and a prefix like "[ClickUp AI Summary]"
+**3. Widen the Add/Edit Note dialog**
 
-**Modified: `TenantClickUpActivity.tsx`**
-- Import and render `TenantClickUpAISearch` in the header area of the card, as a collapsible section
+Change `max-w-lg` to `max-w-2xl` to accommodate the extra fields on one row.
 
-## Technical Details
+**4. Update the Type/Priority row to include Status**
 
-### Edge Function (`supabase/functions/clickup-ai-search/index.ts`)
-- CORS headers as per standard pattern
-- Auth token verification via `supabase.auth.getUser()`
-- Vivacity staff check using `is_vivacity_staff` or profile role check
-- Fetches tasks (capped at 200) and comments (capped at 500) for the tenant
-- System prompt: "You are an internal assistant for Vivacity Coaching. You have been given ClickUp task and comment data for a specific client. Answer the user's question based only on this data. Use Australian date formats. Be concise and factual."
-- Streams response from Lovable AI Gateway
-- Config: `verify_jwt = false` in config.toml
+Change the first row from a 2-column grid to a 3-column grid containing:
+- Type (existing)
+- Priority (existing)
+- Status (new -- populated from `dd_note_status`)
 
-### Frontend Component (`src/components/tenant/TenantClickUpAISearch.tsx`)
-- Uses `import.meta.env.VITE_SUPABASE_URL` for the streaming fetch URL
-- SSE line-by-line parsing (same pattern as documented)
-- Markdown rendering of the streamed response
-- "Save as Note" button calls `supabase.from("notes").insert(...)` with the AI-generated content
-- Loading state with spinner during streaming
+**5. Conditionally show Duration field**
 
-### Config Update (`supabase/config.toml`)
-- Add `[functions.clickup-ai-search]` with `verify_jwt = false`
+When `noteType` is `meeting`, `phone-call`, or `action`:
+- Expand the row to 4 columns: Type | Priority | Status | Duration (mins)
+- Duration is a numeric `Input` field
 
-## Files to Create/Modify
-1. **Create** `supabase/functions/clickup-ai-search/index.ts` -- Edge function
-2. **Create** `src/components/tenant/TenantClickUpAISearch.tsx` -- AI search UI
-3. **Modify** `src/components/tenant/TenantClickUpActivity.tsx` -- Integrate AI search
-4. **Modify** `supabase/config.toml` -- Register new edge function
+**6. Add form state for `status` and `duration`**
 
-## Security
-- Vivacity staff only (consistent with existing ClickUp visibility rules)
-- Uses `LOVABLE_API_KEY` (already configured) for AI Gateway
-- No client-facing access
-- Note insertion uses authenticated user's ID for audit trail
+New state variables:
+- `noteStatus` (string, default empty)
+- `duration` (number or empty string)
+
+Both included in `resetForm()` and `handleSave()`.
+
+**7. Persist status and duration on save**
+
+Pass `status` and `duration` to `createNote()` / `updateNote()`. The `notes` table already has a `duration` column (integer). The `status` column will be added by migration.
+
+Update `useNotes.tsx`:
+- Add `status` to `Note` interface, `CreateNoteInput`, and `UpdateNoteInput`
+- Include `status` in the SELECT query and in create/update operations
+
+**8. Time log prompt after save**
+
+After successfully creating a note with type `meeting`, `phone-call`, or `action` and a duration > 0:
+- Show a confirmation dialog: "Would you like to log this as a time entry?"
+- If yes, call the existing time tracking RPC to add a manual time entry for the tenant with the specified duration
+- If no, just close
+
+**9. Pre-populate edit form**
+
+When editing a note, pre-populate `noteStatus` from `note.status` and `duration` from `note.duration`.
+
+### Files to Modify
+
+| File | Change |
+|------|--------|
+| `supabase/migrations/` | New migration: create `dd_note_status`, seed rows, add `status` column to `notes` |
+| `src/hooks/useNotes.tsx` | Add `status` to Note interface, CreateNoteInput, UpdateNoteInput, and queries |
+| `src/components/client/ClientStructuredNotesTab.tsx` | Widen dialog, add Status and Duration fields, add time log prompt dialog |
+
+### Technical Details
+
+- The `dd_note_status` table follows existing code table conventions (`dd_` prefix, `code`/`label`/`sort_order`/`is_active` columns)
+- Status values are stored as text codes in the `notes.status` column (not foreign key IDs) to match existing patterns (e.g., `note_type`, `priority`)
+- Duration is already an integer column on `notes` -- no migration needed for that field
+- The time log prompt uses a separate `AlertDialog` shown after the note is saved, containing a summary and Yes/No buttons
+- The responsive grid uses `grid-cols-3` normally and `grid-cols-4` when duration is visible (meeting/phone-call/action types)
+
