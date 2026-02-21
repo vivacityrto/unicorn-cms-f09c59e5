@@ -411,7 +411,7 @@ export default function TasksManagement() {
           {isSuperAdmin() && (
             <Button variant="outline" onClick={() => navigate("/admin/clickup-import")}>
               <Upload className="h-4 w-4 mr-2" />
-              Import ClickUp CSV
+              ClickUp
             </Button>
           )}
           <Dialog open={isCreateDialogOpen} onOpenChange={open => {
