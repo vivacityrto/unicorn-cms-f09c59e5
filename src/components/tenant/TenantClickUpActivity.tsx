@@ -3,8 +3,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { ExternalLink, MessageSquare, Loader2 } from "lucide-react";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { ExternalLink, MessageSquare, Loader2, Sparkles, ChevronDown } from "lucide-react";
 import { formatDate } from "@/lib/utils";
+import { TenantClickUpAISearch } from "./TenantClickUpAISearch";
 
 interface TenantClickUpActivityProps {
   tenantId: number;
@@ -53,6 +55,7 @@ export function TenantClickUpActivity({ tenantId }: TenantClickUpActivityProps) 
   const [comments, setComments] = useState<ClickUpComment[]>([]);
   const [loadingTasks, setLoadingTasks] = useState(true);
   const [loadingComments, setLoadingComments] = useState(false);
+  const [aiOpen, setAiOpen] = useState(false);
 
   // Fetch tasks on mount
   useEffect(() => {
@@ -93,12 +96,30 @@ export function TenantClickUpActivity({ tenantId }: TenantClickUpActivityProps) 
   return (
     <Card className="border-0 shadow-lg overflow-hidden">
       <div className="bg-muted/30 px-6 py-4 border-b border-border/50">
-        <div className="flex items-center gap-2">
-          <MessageSquare className="h-4 w-4 text-muted-foreground" />
-          <span className="text-sm font-semibold text-foreground">ClickUp Activity</span>
-          <span className="text-xs text-muted-foreground">({tasks.length} tasks)</span>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <MessageSquare className="h-4 w-4 text-muted-foreground" />
+            <span className="text-sm font-semibold text-foreground">ClickUp Activity</span>
+            <span className="text-xs text-muted-foreground">({tasks.length} tasks)</span>
+          </div>
+          <CollapsibleTrigger
+            onClick={() => setAiOpen(!aiOpen)}
+            className="flex items-center gap-1.5 text-xs font-medium text-primary hover:text-primary/80 transition-colors cursor-pointer"
+          >
+            <Sparkles className="h-3.5 w-3.5" />
+            AI Search
+            <ChevronDown className={`h-3.5 w-3.5 transition-transform ${aiOpen ? "rotate-180" : ""}`} />
+          </CollapsibleTrigger>
         </div>
       </div>
+
+      <Collapsible open={aiOpen} onOpenChange={setAiOpen}>
+        <CollapsibleContent>
+          <div className="border-b border-border/50 pt-3">
+            <TenantClickUpAISearch tenantId={tenantId} />
+          </div>
+        </CollapsibleContent>
+      </Collapsible>
 
       <CardContent className="p-0">
         <div className="grid grid-cols-1 lg:grid-cols-3">
