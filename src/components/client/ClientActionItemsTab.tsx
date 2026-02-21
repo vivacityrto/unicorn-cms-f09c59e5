@@ -430,12 +430,12 @@ export function ClientActionItemsTab({ tenantId, clientId }: ClientActionItemsTa
             
             <div className="space-y-2">
               <Label>Assign To</Label>
-              <Select value={ownerUserId || ''} onValueChange={v => setOwnerUserId(v || undefined)}>
+              <Select value={ownerUserId || '__unassigned__'} onValueChange={v => setOwnerUserId(v === '__unassigned__' ? undefined : v)}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select team member..." />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Unassigned</SelectItem>
+                  <SelectItem value="__unassigned__">Unassigned</SelectItem>
                   {teamMembers.map(member => (
                     <SelectItem key={member.user_uuid} value={member.user_uuid}>
                       <span className="flex items-center gap-2">
