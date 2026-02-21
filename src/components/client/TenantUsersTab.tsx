@@ -461,8 +461,16 @@ export function TenantUsersTab({ tenantId, tenantName, onCountChange }: TenantUs
                           <p className="font-medium">
                             {user.first_name} {user.last_name}
                           </p>
+                          {user.job_title && (
+                            <span className="text-sm text-muted-foreground">— {user.job_title}</span>
+                          )}
                         </div>
-                        <p className="text-sm text-muted-foreground">{user.email}</p>
+                        <div className="flex items-center gap-2">
+                          <p className="text-sm text-muted-foreground">{user.email}</p>
+                          {user.phone && (
+                            <span className="text-sm text-muted-foreground">• {user.phone}</span>
+                          )}
+                        </div>
                       </div>
                     </div>
 

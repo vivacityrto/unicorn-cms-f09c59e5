@@ -252,7 +252,7 @@ serve(async (req) => {
             is_team: payload.invite_as === 'VIVACITY',
             disabled: false,
             job_title: payload.job_title || null,
-            phone_number: payload.phone_number || null,
+            phone: payload.phone_number || null,
           });
 
         if (insertError) {
