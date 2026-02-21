@@ -14,6 +14,7 @@ import {
   User,
   HelpCircle,
   ExternalLink,
+  Database,
   type LucideIcon,
 } from "lucide-react";
 
@@ -46,6 +47,7 @@ export const complianceMenuSections: MenuSection[] = [
       { icon: Building2, label: "Clients", path: "/manage-tenants" },
       { icon: FileText, label: "Documents", path: "/manage-documents" },
       { icon: Library, label: "Resource Hub", path: "/resource-hub" },
+      { icon: Database, label: "Code Tables", path: "/admin/code-tables" },
     ],
   },
   {
