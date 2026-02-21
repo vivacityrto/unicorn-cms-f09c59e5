@@ -45757,6 +45757,15 @@ export type Database = {
         Args: { p_meeting_id: string }
         Returns: Json
       }
+      code_table_operation: {
+        Args: {
+          p_data?: Json
+          p_operation: string
+          p_table_name: string
+          p_where_clause?: Json
+        }
+        Returns: Json
+      }
       compare_unicorn_import_prefix: {
         Args: { prefix?: string }
         Returns: {
@@ -46016,6 +46025,7 @@ export type Database = {
           reason: string
         }[]
       }
+      format_code_label: { Args: { input_label: string }; Returns: string }
       generate_findings: {
         Args: { p_audit_id: number }
         Returns: {
@@ -46472,6 +46482,18 @@ export type Database = {
       kpi_score_rolling: {
         Args: { p_days?: number; p_tenant_id: number }
         Returns: Json
+      }
+      list_code_tables: {
+        Args: never
+        Returns: {
+          columns: Json
+          has_rls: boolean
+          last_updated: string
+          policy_count: number
+          row_count: number
+          schema_name: string
+          table_name: string
+        }[]
       }
       list_meeting_summaries_for_client: {
         Args: { p_client_id: string; p_limit?: number; p_offset?: number }
@@ -47048,6 +47070,7 @@ export type Database = {
         Returns: Json
       }
       stage_instance_tenant_id: { Args: { p_si_id: number }; Returns: number }
+      standardize_code_value: { Args: { input_label: string }; Returns: string }
       start_client_package: {
         Args: {
           p_assigned_csc_user_id?: string
