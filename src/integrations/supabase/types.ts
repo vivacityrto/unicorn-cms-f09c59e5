@@ -34453,6 +34453,8 @@ export type Database = {
           legal_name: string | null
           notes: string | null
           org_type: string | null
+          phone1: string | null
+          phone2: string | null
           postcode: string | null
           primary_contact_email: string | null
           primary_contact_name: string | null
@@ -34476,6 +34478,8 @@ export type Database = {
           legal_name?: string | null
           notes?: string | null
           org_type?: string | null
+          phone1?: string | null
+          phone2?: string | null
           postcode?: string | null
           primary_contact_email?: string | null
           primary_contact_name?: string | null
@@ -34499,6 +34503,8 @@ export type Database = {
           legal_name?: string | null
           notes?: string | null
           org_type?: string | null
+          phone1?: string | null
+          phone2?: string | null
           postcode?: string | null
           primary_contact_email?: string | null
           primary_contact_name?: string | null
