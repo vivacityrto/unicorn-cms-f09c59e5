@@ -1,12 +1,13 @@
 import { useState } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Combobox } from '@/components/ui/combobox';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { Loader2 } from 'lucide-react';
+import { Loader2, UserPlus } from 'lucide-react';
 
 interface AdminInviteUserDialogProps {
   open: boolean;
@@ -18,9 +19,9 @@ interface AdminInviteUserDialogProps {
 
 type AdminRole = 'Admin' | 'User';
 
-const ADMIN_ROLES: { value: AdminRole; label: string }[] = [
-  { value: 'Admin', label: 'Admin' },
-  { value: 'User', label: 'User' },
+const ADMIN_ROLES: { value: AdminRole; label: string; description: string }[] = [
+  { value: 'Admin', label: 'Admin', description: 'Full administrative access' },
+  { value: 'User', label: 'General User', description: 'Standard access to features' },
 ];
 
 export function AdminInviteUserDialog({
@@ -36,18 +37,20 @@ export function AdminInviteUserDialog({
   const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
   const [roleLevel, setRoleLevel] = useState<AdminRole>('User');
+  const [sendInvitation, setSendInvitation] = useState(false);
 
   const handleClose = () => {
     setFirstName('');
     setLastName('');
     setEmail('');
     setRoleLevel('User');
+    setSendInvitation(false);
     setIsSending(false);
     onOpenChange(false);
   };
 
-  const handleSendInvite = async () => {
-    if (!email || !firstName || !lastName) {
+  const handleSubmit = async () => {
+    if (!email || !firstName) {
       toast({
         title: 'Missing Information',
         description: 'Please fill in all required fields.',
@@ -58,48 +61,40 @@ export function AdminInviteUserDialog({
 
     setIsSending(true);
     try {
-      const { data: sessionData } = await supabase.auth.getSession();
-      const token = sessionData?.session?.access_token;
-
-      if (!token) {
-        throw new Error('No authentication token');
-      }
-
       const { data, error } = await supabase.functions.invoke('invite-user', {
         body: {
-          email: email.trim(),
+          email: email.trim().toLowerCase(),
           first_name: firstName.trim(),
-          last_name: lastName.trim(),
-          invite_as: 'client',
+          last_name: (lastName.trim() || '-'),
+          invite_as: 'CLIENT',
           tenant_id: tenantId,
           unicorn_role: roleLevel,
-        },
-        headers: {
-          Authorization: `Bearer ${token}`,
+          skip_email: !sendInvitation,
         },
       });
 
       if (error) {
-        console.error('Invite error:', error);
-        throw new Error(error.message || 'Failed to send invitation');
+        throw new Error(error.message || 'Failed to add user');
       }
 
       if (!data?.ok) {
-        throw new Error(data?.detail || data?.code || 'Failed to send invitation');
+        throw new Error(data?.detail || data?.code || 'Failed to add user');
       }
 
       toast({
         title: 'Success',
-        description: `Invitation sent to ${email}`,
+        description: sendInvitation
+          ? `Invitation sent to ${email}`
+          : `${firstName} added to ${tenantName}`,
       });
 
       handleClose();
       onSuccess?.();
     } catch (error: any) {
-      console.error('Send invite error:', error);
+      console.error('Add user error:', error);
       toast({
         title: 'Error',
-        description: error.message || 'Failed to send invitation',
+        description: error.message || 'Failed to add user',
         variant: 'destructive',
       });
     } finally {
@@ -107,30 +102,59 @@ export function AdminInviteUserDialog({
     }
   };
 
-  const canSend = email && firstName && lastName && !isSending;
+  const canSubmit = email && firstName && !isSending;
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="sm:max-w-[500px] border-[3px] border-[#dfdfdf]">
         <DialogHeader>
-          <DialogTitle>Invite User to {tenantName}</DialogTitle>
+          <DialogTitle>Invite User</DialogTitle>
+          <DialogDescription>
+            Invite a new user to <strong>{tenantName}</strong>
+          </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4 py-4">
+        <div className="space-y-4 py-2">
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="admin-firstName" className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">First Name *</Label>
+              <Input
+                id="admin-firstName"
+                value={firstName}
+                onChange={(e) => setFirstName(e.target.value)}
+                placeholder="John"
+                autoFocus
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="admin-lastName" className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Last Name</Label>
+              <Input
+                id="admin-lastName"
+                value={lastName}
+                onChange={(e) => setLastName(e.target.value)}
+                placeholder="Doe"
+              />
+            </div>
+          </div>
+
           <div className="space-y-2">
-            <Label htmlFor="tenant">Tenant</Label>
+            <Label htmlFor="admin-email" className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Email *</Label>
             <Input
-              id="tenant"
-              value={tenantName}
-              disabled
-              className="bg-muted"
+              id="admin-email"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="john@example.com"
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="role">User Role *</Label>
+            <Label htmlFor="admin-role" className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Role</Label>
             <Combobox
-              options={ADMIN_ROLES}
+              options={ADMIN_ROLES.map(r => ({
+                value: r.value,
+                label: `${r.label}  - ${r.description}`,
+              }))}
               value={roleLevel}
               onValueChange={(value) => setRoleLevel(value as AdminRole)}
               placeholder="Select role..."
@@ -139,35 +163,18 @@ export function AdminInviteUserDialog({
             />
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="firstName">First Name *</Label>
-            <Input
-              id="firstName"
-              value={firstName}
-              onChange={(e) => setFirstName(e.target.value)}
-              placeholder="Enter first name"
+          <div className="flex items-center space-x-2 pt-2">
+            <Checkbox
+              id="sendInvitation"
+              checked={sendInvitation}
+              onCheckedChange={(checked) => setSendInvitation(checked === true)}
             />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="lastName">Last Name *</Label>
-            <Input
-              id="lastName"
-              value={lastName}
-              onChange={(e) => setLastName(e.target.value)}
-              placeholder="Enter last name"
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="email">Email Address *</Label>
-            <Input
-              id="email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="Enter email address"
-            />
+            <Label
+              htmlFor="sendInvitation"
+              className="text-sm font-normal cursor-pointer"
+            >
+              Send Invitation Email
+            </Label>
           </div>
         </div>
 
@@ -175,9 +182,9 @@ export function AdminInviteUserDialog({
           <Button variant="outline" onClick={handleClose} disabled={isSending}>
             Cancel
           </Button>
-          <Button onClick={handleSendInvite} disabled={!canSend}>
+          <Button onClick={handleSubmit} disabled={!canSubmit}>
             {isSending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Send Invitation
+            {sendInvitation ? 'Send Invitation' : 'Add User'}
           </Button>
         </DialogFooter>
       </DialogContent>

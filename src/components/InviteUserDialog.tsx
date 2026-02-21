@@ -4,10 +4,11 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card } from '@/components/ui/card';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Combobox } from '@/components/ui/combobox';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { Building2, Users, Mail, Send, Shield, UserCog, User } from 'lucide-react';
+import { Building2, Users, Mail, Send, Shield, UserCog, User, UserPlus } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { cn } from '@/lib/utils';
 
@@ -40,6 +41,7 @@ export function InviteUserDialog({ open, onOpenChange, onSuccess }: InviteUserDi
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [tenantId, setTenantId] = useState<number | null>(null);
+  const [sendInvitation, setSendInvitation] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
   const VIVACITY_TENANT_ID = 319;
@@ -66,6 +68,7 @@ export function InviteUserDialog({ open, onOpenChange, onSuccess }: InviteUserDi
     setFirstName('');
     setLastName('');
     setTenantId(null);
+    setSendInvitation(false);
     onOpenChange(false);
   };
 
@@ -105,6 +108,7 @@ export function InviteUserDialog({ open, onOpenChange, onSuccess }: InviteUserDi
         invite_as: userType?.toUpperCase() as 'VIVACITY' | 'CLIENT',
         tenant_id: tenantId,
         unicorn_role: roleLevel,
+        skip_email: !sendInvitation,
       };
 
       const { data: inviteData, error: inviteError } = await supabase.functions.invoke('invite-user', {
@@ -318,6 +322,20 @@ export function InviteUserDialog({ open, onOpenChange, onSuccess }: InviteUserDi
               )}
             </div>
 
+            <div className="flex items-center space-x-2 pt-2">
+              <Checkbox
+                id="sendInvitationMain"
+                checked={sendInvitation}
+                onCheckedChange={(checked) => setSendInvitation(checked === true)}
+              />
+              <Label
+                htmlFor="sendInvitationMain"
+                className="text-sm font-normal cursor-pointer"
+              >
+                Send Invitation Email
+              </Label>
+            </div>
+
             <div className="flex gap-2 pt-4">
               <Button
                 variant="outline"
@@ -332,8 +350,11 @@ export function InviteUserDialog({ open, onOpenChange, onSuccess }: InviteUserDi
                 disabled={!canSend || isLoading}
                 className="flex-1"
               >
-                <Send className="h-4 w-4 mr-2" />
-                {isLoading ? 'Sending...' : 'Send Invitation'}
+                {sendInvitation ? (
+                  <><Send className="h-4 w-4 mr-2" />{isLoading ? 'Sending...' : 'Send Invitation'}</>
+                ) : (
+                  <><UserPlus className="h-4 w-4 mr-2" />{isLoading ? 'Adding...' : 'Add User'}</>
+                )}
               </Button>
             </div>
           </div>
