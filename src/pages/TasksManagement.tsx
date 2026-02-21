@@ -76,7 +76,8 @@ export default function TasksManagement() {
     toast
   } = useToast();
   const {
-    user
+    user,
+    isSuperAdmin
   } = useAuth();
   const navigate = useNavigate();
   useEffect(() => {
@@ -406,18 +407,25 @@ export default function TasksManagement() {
           <h1 className="text-[28px] font-bold">Tasks Management</h1>
           <p className="text-muted-foreground">View and manage all client tasks</p>
         </div>
-        <Dialog open={isCreateDialogOpen} onOpenChange={open => {
-        setIsCreateDialogOpen(open);
-        if (!open) {
-          setUploadedFiles([]);
-        }
-      }}>
-          <DialogTrigger asChild>
-            <Button className="bg-[hsl(188_74%_51%)] hover:bg-[hsl(188_74%_51%)]/90">
-              <Plus className="h-4 w-4 mr-2" />
-              Create Task
+        <div className="flex items-center gap-2">
+          {isSuperAdmin() && (
+            <Button variant="outline" onClick={() => navigate("/admin/clickup-import")}>
+              <Upload className="h-4 w-4 mr-2" />
+              Import ClickUp CSV
             </Button>
-          </DialogTrigger>
+          )}
+          <Dialog open={isCreateDialogOpen} onOpenChange={open => {
+          setIsCreateDialogOpen(open);
+          if (!open) {
+            setUploadedFiles([]);
+          }
+        }}>
+            <DialogTrigger asChild>
+              <Button className="bg-[hsl(188_74%_51%)] hover:bg-[hsl(188_74%_51%)]/90">
+                <Plus className="h-4 w-4 mr-2" />
+                Create Task
+              </Button>
+            </DialogTrigger>
           <DialogContent className="max-w-[650px] border-[3px] border-[#dfdfdf] overflow-hidden">
             <DialogHeader className="p-0">
               <DialogTitle className="flex items-center gap-2">
@@ -684,6 +692,7 @@ export default function TasksManagement() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+        </div>
 
         {/* Edit Task Dialog */}
         <Dialog open={isEditDialogOpen} onOpenChange={open => {
