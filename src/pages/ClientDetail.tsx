@@ -36,7 +36,8 @@ import {
   Mail,
   FolderOpen,
   ShieldAlert,
-  Clock
+  Clock,
+  Phone
 } from 'lucide-react';
 import { ClientProfileForm } from '@/components/client/ClientProfileForm';
 import { ClientAddressSection } from '@/components/client/ClientAddressSection';
@@ -75,6 +76,7 @@ export default function ClientDetail() {
   const [profileSaving, setProfileSaving] = useState(false);
   const [triggerProfileSave, setTriggerProfileSave] = useState<(() => void) | null>(null);
   const [userCount, setUserCount] = useState<number | null>(null);
+  const [tenantPhone, setTenantPhone] = useState<string | null>(null);
 
   const tenantIdNum = tenantId ? parseInt(tenantId) : null;
   
@@ -129,6 +131,14 @@ export default function ClientDetail() {
 
       if (error) throw error;
       setTenant(data);
+
+      // Fetch phone from tenant_profile
+      const { data: tp } = await supabase
+        .from('tenant_profile')
+        .select('phone1')
+        .eq('tenant_id', tenantIdNum)
+        .maybeSingle();
+      setTenantPhone(tp?.phone1 || null);
     } catch (error) {
       console.error('Error fetching tenant:', error);
       navigate('/manage-tenants');
@@ -236,7 +246,12 @@ export default function ClientDetail() {
                     disabled={!canEdit}
                   />
                 </div>
-                <p className="text-xs text-muted-foreground mt-1">slug: {tenant.slug}</p>
+                {tenantPhone && (
+                  <a href={`tel:${tenantPhone}`} className="text-xs text-muted-foreground mt-1 hover:text-primary hover:underline inline-flex items-center gap-1">
+                    <Phone className="h-3 w-3" />
+                    {tenantPhone}
+                  </a>
+                )}
                 
                 {/* CSC Assignment */}
                 <div className="mt-2">
