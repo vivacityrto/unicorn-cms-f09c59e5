@@ -250,3 +250,6 @@ verify_jwt = false
 
 [functions.fetch-clickup-comments]
 verify_jwt = false
+
+[functions.sync-clickup-tasks]
+verify_jwt = false
