@@ -8,7 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Upload, FileUp, CheckCircle2, AlertTriangle, ArrowLeft, RefreshCw, MessageSquare, Download } from "lucide-react";
+import { Upload, FileUp, CheckCircle2, AlertTriangle, ArrowLeft, RefreshCw, MessageSquare, Download, CloudDownload, Loader2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useNavigate } from "react-router-dom";
 import { mapRowForTable, getPreviewColumns, type ImportMode } from "@/utils/clickup-import-mappings";
@@ -27,6 +27,13 @@ export default function ClickUpImport() {
   const [fetchingComments, setFetchingComments] = useState(false);
   const [commentTenantId, setCommentTenantId] = useState("");
   const [commentResult, setCommentResult] = useState<{ fetched: number; stored: number; task_count?: number; errors: string[] } | null>(null);
+  const [apiSyncing, setApiSyncing] = useState(false);
+  const [apiSyncResult, setApiSyncResult] = useState<{
+    tasks_fetched: number;
+    tasks_upserted: number;
+    tenants_resolved: number;
+    errors: string[];
+  } | null>(null);
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -141,9 +148,28 @@ export default function ClickUpImport() {
     }
   };
 
+  const handleApiSync = async () => {
+    setApiSyncing(true);
+    setApiSyncResult(null);
+    try {
+      const { data, error } = await supabase.functions.invoke("sync-clickup-tasks", {
+        body: { mode: "sync_all" },
+      });
+      if (error) throw error;
+      setApiSyncResult(data);
+      toast({
+        title: "API Sync Complete",
+        description: `${data?.tasks_upserted ?? 0} tasks synced, ${data?.tenants_resolved ?? 0} tenants resolved.`,
+      });
+    } catch (err) {
+      toast({ title: "API Sync failed", description: (err as Error).message, variant: "destructive" });
+    } finally {
+      setApiSyncing(false);
+    }
+  };
+
   const handleModeChange = (newMode: ImportMode) => {
     setMode(newMode);
-    // Reset file state when switching modes
     setFile(null);
     setParsedRows([]);
     setCsvHeaders([]);
@@ -170,12 +196,62 @@ export default function ClickUpImport() {
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <div>
-            <h1 className="text-2xl font-bold text-foreground">ClickUp CSV Importer</h1>
+            <h1 className="text-2xl font-bold text-foreground">ClickUp Import & Sync</h1>
             <p className="text-sm text-muted-foreground">
-              Import ClickUp data into Unicorn 2.0
+              Sync tasks from ClickUp API or import CSV data into Unicorn 2.0
             </p>
           </div>
         </div>
+
+        {/* API Sync */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <CloudDownload className="h-5 w-5" /> Sync from ClickUp API
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Pull all tasks (including custom fields) from the <strong>Membership</strong> list via the ClickUp API.
+              Tasks are upserted into <code className="text-xs bg-muted px-1 rounded">clickup_tasks_api</code> and tenant IDs are resolved from <code className="text-xs bg-muted px-1 rounded">unicorn_url</code>.
+            </p>
+            <Button
+              onClick={handleApiSync}
+              disabled={apiSyncing}
+              variant="default"
+            >
+              {apiSyncing ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Syncing…
+                </>
+              ) : (
+                <>
+                  <CloudDownload className="h-4 w-4 mr-2" />
+                  Full Sync
+                </>
+              )}
+            </Button>
+            {apiSyncResult && (
+              <div className="rounded-md border p-3 space-y-1 text-sm">
+                <div className="flex items-center gap-2">
+                  <CheckCircle2 className="h-4 w-4 text-green-600" />
+                  <span>
+                    {apiSyncResult.tasks_fetched} fetched, {apiSyncResult.tasks_upserted} upserted, {apiSyncResult.tenants_resolved} tenants resolved
+                  </span>
+                </div>
+                {apiSyncResult.errors.length > 0 && (
+                  <div className="text-xs text-destructive mt-1">
+                    <p className="font-medium">{apiSyncResult.errors.length} errors:</p>
+                    <ul className="list-disc pl-4 max-h-24 overflow-y-auto">
+                      {apiSyncResult.errors.slice(0, 10).map((e, i) => <li key={i}>{e}</li>)}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
         {/* Mode Selector */}
         <Card>
