@@ -15,17 +15,20 @@ type TargetTable = (typeof ALLOWED_TABLES)[number];
  *  - /stage/N    → lookup v_tenant_stage_instances
  *  - /N or /email/N → lookup package_instances
  */
-async function resolveTenantIds(sb: ReturnType<typeof createServiceClient>, insertedIds: number[]) {
-  if (insertedIds.length === 0) return;
-
-  // Fetch rows that need tenant resolution
-  const { data: rows } = await sb
+async function resolveTenantIds(sb: ReturnType<typeof createServiceClient>, insertedIds?: number[]): Promise<number> {
+  let query = sb
     .from("clickup_tasksdb")
     .select("id, unicorn_url, tenant_id")
-    .in("id", insertedIds)
     .is("tenant_id", null);
 
-  if (!rows || rows.length === 0) return;
+  if (insertedIds && insertedIds.length > 0) {
+    query = query.in("id", insertedIds);
+  }
+
+  const { data: rows } = await query;
+  if (!rows || rows.length === 0) return 0;
+
+  let resolved = 0;
 
   for (const row of rows) {
     const url = (row as any).unicorn_url as string | null;
@@ -33,13 +36,11 @@ async function resolveTenantIds(sb: ReturnType<typeof createServiceClient>, inse
 
     let tenantId: number | null = null;
 
-    // Pattern 1: /clients/N
     const clientMatch = url.match(/\/clients\/(\d+)/);
     if (clientMatch) {
       tenantId = parseInt(clientMatch[1], 10);
     }
 
-    // Pattern 2: /stage/N
     if (!tenantId) {
       const stageMatch = url.match(/\/stage\/(\d+)/);
       if (stageMatch) {
@@ -50,13 +51,10 @@ async function resolveTenantIds(sb: ReturnType<typeof createServiceClient>, inse
           .eq("stage_instance_id", stageInstanceId)
           .limit(1)
           .single();
-        if (stageData) {
-          tenantId = (stageData as any).tenant_id;
-        }
+        if (stageData) tenantId = (stageData as any).tenant_id;
       }
     }
 
-    // Pattern 3: /N (bare number) or /email/N — treat as package_instance id
     if (!tenantId) {
       const pkgMatch = url.match(/\/(?:email\/)?(\d+)\s*$/);
       if (pkgMatch) {
@@ -67,9 +65,7 @@ async function resolveTenantIds(sb: ReturnType<typeof createServiceClient>, inse
           .eq("id", pkgId)
           .limit(1)
           .single();
-        if (pkgData) {
-          tenantId = (pkgData as any).tenant_id;
-        }
+        if (pkgData) tenantId = (pkgData as any).tenant_id;
       }
     }
 
@@ -78,8 +74,11 @@ async function resolveTenantIds(sb: ReturnType<typeof createServiceClient>, inse
         .from("clickup_tasksdb")
         .update({ tenant_id: tenantId })
         .eq("id", (row as any).id);
+      resolved++;
     }
   }
+
+  return resolved;
 }
 
 Deno.serve(async (req) => {
@@ -88,7 +87,20 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { rows, target_table } = await req.json();
+    const body = await req.json();
+    const { action } = body;
+
+    // Manual resolve-only mode
+    if (action === "resolve_tenants") {
+      const sb = createServiceClient();
+      const resolved = await resolveTenantIds(sb);
+      return new Response(
+        JSON.stringify({ resolved }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const { rows, target_table } = body;
 
     // Validate target table
     const table: TargetTable = ALLOWED_TABLES.includes(target_table) ? target_table : "clickup_tasksdb";
@@ -124,19 +136,20 @@ Deno.serve(async (req) => {
     }
 
     const insertedCount = data?.length ?? 0;
+    let resolvedCount = 0;
 
     // For clickup_tasksdb, resolve tenant_id from unicorn_url
     if (table === "clickup_tasksdb" && data && data.length > 0) {
       try {
         const ids = data.map((d: any) => d.id);
-        await resolveTenantIds(sb, ids);
+        resolvedCount = await resolveTenantIds(sb, ids);
       } catch (resolveErr) {
         console.error("Tenant resolution error (non-fatal):", resolveErr);
       }
     }
 
     return new Response(
-      JSON.stringify({ inserted: insertedCount, errors: 0 }),
+      JSON.stringify({ inserted: insertedCount, errors: 0, resolved: resolvedCount }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (err) {
