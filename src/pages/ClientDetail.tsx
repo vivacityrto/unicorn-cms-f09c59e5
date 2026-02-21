@@ -54,6 +54,7 @@ import { ConsultantAssignmentCard } from '@/components/client/ConsultantAssignme
 import { MembershipUsageCard } from '@/components/capacity/MembershipUsageCard';
 import { ViewAsClientButton } from '@/components/client/ViewAsClientButton';
 import { AssignPackageDialog } from '@/components/client/AssignPackageDialog';
+import { TenantStatusDropdown } from '@/components/tenant/TenantStatusDropdown';
 
 interface TenantBasic {
   id: number;
@@ -223,21 +224,15 @@ export default function ClientDetail() {
               <div>
                 <div className="flex items-center gap-3">
                   <h1 className="text-2xl font-bold">{tenant.name}</h1>
-                  <Badge
-                    variant={tenant.status === 'active' ? 'default' : 'destructive'}
-                    className={
-                      tenant.status === 'active'
-                        ? 'bg-green-500/10 text-green-600 border border-green-600'
-                        : 'bg-red-500/10 text-red-600 border border-red-600'
-                    }
-                  >
-                    {tenant.status === 'active' ? (
-                      <CheckCircle2 className="h-3 w-3 mr-1" />
-                    ) : (
-                      <XCircle className="h-3 w-3 mr-1" />
-                    )}
-                    {tenant.status}
-                  </Badge>
+                  <TenantStatusDropdown
+                    tenantId={tenantIdNum!}
+                    currentStatus={tenant.status}
+                    onStatusChange={(newStatus) => setTenant(prev => prev ? { ...prev, status: newStatus } : null)}
+                    onNonActiveChange={(statusDescription) => {
+                      const title = `** CLIENT ${statusDescription.toUpperCase()} **`;
+                      navigate(`/tenant/${tenantId}/notes?initNote=true&noteTitle=${encodeURIComponent(title)}`);
+                    }}
+                  />
                   <RiskLevelBadge
                     riskLevel={profile?.risk_level}
                     onUpdate={async (newLevel) => {

@@ -24,7 +24,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { CheckCircle2, XCircle, ChevronDown, Loader2 } from 'lucide-react';
+import { CheckCircle2, XCircle, ChevronDown, Loader2, Pencil } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 
@@ -49,6 +49,7 @@ export function TenantStatusDropdown({ tenantId, currentStatus, onStatusChange, 
   const [pendingStatus, setPendingStatus] = useState<string | null>(null);
   const [openPackageCount, setOpenPackageCount] = useState(0);
   const [showConfirm, setShowConfirm] = useState(false);
+  const [isHovered, setIsHovered] = useState(false);
 
   useEffect(() => {
     supabase
@@ -143,7 +144,11 @@ export function TenantStatusDropdown({ tenantId, currentStatus, onStatusChange, 
     <>
       <DropdownMenu>
         <DropdownMenuTrigger asChild disabled={saving}>
-          <button className="inline-flex items-center gap-1 cursor-pointer focus:outline-none">
+          <button
+            className="inline-flex items-center gap-1 cursor-pointer focus:outline-none"
+            onMouseEnter={() => setIsHovered(true)}
+            onMouseLeave={() => setIsHovered(false)}
+          >
             <Badge
               variant={isActive ? 'default' : 'destructive'}
               className={
@@ -160,7 +165,7 @@ export function TenantStatusDropdown({ tenantId, currentStatus, onStatusChange, 
                 <XCircle className="mr-1 h-3 w-3" />
               )}
               {currentLabel}
-              <ChevronDown className="ml-1 h-3 w-3" />
+              {isHovered && <Pencil className="ml-1 h-3 w-3" />}
             </Badge>
           </button>
         </DropdownMenuTrigger>
