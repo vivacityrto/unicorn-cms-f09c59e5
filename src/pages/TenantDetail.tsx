@@ -21,6 +21,7 @@ import { TenantClickUpActivity } from "@/components/tenant/TenantClickUpActivity
 import { CSCProfileCard } from "@/components/csc/CSCProfileCard";
 import { ViewAsClientButton } from "@/components/client/ViewAsClientButton";
 import { EnrichTenantButton } from "@/components/tenant/EnrichTenantButton";
+import { TenantStatusDropdown } from '@/components/tenant/TenantStatusDropdown';
 import type { TenantType } from "@/contexts/TenantTypeContext";
 interface ClientData {
   id: string;
@@ -532,10 +533,11 @@ export default function TenantDetail() {
 
       {/* Status Badge */}
       <div className="px-6 mb-2 flex justify-end items-center">
-        <Badge variant={tenantStatus === "active" ? "default" : "destructive"} className={tenantStatus === "active" ? "bg-green-500/20 text-green-600 hover:bg-green-500/30 border border-green-600 text-[0.75rem] py-[2px] px-[0.625rem] rounded-[11px]" : "bg-red-500/20 text-red-600 hover:bg-red-500/30 border border-red-600 text-[0.75rem] py-[2px] px-[0.625rem] rounded-[11px]"}>
-          {tenantStatus === "active" ? <CheckCircle2 className="mr-1 h-3 w-3" /> : <XCircle className="mr-1 h-3 w-3" />}
-          {tenantStatus === "active" ? "Active" : "Inactive"}
-        </Badge>
+        <TenantStatusDropdown
+          tenantId={parseInt(tenantId!)}
+          currentStatus={tenantStatus}
+          onStatusChange={setTenantStatus}
+        />
       </div>
 
       {/* Header Card */}
