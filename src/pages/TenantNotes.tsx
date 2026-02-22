@@ -435,7 +435,7 @@ export default function TenantNotes() {
             </SelectTrigger>
             <SelectContent className="bg-background">
               <SelectItem value="notes">All Notes</SelectItem>
-              <SelectItem value="clickup">ClickUp Tasks</SelectItem>
+              <SelectItem value="clickup">ClickUp Task Comments</SelectItem>
             </SelectContent>
           </Select>
 

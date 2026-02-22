@@ -104,7 +104,7 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
   // ClickUp state
   const [clickupTasks, setClickupTasks] = useState<ClickUpTask[]>([]);
   const [clickupLoading, setClickupLoading] = useState(false);
-  const [expandedTaskId, setExpandedTaskId] = useState<string | null>(null);
+  const [collapsedTaskIds, setCollapsedTaskIds] = useState<Set<string>>(new Set());
   const [apiComments, setApiComments] = useState<Record<string, ApiComment[]>>({});
   const [fetchingCommentsForTask, setFetchingCommentsForTask] = useState<string | null>(null);
   
@@ -651,7 +651,7 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
                   <SelectItem value="clickup">
                     <span className="flex items-center gap-2">
                       <ListTodo className="h-4 w-4" />
-                      ClickUp Tasks
+                      ClickUp Task Comments
                     </span>
                   </SelectItem>
                 </SelectContent>
@@ -730,7 +730,7 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
                 <ScrollArea className="h-[500px]">
                   <div className="space-y-2">
                     {clickupTasks.map(task => {
-                      const isExpanded = expandedTaskId === task.id;
+                      const isExpanded = !collapsedTaskIds.has(task.id);
                       // date_created is a unix timestamp in ms stored as string
                       let formattedDate = '—';
                       const rawTs = task.date_created;
@@ -768,7 +768,12 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
                         <div key={task.id} className="rounded-lg border bg-card">
                           <div
                             className="p-4 cursor-pointer hover:bg-muted/30 transition-colors"
-                            onClick={() => setExpandedTaskId(isExpanded ? null : task.id)}
+                            onClick={() => setCollapsedTaskIds(prev => {
+                              const next = new Set(prev);
+                              if (next.has(task.id)) next.delete(task.id);
+                              else next.add(task.id);
+                              return next;
+                            })}
                           >
                             <div className="flex items-start justify-between gap-3">
                               <div className="flex-1 min-w-0">
