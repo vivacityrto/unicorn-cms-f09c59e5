@@ -46,6 +46,7 @@ export default function ClickUpImport() {
   const [tenants, setTenants] = useState<{ id: number; name: string }[]>([]);
   const [filterTenant, setFilterTenant] = useState<string>("unresolved");
   const [updatingTaskId, setUpdatingTaskId] = useState<number | null>(null);
+  const [taskSearch, setTaskSearch] = useState("");
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -318,6 +319,12 @@ export default function ClickUpImport() {
             <div className="flex items-center justify-between">
               <CardTitle className="text-lg">Tasks — Manual Tenant Assignment</CardTitle>
               <div className="flex items-center gap-2">
+                <Input
+                  placeholder="Search by name or ID..."
+                  value={taskSearch}
+                  onChange={(e) => setTaskSearch(e.target.value)}
+                  className="w-[220px] h-9"
+                />
                 <Select value={filterTenant} onValueChange={setFilterTenant}>
                   <SelectTrigger className="w-[200px]">
                     <SelectValue placeholder="Filter tasks" />
@@ -345,7 +352,19 @@ export default function ClickUpImport() {
               <p className="text-sm text-muted-foreground text-center py-8">No tasks found for this filter.</p>
             ) : (
               <>
-                <p className="text-xs text-muted-foreground mb-2">{tasks.length} tasks shown (max 200)</p>
+                {(() => {
+                  const searchLower = taskSearch.toLowerCase().trim();
+                  const filteredTasks = searchLower
+                    ? tasks.filter(t =>
+                        (t.name?.toLowerCase().includes(searchLower)) ||
+                        (t.custom_id?.toLowerCase().includes(searchLower))
+                      )
+                    : tasks;
+                  return (
+                    <>
+                      <p className="text-xs text-muted-foreground mb-2">
+                        {searchLower ? `${filteredTasks.length} of ${tasks.length}` : `${tasks.length}`} tasks shown (max 200)
+                      </p>
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -357,7 +376,7 @@ export default function ClickUpImport() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {tasks.map(task => (
+                    {filteredTasks.map(task => (
                       <TableRow key={task.id}>
                         <TableCell className="font-mono text-xs">{task.custom_id || "—"}</TableCell>
                         <TableCell className="max-w-[250px]">
@@ -390,6 +409,9 @@ export default function ClickUpImport() {
                     ))}
                   </TableBody>
                 </Table>
+                    </>
+                  );
+                })()}
               </>
             )}
           </CardContent>
