@@ -140,7 +140,7 @@ export function TenantClickUpAISearch({ tenantId }: TenantClickUpAISearchProps) 
     <div className="space-y-3 px-6 pb-4">
       <div className="flex gap-2">
         <Input
-          placeholder="Ask about Notes... e.g. 'Summarise open tasks' or 'What mentions evidence gaps?' Include 'with ClickUp comments' for task context."
+          placeholder="Ask about Notes & ClickUp task comments... e.g. 'Summarise open tasks' or 'What mentions evidence gaps?'"
           value={question}
           onChange={(e) => setQuestion(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && handleAsk()}

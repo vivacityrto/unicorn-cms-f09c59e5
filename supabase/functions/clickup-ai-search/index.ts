@@ -65,6 +65,14 @@ serve(async (req) => {
       .order("comment_date", { ascending: false })
       .limit(500);
 
+    // Fetch tenant notes (capped at 200)
+    const { data: notes } = await supabase
+      .from("notes")
+      .select("title, note_details, note_type, created_at, parent_type")
+      .eq("tenant_id", tenant_id)
+      .order("created_at", { ascending: false })
+      .limit(200);
+
     const taskContext = (tasks || []).map((t: any) => ({
       id: t.custom_id || t.task_id,
       name: t.name,
@@ -82,13 +90,24 @@ serve(async (req) => {
       by: c.comment_by,
     }));
 
-    const systemPrompt = `You are an internal assistant for Vivacity Coaching & Consulting. You have been given ClickUp task and comment data for a specific client. Answer the user's question based only on this data. Use Australian date formats (dd/MM/yyyy). Be concise and factual. Format your response in markdown.
+    const noteContext = (notes || []).map((n: any) => ({
+      title: n.title,
+      content: n.note_details,
+      type: n.note_type,
+      created: n.created_at,
+      parent_type: n.parent_type,
+    }));
+
+    const systemPrompt = `You are an internal assistant for Vivacity Coaching & Consulting. You have been given ClickUp task data, ClickUp comments, and internal tenant notes for a specific client. Answer the user's question based only on this data. Use Australian date formats (dd/MM/yyyy). Be concise and factual. Format your response in markdown.
 
 ## Tasks (${taskContext.length} total)
 ${JSON.stringify(taskContext, null, 1)}
 
-## Comments (${commentContext.length} total)
-${JSON.stringify(commentContext, null, 1)}`;
+## ClickUp Comments (${commentContext.length} total)
+${JSON.stringify(commentContext, null, 1)}
+
+## Tenant Notes (${noteContext.length} total)
+${JSON.stringify(noteContext, null, 1)}`;
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) {
