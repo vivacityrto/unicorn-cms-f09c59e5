@@ -651,7 +651,7 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
                   <SelectItem value="clickup">
                     <span className="flex items-center gap-2">
                       <ListTodo className="h-4 w-4" />
-                      ClickUp Task Comments
+                      ClickUp Tasks
                     </span>
                   </SelectItem>
                 </SelectContent>
