@@ -157,6 +157,9 @@ export function TenantClickUpAISearch({ tenantId }: TenantClickUpAISearchProps) 
           Ask
         </Button>
       </div>
+      <p className="text-[11px] text-muted-foreground/70 px-1">
+        💡 For deeper analysis beyond notes & tasks, use <span className="font-medium text-primary/80">Ask Viv</span> in the top-right toolbar.
+      </p>
 
       {(response || isStreaming) && (
         <div className="rounded-lg border border-border/50 bg-muted/20 p-4">
