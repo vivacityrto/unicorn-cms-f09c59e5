@@ -1,5 +1,13 @@
 import { useState, useEffect } from 'react';
 import { format } from 'date-fns';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle
+} from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -12,23 +20,33 @@ import {
   SelectTrigger,
   SelectValue
 } from '@/components/ui/select';
-import {
-  AppModal,
-  AppModalContent,
-  AppModalHeader,
-  AppModalTitle,
-  AppModalBody,
-  AppModalFooter,
-} from '@/components/ui/app-modal';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ScopeSelectorBadge } from './ScopeSelectorBadge';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
+import { useSpeechToText } from '@/hooks/useSpeechToText';
+import { Bell, UserMinus, Mic, MicOff } from 'lucide-react';
 import type { TimeEntry } from '@/hooks/useTimeTracking';
 import type { ScopeTag } from '@/hooks/useTenantMemberships';
 
 interface WorkTypeOption {
   code: string;
   label: string;
+}
+
+interface TeamMember {
+  user_uuid: string;
+  first_name: string;
+  last_name: string;
+  avatar_url: string | null;
+}
+
+interface PackageInstance {
+  id: number;
+  package_id: number;
+  package_name: string;
+  is_kickstart: boolean;
 }
 
 interface EditTimeDialogProps {
@@ -39,7 +57,9 @@ interface EditTimeDialogProps {
 }
 
 export function EditTimeDialog({ open, onOpenChange, entry, onSuccess }: EditTimeDialogProps) {
+  const { user } = useAuth();
   const { toast } = useToast();
+  const { isRecording, isSupported, interimTranscript, startRecording, stopRecording } = useSpeechToText();
   const [hours, setHours] = useState('0');
   const [minutes, setMinutes] = useState('0');
   const [date, setDate] = useState('');
@@ -49,6 +69,10 @@ export function EditTimeDialog({ open, onOpenChange, entry, onSuccess }: EditTim
   const [scopeTag, setScopeTag] = useState<ScopeTag>('both');
   const [saving, setSaving] = useState(false);
   const [workTypes, setWorkTypes] = useState<WorkTypeOption[]>([]);
+  const [activeInstances, setActiveInstances] = useState<PackageInstance[]>([]);
+  const [selectedInstanceId, setSelectedInstanceId] = useState<number | null>(null);
+  const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
+  const [notifyUserId, setNotifyUserId] = useState<string>('');
 
   // Fetch work types
   useEffect(() => {
@@ -61,6 +85,87 @@ export function EditTimeDialog({ open, onOpenChange, entry, onSuccess }: EditTim
       if (data) setWorkTypes(data as WorkTypeOption[]);
     })();
   }, []);
+
+  // Fetch team members for notify selector
+  useEffect(() => {
+    if (!open || !entry) return;
+    (async () => {
+      const { data: staffData } = await (supabase as any)
+        .from('users')
+        .select('user_uuid, first_name, last_name, avatar_url')
+        .eq('disabled', false)
+        .eq('user_type', 'Vivacity Team')
+        .order('first_name')
+        .limit(200);
+
+      let tenantUsers: TeamMember[] = [];
+      if (entry.tenant_id) {
+        const { data: tuData } = await (supabase as any)
+          .from('tenant_users')
+          .select('user_uuid, users:user_uuid(user_uuid, first_name, last_name, avatar_url, disabled)')
+          .eq('tenant_id', entry.tenant_id)
+          .limit(200);
+        if (tuData) {
+          tenantUsers = tuData
+            .map((tu: any) => tu.users)
+            .filter((u: any) => u && !u.disabled)
+            .map((u: any) => ({
+              user_uuid: u.user_uuid,
+              first_name: u.first_name,
+              last_name: u.last_name,
+              avatar_url: u.avatar_url,
+            }));
+        }
+      }
+
+      const allMembers = [...(staffData || []), ...tenantUsers] as TeamMember[];
+      const seen = new Set<string>();
+      const deduped = allMembers.filter(m => {
+        if (seen.has(m.user_uuid) || m.user_uuid === user?.id) return false;
+        seen.add(m.user_uuid);
+        return true;
+      });
+      setTeamMembers(deduped);
+    })();
+  }, [open, entry, user?.id]);
+
+  // Fetch active package instances
+  useEffect(() => {
+    if (!open || !entry) return;
+    (async () => {
+      const { data: piData } = await supabase
+        .from('package_instances')
+        .select('id, package_id')
+        .eq('tenant_id', entry.tenant_id)
+        .eq('is_complete', false)
+        .eq('is_active', true)
+        .order('start_date', { ascending: false });
+
+      if (!piData || piData.length === 0) {
+        setActiveInstances([]);
+        return;
+      }
+
+      const pkgIds = [...new Set(piData.map((pi) => Number(pi.package_id)).filter(Boolean))];
+      const { data: pkgData } = pkgIds.length > 0
+        ? await supabase.from('packages').select('id, name, package_type').in('id', pkgIds)
+        : { data: [] };
+
+      const pkgMap = new Map((pkgData || []).map((p: any) => [Number(p.id), p]));
+
+      const instances: PackageInstance[] = piData.map((pi: any) => {
+        const pkg = pkgMap.get(Number(pi.package_id));
+        return {
+          id: pi.id,
+          package_id: Number(pi.package_id),
+          package_name: pkg?.name || `Package #${pi.id}`,
+          is_kickstart: (pkg?.package_type || '').toLowerCase() === 'kickstart',
+        };
+      });
+
+      setActiveInstances(instances);
+    })();
+  }, [open, entry]);
 
   // Populate form when entry changes
   useEffect(() => {
@@ -78,6 +183,8 @@ export function EditTimeDialog({ open, onOpenChange, entry, onSuccess }: EditTim
       setNotes(entry.notes || '');
       setIsBillable(entry.is_billable);
       setScopeTag((entry.scope_tag as ScopeTag) || 'both');
+      setSelectedInstanceId(entry.package_id || null);
+      setNotifyUserId('');
     }
   }, [entry, open]);
 
@@ -87,6 +194,11 @@ export function EditTimeDialog({ open, onOpenChange, entry, onSuccess }: EditTim
 
     const totalMinutes = (parseInt(hours) || 0) * 60 + (parseInt(minutes) || 0);
     if (totalMinutes <= 0) return;
+
+    if (activeInstances.length > 1 && !selectedInstanceId) {
+      toast({ title: 'Package required', description: 'Please select a package.', variant: 'destructive' });
+      return;
+    }
 
     setSaving(true);
     try {
@@ -99,11 +211,25 @@ export function EditTimeDialog({ open, onOpenChange, entry, onSuccess }: EditTim
           notes: notes || null,
           is_billable: isBillable,
           scope_tag: scopeTag,
+          package_id: selectedInstanceId,
+          package_instance_id: selectedInstanceId,
           updated_at: new Date().toISOString(),
         } as any)
         .eq('id', entry.id);
 
       if (error) throw error;
+
+      // Log notify intent
+      if (notifyUserId) {
+        const notifyMember = teamMembers.find(m => m.user_uuid === notifyUserId);
+        const durationStr = `${Math.floor(totalMinutes / 60)}h ${totalMinutes % 60}m`;
+        const workLabel = workTypes.find(w => w.code === workType)?.label || workType;
+        console.log('[EditTimeDialog] Notify requested', {
+          notifyUserId,
+          notifyName: notifyMember ? `${notifyMember.first_name} ${notifyMember.last_name}` : 'unknown',
+          summary: `${durationStr} (${workLabel})`,
+        });
+      }
 
       toast({ title: 'Time entry updated' });
       onOpenChange(false);
@@ -116,24 +242,61 @@ export function EditTimeDialog({ open, onOpenChange, entry, onSuccess }: EditTim
   };
 
   return (
-    <AppModal open={open} onOpenChange={onOpenChange}>
-      <AppModalContent size="sm">
-        <AppModalHeader>
-          <AppModalTitle>Edit Time Entry</AppModalTitle>
-        </AppModalHeader>
-        <form onSubmit={handleSubmit}>
-          <AppModalBody className="space-y-4">
-            {/* Scope */}
-            <div className="space-y-2">
-              <Label>Allocation</Label>
-              <ScopeSelectorBadge value={scopeTag} onChange={setScopeTag} showSelector />
-            </div>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-3xl">
+        <DialogHeader>
+          <DialogTitle>Edit Time Entry</DialogTitle>
+          <DialogDescription>
+            Update details for this time entry.
+          </DialogDescription>
+        </DialogHeader>
 
-            {/* Duration */}
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Scope selector */}
+          <div className="space-y-2">
+            <Label>Allocation</Label>
+            <ScopeSelectorBadge value={scopeTag} onChange={setScopeTag} showSelector />
+          </div>
+
+          {/* Package instance selector */}
+          {activeInstances.length === 1 && (
             <div className="space-y-2">
-              <Label>Duration</Label>
-              <div className="flex gap-2">
-                <div className="flex-1 flex items-center gap-2">
+              <Label>Package</Label>
+              <Input value={activeInstances[0].package_name} readOnly className="bg-muted" />
+            </div>
+          )}
+          {activeInstances.length > 1 && (
+            <div className="space-y-2">
+              <Label>Package</Label>
+              <Select
+                value={selectedInstanceId?.toString() ?? ''}
+                onValueChange={(v) => {
+                  const id = Number(v);
+                  setSelectedInstanceId(id);
+                  const inst = activeInstances.find((i) => i.id === id);
+                  if (inst?.is_kickstart) setIsBillable(false);
+                }}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a package..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {activeInstances.map((inst) => (
+                    <SelectItem key={inst.id} value={inst.id.toString()}>
+                      {inst.package_name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
+          {/* Duration */}
+          <div className="space-y-2">
+            <Label>Duration</Label>
+            <div className="flex gap-2">
+              <div className="flex-1">
+                <div className="flex items-center gap-2">
                   <Input
                     type="number"
                     min="0"
@@ -144,7 +307,9 @@ export function EditTimeDialog({ open, onOpenChange, entry, onSuccess }: EditTim
                   />
                   <span className="text-sm text-muted-foreground">hours</span>
                 </div>
-                <div className="flex-1 flex items-center gap-2">
+              </div>
+              <div className="flex-1">
+                <div className="flex items-center gap-2">
                   <Input
                     type="number"
                     min="0"
@@ -161,56 +326,124 @@ export function EditTimeDialog({ open, onOpenChange, entry, onSuccess }: EditTim
                 </div>
               </div>
             </div>
+          </div>
 
-            {/* Date */}
-            <div className="space-y-2">
-              <Label>Date</Label>
-              <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
-            </div>
+          {/* Date */}
+          <div className="space-y-2">
+            <Label htmlFor="edit-date">Date</Label>
+            <Input
+              id="edit-date"
+              type="date"
+              value={date}
+              onChange={(e) => setDate(e.target.value)}
+            />
+          </div>
 
-            {/* Work Type */}
-            <div className="space-y-2">
-              <Label>Work Type</Label>
-              <Select value={workType} onValueChange={setWorkType}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {workTypes.map((type) => (
-                    <SelectItem key={type.code} value={type.code}>
-                      {type.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+          {/* Work Type */}
+          <div className="space-y-2">
+            <Label htmlFor="edit-work-type">Work Type</Label>
+            <Select value={workType} onValueChange={setWorkType}>
+              <SelectTrigger id="edit-work-type">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {workTypes.map((type) => (
+                  <SelectItem key={type.code} value={type.code}>
+                    {type.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
 
-            {/* Notes */}
-            <div className="space-y-2">
-              <Label>Notes</Label>
-              <Textarea
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                rows={3}
-              />
-            </div>
-
-            {/* Billable */}
+          {/* Notes with dictation */}
+          <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <Label>Billable</Label>
-              <Switch checked={isBillable} onCheckedChange={setIsBillable} />
+              <Label htmlFor="edit-notes">Notes</Label>
+              {isSupported && (
+                <Button
+                  type="button"
+                  variant={isRecording ? 'destructive' : 'ghost'}
+                  size="sm"
+                  className="h-7 px-2 gap-1 text-xs"
+                  onClick={() => {
+                    if (isRecording) {
+                      stopRecording();
+                    } else {
+                      startRecording((text) => {
+                        setNotes((prev) => (prev ? prev + ' ' + text : text));
+                      });
+                    }
+                  }}
+                >
+                  {isRecording ? <MicOff className="h-3.5 w-3.5" /> : <Mic className="h-3.5 w-3.5" />}
+                  {isRecording ? 'Stop' : 'Dictate'}
+                </Button>
+              )}
             </div>
-          </AppModalBody>
-          <AppModalFooter>
+            <Textarea
+              id="edit-notes"
+              placeholder="What did you work on?"
+              value={isRecording && interimTranscript ? (notes ? notes + ' ' + interimTranscript : interimTranscript) : notes}
+              onChange={(e) => setNotes(e.target.value)}
+              rows={2}
+            />
+          </div>
+
+          {/* Billable toggle */}
+          <div className="flex items-center justify-between">
+            <Label htmlFor="edit-billable">Billable</Label>
+            <Switch
+              id="edit-billable"
+              checked={isBillable}
+              onCheckedChange={setIsBillable}
+            />
+          </div>
+
+          {/* Notify team member */}
+          <div className="space-y-2">
+            <Label className="flex items-center gap-1.5">
+              <Bell className="h-3.5 w-3.5" />
+              Notify
+            </Label>
+            <Select value={notifyUserId || "__none__"} onValueChange={(v) => setNotifyUserId(v === "__none__" ? "" : v)}>
+              <SelectTrigger>
+                <SelectValue placeholder="No notification" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__none__">
+                  <div className="flex items-center gap-2 text-muted-foreground">
+                    <UserMinus className="h-4 w-4" />
+                    No notification
+                  </div>
+                </SelectItem>
+                {teamMembers.map(member => (
+                  <SelectItem key={member.user_uuid} value={member.user_uuid}>
+                    <div className="flex items-center gap-2">
+                      <Avatar className="h-5 w-5">
+                        <AvatarImage src={member.avatar_url || undefined} />
+                        <AvatarFallback className="text-[9px]">
+                          {member.first_name?.[0]}{member.last_name?.[0]}
+                        </AvatarFallback>
+                      </Avatar>
+                      {member.first_name} {member.last_name}
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
             <Button type="submit" disabled={saving}>
               {saving ? 'Saving...' : 'Save Changes'}
             </Button>
-          </AppModalFooter>
+          </DialogFooter>
         </form>
-      </AppModalContent>
-    </AppModal>
+      </DialogContent>
+    </Dialog>
   );
 }
