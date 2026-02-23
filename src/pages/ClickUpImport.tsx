@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, CloudDownload, Loader2, MessageSquare, Download, CheckCircle2, ExternalLink, RefreshCw } from "lucide-react";
+import { ArrowLeft, CloudDownload, Loader2, MessageSquare, Download, CheckCircle2, ExternalLink, RefreshCw, Clock } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { TenantCombobox } from "@/components/clickup/TenantCombobox";
@@ -15,6 +15,7 @@ import { useNavigate } from "react-router-dom";
 interface TableCount {
   clickup_tasks_api: number;
   clickup_task_comments: number;
+  clickup_time_entries: number;
 }
 
 interface ClickUpTask {
@@ -47,18 +48,23 @@ export default function ClickUpImport() {
   const [filterTenant, setFilterTenant] = useState<string>("unresolved");
   const [updatingTaskId, setUpdatingTaskId] = useState<number | null>(null);
   const [taskSearch, setTaskSearch] = useState("");
+  const [timeSyncing, setTimeSyncing] = useState(false);
+  const [timeSyncProgress, setTimeSyncProgress] = useState<{ processed: number; entries: number } | null>(null);
+  const [timeSyncResult, setTimeSyncResult] = useState<{ entries_synced: number; tasks_processed: number; errors: string[] } | null>(null);
   const { toast } = useToast();
   const navigate = useNavigate();
 
   // Fetch table counts
   const fetchCounts = useCallback(async () => {
-    const [r1, r2] = await Promise.all([
+    const [r1, r2, r3] = await Promise.all([
       supabase.from("clickup_tasks_api").select("id", { count: "exact", head: true }),
       supabase.from("clickup_task_comments").select("id", { count: "exact", head: true }),
+      supabase.from("clickup_time_entries").select("id", { count: "exact", head: true }),
     ]);
     setCounts({
       clickup_tasks_api: r1.count ?? 0,
       clickup_task_comments: r2.count ?? 0,
+      clickup_time_entries: r3.count ?? 0,
     });
   }, []);
 
@@ -185,6 +191,50 @@ export default function ClickUpImport() {
     setUpdatingTaskId(null);
   };
 
+  const handleTimeSync = async () => {
+    setTimeSyncing(true);
+    setTimeSyncResult(null);
+    setTimeSyncProgress(null);
+
+    let offset = 0;
+    let totalEntries = 0;
+    let totalTasks = 0;
+    const allErrors: string[] = [];
+
+    try {
+      let hasMore = true;
+      while (hasMore) {
+        const { data, error } = await supabase.functions.invoke("sync-clickup-time", {
+          body: { mode: "sync_all", offset },
+        });
+        if (error) throw error;
+
+        totalEntries += data?.entries_synced ?? 0;
+        totalTasks += data?.tasks_processed ?? 0;
+        if (data?.errors?.length) allErrors.push(...data.errors);
+
+        setTimeSyncProgress({ processed: totalTasks, entries: totalEntries });
+
+        hasMore = data?.has_more ?? false;
+        offset = data?.next_offset ?? offset + 50;
+
+        if (hasMore) await new Promise(r => setTimeout(r, 500));
+      }
+
+      setTimeSyncResult({ entries_synced: totalEntries, tasks_processed: totalTasks, errors: allErrors });
+      fetchCounts();
+      toast({
+        title: "Time Sync Complete",
+        description: `${totalEntries} time entries synced from ${totalTasks} tasks.`,
+      });
+    } catch (err) {
+      toast({ title: "Time sync failed", description: (err as Error).message, variant: "destructive" });
+    } finally {
+      setTimeSyncing(false);
+      setTimeSyncProgress(null);
+    }
+  };
+
   return (
     <AppLayout>
       <div className="max-w-6xl mx-auto p-4 md:p-6 space-y-6">
@@ -202,10 +252,11 @@ export default function ClickUpImport() {
         </div>
 
         {/* Table Counts */}
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-3 gap-3">
           {[
             { label: "Tasks (API)", key: "clickup_tasks_api" as const },
             { label: "Comments", key: "clickup_task_comments" as const },
+            { label: "Time Entries", key: "clickup_time_entries" as const },
           ].map(({ label, key }) => (
             <Card key={key} className="border-primary/30">
               <CardContent className="pt-4 pb-3 px-4">
@@ -305,6 +356,48 @@ export default function ClickUpImport() {
                   <div className="text-xs text-destructive mt-1">
                     <ul className="list-disc pl-4 max-h-24 overflow-y-auto">
                       {commentResult.errors.slice(0, 10).map((e, i) => <li key={i}>{e}</li>)}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Sync Time Entries */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <Clock className="h-5 w-5" /> Sync ClickUp Time Entries
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Fetch detailed time tracking entries from ClickUp for all synced tasks. Upserts on <code className="text-xs bg-muted px-1 rounded">clickup_interval_id</code> — safe to re-run.
+            </p>
+            <Button onClick={handleTimeSync} disabled={timeSyncing}>
+              {timeSyncing ? (
+                <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Syncing Time…</>
+              ) : (
+                <><Clock className="h-4 w-4 mr-2" />Sync All Time Entries</>
+              )}
+            </Button>
+            {timeSyncProgress && (
+              <div className="text-sm text-muted-foreground">
+                Tasks processed: <strong>{timeSyncProgress.processed}</strong> · Time entries found: <strong>{timeSyncProgress.entries}</strong>
+              </div>
+            )}
+            {timeSyncResult && (
+              <div className="rounded-md border p-3 space-y-1 text-sm">
+                <div className="flex items-center gap-2">
+                  <CheckCircle2 className="h-4 w-4 text-green-600" />
+                  <span>{timeSyncResult.entries_synced} time entries synced from {timeSyncResult.tasks_processed} tasks</span>
+                </div>
+                {timeSyncResult.errors.length > 0 && (
+                  <div className="text-xs text-destructive mt-1">
+                    <p className="font-medium">{timeSyncResult.errors.length} errors:</p>
+                    <ul className="list-disc pl-4 max-h-24 overflow-y-auto">
+                      {timeSyncResult.errors.slice(0, 10).map((e, i) => <li key={i}>{e}</li>)}
                     </ul>
                   </div>
                 )}

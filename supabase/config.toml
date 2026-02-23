@@ -256,3 +256,6 @@ verify_jwt = false
 
 [functions.clickup-ai-search]
 verify_jwt = false
+
+[functions.sync-clickup-time]
+verify_jwt = false
