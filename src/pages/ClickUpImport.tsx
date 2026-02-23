@@ -5,9 +5,11 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, CloudDownload, Loader2, MessageSquare, Download, CheckCircle2, ExternalLink, RefreshCw, Clock } from "lucide-react";
+import { ArrowLeft, CloudDownload, Loader2, MessageSquare, Download, CheckCircle2, ExternalLink, RefreshCw, Clock, ArrowRightLeft } from "lucide-react";
 import { PackageInstanceAssignment } from "@/components/clickup/PackageInstanceAssignment";
+import { ClickUpTimeTransfer } from "@/components/clickup/ClickUpTimeTransfer";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { TenantCombobox } from "@/components/clickup/TenantCombobox";
@@ -398,6 +400,18 @@ export default function ClickUpImport() {
           ))}
         </div>
 
+        <Tabs defaultValue="sync" className="w-full">
+          <TabsList>
+            <TabsTrigger value="sync" className="gap-1.5">
+              <CloudDownload className="h-4 w-4" /> Sync & Assign
+            </TabsTrigger>
+            <TabsTrigger value="transfer" className="gap-1.5">
+              <ArrowRightLeft className="h-4 w-4" /> Transfer Time
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="sync" className="space-y-6 mt-4">
+
         {/* API Sync */}
         <Card>
           <CardHeader>
@@ -652,6 +666,12 @@ export default function ClickUpImport() {
             )}
           </CardContent>
         </Card>
+          </TabsContent>
+
+          <TabsContent value="transfer" className="mt-4">
+            <ClickUpTimeTransfer />
+          </TabsContent>
+        </Tabs>
       </div>
     </AppLayout>
   );
