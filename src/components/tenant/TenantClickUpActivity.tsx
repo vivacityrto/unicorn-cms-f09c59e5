@@ -4,9 +4,14 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { ExternalLink, MessageSquare, Loader2, Sparkles, ChevronDown } from "lucide-react";
-import { formatDate } from "@/lib/utils";
+import { ExternalLink, MessageSquare, Loader2, Sparkles, ChevronDown, CalendarIcon, X } from "lucide-react";
+import { formatDate, cn } from "@/lib/utils";
 import { TenantClickUpAISearch } from "./TenantClickUpAISearch";
+import { Button } from "@/components/ui/button";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { Label } from "@/components/ui/label";
+import { format, startOfDay, endOfDay } from "date-fns";
 
 interface TenantClickUpActivityProps {
   tenantId: number;
@@ -56,6 +61,18 @@ export function TenantClickUpActivity({ tenantId }: TenantClickUpActivityProps) 
   const [loadingTasks, setLoadingTasks] = useState(true);
   const [loadingComments, setLoadingComments] = useState(false);
   const [aiOpen, setAiOpen] = useState(false);
+  const [dateFrom, setDateFrom] = useState<Date | undefined>(undefined);
+  const [dateTo, setDateTo] = useState<Date | undefined>(undefined);
+
+  const filteredTasks = tasks.filter(task => {
+    if (!dateFrom && !dateTo) return true;
+    if (!task.date_created) return true;
+    const d = new Date(task.date_created);
+    if (isNaN(d.getTime())) return true;
+    if (dateFrom && d < startOfDay(dateFrom)) return false;
+    if (dateTo && d > endOfDay(dateTo)) return false;
+    return true;
+  });
 
   // Fetch tasks on mount
   useEffect(() => {
@@ -100,16 +117,48 @@ export function TenantClickUpActivity({ tenantId }: TenantClickUpActivityProps) 
           <div className="flex items-center gap-2">
             <MessageSquare className="h-4 w-4 text-muted-foreground" />
             <span className="text-sm font-semibold text-foreground">ClickUp Activity</span>
-            <span className="text-xs text-muted-foreground">({tasks.length} tasks)</span>
+            <span className="text-xs text-muted-foreground">({filteredTasks.length} tasks)</span>
           </div>
-          <CollapsibleTrigger
-            onClick={() => setAiOpen(!aiOpen)}
-            className="flex items-center gap-1.5 text-xs font-medium text-primary hover:text-primary/80 transition-colors cursor-pointer"
-          >
-            <Sparkles className="h-3.5 w-3.5" />
-            AI Search
-            <ChevronDown className={`h-3.5 w-3.5 transition-transform ${aiOpen ? "rotate-180" : ""}`} />
-          </CollapsibleTrigger>
+          <div className="flex items-center gap-2">
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" size="sm" className={cn("h-7 gap-1.5 text-xs", (dateFrom || dateTo) && "border-primary text-primary")}>
+                  <CalendarIcon className="h-3.5 w-3.5" />
+                  {dateFrom || dateTo
+                    ? `${dateFrom ? format(dateFrom, 'dd/MM/yy') : '...'} – ${dateTo ? format(dateTo, 'dd/MM/yy') : '...'}`
+                    : 'Date Filter'}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-3 bg-popover" align="end">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-medium">Filter by date</span>
+                  {(dateFrom || dateTo) && (
+                    <Button variant="ghost" size="sm" className="h-6 px-2 text-xs" onClick={() => { setDateFrom(undefined); setDateTo(undefined); }}>
+                      Clear
+                    </Button>
+                  )}
+                </div>
+                <div className="flex flex-col gap-3">
+                  <div>
+                    <Label className="text-xs text-muted-foreground mb-1 block">From</Label>
+                    <Calendar mode="single" selected={dateFrom} onSelect={setDateFrom} className={cn("p-2 pointer-events-auto")} />
+                  </div>
+                  <div>
+                    <Label className="text-xs text-muted-foreground mb-1 block">To</Label>
+                    <Calendar mode="single" selected={dateTo} onSelect={setDateTo} className={cn("p-2 pointer-events-auto")} />
+                  </div>
+                </div>
+              </PopoverContent>
+            </Popover>
+            <CollapsibleTrigger
+              onClick={() => setAiOpen(!aiOpen)}
+              className="flex items-center gap-1.5 text-xs font-medium text-primary hover:text-primary/80 transition-colors cursor-pointer"
+            >
+              <Sparkles className="h-3.5 w-3.5" />
+              AI Search
+              <ChevronDown className={`h-3.5 w-3.5 transition-transform ${aiOpen ? "rotate-180" : ""}`} />
+            </CollapsibleTrigger>
+          </div>
         </div>
       </div>
 
@@ -130,8 +179,10 @@ export function TenantClickUpActivity({ tenantId }: TenantClickUpActivityProps) 
                 <div className="flex items-center justify-center py-16">
                   <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
                 </div>
-              ) : tasks.length === 0 ? (
-                <div className="text-center py-16 text-sm text-muted-foreground">No ClickUp tasks found</div>
+              ) : filteredTasks.length === 0 ? (
+                <div className="text-center py-16 text-sm text-muted-foreground">
+                  {tasks.length === 0 ? 'No ClickUp tasks found' : 'No tasks match the selected date range'}
+                </div>
               ) : (
                 <Table>
                   <TableHeader>
@@ -147,7 +198,7 @@ export function TenantClickUpActivity({ tenantId }: TenantClickUpActivityProps) 
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {tasks.map((task) => (
+                    {filteredTasks.map((task) => (
                       <TableRow
                         key={task.task_id}
                         className={`cursor-pointer ${selectedTaskId === task.task_id ? "bg-accent" : ""}`}
