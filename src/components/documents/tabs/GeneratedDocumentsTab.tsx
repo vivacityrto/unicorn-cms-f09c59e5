@@ -70,7 +70,7 @@ export function GeneratedDocumentsTab({ tenantId, isClientView = false, tenantNa
       const packageIds = (tenantData as any).package_ids || (tenantData.package_id ? [tenantData.package_id] : []);
       if (packageIds.length === 0) return [];
 
-      let query = supabase
+      let query = (supabase as any)
         .from('documents')
         .select('*, packages:package_id(name)')
         .in('package_id', packageIds)

@@ -165,7 +165,7 @@ export function AskVivPanel() {
       if (!user?.id || selectedMode !== "compliance") return;
 
       try {
-        const { data: tenantMember } = await supabase
+        const { data: tenantMember } = await (supabase as any)
           .from("tenant_members")
           .select("tenant_id, tenants(id, name)")
           .eq("user_id", user.id)
