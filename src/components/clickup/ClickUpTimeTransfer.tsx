@@ -7,7 +7,8 @@ import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 
-import { Loader2, ArrowRight, CheckCircle2, Clock, ArrowLeft, Package } from "lucide-react";
+import { Loader2, ArrowRight, CheckCircle2, Clock, ArrowLeft, Package, ExternalLink } from "lucide-react";
+import { Link } from "react-router-dom";
 import { format } from "date-fns";
 
 interface TaskWithTime {
@@ -48,7 +49,7 @@ export function ClickUpTimeTransfer() {
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [transferring, setTransferring] = useState(false);
   const [userMap, setUserMap] = useState<UserMap>(new Map());
-  const [packageInstances, setPackageInstances] = useState<{ id: number; package_name: string; start_date: string | null; end_date: string | null; is_active: boolean }[]>([]);
+  const [packageInstances, setPackageInstances] = useState<{ id: number; package_name: string; start_date: string | null; end_date: string | null; is_active: boolean; logged_minutes: number }[]>([]);
   const [packagesLoading, setPackagesLoading] = useState(false);
   const { toast } = useToast();
 
@@ -106,15 +107,23 @@ export function ClickUpTimeTransfer() {
           return;
         }
 
-        // Fetch package names (no FK join available)
+        // Fetch package names and existing time totals in parallel
+        const instanceIds = instances.map((i: any) => i.id);
         const packageIds = [...new Set(instances.map((i: any) => i.package_id).filter(Boolean))];
-        const { data: packages } = await (supabase as any)
-          .from("packages")
-          .select("id, name")
-          .in("id", packageIds);
+        
+        const [pkgRes, timeRes] = await Promise.all([
+          (supabase as any).from("packages").select("id, name").in("id", packageIds),
+          (supabase as any).from("time_entries").select("package_instance_id, duration_minutes").eq("tenant_id", selectedTenantId).in("package_instance_id", instanceIds),
+        ]);
 
         const pkgMap = new Map<number, string>();
-        for (const p of (packages ?? [])) pkgMap.set(p.id, p.name);
+        for (const p of (pkgRes.data ?? [])) pkgMap.set(p.id, p.name);
+
+        // Sum logged minutes per package instance
+        const loggedMap = new Map<number, number>();
+        for (const te of (timeRes.data ?? [])) {
+          loggedMap.set(te.package_instance_id, (loggedMap.get(te.package_instance_id) ?? 0) + (te.duration_minutes ?? 0));
+        }
 
         setPackageInstances(instances.map((i: any) => ({
           id: i.id,
@@ -122,6 +131,7 @@ export function ClickUpTimeTransfer() {
           start_date: i.start_date,
           end_date: i.end_date,
           is_active: i.is_active ?? false,
+          logged_minutes: loggedMap.get(i.id) ?? 0,
         })));
       } catch (err) {
         console.error("Failed to load package instances", err);
@@ -369,9 +379,18 @@ export function ClickUpTimeTransfer() {
       {selectedTenantId && (
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-base">
-              <Package className="h-4 w-4" /> Package Instances
-            </CardTitle>
+            <div className="flex items-center justify-between">
+              <CardTitle className="flex items-center gap-2 text-base">
+                <Package className="h-4 w-4" /> Package Instances
+              </CardTitle>
+              <Link
+                to={`/tenant/${selectedTenantId}`}
+                target="_blank"
+                className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
+              >
+                View Tenant <ExternalLink className="h-3 w-3" />
+              </Link>
+            </div>
           </CardHeader>
           <CardContent>
             {packagesLoading ? (
@@ -388,23 +407,30 @@ export function ClickUpTimeTransfer() {
                     <TableHead>Package</TableHead>
                     <TableHead>Start Date</TableHead>
                     <TableHead>End Date</TableHead>
+                    <TableHead className="text-center">Time Logged</TableHead>
                     <TableHead className="text-center">Status</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {packageInstances.map(pi => (
-                    <TableRow key={pi.id}>
-                      <TableCell className="font-mono text-xs">{pi.id}</TableCell>
-                      <TableCell className="text-sm font-medium">{pi.package_name}</TableCell>
-                      <TableCell className="text-xs">{pi.start_date ?? "—"}</TableCell>
-                      <TableCell className="text-xs">{pi.end_date ?? "—"}</TableCell>
-                      <TableCell className="text-center">
-                        <Badge variant={pi.is_active ? "default" : "outline"} className="text-xs">
-                          {pi.is_active ? "Active" : "Inactive"}
-                        </Badge>
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                  {packageInstances.map(pi => {
+                    const h = Math.floor(pi.logged_minutes / 60);
+                    const m = pi.logged_minutes % 60;
+                    const timeStr = pi.logged_minutes > 0 ? (h > 0 ? `${h}h ${m}m` : `${m}m`) : "—";
+                    return (
+                      <TableRow key={pi.id}>
+                        <TableCell className="font-mono text-xs">{pi.id}</TableCell>
+                        <TableCell className="text-sm font-medium">{pi.package_name}</TableCell>
+                        <TableCell className="text-xs">{pi.start_date ?? "—"}</TableCell>
+                        <TableCell className="text-xs">{pi.end_date ?? "—"}</TableCell>
+                        <TableCell className="text-center text-xs font-medium">{timeStr}</TableCell>
+                        <TableCell className="text-center">
+                          <Badge variant={pi.is_active ? "default" : "outline"} className="text-xs">
+                            {pi.is_active ? "Active" : "Inactive"}
+                          </Badge>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
                 </TableBody>
               </Table>
             )}
