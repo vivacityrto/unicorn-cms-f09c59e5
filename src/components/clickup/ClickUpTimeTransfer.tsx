@@ -278,7 +278,7 @@ export function ClickUpTimeTransfer() {
       const rows = toTransfer.map(i => ({
         tenant_id: selectedTenantId,
         client_id: selectedTenantId,
-        package_id: packageInstances.find(pi => pi.id === currentTask.packageinstance_id)?.package_id ?? currentTask.packageinstance_id,
+        package_id: currentTask.packageinstance_id,
         package_instance_id: currentTask.packageinstance_id,
         user_id: userMap.get(i.user_email?.toLowerCase() ?? "") ?? null,
         work_type: "general",
