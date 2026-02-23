@@ -205,7 +205,7 @@ export default function TimeInbox() {
   };
 
   const fetchStagesForPackage = async (packageId: number) => {
-    const { data } = await supabase
+    const { data } = await (supabase as any)
       .from('package_stages')
       .select('stage_id, documents_stages(title)')
       .eq('package_id', packageId);
