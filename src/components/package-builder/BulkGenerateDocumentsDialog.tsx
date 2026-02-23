@@ -69,7 +69,7 @@ export function BulkGenerateDocumentsDialog({
     setIsLoadingTenants(true);
     try {
       // Get tenants with this package through client_package_stage_state
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from('client_package_stage_state')
         .select('tenant_id, tenants(id, name)')
         .eq('package_id', packageId)
