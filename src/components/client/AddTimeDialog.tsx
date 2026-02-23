@@ -24,7 +24,8 @@ import { ScopeSelectorBadge } from './ScopeSelectorBadge';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
-import { Bell, UserMinus } from 'lucide-react';
+import { Bell, UserMinus, Mic, MicOff } from 'lucide-react';
+import { useSpeechToText } from '@/hooks/useSpeechToText';
 import type { ScopeTag } from '@/hooks/useTenantMemberships';
 
 interface WorkTypeOption {
@@ -70,6 +71,7 @@ export function AddTimeDialog({
 }: AddTimeDialogProps) {
   const { user } = useAuth();
   const { toast } = useToast();
+  const { isRecording, isSupported, interimTranscript, startRecording, stopRecording } = useSpeechToText();
   const [hours, setHours] = useState('0');
   const [minutes, setMinutes] = useState('30');
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
@@ -339,11 +341,33 @@ export function AddTimeDialog({
 
           {/* Notes */}
           <div className="space-y-2">
-            <Label htmlFor="notes">Notes</Label>
+            <div className="flex items-center justify-between">
+              <Label htmlFor="notes">Notes</Label>
+              {isSupported && (
+                <Button
+                  type="button"
+                  variant={isRecording ? 'destructive' : 'ghost'}
+                  size="sm"
+                  className="h-7 px-2 gap-1 text-xs"
+                  onClick={() => {
+                    if (isRecording) {
+                      stopRecording();
+                    } else {
+                      startRecording((text) => {
+                        setNotes((prev) => (prev ? prev + ' ' + text : text));
+                      });
+                    }
+                  }}
+                >
+                  {isRecording ? <MicOff className="h-3.5 w-3.5" /> : <Mic className="h-3.5 w-3.5" />}
+                  {isRecording ? 'Stop' : 'Dictate'}
+                </Button>
+              )}
+            </div>
             <Textarea
               id="notes"
               placeholder="What did you work on?"
-              value={notes}
+              value={isRecording && interimTranscript ? (notes ? notes + ' ' + interimTranscript : interimTranscript) : notes}
               onChange={(e) => setNotes(e.target.value)}
               rows={2}
             />
