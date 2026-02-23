@@ -57,19 +57,29 @@ export function PackageDataManager({ open, onOpenChange, tenantId, onSuccess }: 
 
   const fetchData = useCallback(async () => {
     setLoading(true);
-    const { data, error } = await supabase
-      .from('package_instances')
-      .select('id, package_id, start_date, end_date, is_active, is_complete, membership_state, packages(name)')
-      .eq('tenant_id', tenantId)
-      .order('start_date', { ascending: true, nullsFirst: false });
 
-    if (error) {
-      toast({ title: 'Error loading packages', description: error.message, variant: 'destructive' });
-    } else if (data) {
-      const mapped: PackageInstanceRow[] = data.map((d: any) => ({
+    // Fetch instances and package names separately (no FK relationship in schema)
+    const [instancesRes, packagesRes] = await Promise.all([
+      supabase
+        .from('package_instances')
+        .select('id, package_id, start_date, end_date, is_active, is_complete, membership_state')
+        .eq('tenant_id', tenantId)
+        .order('start_date', { ascending: true, nullsFirst: false }),
+      supabase
+        .from('packages')
+        .select('id, name'),
+    ]);
+
+    if (instancesRes.error) {
+      toast({ title: 'Error loading packages', description: instancesRes.error.message, variant: 'destructive' });
+    } else if (instancesRes.data) {
+      const packageNames = new Map<number, string>();
+      (packagesRes.data ?? []).forEach((p: any) => packageNames.set(p.id, p.name));
+
+      const mapped: PackageInstanceRow[] = instancesRes.data.map((d: any) => ({
         id: d.id,
         package_id: d.package_id,
-        package_name: d.packages?.name ?? `Package #${d.package_id}`,
+        package_name: packageNames.get(d.package_id) ?? `Package #${d.package_id}`,
         start_date: d.start_date,
         end_date: d.end_date,
         is_active: d.is_active ?? false,
