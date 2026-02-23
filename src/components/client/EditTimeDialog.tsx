@@ -168,6 +168,22 @@ export function EditTimeDialog({ open, onOpenChange, entry, onSuccess }: EditTim
       });
 
       setActiveInstances(instances);
+
+      // Auto-select the correct instance based on entry's package_id
+      if (entry.package_id) {
+        // Try to find instance matching the entry's package_id (could be instance ID or packages.id)
+        const directMatch = instances.find(i => i.id === entry.package_id);
+        const pkgMatch = instances.find(i => i.package_id === entry.package_id);
+        if (directMatch) {
+          setSelectedInstanceId(directMatch.id);
+        } else if (pkgMatch) {
+          setSelectedInstanceId(pkgMatch.id);
+        } else if (instances.length === 1) {
+          setSelectedInstanceId(instances[0].id);
+        }
+      } else if (instances.length === 1) {
+        setSelectedInstanceId(instances[0].id);
+      }
     })();
   }, [open, entry]);
 
@@ -187,7 +203,7 @@ export function EditTimeDialog({ open, onOpenChange, entry, onSuccess }: EditTim
       setNotes(entry.notes || '');
       setIsBillable(entry.is_billable);
       setScopeTag((entry.scope_tag as ScopeTag) || 'both');
-      setSelectedInstanceId(entry.package_id || null);
+      setSelectedInstanceId(null); // Will be resolved by instance-fetch effect
       setSelectedUserId(entry.user_id || user?.id || '');
       setNotifyUserId('');
     }
