@@ -6,7 +6,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
-import { TenantCombobox } from "./TenantCombobox";
+
 import { Loader2, ArrowRight, CheckCircle2, Clock, ArrowLeft } from "lucide-react";
 import { format } from "date-fns";
 
@@ -50,13 +50,31 @@ export function ClickUpTimeTransfer() {
   const [userMap, setUserMap] = useState<UserMap>(new Map());
   const { toast } = useToast();
 
-  // Fetch tenants + user map once
+  const [tenantsLoading, setTenantsLoading] = useState(true);
+
+  // Fetch tenants that have transferable time data + user map
   useEffect(() => {
+    setTenantsLoading(true);
     Promise.all([
+      (supabase as any)
+        .from("clickup_time_entries")
+        .select("tenant_id")
+        .eq("imported_to_time_entries", false),
       supabase.from("tenants").select("id, name").order("name"),
       supabase.from("users").select("user_uuid, email"),
-    ]).then(([tenantRes, userRes]) => {
-      if (tenantRes.data) setTenants(tenantRes.data.map(t => ({ ...t, name: t.name?.trim() ?? "" })));
+    ]).then(([timeRes, tenantRes, userRes]: any[]) => {
+      // Build set of tenant IDs with transferable data
+      const tenantIdsWithData = new Set<number>();
+      for (const row of (timeRes.data ?? [])) {
+        if (row.tenant_id) tenantIdsWithData.add(row.tenant_id);
+      }
+      if (tenantRes.data) {
+        setTenants(
+          tenantRes.data
+            .filter((t: any) => tenantIdsWithData.has(t.id))
+            .map((t: any) => ({ ...t, name: t.name?.trim() ?? "" }))
+        );
+      }
       if (userRes.data) {
         const map = new Map<string, string>();
         for (const u of userRes.data) {
@@ -64,6 +82,7 @@ export function ClickUpTimeTransfer() {
         }
         setUserMap(map);
       }
+      setTenantsLoading(false);
     });
   }, []);
 
@@ -277,14 +296,27 @@ export function ClickUpTimeTransfer() {
           <p className="text-sm text-muted-foreground">
             Select a tenant, then drill into tasks to review and transfer verified time intervals to the production <code className="text-xs bg-muted px-1 rounded">time_entries</code> table.
           </p>
-          <div className="max-w-xs">
-            <label className="text-xs font-medium text-muted-foreground mb-1 block">Select Tenant</label>
-            <TenantCombobox
-              tenants={tenants}
-              value={selectedTenantId}
-              onSelect={setSelectedTenantId}
-            />
-          </div>
+          {tenantsLoading ? (
+            <div className="flex items-center justify-center py-6">
+              <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+            </div>
+          ) : tenants.length === 0 ? (
+            <p className="text-sm text-muted-foreground text-center py-4">No tenants with transferable time data.</p>
+          ) : (
+            <div className="max-h-[360px] overflow-y-auto border rounded-md divide-y">
+              {tenants.map(t => (
+                <button
+                  key={t.id}
+                  onClick={() => setSelectedTenantId(t.id)}
+                  className={`w-full text-left px-3 py-2 text-sm transition-colors hover:bg-muted/50 ${
+                    selectedTenantId === t.id ? "bg-accent text-accent-foreground font-medium" : ""
+                  }`}
+                >
+                  {t.name}
+                </button>
+              ))}
+            </div>
+          )}
         </CardContent>
       </Card>
 
