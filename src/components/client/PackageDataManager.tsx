@@ -302,7 +302,17 @@ export function PackageDataManager({ open, onOpenChange, tenantId, onSuccess }: 
                       <TableCell className="text-center">
                         <Switch
                           checked={eff.is_active}
-                          onCheckedChange={(v) => setEdit(row.id, 'is_active', v)}
+                          onCheckedChange={(v) => {
+                            setEdits(prev => ({
+                              ...prev,
+                              [row.id]: {
+                                ...prev[row.id],
+                                is_active: v,
+                                // Deactivating auto-completes
+                                ...(!v ? { is_complete: true } : {}),
+                              },
+                            }));
+                          }}
                         />
                       </TableCell>
                       <TableCell className="text-center">
