@@ -34,9 +34,11 @@ import {
   RotateCcw,
   Pencil,
   Mail,
+  Trash2,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { EditTimeDialog } from './EditTimeDialog';
+import { DeleteConfirmDialog } from '@/components/audit/DeleteConfirmDialog';
 
 interface ClientTimeTabProps {
   tenantId: number;
@@ -639,8 +641,9 @@ export function ClientTimeTab({ tenantId, tenantName }: ClientTimeTabProps) {
   const [splitEntry, setSplitEntry] = useState<TimeEntry | null>(null);
   const [reallocateEntry, setReallocateEntry] = useState<TimeEntry | null>(null);
   const [editEntry, setEditEntry] = useState<TimeEntry | null>(null);
+  const [deleteEntry, setDeleteEntry] = useState<TimeEntry | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
-  // Fetch user names for entries
   const userIds = useMemo(() => [...new Set(entries.map(e => e.user_id).filter(Boolean))], [entries]);
   const { data: userMap = {} } = useQuery({
     queryKey: ['entry-user-names', userIds],
@@ -952,6 +955,15 @@ export function ClientTimeTab({ tenantId, tenantName }: ClientTimeTabProps) {
                               </Button>
                             </>
                           )}
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 px-2 text-destructive hover:text-destructive"
+                            onClick={() => setDeleteEntry(entry)}
+                            title="Delete entry"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
                         </div>
                       </TableCell>
                     </TableRow>
@@ -1003,6 +1015,32 @@ export function ClientTimeTab({ tenantId, tenantName }: ClientTimeTabProps) {
         onOpenChange={v => !v && setEditEntry(null)}
         entry={editEntry}
         onSuccess={handleRefresh}
+      />
+
+      {/* Delete Confirmation */}
+      <DeleteConfirmDialog
+        open={!!deleteEntry}
+        onOpenChange={v => !v && setDeleteEntry(null)}
+        title="Delete Time Entry"
+        description="Are you sure you want to delete this time entry? This action cannot be undone."
+        itemName={deleteEntry ? `${formatDuration(deleteEntry.duration_minutes)} on ${deleteEntry.start_at ? format(new Date(deleteEntry.start_at), 'd MMM yyyy') : 'N/A'}` : undefined}
+        isDeleting={isDeleting}
+        onConfirm={async () => {
+          if (!deleteEntry) return;
+          setIsDeleting(true);
+          const { error } = await supabase
+            .from('time_entries')
+            .delete()
+            .eq('id', deleteEntry.id);
+          setIsDeleting(false);
+          if (error) {
+            toast({ title: 'Failed to delete', description: error.message, variant: 'destructive' });
+          } else {
+            setDeleteEntry(null);
+            handleRefresh();
+            toast({ title: 'Time entry deleted' });
+          }
+        }}
       />
     </div>
   );
