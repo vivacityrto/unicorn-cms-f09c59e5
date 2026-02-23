@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { ExternalLink } from 'lucide-react';
 import { ClientProfile } from '@/hooks/useClientManagement';
+import { supabase } from '@/integrations/supabase/client';
 
 interface ClientProfileFormProps {
   profile: ClientProfile | null;
@@ -16,41 +17,26 @@ interface ClientProfileFormProps {
   onStateChange?: (hasChanges: boolean, saving: boolean, triggerSave: () => void) => void;
 }
 
-const ORG_TYPES = [
-  { value: 'rto', label: 'RTO' },
-  { value: 'cricos', label: 'CRICOS Provider' },
-  { value: 'gto', label: 'GTO' },
-  { value: 'rto_cricos', label: 'RTO + CRICOS' },
-  { value: 'other', label: 'Other' }
-];
+interface LookupOption {
+  value: string;
+  label: string;
+}
 
-
-const LMS_OPTIONS = [
-  { value: 'moodle', label: 'Moodle' },
-  { value: 'canvas', label: 'Canvas' },
-  { value: 'blackboard', label: 'Blackboard' },
-  { value: 'axcelerate', label: 'aXcelerate' },
-  { value: 'totara', label: 'Totara' },
-  { value: 'other', label: 'Other' }
-];
-
-const SMS_OPTIONS = [
-  { value: 'axcelerate', label: 'aXcelerate' },
-  { value: 'wisenet', label: 'Wisenet' },
-  { value: 'vettrak', label: 'VETtrak' },
-  { value: 'jobready', label: 'Jobready' },
-  { value: 'rtomanager', label: 'RTO Manager' },
-  { value: 'cloud_assess', label: 'Cloud Assess' },
-  { value: 'other', label: 'Other' }
-];
-
-const ACCOUNTING_OPTIONS = [
-  { value: 'xero', label: 'Xero' },
-  { value: 'myob', label: 'MYOB' },
-  { value: 'quickbooks', label: 'QuickBooks' },
-  { value: 'sage', label: 'Sage' },
-  { value: 'other', label: 'Other' }
-];
+function useLookupTable(tableName: string) {
+  const [options, setOptions] = useState<LookupOption[]>([]);
+  useEffect(() => {
+    const fetch = async () => {
+      const { data } = await supabase
+        .from(tableName as any)
+        .select('value, label')
+        .eq('is_active', true)
+        .order('sort_order');
+      if (data) setOptions((data as any[]).map(d => ({ value: d.value, label: d.label })));
+    };
+    fetch();
+  }, [tableName]);
+  return options;
+}
 
 // Fields that are synced from TGA when linked
 const TGA_SYNCED_FIELDS = ['legal_name', 'trading_name', 'abn', 'acn', 'website', 'org_type'] as const;
@@ -77,6 +63,11 @@ export function ClientProfileForm({ profile, onSave, loading, tgaLinked, onState
   const [formData, setFormData] = useState<Partial<ClientProfile>>({});
   const [saving, setSaving] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
+  
+  const ORG_TYPES = useLookupTable('dd_org_type');
+  const SMS_OPTIONS = useLookupTable('dd_sms');
+  const LMS_OPTIONS = useLookupTable('dd_lms');
+  const ACCOUNTING_OPTIONS = useLookupTable('dd_accounting_system');
 
   const handleSave = async () => {
     setSaving(true);
@@ -177,8 +168,8 @@ export function ClientProfileForm({ profile, onSave, loading, tgaLinked, onState
               <SelectTrigger className={isTgaField('org_type') ? 'bg-muted' : ''}>
                 <SelectValue placeholder="Select type..." />
               </SelectTrigger>
-              <SelectContent>
-                {ORG_TYPES.map((type) => (
+              <SelectContent className="bg-background">
+                {ORG_TYPES.filter(t => t.value).map((type) => (
                   <SelectItem key={type.value} value={type.value}>
                     {type.label}
                   </SelectItem>
@@ -286,8 +277,8 @@ export function ClientProfileForm({ profile, onSave, loading, tgaLinked, onState
               <SelectTrigger>
                 <SelectValue placeholder="Select SMS..." />
               </SelectTrigger>
-              <SelectContent>
-                {SMS_OPTIONS.map((opt) => (
+              <SelectContent className="bg-background">
+                {SMS_OPTIONS.filter(o => o.value).map((opt) => (
                   <SelectItem key={opt.value} value={opt.value}>
                     {opt.label}
                   </SelectItem>
@@ -306,8 +297,8 @@ export function ClientProfileForm({ profile, onSave, loading, tgaLinked, onState
               <SelectTrigger>
                 <SelectValue placeholder="Select LMS..." />
               </SelectTrigger>
-              <SelectContent>
-                {LMS_OPTIONS.map((opt) => (
+              <SelectContent className="bg-background">
+                {LMS_OPTIONS.filter(o => o.value).map((opt) => (
                   <SelectItem key={opt.value} value={opt.value}>
                     {opt.label}
                   </SelectItem>
@@ -326,8 +317,8 @@ export function ClientProfileForm({ profile, onSave, loading, tgaLinked, onState
               <SelectTrigger>
                 <SelectValue placeholder="Select system..." />
               </SelectTrigger>
-              <SelectContent>
-                {ACCOUNTING_OPTIONS.map((opt) => (
+              <SelectContent className="bg-background">
+                {ACCOUNTING_OPTIONS.filter(o => o.value).map((opt) => (
                   <SelectItem key={opt.value} value={opt.value}>
                     {opt.label}
                   </SelectItem>
