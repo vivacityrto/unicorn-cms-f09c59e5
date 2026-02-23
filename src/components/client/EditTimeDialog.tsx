@@ -313,12 +313,12 @@ export function EditTimeDialog({ open, onOpenChange, entry, onSuccess }: EditTim
                   <Input
                     type="number"
                     min="0"
-                    max="45"
-                    step="15"
+                    max="59"
+                    step="1"
                     value={minutes}
                     onChange={(e) => {
-                      const val = Math.round(parseInt(e.target.value) / 15) * 15;
-                      setMinutes(String(Math.max(0, Math.min(45, isNaN(val) ? 0 : val))));
+                      const val = parseInt(e.target.value);
+                      setMinutes(String(Math.max(0, Math.min(59, isNaN(val) ? 0 : val))));
                     }}
                     className="text-center"
                   />
