@@ -331,7 +331,7 @@ export function useStageSimulation() {
   const { standards: allStandards } = useStandardsReference();
 
   const fetchPackagesUsingStage = useCallback(async (stageId: number) => {
-    const { data } = await supabase
+    const { data } = await (supabase as any)
       .from('package_stages')
       .select('package_id, packages:package_id (id, name, status, package_type)')
       .eq('stage_id', stageId) as any;

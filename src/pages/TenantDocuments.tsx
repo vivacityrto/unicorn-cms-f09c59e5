@@ -114,7 +114,7 @@ export default function TenantDocuments() {
         
         // Fetch documents from documents table matching any of the tenant's package_ids (only released documents)
         if (tenantPackageIds.length > 0) {
-          const { data: documentsData, error } = await supabase
+          const { data: documentsData, error } = await (supabase as any)
             .from("documents")
             .select("*, packages:package_id(name)")
             .in("package_id", tenantPackageIds)

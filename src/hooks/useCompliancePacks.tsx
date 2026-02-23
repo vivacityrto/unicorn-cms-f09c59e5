@@ -35,7 +35,7 @@ export function useCompliancePacks() {
   const fetchExports = useCallback(async (tenantId?: number) => {
     setLoading(true);
     try {
-      let query = supabase
+      let query = (supabase as any)
         .from('compliance_pack_exports')
         .select(`
           *,

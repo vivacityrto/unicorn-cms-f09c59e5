@@ -31,7 +31,7 @@ export function useDocumentRequests(tenantId: number | null) {
     queryKey: documentRequestKeys.list(tenantId!),
     queryFn: async () => {
       if (!tenantId) return [];
-      const { data, error } = await (supabase
+      const { data, error } = await ((supabase as any)
         .from('tenant_document_requests')
         .select(`
           *,
