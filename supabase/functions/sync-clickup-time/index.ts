@@ -87,19 +87,25 @@ Deno.serve(async (req) => {
         const intervals = timeData?.data ?? [];
 
         if (intervals.length > 0) {
-          const rows = intervals.map((interval: any) => ({
-            clickup_interval_id: String(interval.id),
-            task_id: task.task_id,
-            tenant_id: task.tenant_id ?? null,
-            user_name: interval.user?.username ?? null,
-            user_email: interval.user?.email ?? null,
-            duration_ms: parseInt(interval.duration ?? interval.time ?? "0"),
-            start_at: interval.start ? new Date(parseInt(interval.start)).toISOString() : null,
-            end_at: interval.end ? new Date(parseInt(interval.end)).toISOString() : null,
-            description: interval.description ?? null,
-            billable: interval.billable ?? false,
-            imported_at: new Date().toISOString(),
-          }));
+          // Deduplicate by clickup_interval_id to avoid "cannot affect row a second time"
+          const seen = new Map<string, any>();
+          for (const interval of intervals) {
+            const id = String(interval.id);
+            seen.set(id, {
+              clickup_interval_id: id,
+              task_id: task.task_id,
+              tenant_id: task.tenant_id ?? null,
+              user_name: interval.user?.username ?? null,
+              user_email: interval.user?.email ?? null,
+              duration_ms: parseInt(interval.duration ?? interval.time ?? "0"),
+              start_at: interval.start ? new Date(parseInt(interval.start)).toISOString() : null,
+              end_at: interval.end ? new Date(parseInt(interval.end)).toISOString() : null,
+              description: interval.description ?? null,
+              billable: interval.billable ?? false,
+              imported_at: new Date().toISOString(),
+            });
+          }
+          const rows = Array.from(seen.values());
 
           const { error: upsertError } = await sb
             .from("clickup_time_entries")
