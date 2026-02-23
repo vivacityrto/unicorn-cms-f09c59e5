@@ -37,7 +37,7 @@ export function TenantCombobox({ tenants, value, onSelect, disabled }: TenantCom
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-[280px] p-0" align="start">
-        <Command>
+        <Command shouldFilter={true} filter={(value, search) => value.toLowerCase().includes(search.toLowerCase()) ? 1 : 0}>
           <CommandInput placeholder="Search tenants…" className="h-8 text-xs" />
           <CommandList>
             <CommandEmpty className="text-xs py-3 text-center">No tenant found.</CommandEmpty>
