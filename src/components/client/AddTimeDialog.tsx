@@ -42,6 +42,7 @@ interface TeamMember {
 
 interface PackageInstance {
   id: number;
+  package_id: number;
   package_name: string;
   is_kickstart: boolean;
 }
@@ -176,6 +177,7 @@ export function AddTimeDialog({
           const pkg = pkgMap.get(Number(pi.package_id));
           return {
             id: pi.id,
+            package_id: Number(pi.package_id),
             package_name: pkg?.name || `Package #${pi.id}`,
             is_kickstart: (pkg?.package_type || '').toLowerCase() === 'kickstart',
           };
@@ -219,6 +221,9 @@ export function AddTimeDialog({
         scope_tag: scopeTag,
         source: 'manual',
         package_instance_id: selectedInstanceId,
+        package_id: selectedInstanceId
+          ? activeInstances.find(i => i.id === selectedInstanceId)?.package_id ?? null
+          : null,
       } as any);
 
       if (error) throw error;
