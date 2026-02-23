@@ -760,18 +760,33 @@ export function ClientTimeTab({ tenantId, tenantName }: ClientTimeTabProps) {
                 size="sm"
                 className="h-8 gap-1 text-xs"
                 onClick={() => {
-                  const lines = filteredEntries.map(e => {
-                    const d = e.start_at ? format(new Date(e.start_at), 'd MMM yyyy') : 'N/A';
-                    const user = userMap[e.user_id] || 'Unknown';
-                    const dur = formatDuration(e.duration_minutes);
-                    const type = e.work_type.replace('_', ' ');
-                    const billable = e.is_billable ? 'Yes' : 'No';
-                    const note = e.notes || '';
-                    return `${d} | ${user} | ${dur} | ${type} | Billable: ${billable} | ${note}`;
-                  });
+                  // Build padded text table
+                  const rows = filteredEntries.map(e => ({
+                    date: e.start_at ? format(new Date(e.start_at), 'd MMM yyyy') : 'N/A',
+                    user: userMap[e.user_id] || 'Unknown',
+                    dur: formatDuration(e.duration_minutes),
+                    type: e.work_type.replace('_', ' '),
+                    billable: e.is_billable ? 'Yes' : 'No',
+                    notes: (e.notes || '—').substring(0, 40),
+                  }));
+                  const header = { date: 'Date', user: 'User', dur: 'Duration', type: 'Type', billable: 'Billable', notes: 'Notes' };
+                  const all = [header, ...rows];
+                  const w = {
+                    date: Math.max(...all.map(r => r.date.length)),
+                    user: Math.max(...all.map(r => r.user.length)),
+                    dur: Math.max(...all.map(r => r.dur.length)),
+                    type: Math.max(...all.map(r => r.type.length)),
+                    billable: Math.max(...all.map(r => r.billable.length)),
+                    notes: Math.max(...all.map(r => r.notes.length)),
+                  };
+                  const fmt = (r: typeof header) =>
+                    `${r.date.padEnd(w.date)}  ${r.user.padEnd(w.user)}  ${r.dur.padEnd(w.dur)}  ${r.type.padEnd(w.type)}  ${r.billable.padEnd(w.billable)}  ${r.notes}`;
+                  const sep = '-'.repeat(w.date + w.user + w.dur + w.type + w.billable + w.notes + 10);
+                  const table = [fmt(header), sep, ...rows.map(fmt)].join('\n');
+                  const totalMins = filteredEntries.reduce((s, e) => s + e.duration_minutes, 0);
+                  const body = `Time Entries for ${tenantName}\nTotal: ${formatDuration(totalMins)}\n\n${table}`;
                   const subject = encodeURIComponent(`Time Entries - ${tenantName}`);
-                  const body = encodeURIComponent(`Time Entries for ${tenantName}\n\n${lines.join('\n')}`);
-                  window.open(`mailto:?subject=${subject}&body=${body}`, '_self');
+                  window.open(`mailto:?subject=${subject}&body=${encodeURIComponent(body)}`, '_self');
                 }}
               >
                 <Mail className="h-3.5 w-3.5" /> Email
