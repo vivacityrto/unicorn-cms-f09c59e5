@@ -42061,6 +42061,20 @@ export type Database = {
           },
         ]
       }
+      v_clickuptask_comments: {
+        Row: {
+          comment_by: string | null
+          comment_id: string | null
+          comment_text: string | null
+          custom_id: string | null
+          date_created: number | null
+          name: string | null
+          task_id: string | null
+          tenant_id: number | null
+          unicorn_url: string | null
+        }
+        Relationships: []
+      }
       v_client_dashboard_progress: {
         Row: {
           current_phase_name: string | null
