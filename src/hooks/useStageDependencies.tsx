@@ -173,7 +173,7 @@ export async function checkPackageDependencies(packageId: number): Promise<{
   }>;
 }> {
   // Get all stages in package with their dependencies
-  const { data: packageStages, error } = await supabase
+  const { data: packageStages, error } = await (supabase as any)
     .from('package_stages')
     .select('stage_id, documents_stages!inner(title, stage_key, requires_stage_keys)')
     .eq('package_id', packageId);
