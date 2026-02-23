@@ -250,41 +250,65 @@ export default function ClickUpImport() {
       return;
     }
 
-    // Count how many rows share this task_id AND have null tenant_id
-    const { count, error: countErr } = await supabase
-      .from("clickup_tasks_api")
-      .select("id", { count: "exact", head: true })
-      .eq("task_id", task.task_id)
-      .is("tenant_id", null);
+    // Count how many task rows and comment rows share this task_id with null tenant_id
+    const [taskCountRes, commentCountRes] = await Promise.all([
+      supabase
+        .from("clickup_tasks_api")
+        .select("id", { count: "exact", head: true })
+        .eq("task_id", task.task_id)
+        .is("tenant_id", null),
+      supabase
+        .from("clickup_task_comments")
+        .select("id", { count: "exact", head: true })
+        .eq("task_id", task.task_id)
+        .is("tenant_id", null),
+    ]);
 
-    if (countErr) {
-      toast({ title: "Error checking tasks", description: countErr.message, variant: "destructive" });
+    if (taskCountRes.error) {
+      toast({ title: "Error checking tasks", description: taskCountRes.error.message, variant: "destructive" });
       return;
     }
 
-    const matchCount = count ?? 0;
+    const taskMatchCount = taskCountRes.count ?? 0;
+    const commentMatchCount = commentCountRes.count ?? 0;
 
-    // Prompt user if more than 1 task will be updated
-    if (matchCount > 1) {
+    // Prompt user with counts
+    const parts: string[] = [];
+    if (taskMatchCount > 0) parts.push(`${taskMatchCount} task(s)`);
+    if (commentMatchCount > 0) parts.push(`${commentMatchCount} comment(s)`);
+
+    if (parts.length > 0) {
       const confirmed = window.confirm(
-        `This will assign the tenant to ${matchCount} tasks with the same task_id (${task.custom_id || task.task_id}) where tenant is currently unset.\n\nContinue?`
+        `This will assign the tenant to ${parts.join(" and ")} for task_id ${task.custom_id || task.task_id} where tenant is currently unset.\n\nContinue?`
       );
       if (!confirmed) return;
     }
 
     setUpdatingTaskId(taskId);
 
-    // Bulk update all rows with same task_id and null tenant_id
-    const { error } = await supabase
-      .from("clickup_tasks_api")
-      .update({ tenant_id: tenantId })
-      .eq("task_id", task.task_id)
-      .is("tenant_id", null);
+    // Bulk update tasks and comments in parallel
+    const [taskUpdateRes, commentUpdateRes] = await Promise.all([
+      supabase
+        .from("clickup_tasks_api")
+        .update({ tenant_id: tenantId })
+        .eq("task_id", task.task_id)
+        .is("tenant_id", null),
+      supabase
+        .from("clickup_task_comments")
+        .update({ tenant_id: tenantId })
+        .eq("task_id", task.task_id)
+        .is("tenant_id", null),
+    ]);
 
-    if (error) {
-      toast({ title: "Update failed", description: error.message, variant: "destructive" });
+    if (taskUpdateRes.error || commentUpdateRes.error) {
+      const msg = taskUpdateRes.error?.message || commentUpdateRes.error?.message || "Unknown error";
+      toast({ title: "Update failed", description: msg, variant: "destructive" });
     } else {
-      toast({ title: "Tenant assigned", description: matchCount > 1 ? `Updated ${matchCount} tasks` : undefined });
+      const desc = [
+        taskMatchCount > 0 ? `${taskMatchCount} task(s)` : null,
+        commentMatchCount > 0 ? `${commentMatchCount} comment(s)` : null,
+      ].filter(Boolean).join(", ");
+      toast({ title: "Tenant assigned", description: desc || undefined });
       // Update local state for all matching tasks
       setTasks(prev => prev.map(t =>
         t.task_id === task.task_id && t.tenant_id === null
