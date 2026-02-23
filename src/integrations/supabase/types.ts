@@ -47326,6 +47326,22 @@ export type Database = {
           video_url: string
         }[]
       }
+      search_unicorn1_users: {
+        Args: { p_search?: string; p_unmapped_only?: boolean }
+        Returns: {
+          Archived: boolean
+          Disabled: boolean
+          Discriminator: string
+          email: string
+          FirstName: string
+          ID: number
+          JobTitle: string
+          LastName: string
+          mapped_user_uuid: string
+          Phone: string
+          PhoneNumber: string
+        }[]
+      }
       search_vector_embeddings: {
         Args: {
           p_limit?: number
