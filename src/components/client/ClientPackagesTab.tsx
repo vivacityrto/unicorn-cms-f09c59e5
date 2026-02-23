@@ -6,6 +6,16 @@ import { Progress } from '@/components/ui/progress';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { 
   Package2, 
   Calendar, 
@@ -23,8 +33,10 @@ import {
   Timer,
   History,
   Archive,
-  Database
+  Database,
+  Flag
 } from 'lucide-react';
+import { toast } from 'sonner';
 import { ClientPackage } from '@/hooks/useClientManagement';
 import { PackageStagesManager } from './PackageStagesManager';
 import { PackageNotesSection } from './PackageNotesSection';
@@ -69,10 +81,34 @@ export function ClientPackagesTab({ tenantId, tenantName, packages, loading, onA
   const [packageNoteCounts, setPackageNoteCounts] = useState<Record<string, number>>({});
   const [viewMode, setViewMode] = useState<'active' | 'history'>('active');
 
+  const [finaliseTarget, setFinaliseTarget] = useState<ClientPackage | null>(null);
+  const [finalising, setFinalising] = useState(false);
+
   const activePackages = packages.filter(p => !p.is_complete);
   const historyPackages = packages.filter(p => p.is_complete);
   const displayedPackages = viewMode === 'active' ? activePackages : historyPackages;
 
+  const handleFinalisePackage = async () => {
+    if (!finaliseTarget) return;
+    setFinalising(true);
+    try {
+      const { error } = await supabase.rpc('transition_membership_state', {
+        p_instance_id: parseInt(finaliseTarget.id, 10),
+        p_new_state: 'complete',
+        p_reason: 'Package finalised by SuperAdmin',
+      });
+      if (error) throw error;
+      toast.success(`${finaliseTarget.package_name} finalised successfully`);
+      setFinaliseTarget(null);
+      // Trigger refresh via parent if available
+      onAddPackage?.();
+    } catch (err: any) {
+      console.error('Finalise error:', err);
+      toast.error(err.message || 'Failed to finalise package');
+    } finally {
+      setFinalising(false);
+    }
+  };
   // Fetch note counts for all package instances
   useEffect(() => {
     const fetchNoteCounts = async () => {
@@ -322,6 +358,20 @@ export function ClientPackagesTab({ tenantId, tenantName, packages, loading, onA
                         </Button>
                       </CollapsibleTrigger>
                     )}
+                    {isSuperAdmin() && !pkg.is_complete && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="gap-1"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setFinaliseTarget(pkg);
+                        }}
+                      >
+                        <Flag className="h-4 w-4" />
+                        Finalise
+                      </Button>
+                    )}
                     <Button 
                       variant="ghost" 
                       size="sm"
@@ -398,6 +448,24 @@ export function ClientPackagesTab({ tenantId, tenantName, packages, loading, onA
           </Collapsible>
         );
       })}
+
+      {/* Finalise Package Confirmation */}
+      <AlertDialog open={!!finaliseTarget} onOpenChange={(open) => !open && setFinaliseTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Finalise Package</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to finalise <strong>{finaliseTarget?.package_name}</strong>? This will mark the package as complete and can only be reversed via Data Manager.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={finalising}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleFinalisePackage} disabled={finalising}>
+              {finalising ? 'Finalising…' : 'Finalise Package'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
