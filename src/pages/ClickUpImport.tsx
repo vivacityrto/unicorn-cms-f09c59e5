@@ -79,25 +79,60 @@ export default function ClickUpImport() {
   // Fetch tasks based on filter
   const fetchTasks = useCallback(async () => {
     setTasksLoading(true);
-    let query = supabase
-      .from("clickup_tasks_api")
-      .select("id, task_id, custom_id, name, description, status, url, tenant_id")
-      .order("name", { ascending: true })
-      .limit(200);
+    const searchTerm = taskSearch.trim();
 
-    if (filterTenant === "unresolved") {
-      query = query.is("tenant_id", null);
-    } else if (filterTenant && filterTenant !== "all") {
-      query = query.eq("tenant_id", parseInt(filterTenant, 10));
+    // If there's an active search, search across ALL tasks (ignore tenant filter)
+    if (searchTerm) {
+      // Search by name, custom_id, or task_id using multiple queries
+      const searches = [
+        supabase.from("clickup_tasks_api")
+          .select("id, task_id, custom_id, name, description, status, url, tenant_id")
+          .ilike("name", `%${searchTerm}%`)
+          .order("name", { ascending: true })
+          .limit(200),
+        supabase.from("clickup_tasks_api")
+          .select("id, task_id, custom_id, name, description, status, url, tenant_id")
+          .ilike("custom_id", `%${searchTerm}%`)
+          .order("name", { ascending: true })
+          .limit(50),
+        supabase.from("clickup_tasks_api")
+          .select("id, task_id, custom_id, name, description, status, url, tenant_id")
+          .ilike("task_id", `%${searchTerm}%`)
+          .order("name", { ascending: true })
+          .limit(50),
+      ];
+      const [r1, r2, r3] = await Promise.all(searches);
+      // Deduplicate by id
+      const map = new Map<number, ClickUpTask>();
+      for (const row of [...(r1.data ?? []), ...(r2.data ?? []), ...(r3.data ?? [])]) {
+        map.set(row.id, row);
+      }
+      setTasks(Array.from(map.values()).sort((a, b) => (a.name ?? "").localeCompare(b.name ?? "")));
+    } else {
+      let query = supabase
+        .from("clickup_tasks_api")
+        .select("id, task_id, custom_id, name, description, status, url, tenant_id")
+        .order("name", { ascending: true })
+        .limit(200);
+
+      if (filterTenant === "unresolved") {
+        query = query.is("tenant_id", null);
+      } else if (filterTenant && filterTenant !== "all") {
+        query = query.eq("tenant_id", parseInt(filterTenant, 10));
+      }
+
+      const { data } = await query;
+      setTasks(data ?? []);
     }
-
-    const { data } = await query;
-    setTasks(data ?? []);
     setTasksLoading(false);
-  }, [filterTenant]);
+  }, [filterTenant, taskSearch]);
 
+  // Debounce search to avoid excessive queries
   useEffect(() => {
-    fetchTasks();
+    const timer = setTimeout(() => {
+      fetchTasks();
+    }, taskSearch.trim() ? 400 : 0);
+    return () => clearTimeout(timer);
   }, [fetchTasks]);
 
   const handleApiSync = async () => {
@@ -445,19 +480,9 @@ export default function ClickUpImport() {
               <p className="text-sm text-muted-foreground text-center py-8">No tasks found for this filter.</p>
             ) : (
               <>
-                {(() => {
-                  const searchLower = taskSearch.toLowerCase().trim();
-                  const filteredTasks = searchLower
-                    ? tasks.filter(t =>
-                        (t.name?.toLowerCase().includes(searchLower)) ||
-                        (t.custom_id?.toLowerCase().includes(searchLower))
-                      )
-                    : tasks;
-                  return (
-                    <>
-                      <p className="text-xs text-muted-foreground mb-2">
-                        {searchLower ? `${filteredTasks.length} of ${tasks.length}` : `${tasks.length}`} tasks shown (max 200)
-                      </p>
+                <p className="text-xs text-muted-foreground mb-2">
+                  {tasks.length} tasks shown (max 200){taskSearch.trim() ? " — searching all tasks" : ""}
+                </p>
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -469,7 +494,7 @@ export default function ClickUpImport() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filteredTasks.map(task => (
+                    {tasks.map(task => (
                       <TableRow key={task.id}>
                         <TableCell className="font-mono text-xs">{task.custom_id || "—"}</TableCell>
                         <TableCell className="max-w-[250px]">
@@ -502,9 +527,6 @@ export default function ClickUpImport() {
                     ))}
                   </TableBody>
                 </Table>
-                    </>
-                  );
-                })()}
               </>
             )}
           </CardContent>
