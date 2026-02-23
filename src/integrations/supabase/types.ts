@@ -6726,6 +6726,7 @@ export type Database = {
           notes: string | null
           on_hold_end_date: string | null
           on_hold_start_date: string | null
+          packageinstance_id: number | null
           parent_task_id: string | null
           phone: string | null
           priority: string | null
@@ -6785,6 +6786,7 @@ export type Database = {
           notes?: string | null
           on_hold_end_date?: string | null
           on_hold_start_date?: string | null
+          packageinstance_id?: number | null
           parent_task_id?: string | null
           phone?: string | null
           priority?: string | null
@@ -6844,6 +6846,7 @@ export type Database = {
           notes?: string | null
           on_hold_end_date?: string | null
           on_hold_start_date?: string | null
+          packageinstance_id?: number | null
           parent_task_id?: string | null
           phone?: string | null
           priority?: string | null
