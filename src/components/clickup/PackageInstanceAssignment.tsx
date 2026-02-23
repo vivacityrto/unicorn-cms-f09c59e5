@@ -301,7 +301,7 @@ export function PackageInstanceAssignment() {
                     </TableCell>
                     <TableCell className="text-sm">
                       <a
-                        href={`/admin/tenants/${task.tenant_id}`}
+                        href={`/tenant-detail/${task.tenant_id}`}
                         className="text-primary underline hover:text-primary/80"
                       >
                         {task.tenant_name}
