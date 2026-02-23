@@ -94,17 +94,31 @@ serve(async (req) => {
       title: n.title,
       content: n.note_details,
       type: n.note_type,
-      created: n.created_at,
+      created: n.created_at ? new Date(n.created_at).toLocaleDateString("en-AU") : null,
       parent_type: n.parent_type,
+    }));
+
+    const commentContextFormatted = (comments || []).map((c: any) => ({
+      task_id: c.task_id,
+      text: c.comment_text,
+      date: c.comment_date ? new Date(c.comment_date).toLocaleDateString("en-AU") : null,
+      by: c.comment_by,
     }));
 
     const systemPrompt = `You are an internal assistant for Vivacity Coaching & Consulting. You have been given ClickUp task data, ClickUp comments, and internal tenant notes for a specific client. Answer the user's question based only on this data. Use Australian date formats (dd/MM/yyyy). Be concise and factual. Format your response in markdown.
 
+When users ask for items on a specific date or date range:
+- Match notes, tasks, and comments by their created/comment date.
+- Accept flexible date formats (e.g. "17-Feb-2026", "17/02/2026", "February 2026").
+- If a month is given without a day, return all items from that month.
+- If no items match the date, say "No notes, tasks, or comments found for that date." clearly.
+- Always list matching items with their title/name, type, and date.
+
 ## Tasks (${taskContext.length} total)
 ${JSON.stringify(taskContext, null, 1)}
 
-## ClickUp Comments (${commentContext.length} total)
-${JSON.stringify(commentContext, null, 1)}
+## ClickUp Comments (${commentContextFormatted.length} total)
+${JSON.stringify(commentContextFormatted, null, 1)}
 
 ## Tenant Notes (${noteContext.length} total)
 ${JSON.stringify(noteContext, null, 1)}`;
