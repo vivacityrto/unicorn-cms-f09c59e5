@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { format, addYears, parseISO } from 'date-fns';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -6,19 +7,23 @@ import { Progress } from '@/components/ui/progress';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from '@/components/ui/dialog';
+import { cn } from '@/lib/utils';
 import { 
   Package2, 
-  Calendar, 
+  Calendar as CalendarIcon, 
   Clock, 
   AlertCircle, 
   CheckCircle2, 
@@ -83,24 +88,74 @@ export function ClientPackagesTab({ tenantId, tenantName, packages, loading, onA
 
   const [finaliseTarget, setFinaliseTarget] = useState<ClientPackage | null>(null);
   const [finalising, setFinalising] = useState(false);
+  const [finaliseEndDate, setFinaliseEndDate] = useState<Date | undefined>();
+  const [renewPackage, setRenewPackage] = useState(false);
+  const [renewalPackageId, setRenewalPackageId] = useState<string>('');
+  const [availablePackages, setAvailablePackages] = useState<{ id: number; name: string }[]>([]);
 
   const activePackages = packages.filter(p => !p.is_complete);
   const historyPackages = packages.filter(p => p.is_complete);
   const displayedPackages = viewMode === 'active' ? activePackages : historyPackages;
 
+  // Fetch available packages for renewal dropdown
+  useEffect(() => {
+    const fetchPackages = async () => {
+      const { data } = await supabase.from('packages').select('id, name').order('name');
+      if (data) setAvailablePackages(data);
+    };
+    fetchPackages();
+  }, []);
+
+  // When finalise target changes, set defaults
+  useEffect(() => {
+    if (finaliseTarget) {
+      const startDate = parseISO(finaliseTarget.membership_started_at);
+      setFinaliseEndDate(addYears(startDate, 1));
+      setRenewPackage(false);
+      setRenewalPackageId(String(finaliseTarget.package_id));
+    }
+  }, [finaliseTarget]);
+
   const handleFinalisePackage = async () => {
     if (!finaliseTarget) return;
     setFinalising(true);
     try {
+      // Update end_date on the package instance
+      if (finaliseEndDate) {
+        await (supabase as any)
+          .from('package_instances')
+          .update({ end_date: format(finaliseEndDate, 'yyyy-MM-dd') })
+          .eq('id', parseInt(finaliseTarget.id, 10));
+      }
+
+      // Transition state to complete
       const { error } = await supabase.rpc('transition_membership_state', {
         p_instance_id: parseInt(finaliseTarget.id, 10),
         p_new_state: 'complete',
         p_reason: 'Package finalised by SuperAdmin',
       });
       if (error) throw error;
-      toast.success(`${finaliseTarget.package_name} finalised successfully`);
+
+      // Create renewal instance if requested
+      if (renewPackage && renewalPackageId) {
+        const newStartDate = finaliseEndDate
+          ? format(finaliseEndDate, 'yyyy-MM-dd')
+          : format(new Date(), 'yyyy-MM-dd');
+
+        await (supabase as any)
+          .from('package_instances')
+          .insert({
+            tenant_id: tenantId,
+            package_id: parseInt(renewalPackageId, 10),
+            start_date: newStartDate,
+            is_active: true,
+            is_complete: false,
+            membership_state: 'active',
+          });
+      }
+
+      toast.success(`${finaliseTarget.package_name} finalised successfully${renewPackage ? ' — renewal created' : ''}`);
       setFinaliseTarget(null);
-      // Trigger refresh via parent if available
       onAddPackage?.();
     } catch (err: any) {
       console.error('Finalise error:', err);
@@ -287,7 +342,7 @@ export function ClientPackagesTab({ tenantId, tenantName, packages, loading, onA
                     {/* Stats Row */}
                     <div className="flex items-center gap-6 text-sm">
                       <div className="flex items-center gap-1 text-muted-foreground">
-                        <Calendar className="h-4 w-4" />
+                        <CalendarIcon className="h-4 w-4" />
                         <span>Started {new Date(pkg.membership_started_at).toLocaleDateString()}</span>
                       </div>
                       {pkg.is_complete && pkg.completed_at && (
@@ -449,23 +504,88 @@ export function ClientPackagesTab({ tenantId, tenantName, packages, loading, onA
         );
       })}
 
-      {/* Finalise Package Confirmation */}
-      <AlertDialog open={!!finaliseTarget} onOpenChange={(open) => !open && setFinaliseTarget(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Finalise Package</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to finalise <strong>{finaliseTarget?.package_name}</strong>? This will mark the package as complete and can only be reversed via Data Manager.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={finalising}>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleFinalisePackage} disabled={finalising}>
+      {/* Finalise Package Dialog */}
+      <Dialog open={!!finaliseTarget} onOpenChange={(open) => !open && setFinaliseTarget(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Finalise Package</DialogTitle>
+            <DialogDescription>
+              Finalise <strong>{finaliseTarget?.package_name}</strong>. This will mark the package as complete.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-2">
+            {/* End Date */}
+            <div className="space-y-2">
+              <Label>End Date</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "w-full justify-start text-left font-normal",
+                      !finaliseEndDate && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {finaliseEndDate ? format(finaliseEndDate, "PPP") : "Pick end date"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={finaliseEndDate}
+                    onSelect={setFinaliseEndDate}
+                    initialFocus
+                    className={cn("p-3 pointer-events-auto")}
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+
+            {/* Renewal Toggle */}
+            <div className="flex items-center justify-between rounded-lg border p-3">
+              <div className="space-y-0.5">
+                <Label htmlFor="renew-toggle">Renew Package</Label>
+                <p className="text-xs text-muted-foreground">Create a new package instance starting from the end date</p>
+              </div>
+              <Switch
+                id="renew-toggle"
+                checked={renewPackage}
+                onCheckedChange={setRenewPackage}
+              />
+            </div>
+
+            {/* Renewal Package Select */}
+            {renewPackage && (
+              <div className="space-y-2">
+                <Label>Renewal Package</Label>
+                <Select value={renewalPackageId} onValueChange={setRenewalPackageId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select package" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availablePackages.map(p => (
+                      <SelectItem key={p.id} value={String(p.id)}>
+                        {p.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setFinaliseTarget(null)} disabled={finalising}>
+              Cancel
+            </Button>
+            <Button onClick={handleFinalisePackage} disabled={finalising}>
               {finalising ? 'Finalising…' : 'Finalise Package'}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
