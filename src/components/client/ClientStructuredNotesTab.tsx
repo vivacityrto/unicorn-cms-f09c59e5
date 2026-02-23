@@ -27,6 +27,7 @@ import {
   ListTodo, ChevronDown, ChevronUp, Mic, MicOff, ExternalLink, Mail, CalendarIcon, X
 } from 'lucide-react';
 import { useSpeechToText } from '@/hooks/useSpeechToText';
+import { useVivacityTeamUsers } from '@/hooks/useVivacityTeamUsers';
 import { SelectSeparator } from '@/components/ui/select';
 import { formatDistanceToNow, format, fromUnixTime, isValid, startOfDay, endOfDay, isWithinInterval } from 'date-fns';
 import { Calendar } from '@/components/ui/calendar';
@@ -146,6 +147,8 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
   const [titleManuallyEdited, setTitleManuallyEdited] = useState(false);
   const [extractingTitle, setExtractingTitle] = useState(false);
   const titleExtractTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [notifyUserIds, setNotifyUserIds] = useState<string[]>([]);
+  const { data: vivacityTeam = [] } = useVivacityTeamUsers();
 
   // Auto-extract title from content using AI
   const extractTitle = useCallback(async (text: string) => {
@@ -410,6 +413,7 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
     setSelectedPackageInstanceId('none');
     setSelectedNote(null);
     setTitleManuallyEdited(false);
+    setNotifyUserIds([]);
   };
 
   const handleOpenAdd = () => {
@@ -512,6 +516,42 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
             }
           } catch (notifErr) {
             console.error('Failed to send CSC notification:', notifErr);
+          }
+        }
+
+        // Send notifications to selected "Notify" users
+        if (noteId && notifyUserIds.length > 0) {
+          try {
+            const { data: userData } = await supabase.auth.getUser();
+            const currentUserId = userData.user?.id;
+            if (currentUserId) {
+              const { data: authorUser } = await supabase
+                .from('users')
+                .select('first_name, last_name')
+                .eq('user_uuid', currentUserId)
+                .single();
+              const authorName = authorUser
+                ? `${authorUser.first_name || ''} ${authorUser.last_name || ''}`.trim()
+                : 'A team member';
+
+              const notifRows = notifyUserIds
+                .filter(uid => uid !== currentUserId)
+                .map(uid => ({
+                  user_id: uid,
+                  tenant_id: tenantId,
+                  title: 'Note shared with you',
+                  message: `${authorName} shared a note: "${(title || content.substring(0, 60)).trim()}${!title && content.length > 60 ? '...' : ''}"`,
+                  type: 'note_shared',
+                  link: `/tenant/${tenantId}`,
+                  created_by: currentUserId
+                }));
+
+              if (notifRows.length > 0) {
+                await supabase.from('user_notifications').insert(notifRows);
+              }
+            }
+          } catch (notifyErr) {
+            console.error('Failed to send notify notifications:', notifyErr);
           }
         }
       }
@@ -1422,6 +1462,41 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
             </div>
             
             
+            {/* Notify team members */}
+            <div className="space-y-2">
+              <Label className="flex items-center gap-1.5">
+                <Mail className="h-3.5 w-3.5" />
+                Notify (optional)
+              </Label>
+              <div className="flex flex-wrap gap-2">
+                {vivacityTeam.map((user) => (
+                  <Button
+                    key={user.user_uuid}
+                    type="button"
+                    variant={notifyUserIds.includes(user.user_uuid) ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setNotifyUserIds(prev => 
+                      prev.includes(user.user_uuid) 
+                        ? prev.filter(id => id !== user.user_uuid)
+                        : [...prev, user.user_uuid]
+                    )}
+                    className="gap-1.5"
+                  >
+                    <Avatar className="h-5 w-5">
+                      {user.avatar_url && <AvatarImage src={user.avatar_url} />}
+                      <AvatarFallback className="text-[9px]">
+                        {user.first_name?.[0]}{user.last_name?.[0]}
+                      </AvatarFallback>
+                    </Avatar>
+                    {user.first_name} {user.last_name}
+                  </Button>
+                ))}
+                {vivacityTeam.length === 0 && (
+                  <span className="text-xs text-muted-foreground">No team members available</span>
+                )}
+              </div>
+            </div>
+
             <div className="flex items-center gap-2">
               <Switch 
                 id="pinned"
