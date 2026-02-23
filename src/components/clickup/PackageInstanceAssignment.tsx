@@ -15,6 +15,7 @@ interface UnmatchedTask {
   name: string | null;
   tenant_id: number;
   tenant_name: string;
+  date_created: string | null;
   earliest_entry: string | null;
   latest_entry: string | null;
   packageinstance_id: number | null;
@@ -65,7 +66,7 @@ export function PackageInstanceAssignment() {
       // Get unmatched tasks (has tenant_id, no packageinstance_id)
       const { data: rawTasks, error } = await (supabase as any)
         .from("clickup_tasks_api")
-        .select("id, task_id, custom_id, name, tenant_id, packageinstance_id, tenants!clickup_tasks_api_tenant_id_fkey(name)")
+        .select("id, task_id, custom_id, name, tenant_id, packageinstance_id, date_created, tenants!clickup_tasks_api_tenant_id_fkey(name)")
         .not("tenant_id", "is", null)
         .is("packageinstance_id", null)
         .order("name", { ascending: true })
@@ -104,6 +105,7 @@ export function PackageInstanceAssignment() {
         name: t.name,
         tenant_id: t.tenant_id,
         tenant_name: t.tenants?.name?.trim() ?? `Tenant ${t.tenant_id}`,
+        date_created: t.date_created ?? null,
         earliest_entry: entryRanges[t.task_id]?.earliest ?? null,
         latest_entry: entryRanges[t.task_id]?.latest ?? null,
         packageinstance_id: t.packageinstance_id,
@@ -271,6 +273,7 @@ export function PackageInstanceAssignment() {
                 <TableHead>Custom ID</TableHead>
                 <TableHead>Task Name</TableHead>
                 <TableHead>Tenant</TableHead>
+                <TableHead>Created</TableHead>
                 <TableHead>Time Range</TableHead>
                 <TableHead className="min-w-[280px]">Package Instance</TableHead>
                 <TableHead className="w-[60px]"></TableHead>
@@ -281,11 +284,25 @@ export function PackageInstanceAssignment() {
                 const pkgs = getSortedPackages(task.tenant_id);
                 return (
                   <TableRow key={task.id}>
-                    <TableCell className="font-mono text-xs">{task.custom_id || "—"}</TableCell>
+                    <TableCell className="font-mono text-xs">
+                      {task.custom_id ? (
+                        <a
+                          href={`https://app.clickup.com/t/6919241/${task.custom_id}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-primary underline hover:text-primary/80"
+                        >
+                          {task.custom_id}
+                        </a>
+                      ) : "—"}
+                    </TableCell>
                     <TableCell className="max-w-[200px]">
                       <div className="truncate text-sm font-medium">{task.name || "—"}</div>
                     </TableCell>
                     <TableCell className="text-sm">{task.tenant_name}</TableCell>
+                    <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
+                      {fmtDate(task.date_created)}
+                    </TableCell>
                     <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
                       {task.earliest_entry ? (
                         <>
