@@ -627,8 +627,9 @@ function PaginationBar({
 
 // ── Main Tab Component ──────────────────────────────────────────────
 export function ClientTimeTab({ tenantId, tenantName }: ClientTimeTabProps) {
-  const { entries, loading } = useTimeTracking(tenantId);
+  const { entries, loading, refresh: refreshTimeTracking } = useTimeTracking(tenantId);
   const { profile } = useAuth();
+  const { toast } = useToast();
   const queryClient = useQueryClient();
   const membership = useTenantMemberships(tenantId);
   const [packageFilter, setPackageFilter] = useState('all');
@@ -710,10 +711,27 @@ export function ClientTimeTab({ tenantId, tenantName }: ClientTimeTabProps) {
   const handleWorkTypeFilter = (v: string) => { setWorkTypeFilter(v); setPage(1); };
 
   const handleRefresh = () => {
+    refreshTimeTracking();
     queryClient.invalidateQueries({ queryKey: ['package-burndown', tenantId] });
     queryClient.invalidateQueries({ queryKey: ['package-time-summary', tenantId] });
     queryClient.invalidateQueries({ queryKey: ['stale-drafts', tenantId] });
     queryClient.invalidateQueries({ queryKey: ['membership-combined-usage', tenantId] });
+  };
+
+  // Inline toggle billable
+  const handleToggleBillable = async (entry: TimeEntry) => {
+    const newVal = !entry.is_billable;
+    const { error } = await supabase
+      .from('time_entries')
+      .update({ is_billable: newVal, updated_at: new Date().toISOString() } as any)
+      .eq('id', entry.id);
+
+    if (error) {
+      toast({ title: 'Failed to update billable', description: error.message, variant: 'destructive' });
+      return;
+    }
+    toast({ title: newVal ? 'Marked as billable' : 'Marked as non-billable' });
+    handleRefresh();
   };
 
   if (loading) {
@@ -872,13 +890,20 @@ export function ClientTimeTab({ tenantId, tenantName }: ClientTimeTabProps) {
                         </Badge>
                       </TableCell>
                       <TableCell>
-                        {entry.is_billable ? (
-                          <Badge variant="default" className="text-xs gap-1">
-                            <DollarSign className="h-3 w-3" /> Yes
-                          </Badge>
-                        ) : (
-                          <span className="text-xs text-muted-foreground">No</span>
-                        )}
+                        <button
+                          type="button"
+                          onClick={() => handleToggleBillable(entry)}
+                          className="cursor-pointer hover:opacity-80 transition-opacity"
+                          title={`Click to mark as ${entry.is_billable ? 'non-billable' : 'billable'}`}
+                        >
+                          {entry.is_billable ? (
+                            <Badge variant="default" className="text-xs gap-1">
+                              <DollarSign className="h-3 w-3" /> Yes
+                            </Badge>
+                          ) : (
+                            <span className="text-xs text-muted-foreground">No</span>
+                          )}
+                        </button>
                       </TableCell>
                       <TableCell className="max-w-[200px] truncate text-sm text-muted-foreground">
                         {entry.notes || '—'}

@@ -223,7 +223,7 @@ export function EditTimeDialog({ open, onOpenChange, entry, onSuccess }: EditTim
 
     setSaving(true);
     try {
-      const { error } = await supabase
+      const { data: updated, error } = await supabase
         .from('time_entries')
         .update({
           duration_minutes: totalMinutes,
@@ -237,9 +237,12 @@ export function EditTimeDialog({ open, onOpenChange, entry, onSuccess }: EditTim
           user_id: selectedUserId || entry.user_id,
           updated_at: new Date().toISOString(),
         } as any)
-        .eq('id', entry.id);
+        .eq('id', entry.id)
+        .select()
+        .single();
 
       if (error) throw error;
+      if (!updated) throw new Error('No rows updated — entry may have been deleted');
 
       // Log notify intent
       if (notifyUserId) {
