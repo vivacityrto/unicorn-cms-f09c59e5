@@ -617,14 +617,15 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
       return true;
     });
 
-  // Filter ClickUp tasks by date range
+  // Filter ClickUp tasks by date range — prefer date_of_last_contact, fall back to date_created
   const filteredClickupTasks = clickupTasks.filter(task => {
     if (!dateFrom && !dateTo) return true;
-    const rawTs = task.date_created;
+    // Use date_of_last_contact (most relevant activity date), then date_created as fallback
+    const rawTs = task.date_of_last_contact ?? task.date_created;
     if (!rawTs) return true;
     try {
       const ts = Number(rawTs);
-      const d = isNaN(ts) ? new Date(rawTs) : fromUnixTime(ts / 1000);
+      const d = isNaN(ts) ? new Date(String(rawTs)) : new Date(ts);
       if (!isValid(d)) return true;
       if (dateFrom && d < startOfDay(dateFrom)) return false;
       if (dateTo && d > endOfDay(dateTo)) return false;
