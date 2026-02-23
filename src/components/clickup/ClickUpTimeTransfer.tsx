@@ -49,7 +49,7 @@ export function ClickUpTimeTransfer() {
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [transferring, setTransferring] = useState(false);
   const [userMap, setUserMap] = useState<UserMap>(new Map());
-  const [packageInstances, setPackageInstances] = useState<{ id: number; package_name: string; start_date: string | null; end_date: string | null; is_active: boolean; logged_minutes: number }[]>([]);
+  const [packageInstances, setPackageInstances] = useState<{ id: number; package_id: number; package_name: string; start_date: string | null; end_date: string | null; is_active: boolean; logged_minutes: number }[]>([]);
   const [packagesLoading, setPackagesLoading] = useState(false);
   const { toast } = useToast();
 
@@ -127,6 +127,7 @@ export function ClickUpTimeTransfer() {
 
         setPackageInstances(instances.map((i: any) => ({
           id: i.id,
+          package_id: i.package_id,
           package_name: pkgMap.get(i.package_id) ?? `Package #${i.package_id}`,
           start_date: i.start_date,
           end_date: i.end_date,
@@ -277,7 +278,7 @@ export function ClickUpTimeTransfer() {
       const rows = toTransfer.map(i => ({
         tenant_id: selectedTenantId,
         client_id: selectedTenantId,
-        package_id: currentTask.packageinstance_id,
+        package_id: packageInstances.find(pi => pi.id === currentTask.packageinstance_id)?.package_id ?? currentTask.packageinstance_id,
         package_instance_id: currentTask.packageinstance_id,
         user_id: userMap.get(i.user_email?.toLowerCase() ?? "") ?? null,
         work_type: "general",
