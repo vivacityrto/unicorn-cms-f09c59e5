@@ -299,7 +299,14 @@ export function PackageInstanceAssignment() {
                     <TableCell className="max-w-[200px]">
                       <div className="truncate text-sm font-medium">{task.name || "—"}</div>
                     </TableCell>
-                    <TableCell className="text-sm">{task.tenant_name}</TableCell>
+                    <TableCell className="text-sm">
+                      <a
+                        href={`/admin/tenants/${task.tenant_id}`}
+                        className="text-primary underline hover:text-primary/80"
+                      >
+                        {task.tenant_name}
+                      </a>
+                    </TableCell>
                     <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
                       {fmtDate(task.date_created)}
                     </TableCell>
