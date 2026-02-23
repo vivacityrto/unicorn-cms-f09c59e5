@@ -291,44 +291,47 @@ export function EditTimeDialog({ open, onOpenChange, entry, onSuccess }: EditTim
             </Select>
           </div>
 
-          {/* Scope selector */}
-          <div className="space-y-2">
-            <Label>Allocation</Label>
-            <ScopeSelectorBadge value={scopeTag} onChange={setScopeTag} showSelector />
-          </div>
+          {/* Package + Allocation side by side */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {/* Package (left) */}
+            <div className="space-y-2">
+              <Label>Package</Label>
+              {activeInstances.length === 0 && (
+                <Input value="No packages" readOnly className="bg-muted" />
+              )}
+              {activeInstances.length === 1 && (
+                <Input value={activeInstances[0].package_name} readOnly className="bg-muted" />
+              )}
+              {activeInstances.length > 1 && (
+                <Select
+                  value={selectedInstanceId?.toString() ?? ''}
+                  onValueChange={(v) => {
+                    const id = Number(v);
+                    setSelectedInstanceId(id);
+                    const inst = activeInstances.find((i) => i.id === id);
+                    if (inst?.is_kickstart) setIsBillable(false);
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a package..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {activeInstances.map((inst) => (
+                      <SelectItem key={inst.id} value={inst.id.toString()}>
+                        {inst.package_name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            </div>
 
-          {/* Package instance selector */}
-          {activeInstances.length === 1 && (
+            {/* Allocation (right) */}
             <div className="space-y-2">
-              <Label>Package</Label>
-              <Input value={activeInstances[0].package_name} readOnly className="bg-muted" />
+              <Label>Allocation</Label>
+              <ScopeSelectorBadge value={scopeTag} onChange={setScopeTag} showSelector />
             </div>
-          )}
-          {activeInstances.length > 1 && (
-            <div className="space-y-2">
-              <Label>Package</Label>
-              <Select
-                value={selectedInstanceId?.toString() ?? ''}
-                onValueChange={(v) => {
-                  const id = Number(v);
-                  setSelectedInstanceId(id);
-                  const inst = activeInstances.find((i) => i.id === id);
-                  if (inst?.is_kickstart) setIsBillable(false);
-                }}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select a package..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {activeInstances.map((inst) => (
-                    <SelectItem key={inst.id} value={inst.id.toString()}>
-                      {inst.package_name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          )}
+          </div>
 
           {/* Duration */}
           <div className="space-y-2">

@@ -33,6 +33,7 @@ import {
   ChevronRight,
   RotateCcw,
   Pencil,
+  Mail,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { EditTimeDialog } from './EditTimeDialog';
@@ -638,6 +639,25 @@ export function ClientTimeTab({ tenantId, tenantName }: ClientTimeTabProps) {
   const [reallocateEntry, setReallocateEntry] = useState<TimeEntry | null>(null);
   const [editEntry, setEditEntry] = useState<TimeEntry | null>(null);
 
+  // Fetch user names for entries
+  const userIds = useMemo(() => [...new Set(entries.map(e => e.user_id).filter(Boolean))], [entries]);
+  const { data: userMap = {} } = useQuery({
+    queryKey: ['entry-user-names', userIds],
+    queryFn: async () => {
+      if (userIds.length === 0) return {};
+      const { data } = await (supabase as any)
+        .from('users')
+        .select('user_uuid, first_name, last_name')
+        .in('user_uuid', userIds);
+      const map: Record<string, string> = {};
+      (data || []).forEach((u: any) => {
+        map[u.user_uuid] = [u.first_name, u.last_name].filter(Boolean).join(' ') || 'Unknown';
+      });
+      return map;
+    },
+    enabled: userIds.length > 0,
+  });
+
   const isAdminOrStaff =
     profile?.global_role === 'SuperAdmin' ||
     profile?.unicorn_role === 'Super Admin' ||
@@ -735,6 +755,27 @@ export function ClientTimeTab({ tenantId, tenantName }: ClientTimeTabProps) {
           <div className="flex items-center justify-between flex-wrap gap-3">
             <CardTitle className="text-base">Time Entries</CardTitle>
             <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 gap-1 text-xs"
+                onClick={() => {
+                  const lines = filteredEntries.map(e => {
+                    const d = e.start_at ? format(new Date(e.start_at), 'd MMM yyyy') : 'N/A';
+                    const user = userMap[e.user_id] || 'Unknown';
+                    const dur = formatDuration(e.duration_minutes);
+                    const type = e.work_type.replace('_', ' ');
+                    const billable = e.is_billable ? 'Yes' : 'No';
+                    const note = e.notes || '';
+                    return `${d} | ${user} | ${dur} | ${type} | Billable: ${billable} | ${note}`;
+                  });
+                  const subject = encodeURIComponent(`Time Entries - ${tenantName}`);
+                  const body = encodeURIComponent(`Time Entries for ${tenantName}\n\n${lines.join('\n')}`);
+                  window.open(`mailto:?subject=${subject}&body=${body}`, '_self');
+                }}
+              >
+                <Mail className="h-3.5 w-3.5" /> Email
+              </Button>
               {hasMultiplePackages && (
                 <Select value={packageFilter} onValueChange={handlePackageFilter}>
                   <SelectTrigger className="w-[180px]">
@@ -776,10 +817,10 @@ export function ClientTimeTab({ tenantId, tenantName }: ClientTimeTabProps) {
             <>
               <Table>
                 <TableHeader>
-                  <TableRow>
+                   <TableRow>
                     <TableHead>Date</TableHead>
+                    <TableHead>User</TableHead>
                     <TableHead>Duration</TableHead>
-                    <TableHead>Scope</TableHead>
                     <TableHead>Type</TableHead>
                     <TableHead>Source</TableHead>
                     <TableHead>Billable</TableHead>
@@ -795,13 +836,11 @@ export function ClientTimeTab({ tenantId, tenantName }: ClientTimeTabProps) {
                           ? format(new Date(entry.start_at), 'd MMM yyyy')
                           : 'N/A'}
                       </TableCell>
+                      <TableCell className="text-sm whitespace-nowrap">
+                        {userMap[entry.user_id] || '—'}
+                      </TableCell>
                       <TableCell className="font-medium">
                         {formatDuration(entry.duration_minutes)}
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="outline" className="text-xs">
-                          {SCOPE_SHORT[(entry.scope_tag as ScopeTag) || 'both']}
-                        </Badge>
                       </TableCell>
                       <TableCell>
                         <Badge variant="secondary" className="capitalize">
