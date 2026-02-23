@@ -388,7 +388,7 @@ export function useAllSeatScorecards() {
     queryFn: async () => {
       if (!tenantId) return [];
 
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from('seat_scorecards')
         .select(`
           *,
