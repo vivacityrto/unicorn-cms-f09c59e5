@@ -73,6 +73,8 @@ export function EditTimeDialog({ open, onOpenChange, entry, onSuccess }: EditTim
   const [selectedInstanceId, setSelectedInstanceId] = useState<number | null>(null);
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
   const [notifyUserId, setNotifyUserId] = useState<string>('');
+  const [vivacityStaff, setVivacityStaff] = useState<TeamMember[]>([]);
+  const [selectedUserId, setSelectedUserId] = useState<string>('');
 
   // Fetch work types
   useEffect(() => {
@@ -86,7 +88,7 @@ export function EditTimeDialog({ open, onOpenChange, entry, onSuccess }: EditTim
     })();
   }, []);
 
-  // Fetch team members for notify selector
+  // Fetch Vivacity staff and team members for selectors
   useEffect(() => {
     if (!open || !entry) return;
     (async () => {
@@ -97,6 +99,8 @@ export function EditTimeDialog({ open, onOpenChange, entry, onSuccess }: EditTim
         .eq('user_type', 'Vivacity Team')
         .order('first_name')
         .limit(200);
+
+      setVivacityStaff((staffData || []) as TeamMember[]);
 
       let tenantUsers: TeamMember[] = [];
       if (entry.tenant_id) {
@@ -184,6 +188,7 @@ export function EditTimeDialog({ open, onOpenChange, entry, onSuccess }: EditTim
       setIsBillable(entry.is_billable);
       setScopeTag((entry.scope_tag as ScopeTag) || 'both');
       setSelectedInstanceId(entry.package_id || null);
+      setSelectedUserId(entry.user_id || user?.id || '');
       setNotifyUserId('');
     }
   }, [entry, open]);
@@ -213,6 +218,7 @@ export function EditTimeDialog({ open, onOpenChange, entry, onSuccess }: EditTim
           scope_tag: scopeTag,
           package_id: selectedInstanceId,
           package_instance_id: selectedInstanceId,
+          user_id: selectedUserId || entry.user_id,
           updated_at: new Date().toISOString(),
         } as any)
         .eq('id', entry.id);
@@ -252,6 +258,39 @@ export function EditTimeDialog({ open, onOpenChange, entry, onSuccess }: EditTim
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Person selector */}
+          <div className="space-y-2">
+            <Label>Person</Label>
+            <Select value={selectedUserId} onValueChange={setSelectedUserId}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select person..." />
+              </SelectTrigger>
+              <SelectContent>
+                {/* Current user option (always present) */}
+                {user?.id && (
+                  <SelectItem value={user.id}>
+                    <span className="font-medium">Me (current user)</span>
+                  </SelectItem>
+                )}
+                {vivacityStaff
+                  .filter(m => m.user_uuid !== user?.id)
+                  .map(member => (
+                    <SelectItem key={member.user_uuid} value={member.user_uuid}>
+                      <div className="flex items-center gap-2">
+                        <Avatar className="h-5 w-5">
+                          <AvatarImage src={member.avatar_url || undefined} />
+                          <AvatarFallback className="text-[9px]">
+                            {member.first_name?.[0]}{member.last_name?.[0]}
+                          </AvatarFallback>
+                        </Avatar>
+                        {member.first_name} {member.last_name}
+                      </div>
+                    </SelectItem>
+                  ))}
+              </SelectContent>
+            </Select>
+          </div>
+
           {/* Scope selector */}
           <div className="space-y-2">
             <Label>Allocation</Label>
