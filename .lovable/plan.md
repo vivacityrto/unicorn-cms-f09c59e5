@@ -1,76 +1,48 @@
 
+# Fix: ClickUp Comments Not Showing for Tenant
 
-## Issue 1: Code Tables Not Showing Up
+## Problem
 
-**Root Cause**: The `list_code_tables` RPC checks the `users.role` column in the database, but your user record has `role = 'Client Child'` instead of `'Super Admin'`. Your JWT metadata says "Super Admin" but the database row disagrees -- likely the role was overwritten by a recent migration or user management action.
+The "Structured Notes" tab queries `clickup_task_comments` filtered by `tenant_id = 7536`, but the 15 comments for task `86d17h5q5` all have `tenant_id = null`. This means they are invisible on the tenant page.
 
-**Fix**: Run a SQL update to correct your role in the `users` table, and also make the RPC more resilient by checking JWT metadata as a fallback:
+This happened because the task was assigned to a tenant before the comment propagation logic was added. The recent fix only applies going forward when a tenant is manually assigned via the ClickUp Sync page.
 
-1. **Database fix** -- Update your user role:
-   ```text
-   UPDATE public.users SET role = 'Super Admin' WHERE user_uuid = '551f13b0-...';
-   ```
-2. **No code changes needed** -- Once the database role is corrected, the existing `list_code_tables` RPC will work again.
+## Root Cause
 
----
+- `ClientStructuredNotesTab.tsx` line 319: `loadApiComments` queries `.eq('tenant_id', tenantId)` -- comments with null tenant_id are excluded
+- The 15 existing comments were never backfilled with the correct tenant_id
 
-## Issue 2: Import ClickUp Time Tracking into Unicorn 2.0
+## Plan
 
-**What exists today**:
-- The `sync-clickup-tasks` edge function already syncs tasks from ClickUp and stores `time_spent` / `time_estimate` (milliseconds) on `clickup_tasks_api`, but these come from the task object itself and are often empty.
-- ClickUp has a **dedicated Time Tracking API** (`GET /task/{task_id}/time`) that returns individual time entries with start/end times, durations, and who logged them.
+### Step 1: Backfill existing orphaned comments (database fix)
 
-**Plan**: Create a new edge function `sync-clickup-time` that fetches detailed time entries from ClickUp and either stores them in a new `clickup_time_entries` table or maps them directly into the existing `time_entries` table.
+Run a one-time UPDATE to propagate `tenant_id` from `clickup_tasks_api` to `clickup_task_comments` wherever comments have a null `tenant_id` but their parent task already has one assigned.
 
-### Database Changes
+```sql
+UPDATE clickup_task_comments c
+SET tenant_id = t.tenant_id
+FROM clickup_tasks_api t
+WHERE c.task_id = t.task_id
+  AND t.tenant_id IS NOT NULL
+  AND c.tenant_id IS NULL;
+```
 
-Create a staging table `clickup_time_entries` to store raw ClickUp time data before mapping:
+This is a safe, idempotent operation that only fills in missing tenant_ids.
 
-| Column | Type | Purpose |
-|--------|------|---------|
-| id | bigserial | PK |
-| clickup_interval_id | text (unique) | ClickUp's time entry ID |
-| task_id | text | ClickUp task ID |
-| tenant_id | integer | Resolved from task |
-| user_name | text | Who logged it in ClickUp |
-| user_email | text | For matching to Unicorn users |
-| duration_ms | bigint | Duration in milliseconds |
-| duration_minutes | integer | Computed (ms / 60000) |
-| start_at | timestamptz | When work started |
-| end_at | timestamptz | When work ended |
-| description | text | ClickUp time entry notes |
-| billable | boolean | ClickUp billable flag |
-| imported_to_time_entries | boolean | Whether mapped to Unicorn |
-| imported_at | timestamptz | When fetched |
+### Step 2: Update the comment fetch after "Fetch from API" (code fix)
 
-RLS: Read access for Vivacity staff, write via service role only.
+In `ClientStructuredNotesTab.tsx`, after the edge function fetches and stores comments for a task, the local refresh query (line 343-347) does not filter by `tenant_id`. However, the newly fetched comments from the edge function may also have null `tenant_id` if the edge function does not know the tenant context.
 
-### Edge Function: `sync-clickup-time`
+Update `handleFetchTaskComments` to also update the `tenant_id` on the freshly fetched comments in the database before reloading them. This ensures that when comments are fetched from ClickUp API for a task that already has a tenant assigned, the comments immediately get the correct `tenant_id`.
 
-- **Mode `sync_all`**: For each task in `clickup_tasks_api`, call `GET /task/{task_id}/time` with rate limiting (650ms), flatten entries, and upsert into `clickup_time_entries`.
-- **Mode `sync_by_tenant`**: Same but scoped to tasks matching a given `tenant_id`.
-- **Batch processing**: Process tasks in batches of 50 with resumable pagination.
-- **Tenant resolution**: Copy `tenant_id` from the parent `clickup_tasks_api` row.
+### Step 3: Defensive query fallback (code fix)
 
-### UI Integration
-
-Add a "Sync Time Entries" button/section to the existing ClickUp Sync admin page (`/admin/clickup-import`), showing:
-- Count of ClickUp time entries imported
-- A button to trigger the sync
-- Status/progress feedback
+Update `loadApiComments` to also include comments where `tenant_id` is null but the `task_id` matches a task linked to this tenant. This provides a safety net so comments are never silently hidden.
 
 ### Technical Details
 
-- **Files to create**:
-  - `supabase/functions/sync-clickup-time/index.ts` -- new edge function
-  - Database migration for `clickup_time_entries` table
+**Files to modify:**
+- `src/components/client/ClientStructuredNotesTab.tsx` -- Update `handleFetchTaskComments` to set `tenant_id` on comments after fetch; update `loadApiComments` to handle the edge case
+- New database migration -- Backfill orphaned comments with correct `tenant_id`
 
-- **Files to modify**:
-  - The ClickUp import/sync admin page to add the time sync UI section
-
-- **ClickUp API endpoint**: `GET /api/v2/task/{task_id}/time` returns an array of time intervals with `id`, `start`, `end`, `time` (duration ms), `user`, `billable`, and `description`.
-
-- **Rate limiting**: Same 650ms delay pattern as existing `sync-clickup-tasks`.
-
-- **Future phase**: A separate mapping step could match ClickUp users to Unicorn users and create proper `time_entries` records with the `source = 'clickup'` tag. This would be a follow-up feature.
-
+**Impact:** All 15 comments for Triquetra Visions (and any other tenants with the same orphan issue) will become visible immediately after the backfill. Future comment fetches will correctly inherit the tenant_id.
