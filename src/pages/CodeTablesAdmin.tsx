@@ -3,6 +3,7 @@ import { useCodeTables, useTableData } from "@/hooks/useCodeTables";
 import { CodeTableSidebar } from "@/components/admin/CodeTableSidebar";
 import { CodeTableDataGrid } from "@/components/admin/CodeTableDataGrid";
 import { CodeRowDialog } from "@/components/admin/CodeRowDialog";
+import { DashboardLayout } from "@/components/DashboardLayout";
 import type { CodeTableRow } from "@/services/codeTablesService";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel,
@@ -65,56 +66,58 @@ export default function CodeTablesAdmin() {
   }
 
   return (
-    <div className="flex h-[calc(100vh-4rem)] bg-background">
-      <CodeTableSidebar
-        tables={tables}
-        selectedTable={selectedTable}
-        onSelect={setSelectedTable}
-        loading={tablesLoading}
-      />
-      <CodeTableDataGrid
-        table={selectedMeta}
-        data={data}
-        loading={dataLoading}
-        onAdd={() => openDialog("create")}
-        onEdit={(row) => openDialog("edit", row)}
-        onDuplicate={(row) => openDialog("duplicate", row)}
-        onDelete={(row) => setDeleteTarget(row)}
-      />
+    <DashboardLayout>
+      <div className="flex h-[calc(100vh-10rem)] bg-background rounded-lg border overflow-hidden">
+        <CodeTableSidebar
+          tables={tables}
+          selectedTable={selectedTable}
+          onSelect={setSelectedTable}
+          loading={tablesLoading}
+        />
+        <CodeTableDataGrid
+          table={selectedMeta}
+          data={data}
+          loading={dataLoading}
+          onAdd={() => openDialog("create")}
+          onEdit={(row) => openDialog("edit", row)}
+          onDuplicate={(row) => openDialog("duplicate", row)}
+          onDelete={(row) => setDeleteTarget(row)}
+        />
 
-      {/* Create/Edit/Duplicate Dialog */}
-      <CodeRowDialog
-        open={dialogOpen}
-        onClose={() => setDialogOpen(false)}
-        mode={dialogMode}
-        columns={columns}
-        row={dialogRow}
-        onSave={handleSave}
-        saving={createRow.isPending || updateRow.isPending}
-      />
+        {/* Create/Edit/Duplicate Dialog */}
+        <CodeRowDialog
+          open={dialogOpen}
+          onClose={() => setDialogOpen(false)}
+          mode={dialogMode}
+          columns={columns}
+          row={dialogRow}
+          onSave={handleSave}
+          saving={createRow.isPending || updateRow.isPending}
+        />
 
-      {/* Delete Confirmation */}
-      <AlertDialog open={!!deleteTarget} onOpenChange={(v) => !v && setDeleteTarget(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete Row</AlertDialogTitle>
-            <AlertDialogDescription>
-              {selectedMeta?.columns.some((c) => c.column_name === "is_active")
-                ? "This will deactivate the row (soft delete). Are you sure?"
-                : "This will permanently delete the row. This action cannot be undone."}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDeleteConfirm}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </div>
+        {/* Delete Confirmation */}
+        <AlertDialog open={!!deleteTarget} onOpenChange={(v) => !v && setDeleteTarget(null)}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete Row</AlertDialogTitle>
+              <AlertDialogDescription>
+                {selectedMeta?.columns.some((c) => c.column_name === "is_active")
+                  ? "This will deactivate the row (soft delete). Are you sure?"
+                  : "This will permanently delete the row. This action cannot be undone."}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={handleDeleteConfirm}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                Delete
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      </div>
+    </DashboardLayout>
   );
 }
