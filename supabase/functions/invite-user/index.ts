@@ -275,10 +275,13 @@ serve(async (req) => {
         .maybeSingle();
 
       if (existingTu) {
-        return jsonResponse(409, {
-          ok: false,
-          code: 'ALREADY_MEMBER',
+        console.log(`[skip_email] ${payload.email} is already a member of tenant ${payload.tenant_id}, returning success`);
+        return jsonResponse(200, {
+          ok: true,
           detail: `${payload.email} is already a member of this tenant`,
+          user_uuid: userUuid,
+          skipped_email: true,
+          already_member: true,
         });
       }
 
