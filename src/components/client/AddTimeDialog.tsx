@@ -106,6 +106,7 @@ export function AddTimeDialog({
         .from('users')
         .select('user_uuid, first_name, last_name, avatar_url')
         .eq('disabled', false)
+        .eq('is_team', true)
         .order('first_name')
         .limit(200);
       if (data) setTeamMembers((data as TeamMember[]).filter(m => m.user_uuid !== user?.id));
