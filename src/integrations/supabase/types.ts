@@ -12347,6 +12347,33 @@ export type Database = {
         }
         Relationships: []
       }
+      dd_work_types: {
+        Row: {
+          code: string
+          created_at: string
+          id: number
+          is_active: boolean
+          label: string
+          sort_order: number
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          id?: number
+          is_active?: boolean
+          label: string
+          sort_order?: number
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          id?: number
+          is_active?: boolean
+          label?: string
+          sort_order?: number
+        }
+        Relationships: []
+      }
       doc_chunks: {
         Row: {
           chunk_index: number
