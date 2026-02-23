@@ -42,7 +42,7 @@ export const WeekTasksTable = () => {
         .lt("due_date", today)
         .neq("status", "completed");
 
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from("tasks_tenants")
         .select(`
           id,
@@ -70,7 +70,7 @@ export const WeekTasksTable = () => {
         const { data: usersData } = await supabase
           .from("users")
           .select("user_uuid, first_name, last_name, avatar_url")
-          .in("user_uuid", allFollowerIds);
+          .in("user_uuid", allFollowerIds as string[]);
         followerUsers = usersData || [];
       }
 

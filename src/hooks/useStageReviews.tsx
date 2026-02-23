@@ -44,7 +44,7 @@ export function useStageReviews() {
   }) => {
     setLoading(true);
     try {
-      let query = supabase
+      let query = (supabase as any)
         .from('stage_release_reviews')
         .select(`
           *,
@@ -79,7 +79,7 @@ export function useStageReviews() {
 
   const fetchReviewForRelease = useCallback(async (stageReleaseId: string): Promise<StageReleaseReview | null> => {
     try {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from('stage_release_reviews')
         .select(`
           *,
