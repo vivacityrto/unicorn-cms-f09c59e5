@@ -48,65 +48,17 @@ serve(async (req) => {
 
     const { search, unmapped_only } = await req.json();
 
-    // Query unicorn1.users using raw SQL since it's a different schema
-    let query = `
-      SELECT "ID", "FirstName", "LastName", email, "JobTitle", "Phone", "PhoneNumber",
-             "Discriminator", "Archived", "Disabled", mapped_user_uuid
-      FROM unicorn1.users
-      WHERE is_deleted = false
-    `;
-    const params: string[] = [];
-
-    if (unmapped_only !== false) {
-      query += ` AND mapped_user_uuid IS NULL`;
-    }
-
-    if (search && search.trim().length >= 2) {
-      params.push(`%${search.trim().toLowerCase()}%`);
-      query += ` AND (
-        LOWER("FirstName") LIKE $${params.length}
-        OR LOWER("LastName") LIKE $${params.length}
-        OR LOWER(email) LIKE $${params.length}
-      )`;
-    }
-
-    query += ` ORDER BY "FirstName", "LastName" LIMIT 50`;
-
-    const { data, error } = await supabase.rpc("exec_sql", {
-      query,
-      params,
+    // Use RPC to query unicorn1 schema since PostgREST only exposes public schema
+    const searchTerm = search?.trim() || "";
+    const { data, error } = await supabase.rpc("search_unicorn1_users", {
+      p_search: searchTerm,
+      p_unmapped_only: unmapped_only !== false,
     });
 
-    // Fallback: direct table query if RPC doesn't exist
     if (error) {
-      // Use a simpler approach - query the table directly with service role
-      let q = supabase
-        .schema("unicorn1" as any)
-        .from("users")
-        .select("ID, FirstName, LastName, email, JobTitle, Phone, PhoneNumber, Discriminator, Archived, Disabled, mapped_user_uuid")
-        .eq("is_deleted", false)
-        .order("FirstName", { ascending: true })
-        .limit(50);
-
-      if (unmapped_only !== false) {
-        q = q.is("mapped_user_uuid", null);
-      }
-
-      if (search && search.trim().length >= 2) {
-        q = q.or(`FirstName.ilike.%${search.trim()}%,LastName.ilike.%${search.trim()}%,email.ilike.%${search.trim()}%`);
-      }
-
-      const { data: fallbackData, error: fallbackError } = await q;
-      
-      if (fallbackError) {
-        console.error("Query error:", fallbackError);
-        return new Response(JSON.stringify({ error: fallbackError.message }), {
-          status: 500,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-
-      return new Response(JSON.stringify({ users: fallbackData || [] }), {
+      console.error("RPC error:", error);
+      return new Response(JSON.stringify({ error: error.message }), {
+        status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
