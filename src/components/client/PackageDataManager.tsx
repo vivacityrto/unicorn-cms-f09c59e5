@@ -28,6 +28,7 @@ interface PackageDataManagerProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   tenantId: number;
+  tenantName?: string;
   onSuccess?: () => void;
 }
 
@@ -49,7 +50,7 @@ interface RowEdits {
   is_complete?: boolean;
 }
 
-export function PackageDataManager({ open, onOpenChange, tenantId, onSuccess }: PackageDataManagerProps) {
+export function PackageDataManager({ open, onOpenChange, tenantId, tenantName, onSuccess }: PackageDataManagerProps) {
   const [rows, setRows] = useState<PackageInstanceRow[]>([]);
   const [loading, setLoading] = useState(false);
   const [edits, setEdits] = useState<Record<number, RowEdits>>({});
@@ -207,7 +208,7 @@ export function PackageDataManager({ open, onOpenChange, tenantId, onSuccess }: 
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Database className="h-5 w-5" />
-            Package Data Manager
+            Package Data Manager {tenantName ? `— ${tenantName}` : ''}
           </DialogTitle>
           <DialogDescription>
             View and edit all package instances for this tenant. Changes are saved per row.
