@@ -801,8 +801,8 @@ export function ClientTimeTab({ tenantId, tenantName }: ClientTimeTabProps) {
                     notes: Math.max(...all.map(r => r.notes.length)),
                   };
                   const fmt = (r: typeof header) =>
-                    `${r.date.padEnd(w.date)}  ${r.user.padEnd(w.user)}  ${r.dur.padEnd(w.dur)}  ${r.type.padEnd(w.type)}  ${r.billable.padEnd(w.billable)}  ${r.notes}`;
-                  const sep = '-'.repeat(w.date + w.user + w.dur + w.type + w.billable + w.notes + 10);
+                    `| ${r.date.padEnd(w.date)} | ${r.user.padEnd(w.user)} | ${r.dur.padEnd(w.dur)} | ${r.type.padEnd(w.type)} | ${r.billable.padEnd(w.billable)} | ${r.notes.padEnd(w.notes)} |`;
+                  const sep = `|${'-'.repeat(w.date + 2)}|${'-'.repeat(w.user + 2)}|${'-'.repeat(w.dur + 2)}|${'-'.repeat(w.type + 2)}|${'-'.repeat(w.billable + 2)}|${'-'.repeat(w.notes + 2)}|`;
                   const table = [fmt(header), sep, ...rows.map(fmt)].join('\n');
                   const totalMins = filteredEntries.reduce((s, e) => s + e.duration_minutes, 0);
                   const body = `Time Entries for ${tenantName}\nTotal: ${formatDuration(totalMins)}\n\n${table}`;
