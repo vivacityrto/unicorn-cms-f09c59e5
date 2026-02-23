@@ -24,11 +24,13 @@ import {
   Plus, StickyNote, Pin, MoreHorizontal, Edit, Trash2, 
   ArrowRight, Tag, Clock, MessageSquare, AlertTriangle, 
   CheckCircle, Users, FileText, Loader2, Filter, Package,
-  ListTodo, ChevronDown, ChevronUp, Mic, MicOff, ExternalLink, Mail
+  ListTodo, ChevronDown, ChevronUp, Mic, MicOff, ExternalLink, Mail, CalendarIcon, X
 } from 'lucide-react';
 import { useSpeechToText } from '@/hooks/useSpeechToText';
 import { SelectSeparator } from '@/components/ui/select';
-import { formatDistanceToNow, format, fromUnixTime, isValid } from 'date-fns';
+import { formatDistanceToNow, format, fromUnixTime, isValid, startOfDay, endOfDay, isWithinInterval } from 'date-fns';
+import { Calendar } from '@/components/ui/calendar';
+import { cn } from '@/lib/utils';
 import { TenantClickUpAISearch } from '@/components/tenant/TenantClickUpAISearch';
 
 interface PackageInfo {
@@ -100,6 +102,8 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
   // Filter state
   const [parentTypeFilter, setParentTypeFilter] = useState<string>('all');
   const [selectedTagFilter, setSelectedTagFilter] = useState<string[]>([]);
+  const [dateFrom, setDateFrom] = useState<Date | undefined>(undefined);
+  const [dateTo, setDateTo] = useState<Date | undefined>(undefined);
 
   // ClickUp state
   const [clickupTasks, setClickupTasks] = useState<ClickUpTask[]>([]);
@@ -600,10 +604,33 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
     return { ...style, label: opt?.label || type, value: type };
   };
 
-  // Filter notes by parent type and tags
+  // Filter notes by parent type, tags, and date range
   const filteredNotes = notes
     .filter(note => parentTypeFilter === 'all' || note.parent_type === parentTypeFilter)
-    .filter(note => selectedTagFilter.length === 0 || note.tags.some(t => selectedTagFilter.includes(t)));
+    .filter(note => selectedTagFilter.length === 0 || note.tags.some(t => selectedTagFilter.includes(t)))
+    .filter(note => {
+      if (!dateFrom && !dateTo) return true;
+      const noteDate = note.created_at ? new Date(note.created_at) : null;
+      if (!noteDate || !isValid(noteDate)) return true;
+      if (dateFrom && noteDate < startOfDay(dateFrom)) return false;
+      if (dateTo && noteDate > endOfDay(dateTo)) return false;
+      return true;
+    });
+
+  // Filter ClickUp tasks by date range
+  const filteredClickupTasks = clickupTasks.filter(task => {
+    if (!dateFrom && !dateTo) return true;
+    const rawTs = task.date_created;
+    if (!rawTs) return true;
+    try {
+      const ts = Number(rawTs);
+      const d = isNaN(ts) ? new Date(rawTs) : fromUnixTime(ts / 1000);
+      if (!isValid(d)) return true;
+      if (dateFrom && d < startOfDay(dateFrom)) return false;
+      if (dateTo && d > endOfDay(dateTo)) return false;
+      return true;
+    } catch { return true; }
+  });
 
   if (loading && notes.length === 0) {
     return (
@@ -699,6 +726,46 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
                   </PopoverContent>
                 </Popover>
               )}
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" size="sm" className={cn("h-9 gap-1.5", (dateFrom || dateTo) && "border-primary text-primary")}>
+                    <CalendarIcon className="h-4 w-4" />
+                    {dateFrom || dateTo
+                      ? `${dateFrom ? format(dateFrom, 'dd/MM/yy') : '...'} – ${dateTo ? format(dateTo, 'dd/MM/yy') : '...'}`
+                      : 'Date'}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-3 bg-popover" align="end">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm font-medium">Filter by date</span>
+                    {(dateFrom || dateTo) && (
+                      <Button variant="ghost" size="sm" className="h-6 px-2 text-xs" onClick={() => { setDateFrom(undefined); setDateTo(undefined); }}>
+                        Clear
+                      </Button>
+                    )}
+                  </div>
+                  <div className="flex flex-col gap-3">
+                    <div>
+                      <Label className="text-xs text-muted-foreground mb-1 block">From</Label>
+                      <Calendar
+                        mode="single"
+                        selected={dateFrom}
+                        onSelect={setDateFrom}
+                        className={cn("p-2 pointer-events-auto")}
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-xs text-muted-foreground mb-1 block">To</Label>
+                      <Calendar
+                        mode="single"
+                        selected={dateTo}
+                        onSelect={setDateTo}
+                        className={cn("p-2 pointer-events-auto")}
+                      />
+                    </div>
+                  </div>
+                </PopoverContent>
+              </Popover>
               <Button size="sm" onClick={handleOpenAdd}>
                 <Plus className="h-4 w-4 mr-1" />
                 Add Note
@@ -712,7 +779,7 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
             <div className="space-y-3">
               <div className="flex items-center gap-2 text-sm text-muted-foreground mb-1">
                 <ListTodo className="h-4 w-4" />
-                <span>{clickupLoading ? 'Loading...' : `${clickupTasks.length} task${clickupTasks.length !== 1 ? 's' : ''} linked to this tenant`}</span>
+                <span>{clickupLoading ? 'Loading...' : `${filteredClickupTasks.length} task${filteredClickupTasks.length !== 1 ? 's' : ''} linked to this tenant`}</span>
               </div>
               <TenantClickUpAISearch tenantId={tenantId} />
               {clickupLoading ? (
@@ -720,16 +787,16 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
                   <Loader2 className="h-5 w-5 animate-spin" />
                   Loading ClickUp tasks...
                 </div>
-              ) : clickupTasks.length === 0 ? (
+              ) : filteredClickupTasks.length === 0 ? (
                 <div className="text-center py-12 text-muted-foreground">
                   <ListTodo className="h-10 w-10 mx-auto mb-3 opacity-50" />
-                  <p>No ClickUp tasks linked to this tenant</p>
-                  <p className="text-sm mt-1">Tasks are linked via the ClickUp tenant mapping configuration</p>
+                  <p>{clickupTasks.length === 0 ? 'No ClickUp tasks linked to this tenant' : 'No tasks match the selected date range'}</p>
+                  {clickupTasks.length === 0 && <p className="text-sm mt-1">Tasks are linked via the ClickUp tenant mapping configuration</p>}
                 </div>
               ) : (
                 <ScrollArea className="h-[500px]">
                   <div className="space-y-2">
-                    {clickupTasks.map(task => {
+                    {filteredClickupTasks.map(task => {
                       const isExpanded = !collapsedTaskIds.has(task.id);
                       // date_created is a unix timestamp in ms stored as string
                       let formattedDate = '—';
