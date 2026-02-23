@@ -22,13 +22,15 @@ import {
   StickyNote,
   Timer,
   History,
-  Archive
+  Archive,
+  Database
 } from 'lucide-react';
 import { ClientPackage } from '@/hooks/useClientManagement';
 import { PackageStagesManager } from './PackageStagesManager';
 import { PackageNotesSection } from './PackageNotesSection';
 import { PackageTimeSection } from './PackageTimeSection';
 import { StartPackageDialog } from './StartPackageDialog';
+import { PackageDataManager } from './PackageDataManager';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useNotes } from '@/hooks/useNotes';
@@ -63,6 +65,7 @@ export function ClientPackagesTab({ tenantId, tenantName, packages, loading, onA
   const { isSuperAdmin } = useAuth();
   const [expandedPackages, setExpandedPackages] = useState<Set<number>>(new Set());
   const [startPackageOpen, setStartPackageOpen] = useState(false);
+  const [dataManagerOpen, setDataManagerOpen] = useState(false);
   const [packageNoteCounts, setPackageNoteCounts] = useState<Record<string, number>>({});
   const [viewMode, setViewMode] = useState<'active' | 'history'>('active');
 
@@ -175,8 +178,24 @@ export function ClientPackagesTab({ tenantId, tenantName, packages, loading, onA
               Add Package
             </Button>
           )}
+          {isSuperAdmin() && (
+            <Button variant="outline" size="sm" onClick={() => setDataManagerOpen(true)}>
+              <Database className="h-4 w-4 mr-2" />
+              Data Manager
+            </Button>
+          )}
         </div>
       </div>
+
+      {/* Package Data Manager Dialog */}
+      <PackageDataManager
+        open={dataManagerOpen}
+        onOpenChange={setDataManagerOpen}
+        tenantId={tenantId}
+        onSuccess={() => {
+          // Trigger a refresh if parent provides onAddPackage callback pattern
+        }}
+      />
 
       {/* Start Package Dialog */}
       <StartPackageDialog
