@@ -1,126 +1,76 @@
 
 
-# Code Tables Manager — Implementation Plan
+## Issue 1: Code Tables Not Showing Up
 
-## Overview
+**Root Cause**: The `list_code_tables` RPC checks the `users.role` column in the database, but your user record has `role = 'Client Child'` instead of `'Super Admin'`. Your JWT metadata says "Super Admin" but the database row disagrees -- likely the role was overwritten by a recent migration or user management action.
 
-Build a Super Admin interface at `/admin/code-tables` to discover, browse, and manage all `dd_` prefixed lookup tables. This replaces manual database edits with a dynamic, auditable UI that adapts to any table shape.
+**Fix**: Run a SQL update to correct your role in the `users` table, and also make the RPC more resilient by checking JWT metadata as a fallback:
 
----
-
-## What Gets Built
-
-### 1. Database Layer (Migration)
-
-Three new RPC functions:
-
-- **`list_code_tables()`** — Returns metadata (table name, row count, RLS status, column definitions) for every `dd_*` table in the public schema. Super Admin gated via `is_super_admin_safe()`.
-- **`code_table_operation(p_table_name, p_operation, p_data, p_where_clause)`** — Generic CRUD RPC accepting `select`, `insert`, `update`, or `delete`. Validates the table name matches `dd_%` before executing dynamic SQL. Soft-deletes (sets `is_active = false`) when the column exists, otherwise hard-deletes.
-- **`format_code_label(input_label text)`** and **`standardize_code_value(input_label text)`** — Helper functions for auto-formatting label text and generating value slugs.
-
-All functions use `SECURITY DEFINER` with `SET search_path = ''` and fully qualified `public.*` references. All are gated to Super Admin only.
-
-### 2. Service Layer
-
-**New file: `src/services/codeTablesService.ts`**
-
-Thin wrapper around the RPCs providing typed methods: `getCodeTables()`, `getTableData()`, `createRow()`, `updateRow()`, `deleteRow()`, `formatLabel()`, `generateValue()`.
-
-### 3. Hook Layer
-
-**New file: `src/hooks/useCodeTables.ts`**
-
-Two hooks:
-- `useCodeTables()` — Fetches all table metadata. Returns `{ tables, loading, error, refetch }`.
-- `useTableData(tableName)` — Fetches rows for the selected table. Returns `{ data, loading, error, refetch, createRow, updateRow, deleteRow }`. Mutations show toast notifications and auto-refetch.
-
-### 4. UI Components (4 files)
-
-| File | Purpose |
-|------|---------|
-| `src/pages/CodeTablesAdmin.tsx` | Page component — layout, dialog state, wires hooks |
-| `src/components/admin/CodeTableSidebar.tsx` | Left panel — searchable list of dd_ tables with row counts and RLS indicators |
-| `src/components/admin/CodeTableDataGrid.tsx` | Main area — dynamic table rendering with sort, search, action buttons |
-| `src/components/admin/CodeRowDialog.tsx` | Create/Edit/Duplicate modal — dynamic form fields based on column metadata |
-
-### 5. Routing
-
-- Add route `/admin/code-tables` in `App.tsx` wrapped with `<ProtectedRoute requireSuperAdmin>`.
-- Add navigation entry in `navigationConfig.ts` under the admin section.
+1. **Database fix** -- Update your user role:
+   ```text
+   UPDATE public.users SET role = 'Super Admin' WHERE user_uuid = '551f13b0-...';
+   ```
+2. **No code changes needed** -- Once the database role is corrected, the existing `list_code_tables` RPC will work again.
 
 ---
 
-## UI Behaviour
+## Issue 2: Import ClickUp Time Tracking into Unicorn 2.0
 
-**Sidebar (left, w-80):**
-- Search input filters table names
-- Each table card shows: name, row count, RLS status (green shield = policies exist, amber = RLS on but no policies, red = no RLS)
-- Selected table highlighted with `ring-2 ring-primary`
+**What exists today**:
+- The `sync-clickup-tasks` edge function already syncs tasks from ClickUp and stores `time_spent` / `time_estimate` (milliseconds) on `clickup_tasks_api`, but these come from the task object itself and are often empty.
+- ClickUp has a **dedicated Time Tracking API** (`GET /task/{task_id}/time`) that returns individual time entries with start/end times, durations, and who logged them.
 
-**Data Grid (main area):**
-- Empty state when no table selected
-- Header shows table name, security badge, row/column counts, search, "Add Row" button
-- Columns generated dynamically from table metadata
-- Booleans render as Active/Inactive badges
-- Timestamps formatted as dates
-- Actions column: Edit, Duplicate, Delete icons
+**Plan**: Create a new edge function `sync-clickup-time` that fetches detailed time entries from ClickUp and either stores them in a new `clickup_time_entries` table or maps them directly into the existing `time_entries` table.
 
-**Row Dialog (modal):**
-- Fields generated from column metadata
-- `label` field auto-formats and auto-generates `value` on change (debounced 300ms)
-- Booleans use Switch toggles
-- `description` fields use Textarea
-- Skips `id` on create/duplicate, skips `created_at`/`updated_at`/`created_by`/`updated_by`
-- Validates required fields (non-nullable without defaults)
+### Database Changes
 
----
+Create a staging table `clickup_time_entries` to store raw ClickUp time data before mapping:
 
-## Existing dd_ Tables (9 tables)
+| Column | Type | Purpose |
+|--------|------|---------|
+| id | bigserial | PK |
+| clickup_interval_id | text (unique) | ClickUp's time entry ID |
+| task_id | text | ClickUp task ID |
+| tenant_id | integer | Resolved from task |
+| user_name | text | Who logged it in ClickUp |
+| user_email | text | For matching to Unicorn users |
+| duration_ms | bigint | Duration in milliseconds |
+| duration_minutes | integer | Computed (ms / 60000) |
+| start_at | timestamptz | When work started |
+| end_at | timestamptz | When work ended |
+| description | text | ClickUp time entry notes |
+| billable | boolean | ClickUp billable flag |
+| imported_to_time_entries | boolean | Whether mapped to Unicorn |
+| imported_at | timestamptz | When fetched |
 
-| Table | Key Columns |
-|-------|-------------|
-| dd_access_status | id, label, value, seq, is_default |
-| dd_address_type | id, code, label, description |
-| dd_document_categories | id, label, value |
-| dd_fields | id, name, tag |
-| dd_lifecycle_status | id, label, value, seq, is_default |
-| dd_note_status | id, code, label, sort_order, is_active |
-| dd_note_tags | id, code, label, description, is_active, sort_order |
-| dd_note_types | id, code, label, sort_order, is_active |
-| dd_status | code, description, seq, value |
+RLS: Read access for Vivacity staff, write via service role only.
 
-All 9 tables already have RLS enabled with read (authenticated) and write (super admin) policies in place. No new RLS policies needed.
+### Edge Function: `sync-clickup-time`
 
----
+- **Mode `sync_all`**: For each task in `clickup_tasks_api`, call `GET /task/{task_id}/time` with rate limiting (650ms), flatten entries, and upsert into `clickup_time_entries`.
+- **Mode `sync_by_tenant`**: Same but scoped to tasks matching a given `tenant_id`.
+- **Batch processing**: Process tasks in batches of 50 with resumable pagination.
+- **Tenant resolution**: Copy `tenant_id` from the parent `clickup_tasks_api` row.
 
-## Technical Details
+### UI Integration
 
-**RPC Security Model:**
-- All RPCs check `is_super_admin_safe(auth.uid())` before executing
-- Dynamic SQL in `code_table_operation` validates table name against `information_schema.tables` with `LIKE 'dd\_%'` pattern before constructing queries
-- Parameters are sanitised using `format()` with `%I` (identifier) and `%L` (literal) placeholders to prevent SQL injection
+Add a "Sync Time Entries" button/section to the existing ClickUp Sync admin page (`/admin/clickup-import`), showing:
+- Count of ClickUp time entries imported
+- A button to trigger the sync
+- Status/progress feedback
 
-**Auto-format behaviour:**
-- `format_code_label('health check status')` returns `Health Check Status`
-- `standardize_code_value('Health Check Status')` returns `health_check_status`
-- "and" is replaced with "&" in labels
+### Technical Details
 
-**Soft delete logic:**
-- If table has an `is_active` column, DELETE sets `is_active = false`
-- Otherwise performs a hard DELETE
+- **Files to create**:
+  - `supabase/functions/sync-clickup-time/index.ts` -- new edge function
+  - Database migration for `clickup_time_entries` table
 
-**Files created (6 new):**
-1. `src/services/codeTablesService.ts`
-2. `src/hooks/useCodeTables.ts`
-3. `src/pages/CodeTablesAdmin.tsx`
-4. `src/components/admin/CodeTableSidebar.tsx`
-5. `src/components/admin/CodeTableDataGrid.tsx`
-6. `src/components/admin/CodeRowDialog.tsx`
+- **Files to modify**:
+  - The ClickUp import/sync admin page to add the time sync UI section
 
-**Files modified (2):**
-1. `src/App.tsx` — Add route
-2. `src/config/navigationConfig.ts` — Add nav entry
+- **ClickUp API endpoint**: `GET /api/v2/task/{task_id}/time` returns an array of time intervals with `id`, `start`, `end`, `time` (duration ms), `user`, `billable`, and `description`.
 
-**Database migration (1):**
-- Creates `list_code_tables()`, `code_table_operation()`, `format_code_label()`, `standardize_code_value()` RPCs
+- **Rate limiting**: Same 650ms delay pattern as existing `sync-clickup-tasks`.
+
+- **Future phase**: A separate mapping step could match ClickUp users to Unicorn users and create proper `time_entries` records with the `source = 'clickup'` tag. This would be a follow-up feature.
 
