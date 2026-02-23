@@ -84,20 +84,27 @@ Deno.serve(async (req) => {
     for (const task of tasks) {
       try {
         const timeData = await clickupGet(`/task/${task.task_id}/time`, CLICKUP_API_KEY);
-        const intervals = timeData?.data ?? [];
+        
+        // Response structure: data[] = { user, time, intervals[] }
+        // Each data item groups intervals by user
+        const userGroups = timeData?.data ?? [];
+        const seen = new Map<string, any>();
 
-        if (intervals.length > 0) {
-          // Deduplicate by clickup_interval_id to avoid "cannot affect row a second time"
-          const seen = new Map<string, any>();
-          for (const interval of intervals) {
+        for (const group of userGroups) {
+          const userName = group.user?.username ?? null;
+          const userEmail = group.user?.email ?? null;
+          const subIntervals = group.intervals ?? [];
+
+          for (const interval of subIntervals) {
             const id = String(interval.id);
+            if (id === "undefined" || !id) continue;
             seen.set(id, {
               clickup_interval_id: id,
               task_id: task.task_id,
               tenant_id: task.tenant_id ?? null,
-              user_name: interval.user?.username ?? null,
-              user_email: interval.user?.email ?? null,
-              duration_ms: parseInt(interval.duration ?? interval.time ?? "0"),
+              user_name: userName,
+              user_email: userEmail,
+              duration_ms: parseInt(interval.time ?? "0"),
               start_at: interval.start ? new Date(parseInt(interval.start)).toISOString() : null,
               end_at: interval.end ? new Date(parseInt(interval.end)).toISOString() : null,
               description: interval.description ?? null,
@@ -105,6 +112,9 @@ Deno.serve(async (req) => {
               imported_at: new Date().toISOString(),
             });
           }
+        }
+
+        if (seen.size > 0) {
           const rows = Array.from(seen.values());
 
           const { error: upsertError } = await sb
