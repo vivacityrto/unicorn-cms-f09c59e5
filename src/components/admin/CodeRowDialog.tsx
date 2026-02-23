@@ -59,27 +59,36 @@ export function CodeRowDialog({
   const hasValueCol = columns.some((c) => c.column_name === "value");
   const hasLabelCol = columns.some((c) => c.column_name === "label");
 
+  /** Convert label to snake_case value: lowercase, replace non-alphanumeric with _, collapse multiples, trim */
+  function labelToValue(label: string): string {
+    return label
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "_")
+      .replace(/^_+|_+$/g, "");
+  }
+
   const handleLabelChange = useCallback(
     (newLabel: string) => {
-      setFormData((prev) => ({ ...prev, label: newLabel }));
-      if (!hasValueCol) return;
+      const updates: Record<string, any> = { label: newLabel };
+      if (hasValueCol) {
+        updates.value = labelToValue(newLabel);
+      }
+      setFormData((prev) => ({ ...prev, ...updates }));
 
+      // Also call RPC for formatted label (optional polish)
       if (debounceRef.current) clearTimeout(debounceRef.current);
       debounceRef.current = setTimeout(async () => {
         try {
-          const [formatted, value] = await Promise.all([
-            codeTablesService.formatLabel(newLabel),
-            codeTablesService.generateValue(newLabel),
-          ]);
+          const formatted = await codeTablesService.formatLabel(newLabel);
           setFormData((prev) => ({
             ...prev,
             label: formatted,
-            value,
+            ...(hasValueCol ? { value: labelToValue(formatted) } : {}),
           }));
         } catch {
           // Silently fail — user can still edit manually
         }
-      }, 300);
+      }, 500);
     },
     [hasValueCol]
   );
@@ -103,7 +112,11 @@ export function CodeRowDialog({
     onSave(data);
   }
 
-  const editableColumns = columns.filter((col) => isEditable(col, mode));
+  // Sort columns: label first, then value, then the rest
+  const editableColumns = columns.filter((col) => isEditable(col, mode)).sort((a, b) => {
+    const order = (name: string) => name === "label" ? 0 : name === "value" ? 1 : 2;
+    return order(a.column_name) - order(b.column_name);
+  });
 
   const title =
     mode === "create" ? "Add Row" : mode === "edit" ? "Edit Row" : "Duplicate Row";
