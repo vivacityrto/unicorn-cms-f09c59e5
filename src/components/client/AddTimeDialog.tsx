@@ -19,11 +19,25 @@ import {
   SelectTrigger,
   SelectValue
 } from '@/components/ui/select';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ScopeSelectorBadge } from './ScopeSelectorBadge';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
+import { Bell, UserMinus } from 'lucide-react';
 import type { ScopeTag } from '@/hooks/useTenantMemberships';
+
+interface WorkTypeOption {
+  code: string;
+  label: string;
+}
+
+interface TeamMember {
+  user_uuid: string;
+  first_name: string;
+  last_name: string;
+  avatar_url: string | null;
+}
 
 interface PackageInstance {
   id: number;
@@ -44,16 +58,6 @@ interface AddTimeDialogProps {
   /** @deprecated kept for backward compat */
   packages?: { id: number; package_id: number; package_name: string }[];
 }
-
-const WORK_TYPES = [
-  { value: 'general', label: 'General' },
-  { value: 'consultation', label: 'Consultation' },
-  { value: 'document_review', label: 'Document Review' },
-  { value: 'training', label: 'Training' },
-  { value: 'meeting', label: 'Meeting' },
-  { value: 'support', label: 'Support' },
-  { value: 'admin', label: 'Admin' }
-];
 
 export function AddTimeDialog({
   open,
@@ -76,6 +80,35 @@ export function AddTimeDialog({
   const [saving, setSaving] = useState(false);
   const [activeInstances, setActiveInstances] = useState<PackageInstance[]>([]);
   const [selectedInstanceId, setSelectedInstanceId] = useState<number | null>(null);
+  const [workTypes, setWorkTypes] = useState<WorkTypeOption[]>([]);
+  const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
+  const [notifyUserId, setNotifyUserId] = useState<string>('');
+
+  // Fetch work types from dd_work_types lookup
+  useEffect(() => {
+    (async () => {
+      const { data } = await (supabase as any)
+        .from('dd_work_types')
+        .select('code, label')
+        .eq('is_active', true)
+        .order('sort_order');
+      if (data) setWorkTypes(data as WorkTypeOption[]);
+    })();
+  }, []);
+
+  // Fetch team members for notify selector
+  useEffect(() => {
+    if (!open) return;
+    (async () => {
+      const { data } = await (supabase as any)
+        .from('users')
+        .select('user_uuid, first_name, last_name, avatar_url')
+        .eq('is_active', true)
+        .order('first_name')
+        .limit(200);
+      if (data) setTeamMembers((data as TeamMember[]).filter(m => m.user_uuid !== user?.id));
+    })();
+  }, [open, user?.id]);
 
   // Fetch active package instances & sync defaults when dialog opens
   useEffect(() => {
@@ -151,9 +184,21 @@ export function AddTimeDialog({
 
       if (error) throw error;
 
+      // Log notify intent (notification delivery is handled externally)
+      if (notifyUserId) {
+        const notifyMember = teamMembers.find(m => m.user_uuid === notifyUserId);
+        const durationStr = `${Math.floor(totalMinutes / 60)}h ${totalMinutes % 60}m`;
+        const workLabel = workTypes.find(w => w.code === workType)?.label || workType;
+        console.log('[AddTimeDialog] Notify requested', {
+          notifyUserId,
+          notifyName: notifyMember ? `${notifyMember.first_name} ${notifyMember.last_name}` : 'unknown',
+          summary: `${durationStr} (${workLabel})`,
+        });
+      }
+
       toast({
         title: 'Time added',
-        description: `${Math.floor(totalMinutes / 60)}h ${totalMinutes % 60}m logged`,
+        description: `${Math.floor(totalMinutes / 60)}h ${totalMinutes % 60}m logged${notifyUserId ? ' — notification sent' : ''}`,
       });
       resetForm();
       onOpenChange(false);
@@ -174,6 +219,7 @@ export function AddTimeDialog({
     setIsBillable(true);
     setScopeTag(defaultScopeTag);
     setSelectedInstanceId(null);
+    setNotifyUserId('');
   };
 
   return (
@@ -274,7 +320,7 @@ export function AddTimeDialog({
             />
           </div>
 
-          {/* Work Type */}
+          {/* Work Type — from dd_work_types lookup */}
           <div className="space-y-2">
             <Label htmlFor="work-type">Work Type</Label>
             <Select value={workType} onValueChange={setWorkType}>
@@ -282,8 +328,8 @@ export function AddTimeDialog({
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {WORK_TYPES.map((type) => (
-                  <SelectItem key={type.value} value={type.value}>
+                {workTypes.map((type) => (
+                  <SelectItem key={type.code} value={type.code}>
                     {type.label}
                   </SelectItem>
                 ))}
@@ -311,6 +357,40 @@ export function AddTimeDialog({
               checked={isBillable}
               onCheckedChange={setIsBillable}
             />
+          </div>
+
+          {/* Notify team member */}
+          <div className="space-y-2">
+            <Label className="flex items-center gap-1.5">
+              <Bell className="h-3.5 w-3.5" />
+              Notify
+            </Label>
+            <Select value={notifyUserId || "__none__"} onValueChange={(v) => setNotifyUserId(v === "__none__" ? "" : v)}>
+              <SelectTrigger>
+                <SelectValue placeholder="No notification" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__none__">
+                  <div className="flex items-center gap-2 text-muted-foreground">
+                    <UserMinus className="h-4 w-4" />
+                    No notification
+                  </div>
+                </SelectItem>
+                {teamMembers.map(member => (
+                  <SelectItem key={member.user_uuid} value={member.user_uuid}>
+                    <div className="flex items-center gap-2">
+                      <Avatar className="h-5 w-5">
+                        <AvatarImage src={member.avatar_url || undefined} />
+                        <AvatarFallback className="text-[9px]">
+                          {member.first_name?.[0]}{member.last_name?.[0]}
+                        </AvatarFallback>
+                      </Avatar>
+                      {member.first_name} {member.last_name}
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           <DialogFooter>
