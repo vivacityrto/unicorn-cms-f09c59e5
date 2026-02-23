@@ -103,7 +103,7 @@ export function AddTimeDialog({
       const { data } = await (supabase as any)
         .from('users')
         .select('user_uuid, first_name, last_name, avatar_url')
-        .eq('is_active', true)
+        .eq('disabled', false)
         .order('first_name')
         .limit(200);
       if (data) setTeamMembers((data as TeamMember[]).filter(m => m.user_uuid !== user?.id));
