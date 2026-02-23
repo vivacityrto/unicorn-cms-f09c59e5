@@ -325,7 +325,7 @@ export function PackageDataManager({ open, onOpenChange, tenantId, onSuccess }: 
   );
 }
 
-// Inline date picker cell
+// Inline date picker cell with month/year selectors
 function DatePickerCell({
   value,
   onChange,
@@ -336,6 +336,19 @@ function DatePickerCell({
   clearable?: boolean;
 }) {
   const date = value ? new Date(value + 'T00:00:00') : undefined;
+  const [displayMonth, setDisplayMonth] = useState<Date>(date ?? new Date());
+
+  // Sync display month when the value changes externally
+  useEffect(() => {
+    if (date) setDisplayMonth(date);
+  }, [value]);
+
+  const currentYear = new Date().getFullYear();
+  const years = Array.from({ length: 20 }, (_, i) => currentYear - 10 + i);
+  const months = [
+    'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+  ];
 
   return (
     <Popover>
@@ -353,10 +366,42 @@ function DatePickerCell({
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-auto p-0" align="start">
+        {/* Month / Year selectors */}
+        <div className="flex items-center gap-1 px-3 pt-3 pb-1">
+          <select
+            className="text-sm border rounded px-1.5 py-1 bg-background"
+            value={displayMonth.getMonth()}
+            onChange={(e) => {
+              const m = new Date(displayMonth);
+              m.setMonth(Number(e.target.value));
+              setDisplayMonth(m);
+            }}
+          >
+            {months.map((label, i) => (
+              <option key={i} value={i}>{label}</option>
+            ))}
+          </select>
+          <select
+            className="text-sm border rounded px-1.5 py-1 bg-background"
+            value={displayMonth.getFullYear()}
+            onChange={(e) => {
+              const m = new Date(displayMonth);
+              m.setFullYear(Number(e.target.value));
+              setDisplayMonth(m);
+            }}
+          >
+            {years.map((y) => (
+              <option key={y} value={y}>{y}</option>
+            ))}
+          </select>
+        </div>
         <Calendar
           mode="single"
           selected={date}
           onSelect={(d) => onChange(d ? format(d, 'yyyy-MM-dd') : null)}
+          month={displayMonth}
+          onMonthChange={setDisplayMonth}
+          defaultMonth={date}
           initialFocus
           className={cn('p-3 pointer-events-auto')}
         />
