@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 
-import { Loader2, ArrowRight, CheckCircle2, Clock, ArrowLeft } from "lucide-react";
+import { Loader2, ArrowRight, CheckCircle2, Clock, ArrowLeft, Package } from "lucide-react";
 import { format } from "date-fns";
 
 interface TaskWithTime {
@@ -48,6 +48,8 @@ export function ClickUpTimeTransfer() {
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [transferring, setTransferring] = useState(false);
   const [userMap, setUserMap] = useState<UserMap>(new Map());
+  const [packageInstances, setPackageInstances] = useState<{ id: number; package_name: string; start_date: string | null; end_date: string | null; is_active: boolean }[]>([]);
+  const [packagesLoading, setPackagesLoading] = useState(false);
   const { toast } = useToast();
 
   const [tenantsLoading, setTenantsLoading] = useState(true);
@@ -85,6 +87,49 @@ export function ClickUpTimeTransfer() {
       setTenantsLoading(false);
     });
   }, []);
+
+  // Fetch package instances for selected tenant
+  useEffect(() => {
+    if (!selectedTenantId) { setPackageInstances([]); return; }
+    setPackagesLoading(true);
+    (async () => {
+      try {
+        const { data: instances } = await (supabase as any)
+          .from("package_instances")
+          .select("id, package_id, start_date, end_date, is_active")
+          .eq("tenant_id", selectedTenantId)
+          .order("start_date", { ascending: false });
+
+        if (!instances || instances.length === 0) {
+          setPackageInstances([]);
+          setPackagesLoading(false);
+          return;
+        }
+
+        // Fetch package names (no FK join available)
+        const packageIds = [...new Set(instances.map((i: any) => i.package_id).filter(Boolean))];
+        const { data: packages } = await (supabase as any)
+          .from("packages")
+          .select("id, name")
+          .in("id", packageIds);
+
+        const pkgMap = new Map<number, string>();
+        for (const p of (packages ?? [])) pkgMap.set(p.id, p.name);
+
+        setPackageInstances(instances.map((i: any) => ({
+          id: i.id,
+          package_name: pkgMap.get(i.package_id) ?? `Package #${i.package_id}`,
+          start_date: i.start_date,
+          end_date: i.end_date,
+          is_active: i.is_active ?? false,
+        })));
+      } catch (err) {
+        console.error("Failed to load package instances", err);
+        setPackageInstances([]);
+      }
+      setPackagesLoading(false);
+    })();
+  }, [selectedTenantId]);
 
   // Fetch tasks with time entries for selected tenant
   const fetchTasks = useCallback(async () => {
@@ -319,6 +364,53 @@ export function ClickUpTimeTransfer() {
           )}
         </CardContent>
       </Card>
+
+      {/* Package Instances for selected tenant */}
+      {selectedTenantId && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Package className="h-4 w-4" /> Package Instances
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {packagesLoading ? (
+              <div className="flex items-center justify-center py-4">
+                <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+              </div>
+            ) : packageInstances.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-3">No package instances for this tenant.</p>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>ID</TableHead>
+                    <TableHead>Package</TableHead>
+                    <TableHead>Start Date</TableHead>
+                    <TableHead>End Date</TableHead>
+                    <TableHead className="text-center">Status</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {packageInstances.map(pi => (
+                    <TableRow key={pi.id}>
+                      <TableCell className="font-mono text-xs">{pi.id}</TableCell>
+                      <TableCell className="text-sm font-medium">{pi.package_name}</TableCell>
+                      <TableCell className="text-xs">{pi.start_date ?? "—"}</TableCell>
+                      <TableCell className="text-xs">{pi.end_date ?? "—"}</TableCell>
+                      <TableCell className="text-center">
+                        <Badge variant={pi.is_active ? "default" : "outline"} className="text-xs">
+                          {pi.is_active ? "Active" : "Inactive"}
+                        </Badge>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {/* Task List for Tenant */}
       {selectedTenantId && (
