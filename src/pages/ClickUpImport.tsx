@@ -71,7 +71,7 @@ export default function ClickUpImport() {
   // Fetch tenants for dropdown
   useEffect(() => {
     supabase.from("tenants").select("id, name").order("name").then(({ data }) => {
-      if (data) setTenants(data);
+      if (data) setTenants(data.map(t => ({ ...t, name: t.name?.trim() ?? '' })));
     });
     fetchCounts();
   }, [fetchCounts]);
