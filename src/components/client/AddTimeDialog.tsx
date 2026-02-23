@@ -221,9 +221,6 @@ export function AddTimeDialog({
         scope_tag: scopeTag,
         source: 'manual',
         package_instance_id: selectedInstanceId,
-        package_id: selectedInstanceId
-          ? activeInstances.find(i => i.id === selectedInstanceId)?.package_id ?? null
-          : null,
       } as any);
 
       if (error) throw error;
