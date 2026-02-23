@@ -98,20 +98,51 @@ export function AddTimeDialog({
     })();
   }, []);
 
-  // Fetch team members for notify selector
+  // Fetch team members for notify selector (Vivacity Team + tenant users)
   useEffect(() => {
     if (!open) return;
     (async () => {
-      const { data } = await (supabase as any)
+      // Fetch Vivacity staff
+      const { data: staffData } = await (supabase as any)
         .from('users')
         .select('user_uuid, first_name, last_name, avatar_url')
         .eq('disabled', false)
         .eq('user_type', 'Vivacity Team')
         .order('first_name')
         .limit(200);
-      if (data) setTeamMembers((data as TeamMember[]).filter(m => m.user_uuid !== user?.id));
+
+      // Fetch tenant users via tenant_users junction
+      let tenantUsers: TeamMember[] = [];
+      if (tenantId) {
+        const { data: tuData } = await (supabase as any)
+          .from('tenant_users')
+          .select('user_uuid, users:user_uuid(user_uuid, first_name, last_name, avatar_url, disabled)')
+          .eq('tenant_id', tenantId)
+          .limit(200);
+        if (tuData) {
+          tenantUsers = tuData
+            .map((tu: any) => tu.users)
+            .filter((u: any) => u && !u.disabled)
+            .map((u: any) => ({
+              user_uuid: u.user_uuid,
+              first_name: u.first_name,
+              last_name: u.last_name,
+              avatar_url: u.avatar_url,
+            }));
+        }
+      }
+
+      // Merge and deduplicate
+      const allMembers = [...(staffData || []), ...tenantUsers] as TeamMember[];
+      const seen = new Set<string>();
+      const deduped = allMembers.filter(m => {
+        if (seen.has(m.user_uuid) || m.user_uuid === user?.id) return false;
+        seen.add(m.user_uuid);
+        return true;
+      });
+      setTeamMembers(deduped);
     })();
-  }, [open, user?.id]);
+  }, [open, user?.id, tenantId]);
 
   // Fetch active package instances & sync defaults when dialog opens
   useEffect(() => {
@@ -167,6 +198,11 @@ export function AddTimeDialog({
 
     const totalMinutes = (parseInt(hours) || 0) * 60 + (parseInt(minutes) || 0);
     if (totalMinutes <= 0) return;
+
+    if (activeInstances.length > 1 && !selectedInstanceId) {
+      toast({ title: 'Package required', description: 'Please select a package before adding time.', variant: 'destructive' });
+      return;
+    }
 
     setSaving(true);
     try {
