@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 
@@ -505,11 +506,41 @@ export function ClickUpTimeTransfer() {
                         )}
                       </TableCell>
                       <TableCell className="text-center">
-                        {task.packageinstance_id ? (
-                          <Badge variant="outline" className="text-xs">{task.packageinstance_id}</Badge>
-                        ) : (
-                          <Badge variant="destructive" className="text-xs">None</Badge>
-                        )}
+                        <Select
+                          value={task.packageinstance_id?.toString() ?? "none"}
+                          onValueChange={async (val) => {
+                            const newId = val === "none" ? null : Number(val);
+                            const { error } = await (supabase as any)
+                              .from("clickup_tasks_api")
+                              .update({ packageinstance_id: newId })
+                              .eq("task_id", task.task_id);
+                            if (error) {
+                              toast({ title: "Failed to update package", description: error.message, variant: "destructive" });
+                              return;
+                            }
+                            setTasks(prev => prev.map(t => t.task_id === task.task_id ? { ...t, packageinstance_id: newId } : t));
+                            toast({ title: "Package updated" });
+                          }}
+                        >
+                          <SelectTrigger
+                            className="h-7 w-auto min-w-[140px] text-xs"
+                            onClick={e => e.stopPropagation()}
+                          >
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="none">None</SelectItem>
+                            {packageInstances.map(pi => {
+                              const startStr = pi.start_date ? format(new Date(pi.start_date + "T00:00:00"), "dd/MM/yyyy") : "?";
+                              const endStr = pi.end_date ? format(new Date(pi.end_date + "T00:00:00"), "dd/MM/yyyy") : "current";
+                              return (
+                                <SelectItem key={pi.id} value={pi.id.toString()}>
+                                  {pi.package_name} ({startStr} — {endStr})
+                                </SelectItem>
+                              );
+                            })}
+                          </SelectContent>
+                        </Select>
                       </TableCell>
                       <TableCell>
                         <ArrowRight className="h-4 w-4 text-muted-foreground" />
