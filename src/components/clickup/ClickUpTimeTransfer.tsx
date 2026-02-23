@@ -258,7 +258,7 @@ export function ClickUpTimeTransfer() {
 
     const toTransfer = intervals.filter(i => selectedIds.has(i.id));
 
-    // Check user mapping
+    // Check user mapping — warn but don't block
     const unmappedEmails = new Set<string>();
     for (const i of toTransfer) {
       if (i.user_email && !userMap.has(i.user_email.toLowerCase())) {
@@ -267,11 +267,9 @@ export function ClickUpTimeTransfer() {
     }
     if (unmappedEmails.size > 0) {
       toast({
-        title: "Unmapped users",
-        description: `Cannot transfer: ${Array.from(unmappedEmails).join(", ")} have no user_uuid mapping.`,
-        variant: "destructive",
+        title: "Unmapped users — proceeding anyway",
+        description: `${Array.from(unmappedEmails).join(", ")} will be transferred with no assigned user.`,
       });
-      return;
     }
 
     setTransferring(true);
