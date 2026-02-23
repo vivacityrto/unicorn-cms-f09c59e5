@@ -593,7 +593,18 @@ export default function ClickUpImport() {
                   <TableBody>
                     {tasks.map(task => (
                       <TableRow key={task.id}>
-                        <TableCell className="font-mono text-xs">{task.custom_id || "—"}</TableCell>
+                        <TableCell className="font-mono text-xs">
+                          {task.custom_id ? (
+                            <a
+                              href={`https://app.clickup.com/t/6919241/${task.custom_id}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-primary hover:underline"
+                            >
+                              {task.custom_id}
+                            </a>
+                          ) : "—"}
+                        </TableCell>
                         <TableCell className="max-w-[250px]">
                           <div className="truncate text-sm font-medium">{task.name || "—"}</div>
                           {task.description && (
