@@ -1286,7 +1286,7 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
 
       {/* Add/Edit Note Dialog */}
       <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-3xl">
           <DialogHeader>
             <DialogTitle>
               {selectedNote ? 'Edit Note' : 'Add Note'}

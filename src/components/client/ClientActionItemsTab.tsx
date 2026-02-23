@@ -424,7 +424,7 @@ export function ClientActionItemsTab({ tenantId, clientId }: ClientActionItemsTa
 
       {/* Add/Edit Dialog */}
       <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-        <DialogContent>
+        <DialogContent className="max-w-3xl">
           <DialogHeader>
             <DialogTitle>
               {selectedItem ? 'Edit Action Item' : 'Add Action Item'}
