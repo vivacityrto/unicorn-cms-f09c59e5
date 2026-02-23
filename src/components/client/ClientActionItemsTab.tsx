@@ -19,9 +19,12 @@ import { Calendar } from '@/components/ui/calendar';
 import { 
   Plus, CheckSquare, MoreHorizontal, Edit, Trash2, 
   Calendar as CalendarIcon, User, Clock, Filter, Loader2,
-  CheckCircle2, Circle, AlertCircle, XCircle, PauseCircle
+  CheckCircle2, Circle, AlertCircle, XCircle, PauseCircle,
+  Mic, MicOff, Mail
 } from 'lucide-react';
 import { format, formatDistanceToNow, isPast, isToday } from 'date-fns';
+import { useSpeechToText } from '@/hooks/useSpeechToText';
+import { useVivacityTeamUsers } from '@/hooks/useVivacityTeamUsers';
 
 interface ClientActionItemsTabProps {
   tenantId: number;
@@ -45,6 +48,8 @@ const PRIORITY_CONFIG: Record<string, { label: string; color: string }> = {
 
 export function ClientActionItemsTab({ tenantId, clientId }: ClientActionItemsTabProps) {
   const { items, loading, createItem, setStatus, updateItem, deleteItem, refresh } = useClientActionItems(tenantId, clientId);
+  const speech = useSpeechToText();
+  const { data: vivacityTeam = [] } = useVivacityTeamUsers();
   
   const [filter, setFilter] = useState('open');
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
@@ -59,6 +64,7 @@ export function ClientActionItemsTab({ tenantId, clientId }: ClientActionItemsTa
   const [actionStatus, setActionStatus] = useState('open');
   const [dueDate, setDueDate] = useState<Date | undefined>();
   const [ownerUserId, setOwnerUserId] = useState<string | undefined>();
+  const [notifyUserIds, setNotifyUserIds] = useState<string[]>([]);
   
   // Status options from dd_status
   const [statusOptions, setStatusOptions] = useState<{ value: string; description: string }[]>([]);
@@ -103,6 +109,7 @@ export function ClientActionItemsTab({ tenantId, clientId }: ClientActionItemsTa
     setDueDate(undefined);
     setOwnerUserId(undefined);
     setSelectedItem(null);
+    setNotifyUserIds([]);
   };
 
   const handleOpenAdd = () => {
@@ -143,6 +150,42 @@ export function ClientActionItemsTab({ tenantId, clientId }: ClientActionItemsTa
           due_date: dueDate ? format(dueDate, 'yyyy-MM-dd') : undefined,
           owner_user_id: ownerUserId
         });
+
+        // Send notifications to selected "Notify" users
+        if (notifyUserIds.length > 0) {
+          try {
+            const { data: userData } = await supabase.auth.getUser();
+            const currentUserId = userData.user?.id;
+            if (currentUserId) {
+              const { data: authorUser } = await supabase
+                .from('users')
+                .select('first_name, last_name')
+                .eq('user_uuid', currentUserId)
+                .single();
+              const authorName = authorUser
+                ? `${authorUser.first_name || ''} ${authorUser.last_name || ''}`.trim()
+                : 'A team member';
+
+              const notifRows = notifyUserIds
+                .filter(uid => uid !== currentUserId)
+                .map(uid => ({
+                  user_id: uid,
+                  tenant_id: tenantId,
+                  title: 'Action item shared with you',
+                  message: `${authorName} created an action: "${title.substring(0, 60).trim()}${title.length > 60 ? '...' : ''}"`,
+                  type: 'action_shared',
+                  link: `/tenant/${tenantId}`,
+                  created_by: currentUserId
+                }));
+
+              if (notifRows.length > 0) {
+                await supabase.from('user_notifications').insert(notifRows);
+              }
+            }
+          } catch (notifyErr) {
+            console.error('Failed to send notify notifications:', notifyErr);
+          }
+        }
       }
       setIsAddDialogOpen(false);
       resetForm();
@@ -399,12 +442,40 @@ export function ClientActionItemsTab({ tenantId, clientId }: ClientActionItemsTa
             </div>
             
             <div className="space-y-2">
-              <Label>Description</Label>
+              <div className="flex items-center justify-between">
+                <Label>Description</Label>
+                {speech.isSupported && (
+                  <Button
+                    type="button"
+                    variant={speech.isRecording ? "destructive" : "ghost"}
+                    size="sm"
+                    className="gap-1.5 h-7 text-xs"
+                    onClick={() => {
+                      if (speech.isRecording) {
+                        speech.stopRecording();
+                      } else {
+                        speech.startRecording((text) => {
+                          setDescription(prev => prev ? `${prev} ${text}` : text);
+                        });
+                      }
+                    }}
+                  >
+                    {speech.isRecording ? (
+                      <><MicOff className="h-3.5 w-3.5" /> Stop</>
+                    ) : (
+                      <><Mic className="h-3.5 w-3.5" /> Speak</>
+                    )}
+                  </Button>
+                )}
+              </div>
               <Textarea 
-                value={description}
+                value={speech.isRecording && speech.interimTranscript 
+                  ? (description ? `${description} ${speech.interimTranscript}` : speech.interimTranscript)
+                  : description}
                 onChange={e => setDescription(e.target.value)}
                 placeholder="Details..."
                 rows={3}
+                className={speech.isRecording ? 'border-destructive' : ''}
               />
             </div>
             
@@ -484,6 +555,41 @@ export function ClientActionItemsTab({ tenantId, clientId }: ClientActionItemsTa
                   ))}
                 </SelectContent>
               </Select>
+            </div>
+
+            {/* Notify team members */}
+            <div className="space-y-2">
+              <Label className="flex items-center gap-1.5">
+                <Mail className="h-3.5 w-3.5" />
+                Notify (optional)
+              </Label>
+              <div className="flex flex-wrap gap-2">
+                {vivacityTeam.map((user) => (
+                  <Button
+                    key={user.user_uuid}
+                    type="button"
+                    variant={notifyUserIds.includes(user.user_uuid) ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setNotifyUserIds(prev => 
+                      prev.includes(user.user_uuid) 
+                        ? prev.filter(id => id !== user.user_uuid)
+                        : [...prev, user.user_uuid]
+                    )}
+                    className="gap-1.5"
+                  >
+                    <Avatar className="h-5 w-5">
+                      {user.avatar_url && <AvatarImage src={user.avatar_url} />}
+                      <AvatarFallback className="text-[9px]">
+                        {user.first_name?.[0]}{user.last_name?.[0]}
+                      </AvatarFallback>
+                    </Avatar>
+                    {user.first_name} {user.last_name}
+                  </Button>
+                ))}
+                {vivacityTeam.length === 0 && (
+                  <span className="text-xs text-muted-foreground">No team members available</span>
+                )}
+              </div>
             </div>
           </div>
           
