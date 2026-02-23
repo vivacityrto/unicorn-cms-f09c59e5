@@ -300,9 +300,13 @@ export function AddTimeDialog({
                   <Input
                     type="number"
                     min="0"
-                    max="59"
+                    max="45"
+                    step="15"
                     value={minutes}
-                    onChange={(e) => setMinutes(e.target.value)}
+                    onChange={(e) => {
+                      const val = Math.round(parseInt(e.target.value) / 15) * 15;
+                      setMinutes(String(Math.max(0, Math.min(45, isNaN(val) ? 0 : val))));
+                    }}
                     className="text-center"
                   />
                   <span className="text-sm text-muted-foreground">min</span>
