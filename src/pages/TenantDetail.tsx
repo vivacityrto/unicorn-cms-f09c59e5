@@ -278,7 +278,7 @@ export default function TenantDetail() {
         const {
           data: docsData,
           count: docCountData
-        } = await supabase.from("documents").select("*, packages:package_id(name)", {
+        } = await (supabase as any).from("documents").select("*, packages:package_id(name)", {
           count: 'exact'
         }).in("package_id", tenantPackageIds).eq("is_released", true).order("createdat", {
           ascending: false

@@ -20,7 +20,7 @@ export function useStageActiveUsage(stageId: number | null) {
       setLoading(true);
       try {
         // Get client packages that use this stage and are active
-        const { data, error } = await supabase
+        const { data, error } = await (supabase as any)
           .from('client_package_stages')
           .select(`
             id,

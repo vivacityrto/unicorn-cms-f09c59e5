@@ -121,7 +121,7 @@ export function StagePreviewDialog({ open, onOpenChange, stage }: StagePreviewDi
           `)
           .eq('stage_id', stage.id)
           .order('sort_order', { ascending: true }) as any,
-        supabase
+        (supabase as any)
           .from('documents')
           .select(`
             id, doc_name,
