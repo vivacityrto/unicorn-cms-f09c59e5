@@ -1,49 +1,98 @@
 
 
-# Package Instance Data Manager
+## ClickUp Time Entry Package Instance Allocation
 
-## Problem
-Imported package data has issues: overlapping date ranges, duplicate active packages, KickStarts still marked active from years ago. You need a simple, focused view to see all a tenant's packages together and fix dates/status quickly.
+### Overview
+Allocate `packageinstance_id` on `clickup_tasks_api` so ClickUp time entries can later be migrated into the production `time_entries` table. This is a two-step process: first auto-match by date overlap (defaulting to the RTO membership), then provide a manual review/override UI. Migration to `time_entries` happens separately, only after allocations are confirmed.
 
-## Solution
-A new "Package Data Manager" dialog accessible from the client Packages tab (SuperAdmin only). It shows a compact table of ALL package instances for that tenant -- both active and completed -- sorted by start date, with inline editing of start date, end date, and active/deactivate toggles.
+### Current State
+- **116 tasks** have a `tenant_id` but no `packageinstance_id`
+- **773 tasks** have no `tenant_id` at all (not relevant yet)
+- Many tenants have 2+ active RTO memberships (current year + previous year still marked active), plus CRICOS memberships
+- Time entries in `clickup_time_entries` have `start_at`/`end_at` timestamps that can be compared against `package_instances.start_date`/`end_date`
 
-## What You'll See
+### Data Matching Strategy
 
-A table with these columns:
-- **Package** (read-only label, e.g. "M-SAR", "KS-RTO")
-- **Start Date** (editable date picker)
-- **End Date** (editable date picker, nullable)
-- **Active** (toggle switch)
-- **Complete** (toggle switch)
-- **Save** button per row (only appears when a change is made)
+For each `clickup_tasks_api` row where `tenant_id` is set but `packageinstance_id` is null:
 
-Rows are sorted chronologically by start date. Colour-coded row backgrounds:
-- Green tint = active
-- Grey tint = complete
-- Red/amber tint = potential issue (active with no end date and older than 12 months, or overlapping active packages of the same type)
+1. Find the earliest `start_at` from its `clickup_time_entries`
+2. Find **RTO membership** package instances (package name matching `M-%R%`, i.e. M-GR, M-RR, M-SAR, M-DR -- excluding CRICOS patterns like M-GC, M-RC, M-SAC, M-DC) for that tenant
+3. Match where the earliest time entry date falls within the package's `start_date` to `start_date + 365 days` (since most packages have no `end_date`)
+4. If exactly one match: set `packageinstance_id`
+5. If zero or multiple matches: leave null for manual assignment
 
-A simple visual warning bar at the top if duplicate active packages of the same type are detected.
+---
 
-## Technical Approach
+### Part 1: Database Function for Auto-Matching
 
-### New Component
-**`src/components/client/PackageDataManager.tsx`**
-- Dialog triggered by a "Data Manager" button on the Packages tab (SuperAdmin only)
-- Fetches all `package_instances` for the tenant joined with `packages.name`
-- Renders an editable table
-- Each row tracks local edits; save button triggers an update to `package_instances` for that row
-- Updates use `supabase.from('package_instances').update(...)` for `start_date`, `end_date`, `is_active`, `is_complete`, and `membership_state`
-- When toggling `is_complete = true`, also sets `membership_state = 'complete'`
-- When toggling `is_active = false` and `is_complete = true`, sets `end_date` to today if blank
-- Toast confirmation on save
+**New SQL function: `rpc_match_clickup_to_rto_membership()`**
 
-### Modified File
-**`src/components/client/ClientPackagesTab.tsx`**
-- Add a "Data Manager" button next to the existing "Start Package" / "Add Package" buttons (SuperAdmin only)
-- Opens the `PackageDataManager` dialog
-- Pass `tenantId` and an `onSuccess` callback to refresh the package list
+Logic:
+- For each unmatched task (has `tenant_id`, no `packageinstance_id`), find the earliest time entry date
+- Join to `package_instances` + `packages` where `packages.name LIKE 'M-%R%'` (RTO memberships only)
+- Match where earliest entry date >= `start_date` AND earliest entry date < `start_date + interval '1 year'`
+- If exactly one match, update `packageinstance_id`
+- Return a summary: tasks matched, tasks unmatched, tasks with no time entries
 
-### No Database Changes Required
-All fields being edited (`start_date`, `end_date`, `is_active`, `is_complete`, `membership_state`) already exist on `package_instances`.
+### Part 2: Package Instance Assignment UI
+
+Add a new **"Assign Package Instances"** card to `src/pages/ClickUpImport.tsx` (below the Time Sync card). This section will:
+
+**Display a table of unmatched tasks** (where `tenant_id` is set, `packageinstance_id` is null):
+- Columns: Custom ID, Task Name, Tenant, Time Range (earliest-latest entry dates), Package Instance (dropdown)
+- The package dropdown shows all package instances for that tenant with date context: **"M-SAR (18/11/2024 -- 17/11/2025)"** or **"M-SAR (18/11/2024 -- current)"**
+- RTO memberships listed first, then other package types
+- A save button per row to commit the assignment
+
+**Action buttons:**
+- **"Auto-Match RTO Memberships"** -- calls the RPC above, then refreshes the list
+- **"Refresh"** -- reloads the unmatched task list
+
+**Summary stats at the top:**
+- Tasks with package assigned / total tasks with tenant / tasks with no time entries
+
+### Part 3: Fix Pre-existing Build Errors
+
+The three TS2589 "type instantiation excessively deep" errors in:
+- `src/components/eos/LiveMeetingView.tsx` (line 109)
+- `src/components/package-builder/StagePreviewDialog.tsx` (line 99)
+- `src/hooks/useProcesses.tsx` (line 489)
+
+These are caused by complex Supabase `.select()` joins with FK hints. Fix by casting the query results with `as any` to break the deep type chain.
+
+---
+
+### Technical Details
+
+**New database migration:**
+```sql
+CREATE OR REPLACE FUNCTION public.rpc_match_clickup_to_rto_membership()
+RETURNS jsonb
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+-- For each clickup_tasks_api row with tenant_id but no packageinstance_id:
+-- 1. Find earliest clickup_time_entries.start_at for that task_id
+-- 2. Match to package_instances where package name LIKE 'M-%R%'
+--    and earliest_date between start_date and start_date + 1 year
+-- 3. Update packageinstance_id if exactly one match
+-- Returns { matched: N, unmatched: N, no_entries: N }
+$$;
+```
+
+**Modified files:**
+
+1. **`src/pages/ClickUpImport.tsx`**
+   - Add new "Assign Package Instances" Card section
+   - New state for unmatched tasks, package instances per tenant
+   - Fetch unmatched tasks joined with time entry date ranges
+   - Package instance dropdown per row with date labels (dd/MM/yyyy format)
+   - Auto-match button calling the RPC
+   - Save per-row to update `clickup_tasks_api.packageinstance_id`
+
+2. **`src/components/eos/LiveMeetingView.tsx`** -- add type cast to fix TS2589
+3. **`src/components/package-builder/StagePreviewDialog.tsx`** -- add type cast to fix TS2589
+4. **`src/hooks/useProcesses.tsx`** -- add type cast to fix TS2589
+
+**No changes to `time_entries` or Add/Edit Time dialogs in this step** -- that comes after allocations are confirmed.
 
