@@ -120,19 +120,28 @@ export function PackageInstanceAssignment() {
           newCache[tid] = pkgCache[tid];
           continue;
         }
-        const { data: piData } = await (supabase as any)
+        const { data: piData } = await supabase
           .from("package_instances")
-          .select("id, start_date, end_date, packages!inner(name)")
+          .select("id, package_id, start_date, end_date")
           .eq("tenant_id", tid)
           .order("start_date", { ascending: false });
 
-        if (piData) {
+        if (piData && piData.length > 0) {
+          // Fetch package names separately (no FK relationship)
+          const packageIds = [...new Set(piData.map(pi => pi.package_id).filter(Boolean))];
+          const { data: pkgData } = await supabase
+            .from("packages")
+            .select("id, name")
+            .in("id", packageIds);
+          const pkgMap: Record<number, string> = {};
+          (pkgData || []).forEach((p: any) => { pkgMap[p.id] = p.name; });
+
           newCache[tid] = piData.map((pi: any) => ({
             id: pi.id,
-            package_name: pi.packages?.name ?? "Unknown",
+            package_name: pkgMap[pi.package_id] ?? "Unknown",
             start_date: pi.start_date,
             end_date: pi.end_date,
-            is_rto: /^M-.*R/.test(pi.packages?.name ?? ""),
+            is_rto: /^M-.*R/.test(pkgMap[pi.package_id] ?? ""),
           }));
         } else {
           newCache[tid] = [];
