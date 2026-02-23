@@ -192,6 +192,7 @@ export function ClientPackagesTab({ tenantId, tenantName, packages, loading, onA
         open={dataManagerOpen}
         onOpenChange={setDataManagerOpen}
         tenantId={tenantId}
+        tenantName={tenantName}
         onSuccess={() => {
           // Trigger a refresh if parent provides onAddPackage callback pattern
         }}
