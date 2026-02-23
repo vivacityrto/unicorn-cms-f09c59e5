@@ -15,6 +15,8 @@ interface TenantComboboxProps {
 export function TenantCombobox({ tenants, value, onSelect, disabled }: TenantComboboxProps) {
   const [open, setOpen] = useState(false);
 
+  const sortedTenants = useMemo(() => [...tenants].sort((a, b) => a.name.localeCompare(b.name)), [tenants]);
+
   const selectedName = useMemo(() => {
     if (!value) return null;
     return tenants.find(t => t.id === value)?.name ?? `#${value}`;
@@ -40,7 +42,7 @@ export function TenantCombobox({ tenants, value, onSelect, disabled }: TenantCom
           <CommandList>
             <CommandEmpty className="text-xs py-3 text-center">No tenant found.</CommandEmpty>
             <CommandGroup>
-              {tenants.map(t => (
+              {sortedTenants.map(t => (
                 <CommandItem
                   key={t.id}
                   value={t.name}
