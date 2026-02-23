@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { format, differenceInMonths } from 'date-fns';
-import { CalendarIcon, AlertTriangle, Save, Database } from 'lucide-react';
+import { CalendarIcon, AlertTriangle, Save, Database, ArrowUpDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
@@ -54,6 +54,7 @@ export function PackageDataManager({ open, onOpenChange, tenantId, onSuccess }: 
   const [loading, setLoading] = useState(false);
   const [edits, setEdits] = useState<Record<number, RowEdits>>({});
   const [savingId, setSavingId] = useState<number | null>(null);
+  const [sortMode, setSortMode] = useState<'start' | 'package_start'>('start');
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -166,6 +167,17 @@ export function PackageDataManager({ open, onOpenChange, tenantId, onSuccess }: 
     setSavingId(null);
   };
 
+  // Sort rows
+  const sortedRows = [...rows].sort((a, b) => {
+    if (sortMode === 'package_start') {
+      const nameCmp = a.package_name.localeCompare(b.package_name);
+      if (nameCmp !== 0) return nameCmp;
+    }
+    const aDate = a.start_date ?? '';
+    const bDate = b.start_date ?? '';
+    return aDate.localeCompare(bDate);
+  });
+
   // Detect issues
   const effectiveRows = rows.map(r => getEffective(r));
   const activeByType = new Map<number, number>();
@@ -219,8 +231,24 @@ export function PackageDataManager({ open, onOpenChange, tenantId, onSuccess }: 
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Package</TableHead>
-                <TableHead>Start Date</TableHead>
+                <TableHead>
+                  <button
+                    className="flex items-center gap-1 hover:text-foreground"
+                    onClick={() => setSortMode('package_start')}
+                  >
+                    Package
+                    <ArrowUpDown className={cn("h-3 w-3", sortMode === 'package_start' && "text-primary")} />
+                  </button>
+                </TableHead>
+                <TableHead>
+                  <button
+                    className="flex items-center gap-1 hover:text-foreground"
+                    onClick={() => setSortMode('start')}
+                  >
+                    Start Date
+                    <ArrowUpDown className={cn("h-3 w-3", sortMode === 'start' && "text-primary")} />
+                  </button>
+                </TableHead>
                 <TableHead>End Date</TableHead>
                 <TableHead className="text-center">Active</TableHead>
                 <TableHead className="text-center">Complete</TableHead>
@@ -241,7 +269,7 @@ export function PackageDataManager({ open, onOpenChange, tenantId, onSuccess }: 
                   </TableCell>
                 </TableRow>
               ) : (
-                rows.map(row => {
+                sortedRows.map(row => {
                   const eff = getEffective(row);
                   return (
                     <TableRow key={row.id} className={getRowClass(eff)}>
