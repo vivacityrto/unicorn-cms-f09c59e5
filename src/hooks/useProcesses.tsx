@@ -486,7 +486,7 @@ export function useProcessAuditLog(processId: string | undefined) {
     queryFn: async (): Promise<ProcessAuditEntry[]> => {
       if (!processId) return [];
 
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from('process_audit_log')
         .select(`
           *,

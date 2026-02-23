@@ -96,7 +96,7 @@ export function StagePreviewDialog({ open, onOpenChange, stage }: StagePreviewDi
     try {
       // Fetch team tasks for this stage across all packages
       const [teamTasksResult, clientTasksResult, emailsResult, documentsResult] = await Promise.all([
-        supabase
+        (supabase as any)
           .from('package_staff_tasks')
           .select(`
             id, name, owner_role, estimated_hours, is_mandatory,

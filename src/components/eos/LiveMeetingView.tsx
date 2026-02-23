@@ -106,7 +106,7 @@ export const LiveMeetingView = () => {
   const { data: participants } = useQuery({
     queryKey: ['eos-meeting-participants', meetingId],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from('eos_meeting_participants')
         .select('*, users!eos_meeting_participants_user_id_users_fkey(first_name, last_name)')
         .eq('meeting_id', meetingId!);

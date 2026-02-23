@@ -7,6 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { ArrowLeft, CloudDownload, Loader2, MessageSquare, Download, CheckCircle2, ExternalLink, RefreshCw, Clock } from "lucide-react";
+import { PackageInstanceAssignment } from "@/components/clickup/PackageInstanceAssignment";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { TenantCombobox } from "@/components/clickup/TenantCombobox";
@@ -533,6 +534,9 @@ export default function ClickUpImport() {
             )}
           </CardContent>
         </Card>
+
+        {/* Package Instance Assignment */}
+        <PackageInstanceAssignment />
 
         {/* Task List with Tenant Assignment */}
         <Card>

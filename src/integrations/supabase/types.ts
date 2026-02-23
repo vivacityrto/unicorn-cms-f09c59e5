@@ -47200,6 +47200,7 @@ export type Database = {
         }
         Returns: Json
       }
+      rpc_match_clickup_to_rto_membership: { Args: never; Returns: Json }
       rpc_post_time_draft: { Args: { p_draft_id: string }; Returns: Json }
       rpc_run_time_draft_worker: {
         Args: { p_tenant_id?: number }

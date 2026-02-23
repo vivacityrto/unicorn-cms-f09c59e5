@@ -137,7 +137,7 @@ export async function checkDependenciesInPackage(
   }
 
   // Get all stage_keys in the package
-  const { data: packageStages, error: psError } = await supabase
+  const { data: packageStages, error: psError } = await (supabase as any)
     .from('package_stages')
     .select('stage_id, documents_stages!inner(stage_key)')
     .eq('package_id', packageId);
