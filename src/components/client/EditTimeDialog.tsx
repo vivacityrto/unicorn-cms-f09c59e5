@@ -46,6 +46,7 @@ interface PackageInstance {
   id: number;
   package_id: number;
   package_name: string;
+  display_label: string;
   is_kickstart: boolean;
 }
 
@@ -137,12 +138,11 @@ export function EditTimeDialog({ open, onOpenChange, entry, onSuccess }: EditTim
   useEffect(() => {
     if (!open || !entry) return;
     (async () => {
+      // Fetch ALL package instances (including completed) to support historical time reallocation
       const { data: piData } = await supabase
         .from('package_instances')
-        .select('id, package_id')
+        .select('id, package_id, start_date, end_date, is_active, is_complete')
         .eq('tenant_id', entry.tenant_id)
-        .eq('is_complete', false)
-        .eq('is_active', true)
         .order('start_date', { ascending: false });
 
       if (!piData || piData.length === 0) {
@@ -159,10 +159,15 @@ export function EditTimeDialog({ open, onOpenChange, entry, onSuccess }: EditTim
 
       const instances: PackageInstance[] = piData.map((pi: any) => {
         const pkg = pkgMap.get(Number(pi.package_id));
+        const name = pkg?.name || `Package #${pi.id}`;
+        const startStr = pi.start_date ? format(new Date(pi.start_date + 'T00:00:00'), 'dd/MM/yyyy') : '?';
+        const endStr = pi.end_date ? format(new Date(pi.end_date + 'T00:00:00'), 'dd/MM/yyyy') : 'current';
+        const suffix = pi.is_complete ? ' (completed)' : '';
         return {
           id: pi.id,
           package_id: Number(pi.package_id),
-          package_name: pkg?.name || `Package #${pi.id}`,
+          package_name: name,
+          display_label: `${name} (${startStr} — ${endStr})${suffix}`,
           is_kickstart: (pkg?.package_type || '').toLowerCase() === 'kickstart',
         };
       });
@@ -319,7 +324,7 @@ export function EditTimeDialog({ open, onOpenChange, entry, onSuccess }: EditTim
                 <Input value="No packages" readOnly className="bg-muted" />
               )}
               {activeInstances.length === 1 && (
-                <Input value={activeInstances[0].package_name} readOnly className="bg-muted" />
+                <Input value={activeInstances[0].display_label} readOnly className="bg-muted" />
               )}
               {activeInstances.length > 1 && (
                 <Select
@@ -337,7 +342,7 @@ export function EditTimeDialog({ open, onOpenChange, entry, onSuccess }: EditTim
                   <SelectContent>
                     {activeInstances.map((inst) => (
                       <SelectItem key={inst.id} value={inst.id.toString()}>
-                        {inst.package_name}
+                        {inst.display_label}
                       </SelectItem>
                     ))}
                   </SelectContent>
