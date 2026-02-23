@@ -101,7 +101,7 @@ export function useClientManagement() {
       const tenantIds = tenantsData.map(t => t.id);
 
       // Fetch all membership entitlements with package details
-      const { data: entitlements } = await supabase
+      const { data: entitlements } = await (supabase as any)
         .from('membership_entitlements')
         .select(`
           id,

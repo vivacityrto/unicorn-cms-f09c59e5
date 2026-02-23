@@ -104,7 +104,7 @@ export function StagePreviewDialog({ open, onOpenChange, stage }: StagePreviewDi
           `)
           .eq('stage_id', stage.id)
           .order('order_number', { ascending: true }),
-        supabase
+        (supabase as any)
           .from('package_client_tasks')
           .select(`
             id, name, instructions,

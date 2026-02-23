@@ -78,7 +78,7 @@ export function ClientDocumentsTab({ tenantId, packages }: ClientDocumentsTabPro
     try {
       setLoading(true);
       
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from('documents')
         .select('*, packages:package_id(name)')
         .in('package_id', packageIds)
