@@ -46535,7 +46535,6 @@ export type Database = {
         Returns: {
           columns: Json
           has_rls: boolean
-          last_updated: string
           policy_count: number
           row_count: number
           schema_name: string
