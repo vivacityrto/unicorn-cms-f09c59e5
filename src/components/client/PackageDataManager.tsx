@@ -283,9 +283,19 @@ export function PackageDataManager({ open, onOpenChange, tenantId, onSuccess }: 
                         />
                       </TableCell>
                       <TableCell>
-                        <DatePickerCell
+                      <DatePickerCell
                           value={eff.end_date}
-                          onChange={(v) => setEdit(row.id, 'end_date', v)}
+                          onChange={(v) => {
+                            setEdits(prev => ({
+                              ...prev,
+                              [row.id]: {
+                                ...prev[row.id],
+                                end_date: v,
+                                // Setting an end date auto-deactivates and completes
+                                ...(v ? { is_active: false, is_complete: true } : {}),
+                              },
+                            }));
+                          }}
                           clearable
                         />
                       </TableCell>
