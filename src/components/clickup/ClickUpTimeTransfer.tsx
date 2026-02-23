@@ -383,13 +383,13 @@ export function ClickUpTimeTransfer() {
               <CardTitle className="flex items-center gap-2 text-base">
                 <Package className="h-4 w-4" /> Package Instances
               </CardTitle>
-              <Link
-                to={`/tenant/${selectedTenantId}`}
-                target="_blank"
-                className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
+              <a
+                href={`/tenant/${selectedTenantId}`}
+                onClick={(e) => { e.preventDefault(); window.open(`/tenant/${selectedTenantId}`, '_blank', 'noopener,noreferrer,width=1200,height=800'); }}
+                className="inline-flex items-center gap-1 text-xs text-primary hover:underline cursor-pointer"
               >
                 View Tenant <ExternalLink className="h-3 w-3" />
-              </Link>
+              </a>
             </div>
           </CardHeader>
           <CardContent>
