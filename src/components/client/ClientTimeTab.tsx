@@ -56,7 +56,7 @@ function PackageBurndownCards({ tenantId }: { tenantId: number }) {
       const instanceIds = (data || []).map(r => r.package_instance_id).filter(Boolean) as number[];
       if (instanceIds.length === 0) return [];
 
-      const { data: instances } = await supabase
+      const { data: instances } = await (supabase as any)
         .from('package_instances')
         .select('id, package_id, packages:package_id(name)')
         .in('id', instanceIds);
@@ -145,7 +145,7 @@ function PackageTimeSummaryCards({ tenantId }: { tenantId: number }) {
       const instanceIds = (data || []).map(r => r.package_instance_id).filter(Boolean) as number[];
       if (instanceIds.length === 0) return [];
 
-      const { data: instances } = await supabase
+      const { data: instances } = await (supabase as any)
         .from('package_instances')
         .select('id, package_id, packages:package_id(name)')
         .in('id', instanceIds);
@@ -243,7 +243,7 @@ function MoveEntryDialog({
   const { data: packages } = useQuery({
     queryKey: ['active-packages', tenantId],
     queryFn: async () => {
-      const { data } = await supabase
+      const { data } = await (supabase as any)
         .from('package_instances')
         .select('id, package_id, packages:package_id(name)')
         .eq('tenant_id', tenantId)
@@ -355,7 +355,7 @@ function SplitEntryDialog({
   const { data: packages } = useQuery({
     queryKey: ['active-packages', tenantId],
     queryFn: async () => {
-      const { data } = await supabase
+      const { data } = await (supabase as any)
         .from('package_instances')
         .select('id, package_id, packages:package_id(name)')
         .eq('tenant_id', tenantId)
@@ -646,7 +646,7 @@ export function ClientTimeTab({ tenantId, tenantName }: ClientTimeTabProps) {
   const { data: activePackages } = useQuery({
     queryKey: ['active-packages', tenantId],
     queryFn: async () => {
-      const { data } = await supabase
+      const { data } = await (supabase as any)
         .from('package_instances')
         .select('id, package_id, packages:package_id(name)')
         .eq('tenant_id', tenantId)

@@ -31,7 +31,7 @@ export function useDocumentRequests(tenantId: number | null) {
     queryKey: documentRequestKeys.list(tenantId!),
     queryFn: async () => {
       if (!tenantId) return [];
-      const { data, error } = await supabase
+      const { data, error } = await (supabase
         .from('tenant_document_requests')
         .select(`
           *,
@@ -39,7 +39,7 @@ export function useDocumentRequests(tenantId: number | null) {
           assignee:users!tenant_document_requests_assigned_to_user_id_fkey(first_name, last_name)
         `)
         .eq('tenant_id', tenantId)
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false }) as any);
 
       if (error) {
         // Fallback without joins if FK aliases fail
