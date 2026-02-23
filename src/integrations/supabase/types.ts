@@ -7245,6 +7245,60 @@ export type Database = {
           },
         ]
       }
+      clickup_time_entries: {
+        Row: {
+          billable: boolean | null
+          clickup_interval_id: string
+          created_at: string | null
+          description: string | null
+          duration_minutes: number | null
+          duration_ms: number
+          end_at: string | null
+          id: number
+          imported_at: string | null
+          imported_to_time_entries: boolean | null
+          start_at: string | null
+          task_id: string
+          tenant_id: number | null
+          user_email: string | null
+          user_name: string | null
+        }
+        Insert: {
+          billable?: boolean | null
+          clickup_interval_id: string
+          created_at?: string | null
+          description?: string | null
+          duration_minutes?: number | null
+          duration_ms?: number
+          end_at?: string | null
+          id?: number
+          imported_at?: string | null
+          imported_to_time_entries?: boolean | null
+          start_at?: string | null
+          task_id: string
+          tenant_id?: number | null
+          user_email?: string | null
+          user_name?: string | null
+        }
+        Update: {
+          billable?: boolean | null
+          clickup_interval_id?: string
+          created_at?: string | null
+          description?: string | null
+          duration_minutes?: number | null
+          duration_ms?: number
+          end_at?: string | null
+          id?: number
+          imported_at?: string | null
+          imported_to_time_entries?: boolean | null
+          start_at?: string | null
+          task_id?: string
+          tenant_id?: number | null
+          user_email?: string | null
+          user_name?: string | null
+        }
+        Relationships: []
+      }
       client_action_item_comments: {
         Row: {
           action_item_id: string
