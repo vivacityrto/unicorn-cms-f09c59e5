@@ -313,10 +313,12 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
   useEffect(() => {
     if (clickupTasks.length === 0) return;
     const loadApiComments = async () => {
+      // Fetch comments by tenant_id, plus any orphaned comments for tasks linked to this tenant
+      const taskIds = clickupTasks.map(t => t.task_id).filter(Boolean);
       const { data } = await supabase
         .from('clickup_task_comments' as never)
         .select('*')
-        .eq('tenant_id', tenantId)
+        .or(`tenant_id.eq.${tenantId}${taskIds.length > 0 ? `,and(tenant_id.is.null,task_id.in.(${taskIds.join(',')}))` : ''}`)
         .order('date_created', { ascending: false });
       if (data && Array.isArray(data)) {
         const grouped: Record<string, ApiComment[]> = {};
@@ -339,6 +341,12 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
         body: { action: 'fetch_by_task_ids', task_ids: [taskId], tenant_id: tenantId },
       });
       if (error) throw error;
+      // Stamp tenant_id on any freshly fetched comments that are still null
+      await supabase
+        .from('clickup_task_comments' as never)
+        .update({ tenant_id: tenantId } as never)
+        .eq('task_id', taskId)
+        .is('tenant_id', null);
       // Reload API comments for this task
       const { data: refreshed } = await supabase
         .from('clickup_task_comments' as never)
