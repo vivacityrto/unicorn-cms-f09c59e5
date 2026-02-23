@@ -21,7 +21,7 @@ type Payload = {
   phone_number?: string | null;
 };
 
-const VIVACITY_TENANT_ID = 319;
+const VIVACITY_TENANT_ID = 6372;
 const VIVACITY_ROLES: UnicornRole[] = [
   "Super Admin",
   "Team Leader",
