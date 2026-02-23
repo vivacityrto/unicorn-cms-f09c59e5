@@ -17,7 +17,7 @@ const Table = React.forwardRef<HTMLTableElement, React.HTMLAttributes<HTMLTableE
         ref={ref} 
         className={cn(
           "w-full caption-bottom text-sm",
-          "min-w-[600px]",
+          "min-w-[800px]",
           className
         )} 
         {...props} 
