@@ -32,8 +32,10 @@ import {
   ChevronLeft,
   ChevronRight,
   RotateCcw,
+  Pencil,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { EditTimeDialog } from './EditTimeDialog';
 
 interface ClientTimeTabProps {
   tenantId: number;
@@ -634,6 +636,7 @@ export function ClientTimeTab({ tenantId, tenantName }: ClientTimeTabProps) {
   const [moveEntry, setMoveEntry] = useState<TimeEntry | null>(null);
   const [splitEntry, setSplitEntry] = useState<TimeEntry | null>(null);
   const [reallocateEntry, setReallocateEntry] = useState<TimeEntry | null>(null);
+  const [editEntry, setEditEntry] = useState<TimeEntry | null>(null);
 
   const isAdminOrStaff =
     profile?.global_role === 'SuperAdmin' ||
@@ -828,6 +831,15 @@ export function ClientTimeTab({ tenantId, tenantName }: ClientTimeTabProps) {
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-1">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 px-2"
+                            onClick={() => setEditEntry(entry)}
+                            title="View / Edit"
+                          >
+                            <Pencil className="h-3.5 w-3.5" />
+                          </Button>
                           {isAdminOrStaff && membership.showScopeSelector && (
                             <Button
                               variant="ghost"
@@ -903,6 +915,14 @@ export function ClientTimeTab({ tenantId, tenantName }: ClientTimeTabProps) {
         entry={reallocateEntry}
         tenantId={tenantId}
         showScopeSelector={membership.showScopeSelector}
+        onSuccess={handleRefresh}
+      />
+
+      {/* Edit Dialog */}
+      <EditTimeDialog
+        open={!!editEntry}
+        onOpenChange={v => !v && setEditEntry(null)}
+        entry={editEntry}
         onSuccess={handleRefresh}
       />
     </div>
