@@ -649,13 +649,22 @@ export function ClientTimeTab({ tenantId, tenantName }: ClientTimeTabProps) {
     queryKey: ['entry-user-names', userIds],
     queryFn: async () => {
       if (userIds.length === 0) return {};
+      // Fetch all users including archived/disabled so time entries still show names
       const { data } = await (supabase as any)
         .from('users')
-        .select('user_uuid, first_name, last_name')
+        .select('user_uuid, first_name, last_name, archived, disabled')
         .in('user_uuid', userIds);
       const map: Record<string, string> = {};
       (data || []).forEach((u: any) => {
-        map[u.user_uuid] = [u.first_name, u.last_name].filter(Boolean).join(' ') || 'Unknown';
+        const name = [u.first_name, u.last_name].filter(Boolean).join(' ') || 'Unknown';
+        const suffix = (u.archived || u.disabled) ? ' (Inactive)' : '';
+        map[u.user_uuid] = name + suffix;
+      });
+      // For any user_id not found in the DB, mark as Former User
+      userIds.forEach(id => {
+        if (!map[id]) {
+          map[id] = 'Former User';
+        }
       });
       return map;
     },
