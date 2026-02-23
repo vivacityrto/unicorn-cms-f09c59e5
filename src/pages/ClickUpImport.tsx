@@ -76,56 +76,76 @@ export default function ClickUpImport() {
     fetchCounts();
   }, [fetchCounts]);
 
+  const SELECT_COLS = "id, task_id, custom_id, name, description, status, url, tenant_id";
+
   // Fetch tasks based on filter
   const fetchTasks = useCallback(async () => {
     setTasksLoading(true);
     const searchTerm = taskSearch.trim();
 
-    // If there's an active search, search across ALL tasks (ignore tenant filter)
-    if (searchTerm) {
-      // Search by name, custom_id, or task_id using multiple queries
-      const searches = [
-        supabase.from("clickup_tasks_api")
-          .select("id, task_id, custom_id, name, description, status, url, tenant_id")
-          .ilike("name", `%${searchTerm}%`)
-          .order("name", { ascending: true })
-          .limit(200),
-        supabase.from("clickup_tasks_api")
-          .select("id, task_id, custom_id, name, description, status, url, tenant_id")
-          .ilike("custom_id", `%${searchTerm}%`)
-          .order("name", { ascending: true })
-          .limit(50),
-        supabase.from("clickup_tasks_api")
-          .select("id, task_id, custom_id, name, description, status, url, tenant_id")
-          .ilike("task_id", `%${searchTerm}%`)
-          .order("name", { ascending: true })
-          .limit(50),
-      ];
-      const [r1, r2, r3] = await Promise.all(searches);
-      // Deduplicate by id
-      const map = new Map<number, ClickUpTask>();
-      for (const row of [...(r1.data ?? []), ...(r2.data ?? []), ...(r3.data ?? [])]) {
-        map.set(row.id, row);
-      }
-      setTasks(Array.from(map.values()).sort((a, b) => (a.name ?? "").localeCompare(b.name ?? "")));
-    } else {
-      let query = supabase
-        .from("clickup_tasks_api")
-        .select("id, task_id, custom_id, name, description, status, url, tenant_id")
-        .order("name", { ascending: true })
-        .limit(200);
+    try {
+      if (searchTerm) {
+        // Search across ALL tasks by name, custom_id, or task_id
+        const searches = [
+          supabase.from("clickup_tasks_api")
+            .select("id, task_id, custom_id, name, description, status, url, tenant_id")
+            .ilike("name", `%${searchTerm}%`)
+            .order("name", { ascending: true })
+            .limit(500),
+          supabase.from("clickup_tasks_api")
+            .select("id, task_id, custom_id, name, description, status, url, tenant_id")
+            .ilike("custom_id", `%${searchTerm}%`)
+            .order("name", { ascending: true })
+            .limit(200),
+          supabase.from("clickup_tasks_api")
+            .select("id, task_id, custom_id, name, description, status, url, tenant_id")
+            .ilike("task_id", `%${searchTerm}%`)
+            .order("name", { ascending: true })
+            .limit(200),
+        ];
+        const [r1, r2, r3] = await Promise.all(searches);
+        const map = new Map<number, ClickUpTask>();
+        for (const row of [...(r1.data ?? []), ...(r2.data ?? []), ...(r3.data ?? [])]) {
+          map.set(row.id, row);
+        }
+        setTasks(Array.from(map.values()).sort((a, b) => (a.name ?? "").localeCompare(b.name ?? "")));
+      } else {
+        // Paginate to get ALL tasks for the current filter
+        const allTasks: ClickUpTask[] = [];
+        let offset = 0;
+        let hasMore = true;
+        const batchSize = 500;
 
-      if (filterTenant === "unresolved") {
-        query = query.is("tenant_id", null);
-      } else if (filterTenant && filterTenant !== "all") {
-        query = query.eq("tenant_id", parseInt(filterTenant, 10));
-      }
+        while (hasMore) {
+          let q = supabase
+            .from("clickup_tasks_api")
+            .select(SELECT_COLS)
+            .order("name", { ascending: true })
+            .range(offset, offset + batchSize - 1);
 
-      const { data } = await query;
-      setTasks(data ?? []);
+          if (filterTenant === "unresolved") {
+            q = q.is("tenant_id", null);
+          } else if (filterTenant && filterTenant !== "all") {
+            q = q.eq("tenant_id", parseInt(filterTenant, 10));
+          }
+
+          const { data, error } = await q;
+          if (error) throw error;
+          if (data && data.length > 0) {
+            allTasks.push(...(data as unknown as ClickUpTask[]));
+            offset += batchSize;
+            hasMore = data.length === batchSize;
+          } else {
+            hasMore = false;
+          }
+        }
+        setTasks(allTasks);
+      }
+    } catch (err) {
+      toast({ title: "Failed to load tasks", description: (err as Error).message, variant: "destructive" });
     }
     setTasksLoading(false);
-  }, [filterTenant, taskSearch]);
+  }, [filterTenant, taskSearch, toast]);
 
   // Debounce search to avoid excessive queries
   useEffect(() => {
@@ -211,17 +231,66 @@ export default function ClickUpImport() {
   };
 
   const handleAssignTenant = async (taskId: number, tenantId: number) => {
+    // Find the task to get its task_id for bulk matching
+    const task = tasks.find(t => t.id === taskId);
+    if (!task?.task_id) {
+      // Fallback: just update the single row
+      setUpdatingTaskId(taskId);
+      const { error } = await supabase
+        .from("clickup_tasks_api")
+        .update({ tenant_id: tenantId })
+        .eq("id", taskId);
+      if (error) {
+        toast({ title: "Update failed", description: error.message, variant: "destructive" });
+      } else {
+        toast({ title: "Tenant assigned" });
+        setTasks(prev => prev.map(t => t.id === taskId ? { ...t, tenant_id: tenantId } : t));
+      }
+      setUpdatingTaskId(null);
+      return;
+    }
+
+    // Count how many rows share this task_id AND have null tenant_id
+    const { count, error: countErr } = await supabase
+      .from("clickup_tasks_api")
+      .select("id", { count: "exact", head: true })
+      .eq("task_id", task.task_id)
+      .is("tenant_id", null);
+
+    if (countErr) {
+      toast({ title: "Error checking tasks", description: countErr.message, variant: "destructive" });
+      return;
+    }
+
+    const matchCount = count ?? 0;
+
+    // Prompt user if more than 1 task will be updated
+    if (matchCount > 1) {
+      const confirmed = window.confirm(
+        `This will assign the tenant to ${matchCount} tasks with the same task_id (${task.custom_id || task.task_id}) where tenant is currently unset.\n\nContinue?`
+      );
+      if (!confirmed) return;
+    }
+
     setUpdatingTaskId(taskId);
+
+    // Bulk update all rows with same task_id and null tenant_id
     const { error } = await supabase
       .from("clickup_tasks_api")
       .update({ tenant_id: tenantId })
-      .eq("id", taskId);
+      .eq("task_id", task.task_id)
+      .is("tenant_id", null);
 
     if (error) {
       toast({ title: "Update failed", description: error.message, variant: "destructive" });
     } else {
-      toast({ title: "Tenant assigned" });
-      setTasks(prev => prev.map(t => t.id === taskId ? { ...t, tenant_id: tenantId } : t));
+      toast({ title: "Tenant assigned", description: matchCount > 1 ? `Updated ${matchCount} tasks` : undefined });
+      // Update local state for all matching tasks
+      setTasks(prev => prev.map(t =>
+        t.task_id === task.task_id && t.tenant_id === null
+          ? { ...t, tenant_id: tenantId }
+          : t
+      ));
     }
     setUpdatingTaskId(null);
   };
@@ -481,7 +550,7 @@ export default function ClickUpImport() {
             ) : (
               <>
                 <p className="text-xs text-muted-foreground mb-2">
-                  {tasks.length} tasks shown (max 200){taskSearch.trim() ? " — searching all tasks" : ""}
+                  {tasks.length} tasks{taskSearch.trim() ? " — searching all tasks" : ""}
                 </p>
                 <Table>
                   <TableHeader>
