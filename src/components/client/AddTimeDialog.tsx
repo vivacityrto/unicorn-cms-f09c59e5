@@ -220,6 +220,7 @@ export function AddTimeDialog({
         is_billable: isBillable,
         scope_tag: scopeTag,
         source: 'manual',
+        package_id: selectedInstanceId,
         package_instance_id: selectedInstanceId,
       } as any);
 
