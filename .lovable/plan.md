@@ -1,48 +1,49 @@
 
-# Fix: ClickUp Comments Not Showing for Tenant
+
+# Package Instance Data Manager
 
 ## Problem
+Imported package data has issues: overlapping date ranges, duplicate active packages, KickStarts still marked active from years ago. You need a simple, focused view to see all a tenant's packages together and fix dates/status quickly.
 
-The "Structured Notes" tab queries `clickup_task_comments` filtered by `tenant_id = 7536`, but the 15 comments for task `86d17h5q5` all have `tenant_id = null`. This means they are invisible on the tenant page.
+## Solution
+A new "Package Data Manager" dialog accessible from the client Packages tab (SuperAdmin only). It shows a compact table of ALL package instances for that tenant -- both active and completed -- sorted by start date, with inline editing of start date, end date, and active/deactivate toggles.
 
-This happened because the task was assigned to a tenant before the comment propagation logic was added. The recent fix only applies going forward when a tenant is manually assigned via the ClickUp Sync page.
+## What You'll See
 
-## Root Cause
+A table with these columns:
+- **Package** (read-only label, e.g. "M-SAR", "KS-RTO")
+- **Start Date** (editable date picker)
+- **End Date** (editable date picker, nullable)
+- **Active** (toggle switch)
+- **Complete** (toggle switch)
+- **Save** button per row (only appears when a change is made)
 
-- `ClientStructuredNotesTab.tsx` line 319: `loadApiComments` queries `.eq('tenant_id', tenantId)` -- comments with null tenant_id are excluded
-- The 15 existing comments were never backfilled with the correct tenant_id
+Rows are sorted chronologically by start date. Colour-coded row backgrounds:
+- Green tint = active
+- Grey tint = complete
+- Red/amber tint = potential issue (active with no end date and older than 12 months, or overlapping active packages of the same type)
 
-## Plan
+A simple visual warning bar at the top if duplicate active packages of the same type are detected.
 
-### Step 1: Backfill existing orphaned comments (database fix)
+## Technical Approach
 
-Run a one-time UPDATE to propagate `tenant_id` from `clickup_tasks_api` to `clickup_task_comments` wherever comments have a null `tenant_id` but their parent task already has one assigned.
+### New Component
+**`src/components/client/PackageDataManager.tsx`**
+- Dialog triggered by a "Data Manager" button on the Packages tab (SuperAdmin only)
+- Fetches all `package_instances` for the tenant joined with `packages.name`
+- Renders an editable table
+- Each row tracks local edits; save button triggers an update to `package_instances` for that row
+- Updates use `supabase.from('package_instances').update(...)` for `start_date`, `end_date`, `is_active`, `is_complete`, and `membership_state`
+- When toggling `is_complete = true`, also sets `membership_state = 'complete'`
+- When toggling `is_active = false` and `is_complete = true`, sets `end_date` to today if blank
+- Toast confirmation on save
 
-```sql
-UPDATE clickup_task_comments c
-SET tenant_id = t.tenant_id
-FROM clickup_tasks_api t
-WHERE c.task_id = t.task_id
-  AND t.tenant_id IS NOT NULL
-  AND c.tenant_id IS NULL;
-```
+### Modified File
+**`src/components/client/ClientPackagesTab.tsx`**
+- Add a "Data Manager" button next to the existing "Start Package" / "Add Package" buttons (SuperAdmin only)
+- Opens the `PackageDataManager` dialog
+- Pass `tenantId` and an `onSuccess` callback to refresh the package list
 
-This is a safe, idempotent operation that only fills in missing tenant_ids.
+### No Database Changes Required
+All fields being edited (`start_date`, `end_date`, `is_active`, `is_complete`, `membership_state`) already exist on `package_instances`.
 
-### Step 2: Update the comment fetch after "Fetch from API" (code fix)
-
-In `ClientStructuredNotesTab.tsx`, after the edge function fetches and stores comments for a task, the local refresh query (line 343-347) does not filter by `tenant_id`. However, the newly fetched comments from the edge function may also have null `tenant_id` if the edge function does not know the tenant context.
-
-Update `handleFetchTaskComments` to also update the `tenant_id` on the freshly fetched comments in the database before reloading them. This ensures that when comments are fetched from ClickUp API for a task that already has a tenant assigned, the comments immediately get the correct `tenant_id`.
-
-### Step 3: Defensive query fallback (code fix)
-
-Update `loadApiComments` to also include comments where `tenant_id` is null but the `task_id` matches a task linked to this tenant. This provides a safety net so comments are never silently hidden.
-
-### Technical Details
-
-**Files to modify:**
-- `src/components/client/ClientStructuredNotesTab.tsx` -- Update `handleFetchTaskComments` to set `tenant_id` on comments after fetch; update `loadApiComments` to handle the edge case
-- New database migration -- Backfill orphaned comments with correct `tenant_id`
-
-**Impact:** All 15 comments for Triquetra Visions (and any other tenants with the same orphan issue) will become visible immediately after the backfill. Future comment fetches will correctly inherit the tenant_id.
