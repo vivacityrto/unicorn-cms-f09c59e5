@@ -609,12 +609,25 @@ export default function ClickUpImport() {
                           ) : "—"}
                         </TableCell>
                         <TableCell className="min-w-[180px]">
-                          <TenantCombobox
-                            tenants={tenants}
-                            value={task.tenant_id}
-                            onSelect={(tid) => handleAssignTenant(task.id, tid)}
-                            disabled={updatingTaskId === task.id}
-                          />
+                          <div className="flex items-center gap-1">
+                            <TenantCombobox
+                              tenants={tenants}
+                              value={task.tenant_id}
+                              onSelect={(tid) => handleAssignTenant(task.id, tid)}
+                              disabled={updatingTaskId === task.id}
+                            />
+                            {task.tenant_id && (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-7 w-7 shrink-0"
+                                onClick={() => navigate(`/tenant/${task.tenant_id}`)}
+                                title="Open tenant record"
+                              >
+                                <ExternalLink className="h-3.5 w-3.5" />
+                              </Button>
+                            )}
+                          </div>
                         </TableCell>
                       </TableRow>
                     ))}
