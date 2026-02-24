@@ -694,6 +694,26 @@ export function ClientTimeTab({ tenantId, tenantName }: ClientTimeTabProps) {
     },
   });
 
+  // Fetch ALL package instances (including inactive/complete) for display in time entries
+  const { data: packageInstanceMap = {} } = useQuery({
+    queryKey: ['all-package-instances', tenantId],
+    queryFn: async () => {
+      const { data } = await (supabase as any)
+        .from('package_instances')
+        .select('id, package_id, start_date, end_date, packages:package_id(name)')
+        .eq('tenant_id', tenantId);
+      const map: Record<number, { name: string; start_date: string; end_date: string | null }> = {};
+      (data || []).forEach((p: any) => {
+        map[p.id] = {
+          name: p.packages?.name || `Package #${p.package_id}`,
+          start_date: p.start_date,
+          end_date: p.end_date,
+        };
+      });
+      return map;
+    },
+  });
+
   const hasMultiplePackages = (activePackages?.length ?? 0) > 1;
 
   const filteredEntries = useMemo(() => {
@@ -877,6 +897,7 @@ export function ClientTimeTab({ tenantId, tenantName }: ClientTimeTabProps) {
                    <TableRow>
                     <TableHead>Date</TableHead>
                     <TableHead>User</TableHead>
+                    <TableHead>Package</TableHead>
                     <TableHead>Duration</TableHead>
                     <TableHead>Type</TableHead>
                     <TableHead>Source</TableHead>
@@ -895,6 +916,22 @@ export function ClientTimeTab({ tenantId, tenantName }: ClientTimeTabProps) {
                       </TableCell>
                       <TableCell className="text-sm whitespace-nowrap">
                         {userMap[entry.user_id] || '—'}
+                      </TableCell>
+                      <TableCell className="text-sm">
+                        {entry.package_id && packageInstanceMap[entry.package_id] ? (
+                          <div>
+                            <p className="font-medium truncate max-w-[180px]">{packageInstanceMap[entry.package_id].name}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {format(new Date(packageInstanceMap[entry.package_id].start_date), 'd MMM yyyy')}
+                              {' – '}
+                              {packageInstanceMap[entry.package_id].end_date
+                                ? format(new Date(packageInstanceMap[entry.package_id].end_date), 'd MMM yyyy')
+                                : 'Ongoing'}
+                            </p>
+                          </div>
+                        ) : (
+                          <span className="text-muted-foreground">—</span>
+                        )}
                       </TableCell>
                       <TableCell className="font-medium">
                         {formatDuration(entry.duration_minutes)}
