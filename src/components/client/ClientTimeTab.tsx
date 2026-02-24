@@ -22,7 +22,7 @@ import {
   Clock,
   Timer,
   TrendingUp,
-  Calendar,
+  CalendarIcon,
   DollarSign,
   FileText,
   ArrowRightLeft,
@@ -35,7 +35,10 @@ import {
   Pencil,
   Mail,
   Trash2,
+  X,
 } from 'lucide-react';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
 import { EditTimeDialog } from './EditTimeDialog';
 import { DeleteConfirmDialog } from '@/components/audit/DeleteConfirmDialog';
@@ -636,6 +639,8 @@ export function ClientTimeTab({ tenantId, tenantName }: ClientTimeTabProps) {
   const membership = useTenantMemberships(tenantId);
   const [packageFilter, setPackageFilter] = useState('all');
   const [workTypeFilter, setWorkTypeFilter] = useState('all');
+  const [dateFrom, setDateFrom] = useState<Date | undefined>();
+  const [dateTo, setDateTo] = useState<Date | undefined>();
   const [page, setPage] = useState(1);
   const [moveEntry, setMoveEntry] = useState<TimeEntry | null>(null);
   const [splitEntry, setSplitEntry] = useState<TimeEntry | null>(null);
@@ -724,12 +729,22 @@ export function ClientTimeTab({ tenantId, tenantName }: ClientTimeTabProps) {
     if (workTypeFilter !== 'all') {
       result = result.filter(e => e.work_type === workTypeFilter);
     }
+    if (dateFrom) {
+      const fromStart = new Date(dateFrom);
+      fromStart.setHours(0, 0, 0, 0);
+      result = result.filter(e => e.start_at && new Date(e.start_at) >= fromStart);
+    }
+    if (dateTo) {
+      const toEnd = new Date(dateTo);
+      toEnd.setHours(23, 59, 59, 999);
+      result = result.filter(e => e.start_at && new Date(e.start_at) <= toEnd);
+    }
     return result.sort((a, b) => {
       const da = a.start_at ? new Date(a.start_at).getTime() : 0;
       const db = b.start_at ? new Date(b.start_at).getTime() : 0;
       return db - da;
     });
-  }, [entries, packageFilter, workTypeFilter]);
+  }, [entries, packageFilter, workTypeFilter, dateFrom, dateTo]);
 
   // Pagination
   const totalPages = Math.max(1, Math.ceil(filteredEntries.length / PAGE_SIZE));
@@ -741,6 +756,10 @@ export function ClientTimeTab({ tenantId, tenantName }: ClientTimeTabProps) {
   // Reset page when filters change
   const handlePackageFilter = (v: string) => { setPackageFilter(v); setPage(1); };
   const handleWorkTypeFilter = (v: string) => { setWorkTypeFilter(v); setPage(1); };
+  const handleDateFrom = (d: Date | undefined) => { setDateFrom(d); setPage(1); };
+  const handleDateTo = (d: Date | undefined) => { setDateTo(d); setPage(1); };
+  const hasDateFilter = !!dateFrom || !!dateTo;
+  const clearDateFilter = () => { setDateFrom(undefined); setDateTo(undefined); setPage(1); };
 
   const handleRefresh = useCallback(() => {
     refreshTimeTracking();
@@ -881,6 +900,55 @@ export function ClientTimeTab({ tenantId, tenantName }: ClientTimeTabProps) {
                   <SelectItem value="support">Support</SelectItem>
                 </SelectContent>
               </Select>
+
+              {/* Date range filter */}
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant={hasDateFilter ? "default" : "outline"}
+                    size="sm"
+                    className="h-8 gap-1 text-xs min-w-[200px] justify-start"
+                  >
+                    <CalendarIcon className="h-3.5 w-3.5" />
+                    {dateFrom && dateTo
+                      ? `${format(dateFrom, 'd MMM yyyy')} – ${format(dateTo, 'd MMM yyyy')}`
+                      : dateFrom
+                        ? `From ${format(dateFrom, 'd MMM yyyy')}`
+                        : dateTo
+                          ? `To ${format(dateTo, 'd MMM yyyy')}`
+                          : 'Date range'}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-4" align="end">
+                  <div className="space-y-3">
+                    <div className="space-y-1">
+                      <p className="text-xs font-medium text-muted-foreground">From</p>
+                      <Calendar
+                        mode="single"
+                        selected={dateFrom}
+                        onSelect={handleDateFrom}
+                        className="pointer-events-auto"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <p className="text-xs font-medium text-muted-foreground">To</p>
+                      <Calendar
+                        mode="single"
+                        selected={dateTo}
+                        onSelect={handleDateTo}
+                        disabled={(date) => dateFrom ? date < dateFrom : false}
+                        className="pointer-events-auto"
+                      />
+                    </div>
+                    {hasDateFilter && (
+                      <Button variant="ghost" size="sm" className="w-full" onClick={clearDateFilter}>
+                        <X className="h-3.5 w-3.5 mr-1" />
+                        Clear dates
+                      </Button>
+                    )}
+                  </div>
+                </PopoverContent>
+              </Popover>
             </div>
           </div>
         </CardHeader>
