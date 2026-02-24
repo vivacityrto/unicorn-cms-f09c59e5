@@ -53,6 +53,7 @@ import { CSCAssignmentSelector } from '@/components/client/CSCAssignmentSelector
 import { ConsultantAssignmentCard } from '@/components/client/ConsultantAssignmentCard';
 import { MembershipUsageCard } from '@/components/capacity/MembershipUsageCard';
 import { ViewAsClientButton } from '@/components/client/ViewAsClientButton';
+import { ClientQuickNav } from '@/components/client/ClientQuickNav';
 import { AssignPackageDialog } from '@/components/client/AssignPackageDialog';
 import { TenantStatusDropdown } from '@/components/tenant/TenantStatusDropdown';
 
@@ -275,6 +276,7 @@ export default function ClientDetail() {
                 tenantId={tenantIdNum!}
                 tenantName={tenant.name}
               />
+              {tenantIdNum && <ClientQuickNav currentTenantId={tenantIdNum} />}
               {activeTab === 'overview' && canEdit && (
                 <Button
                   onClick={() => triggerProfileSave?.()}
