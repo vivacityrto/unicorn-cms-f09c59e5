@@ -9,7 +9,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
 
-const MEMBERSHIP_TIERS = ['Free', 'Essentials', 'Professional', 'Enterprise'] as const;
+const MEMBERSHIP_TIERS = ['Founder', 'Starter', 'Growth', 'Scale', 'Enterprise'] as const;
 const UNASSIGNED = '__unassigned__';
 
 interface ComplyHubCardProps {
