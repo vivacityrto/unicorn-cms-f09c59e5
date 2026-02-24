@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import { format } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -722,13 +722,25 @@ export function ClientTimeTab({ tenantId, tenantName }: ClientTimeTabProps) {
   const handlePackageFilter = (v: string) => { setPackageFilter(v); setPage(1); };
   const handleWorkTypeFilter = (v: string) => { setWorkTypeFilter(v); setPage(1); };
 
-  const handleRefresh = () => {
+  const handleRefresh = useCallback(() => {
     refreshTimeTracking();
     queryClient.invalidateQueries({ queryKey: ['package-burndown', tenantId] });
     queryClient.invalidateQueries({ queryKey: ['package-time-summary', tenantId] });
     queryClient.invalidateQueries({ queryKey: ['stale-drafts', tenantId] });
     queryClient.invalidateQueries({ queryKey: ['membership-combined-usage', tenantId] });
-  };
+  }, [refreshTimeTracking, queryClient, tenantId]);
+
+  // Listen for time-entry-changed events from other components (e.g. TenantTimeTrackerBar)
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      if (detail?.tenantId === tenantId) {
+        handleRefresh();
+      }
+    };
+    window.addEventListener('time-entry-changed', handler);
+    return () => window.removeEventListener('time-entry-changed', handler);
+  }, [tenantId, handleRefresh]);
 
   // Inline toggle billable
   const handleToggleBillable = async (entry: TimeEntry) => {
