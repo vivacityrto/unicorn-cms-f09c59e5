@@ -299,7 +299,21 @@ export function SharePointFolderConfig({ tenantId }: SharePointFolderConfigProps
       <CardContent className="space-y-4">
         {/* URL Input */}
         <div className="space-y-2">
-          <Label htmlFor="sp-root-url">Root folder link</Label>
+          <Label htmlFor="sp-root-url">
+            {urlInput.trim().startsWith('https://') ? (
+              <a
+                href={urlInput.trim()}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 hover:text-primary hover:underline underline-offset-4 transition-colors"
+              >
+                Root folder link
+                <ExternalLink className="h-3 w-3" />
+              </a>
+            ) : (
+              'Root folder link'
+            )}
+          </Label>
           <div className="flex gap-2">
             <Input
               id="sp-root-url"
