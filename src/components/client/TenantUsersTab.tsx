@@ -449,7 +449,7 @@ export function TenantUsersTab({ tenantId, tenantName, onCountChange }: TenantUs
                 return (
                   <div
                     key={member.user_id}
-                    className="flex items-center justify-between px-4 py-5 hover:bg-muted/50 transition-colors cursor-pointer"
+                    className="flex items-center justify-between p-4 hover:bg-muted/50 transition-colors cursor-pointer"
                     onClick={() => canManageUsers && openEditDrawer(member)}
                   >
                     <div className="flex items-center gap-3">
@@ -460,7 +460,7 @@ export function TenantUsersTab({ tenantId, tenantName, onCountChange }: TenantUs
                         </AvatarFallback>
                       </Avatar>
                       <div>
-                        <div className="flex items-center gap-2 flex-wrap">
+                        <div className="flex items-center gap-4 flex-wrap">
                           <p className="font-medium">
                             {user.first_name} {user.last_name}
                           </p>
