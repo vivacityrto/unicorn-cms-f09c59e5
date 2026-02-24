@@ -20,6 +20,7 @@ import TenantProgressTable from "@/components/tenant/TenantProgressTable";
 import { TenantClickUpActivity } from "@/components/tenant/TenantClickUpActivity";
 import { CSCProfileCard } from "@/components/csc/CSCProfileCard";
 import { ViewAsClientButton } from "@/components/client/ViewAsClientButton";
+import { ClientQuickNav } from "@/components/client/ClientQuickNav";
 import { EnrichTenantButton } from "@/components/tenant/EnrichTenantButton";
 import { TenantStatusDropdown } from '@/components/tenant/TenantStatusDropdown';
 import type { TenantType } from "@/contexts/TenantTypeContext";
@@ -591,6 +592,7 @@ export default function TenantDetail() {
                     compact
                   />
                 )}
+                {tenantId && <ClientQuickNav currentTenantId={parseInt(tenantId)} />}
                 <a href="#" className="group relative p-2.5 rounded-full bg-gradient-to-br from-background to-muted border border-border/40 transition-all duration-300 hover:shadow-lg hover:scale-110 hover:border-[#1877F2]/30 cursor-not-allowed" title="Facebook" onClick={e => e.preventDefault()}>
                   <Facebook className="h-4 w-4 text-[#1877F2] group-hover:scale-110 transition-transform" />
                 </a>
