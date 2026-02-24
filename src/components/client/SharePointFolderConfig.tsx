@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import {
   Card,
   CardContent,
@@ -74,6 +75,20 @@ export function SharePointFolderConfig({ tenantId }: SharePointFolderConfigProps
   const [validating, setValidating] = useState(false);
   const [toggling, setToggling] = useState(false);
   const [urlInput, setUrlInput] = useState('');
+
+  // Fetch global SharePoint site URL
+  const { data: globalSiteUrl } = useQuery({
+    queryKey: ['app-settings-sharepoint-site-url'],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('app_settings')
+        .select('sharepoint_site_url')
+        .limit(1)
+        .single();
+      return data?.sharepoint_site_url || null;
+    },
+    staleTime: 5 * 60 * 1000,
+  });
 
   // Only Vivacity team can manage
   const isVivacityTeam = ['Super Admin', 'Team Leader', 'Team Member'].includes(
@@ -254,12 +269,22 @@ export function SharePointFolderConfig({ tenantId }: SharePointFolderConfigProps
               Connect a SharePoint folder as the document root for this client
             </CardDescription>
           </div>
-          {settings && (
-            <Badge variant={status.variant} className="flex items-center gap-1">
-              {status.icon}
-              {status.label}
-            </Badge>
-          )}
+          <div className="flex items-center gap-2">
+            {globalSiteUrl && (
+              <Button variant="outline" size="sm" asChild>
+                <a href={globalSiteUrl} target="_blank" rel="noopener noreferrer">
+                  <ExternalLink className="h-4 w-4 mr-2" />
+                  Open SharePoint
+                </a>
+              </Button>
+            )}
+            {settings && (
+              <Badge variant={status.variant} className="flex items-center gap-1">
+                {status.icon}
+                {status.label}
+              </Badge>
+            )}
+          </div>
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
