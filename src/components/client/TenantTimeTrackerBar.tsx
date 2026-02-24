@@ -104,6 +104,7 @@ export function TenantTimeTrackerBar({ tenantId, tenantName }: TenantTimeTracker
         refetchType: 'all'
       }),
     ]);
+    window.dispatchEvent(new CustomEvent('time-entry-changed', { detail: { tenantId } }));
   };
 
   if (loading || membership.loading) {
