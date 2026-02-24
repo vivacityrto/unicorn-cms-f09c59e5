@@ -260,31 +260,33 @@ export function SharePointFolderConfig({ tenantId }: SharePointFolderConfigProps
     <Card>
       <CardHeader>
         <div className="flex items-center justify-between">
-          <div>
+          <div className="space-y-1">
             <CardTitle className="text-base flex items-center gap-2">
               <FolderOpen className="h-5 w-5" />
-              SharePoint Folder
+              {globalSiteUrl ? (
+                <a
+                  href={globalSiteUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 hover:text-primary hover:underline underline-offset-4 transition-colors"
+                >
+                  SharePoint Folder
+                  <ExternalLink className="h-3.5 w-3.5" />
+                </a>
+              ) : (
+                'SharePoint Folder'
+              )}
             </CardTitle>
             <CardDescription className="mt-1">
               Connect a SharePoint folder as the document root for this client
             </CardDescription>
           </div>
-          <div className="flex items-center gap-2">
-            {globalSiteUrl && (
-              <Button variant="outline" size="sm" asChild>
-                <a href={globalSiteUrl} target="_blank" rel="noopener noreferrer">
-                  <ExternalLink className="h-4 w-4 mr-2" />
-                  Open SharePoint
-                </a>
-              </Button>
-            )}
-            {settings && (
-              <Badge variant={status.variant} className="flex items-center gap-1">
-                {status.icon}
-                {status.label}
-              </Badge>
-            )}
-          </div>
+          {settings && (
+            <Badge variant={status.variant} className="flex items-center gap-1">
+              {status.icon}
+              {status.label}
+            </Badge>
+          )}
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
