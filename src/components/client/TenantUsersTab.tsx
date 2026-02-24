@@ -42,6 +42,7 @@ import {
   User as UserIcon, 
   Mail, 
   Clock,
+  Phone,
   MoreVertical,
   Trash2,
   Pencil,
@@ -64,6 +65,7 @@ interface TenantUser {
   last_name: string | null;
   avatar_url: string | null;
   phone: string | null;
+  mobile_phone: string | null;
   job_title: string | null;
   disabled: boolean;
   last_sign_in_at: string | null;
@@ -204,6 +206,7 @@ export function TenantUsersTab({ tenantId, tenantName, onCountChange }: TenantUs
             last_name,
             avatar_url,
             phone,
+            mobile_phone,
             job_title,
             disabled,
             last_sign_in_at,
@@ -465,10 +468,13 @@ export function TenantUsersTab({ tenantId, tenantName, onCountChange }: TenantUs
                             <span className="text-sm text-muted-foreground">— {user.job_title}</span>
                           )}
                         </div>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-wrap">
                           <a href={`mailto:${user.email}`} className="text-sm text-muted-foreground hover:text-primary hover:underline" onClick={e => e.stopPropagation()}>{user.email}</a>
-                          {user.phone && (
-                            <a href={`tel:${user.phone}`} className="text-sm text-muted-foreground hover:text-primary hover:underline" onClick={e => e.stopPropagation()}>• {user.phone}</a>
+                          {(user.phone || user.mobile_phone) && (
+                            <a href={`tel:${user.phone || user.mobile_phone}`} className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-primary hover:underline" onClick={e => e.stopPropagation()}>
+                              <Phone className="h-3 w-3" />
+                              {user.phone || user.mobile_phone}
+                            </a>
                           )}
                         </div>
                       </div>
