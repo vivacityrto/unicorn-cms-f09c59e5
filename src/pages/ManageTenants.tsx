@@ -334,7 +334,9 @@ export default function ManageTenants() {
     }
 
     // Package filter
-    if (packageFilter !== "all") {
+    if (packageFilter === "complyhub") {
+      filtered = filtered.filter(tenant => !!tenant.complyhub_membership_tier);
+    } else if (packageFilter !== "all") {
       filtered = filtered.filter(tenant => tenant.package_id?.toString() === packageFilter);
     }
 
@@ -594,6 +596,7 @@ export default function ManageTenants() {
         <Combobox
           options={[
             { value: "all", label: "All Packages", icon: Package2, iconColor: "text-muted-foreground" },
+            { value: "complyhub", label: "ComplyHub", icon: Package2, iconColor: "text-primary" },
             ...packages.map(pkg => {
               const isNew = pkg.created_at && new Date().getTime() - new Date(pkg.created_at).getTime() < 7 * 24 * 60 * 60 * 1000;
               return { value: pkg.id.toString(), label: pkg.name, badge: isNew ? "NEW" : undefined, icon: Package2, iconColor: "text-blue-600" };
