@@ -20,6 +20,8 @@ import {
   Loader2,
   Info,
   ExternalLink,
+  ShieldCheck,
+  Save,
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -68,6 +70,7 @@ export function SharePointFolderConfig({ tenantId }: SharePointFolderConfigProps
   const { toast } = useToast();
   const [settings, setSettings] = useState<SharePointSettings | null>(null);
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [validating, setValidating] = useState(false);
   const [toggling, setToggling] = useState(false);
   const [urlInput, setUrlInput] = useState('');
@@ -99,71 +102,68 @@ export function SharePointFolderConfig({ tenantId }: SharePointFolderConfigProps
     fetchSettings();
   }, [fetchSettings]);
 
+  const validateUrl = (url: string): boolean => {
+    if (!url) {
+      toast({ title: 'URL required', description: 'Please enter a SharePoint folder link.', variant: 'destructive' });
+      return false;
+    }
+    if (!url.startsWith('https://')) {
+      toast({ title: 'Invalid URL', description: 'Please enter a valid URL starting with https://', variant: 'destructive' });
+      return false;
+    }
+    return true;
+  };
+
+  // Save link only (no Graph API validation)
   const handleSave = async () => {
     const trimmedUrl = urlInput.trim();
-    if (!trimmedUrl) {
-      toast({
-        title: 'URL required',
-        description: 'Please enter a SharePoint folder link.',
-        variant: 'destructive',
-      });
-      return;
-    }
+    if (!validateUrl(trimmedUrl)) return;
 
-    if (!trimmedUrl.startsWith('https://')) {
-      toast({
-        title: 'Invalid URL',
-        description: 'Please enter a valid URL starting with https://',
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    setValidating(true);
-
+    setSaving(true);
     try {
       const now = new Date().toISOString();
-
       if (settings) {
         const { error } = await supabase
           .from('tenant_sharepoint_settings')
-          .update({
-            root_folder_url: trimmedUrl,
-            validation_status: 'valid',
-            validation_error: null,
-            last_validated_at: now,
-            updated_at: now,
-          })
+          .update({ root_folder_url: trimmedUrl, validation_status: 'unvalidated', validation_error: null, updated_at: now })
           .eq('id', settings.id);
-
         if (error) throw error;
       } else {
         const { error } = await supabase
           .from('tenant_sharepoint_settings')
-          .insert([{
-            tenant_id: tenantId,
-            root_folder_url: trimmedUrl,
-            validation_status: 'valid',
-            is_enabled: true,
-            last_validated_at: now,
-            created_by: profile?.user_uuid || '',
-          }]);
-
+          .insert([{ tenant_id: tenantId, root_folder_url: trimmedUrl, validation_status: 'unvalidated', is_enabled: true, created_by: profile?.user_uuid || '' }]);
         if (error) throw error;
       }
-
-      toast({
-        title: 'SharePoint link saved',
-        description: 'The folder link has been stored successfully.',
-      });
-
+      toast({ title: 'Link saved', description: 'SharePoint folder link stored. Use "Validate" to verify access via Microsoft.' });
       await fetchSettings();
     } catch (err) {
-      toast({
-        title: 'Error',
-        description: err instanceof Error ? err.message : 'An unexpected error occurred.',
-        variant: 'destructive',
+      toast({ title: 'Error', description: err instanceof Error ? err.message : 'An unexpected error occurred.', variant: 'destructive' });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // Validate via Graph API (requires connected Microsoft account)
+  const handleValidateAndSave = async () => {
+    const trimmedUrl = urlInput.trim();
+    if (!validateUrl(trimmedUrl)) return;
+
+    setValidating(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('validate-sharepoint-root-folder', {
+        body: { tenant_id: tenantId, root_folder_url: trimmedUrl },
       });
+
+      if (error) {
+        toast({ title: 'Validation failed', description: error.message || 'Could not validate the folder link.', variant: 'destructive' });
+      } else if (data?.success) {
+        toast({ title: 'SharePoint folder validated', description: `Root folder "${data.root_name}" connected and verified.` });
+      } else {
+        toast({ title: 'Validation failed', description: data?.error || 'Could not validate the folder link.', variant: 'destructive' });
+      }
+      await fetchSettings();
+    } catch (err) {
+      toast({ title: 'Error', description: err instanceof Error ? err.message : 'An unexpected error occurred.', variant: 'destructive' });
     } finally {
       setValidating(false);
     }
@@ -275,15 +275,27 @@ export function SharePointFolderConfig({ tenantId }: SharePointFolderConfigProps
               className="flex-1"
             />
             <Button
+              variant="outline"
               onClick={handleSave}
-              disabled={validating || !urlInput.trim()}
+              disabled={saving || validating || !urlInput.trim()}
+            >
+              {saving ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <Save className="h-4 w-4 mr-2" />
+              )}
+              Save Link
+            </Button>
+            <Button
+              onClick={handleValidateAndSave}
+              disabled={saving || validating || !urlInput.trim()}
             >
               {validating ? (
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
               ) : (
-                <CheckCircle2 className="h-4 w-4 mr-2" />
+                <ShieldCheck className="h-4 w-4 mr-2" />
               )}
-              Save Link
+              Validate & Save
             </Button>
           </div>
           <p className="text-xs text-muted-foreground flex items-start gap-1">
