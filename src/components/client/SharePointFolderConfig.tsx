@@ -156,8 +156,10 @@ export function SharePointFolderConfig({ tenantId }: SharePointFolderConfigProps
       }
       toast({ title: 'Link saved', description: 'SharePoint folder link stored. Use "Validate" to verify access via Microsoft.' });
       await fetchSettings();
-    } catch (err) {
-      toast({ title: 'Error', description: err instanceof Error ? err.message : 'An unexpected error occurred.', variant: 'destructive' });
+    } catch (err: any) {
+      console.error('SharePoint save error:', err);
+      const message = err?.message || err?.details || err?.hint || 'An unexpected error occurred.';
+      toast({ title: 'Error', description: message, variant: 'destructive' });
     } finally {
       setSaving(false);
     }
