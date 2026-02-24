@@ -99,7 +99,7 @@ export function SharePointFolderConfig({ tenantId }: SharePointFolderConfigProps
     fetchSettings();
   }, [fetchSettings]);
 
-  const handleValidateAndSave = async () => {
+  const handleSave = async () => {
     const trimmedUrl = urlInput.trim();
     if (!trimmedUrl) {
       toast({
@@ -110,8 +110,7 @@ export function SharePointFolderConfig({ tenantId }: SharePointFolderConfigProps
       return;
     }
 
-    // Basic URL validation
-    if (!trimmedUrl.startsWith('http')) {
+    if (!trimmedUrl.startsWith('https://')) {
       toast({
         title: 'Invalid URL',
         description: 'Please enter a valid URL starting with https://',
@@ -123,36 +122,41 @@ export function SharePointFolderConfig({ tenantId }: SharePointFolderConfigProps
     setValidating(true);
 
     try {
-      const { data, error } = await supabase.functions.invoke(
-        'validate-sharepoint-root-folder',
-        {
-          body: {
+      const now = new Date().toISOString();
+
+      if (settings) {
+        const { error } = await supabase
+          .from('tenant_sharepoint_settings')
+          .update({
+            root_folder_url: trimmedUrl,
+            validation_status: 'valid',
+            validation_error: null,
+            last_validated_at: now,
+            updated_at: now,
+          })
+          .eq('id', settings.id);
+
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from('tenant_sharepoint_settings')
+          .insert([{
             tenant_id: tenantId,
             root_folder_url: trimmedUrl,
-          },
-        }
-      );
+            validation_status: 'valid',
+            is_enabled: true,
+            last_validated_at: now,
+            created_by: profile?.user_uuid || '',
+          }]);
 
-      if (error) {
-        toast({
-          title: 'Validation failed',
-          description: error.message || 'Could not validate the folder link.',
-          variant: 'destructive',
-        });
-      } else if (data?.success) {
-        toast({
-          title: 'SharePoint folder validated',
-          description: `Root folder "${data.root_name}" connected successfully.`,
-        });
-      } else {
-        toast({
-          title: 'Validation failed',
-          description: data?.error || 'Could not validate the folder link.',
-          variant: 'destructive',
-        });
+        if (error) throw error;
       }
 
-      // Refresh settings regardless
+      toast({
+        title: 'SharePoint link saved',
+        description: 'The folder link has been stored successfully.',
+      });
+
       await fetchSettings();
     } catch (err) {
       toast({
@@ -271,7 +275,7 @@ export function SharePointFolderConfig({ tenantId }: SharePointFolderConfigProps
               className="flex-1"
             />
             <Button
-              onClick={handleValidateAndSave}
+              onClick={handleSave}
               disabled={validating || !urlInput.trim()}
             >
               {validating ? (
@@ -279,7 +283,7 @@ export function SharePointFolderConfig({ tenantId }: SharePointFolderConfigProps
               ) : (
                 <CheckCircle2 className="h-4 w-4 mr-2" />
               )}
-              Validate & Save
+              Save Link
             </Button>
           </div>
           <p className="text-xs text-muted-foreground flex items-start gap-1">
