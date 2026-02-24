@@ -150,7 +150,7 @@ export function TenantUsersTab({ tenantId, tenantName, onCountChange }: TenantUs
     try {
       const { error } = await supabase
         .from('tenant_users')
-        .update({ role: newRole })
+        .update({ role: newRole, primary_contact: newRole === 'parent' })
         .eq('tenant_id', tenantId)
         .eq('user_id', userId);
 
@@ -277,7 +277,7 @@ export function TenantUsersTab({ tenantId, tenantName, onCountChange }: TenantUs
       if (editForm.role !== editingMember.role) {
         const { error: roleError } = await supabase
           .from('tenant_users')
-          .update({ role: editForm.role })
+          .update({ role: editForm.role, primary_contact: editForm.role === 'parent' })
           .eq('tenant_id', tenantId)
           .eq('user_id', editingMember.user_id);
 
