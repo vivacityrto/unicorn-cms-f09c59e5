@@ -1921,6 +1921,7 @@ export type Database = {
           minutes_copilot_auto_fetch_fallback_to_paste: boolean
           minutes_store_raw_copilot_input: boolean
           review_required_before_release: boolean
+          sharepoint_site_url: string | null
           updated_at: string
         }
         Insert: {
@@ -1945,6 +1946,7 @@ export type Database = {
           minutes_copilot_auto_fetch_fallback_to_paste?: boolean
           minutes_store_raw_copilot_input?: boolean
           review_required_before_release?: boolean
+          sharepoint_site_url?: string | null
           updated_at?: string
         }
         Update: {
@@ -1969,6 +1971,7 @@ export type Database = {
           minutes_copilot_auto_fetch_fallback_to_paste?: boolean
           minutes_store_raw_copilot_input?: boolean
           review_required_before_release?: boolean
+          sharepoint_site_url?: string | null
           updated_at?: string
         }
         Relationships: []

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { PageHeader } from '@/components/ui/page-header';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -7,9 +7,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
-import { MessageSquare, Send } from 'lucide-react';
+import { MessageSquare, Send, FolderOpen, ExternalLink, Save, Loader2 } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
+import { supabase } from '@/integrations/supabase/client';
 
 export default function IntegrationSettings() {
   return (
@@ -27,8 +28,40 @@ function IntegrationSettingsContent() {
   const [teamsChannel, setTeamsChannel] = useState('');
   const [wantsDM, setWantsDM] = useState(false);
 
+  // SharePoint global setting
+  const [sharepointSiteUrl, setSharepointSiteUrl] = useState('');
+  const [savingSharepoint, setSavingSharepoint] = useState(false);
+
+  useEffect(() => {
+    supabase
+      .from('app_settings')
+      .select('sharepoint_site_url')
+      .limit(1)
+      .single()
+      .then(({ data }) => {
+        if (data?.sharepoint_site_url) {
+          setSharepointSiteUrl(data.sharepoint_site_url);
+        }
+      });
+  }, []);
+
+  const handleSaveSharepointUrl = async () => {
+    setSavingSharepoint(true);
+    try {
+      const { error } = await supabase
+        .from('app_settings')
+        .update({ sharepoint_site_url: sharepointSiteUrl.trim() || null })
+        .eq('id', 1);
+      if (error) throw error;
+      toast({ title: 'SharePoint site URL saved' });
+    } catch (err) {
+      toast({ title: 'Error', description: err instanceof Error ? err.message : 'Failed to save', variant: 'destructive' });
+    } finally {
+      setSavingSharepoint(false);
+    }
+  };
+
   const handleSlackConnect = () => {
-    // In production, this would initiate OAuth flow
     toast({
       title: 'Slack OAuth',
       description: 'Contact your administrator to enable Slack integration',
@@ -36,7 +69,6 @@ function IntegrationSettingsContent() {
   };
 
   const handleTeamsConnect = () => {
-    // In production, this would initiate OAuth flow
     toast({
       title: 'Teams OAuth',
       description: 'Contact your administrator to enable Teams integration',
@@ -44,7 +76,6 @@ function IntegrationSettingsContent() {
   };
 
   const handleSavePreferences = async () => {
-    // Save to user_integration_prefs table
     toast({ title: 'Preferences saved' });
   };
 
@@ -64,6 +95,52 @@ function IntegrationSettingsContent() {
       />
 
       <div className="grid gap-6 max-w-3xl">
+        {/* SharePoint Global Setting */}
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div className="space-y-1">
+                <CardTitle className="flex items-center gap-2">
+                  <FolderOpen className="h-5 w-5" />
+                  SharePoint Site URL
+                </CardTitle>
+                <CardDescription>
+                  Global SharePoint site used for client folders and document storage
+                </CardDescription>
+              </div>
+              {sharepointSiteUrl && (
+                <Button variant="outline" size="sm" asChild>
+                  <a href={sharepointSiteUrl} target="_blank" rel="noopener noreferrer">
+                    <ExternalLink className="h-4 w-4 mr-2" />
+                    Open Site
+                  </a>
+                </Button>
+              )}
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="sp-site-url">SharePoint site URL</Label>
+              <div className="flex gap-2">
+                <Input
+                  id="sp-site-url"
+                  placeholder="https://vivacity.sharepoint.com/sites/Clients"
+                  value={sharepointSiteUrl}
+                  onChange={(e) => setSharepointSiteUrl(e.target.value)}
+                  className="flex-1"
+                />
+                <Button onClick={handleSaveSharepointUrl} disabled={savingSharepoint}>
+                  {savingSharepoint ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
+                  Save
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                This URL is shown as the "Open SharePoint" link on client pages.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+
         {/* Slack Integration */}
         <Card>
           <CardHeader>
