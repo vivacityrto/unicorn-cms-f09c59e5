@@ -2,7 +2,9 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { useAuth } from "@/hooks/useAuth";
-import { Loader2 } from "lucide-react";
+import { Loader2, Building2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { ClientQuickNav } from "@/components/client/ClientQuickNav";
 import { useDashboardTriage, type AttentionTenant } from "@/hooks/useDashboardTriage";
 import { PortfolioFilterBar } from "@/components/portfolio/PortfolioFilterBar";
 import { TodaysFocusSection } from "@/components/dashboard/TodaysFocusSection";
@@ -67,12 +69,24 @@ const Dashboard = () => {
 
         {/* Compact header */}
         <div className="border-b bg-card/50 backdrop-blur-sm px-4 md:px-6 py-3">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between gap-3">
             <div>
               <h1 className="text-base font-bold text-foreground">Triage Dashboard</h1>
               <p className="text-xs text-muted-foreground">
                 {savedView === 'my_tenants' ? 'My Tenants' : 'All Tenants'} · {activePortfolio.length + lowAttention.length} active
               </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => navigate('/manage-tenants')}
+                className="gap-1.5"
+              >
+                <Building2 className="h-3.5 w-3.5" />
+                Manage Clients
+              </Button>
+              <ClientQuickNav currentTenantId={0} />
             </div>
           </div>
         </div>
