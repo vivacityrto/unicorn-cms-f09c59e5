@@ -19,6 +19,7 @@ import {
   Clock,
   Loader2,
   Info,
+  ExternalLink,
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -296,6 +297,14 @@ export function SharePointFolderConfig({ tenantId }: SharePointFolderConfigProps
                 <span className="text-muted-foreground">Root folder:</span>
                 <span className="font-medium">{settings.root_name}</span>
               </div>
+            )}
+            {settings.validation_status === 'valid' && settings.root_folder_url && (
+              <Button variant="outline" size="sm" asChild>
+                <a href={settings.root_folder_url} target="_blank" rel="noopener noreferrer">
+                  <ExternalLink className="h-4 w-4 mr-2" />
+                  Open in SharePoint
+                </a>
+              </Button>
             )}
             {settings.drive_id && settings.validation_status === 'valid' && (
               <div className="flex items-center gap-2 text-sm">
