@@ -460,16 +460,13 @@ export function TenantUsersTab({ tenantId, tenantName, onCountChange }: TenantUs
                         </AvatarFallback>
                       </Avatar>
                       <div>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-wrap">
                           <p className="font-medium">
                             {user.first_name} {user.last_name}
                           </p>
                           {user.job_title && (
                             <span className="text-sm text-muted-foreground">— {user.job_title}</span>
                           )}
-                        </div>
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <a href={`mailto:${user.email}`} className="text-sm text-muted-foreground hover:text-primary hover:underline" onClick={e => e.stopPropagation()}>{user.email}</a>
                           {(user.phone || user.mobile_phone) && (
                             <a href={`tel:${user.phone || user.mobile_phone}`} className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-primary hover:underline" onClick={e => e.stopPropagation()}>
                               <Phone className="h-3 w-3" />
@@ -477,6 +474,7 @@ export function TenantUsersTab({ tenantId, tenantName, onCountChange }: TenantUs
                             </a>
                           )}
                         </div>
+                        <a href={`mailto:${user.email}`} className="text-sm text-muted-foreground hover:text-primary hover:underline" onClick={e => e.stopPropagation()}>{user.email}</a>
                       </div>
                     </div>
 
