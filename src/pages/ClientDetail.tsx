@@ -61,6 +61,7 @@ interface TenantBasic {
   name: string;
   slug: string;
   status: string;
+  complyhub_membership_tier?: string | null;
 }
 
 export default function ClientDetail() {
@@ -126,7 +127,7 @@ export default function ClientDetail() {
       setLoading(true);
       const { data, error } = await supabase
         .from('tenants')
-        .select('id, name, slug, status')
+        .select('id, name, slug, status, complyhub_membership_tier')
         .eq('id', tenantIdNum)
         .single();
 
@@ -443,6 +444,7 @@ export default function ClientDetail() {
               packages={packages}
               loading={packagesLoading}
               onAddPackage={() => setAssignPackageOpen(true)}
+              complyhubTier={tenant?.complyhub_membership_tier}
             />
             <AssignPackageDialog
               open={assignPackageOpen}

@@ -40,6 +40,7 @@ interface Tenant {
   package_full_text?: string | null;
   package_id?: number | null;
   state?: string | null;
+  complyhub_membership_tier?: string | null;
 }
 
 interface CSCFilterOption {
@@ -674,8 +675,9 @@ export default function ManageTenants() {
               <TableHeader>
                 <TableRow className="border-b-2 hover:bg-transparent">
                   <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-r border-border/50">Tenant Name</TableHead>
-                  <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-r border-border/50">Package</TableHead>
-                  <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-r border-border/50 text-center">Status</TableHead>
+                   <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-r border-border/50">Package</TableHead>
+                   <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-r border-border/50 text-center">ComplyHub</TableHead>
+                   <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-r border-border/50 text-center">Status</TableHead>
                   <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-r border-border/50 text-center">CSC</TableHead>
                   <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-r border-border/50 text-center">Members</TableHead>
                   <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-r border-border/50 text-center">Risk Level</TableHead>
@@ -717,6 +719,15 @@ export default function ManageTenants() {
                           <span>{tenant.package_name === "NA" ? "NA" : tenant.package_full_text || "No Packages Added"}</span>
                         </div>
                       </div>
+                    </TableCell>
+                    <TableCell className="py-6 border-r border-border/50 text-center whitespace-nowrap">
+                      {tenant.complyhub_membership_tier ? (
+                        <Badge variant="outline" className="gap-1 border-primary/30 text-primary">
+                          {tenant.complyhub_membership_tier}
+                        </Badge>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">—</span>
+                      )}
                     </TableCell>
                     <TableCell className="py-6 border-r border-border/50 text-center whitespace-nowrap">
                       {getStatusBadge(tenant.status)}
