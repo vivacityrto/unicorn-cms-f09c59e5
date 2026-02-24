@@ -39,7 +39,8 @@ import {
   History,
   Archive,
   Database,
-  Flag
+  Flag,
+  Shield
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { ClientPackage } from '@/hooks/useClientManagement';
@@ -59,6 +60,7 @@ interface ClientPackagesTabProps {
   packages: ClientPackage[];
   loading: boolean;
   onAddPackage?: () => void;
+  complyhubTier?: string | null;
 }
 
 const STATE_COLORS: Record<string, string> = {
@@ -77,7 +79,7 @@ const STATE_ICONS: Record<string, React.ReactNode> = {
   complete: <CheckCircle2 className="h-3 w-3" />
 };
 
-export function ClientPackagesTab({ tenantId, tenantName, packages, loading, onAddPackage }: ClientPackagesTabProps) {
+export function ClientPackagesTab({ tenantId, tenantName, packages, loading, onAddPackage, complyhubTier }: ClientPackagesTabProps) {
   const navigate = useNavigate();
   const { isSuperAdmin } = useAuth();
   const [expandedPackages, setExpandedPackages] = useState<Set<number>>(new Set());
@@ -255,6 +257,12 @@ export function ClientPackagesTab({ tenantId, tenantName, packages, loading, onA
             <Archive className="h-4 w-4 mr-1" />
             History ({historyPackages.length})
           </Button>
+          {complyhubTier && (
+            <Badge variant="outline" className="gap-1 ml-2 border-primary/30 text-primary">
+              <Shield className="h-3 w-3" />
+              ComplyHub: {complyhubTier}
+            </Badge>
+          )}
         </div>
         <div className="flex items-center gap-2">
           {isSuperAdmin() && viewMode === 'active' && (
