@@ -36318,6 +36318,8 @@ export type Database = {
           closed_at: string | null
           closed_reason: string | null
           compliance_system_enabled: boolean
+          complyhub_membership_tier: string | null
+          complyhub_url: string | null
           consultant_assignment_method: string | null
           courses_enrolled_count: number
           created_at: string
@@ -36374,6 +36376,8 @@ export type Database = {
           closed_at?: string | null
           closed_reason?: string | null
           compliance_system_enabled?: boolean
+          complyhub_membership_tier?: string | null
+          complyhub_url?: string | null
           consultant_assignment_method?: string | null
           courses_enrolled_count?: number
           created_at?: string
@@ -36430,6 +36434,8 @@ export type Database = {
           closed_at?: string | null
           closed_reason?: string | null
           compliance_system_enabled?: boolean
+          complyhub_membership_tier?: string | null
+          complyhub_url?: string | null
           consultant_assignment_method?: string | null
           courses_enrolled_count?: number
           created_at?: string
