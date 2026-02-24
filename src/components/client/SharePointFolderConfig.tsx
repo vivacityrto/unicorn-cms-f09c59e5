@@ -134,19 +134,24 @@ export function SharePointFolderConfig({ tenantId }: SharePointFolderConfigProps
     const trimmedUrl = urlInput.trim();
     if (!validateUrl(trimmedUrl)) return;
 
+    if (!profile?.user_uuid) {
+      toast({ title: 'Error', description: 'You must be logged in to save settings.', variant: 'destructive' });
+      return;
+    }
+
     setSaving(true);
     try {
       const now = new Date().toISOString();
       if (settings) {
         const { error } = await supabase
           .from('tenant_sharepoint_settings')
-          .update({ root_folder_url: trimmedUrl, validation_status: 'unvalidated', validation_error: null, updated_at: now })
+          .update({ root_folder_url: trimmedUrl, validation_status: 'unvalidated', validation_error: null, updated_at: now, updated_by: profile.user_uuid })
           .eq('id', settings.id);
         if (error) throw error;
       } else {
         const { error } = await supabase
           .from('tenant_sharepoint_settings')
-          .insert([{ tenant_id: tenantId, root_folder_url: trimmedUrl, validation_status: 'unvalidated', is_enabled: true, created_by: profile?.user_uuid || '' }]);
+          .insert([{ tenant_id: tenantId, root_folder_url: trimmedUrl, validation_status: 'unvalidated', is_enabled: true, created_by: profile.user_uuid, setup_mode: 'manual', manual_folder_url: trimmedUrl }]);
         if (error) throw error;
       }
       toast({ title: 'Link saved', description: 'SharePoint folder link stored. Use "Validate" to verify access via Microsoft.' });
