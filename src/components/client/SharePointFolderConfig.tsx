@@ -352,8 +352,8 @@ export function SharePointFolderConfig({ tenantId }: SharePointFolderConfigProps
           </p>
         </div>
 
-        {/* Status Details */}
-        {settings && (
+        {/* Status Details — only show when there's something to display */}
+        {settings && (settings.validation_status === 'valid' || settings.last_validated_at || settings.validation_error) && (
           <div className="rounded-lg border bg-muted/50 p-4 space-y-2">
             {settings.root_name && settings.validation_status === 'valid' && (
               <div className="flex items-center gap-2 text-sm">
