@@ -59,10 +59,19 @@ async function resolvePackageNames(instanceIds: number[]) {
     .select('id, package_id, start_date, end_date')
     .in('id', instanceIds);
 
-  const packageIds = [...new Set((instances || []).map((i: any) => i.package_id).filter(Boolean))];
+  const resolvedInstanceIds = new Set((instances || []).map((i: any) => i.id));
+  // IDs not found in package_instances may be raw package_ids (from COALESCE fallback in views)
+  const fallbackPackageIds = instanceIds.filter(id => !resolvedInstanceIds.has(id));
 
-  const { data: pkgs } = packageIds.length > 0
-    ? await (supabase as any).from('packages').select('id, name').in('id', packageIds)
+  const allPackageIds = [
+    ...new Set([
+      ...(instances || []).map((i: any) => i.package_id).filter(Boolean),
+      ...fallbackPackageIds,
+    ]),
+  ];
+
+  const { data: pkgs } = allPackageIds.length > 0
+    ? await (supabase as any).from('packages').select('id, name').in('id', allPackageIds)
     : { data: [] };
 
   const pkgNameMap: Record<number, string> = {};
@@ -73,6 +82,11 @@ async function resolvePackageNames(instanceIds: number[]) {
   (instances || []).forEach((inst: any) => {
     nameMap[inst.id] = pkgNameMap[inst.package_id] || `Package #${inst.package_id}`;
     lifecycleMap[inst.id] = { start_date: inst.start_date, end_date: inst.end_date };
+  });
+  // For fallback IDs (raw package_ids), use the package name directly
+  fallbackPackageIds.forEach(id => {
+    if (!nameMap[id]) nameMap[id] = pkgNameMap[id] || `Package #${id}`;
+    if (!lifecycleMap[id]) lifecycleMap[id] = { start_date: null, end_date: null };
   });
 
   return { nameMap, lifecycleMap };
@@ -186,19 +200,20 @@ function PackageTimeSummaryCards({ tenantId }: { tenantId: number }) {
       const { nameMap, lifecycleMap } = await resolvePackageNames(instanceIds);
 
       // 3. Fetch per-month breakdown from time_entries (include is_billable)
+      // Fetch ALL entries for tenant - use coalesce logic to match the view
       const { data: monthlyRows } = await (supabase as any)
         .from('time_entries')
-        .select('package_instance_id, start_at, duration_minutes, is_billable')
-        .eq('tenant_id', tenantId)
-        .in('package_instance_id', instanceIds);
+        .select('package_id, package_instance_id, start_at, duration_minutes, is_billable')
+        .eq('tenant_id', tenantId);
 
-      // Group by instance + month, tracking billable/non-billable
+      // Group by coalesce(package_instance_id, package_id) + month, tracking billable/non-billable
       const monthlyMap: Record<number, { month: string; minutes: number; billable: number; nonBillable: number }[]> = {};
       const instanceTotals: Record<number, { billable: number; nonBillable: number }> = {};
       (monthlyRows || []).forEach((row: any) => {
-        if (!row.start_at || !row.package_instance_id) return;
+        if (!row.start_at) return;
+        const instId = row.package_instance_id ?? row.package_id;
+        if (!instId || !instanceIds.includes(instId)) return;
         const monthKey = format(new Date(row.start_at), 'yyyy-MM');
-        const instId = row.package_instance_id;
         const mins = row.duration_minutes || 0;
         if (!monthlyMap[instId]) monthlyMap[instId] = [];
         if (!instanceTotals[instId]) instanceTotals[instId] = { billable: 0, nonBillable: 0 };
