@@ -10320,7 +10320,7 @@ export type Database = {
             foreignKeyName: "compliance_score_snapshots_package_instance_id_fkey"
             columns: ["package_instance_id"]
             isOneToOne: false
-            referencedRelation: "v_packsge_instances"
+            referencedRelation: "v_package_instances"
             referencedColumns: ["id"]
           },
           {
@@ -23951,7 +23951,7 @@ export type Database = {
             foreignKeyName: "ops_work_items_package_instance_id_fkey"
             columns: ["package_instance_id"]
             isOneToOne: false
-            referencedRelation: "v_packsge_instances"
+            referencedRelation: "v_package_instances"
             referencedColumns: ["id"]
           },
           {
@@ -24340,7 +24340,7 @@ export type Database = {
             foreignKeyName: "package_instance_state_log_package_instance_id_fkey"
             columns: ["package_instance_id"]
             isOneToOne: false
-            referencedRelation: "v_packsge_instances"
+            referencedRelation: "v_package_instances"
             referencedColumns: ["id"]
           },
           {
@@ -24552,7 +24552,7 @@ export type Database = {
             foreignKeyName: "package_notes_package_instance_id_fkey"
             columns: ["package_instance_id"]
             isOneToOne: false
-            referencedRelation: "v_packsge_instances"
+            referencedRelation: "v_package_instances"
             referencedColumns: ["id"]
           },
           {
@@ -38382,7 +38382,7 @@ export type Database = {
             foreignKeyName: "time_entries_package_instance_id_fkey"
             columns: ["package_instance_id"]
             isOneToOne: false
-            referencedRelation: "v_packsge_instances"
+            referencedRelation: "v_package_instances"
             referencedColumns: ["id"]
           },
           {
@@ -41282,7 +41282,7 @@ export type Database = {
             foreignKeyName: "compliance_score_snapshots_package_instance_id_fkey"
             columns: ["package_instance_id"]
             isOneToOne: false
-            referencedRelation: "v_packsge_instances"
+            referencedRelation: "v_package_instances"
             referencedColumns: ["id"]
           },
           {
@@ -42658,7 +42658,7 @@ export type Database = {
             foreignKeyName: "compliance_score_snapshots_package_instance_id_fkey"
             columns: ["package_instance_id"]
             isOneToOne: false
-            referencedRelation: "v_packsge_instances"
+            referencedRelation: "v_package_instances"
             referencedColumns: ["id"]
           },
           {
@@ -42896,7 +42896,7 @@ export type Database = {
             foreignKeyName: "compliance_score_snapshots_package_instance_id_fkey"
             columns: ["package_instance_id"]
             isOneToOne: false
-            referencedRelation: "v_packsge_instances"
+            referencedRelation: "v_package_instances"
             referencedColumns: ["id"]
           },
           {
@@ -43126,7 +43126,7 @@ export type Database = {
             foreignKeyName: "compliance_score_snapshots_package_instance_id_fkey"
             columns: ["package_instance_id"]
             isOneToOne: false
-            referencedRelation: "v_packsge_instances"
+            referencedRelation: "v_package_instances"
             referencedColumns: ["id"]
           },
           {
@@ -43360,7 +43360,7 @@ export type Database = {
             foreignKeyName: "compliance_score_snapshots_package_instance_id_fkey"
             columns: ["package_instance_id"]
             isOneToOne: false
-            referencedRelation: "v_packsge_instances"
+            referencedRelation: "v_package_instances"
             referencedColumns: ["id"]
           },
           {
@@ -43582,7 +43582,7 @@ export type Database = {
             foreignKeyName: "compliance_score_snapshots_package_instance_id_fkey"
             columns: ["package_instance_id"]
             isOneToOne: false
-            referencedRelation: "v_packsge_instances"
+            referencedRelation: "v_package_instances"
             referencedColumns: ["id"]
           },
           {
@@ -44336,6 +44336,19 @@ export type Database = {
         }
         Relationships: []
       }
+      v_package_instances: {
+        Row: {
+          end_date: string | null
+          id: number | null
+          is_active: boolean | null
+          is_complete: boolean | null
+          package_id: number | null
+          package_name: string | null
+          start_date: string | null
+          tenant_id: number | null
+        }
+        Relationships: []
+      }
       v_package_minutes_used: {
         Row: {
           last_logged_at: string | null
@@ -44354,19 +44367,6 @@ export type Database = {
           minutes_total: number | null
           minutes_ytd: number | null
           package_instance_id: number | null
-          tenant_id: number | null
-        }
-        Relationships: []
-      }
-      v_packsge_instances: {
-        Row: {
-          end_date: string | null
-          id: number | null
-          is_active: boolean | null
-          is_complete: boolean | null
-          package_id: number | null
-          package_name: string | null
-          start_date: string | null
           tenant_id: number | null
         }
         Relationships: []
