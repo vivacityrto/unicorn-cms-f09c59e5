@@ -50,6 +50,40 @@ interface ClientTimeTabProps {
 
 const PAGE_SIZE = 20;
 
+// ── Helper: resolve package names via two-step fetch ────────────────
+async function resolvePackageNames(instanceIds: number[]) {
+  if (instanceIds.length === 0) return { nameMap: {} as Record<number, string>, lifecycleMap: {} as Record<number, { start_date: string | null; end_date: string | null }> };
+
+  const { data: instances } = await (supabase as any)
+    .from('package_instances')
+    .select('id, package_id, start_date, end_date')
+    .in('id', instanceIds);
+
+  const packageIds = [...new Set((instances || []).map((i: any) => i.package_id).filter(Boolean))];
+
+  const { data: pkgs } = packageIds.length > 0
+    ? await (supabase as any).from('packages').select('id, name').in('id', packageIds)
+    : { data: [] };
+
+  const pkgNameMap: Record<number, string> = {};
+  (pkgs || []).forEach((p: any) => { pkgNameMap[p.id] = p.name; });
+
+  const nameMap: Record<number, string> = {};
+  const lifecycleMap: Record<number, { start_date: string | null; end_date: string | null }> = {};
+  (instances || []).forEach((inst: any) => {
+    nameMap[inst.id] = pkgNameMap[inst.package_id] || `Package #${inst.package_id}`;
+    lifecycleMap[inst.id] = { start_date: inst.start_date, end_date: inst.end_date };
+  });
+
+  return { nameMap, lifecycleMap };
+}
+
+function formatLifecycle(start: string | null, end: string | null) {
+  const s = start ? format(new Date(start), 'd MMM yyyy') : 'Unknown';
+  const e = end ? format(new Date(end), 'd MMM yyyy') : 'Ongoing';
+  return `${s} – ${e}`;
+}
+
 // ── Burndown Summary per package ────────────────────────────────────
 function PackageBurndownCards({ tenantId }: { tenantId: number }) {
   const { data: burndown, isLoading } = useQuery({
@@ -62,21 +96,12 @@ function PackageBurndownCards({ tenantId }: { tenantId: number }) {
       if (error) throw error;
 
       const instanceIds = (data || []).map(r => r.package_instance_id).filter(Boolean) as number[];
-      if (instanceIds.length === 0) return [];
-
-      const { data: instances } = await (supabase as any)
-        .from('package_instances')
-        .select('id, package_id, packages:package_id(name)')
-        .in('id', instanceIds);
-
-      const nameMap: Record<number, string> = {};
-      (instances || []).forEach((inst: any) => {
-        nameMap[inst.id] = inst.packages?.name || `Package #${inst.package_id}`;
-      });
+      const { nameMap, lifecycleMap } = await resolvePackageNames(instanceIds);
 
       return (data || []).map(row => ({
         ...row,
         package_name: nameMap[row.package_instance_id!] || 'Unknown',
+        lifecycle: lifecycleMap[row.package_instance_id!] || { start_date: null, end_date: null },
       }));
     },
   });
@@ -109,6 +134,9 @@ function PackageBurndownCards({ tenantId }: { tenantId: number }) {
           <Card key={row.package_instance_id}>
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium">{row.package_name}</CardTitle>
+              <p className="text-xs text-muted-foreground">
+                {formatLifecycle(row.lifecycle.start_date, row.lifecycle.end_date)}
+              </p>
             </CardHeader>
             <CardContent className="space-y-3">
               <div className="flex items-baseline justify-between">
@@ -144,28 +172,48 @@ function PackageTimeSummaryCards({ tenantId }: { tenantId: number }) {
   const { data, isLoading } = useQuery({
     queryKey: ['package-time-summary', tenantId],
     queryFn: async () => {
-      const { data, error } = await supabase
+      // 1. Get aggregate summary from view
+      const { data: summaryData, error } = await supabase
         .from('v_package_time_summary')
         .select('*')
         .eq('tenant_id', tenantId);
       if (error) throw error;
 
-      const instanceIds = (data || []).map(r => r.package_instance_id).filter(Boolean) as number[];
+      const instanceIds = (summaryData || []).map(r => r.package_instance_id).filter(Boolean) as number[];
       if (instanceIds.length === 0) return [];
 
-      const { data: instances } = await (supabase as any)
-        .from('package_instances')
-        .select('id, package_id, packages:package_id(name)')
-        .in('id', instanceIds);
+      // 2. Resolve names and lifecycle
+      const { nameMap, lifecycleMap } = await resolvePackageNames(instanceIds);
 
-      const nameMap: Record<number, string> = {};
-      (instances || []).forEach((inst: any) => {
-        nameMap[inst.id] = inst.packages?.name || `Package #${inst.package_id}`;
+      // 3. Fetch per-month breakdown from time_entries
+      const { data: monthlyRows } = await (supabase as any)
+        .from('time_entries')
+        .select('package_instance_id, start_at, duration_minutes')
+        .eq('tenant_id', tenantId)
+        .in('package_instance_id', instanceIds);
+
+      // Group by instance + month
+      const monthlyMap: Record<number, { month: string; minutes: number }[]> = {};
+      (monthlyRows || []).forEach((row: any) => {
+        if (!row.start_at || !row.package_instance_id) return;
+        const monthKey = format(new Date(row.start_at), 'yyyy-MM');
+        const instId = row.package_instance_id;
+        if (!monthlyMap[instId]) monthlyMap[instId] = [];
+        const existing = monthlyMap[instId].find(m => m.month === monthKey);
+        if (existing) {
+          existing.minutes += row.duration_minutes || 0;
+        } else {
+          monthlyMap[instId].push({ month: monthKey, minutes: row.duration_minutes || 0 });
+        }
       });
+      // Sort each instance's months
+      Object.values(monthlyMap).forEach(arr => arr.sort((a, b) => a.month.localeCompare(b.month)));
 
-      return (data || []).map(row => ({
+      return (summaryData || []).map(row => ({
         ...row,
         package_name: nameMap[row.package_instance_id!] || 'Unknown',
+        lifecycle: lifecycleMap[row.package_instance_id!] || { start_date: null, end_date: null },
+        monthly: monthlyMap[row.package_instance_id!] || [],
       }));
     },
   });
@@ -176,24 +224,37 @@ function PackageTimeSummaryCards({ tenantId }: { tenantId: number }) {
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
       {data.map(row => (
         <Card key={row.package_instance_id}>
-          <CardContent className="p-4">
-            <p className="text-sm font-medium mb-3">{row.package_name}</p>
-            <div className="grid grid-cols-3 gap-2 text-center">
-              <div>
-                <p className="text-xs text-muted-foreground">This Month</p>
-                <p className="font-semibold">{formatDuration(row.minutes_month ?? 0)}</p>
-              </div>
-              <div>
-                <p className="text-xs text-muted-foreground">YTD</p>
-                <p className="font-semibold">{formatDuration(row.minutes_ytd ?? 0)}</p>
-              </div>
-              <div>
-                <p className="text-xs text-muted-foreground">Total</p>
-                <p className="font-semibold">{formatDuration(row.minutes_total ?? 0)}</p>
-              </div>
+          <CardContent className="p-4 space-y-3">
+            <div>
+              <p className="text-sm font-medium">{row.package_name}</p>
+              <p className="text-xs text-muted-foreground">
+                {formatLifecycle(row.lifecycle.start_date, row.lifecycle.end_date)}
+              </p>
             </div>
+
+            {row.monthly.length > 0 && (
+              <div className="space-y-1">
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Monthly</p>
+                <div className="space-y-0.5 max-h-40 overflow-y-auto">
+                  {row.monthly.map((m: { month: string; minutes: number }) => (
+                    <div key={m.month} className="flex justify-between text-xs">
+                      <span className="text-muted-foreground">
+                        {format(new Date(m.month + '-01'), 'MMM yyyy')}
+                      </span>
+                      <span className="font-medium">{formatDuration(m.minutes)}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div className="flex justify-between items-center pt-2 border-t border-border">
+              <span className="text-xs text-muted-foreground">Total</span>
+              <span className="text-sm font-semibold">{formatDuration(row.minutes_total ?? 0)}</span>
+            </div>
+
             {row.last_entry_at && (
-              <p className="text-xs text-muted-foreground mt-2">
+              <p className="text-xs text-muted-foreground">
                 Last entry: {format(new Date(row.last_entry_at), 'd MMM yyyy')}
               </p>
             )}
@@ -251,14 +312,20 @@ function MoveEntryDialog({
   const { data: packages } = useQuery({
     queryKey: ['active-packages', tenantId],
     queryFn: async () => {
-      const { data } = await (supabase as any)
+      const { data: instances } = await (supabase as any)
         .from('package_instances')
-        .select('id, package_id, packages:package_id(name)')
+        .select('id, package_id')
         .eq('tenant_id', tenantId)
         .eq('is_complete', false);
-      return (data || []).map((p: any) => ({
+      const packageIds = [...new Set((instances || []).map((i: any) => i.package_id).filter(Boolean))];
+      const { data: pkgs } = packageIds.length > 0
+        ? await (supabase as any).from('packages').select('id, name').in('id', packageIds)
+        : { data: [] };
+      const pkgNames: Record<number, string> = {};
+      (pkgs || []).forEach((p: any) => { pkgNames[p.id] = p.name; });
+      return (instances || []).map((p: any) => ({
         id: p.package_id,
-        name: p.packages?.name || `Package #${p.package_id}`,
+        name: pkgNames[p.package_id] || `Package #${p.package_id}`,
       }));
     },
     enabled: open,
@@ -363,14 +430,20 @@ function SplitEntryDialog({
   const { data: packages } = useQuery({
     queryKey: ['active-packages', tenantId],
     queryFn: async () => {
-      const { data } = await (supabase as any)
+      const { data: instances } = await (supabase as any)
         .from('package_instances')
-        .select('id, package_id, packages:package_id(name)')
+        .select('id, package_id')
         .eq('tenant_id', tenantId)
         .eq('is_complete', false);
-      return (data || []).map((p: any) => ({
+      const packageIds = [...new Set((instances || []).map((i: any) => i.package_id).filter(Boolean))];
+      const { data: pkgs } = packageIds.length > 0
+        ? await (supabase as any).from('packages').select('id, name').in('id', packageIds)
+        : { data: [] };
+      const pkgNames: Record<number, string> = {};
+      (pkgs || []).forEach((p: any) => { pkgNames[p.id] = p.name; });
+      return (instances || []).map((p: any) => ({
         id: p.package_id,
-        name: p.packages?.name || `Package #${p.package_id}`,
+        name: pkgNames[p.package_id] || `Package #${p.package_id}`,
       }));
     },
     enabled: open,
