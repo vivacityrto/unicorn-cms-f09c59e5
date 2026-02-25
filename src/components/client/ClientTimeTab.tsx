@@ -185,25 +185,39 @@ function PackageTimeSummaryCards({ tenantId }: { tenantId: number }) {
       // 2. Resolve names and lifecycle
       const { nameMap, lifecycleMap } = await resolvePackageNames(instanceIds);
 
-      // 3. Fetch per-month breakdown from time_entries
+      // 3. Fetch per-month breakdown from time_entries (include is_billable)
       const { data: monthlyRows } = await (supabase as any)
         .from('time_entries')
-        .select('package_instance_id, start_at, duration_minutes')
+        .select('package_instance_id, start_at, duration_minutes, is_billable')
         .eq('tenant_id', tenantId)
         .in('package_instance_id', instanceIds);
 
-      // Group by instance + month
-      const monthlyMap: Record<number, { month: string; minutes: number }[]> = {};
+      // Group by instance + month, tracking billable/non-billable
+      const monthlyMap: Record<number, { month: string; minutes: number; billable: number; nonBillable: number }[]> = {};
+      const instanceTotals: Record<number, { billable: number; nonBillable: number }> = {};
       (monthlyRows || []).forEach((row: any) => {
         if (!row.start_at || !row.package_instance_id) return;
         const monthKey = format(new Date(row.start_at), 'yyyy-MM');
         const instId = row.package_instance_id;
+        const mins = row.duration_minutes || 0;
         if (!monthlyMap[instId]) monthlyMap[instId] = [];
+        if (!instanceTotals[instId]) instanceTotals[instId] = { billable: 0, nonBillable: 0 };
+        if (row.is_billable) {
+          instanceTotals[instId].billable += mins;
+        } else {
+          instanceTotals[instId].nonBillable += mins;
+        }
         const existing = monthlyMap[instId].find(m => m.month === monthKey);
         if (existing) {
-          existing.minutes += row.duration_minutes || 0;
+          existing.minutes += mins;
+          if (row.is_billable) existing.billable += mins; else existing.nonBillable += mins;
         } else {
-          monthlyMap[instId].push({ month: monthKey, minutes: row.duration_minutes || 0 });
+          monthlyMap[instId].push({
+            month: monthKey,
+            minutes: mins,
+            billable: row.is_billable ? mins : 0,
+            nonBillable: row.is_billable ? 0 : mins,
+          });
         }
       });
       // Sort each instance's months
@@ -214,6 +228,7 @@ function PackageTimeSummaryCards({ tenantId }: { tenantId: number }) {
         package_name: nameMap[row.package_instance_id!] || 'Unknown',
         lifecycle: lifecycleMap[row.package_instance_id!] || { start_date: null, end_date: null },
         monthly: monthlyMap[row.package_instance_id!] || [],
+        billableTotals: instanceTotals[row.package_instance_id!] || { billable: 0, nonBillable: 0 },
       }));
     },
   });
@@ -234,14 +249,21 @@ function PackageTimeSummaryCards({ tenantId }: { tenantId: number }) {
 
             {row.monthly.length > 0 && (
               <div className="space-y-1">
-                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Monthly</p>
+                <div className="flex justify-between text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                  <span>Monthly</span>
+                  <span className="flex gap-2"><span>Total</span><span className="text-green-600">Bill</span><span>Non-bill</span></span>
+                </div>
                 <div className="space-y-0.5 max-h-40 overflow-y-auto">
-                  {row.monthly.map((m: { month: string; minutes: number }) => (
-                    <div key={m.month} className="flex justify-between text-xs">
+                  {row.monthly.map((m: { month: string; minutes: number; billable: number; nonBillable: number }) => (
+                    <div key={m.month} className="flex justify-between text-xs gap-2">
                       <span className="text-muted-foreground">
                         {format(new Date(m.month + '-01'), 'MMM yyyy')}
                       </span>
-                      <span className="font-medium">{formatDuration(m.minutes)}</span>
+                      <span className="flex gap-2">
+                        <span className="font-medium">{formatDuration(m.minutes)}</span>
+                        <span className="text-green-600">{formatDuration(m.billable)}</span>
+                        <span className="text-muted-foreground">{formatDuration(m.nonBillable)}</span>
+                      </span>
                     </div>
                   ))}
                 </div>
@@ -250,7 +272,11 @@ function PackageTimeSummaryCards({ tenantId }: { tenantId: number }) {
 
             <div className="flex justify-between items-center pt-2 border-t border-border">
               <span className="text-xs text-muted-foreground">Total</span>
-              <span className="text-sm font-semibold">{formatDuration(row.minutes_total ?? 0)}</span>
+              <span className="flex gap-2 text-xs">
+                <span className="font-semibold text-sm">{formatDuration(row.minutes_total ?? 0)}</span>
+                <span className="text-green-600 font-medium">{formatDuration(row.billableTotals.billable)}</span>
+                <span className="text-muted-foreground">{formatDuration(row.billableTotals.nonBillable)}</span>
+              </span>
             </div>
 
             {row.last_entry_at && (
@@ -938,7 +964,9 @@ export function ClientTimeTab({ tenantId, tenantName }: ClientTimeTabProps) {
                   const sep = `|${'-'.repeat(w.date + 2)}|${'-'.repeat(w.user + 2)}|${'-'.repeat(w.dur + 2)}|${'-'.repeat(w.type + 2)}|${'-'.repeat(w.billable + 2)}|${'-'.repeat(w.notes + 2)}|`;
                   const table = [fmt(header), sep, ...rows.map(fmt)].join('\n');
                   const totalMins = filteredEntries.reduce((s, e) => s + e.duration_minutes, 0);
-                  const body = `Time Entries for ${tenantName}\nTotal: ${formatDuration(totalMins)}\n\n${table}`;
+                  const billableMins = filteredEntries.filter(e => e.is_billable).reduce((s, e) => s + e.duration_minutes, 0);
+                  const nonBillableMins = totalMins - billableMins;
+                  const body = `Time Entries for ${tenantName}\nTotal: ${formatDuration(totalMins)} | Billable: ${formatDuration(billableMins)} | Non-billable: ${formatDuration(nonBillableMins)}\n\n${table}`;
                   const subject = encodeURIComponent(`Time Entries - ${tenantName}`);
                   window.open(`mailto:?subject=${subject}&body=${encodeURIComponent(body)}`, '_self');
                 }}
