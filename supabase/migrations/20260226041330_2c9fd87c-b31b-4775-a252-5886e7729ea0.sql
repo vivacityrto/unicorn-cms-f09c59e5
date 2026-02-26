@@ -1,0 +1,1 @@
+ALTER TABLE staff_tasks ADD COLUMN is_recurring boolean NOT NULL DEFAULT false;
