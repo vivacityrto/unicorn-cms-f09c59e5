@@ -422,65 +422,66 @@ export function ClientPackagesTab({ tenantId, tenantName, packages, loading, onA
                     )}
                   </div>
 
-                  {/* Right: Actions */}
-                  <div className="flex items-center gap-2">
-                    {isSuperAdmin() && (
-                      <CollapsibleTrigger asChild>
-                        <Button variant="outline" size="sm" className="gap-1">
-                          <Settings className="h-4 w-4" />
-                          Manage
-                          {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-                        </Button>
-                      </CollapsibleTrigger>
-                    )}
-                    {isSuperAdmin() && !pkg.is_complete && (
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
+                  {/* Right: Actions + Renewal date stacked */}
+                  <div className="flex flex-col items-end">
+                    <div className="flex items-center gap-2">
+                      {isSuperAdmin() && (
+                        <CollapsibleTrigger asChild>
                           <Button variant="outline" size="sm" className="gap-1">
-                            <Flag className="h-4 w-4" />
-                            Finalise
-                            <ChevronDown className="h-3 w-3 ml-0.5" />
+                            <Settings className="h-4 w-4" />
+                            Manage
+                            {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
                           </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
-                          <DropdownMenuItem
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setRenewTarget(pkg);
-                            }}
-                          >
-                            <RefreshCw className="h-4 w-4 mr-2" />
-                            Renew
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setFinaliseTarget(pkg);
-                            }}
-                          >
-                            <Flag className="h-4 w-4 mr-2" />
-                            Finalise
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    )}
-                    <Button 
-                      variant="ghost" 
-                      size="sm"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        navigate(`/admin/package/${pkg.package_id}/tenant/${tenantId}/instance/${pkg.id}`);
-                      }}
-                    >
-                      <ChevronRight className="h-5 w-5 text-muted-foreground" />
-                    </Button>
-                  </div>
-                  {/* Renewal date below action buttons */}
-                  {pkg.next_renewal_date && !pkg.is_complete && (
-                    <div className="text-xs text-muted-foreground text-right">
-                      Renewal {format(parseISO(pkg.next_renewal_date), 'dd/MM/yyyy')}
+                        </CollapsibleTrigger>
+                      )}
+                      {isSuperAdmin() && !pkg.is_complete && (
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="outline" size="sm" className="gap-1">
+                              <Flag className="h-4 w-4" />
+                              Finalise
+                              <ChevronDown className="h-3 w-3 ml-0.5" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+                            <DropdownMenuItem
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setRenewTarget(pkg);
+                              }}
+                            >
+                              <RefreshCw className="h-4 w-4 mr-2" />
+                              Renew
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setFinaliseTarget(pkg);
+                              }}
+                            >
+                              <Flag className="h-4 w-4 mr-2" />
+                              Finalise
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      )}
+                      <Button 
+                        variant="ghost" 
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          navigate(`/admin/package/${pkg.package_id}/tenant/${tenantId}/instance/${pkg.id}`);
+                        }}
+                      >
+                        <ChevronRight className="h-5 w-5 text-muted-foreground" />
+                      </Button>
                     </div>
-                  )}
+                    {pkg.next_renewal_date && !pkg.is_complete && (
+                      <div className="text-xs text-muted-foreground mt-1">
+                        Renewal {format(parseISO(pkg.next_renewal_date), 'dd/MM/yyyy')}
+                      </div>
+                    )}
+                  </div>
                 </div>
               </CardContent>
               
