@@ -423,7 +423,7 @@ export function ClientPackagesTab({ tenantId, tenantName, packages, loading, onA
                   </div>
 
                   {/* Right: Actions + Renewal date stacked */}
-                   <div className="flex items-center gap-2">
+                   <div className="flex items-start gap-2">
                       {isSuperAdmin() && (
                         <CollapsibleTrigger asChild>
                           <Button variant="outline" size="sm" className="gap-1">
