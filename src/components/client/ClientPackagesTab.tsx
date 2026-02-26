@@ -475,6 +475,12 @@ export function ClientPackagesTab({ tenantId, tenantName, packages, loading, onA
                       <ChevronRight className="h-5 w-5 text-muted-foreground" />
                     </Button>
                   </div>
+                  {/* Renewal date */}
+                  {pkg.next_renewal_date && !pkg.is_complete && (
+                    <div className="text-xs text-muted-foreground mt-1 text-right">
+                      Renewal {format(parseISO(pkg.next_renewal_date), 'dd/MM/yyyy')}
+                    </div>
+                  )}
                 </div>
               </CardContent>
               
