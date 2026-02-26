@@ -62,7 +62,8 @@ export default function ManageTenants() {
   const [cscFilterOptions, setCscFilterOptions] = useState<CSCFilterOption[]>([]);
   const [showArchived, setShowArchived] = useState(false);
   const [packages, setPackages] = useState<{ id: number; name: string; created_at?: string }[]>([]);
-  const [sortField, setSortField] = useState<"status" | "member_count" | "created_at">("status");
+  const [sortField, setSortField] = useState<"status" | "member_count" | "created_at" | "renewal">("status");
+  const [renewalFilter, setRenewalFilter] = useState<string>("all");
   const [viewMode, setViewMode] = useState<"grid" | "table">("table");
   const [connectedTenantIds, setConnectedTenantIds] = useState<number[]>([]);
   const [assignedTenants, setAssignedTenants] = useState<Record<number, { userId: string; userName: string }>>({});
@@ -147,7 +148,7 @@ export default function ManageTenants() {
   useEffect(() => {
     applyFiltersAndSort();
     setCurrentPage(1);
-  }, [tenants, searchQuery, statusFilter, packageFilter, cscFilter, sortField, showArchived]);
+  }, [tenants, searchQuery, statusFilter, packageFilter, cscFilter, sortField, showArchived, renewalFilter]);
 
   const fetchTenants = async () => {
     try {
@@ -359,6 +360,18 @@ export default function ManageTenants() {
       filtered = filtered.filter(tenant => tenant.csc_user_id === cscFilter);
     }
 
+    // Renewal due filter (months)
+    if (renewalFilter !== "all") {
+      const months = parseInt(renewalFilter);
+      const now = new Date();
+      const cutoff = new Date(now.getFullYear(), now.getMonth() + months, now.getDate());
+      filtered = filtered.filter(tenant => {
+        if (!tenant.next_renewal_date) return false;
+        const renewal = new Date(tenant.next_renewal_date);
+        return renewal <= cutoff;
+      });
+    }
+
     // Sort
     filtered.sort((a, b) => {
       if (sortField === "status") {
@@ -368,6 +381,10 @@ export default function ManageTenants() {
         return b.member_count - a.member_count;
       } else if (sortField === "created_at") {
         return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+      } else if (sortField === "renewal") {
+        const aDate = a.next_renewal_date ? new Date(a.next_renewal_date).getTime() : Infinity;
+        const bDate = b.next_renewal_date ? new Date(b.next_renewal_date).getTime() : Infinity;
+        return aDate - bDate;
       }
       return 0;
     });
@@ -655,6 +672,25 @@ export default function ManageTenants() {
 
         <Combobox
           options={[
+            { value: "all", label: "All Renewals", icon: Calendar, iconColor: "text-muted-foreground" },
+            { value: "1", label: "Due within 1 month", icon: Calendar, iconColor: "text-red-600" },
+            { value: "2", label: "Due within 2 months", icon: Calendar, iconColor: "text-amber-600" },
+            { value: "3", label: "Due within 3 months", icon: Calendar, iconColor: "text-yellow-600" },
+            { value: "4", label: "Due within 4 months", icon: Calendar, iconColor: "text-primary" },
+            { value: "5", label: "Due within 5 months", icon: Calendar, iconColor: "text-muted-foreground" },
+          ]}
+          value={renewalFilter}
+          onValueChange={setRenewalFilter}
+          placeholder="Filter by renewal..."
+          searchPlaceholder="Search..."
+          emptyText="No options."
+          className="w-full md:w-[220px] h-[48px]"
+          showIcons
+          showSeparators
+        />
+
+        <Combobox
+          options={[
             { value: "all", label: "All Status", icon: Activity, iconColor: "text-muted-foreground" },
             ...statusOptions.map(s => {
               const iconMap: Record<string, typeof CheckCircle2> = { active: CheckCircle2, disabled: XCircle, on_hold: Pause, overrun: AlertCircle, terminated: XCircle, cancelled: Archive };
@@ -703,7 +739,12 @@ export default function ManageTenants() {
                   <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-r border-border/50 text-center">CSC</TableHead>
                   <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-r border-border/50 text-center">Members</TableHead>
                   <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-r border-border/50 text-center">Risk Level</TableHead>
-                  <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-r border-border/50">Renewal</TableHead>
+                  <TableHead
+                    className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-r border-border/50 cursor-pointer hover:bg-muted/50 select-none"
+                    onClick={() => setSortField(sortField === "renewal" ? "status" : "renewal")}
+                  >
+                    Renewal {sortField === "renewal" && "▲"}
+                  </TableHead>
                   <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-border/50 text-center">Actions</TableHead>
                 </TableRow>
               </TableHeader>
