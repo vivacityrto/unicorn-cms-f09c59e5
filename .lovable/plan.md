@@ -1,75 +1,163 @@
 
 
-# Fix "Unknown" Package Names and Add Monthly/Lifecycle Breakdowns on Time Tab
+# Add `next_renewal_date` and Scope Time Logs to Renewal Year
 
-## Problem
+## Overview
 
-The **Package Burndown** and **Monthly Summary** cards on the Time tab both show "Unknown" because of a broken join. The code tries to use Supabase's relational syntax (`packages:package_id(name)`) on `package_instances`, but there is **no foreign key** between `package_instances.package_id` and `packages.id` in the database. Without the FK, Supabase returns null, and the fallback label "Unknown" is displayed.
+Three changes in one pass:
 
-Additionally, the Monthly Summary only shows aggregate totals (This Month / YTD / Total) -- the user wants a **per-month breakdown** and **package lifecycle dates** (start/end) visible.
+1. **Database**: Add `next_renewal_date` column, backfill open records, auto-set on insert
+2. **Manage Packages dashboard**: Show renewal date under tenant name (with state inline), add renewal filter
+3. **Time scoping**: Burndown view and time summaries filter entries to the current renewal year only (`next_renewal_date - 1 year` to `next_renewal_date`)
 
-## Root Cause (Technical)
+---
 
-In `ClientTimeTab.tsx`, both `PackageBurndownCards` (line 67-70) and `PackageTimeSummaryCards` (line 156-159) do:
+## 1. Database Migration
 
+### Add column and backfill
+
+```sql
+ALTER TABLE package_instances ADD COLUMN next_renewal_date date;
+
+UPDATE package_instances
+SET next_renewal_date = start_date + INTERVAL '1 year'
+WHERE end_date IS NULL;
 ```
-.from('package_instances')
-.select('id, package_id, packages:package_id(name)')
+
+### Auto-set trigger for future inserts
+
+```sql
+CREATE OR REPLACE FUNCTION set_default_renewal_date()
+RETURNS TRIGGER AS $$
+BEGIN
+  IF NEW.next_renewal_date IS NULL AND NEW.start_date IS NOT NULL THEN
+    NEW.next_renewal_date := NEW.start_date + INTERVAL '1 year';
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_set_renewal_date
+BEFORE INSERT ON package_instances
+FOR EACH ROW EXECUTE FUNCTION set_default_renewal_date();
 ```
 
-This Supabase join syntax requires a FK constraint. Since none exists, `packages` returns `null`, and `nameMap` maps every instance to "Unknown".
+### Update `v_package_burndown` -- scope to renewal year
 
-## Solution
+Currently the burndown sums ALL time entries for a package instance. It needs to only count entries within the current renewal year window:
 
-### Fix 1: Resolve package names correctly
+```sql
+CREATE OR REPLACE VIEW v_package_burndown AS
+SELECT
+  pi.tenant_id,
+  pi.id AS package_instance_id,
+  COALESCE(pi.included_minutes, 0) + COALESCE(pi.hours_added, 0) * 60 AS included_minutes,
+  COALESCE(ts.used_minutes, 0) AS used_minutes,
+  -- remaining and percent_used as before ...
+FROM package_instances pi
+LEFT JOIN (
+  SELECT te.package_id, SUM(te.duration_minutes) AS used_minutes
+  FROM time_entries te
+  JOIN package_instances pi2 ON pi2.id = te.package_id
+  WHERE te.package_id IS NOT NULL
+    AND te.start_at >= COALESCE(pi2.next_renewal_date, pi2.start_date + INTERVAL '1 year') - INTERVAL '1 year'
+    AND te.start_at < COALESCE(pi2.next_renewal_date, pi2.start_date + INTERVAL '1 year')
+  GROUP BY te.package_id
+) ts ON ts.package_id = pi.id
+WHERE pi.is_complete = false;
+```
 
-Replace the broken FK join with two separate queries:
-1. Fetch `package_instances` (get `id`, `package_id`, `start_date`, `end_date`)
-2. Fetch `packages` by the distinct `package_id` values (get `id`, `name`)
-3. Map names client-side
+This ensures only hours logged within the current renewal year count toward the burndown.
 
-This follows the established pattern noted in project memory: "no explicit FK relationship... requires separate fetches with client-side mapping."
+### Update `v_package_time_summary` -- scope to renewal year
 
-### Fix 2: Show package lifecycle dates
+Similarly, the time summary view will filter entries to the renewal year window instead of using calendar year-to-date.
 
-Add start/end dates from `package_instances` to both the Burndown and Monthly Summary cards. Display format: "1 Jan 2025 -- 31 Dec 2025" or "1 Jan 2025 -- Ongoing".
+---
 
-### Fix 3: Add per-month breakdown
+## 2. Frontend Time Scoping
 
-Replace the current 3-column aggregate (This Month / YTD / Total) with a monthly breakdown table/list showing each month's total hours for that package instance. This gives visibility into usage patterns over the package's life.
+### `useTimeSummaryQuery` (src/hooks/useTimeTrackingQuery.tsx)
+
+The summary query currently fetches all `time_entries` for a client and calculates week/month/90-day buckets client-side. When a specific `packageId` is provided, it needs to also fetch the package instance's `next_renewal_date` and `start_date`, then only include entries within that renewal year window.
+
+Changes:
+- When `packageId` is set, fetch `next_renewal_date` and `start_date` from `package_instances`
+- Calculate `renewalStart = next_renewal_date - 1 year` and `renewalEnd = next_renewal_date`
+- Filter entries to only those within this window before computing summaries
+
+### `ClientTimeTab.tsx` time entries list
+
+The entries list and monthly breakdown already filter by `package_id`. The `resolvePackageNames` helper will also fetch `next_renewal_date` alongside `start_date` and `end_date`. The monthly breakdown cards will show the renewal year range instead of calendar YTD.
+
+### `PackageBurndownCards` (ClientTimeTab.tsx)
+
+Already reads from `v_package_burndown` which will be scoped at the database level. The lifecycle display will show the renewal year range.
+
+---
+
+## 3. Manage Packages Dashboard Layout
+
+### Client column restructure (src/pages/ManagePackages.tsx)
+
+Current layout per row:
+```text
+Tenant Name
+```
+
+New layout:
+```text
+Tenant Name  NSW
+Renewal: 15 Mar 2027
+```
+
+- **Line 1**: Tenant name (font-semibold) + state (text-xs text-muted-foreground) on the same line
+- **Line 2**: Renewal date with colour-coded text:
+  - Red: lapsed (past due)
+  - Amber: due within 30 days
+  - Yellow: due within 60 days
+  - Green/neutral: more than 60 days away
+
+### Data fetching changes
+
+Update `fetchTenantsForPackage` to also select `id, start_date, next_renewal_date` from `package_instances` and pass into each tenant record.
+
+Add to `TenantData` interface:
+```typescript
+start_date?: string | null;
+next_renewal_date?: string | null;
+package_instance_id?: number | null;
+```
+
+### Renewal filter
+
+New "Renewal" combobox alongside existing State and Status filters:
+- All (default)
+- Due 30 days
+- Due 60 days
+- Due 90 days
+- Lapsed
+
+### Inline date editing
+
+Clicking the renewal date opens a date picker popover to update `package_instances.next_renewal_date` directly.
+
+---
 
 ## Files Changed
 
-**`src/components/client/ClientTimeTab.tsx`** -- single file, three changes:
-
-### Change 1: `PackageBurndownCards` query (lines 54-140)
-- Replace `packages:package_id(name)` join with two-step fetch
-- Also fetch `start_date` and `end_date` from `package_instances`
-- Display package lifecycle dates on each burndown card
-
-### Change 2: `PackageTimeSummaryCards` query and display (lines 142-205)
-- Same two-step fetch fix for package names
-- Fetch `start_date` and `end_date` from `package_instances`
-- Add a new query to `time_entries` grouped by `package_id` and month (`date_trunc`) to get per-month totals
-- Replace the 3-column aggregate with a monthly breakdown list showing each month and its hours
-- Show package lifecycle dates (start -- end/Ongoing)
-- Keep "Total" and "Last entry" as summary info
-
-### Change 3: Card layout enhancement
-- Each Monthly Summary card will show:
-  - Package name (resolved correctly)
-  - Package life: "18 Nov 2025 -- Ongoing"
-  - A compact list of months with hours (e.g., "Feb 2026: 6h 55m")
-  - Total at the bottom
-  - Last entry date
+| File | Change |
+|------|--------|
+| New migration | Add column, backfill, trigger, update both views |
+| `src/pages/ManagePackages.tsx` | TenantData interface, fetch renewal dates, rearrange Client cell, add renewal filter, inline date picker |
+| `src/hooks/useTimeTrackingQuery.tsx` | Scope summary to renewal year when package selected |
+| `src/components/client/ClientTimeTab.tsx` | Fetch `next_renewal_date` in resolvePackageNames, display renewal year in lifecycle labels |
+| `src/integrations/supabase/types.ts` | Auto-updated after migration |
 
 ## What Does NOT Change
-- Time entries list, filters, pagination
-- Timer controls (Start/Stop)
-- Package burndown calculation logic (view-driven)
-- Stale drafts warning
-- Add/Edit/Move/Delete time entry flows
-- Any database tables or views
+
+- Package finalisation/creation workflows
 - RLS policies
-- Any other tabs or pages
+- Timer start/stop logic
+- Time entry creation (entries are still recorded normally; only display/summaries are scoped)
 
