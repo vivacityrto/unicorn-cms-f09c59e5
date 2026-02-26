@@ -353,7 +353,9 @@ export default function ManageTenants() {
     }
 
     // CSC filter
-    if (cscFilter !== "all") {
+    if (cscFilter === "unassigned") {
+      filtered = filtered.filter(tenant => !tenant.csc_user_id);
+    } else if (cscFilter !== "all") {
       filtered = filtered.filter(tenant => tenant.csc_user_id === cscFilter);
     }
 
@@ -590,7 +592,11 @@ export default function ManageTenants() {
               </Badge>
             ))}
             {unassigned > 0 && (
-              <Badge variant="outline" className="text-xs gap-1 text-amber-600 border-amber-300">
+              <Badge
+                variant={cscFilter === 'unassigned' ? "default" : "outline"}
+                className="cursor-pointer text-xs gap-1 text-amber-600 border-amber-300"
+                onClick={() => setCscFilter(cscFilter === 'unassigned' ? 'all' : 'unassigned')}
+              >
                 Unassigned <span className="font-bold">{unassigned}</span>
               </Badge>
             )}
@@ -627,6 +633,7 @@ export default function ManageTenants() {
         <Combobox
           options={[
             { value: "all", label: "All CSC", icon: Users, iconColor: "text-muted-foreground" },
+            { value: "unassigned", label: `Unassigned (${tenants.filter(t => !t.csc_user_id).length})`, icon: UserPlus, iconColor: "text-amber-600" },
             ...cscFilterOptions.filter(u => !u.archived).map(csc => {
               const clientCount = tenants.filter(t => t.lifecycle_status === 'active' && t.csc_user_id === csc.user_uuid).length;
               return { value: csc.user_uuid, label: `${csc.first_name} ${csc.last_name} (${clientCount})`, icon: Users, iconColor: "text-primary" };
