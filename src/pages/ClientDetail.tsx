@@ -392,16 +392,6 @@ export default function ClientDetail() {
                 <Clock className="h-4 w-4 mr-2" />
                 Time
               </TabsTrigger>
-              <a
-                href={`https://unicorn-cms.com.au/clients/${tenantIdNum}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center justify-center whitespace-nowrap rounded-full px-3 py-1.5 text-sm font-medium transition-colors ml-2"
-                style={{ backgroundColor: '#D4842A', color: '#fff' }}
-                onClick={(e) => e.stopPropagation()}
-              >
-                Unicorn 1.0
-              </a>
             </TabsList>
           </Tabs>
         </div>

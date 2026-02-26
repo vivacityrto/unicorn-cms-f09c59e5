@@ -185,6 +185,17 @@ export function TenantTimeTrackerBar({ tenantId, tenantName }: TenantTimeTracker
             </TooltipProvider>
           )}
 
+          {/* Unicorn 1.0 link */}
+          <a
+            href={`https://unicorn-cms.com.au/clients/${tenantId}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center justify-center rounded-md px-3 h-8 text-sm font-medium text-white transition-colors hover:opacity-90"
+            style={{ backgroundColor: '#D4842A' }}
+          >
+            Unicorn 1.0
+          </a>
+
           {/* Spacer */}
           <div className="flex-1" />
 
