@@ -20,6 +20,12 @@ import {
   DialogDescription,
   DialogFooter,
 } from '@/components/ui/dialog';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
 import { 
   Package2, 
@@ -40,7 +46,9 @@ import {
   Archive,
   Database,
   Flag,
-  Shield
+  Shield,
+  RefreshCw,
+  MoreVertical
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { ClientPackage } from '@/hooks/useClientManagement';
@@ -164,6 +172,34 @@ export function ClientPackagesTab({ tenantId, tenantName, packages, loading, onA
       toast.error(err.message || 'Failed to finalise package');
     } finally {
       setFinalising(false);
+    }
+  };
+
+  // Renew: update next_renewal_date on existing instance (no finalisation)
+  const [renewing, setRenewing] = useState(false);
+  const handleRenewPackage = async (pkg: ClientPackage) => {
+    setRenewing(true);
+    try {
+      // Calculate new renewal date: current next_renewal_date + 1 year, or start_date + 1 year
+      const currentRenewal = (pkg as any).next_renewal_date
+        ? parseISO((pkg as any).next_renewal_date)
+        : addYears(parseISO(pkg.membership_started_at), 1);
+      const newRenewalDate = addYears(currentRenewal, 1);
+
+      const { error } = await (supabase as any)
+        .from('package_instances')
+        .update({ next_renewal_date: format(newRenewalDate, 'yyyy-MM-dd') })
+        .eq('id', parseInt(pkg.id, 10));
+
+      if (error) throw error;
+
+      toast.success(`${pkg.package_name} renewed — next renewal ${format(newRenewalDate, 'dd MMM yyyy')}`);
+      onAddPackage?.(); // refresh data
+    } catch (err: any) {
+      console.error('Renewal error:', err);
+      toast.error(err.message || 'Failed to renew package');
+    } finally {
+      setRenewing(false);
     }
   };
   // Fetch note counts for all package instances
@@ -422,18 +458,36 @@ export function ClientPackagesTab({ tenantId, tenantName, packages, loading, onA
                       </CollapsibleTrigger>
                     )}
                     {isSuperAdmin() && !pkg.is_complete && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="gap-1"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setFinaliseTarget(pkg);
-                        }}
-                      >
-                        <Flag className="h-4 w-4" />
-                        Finalise
-                      </Button>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="outline" size="sm" className="gap-1">
+                            <Flag className="h-4 w-4" />
+                            Finalise
+                            <ChevronDown className="h-3 w-3 ml-0.5" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+                          <DropdownMenuItem
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleRenewPackage(pkg);
+                            }}
+                            disabled={renewing}
+                          >
+                            <RefreshCw className="h-4 w-4 mr-2" />
+                            Renew
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setFinaliseTarget(pkg);
+                            }}
+                          >
+                            <Flag className="h-4 w-4 mr-2" />
+                            Finalise
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     )}
                     <Button 
                       variant="ghost" 
