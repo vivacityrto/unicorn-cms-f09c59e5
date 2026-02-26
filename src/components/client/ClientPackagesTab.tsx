@@ -56,6 +56,7 @@ import { PackageStagesManager } from './PackageStagesManager';
 import { PackageNotesSection } from './PackageNotesSection';
 import { PackageTimeSection } from './PackageTimeSection';
 import { StartPackageDialog } from './StartPackageDialog';
+import { RenewalConfirmDialog } from './RenewalConfirmDialog';
 import { PackageDataManager } from './PackageDataManager';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
@@ -175,33 +176,8 @@ export function ClientPackagesTab({ tenantId, tenantName, packages, loading, onA
     }
   };
 
-  // Renew: update next_renewal_date on existing instance (no finalisation)
-  const [renewing, setRenewing] = useState(false);
-  const handleRenewPackage = async (pkg: ClientPackage) => {
-    setRenewing(true);
-    try {
-      // Calculate new renewal date: current next_renewal_date + 1 year, or start_date + 1 year
-      const currentRenewal = (pkg as any).next_renewal_date
-        ? parseISO((pkg as any).next_renewal_date)
-        : addYears(parseISO(pkg.membership_started_at), 1);
-      const newRenewalDate = addYears(currentRenewal, 1);
-
-      const { error } = await (supabase as any)
-        .from('package_instances')
-        .update({ next_renewal_date: format(newRenewalDate, 'yyyy-MM-dd') })
-        .eq('id', parseInt(pkg.id, 10));
-
-      if (error) throw error;
-
-      toast.success(`${pkg.package_name} renewed — next renewal ${format(newRenewalDate, 'dd MMM yyyy')}`);
-      onAddPackage?.(); // refresh data
-    } catch (err: any) {
-      console.error('Renewal error:', err);
-      toast.error(err.message || 'Failed to renew package');
-    } finally {
-      setRenewing(false);
-    }
-  };
+  // Renewal dialog state
+  const [renewTarget, setRenewTarget] = useState<ClientPackage | null>(null);
   // Fetch note counts for all package instances
   useEffect(() => {
     const fetchNoteCounts = async () => {
@@ -470,9 +446,8 @@ export function ClientPackagesTab({ tenantId, tenantName, packages, loading, onA
                           <DropdownMenuItem
                             onClick={(e) => {
                               e.stopPropagation();
-                              handleRenewPackage(pkg);
+                              setRenewTarget(pkg);
                             }}
-                            disabled={renewing}
                           >
                             <RefreshCw className="h-4 w-4 mr-2" />
                             Renew
@@ -648,6 +623,20 @@ export function ClientPackagesTab({ tenantId, tenantName, packages, loading, onA
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Renewal Confirm Dialog */}
+      {renewTarget && (
+        <RenewalConfirmDialog
+          open={!!renewTarget}
+          onOpenChange={(open) => !open && setRenewTarget(null)}
+          pkg={renewTarget}
+          tenantId={tenantId}
+          onSuccess={() => {
+            setRenewTarget(null);
+            onAddPackage?.();
+          }}
+        />
+      )}
     </div>
   );
 }
