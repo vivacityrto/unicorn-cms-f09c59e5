@@ -41,6 +41,7 @@ interface Tenant {
   package_id?: number | null;
   state?: string | null;
   complyhub_membership_tier?: string | null;
+  next_renewal_date?: string | null;
 }
 
 interface CSCFilterOption {
@@ -163,7 +164,7 @@ export default function ManageTenants() {
 
       const { data: packageInstancesData } = await supabase
         .from("package_instances")
-        .select("tenant_id, package_id")
+        .select("tenant_id, package_id, next_renewal_date")
         .eq("is_complete", false)
         .in("tenant_id", tenantIds);
 
@@ -190,6 +191,16 @@ export default function ManageTenants() {
         }
         return acc;
       }, {} as Record<number, { id: number; name: string; full_text: string | null }[]>);
+
+      // Build renewal date map: earliest next_renewal_date per tenant
+      const tenantRenewalMap = (packageInstancesData || []).reduce((acc, pi) => {
+        if (pi.next_renewal_date) {
+          if (!acc[pi.tenant_id] || pi.next_renewal_date < acc[pi.tenant_id]) {
+            acc[pi.tenant_id] = pi.next_renewal_date;
+          }
+        }
+        return acc;
+      }, {} as Record<number, string>);
 
       const { data: memberCounts } = await supabase.from("users").select("tenant_id").in("tenant_id", tenantIds);
       const memberCountMap = (memberCounts || []).reduce((acc, user) => {
@@ -249,7 +260,8 @@ export default function ManageTenants() {
           package_name: firstPackage?.name || null,
           package_full_text: firstPackage?.full_text || null,
           package_id: firstPackage?.id || null,
-          state: stateMap[tenant.id] || null
+          state: stateMap[tenant.id] || null,
+          next_renewal_date: tenantRenewalMap[tenant.id] || null
         };
       });
       setTenants(tenantsWithCounts);
@@ -684,7 +696,7 @@ export default function ManageTenants() {
                   <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-r border-border/50 text-center">CSC</TableHead>
                   <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-r border-border/50 text-center">Members</TableHead>
                   <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-r border-border/50 text-center">Risk Level</TableHead>
-                  <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-r border-border/50">Created</TableHead>
+                  <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-r border-border/50">Renewal</TableHead>
                   <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-border/50 text-center">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -811,7 +823,26 @@ export default function ManageTenants() {
                       })()}
                     </TableCell>
                     <TableCell className="py-6 border-r border-border/50 whitespace-nowrap">
-                      <div className="text-sm text-muted-foreground">{new Date(tenant.created_at).toLocaleDateString()}</div>
+                      {tenant.next_renewal_date ? (() => {
+                        const renewal = new Date(tenant.next_renewal_date);
+                        const now = new Date();
+                        const diffDays = Math.ceil((renewal.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+                        const colorClass = diffDays < 0
+                          ? "text-red-600"
+                          : diffDays <= 30
+                          ? "text-amber-600"
+                          : diffDays <= 60
+                          ? "text-yellow-600"
+                          : "text-muted-foreground";
+                        return (
+                          <div className={cn("text-sm font-medium flex items-center gap-1", colorClass)}>
+                            <Calendar className="h-3 w-3" />
+                            {renewal.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })}
+                          </div>
+                        );
+                      })() : (
+                        <span className="text-xs text-muted-foreground">—</span>
+                      )}
                     </TableCell>
                     <TableCell className="py-6 px-4 text-center whitespace-nowrap">
                       <div className="flex items-center justify-center gap-1" onClick={(e) => e.stopPropagation()}>
