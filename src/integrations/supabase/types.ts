@@ -24641,6 +24641,7 @@ export type Database = {
           is_deleted: boolean
           is_mandatory: boolean | null
           is_override: boolean
+          is_recurring: boolean
           name: string
           order_number: number
           owner_role: string | null
@@ -24658,6 +24659,7 @@ export type Database = {
           is_deleted?: boolean
           is_mandatory?: boolean | null
           is_override?: boolean
+          is_recurring?: boolean
           name: string
           order_number?: number
           owner_role?: string | null
@@ -24675,6 +24677,7 @@ export type Database = {
           is_deleted?: boolean
           is_mandatory?: boolean | null
           is_override?: boolean
+          is_recurring?: boolean
           name?: string
           order_number?: number
           owner_role?: string | null
@@ -30933,6 +30936,7 @@ export type Database = {
           estimated_hours: number | null
           id: number
           is_mandatory: boolean | null
+          is_recurring: boolean
           name: string
           owner_role: string | null
           sort_order: number
@@ -30945,6 +30949,7 @@ export type Database = {
           estimated_hours?: number | null
           id?: never
           is_mandatory?: boolean | null
+          is_recurring?: boolean
           name: string
           owner_role?: string | null
           sort_order?: number
@@ -30957,6 +30962,7 @@ export type Database = {
           estimated_hours?: number | null
           id?: never
           is_mandatory?: boolean | null
+          is_recurring?: boolean
           name?: string
           owner_role?: string | null
           sort_order?: number

@@ -21,12 +21,13 @@ import { useToast } from '@/hooks/use-toast';
 import { 
   X, Plus, Trash2, Users, Mail, FileText, CheckSquare, 
   GripVertical, Clock, User, Loader2, AlertTriangle, Settings, Copy, ShieldAlert,
-  ExternalLink, RotateCcw, FileStack, GitCompare
+  ExternalLink, RotateCcw, FileStack, GitCompare, RefreshCw
 } from 'lucide-react';
 import { StageDocumentsTab } from './StageDocumentsTab';
 import { BulkGenerateDocumentsDialog } from './BulkGenerateDocumentsDialog';
 import { StageDiffView } from './StageDiffView';
 import { Link } from 'react-router-dom';
+import { supabase } from '@/integrations/supabase/client';
 
 interface StageDetailPanelProps {
   packageId: number;
@@ -142,6 +143,35 @@ export function StageDetailPanel({ packageId, stageId, stage, allStages = [], on
   const displayEmails = useOverrides ? stageEmails : resolvedEmails;
   const displayDocuments = useOverrides ? stageDocuments : resolvedDocuments;
   const isReadOnly = !useOverrides;
+
+  // Toggle is_recurring on the appropriate table
+  const handleToggleRecurring = async (task: any) => {
+    const newVal = !task.is_recurring;
+    try {
+      if (useOverrides) {
+        await supabase
+          .from('package_staff_tasks')
+          .update({ is_recurring: newVal } as any)
+          .eq('id', task.id);
+      } else {
+        await supabase
+          .from('stage_team_tasks')
+          .update({ is_recurring: newVal } as any)
+          .eq('id', task.id);
+      }
+      // Also sync to staff_tasks if source link exists
+      if (task.source_stage_task_id) {
+        await supabase
+          .from('staff_tasks')
+          .update({ is_recurring: newVal } as any)
+          .eq('id', task.source_stage_task_id);
+      }
+      toast({ title: 'Updated', description: `Task marked as ${newVal ? 'recurring' : 'once-off'}` });
+      refetchResolved();
+    } catch (err: any) {
+      toast({ title: 'Error', description: err.message, variant: 'destructive' });
+    }
+  };
 
   const handleUpdateStage = async (updates: Partial<Stage>) => {
     if (!stage) return;
@@ -682,6 +712,22 @@ export function StageDetailPanel({ packageId, stageId, stage, allStages = [], on
                                 {task.estimated_hours}h
                               </span>
                             )}
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleToggleRecurring(task);
+                              }}
+                              className={`flex items-center gap-1 px-1.5 py-0.5 rounded-full border transition-colors ${
+                                task.is_recurring
+                                  ? 'border-primary/30 bg-primary/10 text-primary'
+                                  : 'border-border hover:border-muted-foreground/40'
+                              }`}
+                              title={task.is_recurring ? 'Recurring: resets on renewal' : 'Once-off: not reset on renewal'}
+                            >
+                              <RefreshCw className="h-3 w-3" />
+                              {task.is_recurring ? 'Recurring' : 'Once-off'}
+                            </button>
                           </div>
                         </div>
                         {useOverrides && (
