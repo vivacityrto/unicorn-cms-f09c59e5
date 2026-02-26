@@ -30258,6 +30258,7 @@ export type Database = {
           description: string | null
           due_date_offset: number | null
           id: number
+          is_recurring: boolean
           name: string | null
           order_number: number
           stage_id: number | null
@@ -30266,6 +30267,7 @@ export type Database = {
           description?: string | null
           due_date_offset?: number | null
           id?: number
+          is_recurring?: boolean
           name?: string | null
           order_number: number
           stage_id?: number | null
@@ -30274,6 +30276,7 @@ export type Database = {
           description?: string | null
           due_date_offset?: number | null
           id?: number
+          is_recurring?: boolean
           name?: string | null
           order_number?: number
           stage_id?: number | null
