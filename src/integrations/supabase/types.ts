@@ -24397,6 +24397,7 @@ export type Database = {
           last_document_update_email: string | null
           manager_id: string | null
           membership_state: Database["public"]["Enums"]["membership_state_enum"]
+          next_renewal_date: string | null
           package_id: number
           release_documents_office: boolean
           release_documents_pdf: boolean
@@ -24421,6 +24422,7 @@ export type Database = {
           last_document_update_email?: string | null
           manager_id?: string | null
           membership_state?: Database["public"]["Enums"]["membership_state_enum"]
+          next_renewal_date?: string | null
           package_id: number
           release_documents_office?: boolean
           release_documents_pdf?: boolean
@@ -24445,6 +24447,7 @@ export type Database = {
           last_document_update_email?: string | null
           manager_id?: string | null
           membership_state?: Database["public"]["Enums"]["membership_state_enum"]
+          next_renewal_date?: string | null
           package_id?: number
           release_documents_office?: boolean
           release_documents_pdf?: boolean
