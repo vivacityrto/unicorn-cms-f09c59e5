@@ -18,6 +18,7 @@ export interface ClientPackage {
   membership_started_at: string;
   is_complete: boolean;
   completed_at?: string | null;
+  next_renewal_date?: string | null;
 }
 
 export interface ClientSummary {
@@ -563,7 +564,7 @@ export function useClientPackages(tenantId: number | null) {
       // Fetch ALL package instances (active + completed) for history support
       const { data: instances, error } = await supabase
         .from('package_instances')
-        .select('id, tenant_id, package_id, start_date, is_complete, hours_included, hours_used, hours_added, membership_state, end_date')
+        .select('id, tenant_id, package_id, start_date, is_complete, hours_included, hours_used, hours_added, membership_state, end_date, next_renewal_date')
         .eq('tenant_id', tenantId)
         .order('start_date', { ascending: false }) as { data: any[] | null; error: any };
 
@@ -631,7 +632,8 @@ export function useClientPackages(tenantId: number | null) {
           has_blocked_stages: hasBlocked,
           membership_started_at: inst.start_date,
           is_complete: inst.is_complete || false,
-          completed_at: inst.end_date || null
+          completed_at: inst.end_date || null,
+          next_renewal_date: inst.next_renewal_date || null
         };
       });
 
