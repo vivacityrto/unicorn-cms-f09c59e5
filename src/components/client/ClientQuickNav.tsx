@@ -20,6 +20,7 @@ export function ClientQuickNav({ currentTenantId }: ClientQuickNavProps) {
       const { data } = await supabase
         .from("tenants")
         .select("id, name")
+        .eq("status", "active")
         .order("name");
       if (data) {
         setTenants(data.map((t) => ({ id: t.id, name: t.name })));
