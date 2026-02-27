@@ -814,8 +814,9 @@ export function ClientTimeTab({ tenantId, tenantName }: ClientTimeTabProps) {
   });
 
   // Fetch ALL package instances (including inactive/complete) for display in time entries
+  // Also resolve base package IDs that may appear in legacy time entries
   const { data: packageInstanceMap = {} } = useQuery({
-    queryKey: ['all-package-instances', tenantId],
+    queryKey: ['all-package-instances', tenantId, entries.length],
     queryFn: async () => {
       const { data } = await (supabase as any)
         .from('package_instances')
@@ -829,8 +830,28 @@ export function ClientTimeTab({ tenantId, tenantName }: ClientTimeTabProps) {
           end_date: p.end_date,
         };
       });
+
+      // Collect any entry package_ids not found in the instance map (legacy base package IDs)
+      const unmatchedPkgIds = [...new Set(
+        entries
+          .map(e => e.package_id)
+          .filter((pid): pid is number => pid != null && !map[pid])
+      )];
+      if (unmatchedPkgIds.length > 0) {
+        const { data: basePkgs } = await (supabase as any)
+          .from('packages')
+          .select('id, name')
+          .in('id', unmatchedPkgIds);
+        (basePkgs || []).forEach((p: any) => {
+          if (!map[p.id]) {
+            map[p.id] = { name: p.name || `Package #${p.id}`, start_date: '', end_date: null };
+          }
+        });
+      }
+
       return map;
     },
+    enabled: entries.length > 0,
   });
 
   const hasMultiplePackages = (activePackages?.length ?? 0) > 1;
