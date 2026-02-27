@@ -282,12 +282,18 @@ export function PackageStagesManager({ tenantId, packageId, packageName }: Packa
                     <ListTodo className="h-3 w-3" />
                     Tasks
                   </Badge>
-                  {stage.is_recurring && (
-                    <Badge variant="outline" className="text-xs gap-1 text-primary border-primary/30">
-                      <RefreshCw className="h-3 w-3" />
-                      Recurring
-                    </Badge>
-                  )}
+                  <Badge 
+                    variant="outline" 
+                    className={cn(
+                      "text-xs gap-1",
+                      stage.is_recurring 
+                        ? "text-primary border-primary/30" 
+                        : "text-muted-foreground border-border"
+                    )}
+                  >
+                    <RefreshCw className="h-3 w-3" />
+                    {stage.is_recurring ? 'Recurring' : 'Once'}
+                  </Badge>
                   {stage.released_client_tasks && (
                     <Badge variant="outline" className="text-xs">Tasks Released</Badge>
                   )}
