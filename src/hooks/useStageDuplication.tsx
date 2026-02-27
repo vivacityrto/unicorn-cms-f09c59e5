@@ -205,7 +205,7 @@ export function useStageDuplication() {
     const result = await duplicateStage(options);
     if (result) {
       toast({
-        title: 'Phase Duplicated',
+        title: 'Stage Duplicated',
         description: `Created copy. This copy is not certified.`,
       });
       navigate(`/admin/stages/${result.newStageId}`);

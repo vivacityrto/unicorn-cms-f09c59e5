@@ -50,10 +50,10 @@ const BLOCKED_EVENTS = new Set([
 // ============================================================
 
 export const ENGAGEMENT_COPY: Record<AllowedCelebrationEvent, { title: string; subtitle: string }> = {
-  phase_complete: { title: 'Phase Completed', subtitle: 'This compliance phase is now finalised.' },
+  phase_complete: { title: 'Stage Completed', subtitle: 'This compliance stage is now finalised.' },
   healthcheck_finalised: { title: 'Health Check Finalised', subtitle: 'Health check review is complete.' },
   package_complete: { title: 'Package Complete', subtitle: 'All package deliverables are finalised.' },
-  completion_cascade: { title: 'Completion Achieved', subtitle: 'All phases complete. Audit ready.' },
+  completion_cascade: { title: 'Completion Achieved', subtitle: 'All stages complete. Audit ready.' },
   risk_resolved: { title: 'Risk Resolved', subtitle: 'Outstanding risk has been addressed.' },
   weekly_milestone: { title: 'Weekly Milestone', subtitle: 'Milestone unlocked this week.' },
   momentum_restored: { title: 'Momentum Restored', subtitle: 'Progress has resumed.' },

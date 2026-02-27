@@ -89,7 +89,7 @@ export function AddExistingStageDialog({
   };
 
   const handleStageClick = (stage: ExistingStage) => {
-    // Check if phase is already added to this tenant
+    // Check if stage is already added to this tenant
     if (currentStageIds.includes(stage.id)) {
       toast({
         title: 'Stage Already Added',

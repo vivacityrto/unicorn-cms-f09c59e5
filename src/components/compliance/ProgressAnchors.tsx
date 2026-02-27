@@ -89,11 +89,11 @@ function buildAnchors(data: ProgressAnchorData, variant: 'internal' | 'client'):
     });
   }
 
-  // Phase complete indicator
+  // Stage complete indicator
   if (data.total_actions_remaining === 0 && data.phase_name) {
     anchors.push({
       icon: CheckCircle2,
-      text: 'This phase is complete.',
+      text: 'This stage is complete.',
       color: 'purple',
       priority: 3,
     });

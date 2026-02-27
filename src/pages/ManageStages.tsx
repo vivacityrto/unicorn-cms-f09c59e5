@@ -135,7 +135,7 @@ export default function ManageStages() {
 
       toast({
         title: 'Success',
-        description: 'Phase created successfully',
+        description: 'Stage created successfully',
       });
 
       setIsCreateDialogOpen(false);
@@ -168,7 +168,7 @@ export default function ManageStages() {
 
       toast({
         title: 'Success',
-        description: 'Phase updated successfully',
+        description: 'Stage updated successfully',
       });
 
       setIsEditDialogOpen(false);
@@ -197,7 +197,7 @@ export default function ManageStages() {
 
       toast({
         title: 'Success',
-        description: 'Phase deleted successfully',
+        description: 'Stage deleted successfully',
       });
 
       setIsDeleteDialogOpen(false);
@@ -270,7 +270,7 @@ export default function ManageStages() {
         <div className="relative flex-1 max-w-md">
           <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground/60" />
           <Input
-            placeholder="Search phases..."
+            placeholder="Search stages..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="pl-12 h-12 bg-card border-border/50 focus:border-primary/50 focus:ring-2 focus:ring-primary/20 rounded-lg font-medium placeholder:text-muted-foreground/50"
@@ -302,7 +302,7 @@ export default function ManageStages() {
             ) : filteredStages.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={7} className="text-center py-16 text-muted-foreground">
-                  {searchQuery ? 'No phases match your search' : 'No phases found'}
+                  {searchQuery ? 'No stages match your search' : 'No stages found'}
                 </TableCell>
               </TableRow>
             ) : (
@@ -470,7 +470,7 @@ export default function ManageStages() {
                   id="create-title"
                   value={formData.title}
                   onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                  placeholder="Enter phase title"
+                  placeholder="Enter stage title"
                 />
             </div>
             <div className="space-y-2">
@@ -517,8 +517,8 @@ export default function ManageStages() {
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Edit Phase</DialogTitle>
-            <DialogDescription>Update phase information</DialogDescription>
+            <DialogTitle>Edit Stage</DialogTitle>
+            <DialogDescription>Update stage information</DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
@@ -527,7 +527,7 @@ export default function ManageStages() {
                   id="edit-title"
                   value={formData.title}
                   onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                  placeholder="Enter phase title"
+                  placeholder="Enter stage title"
                 />
             </div>
             <div className="space-y-2">

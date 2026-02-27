@@ -121,7 +121,7 @@ export default function AdminStageAnalytics() {
           <div className="flex items-center gap-3">
             <BarChart3 className="h-7 w-7" />
             <div>
-              <h1 className="text-2xl font-bold">Phase Analytics</h1>
+              <h1 className="text-2xl font-bold">Stage Analytics</h1>
               <p className="text-sm text-muted-foreground">
                 Usage insights, risk signals, and cleanup opportunities
               </p>
@@ -321,7 +321,7 @@ export default function AdminStageAnalytics() {
                     {[1, 2, 3, 4, 5].map(i => <Skeleton key={i} className="h-12 w-full" />)}
                   </div>
                 ) : topStages.length === 0 ? (
-                  <p className="text-center text-muted-foreground py-8">No phases found</p>
+                  <p className="text-center text-muted-foreground py-8">No stages found</p>
                 ) : (
                   <Table>
                     <TableHeader>
@@ -523,7 +523,7 @@ export default function AdminStageAnalytics() {
                                 </Button>
                               </TooltipTrigger>
                               <TooltipContent>
-                                Open phase to duplicate and swap in packages
+                                Open stage to duplicate and swap in packages
                               </TooltipContent>
                             </Tooltip>
                           </TableCell>
@@ -540,8 +540,8 @@ export default function AdminStageAnalytics() {
           <TabsContent value="activity">
             <Card>
               <CardHeader>
-                <CardTitle className="text-lg">Phase Change Activity</CardTitle>
-                <CardDescription>Last 50 phase-related events in the past {dateRangeDays} days</CardDescription>
+                <CardTitle className="text-lg">Stage Change Activity</CardTitle>
+                <CardDescription>Last 50 stage-related events in the past {dateRangeDays} days</CardDescription>
               </CardHeader>
               <CardContent>
                 {activityLoading ? (

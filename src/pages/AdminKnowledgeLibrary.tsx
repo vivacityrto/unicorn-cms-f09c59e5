@@ -50,7 +50,7 @@
    { value: 'platform_doc', label: 'Platform Documentation' },
    { value: 'policy', label: 'Internal Policy' },
    { value: 'regulatory_mapping', label: 'Regulatory Mapping' },
-   { value: 'package_phase', label: 'Package/Phase Definition' },
+   { value: 'package_phase', label: 'Package/Stage Definition' },
    { value: 'eos_process', label: 'EOS Process' },
    { value: 'template', label: 'Template' },
    { value: 'config_meta', label: 'Config Metadata' },

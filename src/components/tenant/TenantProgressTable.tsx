@@ -199,13 +199,13 @@ export default function TenantProgressTable({
 
         <CardContent className="p-0">
           {stages.length === 0 ? <div className="p-8 text-center text-muted-foreground">
-              <p>No phases available for this package.</p>
+              <p>No stages available for this package.</p>
             </div> : <>
               <Table>
                 <TableHeader>
                   <TableRow className="border-b hover:bg-transparent">
                     <TableHead className="bg-muted/20 h-12 font-semibold text-foreground whitespace-nowrap border-r w-12 text-center">#</TableHead>
-                    <TableHead className="bg-muted/20 h-12 font-semibold text-foreground whitespace-nowrap border-r min-w-[200px]">Phase Name</TableHead>
+                    <TableHead className="bg-muted/20 h-12 font-semibold text-foreground whitespace-nowrap border-r min-w-[200px]">Stage Name</TableHead>
                     <TableHead className="bg-muted/20 h-12 font-semibold text-foreground whitespace-nowrap border-r">Status</TableHead>
                     <TableHead className="bg-muted/20 h-12 font-semibold text-foreground whitespace-nowrap border-r">Payment</TableHead>
                     <TableHead className="bg-muted/20 h-12 font-semibold text-foreground whitespace-nowrap text-center">Actions</TableHead>

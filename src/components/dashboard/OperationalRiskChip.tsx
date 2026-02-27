@@ -54,7 +54,7 @@ function buildSignalSummary(snapshot: PredictiveRiskSnapshot): string[] {
     lines.push(`Consult hours: ~${snapshot.inputs.projected_days_to_exhaustion}d to exhaustion`);
   }
   if (snapshot.phase_drift) {
-    lines.push(`Phase stagnating (${snapshot.inputs.days_in_current_phase}d, ${snapshot.inputs.actions_remaining} actions left)`);
+    lines.push(`Stage stagnating (${snapshot.inputs.days_in_current_phase}d, ${snapshot.inputs.actions_remaining} actions left)`);
   }
   if (lines.length === 0) lines.push('No signals detected.');
   return lines;

@@ -1599,7 +1599,7 @@ export default function AdminStageDetail() {
                     <p className="text-muted-foreground max-w-md">
                       {auditDateFrom || auditDateTo || auditActionFilter !== 'all' 
                         ? 'No events match your filters.' 
-                        : 'No changes have been recorded for this phase yet.'}
+                        : 'No changes have been recorded for this stage yet.'}
                     </p>
                   </div>
                 ) : (
@@ -1998,11 +1998,11 @@ export default function AdminStageDetail() {
               </p>
             </div>
 
-            {/* Replacement Phase Selection */}
+            {/* Replacement Stage Selection */}
             <div className="space-y-2">
-              <Label>Replacement Phase</Label>
+              <Label>Replacement Stage</Label>
               <Input
-                placeholder="Search phases by name or key..."
+                placeholder="Search stages by name or key..."
                 value={stageSearchQuery}
                 onChange={(e) => setStageSearchQuery(e.target.value)}
                 className="mb-2"
@@ -2010,7 +2010,7 @@ export default function AdminStageDetail() {
               <div className="border rounded-lg divide-y max-h-[200px] overflow-y-auto">
                 {filteredReplacementStages.length === 0 ? (
                   <div className="p-4 text-center text-muted-foreground text-sm">
-                    {stageSearchQuery ? 'No phases match your search' : 'No compatible phases found'}
+                    {stageSearchQuery ? 'No stages match your search' : 'No compatible stages found'}
                   </div>
                 ) : (
                   filteredReplacementStages.map(s => (

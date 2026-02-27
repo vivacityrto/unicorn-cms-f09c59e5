@@ -90,8 +90,8 @@ export function PackageAIAssistant({
       result.push({
         id: 'warning-no-onboarding',
         type: 'warning',
-        title: 'No Onboarding Phase',
-        description: 'Packages without an onboarding phase may leave clients confused about how to get started.',
+        title: 'No Onboarding Stage',
+        description: 'Packages without an onboarding stage may leave clients confused about how to get started.',
         reason: 'Onboarding phases help set expectations and collect required information.',
         severity: 'warning'
       });
@@ -102,8 +102,8 @@ export function PackageAIAssistant({
       result.push({
         id: 'warning-no-offboarding',
         type: 'warning',
-        title: 'No Offboarding Phase',
-        description: 'Consider adding an offboarding phase to properly close out client engagements.',
+        title: 'No Offboarding Stage',
+        description: 'Consider adding an offboarding stage to properly close out client engagements.',
         reason: 'Proper offboarding ensures clean handoffs and final deliverables.',
         severity: 'info'
       });
@@ -130,14 +130,14 @@ export function PackageAIAssistant({
       }
     }
 
-    // 5. Warn if package has no phases
+    // 5. Warn if package has no stages
     if (packageStages.length === 0) {
       result.push({
         id: 'warning-empty',
         type: 'warning',
-        title: 'Package Has No Phases',
-        description: 'Add phases to define the workflow for this package.',
-        reason: 'Packages need at least one phase to be functional.',
+        title: 'Package Has No Stages',
+        description: 'Add stages to define the workflow for this package.',
+        reason: 'Packages need at least one stage to be functional.',
         severity: 'warning'
       });
     }
@@ -155,8 +155,8 @@ export function PackageAIAssistant({
           id: `reused-${ps.id}`,
           type: 'conflict',
           title: `Highly Shared: ${stage.title}`,
-          description: `This phase is used in ${stage.usage_count} packages. Changes will affect all of them.`,
-          reason: 'Consider duplicating this phase if you need package-specific customizations.',
+          description: `This stage is used in ${stage.usage_count} packages. Changes will affect all of them.`,
+          reason: 'Consider duplicating this stage if you need package-specific customizations.',
           severity: 'info'
         });
       }

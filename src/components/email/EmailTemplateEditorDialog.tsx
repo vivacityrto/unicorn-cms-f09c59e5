@@ -29,7 +29,7 @@ const MERGE_FIELDS = [
   { field: "ABN", description: "Australian Business Number" },
   { field: "PackageName", description: "Package name (if context)" },
   { field: "PackageCode", description: "Package code" },
-  { field: "StageName", description: "Phase name (if context)" },
+  { field: "StageName", description: "Stage name (if context)" },
   { field: "CSCName", description: "Assigned CSC name" },
   { field: "CSCEmail", description: "Assigned CSC email" },
 ];

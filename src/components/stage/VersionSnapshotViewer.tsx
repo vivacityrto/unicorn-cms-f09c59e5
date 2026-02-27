@@ -61,7 +61,7 @@ export function VersionSnapshotViewer({
             <TabsContent value="overview" className="space-y-4 mt-4">
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-base">Phase Details</CardTitle>
+                  <CardTitle className="text-base">Stage Details</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-2 text-sm">
                   <div className="flex justify-between">

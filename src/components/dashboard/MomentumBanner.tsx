@@ -24,7 +24,7 @@ function getSubtitle(state: MomentumState, variant: 'internal' | 'client'): stri
     if (state.pause_reason.includes('stale_data'))
       return `No activity recorded in ${state.days_since_last_activity} days.`;
     if (state.pause_reason.includes('phase_stalled'))
-      return 'Your current phase has not progressed recently.';
+      return 'Your current stage has not progressed recently.';
     return 'Action is needed to continue progress.';
   }
 

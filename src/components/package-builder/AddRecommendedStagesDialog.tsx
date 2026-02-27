@@ -177,7 +177,7 @@ export function AddRecommendedStagesDialog({
                           ? 'Not available – framework mismatch'
                           : match.stage 
                             ? 'Will be added'
-                            : `Missing recommended phase template (${match.stageKey})`
+                            : `Missing recommended stage template (${match.stageKey})`
                       }
                     </p>
                   </div>
@@ -213,8 +213,8 @@ export function AddRecommendedStagesDialog({
             {isAdding 
               ? 'Adding...' 
               : stagesToAdd.length === 0 
-                ? 'No Phases to Add'
-                : `Add ${stagesToAdd.length} Phase${stagesToAdd.length !== 1 ? 's' : ''}`
+                ? 'No Stages to Add'
+                : `Add ${stagesToAdd.length} Stage${stagesToAdd.length !== 1 ? 's' : ''}`
             }
           </Button>
         </DialogFooter>

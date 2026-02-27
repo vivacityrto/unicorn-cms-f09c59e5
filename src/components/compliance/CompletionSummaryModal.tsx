@@ -67,7 +67,7 @@ export function CompletionSummaryModal({
           <div className="grid grid-cols-2 gap-3">
             <SummaryItem
               icon={CheckCircle2}
-              label="Phase Completion"
+              label="Stage Completion"
               value={`${score?.phase_completion ?? 100}%`}
             />
             <SummaryItem

@@ -69,10 +69,10 @@ export function StageImpactPanel({ stageId, stageName }: StageImpactPanelProps) 
             <div>
               <CardTitle className="text-base flex items-center gap-2">
                 <Package className="h-4 w-4" />
-                Phase Impact
+                Stage Impact
               </CardTitle>
               <CardDescription>
-                How this phase is used across packages
+                How this stage is used across packages
               </CardDescription>
             </div>
             {packageCount > 0 && (
@@ -97,7 +97,7 @@ export function StageImpactPanel({ stageId, stageName }: StageImpactPanelProps) 
           {packageCount === 0 ? (
             <div className="text-center py-6 text-muted-foreground">
               <Package className="h-8 w-8 mx-auto mb-2 opacity-50" />
-              <p>This phase is not used in any packages yet</p>
+              <p>This stage is not used in any packages yet</p>
             </div>
           ) : (
             <div className="space-y-4">
@@ -166,12 +166,12 @@ export function StageImpactPanel({ stageId, stageName }: StageImpactPanelProps) 
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2">
               <RefreshCw className="h-5 w-5" />
-              Sync Phase to Packages
+              Sync Stage to Packages
             </AlertDialogTitle>
             <AlertDialogDescription asChild>
               <div className="space-y-3">
                 <p>
-                  This will push the current phase template to all packages using this phase.
+                  This will push the current stage template to all packages using this stage.
                 </p>
                 <div className="bg-muted p-3 rounded-lg space-y-2 text-sm">
                   <div className="flex items-center gap-2">

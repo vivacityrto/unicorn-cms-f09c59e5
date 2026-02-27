@@ -121,7 +121,7 @@ export function StageSimulationDialog({
     } else {
       toast({
         title: 'Simulation Failed',
-        description: 'Could not run phase simulation',
+        description: 'Could not run stage simulation',
         variant: 'destructive'
       });
     }
@@ -224,7 +224,7 @@ function ContextSelectionStep({
         <div>
           <p className="font-medium">No packages found</p>
           <p className="text-sm text-muted-foreground">
-            Add this phase to a package to simulate.
+            Add this stage to a package to simulate.
           </p>
         </div>
       </div>
@@ -255,7 +255,7 @@ function ContextSelectionStep({
             </SelectContent>
           </Select>
           <p className="text-xs text-muted-foreground">
-            Phase content is loaded from this package context.
+            Stage content is loaded from this package context.
           </p>
         </div>
 

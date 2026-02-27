@@ -111,7 +111,7 @@ export function AddStageDialog({
         if (error) throw error;
         toast({
           title: "Success",
-          description: "Phase updated successfully"
+          description: "Stage updated successfully"
         });
       } else {
         // Create new stage in documents_stages
@@ -162,7 +162,7 @@ export function AddStageDialog({
 
         toast({
           title: "Success",
-          description: "Phase created successfully"
+          description: "Stage created successfully"
         });
       }
 
@@ -206,7 +206,7 @@ export function AddStageDialog({
               {stageData ? 'Edit Phase' : 'Create New Phase'}
             </DialogTitle>
             <DialogDescription>
-              {stageData ? 'Update the phase details' : 'Add a new phase to organize documents in your workflow'}
+              {stageData ? 'Update the stage details' : 'Add a new stage to organize documents in your workflow'}
             </DialogDescription>
           </DialogHeader>
 
@@ -218,7 +218,7 @@ export function AddStageDialog({
                 id="stage-name"
                 value={formData.stage_name}
                 onChange={e => setFormData({ ...formData, stage_name: e.target.value })}
-                placeholder="Enter phase name"
+                placeholder="Enter stage name"
                 autoFocus
               />
             </div>
@@ -262,16 +262,16 @@ export function AddStageDialog({
               />
             </div>
 
-            {/* Certified Phase Toggle */}
+            {/* Certified Stage Toggle */}
             <div className="space-y-3 p-4 rounded-lg border bg-muted/30">
               <div className="flex items-center justify-between">
                 <div className="space-y-0.5">
                   <Label htmlFor="stage-certified" className="flex items-center gap-2">
                     <ShieldCheck className="h-4 w-4 text-emerald-600" />
-                    Certified Phase
+                    Certified Stage
                   </Label>
                   <p className="text-xs text-muted-foreground">
-                    Mark this phase as a certified template for reuse
+                    Mark this stage as a certified template for reuse
                   </p>
                 </div>
                 <Switch
