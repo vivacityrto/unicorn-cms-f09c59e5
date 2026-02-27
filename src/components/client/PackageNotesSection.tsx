@@ -283,7 +283,7 @@ export function PackageNotesSection({ tenantId, packageInstanceId, packageId }: 
 
       {/* Create/Edit Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-3xl">
+        <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{editingNote ? 'Edit Note' : 'Add Note'}</DialogTitle>
           </DialogHeader>
@@ -337,7 +337,7 @@ export function PackageNotesSection({ tenantId, packageInstanceId, packageId }: 
                 placeholder="Write your note..."
                 value={formDetails}
                 onChange={(e) => setFormDetails(e.target.value)}
-                rows={12}
+                rows={20}
               />
             </div>
           </div>
