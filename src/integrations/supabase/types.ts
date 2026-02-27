@@ -14045,6 +14045,7 @@ export type Database = {
           id: number
           is_archived: boolean
           is_certified: boolean
+          is_recurring: boolean
           is_reusable: boolean | null
           registry_code: string | null
           requires_stage_keys: string[] | null
@@ -14071,6 +14072,7 @@ export type Database = {
           id?: never
           is_archived?: boolean
           is_certified?: boolean
+          is_recurring?: boolean
           is_reusable?: boolean | null
           registry_code?: string | null
           requires_stage_keys?: string[] | null
@@ -14097,6 +14099,7 @@ export type Database = {
           id?: never
           is_archived?: boolean
           is_certified?: boolean
+          is_recurring?: boolean
           is_reusable?: boolean | null
           registry_code?: string | null
           requires_stage_keys?: string[] | null
@@ -24880,6 +24883,7 @@ export type Database = {
           created_by: string | null
           dashboard_group: string | null
           id: number
+          is_recurring: boolean
           is_required: boolean
           last_checked_at: string | null
           last_synced_at: string | null
@@ -24895,6 +24899,7 @@ export type Database = {
           created_by?: string | null
           dashboard_group?: string | null
           id?: number
+          is_recurring?: boolean
           is_required?: boolean
           last_checked_at?: string | null
           last_synced_at?: string | null
@@ -24910,6 +24915,7 @@ export type Database = {
           created_by?: string | null
           dashboard_group?: string | null
           id?: number
+          is_recurring?: boolean
           is_required?: boolean
           last_checked_at?: string | null
           last_synced_at?: string | null
@@ -30563,6 +30569,7 @@ export type Database = {
           comment: string | null
           completion_date: string | null
           id: number
+          is_recurring: boolean
           packageinstance_id: number
           paid: boolean
           released_client_tasks: boolean
@@ -30577,6 +30584,7 @@ export type Database = {
           comment?: string | null
           completion_date?: string | null
           id?: number
+          is_recurring?: boolean
           packageinstance_id: number
           paid?: boolean
           released_client_tasks?: boolean
@@ -30591,6 +30599,7 @@ export type Database = {
           comment?: string | null
           completion_date?: string | null
           id?: number
+          is_recurring?: boolean
           packageinstance_id?: number
           paid?: boolean
           released_client_tasks?: boolean
