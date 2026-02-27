@@ -348,8 +348,17 @@ export function EditTimeDialog({ open, onOpenChange, entry, onSuccess }: EditTim
             )}
           </div>
 
-          {/* Duration + Date side by side */}
+          {/* Date + Duration side by side */}
           <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="edit-date">Date</Label>
+              <Input
+                id="edit-date"
+                type="date"
+                value={date}
+                onChange={(e) => setDate(e.target.value)}
+              />
+            </div>
             <div className="space-y-2">
               <Label>Duration</Label>
               <div className="flex items-center gap-2">
@@ -376,15 +385,6 @@ export function EditTimeDialog({ open, onOpenChange, entry, onSuccess }: EditTim
                 />
                 <span className="text-sm text-muted-foreground">min</span>
               </div>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="edit-date">Date</Label>
-              <Input
-                id="edit-date"
-                type="date"
-                value={date}
-                onChange={(e) => setDate(e.target.value)}
-              />
             </div>
           </div>
 
