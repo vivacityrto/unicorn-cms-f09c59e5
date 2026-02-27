@@ -1,7 +1,7 @@
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Upload, Trash2, Edit2, UserCheck, UserX } from 'lucide-react';
+import { Upload, Trash2, Edit2, UserCheck, UserX, Archive } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
@@ -61,6 +61,7 @@ export function ProfileHeader({ user, tenantName, canEdit, onAvatarChange, onEdi
   const { refreshProfile, user: authUser } = useAuth();
   const [uploading, setUploading] = useState(false);
   const [togglingStatus, setTogglingStatus] = useState(false);
+  const [togglingArchive, setTogglingArchive] = useState(false);
   
   // Determine target user for avatar upload
   // SuperAdmin can upload for the viewed user, others can only upload for themselves
@@ -282,6 +283,43 @@ export function ProfileHeader({ user, tenantName, canEdit, onAvatarChange, onEdi
     }
   };
 
+  const handleToggleArchive = async () => {
+    try {
+      setTogglingArchive(true);
+      const newArchived = !user.archived;
+
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData?.session?.access_token;
+      if (!token) throw new Error('No authentication token');
+
+      const { data, error } = await supabase.functions.invoke('update-user-profile', {
+        body: {
+          user_uuid: user.user_uuid,
+          archived: newArchived,
+        },
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (error) throw error;
+      if (!data?.ok) throw new Error(data?.detail || 'Failed to update archive status');
+
+      toast({
+        title: 'Success',
+        description: `User ${newArchived ? 'archived' : 'unarchived'} successfully`,
+      });
+
+      onAvatarChange(); // Refreshes user data
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: error.message,
+        variant: 'destructive',
+      });
+    } finally {
+      setTogglingArchive(false);
+    }
+  };
+
   return (
     <div className="flex flex-col md:flex-row gap-6 items-start">
       {/* Avatar Section */}
@@ -339,15 +377,55 @@ export function ProfileHeader({ user, tenantName, canEdit, onAvatarChange, onEdi
           </div>
           
           {canEdit && (
-            <Button
-              onClick={onEditClick}
-              variant={isEditing ? "default" : "outline"}
-              size="sm"
-              className="gap-2 shrink-0"
-            >
-              <Edit2 className="h-4 w-4" />
-              {isEditing ? 'Cancel' : 'Edit'}
-            </Button>
+            <div className="flex flex-col gap-2 shrink-0">
+              <Button
+                onClick={onEditClick}
+                variant={isEditing ? "default" : "outline"}
+                size="sm"
+                className="gap-2"
+              >
+                <Edit2 className="h-4 w-4" />
+                {isEditing ? 'Cancel' : 'Edit'}
+              </Button>
+              
+              {/* Archive toggle - only for inactive users, SuperAdmin only */}
+              {canToggleStatus && !isActive && (
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className={`gap-2 ${user.archived 
+                        ? 'border-green-500/50 text-green-700 hover:bg-green-500/10' 
+                        : 'border-amber-500/50 text-amber-700 hover:bg-amber-500/10'}`}
+                      disabled={togglingArchive}
+                    >
+                      <Archive className="h-4 w-4" />
+                      {user.archived ? 'Unarchive' : 'Archive'}
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>
+                        {user.archived ? 'Unarchive' : 'Archive'} User?
+                      </AlertDialogTitle>
+                      <AlertDialogDescription>
+                        {user.archived
+                          ? `This will restore ${user.first_name} ${user.last_name} to the active user lists.`
+                          : `This will hide ${user.first_name} ${user.last_name} from active lists and prevent assignment to tasks.`
+                        }
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                      <AlertDialogAction onClick={handleToggleArchive} disabled={togglingArchive}>
+                        {togglingArchive ? 'Processing...' : 'Confirm'}
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              )}
+            </div>
           )}
         </div>
 
