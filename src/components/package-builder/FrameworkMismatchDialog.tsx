@@ -56,16 +56,16 @@ export function FrameworkMismatchDialog({
           <AlertDialogDescription asChild>
             <div className="space-y-4">
               <p>
-                This phase is not marked for the selected package framework.
+                This stage is not marked for the selected package framework.
               </p>
               
               <div className="space-y-2 p-3 bg-muted/50 rounded-lg">
                 <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium">Phase:</span>
+                  <span className="text-sm font-medium">Stage:</span>
                   <span className="text-sm">{stageName}</span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium">Phase Frameworks:</span>
+                  <span className="text-sm font-medium">Stage Frameworks:</span>
                   <StageFrameworkBadges frameworks={stageFrameworks} size="sm" />
                 </div>
                 <div className="flex items-center justify-between">
@@ -77,7 +77,7 @@ export function FrameworkMismatchDialog({
               </div>
 
               <p className="text-sm text-muted-foreground">
-                Adding this phase may cause compliance issues. Do you want to proceed anyway?
+                Adding this stage may cause compliance issues. Do you want to proceed anyway?
               </p>
             </div>
           </AlertDialogDescription>

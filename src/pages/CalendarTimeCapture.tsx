@@ -744,14 +744,14 @@ export default function CalendarTimeCapture() {
               </div>
 
               <div className="space-y-2">
-                <Label>Phase</Label>
+                <Label>Stage</Label>
                 <Select 
                   value={draftForm.stage_id?.toString() || ''} 
                   onValueChange={(v) => setDraftForm(prev => ({ ...prev, stage_id: parseInt(v) }))}
                   disabled={!draftForm.package_id}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="Select phase" />
+                    <SelectValue placeholder="Select stage" />
                   </SelectTrigger>
                   <SelectContent>
                     {stages.map(s => (

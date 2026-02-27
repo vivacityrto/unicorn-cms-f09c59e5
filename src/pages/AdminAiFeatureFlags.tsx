@@ -46,8 +46,8 @@ const FLAG_LABELS: Record<string, { label: string; description: string }> = {
     description: "Extract structured data from TAS and Trainer Matrix documents",
   },
   ai_phase_check_enabled: {
-    label: "Phase Completeness Check",
-    description: "AI-assisted phase completeness evaluation",
+    label: "Stage Completeness Check",
+    description: "AI-assisted stage completeness evaluation",
   },
   ai_risk_radar_enabled: {
     label: "Risk Radar AI",

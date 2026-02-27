@@ -63,8 +63,8 @@ export function StageStatusControl({ stageState, onStatusChange, compact = false
     // Skipped only allowed for non-required
     if (newStatus === 'skipped' && stageState.is_required) {
       toast({
-        title: 'Cannot skip required phase',
-        description: 'This phase is required and cannot be skipped.',
+        title: 'Cannot skip required stage',
+        description: 'This stage is required and cannot be skipped.',
         variant: 'destructive',
       });
       return;
@@ -94,8 +94,8 @@ export function StageStatusControl({ stageState, onStatusChange, compact = false
       }
 
       toast({
-        title: 'Phase updated',
-        description: `Phase marked as ${STATUS_OPTIONS.find(o => o.value === newStatus)?.label || newStatus}.`,
+        title: 'Stage updated',
+        description: `Stage marked as ${STATUS_OPTIONS.find(o => o.value === newStatus)?.label || newStatus}.`,
       });
 
       setIsDialogOpen(false);
@@ -104,7 +104,7 @@ export function StageStatusControl({ stageState, onStatusChange, compact = false
       onStatusChange?.();
     } catch (error: any) {
       toast({
-        title: 'Error updating phase',
+        title: 'Error updating stage',
         description: error.message,
         variant: 'destructive',
       });

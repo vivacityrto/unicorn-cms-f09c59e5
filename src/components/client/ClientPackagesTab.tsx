@@ -380,11 +380,11 @@ export function ClientPackagesTab({ tenantId, tenantName, packages, loading, onA
                     {/* Stage Progress */}
                     <div className="space-y-2">
                       <div className="flex items-center justify-between text-sm">
-                        <span className="text-muted-foreground">Phase Progress</span>
+                        <span className="text-muted-foreground">Stage Progress</span>
                         <span className="font-medium">
                           {pkg.total_stages > 0 
-                            ? `${pkg.completed_stages}/${pkg.total_stages} phases`
-                            : 'No phases configured'}
+                            ? `${pkg.completed_stages}/${pkg.total_stages} stages`
+                            : 'No stages configured'}
                         </span>
                       </div>
                       {pkg.total_stages > 0 ? (
@@ -400,15 +400,15 @@ export function ClientPackagesTab({ tenantId, tenantName, packages, loading, onA
                       ) : (
                         <p className="text-sm text-amber-600">
                           <AlertCircle className="h-4 w-4 inline mr-1" />
-                          Phase tracking not configured for this package
+                          Stage tracking not configured for this package
                         </p>
                       )}
                     </div>
 
-                    {/* Current Phase */}
+                    {/* Current Stage */}
                     {pkg.current_stage_name && (
                       <div className="flex items-center gap-2">
-                        <span className="text-sm text-muted-foreground">Current Phase:</span>
+                        <span className="text-sm text-muted-foreground">Current Stage:</span>
                         <Badge variant="secondary">{pkg.current_stage_name}</Badge>
                       </div>
                     )}
@@ -417,7 +417,7 @@ export function ClientPackagesTab({ tenantId, tenantName, packages, loading, onA
                     {pkg.has_blocked_stages && (
                       <div className="flex items-center gap-2 text-red-600 text-sm">
                         <AlertCircle className="h-4 w-4" />
-                        <span>Has blocked phases that need attention</span>
+                        <span>Has blocked stages that need attention</span>
                       </div>
                     )}
                   </div>
@@ -487,12 +487,12 @@ export function ClientPackagesTab({ tenantId, tenantName, packages, loading, onA
               
               <CollapsibleContent>
                 <div className="border-t">
-                  <Tabs defaultValue="phases" className="w-full">
+                  <Tabs defaultValue="stages" className="w-full">
                     <div className="px-6 pt-4 bg-muted/30">
                       <TabsList>
-                        <TabsTrigger value="phases" className="gap-1">
+                        <TabsTrigger value="stages" className="gap-1">
                           <Settings className="h-4 w-4" />
-                          Phases
+                          Stages
                         </TabsTrigger>
                         <TabsTrigger value="notes" className="gap-1">
                           <StickyNote className="h-4 w-4" />
@@ -510,7 +510,7 @@ export function ClientPackagesTab({ tenantId, tenantName, packages, loading, onA
                       </TabsList>
                     </div>
                     
-                    <TabsContent value="phases" className="mt-0">
+                    <TabsContent value="stages" className="mt-0">
                       <div className="px-6 pb-6 bg-muted/30">
                         <PackageStagesManager 
                           tenantId={tenantId} 

@@ -147,7 +147,7 @@ export function formatScopeForDisplay(scopeLock: ScopeLock): string {
   
   parts.push(`Client ${scopeLock.client.label ?? "Not specified"}`);
   parts.push(`Package ${scopeLock.package.label ?? "Not specified"}`);
-  parts.push(`Phase ${scopeLock.phase.label ?? "Not specified"}`);
+  parts.push(`Stage ${scopeLock.phase.label ?? "Not specified"}`);
   
   return `Answer scoped to: ${parts.join(", ")}`;
 }

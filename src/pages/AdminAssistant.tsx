@@ -56,7 +56,7 @@ import { AssistantTestChecklist } from '@/components/admin/AssistantTestChecklis
  const REPORT_TYPES = [
    { value: 'client_engagement_overview', label: 'Client Engagement Overview' },
    { value: 'package_utilisation_summary', label: 'Package Utilisation Summary' },
-   { value: 'phase_progression_timeline', label: 'Phase Progression Timeline' },
+   { value: 'phase_progression_timeline', label: 'Stage Progression Timeline' },
    { value: 'decisions_approvals_log', label: 'Decisions and Approvals Log' },
    { value: 'risks_unresolved_actions', label: 'Risks and Unresolved Actions Summary' },
    { value: 'eos_engagement_summary', label: 'EOS Engagement Summary' },

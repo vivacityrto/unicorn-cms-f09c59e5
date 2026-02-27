@@ -314,14 +314,14 @@ export default function AdminManageStages() {
     if (result.success && result.newStageId) {
       setImportSuccessId(result.newStageId);
       toast({
-        title: 'Phase Imported',
+        title: 'Stage Imported',
         description: `Created "${importData.stage.title}" with ${result.counts?.team_tasks || 0} team tasks, ${result.counts?.client_tasks || 0} client tasks.`,
       });
       fetchStages();
     } else {
       toast({
         title: 'Import Failed',
-        description: result.error || 'Failed to import phase',
+        description: result.error || 'Failed to import stage',
         variant: 'destructive',
       });
     }
@@ -425,10 +425,10 @@ export default function AdminManageStages() {
       if (error) throw error;
 
       toast({
-        title: newArchived ? 'Phase Archived' : 'Phase Restored',
+        title: newArchived ? 'Stage Archived' : 'Stage Restored',
         description: newArchived 
-          ? 'Phase has been archived and hidden from phase selection.' 
-          : 'Phase has been restored and is now available.',
+          ? 'Stage has been archived and hidden from stage selection.' 
+          : 'Stage has been restored and is now available.',
       });
       
       // Log audit event
@@ -443,7 +443,7 @@ export default function AdminManageStages() {
     } catch (error: any) {
       toast({
         title: 'Error',
-        description: error.message || 'Failed to update phase',
+        description: error.message || 'Failed to update stage',
         variant: 'destructive',
       });
     }
@@ -515,10 +515,10 @@ export default function AdminManageStages() {
         <div>
           <h1 className="text-[28px] font-bold flex items-center gap-2">
             <Layers className="h-7 w-7" />
-            Manage Phases
+            Manage Stages
           </h1>
           <p className="text-muted-foreground">
-            Create and manage phase templates for packages
+            Create and manage stage templates for packages
           </p>
         </div>
         <div className="flex gap-2">
@@ -534,14 +534,14 @@ export default function AdminManageStages() {
             onClick={() => fileInputRef.current?.click()}
           >
             <Upload className="mr-2 h-4 w-4" />
-            Import Phase
+            Import Stage
           </Button>
           <Button
             onClick={() => setIsCreateDialogOpen(true)}
             className="bg-[hsl(188_74%_51%)] hover:bg-[hsl(188_74%_51%)]/90"
           >
             <Plus className="mr-2 h-4 w-4" />
-            Create Phase
+            Create Stage
           </Button>
         </div>
       </div>
@@ -551,7 +551,7 @@ export default function AdminManageStages() {
         <div className="relative flex-1 min-w-[250px] max-w-md">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Search by name or phase key..."
+            placeholder="Search by name or stage key..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="pl-10"
@@ -560,7 +560,7 @@ export default function AdminManageStages() {
 
         <Select value={stageTypeFilter} onValueChange={setStageTypeFilter}>
           <SelectTrigger className="w-[160px]">
-            <SelectValue placeholder="Phase Type" />
+            <SelectValue placeholder="Stage Type" />
           </SelectTrigger>
           <SelectContent>
             {STAGE_TYPE_OPTIONS.map((option) => (
@@ -624,7 +624,7 @@ export default function AdminManageStages() {
         </Select>
 
         <div className="text-sm text-muted-foreground ml-auto">
-          Showing {filteredStages.length} of {stages.length} phases
+          Showing {filteredStages.length} of {stages.length} stages
         </div>
       </div>
 
@@ -633,7 +633,7 @@ export default function AdminManageStages() {
         <Table>
           <TableHeader>
             <TableRow className="border-b hover:bg-transparent">
-              <TableHead className="font-semibold">Phase Name</TableHead>
+              <TableHead className="font-semibold">Stage Name</TableHead>
               <TableHead className="font-semibold">Type</TableHead>
               <TableHead className="font-semibold">Version</TableHead>
               <TableHead className="font-semibold">Frameworks</TableHead>
@@ -720,8 +720,8 @@ export default function AdminManageStages() {
                     <Layers className="h-12 w-12 mx-auto text-muted-foreground/50" />
                     <p className="text-muted-foreground">
                       {stages.length === 0
-                        ? 'No phases found. Create a phase to get started.'
-                        : 'No phases match your filters.'}
+                        ? 'No stages found. Create a stage to get started.'
+                        : 'No stages match your filters.'}
                     </p>
                     {stages.length === 0 && (
                       <Button
@@ -729,7 +729,7 @@ export default function AdminManageStages() {
                         onClick={() => setIsCreateDialogOpen(true)}
                       >
                         <Plus className="mr-2 h-4 w-4" />
-                        Create Phase
+                        Create Stage
                       </Button>
                     )}
                   </div>
@@ -929,7 +929,7 @@ export default function AdminManageStages() {
       <AlertDialog open={archiveConfirmOpen} onOpenChange={setArchiveConfirmOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Archive Phase?</AlertDialogTitle>
+            <AlertDialogTitle>Archive Stage?</AlertDialogTitle>
             <AlertDialogDescription>
               {stageToArchive && (
                 <>
@@ -939,8 +939,8 @@ export default function AdminManageStages() {
                     <> and <strong>{stageToArchive.active_client_count} active client(s)</strong></>
                   )}.
                   <br /><br />
-                  Archived phases will be hidden from phase selection dialogs but will remain 
-                  in existing packages. Are you sure you want to archive this phase?
+                  Archived stages will be hidden from stage selection dialogs but will remain 
+                  in existing packages. Are you sure you want to archive this stage?
                 </>
               )}
             </AlertDialogDescription>
@@ -958,16 +958,16 @@ export default function AdminManageStages() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-      {/* Import Phase Dialog */}
+      {/* Import Stage Dialog */}
       <Dialog open={importDialogOpen} onOpenChange={closeImportDialog}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <FileJson className="h-5 w-5" />
-              Import Phase from JSON
+              Import Stage from JSON
             </DialogTitle>
             <DialogDescription>
-              Create a new phase from an exported phase definition.
+              Create a new stage from an exported stage definition.
             </DialogDescription>
           </DialogHeader>
           
