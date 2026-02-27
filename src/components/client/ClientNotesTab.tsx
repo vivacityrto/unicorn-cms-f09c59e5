@@ -486,14 +486,14 @@ export function ClientNotesTab({ tenantId, packages }: ClientNotesTabProps) {
 
       {/* Add/Edit Note Dialog */}
       <Dialog open={isAddDialogOpen} onOpenChange={(open) => { if (!open) resetForm(); setIsAddDialogOpen(open); }}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="w-[90vw] max-w-[1400px] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{selectedNote ? 'Edit Note' : 'Add Note'}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
               <Label>Note Details *</Label>
-              <Textarea value={noteText} onChange={(e) => setNoteText(e.target.value)} placeholder="Enter note details..." rows={4} />
+              <Textarea value={noteText} onChange={(e) => setNoteText(e.target.value)} placeholder="Enter note details..." rows={20} />
             </div>
             
             <div className="grid grid-cols-2 gap-4">
