@@ -45,6 +45,7 @@ export function useTenantTeamUsers() {
           .select('user_uuid, first_name, last_name, email, avatar_url, unicorn_role, job_title')
           .in('unicorn_role', ['Super Admin', 'Team Leader', 'Team Member'])
           .eq('archived', false)
+          .eq('disabled', false)
           .order('first_name', { ascending: true });
 
         if (error) throw error;
@@ -58,6 +59,7 @@ export function useTenantTeamUsers() {
         .eq('tenant_id', tenantId)
         .in('unicorn_role', ['Admin', 'User'])
         .eq('archived', false)
+        .eq('disabled', false)
         .order('first_name', { ascending: true });
 
       if (error) throw error;
