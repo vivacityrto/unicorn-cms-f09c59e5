@@ -275,15 +275,7 @@ export function AddTimeDialog({
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Scope selector */}
-          <div className="space-y-2">
-            <Label>Allocation</Label>
-            <ScopeSelectorBadge
-              value={scopeTag}
-              onChange={setScopeTag}
-              showSelector={showScopeSelector}
-            />
-          </div>
+          {/* Allocation removed — package selection handles this */}
 
           {/* Package instance selector */}
           {activeInstances.length === 1 && (
