@@ -814,18 +814,27 @@ export function ClientTimeTab({ tenantId, tenantName }: ClientTimeTabProps) {
   });
 
   // Fetch ALL package instances (including inactive/complete) for display in time entries
-  // Also resolve base package IDs that may appear in legacy time entries
+  // Uses two-step fetch since there's no FK between package_instances and packages
   const { data: packageInstanceMap = {} } = useQuery({
     queryKey: ['all-package-instances', tenantId, entries.length],
     queryFn: async () => {
-      const { data } = await (supabase as any)
+      const { data: instances } = await (supabase as any)
         .from('package_instances')
-        .select('id, package_id, start_date, end_date, packages:package_id(name)')
+        .select('id, package_id, start_date, end_date')
         .eq('tenant_id', tenantId);
+
+      // Resolve package names via separate fetch
+      const pkgIds = [...new Set((instances || []).map((i: any) => i.package_id).filter(Boolean))];
+      const { data: pkgs } = pkgIds.length > 0
+        ? await (supabase as any).from('packages').select('id, name').in('id', pkgIds)
+        : { data: [] };
+      const pkgNameMap: Record<number, string> = {};
+      (pkgs || []).forEach((p: any) => { pkgNameMap[Number(p.id)] = p.name; });
+
       const map: Record<number, { name: string; start_date: string; end_date: string | null }> = {};
-      (data || []).forEach((p: any) => {
+      (instances || []).forEach((p: any) => {
         map[Number(p.id)] = {
-          name: p.packages?.name || `Package #${p.package_id}`,
+          name: pkgNameMap[Number(p.package_id)] || `Package #${p.package_id}`,
           start_date: p.start_date,
           end_date: p.end_date,
         };
