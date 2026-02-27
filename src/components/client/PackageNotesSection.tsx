@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { format } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
 import { useNotes, Note, CreateNoteInput, filterNotes } from '@/hooks/useNotes';
@@ -23,7 +23,10 @@ import {
   Pin,
   MoreHorizontal,
   Pencil,
-  Trash2
+  Trash2,
+  Mic,
+  MicOff,
+  Loader2
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -42,6 +45,8 @@ import {
   AlertDialogTitle
 } from '@/components/ui/alert-dialog';
 import { cn } from '@/lib/utils';
+import { useSpeechToText } from '@/hooks/useSpeechToText';
+import { supabase } from '@/integrations/supabase/client';
 
 interface PackageNotesSectionProps {
   tenantId: number;
@@ -83,6 +88,40 @@ export function PackageNotesSection({ tenantId, packageInstanceId, packageId }: 
   const [formDetails, setFormDetails] = useState('');
   const [formType, setFormType] = useState('general');
   const [formPriority, setFormPriority] = useState('normal');
+  const [titleManuallyEdited, setTitleManuallyEdited] = useState(false);
+  const [extractingTitle, setExtractingTitle] = useState(false);
+  const titleExtractTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const speech = useSpeechToText();
+
+  // Auto-extract title from content using AI
+  const extractTitle = useCallback(async (text: string) => {
+    if (!text || text.trim().length < 10) return;
+    setExtractingTitle(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('extract-note-title', {
+        body: { content: text.trim() },
+      });
+      if (!error && data?.title) {
+        setFormTitle(data.title);
+      }
+    } catch (e) {
+      console.error('Title extraction failed:', e);
+    } finally {
+      setExtractingTitle(false);
+    }
+  }, []);
+
+  // Debounced title extraction when content changes and title hasn't been manually edited
+  useEffect(() => {
+    if (titleManuallyEdited || !formDetails || formDetails.trim().length < 10) return;
+    if (titleExtractTimer.current) clearTimeout(titleExtractTimer.current);
+    titleExtractTimer.current = setTimeout(() => {
+      extractTitle(formDetails);
+    }, 1500);
+    return () => {
+      if (titleExtractTimer.current) clearTimeout(titleExtractTimer.current);
+    };
+  }, [formDetails, titleManuallyEdited, extractTitle]);
 
   const filteredNotes = filterNotes(notes, {
     searchQuery,
@@ -95,6 +134,7 @@ export function PackageNotesSection({ tenantId, packageInstanceId, packageId }: 
     setFormDetails('');
     setFormType('general');
     setFormPriority('normal');
+    setTitleManuallyEdited(false);
     setDialogOpen(true);
   };
 
@@ -104,6 +144,7 @@ export function PackageNotesSection({ tenantId, packageInstanceId, packageId }: 
     setFormDetails(note.note_details);
     setFormType(note.note_type || 'general');
     setFormPriority(note.priority || 'normal');
+    setTitleManuallyEdited(true);
     setDialogOpen(true);
   };
 
@@ -289,11 +330,20 @@ export function PackageNotesSection({ tenantId, packageInstanceId, packageId }: 
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <label className="text-sm font-medium">Title (optional)</label>
+              <div className="flex items-center justify-between">
+                <label className="text-sm font-medium">Title (optional)</label>
+                <span className="flex items-center gap-1 text-xs text-muted-foreground italic">
+                  {extractingTitle && <Loader2 className="h-3 w-3 animate-spin" />}
+                  {!titleManuallyEdited && formTitle && 'AI generated from Content'}
+                </span>
+              </div>
               <Input
-                placeholder="Note title..."
+                placeholder="Auto-generated from content..."
                 value={formTitle}
-                onChange={(e) => setFormTitle(e.target.value)}
+                onChange={(e) => {
+                  setFormTitle(e.target.value);
+                  setTitleManuallyEdited(true);
+                }}
               />
             </div>
             <div className="grid grid-cols-2 gap-4">
@@ -332,12 +382,40 @@ export function PackageNotesSection({ tenantId, packageInstanceId, packageId }: 
               </div>
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium">Details</label>
+              <div className="flex items-center justify-between">
+                <label className="text-sm font-medium">Details</label>
+                {speech.isSupported && (
+                  <Button
+                    type="button"
+                    variant={speech.isRecording ? "destructive" : "ghost"}
+                    size="sm"
+                    className="gap-1.5 h-7 text-xs"
+                    onClick={() => {
+                      if (speech.isRecording) {
+                        speech.stopRecording();
+                      } else {
+                        speech.startRecording((text) => {
+                          setFormDetails(prev => prev ? `${prev} ${text}` : text);
+                        });
+                      }
+                    }}
+                  >
+                    {speech.isRecording ? (
+                      <><MicOff className="h-3.5 w-3.5" /> Stop</>
+                    ) : (
+                      <><Mic className="h-3.5 w-3.5" /> Speak</>
+                    )}
+                  </Button>
+                )}
+              </div>
               <Textarea
                 placeholder="Write your note..."
-                value={formDetails}
+                value={speech.isRecording && speech.interimTranscript 
+                  ? (formDetails ? `${formDetails} ${speech.interimTranscript}` : speech.interimTranscript)
+                  : formDetails}
                 onChange={(e) => setFormDetails(e.target.value)}
                 rows={20}
+                className={speech.isRecording ? 'border-destructive' : ''}
               />
             </div>
           </div>
