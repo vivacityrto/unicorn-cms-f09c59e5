@@ -77,7 +77,7 @@ export function StageDetailSection({
         details: { package_id: packageId, stage_id: stageId }
       });
 
-      toast({ title: 'Phase details saved' });
+      toast({ title: 'Stage details saved' });
       onUpdate();
     } catch (error: any) {
       console.error('Error saving stage details:', error);
@@ -125,7 +125,7 @@ export function StageDetailSection({
         <div className="space-y-2 sm:col-span-2">
           <label className="text-sm font-medium">Comment</label>
           <Textarea
-            placeholder="Add notes about this phase..."
+            placeholder="Add notes about this stage..."
             value={commentText}
             onChange={(e) => setCommentText(e.target.value)}
             rows={3}

@@ -60,7 +60,7 @@ export function AskVivScopeBanner({
   const inferredParts: string[] = [];
   if (scopeLock.client.inferred) inferredParts.push("Client");
   if (scopeLock.package.inferred) inferredParts.push("Package");
-  if (scopeLock.phase.inferred) inferredParts.push("Phase");
+  if (scopeLock.phase.inferred) inferredParts.push("Stage");
 
   return (
     <div
@@ -143,7 +143,7 @@ export function AskVivScopeBanner({
               </Badge>
             </TooltipTrigger>
             <TooltipContent side="bottom" className="text-xs">
-              {scopeLock.phase.inferred ? "Inferred from active phases" : (scopeLock.phase.id ? "Explicitly provided" : "Not specified")}
+              {scopeLock.phase.inferred ? "Inferred from active stages" : (scopeLock.phase.id ? "Explicitly provided" : "Not specified")}
             </TooltipContent>
           </Tooltip>
         </TooltipProvider>

@@ -41,7 +41,7 @@ const USAGE_RULES_CONTENT = `
 Ask Viv is an internal diagnostic tool for Vivacity Team members. It provides status visibility and gap analysis only.
 
 ### What Ask Viv CAN do
-- Report current status of clients, packages, and phases
+- Report current status of clients, packages, and stages
 - Identify blockers, missing evidence, and overdue tasks
 - Explain internal procedures and policies
 - Summarise compliance gaps
@@ -49,7 +49,7 @@ Ask Viv is an internal diagnostic tool for Vivacity Team members. It provides st
 ### What Ask Viv CANNOT do
 - Approve submissions or sign-offs
 - Confirm regulatory compliance
-- Make decisions about phase progression
+- Make decisions about stage progression
 - Provide advice to clients or regulators
 - Guarantee audit outcomes
 
@@ -60,10 +60,10 @@ Ask Viv is an internal diagnostic tool for Vivacity Team members. It provides st
 
 ### Safe alternatives
 When a request is blocked, try rephrasing to focus on:
-- "What gaps exist for this phase?"
+- "What gaps exist for this stage?"
 - "List missing evidence types"
 - "Summarise overdue mandatory tasks"
-- "What is blocking this phase?"
+- "What is blocking this stage?"
 
 ### Escalation
 For decisions or approvals, escalate to:

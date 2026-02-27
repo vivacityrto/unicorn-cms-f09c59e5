@@ -200,7 +200,7 @@ Deno.test("formatScopeForDisplay - full scope", () => {
   };
 
   const result = formatScopeForDisplay(scopeLock);
-  assertEquals(result, "Answer scoped to: Client ABC RTO, Package KickStart, Phase PH-VAL - Validation");
+  assertEquals(result, "Answer scoped to: Client ABC RTO, Package KickStart, Stage PH-VAL - Validation");
 });
 
 Deno.test("formatScopeForDisplay - partial scope with nulls", () => {
@@ -214,7 +214,7 @@ Deno.test("formatScopeForDisplay - partial scope with nulls", () => {
   };
 
   const result = formatScopeForDisplay(scopeLock);
-  assertEquals(result, "Answer scoped to: Client ABC RTO, Package Not specified, Phase Not specified");
+  assertEquals(result, "Answer scoped to: Client ABC RTO, Package Not specified, Stage Not specified");
 });
 
 // ============= buildScopeLockAuditEntry Tests =============

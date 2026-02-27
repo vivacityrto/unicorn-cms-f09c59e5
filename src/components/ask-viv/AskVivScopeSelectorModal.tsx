@@ -287,11 +287,11 @@ export function AskVivScopeSelectorModal({
             )}
           </div>
 
-          {/* Phase selector */}
+          {/* Stage selector */}
           <div className="space-y-2">
             <Label className="flex items-center gap-1.5 text-sm">
               <Layers className="h-3.5 w-3.5" />
-              Phase
+              Stage
             </Label>
             <Select
               value={selectedPhaseId ?? "none"}
@@ -299,10 +299,10 @@ export function AskVivScopeSelectorModal({
               disabled={loadingPhases || phases.length === 0}
             >
               <SelectTrigger className={cn((loadingPhases || phases.length === 0) && "opacity-50")}>
-                <SelectValue placeholder={phases.length === 0 ? "No phases available" : "All phases"} />
+                <SelectValue placeholder={phases.length === 0 ? "No stages available" : "All stages"} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="none">All phases</SelectItem>
+                <SelectItem value="none">All stages</SelectItem>
                 {phases.map((phase) => (
                   <SelectItem key={phase.id} value={phase.id}>
                     {phase.label}
@@ -313,7 +313,7 @@ export function AskVivScopeSelectorModal({
             {loadingPhases && (
               <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                 <Loader2 className="h-3 w-3 animate-spin" />
-                Loading phases...
+                Loading stages...
               </div>
             )}
           </div>
