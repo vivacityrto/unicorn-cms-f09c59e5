@@ -18,6 +18,7 @@ import {
   TrendingUp,
   FileText
 } from 'lucide-react';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { cn } from '@/lib/utils';
 
 interface PackageTimeSectionProps {
@@ -220,46 +221,66 @@ export function PackageTimeSection({
         </div>
       )}
 
-      {/* Time Entries List */}
-      {packageEntries.length === 0 ? (
-        <div className="text-center py-8 text-muted-foreground">
-          <Clock className="h-8 w-8 mx-auto mb-2 opacity-50" />
-          <p>No time entries for this package</p>
-        </div>
-      ) : (
-        <div className="space-y-2">
-          {packageEntries.map((entry) => (
-            <Card key={entry.id}>
-              <CardContent className="p-3">
-                <div className="flex items-center gap-4">
-                  <div className="text-sm text-muted-foreground w-24">
-                    {entry.start_at ? format(new Date(entry.start_at), 'd MMM yyyy') : 'N/A'}
-                  </div>
-                  <div className="font-medium w-16">
-                    {formatDuration(entry.duration_minutes)}
-                  </div>
-                  <Badge variant="secondary" className="capitalize">
-                    {entry.work_type.replace('_', ' ')}
-                  </Badge>
-                  <Badge variant="outline" className="text-xs">
-                    {entry.source === 'timer' ? (
-                      <><Timer className="h-3 w-3 mr-1" /> Timer</>
-                    ) : (
-                      <><FileText className="h-3 w-3 mr-1" /> Manual</>
-                    )}
-                  </Badge>
-                  {entry.is_billable && (
-                    <DollarSign className="h-4 w-4 text-green-600" />
-                  )}
-                  <div className="flex-1 text-sm text-muted-foreground truncate">
-                    {entry.notes}
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      )}
+      {/* Time Entries Table */}
+      <Card>
+        <CardContent className="p-0">
+          {packageEntries.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              <Clock className="h-8 w-8 mx-auto mb-2 opacity-50" />
+              <p>No time entries for this package</p>
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Date</TableHead>
+                  <TableHead>Duration</TableHead>
+                  <TableHead>Type</TableHead>
+                  <TableHead>Source</TableHead>
+                  <TableHead>Billable</TableHead>
+                  <TableHead>Notes</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {packageEntries.map((entry) => (
+                  <TableRow key={entry.id}>
+                    <TableCell className="whitespace-nowrap">
+                      {entry.start_at ? format(new Date(entry.start_at), 'd MMM yyyy') : 'N/A'}
+                    </TableCell>
+                    <TableCell className="font-medium">
+                      {formatDuration(entry.duration_minutes)}
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="secondary" className="capitalize">
+                        {entry.work_type.replace('_', ' ')}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="outline" className="text-xs">
+                        {entry.source === 'timer' ? (
+                          <><Timer className="h-3 w-3 mr-1" /> Timer</>
+                        ) : (
+                          <><FileText className="h-3 w-3 mr-1" /> Manual</>
+                        )}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      {entry.is_billable ? (
+                        <DollarSign className="h-4 w-4 text-green-600" />
+                      ) : (
+                        <span className="text-xs text-muted-foreground">—</span>
+                      )}
+                    </TableCell>
+                    <TableCell className="max-w-[200px] truncate text-sm text-muted-foreground">
+                      {entry.notes || '—'}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Add Time Dialog */}
       <AddTimeDialog
