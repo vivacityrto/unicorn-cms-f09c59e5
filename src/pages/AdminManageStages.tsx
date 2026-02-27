@@ -7,6 +7,13 @@ import { useStageDuplication } from '@/hooks/useStageDuplication';
 import { useStageExportImport, StageExportData } from '@/hooks/useStageExportImport';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -68,7 +75,8 @@ import {
   AlertTriangle,
   XCircle,
   Play,
-  RefreshCw
+  RefreshCw,
+  MoreVertical
 } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import { AddStageDialog } from '@/components/AddStageDialog';
@@ -868,82 +876,48 @@ export default function AdminManageStages() {
                     />
                   </TableCell>
                   <TableCell className="text-right">
-                    <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => {
-                                setSimulateStageId(stage.id);
-                                setSimulateStageName(stage.title);
-                                setIsSimulateOpen(true);
-                              }}
-                              className="h-8 w-8"
-                            >
-                              <Play className="h-4 w-4" />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>Simulate</TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => handlePreview(stage)}
-                              className="h-8 w-8"
-                            >
-                              <Eye className="h-4 w-4" />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>Preview</TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-                      
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => handleDuplicate(stage)}
-                              disabled={isDuplicating}
-                              className="h-8 w-8"
-                            >
-                              <Copy className="h-4 w-4" />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>Duplicate</TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => handleArchive(stage)}
-                              className="h-8 w-8"
-                            >
-                              {stage.is_archived ? (
-                                <ArchiveRestore className="h-4 w-4" />
-                              ) : (
-                                <Archive className="h-4 w-4" />
-                              )}
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            {stage.is_archived ? 'Restore' : 'Archive'}
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-                    </div>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-8 w-8">
+                          <MoreVertical className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-44">
+                        <DropdownMenuItem onClick={() => {
+                          setSimulateStageId(stage.id);
+                          setSimulateStageName(stage.title);
+                          setIsSimulateOpen(true);
+                        }}>
+                          <Play className="h-4 w-4 mr-2" />
+                          Simulate
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handlePreview(stage)}>
+                          <Eye className="h-4 w-4 mr-2" />
+                          Preview
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => handleDuplicate(stage)}
+                          disabled={isDuplicating}
+                        >
+                          <Copy className="h-4 w-4 mr-2" />
+                          Duplicate
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem onClick={() => handleArchive(stage)}>
+                          {stage.is_archived ? (
+                            <>
+                              <ArchiveRestore className="h-4 w-4 mr-2" />
+                              Restore
+                            </>
+                          ) : (
+                            <>
+                              <Archive className="h-4 w-4 mr-2" />
+                              Archive
+                            </>
+                          )}
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </TableCell>
                 </TableRow>
               ))
