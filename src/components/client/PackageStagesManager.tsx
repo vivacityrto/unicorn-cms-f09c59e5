@@ -23,7 +23,8 @@ import {
   ChevronDown,
   ChevronRight,
   ListTodo,
-  MessageSquare
+  MessageSquare,
+  RefreshCw
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -38,6 +39,7 @@ interface StageInstance {
   comment: string | null;
   paid: boolean;
   released_client_tasks: boolean;
+  is_recurring: boolean;
 }
 
 interface PackageStagesManagerProps {
@@ -112,7 +114,7 @@ export function PackageStagesManager({ tenantId, packageId, packageName }: Packa
       // Fetch stage_instances for this package_instance
       const stageResult = await (supabase
         .from('stage_instances' as any)
-        .select('id, stage_id, status, status_date, completion_date, comment, paid, released_client_tasks')
+        .select('id, stage_id, status, status_date, completion_date, comment, paid, released_client_tasks, is_recurring')
         .eq('packageinstance_id', instanceData.id)
         .order('stage_sortorder')) as { data: Array<{ id: number; stage_id: number; status: string | null; completion_date: string | null; paid: boolean | null; released_client_tasks: boolean | null }> | null; error: any };
       
@@ -153,6 +155,7 @@ export function PackageStagesManager({ tenantId, packageId, packageName }: Packa
           comment: row.comment || null,
           paid: row.paid ?? false,
           released_client_tasks: row.released_client_tasks ?? false,
+          is_recurring: row.is_recurring ?? false,
         };
       });
 
@@ -279,6 +282,12 @@ export function PackageStagesManager({ tenantId, packageId, packageName }: Packa
                     <ListTodo className="h-3 w-3" />
                     Tasks
                   </Badge>
+                  {stage.is_recurring && (
+                    <Badge variant="outline" className="text-xs gap-1 text-primary border-primary/30">
+                      <RefreshCw className="h-3 w-3" />
+                      Recurring
+                    </Badge>
+                  )}
                   {stage.released_client_tasks && (
                     <Badge variant="outline" className="text-xs">Tasks Released</Badge>
                   )}
