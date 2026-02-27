@@ -27,6 +27,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
 import { Users, UserCheck, UserX, Search, ArrowUpDown, Edit, Trash2, UserX as UserXIcon, Save, UserPlus, Building2, ChevronLeft, ChevronRight, Filter, UsersRound, UserMinus, MoreHorizontal } from 'lucide-react';
 import { Combobox } from '@/components/ui/combobox';
@@ -94,6 +95,7 @@ export default function ManageUsers() {
     bio: '',
     user_type: '',
     unicorn_role: '',
+    archived: false,
   });
   const [deleteDialog, setDeleteDialog] = useState<{
     open: boolean;
@@ -450,7 +452,7 @@ export default function ManageUsers() {
     // Fetch full user details including job_title, timezone, bio, user_type, unicorn_role
     const { data, error } = await supabase
       .from('users')
-      .select('first_name, last_name, mobile_phone, job_title, timezone, bio, user_type, unicorn_role')
+      .select('first_name, last_name, mobile_phone, job_title, timezone, bio, user_type, unicorn_role, archived')
       .eq('user_uuid', user.user_uuid)
       .single();
     
@@ -464,6 +466,7 @@ export default function ManageUsers() {
         bio: data.bio || '',
         user_type: data.user_type || '',
         unicorn_role: data.unicorn_role || '',
+        archived: data.archived ?? false,
       });
     } else {
       setEditFormData({
@@ -475,6 +478,7 @@ export default function ManageUsers() {
         bio: '',
         user_type: user.user_type || '',
         unicorn_role: user.unicorn_role || '',
+        archived: user.archived ?? false,
       });
     }
     
@@ -503,6 +507,7 @@ export default function ManageUsers() {
           bio: editFormData.bio || null,
           user_type: editFormData.user_type || null,
           unicorn_role: editFormData.unicorn_role || null,
+          archived: editFormData.archived,
         },
         headers: {
           Authorization: `Bearer ${token}`,
@@ -1173,6 +1178,18 @@ export default function ManageUsers() {
                   onChange={(e) => setEditFormData({ ...editFormData, bio: e.target.value })}
                   placeholder="Tell us about yourself..."
                   rows={4}
+                />
+              </div>
+
+              <div className="flex items-center justify-between rounded-lg border border-border/50 p-4">
+                <div className="space-y-0.5">
+                  <Label htmlFor="edit-archived" className="text-sm font-medium">Archived</Label>
+                  <p className="text-xs text-muted-foreground">Archived users are hidden from active lists and cannot be assigned to tasks.</p>
+                </div>
+                <Switch
+                  id="edit-archived"
+                  checked={editFormData.archived}
+                  onCheckedChange={(checked) => setEditFormData({ ...editFormData, archived: checked })}
                 />
               </div>
             </div>
