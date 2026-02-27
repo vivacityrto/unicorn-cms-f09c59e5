@@ -1,12 +1,16 @@
 import { useState, useMemo } from 'react';
 import { format } from 'date-fns';
 import { useTimeTracking, formatDuration, formatElapsedTime, TimeEntry } from '@/hooks/useTimeTracking';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { AddTimeDialog } from './AddTimeDialog';
+import { EditTimeDialog } from './EditTimeDialog';
+import { DeleteConfirmDialog } from '@/components/audit/DeleteConfirmDialog';
 import { 
   Clock, 
   Play, 
@@ -16,7 +20,9 @@ import {
   Timer,
   Calendar,
   TrendingUp,
-  FileText
+  FileText,
+  Pencil,
+  Trash2
 } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { cn } from '@/lib/utils';
@@ -43,18 +49,23 @@ export function PackageTimeSection({
   packageId,
   packageInstanceId 
 }: PackageTimeSectionProps) {
+  const { toast } = useToast();
   const { 
     entries, 
     activeTimer, 
     summary, 
     loading, 
     startTimer, 
-    stopTimer 
+    stopTimer,
+    refresh
   } = useTimeTracking(clientId);
 
   const [workTypeFilter, setWorkTypeFilter] = useState('all');
   const [billableFilter, setBillableFilter] = useState<'all' | 'billable' | 'non-billable'>('all');
   const [addTimeOpen, setAddTimeOpen] = useState(false);
+  const [editEntry, setEditEntry] = useState<TimeEntry | null>(null);
+  const [deleteEntry, setDeleteEntry] = useState<TimeEntry | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // Filter entries by package
   const packageEntries = useMemo(() => {
@@ -239,6 +250,7 @@ export function PackageTimeSection({
                   <TableHead>Source</TableHead>
                   <TableHead>Billable</TableHead>
                   <TableHead>Notes</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -274,6 +286,28 @@ export function PackageTimeSection({
                     <TableCell className="max-w-[200px] truncate text-sm text-muted-foreground">
                       {entry.notes || '—'}
                     </TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex items-center justify-end gap-1">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 px-2"
+                          onClick={() => setEditEntry(entry)}
+                          title="Edit"
+                        >
+                          <Pencil className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 px-2 text-destructive hover:text-destructive"
+                          onClick={() => setDeleteEntry(entry)}
+                          title="Delete"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -288,6 +322,40 @@ export function PackageTimeSection({
         onOpenChange={setAddTimeOpen}
         tenantId={tenantId}
         clientId={clientId}
+      />
+
+      {/* Edit Dialog */}
+      <EditTimeDialog
+        open={!!editEntry}
+        onOpenChange={v => !v && setEditEntry(null)}
+        entry={editEntry}
+        onSuccess={refresh}
+      />
+
+      {/* Delete Confirmation */}
+      <DeleteConfirmDialog
+        open={!!deleteEntry}
+        onOpenChange={v => !v && setDeleteEntry(null)}
+        title="Delete Time Entry"
+        description="Are you sure you want to delete this time entry? This action cannot be undone."
+        itemName={deleteEntry ? `${formatDuration(deleteEntry.duration_minutes)} on ${deleteEntry.start_at ? format(new Date(deleteEntry.start_at), 'd MMM yyyy') : 'N/A'}` : undefined}
+        isDeleting={isDeleting}
+        onConfirm={async () => {
+          if (!deleteEntry) return;
+          setIsDeleting(true);
+          const { error } = await supabase
+            .from('time_entries')
+            .delete()
+            .eq('id', deleteEntry.id);
+          setIsDeleting(false);
+          if (error) {
+            toast({ title: 'Failed to delete', description: error.message, variant: 'destructive' });
+          } else {
+            setDeleteEntry(null);
+            refresh();
+            toast({ title: 'Time entry deleted' });
+          }
+        }}
       />
     </div>
   );
