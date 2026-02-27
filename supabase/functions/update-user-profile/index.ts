@@ -11,6 +11,7 @@ type UpdateProfileBody = {
   bio?: string;
   user_type?: string;
   unicorn_role?: string;
+  archived?: boolean;
 };
 
 Deno.serve(async (req) => {
@@ -20,7 +21,7 @@ Deno.serve(async (req) => {
 
   try {
     const body = (await req.json()) as UpdateProfileBody;
-    const { user_uuid, user_type, unicorn_role, ...updates } = body;
+    const { user_uuid, user_type, unicorn_role, archived, ...updates } = body;
 
     if (!user_uuid) {
       return jsonErr(400, "MISSING_USER_ID", "User UUID is required");
@@ -106,8 +107,9 @@ Deno.serve(async (req) => {
     if (isSuperAdminForRoleChange) {
       if (user_type) updatePayload.user_type = user_type;
       if (unicorn_role) updatePayload.unicorn_role = unicorn_role;
-    } else if (user_type || unicorn_role) {
-      console.log("Non-Super Admin attempted to change user_type or unicorn_role - ignoring");
+      if (archived !== undefined) updatePayload.archived = archived;
+    } else if (user_type || unicorn_role || archived !== undefined) {
+      console.log("Non-Super Admin attempted to change user_type, unicorn_role, or archived - ignoring");
     }
 
     // Update the user
