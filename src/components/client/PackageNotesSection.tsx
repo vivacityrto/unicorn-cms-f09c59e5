@@ -9,8 +9,9 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Card, CardContent } from '@/components/ui/card';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+
 import { 
   Plus, 
   Search, 
@@ -185,63 +186,70 @@ export function PackageNotesSection({ tenantId, packageInstanceId, packageId }: 
         </Button>
       </div>
 
-      {/* Notes list */}
-      {filteredNotes.length === 0 ? (
-        <div className="text-center py-8 text-muted-foreground">
-          <StickyNote className="h-8 w-8 mx-auto mb-2 opacity-50" />
-          <p>{notes.length === 0 ? 'No notes yet' : 'No matching notes'}</p>
-        </div>
-      ) : (
-        <div className="space-y-3">
-          {filteredNotes.map((note) => {
-            const TypeIcon = getTypeIcon(note.note_type);
-            const priorityOption = PRIORITY_OPTIONS.find(p => p.value === note.priority);
+      {/* Notes Table */}
+      <Card>
+        <CardContent className="p-0">
+          {filteredNotes.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              <StickyNote className="h-8 w-8 mx-auto mb-2 opacity-50" />
+              <p>{notes.length === 0 ? 'No notes yet' : 'No matching notes'}</p>
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Date</TableHead>
+                  <TableHead>Title</TableHead>
+                  <TableHead>Type</TableHead>
+                  <TableHead>Priority</TableHead>
+                  <TableHead>Author</TableHead>
+                  <TableHead>Details</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredNotes.map((note) => {
+                  const TypeIcon = getTypeIcon(note.note_type);
+                  const priorityOption = PRIORITY_OPTIONS.find(p => p.value === note.priority);
 
-            return (
-              <Card key={note.id} className={cn(
-                "transition-colors",
-                note.is_pinned && "border-primary/50 bg-primary/5"
-              )}>
-                <CardContent className="p-4">
-                  <div className="flex items-start gap-3">
-                    <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center shrink-0">
-                      <TypeIcon className="h-4 w-4" />
-                    </div>
-                    <div className="flex-1 min-w-0 space-y-2">
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          {note.title && (
-                            <span className="font-medium">{note.title}</span>
-                          )}
-                          {note.is_pinned && (
-                            <Pin className="h-3 w-3 text-primary" />
-                          )}
-                          {note.note_type && (
-                            <Badge variant="outline" className="text-xs capitalize">
-                              {note.note_type}
-                            </Badge>
-                          )}
-                          {note.parent_type === 'package_instance' && (
-                            <Badge
-                              variant="outline"
-                              className="text-xs cursor-pointer bg-primary/10 text-primary border-primary/40 hover:bg-primary/20"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                navigate(`/admin/client-packages/${note.parent_id}`);
-                              }}
-                            >
-                              Package
-                            </Badge>
-                          )}
-                          {priorityOption && priorityOption.value !== 'normal' && (
-                            <Badge variant="outline" className={cn("text-xs", priorityOption.color)}>
-                              {priorityOption.label}
-                            </Badge>
-                          )}
+                  return (
+                    <TableRow key={note.id} className={cn(note.is_pinned && "bg-primary/5")}>
+                      <TableCell className="whitespace-nowrap text-sm">
+                        {format(new Date(note.created_at), 'd MMM yyyy')}
+                      </TableCell>
+                      <TableCell className="font-medium">
+                        <div className="flex items-center gap-1.5">
+                          {note.is_pinned && <Pin className="h-3 w-3 text-primary shrink-0" />}
+                          <span className="truncate max-w-[200px]">{note.title || '—'}</span>
                         </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className="text-xs capitalize gap-1">
+                          <TypeIcon className="h-3 w-3" />
+                          {note.note_type || 'general'}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        {priorityOption && priorityOption.value !== 'normal' ? (
+                          <Badge variant="outline" className={cn("text-xs", priorityOption.color)}>
+                            {priorityOption.label}
+                          </Badge>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">Normal</span>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-sm whitespace-nowrap">
+                        {note.creator
+                          ? `${note.creator.first_name} ${note.creator.last_name}`
+                          : '—'}
+                      </TableCell>
+                      <TableCell className="max-w-[250px] truncate text-sm text-muted-foreground">
+                        {note.note_details}
+                      </TableCell>
+                      <TableCell className="text-right">
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-8 w-8">
+                            <Button variant="ghost" size="icon" className="h-7 w-7">
                               <MoreHorizontal className="h-4 w-4" />
                             </Button>
                           </DropdownMenuTrigger>
@@ -254,7 +262,7 @@ export function PackageNotesSection({ tenantId, packageInstanceId, packageId }: 
                               <Pencil className="h-4 w-4 mr-2" />
                               Edit
                             </DropdownMenuItem>
-                            <DropdownMenuItem 
+                            <DropdownMenuItem
                               onClick={() => setDeleteConfirmId(note.id)}
                               className="text-destructive"
                             >
@@ -263,32 +271,15 @@ export function PackageNotesSection({ tenantId, packageInstanceId, packageId }: 
                             </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
-                      </div>
-                      <p className="text-sm text-muted-foreground whitespace-pre-wrap">
-                        {note.note_details}
-                      </p>
-                      <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                        {note.creator && (
-                          <div className="flex items-center gap-1">
-                            <Avatar className="h-4 w-4">
-                              <AvatarImage src={note.creator.avatar_url || undefined} />
-                              <AvatarFallback className="text-[8px]">
-                                {note.creator.first_name?.[0]}{note.creator.last_name?.[0]}
-                              </AvatarFallback>
-                            </Avatar>
-                            <span>{note.creator.first_name} {note.creator.last_name}</span>
-                          </div>
-                        )}
-                        <span>{format(new Date(note.created_at), 'd MMM yyyy HH:mm')}</span>
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          })}
-        </div>
-      )}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Create/Edit Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
