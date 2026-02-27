@@ -241,7 +241,7 @@ export default function StageBuilder() {
   // Create stage
   const handleCreate = async () => {
     if (!state.stageName.trim()) {
-      toast({ title: 'Error', description: 'Phase name is required', variant: 'destructive' });
+      toast({ title: 'Error', description: 'Stage name is required', variant: 'destructive' });
       return;
     }
 
@@ -313,7 +313,7 @@ export default function StageBuilder() {
 
       setCreatedStageId(stageId);
       toast({
-        title: 'Phase Created!',
+        title: 'Stage Created!',
         description: `"${state.stageName}" has been created successfully.`,
       });
     } catch (error: any) {
@@ -337,7 +337,7 @@ export default function StageBuilder() {
             <ShieldX className="h-16 w-16 mx-auto text-destructive/50" />
             <h2 className="text-xl font-semibold">Access Denied</h2>
             <p className="text-muted-foreground">
-              You need Super Admin privileges to access Phase Builder.
+              You need Super Admin privileges to access Stage Builder.
             </p>
           </div>
         </div>
@@ -356,7 +356,7 @@ export default function StageBuilder() {
                 <CheckCircle2 className="h-10 w-10 text-emerald-500" />
               </div>
               <div>
-                <h2 className="text-2xl font-bold mb-2">Phase Created Successfully!</h2>
+                <h2 className="text-2xl font-bold mb-2">Stage Created Successfully!</h2>
                 <p className="text-muted-foreground">
                   "{state.stageName}" has been created with {state.teamTasks.length} team tasks, 
                   {' '}{state.clientTasks.length} client tasks, and {state.emails.length} emails.
@@ -384,7 +384,7 @@ export default function StageBuilder() {
                   Create Another
                 </Button>
                 <Button onClick={() => navigate(`/admin/stages/${createdStageId}`)}>
-                  Open Phase Editor
+                  Open Stage Editor
                 </Button>
               </div>
             </CardContent>
@@ -402,10 +402,10 @@ export default function StageBuilder() {
           <div>
             <h1 className="text-[28px] font-bold flex items-center gap-2">
               <Wand2 className="h-7 w-7" />
-              Phase Builder
+              Stage Builder
             </h1>
             <p className="text-muted-foreground">
-              Create a complete phase with tasks, emails, and documents in minutes
+              Create a complete stage with tasks, emails, and documents in minutes
             </p>
           </div>
           <Badge variant="outline" className="text-xs">
@@ -439,13 +439,13 @@ export default function StageBuilder() {
             {currentStep === 1 && (
               <div className="space-y-6">
                 <div>
-                  <CardTitle className="text-lg mb-1">Phase Basics</CardTitle>
-                  <CardDescription>Define the core properties of your new phase</CardDescription>
+                  <CardTitle className="text-lg mb-1">Stage Basics</CardTitle>
+                  <CardDescription>Define the core properties of your new stage</CardDescription>
                 </div>
 
                 <div className="grid gap-6 md:grid-cols-2">
                   <div className="space-y-2">
-                    <Label>Phase Name *</Label>
+                    <Label>Stage Name *</Label>
                     <Input
                       value={state.stageName}
                       onChange={(e) => setState(prev => ({ ...prev, stageName: e.target.value }))}
@@ -454,7 +454,7 @@ export default function StageBuilder() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label>Phase Type</Label>
+                    <Label>Stage Type</Label>
                     <Select value={state.stageType} onValueChange={(v) => setState(prev => ({ ...prev, stageType: v }))}>
                       <SelectTrigger>
                         <SelectValue />
@@ -539,8 +539,8 @@ export default function StageBuilder() {
             {currentStep === 2 && (
               <div className="space-y-6">
                 <div>
-                  <CardTitle className="text-lg mb-1">Phase Content</CardTitle>
-                  <CardDescription>Configure tasks, emails, and documents for this phase</CardDescription>
+                  <CardTitle className="text-lg mb-1">Stage Content</CardTitle>
+                  <CardDescription>Configure tasks, emails, and documents for this stage</CardDescription>
                 </div>
 
                 {/* Team Tasks */}

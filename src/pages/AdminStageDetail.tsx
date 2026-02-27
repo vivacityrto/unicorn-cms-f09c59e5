@@ -160,7 +160,7 @@ export default function AdminStageDetail() {
   const [pendingUpdate, setPendingUpdate] = useState<Partial<Stage> | null>(null);
   const [hasConfirmedEditing, setHasConfirmedEditing] = useState(false);
   const [confirmPhrase, setConfirmPhrase] = useState('');
-  const CONFIRM_PHRASE_REQUIRED = 'EDIT LIVE PHASE';
+  const CONFIRM_PHRASE_REQUIRED = 'EDIT LIVE STAGE';
   
   // Replace stage state
   const [replaceDialogOpen, setReplaceDialogOpen] = useState(false);
@@ -329,7 +329,7 @@ export default function AdminStageDetail() {
     try {
       await updateStage(stage.id, updates);
       setStage(prev => prev ? { ...prev, ...updates } : null);
-      toast({ title: 'Phase Updated' });
+      toast({ title: 'Stage Updated' });
     } catch (error: any) {
       toast({
         title: 'Error',
@@ -467,11 +467,11 @@ export default function AdminStageDetail() {
       try {
         await updateStage(stage.id, pendingUpdate);
         setStage(prev => prev ? { ...prev, ...pendingUpdate } : null);
-        toast({ title: 'Phase Updated' });
+        toast({ title: 'Stage Updated' });
       } catch (error: any) {
         toast({
           title: 'Error',
-          description: error.message || 'Failed to update phase',
+          description: error.message || 'Failed to update stage',
           variant: 'destructive'
         });
       }
@@ -645,7 +645,7 @@ export default function AdminStageDetail() {
 
   const handleReplaceInPackages = async () => {
     if (!stageIdNum || !replacementStageId || selectedPackagesForReplace.length === 0) {
-      toast({ title: 'Error', description: 'Select packages and a replacement phase', variant: 'destructive' });
+      toast({ title: 'Error', description: 'Select packages and a replacement stage', variant: 'destructive' });
       return;
     }
 
@@ -857,7 +857,7 @@ export default function AdminStageDetail() {
         <Button variant="ghost" asChild className="gap-2 hover:bg-muted">
           <Link to="/admin/stages">
             <ArrowLeft className="h-4 w-4" />
-            Back to Phases
+            Back to Stages
           </Link>
         </Button>
       </div>
@@ -916,7 +916,7 @@ export default function AdminStageDetail() {
                     onClick={() => setSimulationOpen(true)}
                   >
                     <Play className="h-3 w-3 mr-1" />
-                    Simulate Phase
+                    Simulate Stage
                   </Button>
                 )}
                 <Button
@@ -953,7 +953,7 @@ export default function AdminStageDetail() {
             </>
           ) : (
             <div className="text-center py-8">
-              <p className="text-muted-foreground">Phase not found</p>
+              <p className="text-muted-foreground">Stage not found</p>
             </div>
           )}
         </div>
@@ -980,10 +980,10 @@ export default function AdminStageDetail() {
           {isUsedByActiveClients && (
             <Alert className="border-destructive/30 bg-destructive/5">
               <AlertTriangle className="h-4 w-4 text-destructive" />
-              <AlertTitle className="text-destructive">This phase is in use by active clients</AlertTitle>
+              <AlertTitle className="text-destructive">This stage is in use by active clients</AlertTitle>
               <AlertDescription className="flex items-center justify-between gap-2 flex-wrap">
                 <span className="text-destructive/80">
-                  {activeUsage.clients.length} active client{activeUsage.clients.length !== 1 ? 's' : ''} are using this phase. 
+                  {activeUsage.clients.length} active client{activeUsage.clients.length !== 1 ? 's' : ''} are using this stage. 
                   Editing may affect their ongoing work.
                 </span>
                 <Button 
@@ -1012,7 +1012,7 @@ export default function AdminStageDetail() {
                   disabled={isDuplicating}
                 >
                   <Copy className="h-3 w-3 mr-1" />
-                  {isDuplicating ? 'Duplicating...' : 'Duplicate Phase'}
+                  {isDuplicating ? 'Duplicating...' : 'Duplicate Stage'}
                 </Button>
               </AlertDescription>
             </Alert>
@@ -1022,7 +1022,7 @@ export default function AdminStageDetail() {
             <Alert className="border-blue-500/30 bg-blue-500/5">
               <Info className="h-4 w-4 text-blue-600" />
               <AlertDescription className="text-blue-800">
-                This phase is shared across {usageCount} packages. Changes will affect all of them.
+                This stage is shared across {usageCount} packages. Changes will affect all of them.
               </AlertDescription>
             </Alert>
           )}
@@ -1067,13 +1067,13 @@ export default function AdminStageDetail() {
           <TabsContent value="settings">
             <Card>
               <CardHeader>
-                <CardTitle>Phase Settings</CardTitle>
-                <CardDescription>Configure the basic properties of this phase.</CardDescription>
+                <CardTitle>Stage Settings</CardTitle>
+                <CardDescription>Configure the basic properties of this stage.</CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label>Phase Name</Label>
+                    <Label>Stage Name</Label>
                     <Input
                       value={stage.title || ''}
                       onChange={(e) => handleUpdateStage({ title: e.target.value })}
@@ -1081,7 +1081,7 @@ export default function AdminStageDetail() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label>Phase Type</Label>
+                    <Label>Stage Type</Label>
                     <Select 
                       value={stage.stage_type || 'delivery'} 
                       onValueChange={(value) => handleUpdateStage({ stage_type: value })}
@@ -1118,7 +1118,7 @@ export default function AdminStageDetail() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label>Phase Key (read-only)</Label>
+                    <Label>Stage Key (read-only)</Label>
                     <Input value={stage.stage_key || ''} disabled className="font-mono text-sm" />
                   </div>
                 </div>
@@ -1133,14 +1133,14 @@ export default function AdminStageDetail() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Phase Version Label</Label>
+                  <Label>Stage Version Label</Label>
                   <Input
                     value={(stage as any).version_label || ''}
                     onChange={(e) => handleUpdateVersionLabel(e.target.value)}
                     placeholder="e.g., v2025.1, July 2026"
                   />
                   <p className="text-xs text-muted-foreground">
-                    Optional. Used to identify the release of this phase for audit and rollout clarity.
+                    Optional. Used to identify the release of this stage for audit and rollout clarity.
                   </p>
                 </div>
 
@@ -1181,7 +1181,7 @@ export default function AdminStageDetail() {
                     onChange={handleUpdateDependencies}
                   />
                   <p className="text-xs text-muted-foreground">
-                    Select phases that must also exist in a package when this phase is used.
+                    Select stages that must also exist in a package when this stage is used.
                   </p>
                 </div>
 
@@ -1504,7 +1504,7 @@ export default function AdminStageDetail() {
                   <div className="flex gap-2">
                     <Button variant="outline" onClick={handleDuplicateStage} disabled={isDuplicating}>
                       <Copy className="h-4 w-4 mr-2" />
-                      {isDuplicating ? 'Duplicating...' : 'Duplicate Phase'}
+                      {isDuplicating ? 'Duplicating...' : 'Duplicate Stage'}
                     </Button>
                     <Button 
                       variant="outline" 
@@ -1527,7 +1527,7 @@ export default function AdminStageDetail() {
                 <div className="flex items-center justify-between">
                   <div>
                     <CardTitle>Audit Log</CardTitle>
-                    <CardDescription>Track changes made to this phase.</CardDescription>
+                    <CardDescription>Track changes made to this stage.</CardDescription>
                   </div>
                   <Button variant="outline" size="sm" onClick={() => refetchAudit()}>
                     <RefreshCw className="h-3 w-3 mr-1" />

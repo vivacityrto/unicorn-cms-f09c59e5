@@ -286,13 +286,13 @@ const PackageDetail = ({ instanceId: propInstanceId }: PackageDetailProps = {}) 
 
         toast({
           title: "Success",
-          description: "Phase order updated successfully",
+          description: "Stage order updated successfully",
         });
       } catch (error: any) {
         console.error("Error updating stage order:", error);
         toast({
           title: "Error",
-          description: "Failed to update phase order",
+          description: "Failed to update stage order",
           variant: "destructive",
         });
         // Revert on error
@@ -492,7 +492,7 @@ const PackageDetail = ({ instanceId: propInstanceId }: PackageDetailProps = {}) 
       if (error) throw error;
       toast({
         title: "Success",
-        description: "Phase deleted successfully"
+        description: "Stage deleted successfully"
       });
       fetchPackageData();
     } catch (error: any) {
@@ -1067,7 +1067,7 @@ const PackageDetail = ({ instanceId: propInstanceId }: PackageDetailProps = {}) 
             <div className="bg-muted/50 px-6 py-4 border-b border-border/50">
               <div className="flex items-center justify-between">
                 <div>
-                  <h3 className="text-base font-semibold text-foreground">Phases</h3>
+                  <h3 className="text-base font-semibold text-foreground">Stages</h3>
                 </div>
               </div>
             </div>
@@ -1075,7 +1075,7 @@ const PackageDetail = ({ instanceId: propInstanceId }: PackageDetailProps = {}) 
               <div className="flex items-center justify-between">
                 <div className="relative flex-1 max-w-md">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input placeholder="Search phases..." value={stageSearchQuery} onChange={e => setStageSearchQuery(e.target.value)} className="pl-10 h-10" />
+                  <Input placeholder="Search stages..." value={stageSearchQuery} onChange={e => setStageSearchQuery(e.target.value)} className="pl-10 h-10" />
                 </div>
                 <div className="flex gap-2">
                   <Button variant="outline" className="gap-2 hover:bg-[hsl(196deg_100%_93.53%)] hover:text-black" style={{
@@ -1087,14 +1087,14 @@ const PackageDetail = ({ instanceId: propInstanceId }: PackageDetailProps = {}) 
                   </Button>
                   <Button className="gap-2" onClick={() => setIsStageDialogOpen(true)}>
                     <Plus className="h-4 w-4" />
-                    Add Phase
+                    Add Stage
                   </Button>
                 </div>
               </div>
 
               <p className="text-sm text-muted-foreground flex items-center gap-2">
                 <GripVertical className="h-4 w-4" />
-                Drag to reorder phases
+                Drag to reorder stages
               </p>
 
               <Card className="border shadow-sm bg-white">
@@ -1111,7 +1111,7 @@ const PackageDetail = ({ instanceId: propInstanceId }: PackageDetailProps = {}) 
                             Order
                           </TableHead>
                           <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-r">
-                            Phase Name
+                            Stage Name
                           </TableHead>
                           <TableHead className="bg-muted/30 font-semibold text-foreground h-14 whitespace-nowrap border-r">
                             Short Name
@@ -1133,7 +1133,7 @@ const PackageDetail = ({ instanceId: propInstanceId }: PackageDetailProps = {}) 
                           {stages.filter(stage => stageSearchQuery === "" || stage.stage_name.toLowerCase().includes(stageSearchQuery.toLowerCase()) || stage.short_name?.toLowerCase().includes(stageSearchQuery.toLowerCase()) || stage.stage_description?.toLowerCase().includes(stageSearchQuery.toLowerCase())).length === 0 ? (
                             <TableRow>
                               <TableCell colSpan={6} className="text-center py-12 text-muted-foreground">
-                                {stageSearchQuery ? "No phases match your search" : "No phases have been added to this package yet."}
+                                {stageSearchQuery ? "No stages match your search" : "No stages have been added to this package yet."}
                               </TableCell>
                             </TableRow>
                           ) : (

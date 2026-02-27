@@ -55,10 +55,10 @@ export function ClientPackageBadges({ packages, maxVisible = 3 }: ClientPackageB
                   Progress: {pkg.progress_percent}%
                 </p>
                 {pkg.current_stage && (
-                  <p className="text-xs">Phase: {pkg.current_stage}</p>
+                  <p className="text-xs">Stage: {pkg.current_stage}</p>
                 )}
                 {pkg.has_blocked && (
-                  <p className="text-xs text-red-500">Has blocked phases</p>
+                  <p className="text-xs text-red-500">Has blocked stages</p>
                 )}
               </div>
             </TooltipContent>

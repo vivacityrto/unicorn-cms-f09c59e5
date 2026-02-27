@@ -91,9 +91,9 @@ const administrationMenuItems = [
 // 6. SYSTEM CONFIG Section - Super Admin Only
 const systemConfigMenuItems = [
   { icon: Package2, label: "Manage Packages", path: "/admin/manage-packages" },
-  { icon: Blocks, label: "Manage Phases", path: "/admin/stages" },
-  { icon: Sparkles, label: "Phase Builder", path: "/admin/stage-builder" },
-  { icon: BarChart3, label: "Phase Analytics", path: "/admin/stage-analytics" },
+  { icon: Blocks, label: "Manage Stages", path: "/admin/stages" },
+  { icon: Sparkles, label: "Stage Builder", path: "/admin/stage-builder" },
+  { icon: BarChart3, label: "Stage Analytics", path: "/admin/stage-analytics" },
   { icon: Cog, label: "EOS Processes", path: "/admin/eos-processes" },
   { icon: Library, label: "Knowledge Library", path: "/admin/knowledge" },
   { icon: Bot, label: "AI Assistant", path: "/admin/assistant" },

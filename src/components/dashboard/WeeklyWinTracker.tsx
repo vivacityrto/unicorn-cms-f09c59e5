@@ -33,7 +33,7 @@ export function WeeklyWinTracker({ userUuid, className }: WeeklyWinTrackerProps)
 
   const metrics = [
     { icon: Target, label: 'Rocks Closed', value: wins?.rocks_closed ?? 0 },
-    { icon: Trophy, label: 'Phases Completed', value: wins?.phases_completed ?? 0 },
+    { icon: Trophy, label: 'Stages Completed', value: wins?.phases_completed ?? 0 },
     { icon: FileText, label: 'Docs Generated', value: wins?.documents_generated ?? 0 },
     { icon: Users, label: 'Clients Advanced', value: wins?.clients_moved_forward ?? 0 },
     { icon: Clock, label: 'Hours Logged', value: wins?.hours_logged ?? 0, suffix: 'h' },

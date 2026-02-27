@@ -52,7 +52,7 @@ function ProgressCard({ progress }: { progress: ClientProgress }) {
         {/* Phase progress bar */}
         <div>
           <div className="flex items-center justify-between mb-1.5">
-            <span className="text-xs font-medium text-foreground">Phase Progress</span>
+            <span className="text-xs font-medium text-foreground">Stage Progress</span>
             <span className="text-xs text-muted-foreground">
               {progress.phase_completion}% • {progress.steps_remaining} step{progress.steps_remaining !== 1 ? 's' : ''} remaining
             </span>

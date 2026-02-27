@@ -203,7 +203,7 @@ export function PackageStagesManager({ tenantId, packageId, packageName }: Packa
       setStages(transformed);
     } catch (error: any) {
       console.error('Error fetching stage instances:', error);
-      toast({ title: 'Error', description: 'Failed to load phases', variant: 'destructive' });
+      toast({ title: 'Error', description: 'Failed to load stages', variant: 'destructive' });
     } finally {
       setLoading(false);
     }
@@ -246,7 +246,7 @@ export function PackageStagesManager({ tenantId, packageId, packageName }: Packa
         details: { package_id: packageId, stage_id: oldStage?.stage_id }
       });
 
-      toast({ title: 'Phase Updated', description: `Status changed to ${STATUS_OPTIONS.find(s => s.value === newStatus)?.label}` });
+      toast({ title: 'Stage Updated', description: `Status changed to ${STATUS_OPTIONS.find(s => s.value === newStatus)?.label}` });
       fetchStages();
     } catch (error: any) {
       console.error('Error updating stage instance:', error);
@@ -269,8 +269,8 @@ export function PackageStagesManager({ tenantId, packageId, packageName }: Packa
   if (stages.length === 0) {
     return (
       <div className="text-center py-6 text-muted-foreground">
-        <p>No phases configured for this package instance.</p>
-        <p className="text-sm mt-1">Phase tracking will be available once phases are assigned.</p>
+        <p>No stages configured for this package instance.</p>
+        <p className="text-sm mt-1">Stage tracking will be available once stages are assigned.</p>
       </div>
     );
   }
