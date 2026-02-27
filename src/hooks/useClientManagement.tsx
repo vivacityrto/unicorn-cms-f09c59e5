@@ -308,6 +308,32 @@ export function useClientProfile(tenantId: number | null) {
         tgaOrgType = 'rto_cricos';
       }
 
+      // Derive org_type from active membership packages when TGA and stored value are both empty
+      const storedOrgType = tpResult.data?.org_type || null;
+      let derivedOrgType = tgaOrgType || storedOrgType;
+      if (!derivedOrgType) {
+        const { data: activePkgs } = await supabase
+          .from('package_instances')
+          .select('package_id')
+          .eq('tenant_id', tenantId)
+          .eq('is_active', true)
+          .eq('is_complete', false);
+        if (activePkgs && activePkgs.length > 0) {
+          const pkgIds = activePkgs.map(p => p.package_id);
+          const { data: pkgNames } = await supabase
+            .from('packages')
+            .select('name')
+            .in('id', pkgIds);
+          if (pkgNames) {
+            const hasRto = pkgNames.some(p => /M-.*R/i.test(p.name));
+            const hasCricos = pkgNames.some(p => /M-.*C/i.test(p.name));
+            if (hasRto && hasCricos) derivedOrgType = 'rto_cricos';
+            else if (hasRto) derivedOrgType = 'rto';
+            else if (hasCricos) derivedOrgType = 'cricos';
+          }
+        }
+      }
+
       // Map tenant columns to ClientProfile interface, overlaying TGA data where available
       const profileData: ClientProfile = {
         tenant_id: tenant.id,
@@ -315,7 +341,7 @@ export function useClientProfile(tenantId: number | null) {
         trading_name: tga?.trading_name || tenant.rto_name,
         abn: tga?.abn || tenant.abn,
         acn: tga?.acn || tenant.acn,
-        org_type: tgaOrgType || tpResult.data?.org_type || null,
+        org_type: derivedOrgType,
         website: tga?.web_address || tenant.website,
         state: tenant.state,
         rto_number: tenant.rto_id,
