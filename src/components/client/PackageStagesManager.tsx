@@ -8,6 +8,16 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { StageStaffTasks } from './StageStaffTasks';
 import { StageDetailSection } from './StageDetailSection';
 import { StageDocumentsSection } from './StageDocumentsSection';
@@ -71,6 +81,37 @@ export function PackageStagesManager({ tenantId, packageId, packageName }: Packa
   const [updating, setUpdating] = useState<number | null>(null);
   const [packageInstanceId, setPackageInstanceId] = useState<number | null>(null);
   const [expandedStages, setExpandedStages] = useState<Set<number>>(new Set());
+  const [recurringConfirm, setRecurringConfirm] = useState<StageInstance | null>(null);
+
+  const toggleRecurring = async (stage: StageInstance) => {
+    const newValue = !stage.is_recurring;
+    try {
+      // Update stage_instances
+      await supabase
+        .from('stage_instances')
+        .update({ is_recurring: newValue })
+        .eq('id', stage.id);
+
+      // Audit log
+      await supabase.from('client_audit_log').insert({
+        tenant_id: tenantId,
+        actor_user_id: profile?.user_uuid,
+        action: 'stage_recurring_toggled',
+        entity_type: 'stage_instances',
+        entity_id: stage.id.toString(),
+        before_data: { is_recurring: stage.is_recurring },
+        after_data: { is_recurring: newValue },
+        details: { stage_name: stage.stage_name, package_id: packageId }
+      });
+
+      toast({ title: 'Updated', description: `${stage.stage_name} set to ${newValue ? 'Recurring' : 'Once'}` });
+      fetchStages();
+    } catch (error: any) {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    } finally {
+      setRecurringConfirm(null);
+    }
+  };
 
   const toggleStageExpanded = (stageId: number) => {
     setExpandedStages(prev => {
@@ -285,11 +326,12 @@ export function PackageStagesManager({ tenantId, packageId, packageName }: Packa
                   <Badge 
                     variant="outline" 
                     className={cn(
-                      "text-xs gap-1",
+                      "text-xs gap-1 cursor-pointer hover:bg-accent transition-colors",
                       stage.is_recurring 
                         ? "text-primary border-primary/30" 
                         : "text-muted-foreground border-border"
                     )}
+                    onClick={(e) => { e.stopPropagation(); setRecurringConfirm(stage); }}
                   >
                     <RefreshCw className="h-3 w-3" />
                     {stage.is_recurring ? 'Recurring' : 'Once'}
@@ -368,6 +410,27 @@ export function PackageStagesManager({ tenantId, packageId, packageName }: Packa
         packageId={packageId}
         stageInstanceIds={stages.map(s => s.id)}
       />
+
+      <AlertDialog open={!!recurringConfirm} onOpenChange={(open) => !open && setRecurringConfirm(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Change Recurring Status</AlertDialogTitle>
+            <AlertDialogDescription>
+              Set <strong>{recurringConfirm?.stage_name}</strong> to{' '}
+              <strong>{recurringConfirm?.is_recurring ? 'Once' : 'Recurring'}</strong>?
+              {recurringConfirm?.is_recurring
+                ? ' This stage will no longer reset on package renewal.'
+                : ' This stage will reset to Not Started on package renewal.'}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={() => recurringConfirm && toggleRecurring(recurringConfirm)}>
+              Confirm
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
