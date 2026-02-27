@@ -207,6 +207,6 @@ export function checkFrameworkCompatibility(
   
   return {
     compatible: false,
-    message: `Phase frameworks: ${stageFrameworks.join(', ')}. Package framework: ${mappedFramework}.`
+    message: `Stage frameworks: ${stageFrameworks.join(', ')}. Package framework: ${mappedFramework}.`
   };
 }

@@ -1113,7 +1113,7 @@ export default function ManageDocuments() {
                   }))} value={formData.stage} onValueChange={value => setFormData({
                     ...formData,
                     stage: value
-                  })} placeholder="Select phase..." searchPlaceholder="Search phases..." emptyText="No phases found." className="w-full" showAvatar={false} autoWidth />
+                  })} placeholder="Select stage..." searchPlaceholder="Search stages..." emptyText="No stages found." className="w-full" showAvatar={false} autoWidth />
                   </div>
 
                   <div className="grid gap-2">

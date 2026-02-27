@@ -185,7 +185,7 @@ export function StageDetailPanel({ packageId, stageId, stage, allStages = [], on
     
     try {
       await updateStage(stage.id, updates);
-      toast({ title: 'Phase Updated' });
+      toast({ title: 'Stage Updated' });
     } catch (error: any) {
       toast({
         title: 'Error',
@@ -201,7 +201,7 @@ export function StageDetailPanel({ packageId, stageId, stage, allStages = [], on
     if (pendingUpdate) {
       try {
         await updateStage(stage!.id, pendingUpdate);
-        toast({ title: 'Phase Updated' });
+        toast({ title: 'Stage Updated' });
       } catch (error: any) {
         toast({
           title: 'Error',
@@ -229,7 +229,7 @@ export function StageDetailPanel({ packageId, stageId, stage, allStages = [], on
         dashboard_visible: stage.dashboard_visible
       });
         toast({
-          title: 'Phase Duplicated',
+          title: 'Stage Duplicated',
           description: `Created "${newStage.title}" in the library.`
         });
     } catch (error: any) {
@@ -384,7 +384,7 @@ export function StageDetailPanel({ packageId, stageId, stage, allStages = [], on
       {/* Header */}
       <div className="flex items-start justify-between">
         <div>
-          <h2 className="text-xl font-semibold">{stage?.title || 'Phase Details'}</h2>
+          <h2 className="text-xl font-semibold">{stage?.title || 'Stage Details'}</h2>
           <div className="flex items-center gap-2 mt-1">
             {stage?.stage_type && (
               <Badge variant="outline" className={getStageTypeColor(stage.stage_type)}>
@@ -481,10 +481,10 @@ export function StageDetailPanel({ packageId, stageId, stage, allStages = [], on
       {isUsedByActiveClients && (
         <Alert className="border-destructive/30 bg-destructive/5">
           <ShieldAlert className="h-4 w-4 text-destructive" />
-          <AlertTitle className="text-destructive">This phase is in use by active clients</AlertTitle>
+          <AlertTitle className="text-destructive">This stage is in use by active clients</AlertTitle>
           <AlertDescription className="flex items-center justify-between">
             <span className="text-destructive/80">
-              {activeUsage.clients.length} active client{activeUsage.clients.length !== 1 ? 's' : ''} are using this phase. 
+              {activeUsage.clients.length} active client{activeUsage.clients.length !== 1 ? 's' : ''} are using this stage. 
               Editing may affect their ongoing work.
             </span>
             <Button 
@@ -495,7 +495,7 @@ export function StageDetailPanel({ packageId, stageId, stage, allStages = [], on
               className="border-destructive/30 text-destructive hover:bg-destructive/10"
             >
               <Copy className="h-3 w-3 mr-1" />
-              {isDuplicatingStage ? 'Duplicating...' : 'Duplicate & Edit Copy Phase'}
+              {isDuplicatingStage ? 'Duplicating...' : 'Duplicate & Edit Copy Stage'}
             </Button>
           </AlertDescription>
         </Alert>
@@ -507,7 +507,7 @@ export function StageDetailPanel({ packageId, stageId, stage, allStages = [], on
           <AlertTriangle className="h-4 w-4 text-amber-600" />
           <AlertDescription className="flex items-center justify-between">
             <span className="text-amber-800">
-              This phase is shared across {usageCount} packages. Template changes will affect all of them.
+              This stage is shared across {usageCount} packages. Template changes will affect all of them.
             </span>
             <Button 
               size="sm" 
@@ -516,7 +516,7 @@ export function StageDetailPanel({ packageId, stageId, stage, allStages = [], on
               disabled={isDuplicatingStage}
             >
               <Copy className="h-3 w-3 mr-1" />
-              {isDuplicatingStage ? 'Duplicating...' : 'Duplicate Phase'}
+              {isDuplicatingStage ? 'Duplicating...' : 'Duplicate Stage'}
             </Button>
           </AlertDescription>
         </Alert>
@@ -581,7 +581,7 @@ export function StageDetailPanel({ packageId, stageId, stage, allStages = [], on
             <CardContent className="pt-6 space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label>Phase Name</Label>
+                  <Label>Stage Name</Label>
                   <Input
                     value={stage?.title || ''}
                     onChange={(e) => handleUpdateStage({ title: e.target.value })}
@@ -589,7 +589,7 @@ export function StageDetailPanel({ packageId, stageId, stage, allStages = [], on
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label>Phase Type</Label>
+                  <Label>Stage Type</Label>
                   <Select 
                     value={stage?.stage_type || 'delivery'} 
                     onValueChange={(value) => handleUpdateStage({ stage_type: value })}

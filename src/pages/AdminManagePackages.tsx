@@ -891,7 +891,7 @@ export default function AdminManagePackages() {
                 <div className="divide-y divide-border/50">
                   {stages.length === 0 ? (
                     <div className="px-4 py-6 text-sm text-muted-foreground text-center">
-                      No phases have been added to this package yet.
+                      No stages have been added to this package yet.
                     </div>
                   ) : (
                     stages.map((stage, index) => (
@@ -1490,7 +1490,7 @@ export default function AdminManagePackages() {
                   onValueChange={value => setDocumentFormData({ ...documentFormData, stage: value })}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="Select phase..." />
+                    <SelectValue placeholder="Select stage..." />
                   </SelectTrigger>
                   <SelectContent>
                     {documentStages.map(stage => (

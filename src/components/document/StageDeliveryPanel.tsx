@@ -260,7 +260,7 @@ export function StageDeliveryPanel({
           <div>
             <CardTitle className="flex items-center gap-2">
               <Package className="h-5 w-5" />
-              Phase Delivery
+              Stage Delivery
             </CardTitle>
             <CardDescription>
               Generate and release documents for {tenantName}
@@ -332,7 +332,7 @@ export function StageDeliveryPanel({
             </div>
           ) : releases.length === 0 ? (
             <p className="text-sm text-muted-foreground py-4">
-              No releases yet for this phase
+              No releases yet for this stage
             </p>
           ) : (
             <ScrollArea className="h-[200px]">

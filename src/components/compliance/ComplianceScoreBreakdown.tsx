@@ -34,16 +34,16 @@ const CAP_ICONS: Record<string, typeof AlertTriangle> = {
 const CAP_LABELS: Record<string, (cap: any) => string> = {
   critical_risk: (c) => `${c.count} active critical risk${c.count > 1 ? 's' : ''} — capped at ${c.cap}`,
   missing_docs: (c) => `${c.missing_pct}% required docs missing — capped at ${c.cap}`,
-  phase_lock: (c) => `Phase completion at ${c.pct}% — capped at ${c.cap}`,
+  phase_lock: (c) => `Stage completion at ${c.pct}% — capped at ${c.cap}`,
   staleness: (c) => `No activity for ${c.days} days — capped at ${c.cap}`,
   consult_not_tracked: () => 'Consult hours not tracked for this package',
-  phase_not_configured: () => 'Phase checklist not configured',
+  phase_not_configured: () => 'Stage checklist not configured',
 };
 
 export function ComplianceScoreBreakdown({ score, className }: ComplianceScoreBreakdownProps) {
   const subScores = [
     {
-      label: 'Phase Completion',
+      label: 'Stage Completion',
       value: score.phase_completion,
       detail: `${score.inputs.completed_stages}/${score.inputs.total_stages} stages complete`,
     },

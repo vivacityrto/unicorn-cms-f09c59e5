@@ -296,8 +296,8 @@ export function PackageBuilderEditor() {
     try {
       await addStageToPackage(stageId);
                       toast({
-                        title: 'Phase Added',
-                        description: 'Phase has been added to the package.'
+                        title: 'Stage Added',
+                        description: 'Stage has been added to the package.'
                       });
     } catch (error: any) {
       toast({
@@ -317,8 +317,8 @@ export function PackageBuilderEditor() {
         setSelectedStageId(null);
       }
                       toast({
-                        title: 'Phase Removed',
-                        description: 'Phase has been removed from the package.'
+                        title: 'Stage Removed',
+                        description: 'Stage has been removed from the package.'
                       });
     } catch (error: any) {
       toast({
@@ -565,13 +565,13 @@ export function PackageBuilderEditor() {
                 {packageStages.length === 0 ? (
                   <div className="flex flex-col items-center justify-center py-12 text-center px-4">
                     <Layers className="h-10 w-10 text-muted-foreground mb-3" />
-                    <h3 className="font-medium mb-1 text-sm">No phases yet</h3>
+                    <h3 className="font-medium mb-1 text-sm">No stages yet</h3>
                     <p className="text-xs text-muted-foreground mb-4">
-                      Add phases to define your package workflow.
+                      Add stages to define your package workflow.
                     </p>
                     <Button size="sm" variant="outline" onClick={() => setIsStageLibraryOpen(true)}>
                       <Plus className="h-3 w-3 mr-1" />
-                      Add First Phase
+                      Add First Stage
                     </Button>
                   </div>
                 ) : (
