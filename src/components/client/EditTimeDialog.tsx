@@ -361,16 +361,16 @@ export function EditTimeDialog({ open, onOpenChange, entry, onSuccess }: EditTim
             </div>
             <div className="space-y-2">
               <Label>Duration</Label>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5">
                 <Input
                   type="number"
                   min="0"
                   max="24"
                   value={hours}
                   onChange={(e) => setHours(e.target.value)}
-                  className="text-center"
+                  className="text-center w-16"
                 />
-                <span className="text-sm text-muted-foreground">hours</span>
+                <span className="text-sm text-muted-foreground shrink-0">hrs</span>
                 <Input
                   type="number"
                   min="0"
@@ -381,9 +381,9 @@ export function EditTimeDialog({ open, onOpenChange, entry, onSuccess }: EditTim
                     const val = parseInt(e.target.value);
                     setMinutes(String(Math.max(0, Math.min(59, isNaN(val) ? 0 : val))));
                   }}
-                  className="text-center"
+                  className="text-center w-16"
                 />
-                <span className="text-sm text-muted-foreground">min</span>
+                <span className="text-sm text-muted-foreground shrink-0">min</span>
               </div>
             </div>
           </div>
