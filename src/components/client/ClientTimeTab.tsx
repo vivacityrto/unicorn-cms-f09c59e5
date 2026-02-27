@@ -824,7 +824,7 @@ export function ClientTimeTab({ tenantId, tenantName }: ClientTimeTabProps) {
         .eq('tenant_id', tenantId);
       const map: Record<number, { name: string; start_date: string; end_date: string | null }> = {};
       (data || []).forEach((p: any) => {
-        map[p.id] = {
+        map[Number(p.id)] = {
           name: p.packages?.name || `Package #${p.package_id}`,
           start_date: p.start_date,
           end_date: p.end_date,
@@ -835,7 +835,7 @@ export function ClientTimeTab({ tenantId, tenantName }: ClientTimeTabProps) {
       const unmatchedPkgIds = [...new Set(
         entries
           .map(e => e.package_id)
-          .filter((pid): pid is number => pid != null && !map[pid])
+          .filter((pid): pid is number => pid != null && !map[Number(pid)])
       )];
       if (unmatchedPkgIds.length > 0) {
         const { data: basePkgs } = await (supabase as any)
@@ -843,8 +843,9 @@ export function ClientTimeTab({ tenantId, tenantName }: ClientTimeTabProps) {
           .select('id, name')
           .in('id', unmatchedPkgIds);
         (basePkgs || []).forEach((p: any) => {
-          if (!map[p.id]) {
-            map[p.id] = { name: p.name || `Package #${p.id}`, start_date: '', end_date: null };
+          const key = Number(p.id);
+          if (!map[key]) {
+            map[key] = { name: p.name || `Package #${p.id}`, start_date: '', end_date: null };
           }
         });
       }
@@ -1123,20 +1124,25 @@ export function ClientTimeTab({ tenantId, tenantName }: ClientTimeTabProps) {
                         {userMap[entry.user_id] || '—'}
                       </TableCell>
                       <TableCell className="text-sm">
-                        {entry.package_id && packageInstanceMap[entry.package_id] ? (
-                          <div>
-                            <p className="font-medium truncate max-w-[180px]">{packageInstanceMap[entry.package_id].name}</p>
-                            <p className="text-xs text-muted-foreground">
-                              {format(new Date(packageInstanceMap[entry.package_id].start_date), 'd MMM yyyy')}
-                              {' – '}
-                              {packageInstanceMap[entry.package_id].end_date
-                                ? format(new Date(packageInstanceMap[entry.package_id].end_date), 'd MMM yyyy')
-                                : 'Ongoing'}
-                            </p>
-                          </div>
-                        ) : (
-                          <span className="text-muted-foreground">—</span>
-                        )}
+                        {(() => {
+                          const pkgInfo = entry.package_id != null ? packageInstanceMap[Number(entry.package_id)] : null;
+                          return pkgInfo ? (
+                            <div>
+                              <p className="font-medium truncate max-w-[180px]">{pkgInfo.name}</p>
+                              {pkgInfo.start_date && (
+                                <p className="text-xs text-muted-foreground">
+                                  {format(new Date(pkgInfo.start_date), 'd MMM yyyy')}
+                                  {' – '}
+                                  {pkgInfo.end_date
+                                    ? format(new Date(pkgInfo.end_date), 'd MMM yyyy')
+                                    : 'Ongoing'}
+                                </p>
+                              )}
+                            </div>
+                          ) : (
+                            <span className="text-muted-foreground">—</span>
+                          );
+                        })()}
                       </TableCell>
                       <TableCell className="font-medium">
                         {formatDuration(entry.duration_minutes)}
