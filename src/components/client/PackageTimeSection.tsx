@@ -57,7 +57,7 @@ export function PackageTimeSection({
 
   // Filter entries by package
   const packageEntries = useMemo(() => {
-    let filtered = entries.filter(e => e.package_id === packageId);
+    let filtered = entries.filter(e => Number(e.package_id) === packageInstanceId);
     
     if (workTypeFilter !== 'all') {
       filtered = filtered.filter(e => e.work_type === workTypeFilter);
@@ -70,11 +70,11 @@ export function PackageTimeSection({
     }
     
     return filtered;
-  }, [entries, packageId, workTypeFilter, billableFilter]);
+  }, [entries, packageInstanceId, workTypeFilter, billableFilter]);
 
   // Calculate package-specific summary
   const packageSummary = useMemo(() => {
-    const allPackageEntries = entries.filter(e => e.package_id === packageId);
+    const allPackageEntries = entries.filter(e => Number(e.package_id) === packageInstanceId);
     
     const now = new Date();
     const startOfWeek = new Date(now);
@@ -100,9 +100,9 @@ export function PackageTimeSection({
     });
     
     return { thisWeek, thisMonth, last90, billable };
-  }, [entries, packageId]);
+  }, [entries, packageInstanceId]);
 
-  const isTimerForThisPackage = activeTimer?.package_id === packageId;
+  const isTimerForThisPackage = Number(activeTimer?.package_id) === packageInstanceId;
 
   const handleStartTimer = async () => {
     await startTimer(tenantId, packageId, null, null, 'general');
