@@ -667,7 +667,7 @@ export default function TenantNotes() {
 
         {/* Add/Edit Note Dialog */}
         <Dialog open={isAddDialogOpen} onOpenChange={(open) => { if (!open) resetForm(); setIsAddDialogOpen(open); }}>
-          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogContent className="w-[90vw] max-w-[1400px] max-h-[90vh] overflow-y-auto">
             <DialogHeader><DialogTitle>{selectedNote ? 'Edit Note' : 'Add Note'}</DialogTitle></DialogHeader>
             <div className="space-y-4 py-4">
               <div className="space-y-2">
@@ -676,7 +676,7 @@ export default function TenantNotes() {
               </div>
               <div className="space-y-2">
                 <Label>Note Details *</Label>
-                <Textarea id="note-content-field" value={noteText} onChange={(e) => setNoteText(e.target.value)} placeholder="Enter note details..." rows={4} autoFocus={!!noteTitle} />
+                <Textarea id="note-content-field" value={noteText} onChange={(e) => setNoteText(e.target.value)} placeholder="Enter note details..." rows={20} autoFocus={!!noteTitle} />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
