@@ -67,8 +67,10 @@ import {
   Loader2,
   AlertTriangle,
   XCircle,
-  Play
+  Play,
+  RefreshCw
 } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
 import { AddStageDialog } from '@/components/AddStageDialog';
 import { StagePreviewDialog } from '@/components/package-builder/StagePreviewDialog';
 import { StageSimulationDialog } from '@/components/stage/StageSimulationDialog';
@@ -133,6 +135,7 @@ interface StageWithUsage {
   updated_at: string | null;
   usage_count: number;
   active_client_count: number;
+  is_recurring: boolean;
 }
 
 export default function AdminManageStages() {
@@ -234,6 +237,7 @@ export default function AdminManageStages() {
         updated_at: stage.updated_at,
         usage_count: usageCountMap[stage.id] || 0,
         active_client_count: activeClientCountMap[stage.id] || 0,
+        is_recurring: stage.is_recurring || false,
       }));
 
       setStages(stagesWithUsage);
@@ -437,6 +441,57 @@ export default function AdminManageStages() {
     }
   };
 
+  const handleToggleRecurring = async (stage: StageWithUsage, checked: boolean) => {
+    try {
+      // Update the registry (documents_stages)
+      const { error: stageError } = await supabase
+        .from('documents_stages')
+        .update({ is_recurring: checked } as any)
+        .eq('id', stage.id);
+
+      if (stageError) throw stageError;
+
+      // Cascade to package_stages
+      const { error: psError } = await (supabase as any)
+        .from('package_stages')
+        .update({ is_recurring: checked })
+        .eq('stage_id', stage.id);
+
+      if (psError) throw psError;
+
+      // Cascade to stage_instances
+      const { error: siError } = await (supabase as any)
+        .from('stage_instances')
+        .update({ is_recurring: checked })
+        .eq('stage_id', stage.id);
+
+      if (siError) throw siError;
+
+      // Update local state optimistically
+      setStages(prev => prev.map(s => s.id === stage.id ? { ...s, is_recurring: checked } : s));
+
+      // Audit log
+      await supabase.from('audit_events').insert({
+        entity: 'stage',
+        entity_id: stage.id.toString(),
+        action: 'stage.recurring_updated',
+        details: { stage_title: stage.title, is_recurring: checked },
+      });
+
+      toast({
+        title: 'Recurring updated',
+        description: `${stage.title} is now ${checked ? 'recurring' : 'non-recurring'}. Updated across all package stages and instances.`,
+      });
+    } catch (error: any) {
+      toast({
+        title: 'Error updating recurring flag',
+        description: error.message,
+        variant: 'destructive',
+      });
+      fetchStages(); // Revert on error
+    }
+  };
+
   const getStageTypeColor = (stageType: string) => {
     switch (stageType) {
       case 'onboarding':
@@ -630,6 +685,17 @@ export default function AdminManageStages() {
                   </Tooltip>
                 </TooltipProvider>
               </TableHead>
+              <TableHead className="font-semibold text-center">
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger className="flex items-center gap-1 mx-auto">
+                      <RefreshCw className="h-4 w-4" />
+                      Recurring
+                    </TooltipTrigger>
+                    <TooltipContent>Resets on package renewal</TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </TableHead>
               <TableHead className="font-semibold">Updated</TableHead>
               <TableHead className="font-semibold text-center">
                 <TooltipProvider>
@@ -782,6 +848,12 @@ export default function AdminManageStages() {
                     ) : (
                       <span className="text-muted-foreground">-</span>
                     )}
+                  </TableCell>
+                  <TableCell className="text-center">
+                    <Switch
+                      checked={stage.is_recurring}
+                      onCheckedChange={(checked) => handleToggleRecurring(stage, checked)}
+                    />
                   </TableCell>
                   <TableCell className="text-muted-foreground text-sm">
                     {stage.updated_at
