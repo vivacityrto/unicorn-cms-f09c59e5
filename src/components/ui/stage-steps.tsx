@@ -2,9 +2,9 @@ import { cn } from '@/lib/utils';
 import { Check, Lock, AlertTriangle, Circle } from 'lucide-react';
 
 /**
- * Phase Step Indicator – Unicorn 2.0 Design System
+ * Stage Step Indicator – Unicorn 2.0 Design System
  *
- * Shows progress through compliance phases or wizard steps.
+ * Shows progress through compliance stages or wizard steps.
  *
  * States:
  * - completed: Purple with check
@@ -24,7 +24,7 @@ interface StepItem {
   riskLevel?: 'warning' | 'critical';
 }
 
-interface PhaseStepsProps {
+interface StageStepsProps {
   steps: StepItem[];
   /** Vertical or horizontal layout */
   orientation?: 'horizontal' | 'vertical';
@@ -64,7 +64,7 @@ const STATUS_STYLES: Record<StepStatus, { ring: string; bg: string; icon: typeof
   },
 };
 
-export function PhaseSteps({ steps, orientation = 'horizontal', className }: PhaseStepsProps) {
+export function StageSteps({ steps, orientation = 'horizontal', className }: StageStepsProps) {
   const isVertical = orientation === 'vertical';
 
   return (
@@ -77,7 +77,6 @@ export function PhaseSteps({ steps, orientation = 'horizontal', className }: Pha
     >
       {steps.map((step, idx) => {
         const style = STATUS_STYLES[step.status];
-        // Risk steps use macaron for warning, fuchsia for critical
         const riskRing =
           step.status === 'risk' && step.riskLevel === 'warning'
             ? 'border-brand-macaron bg-brand-macaron-50'
@@ -90,7 +89,6 @@ export function PhaseSteps({ steps, orientation = 'horizontal', className }: Pha
 
         return (
           <div key={step.id} className={cn('flex items-center gap-2', isVertical ? '' : '')}>
-            {/* Connector line */}
             {idx > 0 && (
               <div
                 className={cn(
@@ -104,7 +102,6 @@ export function PhaseSteps({ steps, orientation = 'horizontal', className }: Pha
               />
             )}
 
-            {/* Step circle */}
             <div className="flex items-center gap-2">
               <div
                 className={cn(

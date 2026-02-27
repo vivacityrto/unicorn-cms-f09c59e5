@@ -113,7 +113,7 @@ export function AskVivExplainPanel({ explain, className }: AskVivExplainPanelPro
       chips.push({ label: "Package", value: explain.context.scope.package_id });
     }
     if (explain.context.scope.phase_id) {
-      chips.push({ label: "Phase", value: explain.context.scope.phase_id });
+      chips.push({ label: "Stage", value: explain.context.scope.phase_id });
     }
     return chips;
   };

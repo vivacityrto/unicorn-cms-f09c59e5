@@ -216,7 +216,7 @@ export function StageDocumentsPanel({
 
       if (error) {
         if (error.code === '23505') {
-          throw new Error('Some documents are already linked to this phase');
+          throw new Error('Some documents are already linked to this stage');
         }
         throw error;
       }
@@ -231,7 +231,7 @@ export function StageDocumentsPanel({
 
       toast({
         title: 'Documents Linked',
-        description: `${docIds.length} document${docIds.length !== 1 ? 's' : ''} linked to phase`
+        description: `${docIds.length} document${docIds.length !== 1 ? 's' : ''} linked to stage`
       });
 
       onRefresh();
@@ -260,7 +260,7 @@ export function StageDocumentsPanel({
         details: { stage_document_id: docId }
       });
       
-      toast({ title: 'Document unlinked from phase' });
+      toast({ title: 'Document unlinked from stage' });
     } catch (error: any) {
       toast({
         title: 'Error',
@@ -421,7 +421,7 @@ export function StageDocumentsPanel({
           ) : documents.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 text-center border-2 border-dashed rounded-lg">
               <FileText className="h-10 w-10 text-muted-foreground mb-3" />
-              <p className="text-muted-foreground mb-4">No documents linked to this phase</p>
+              <p className="text-muted-foreground mb-4">No documents linked to this stage</p>
               <div className="flex gap-2">
                 <Button variant="outline" size="sm" onClick={() => safeAction(openLinkDialog)}>
                   <Link2 className="h-3 w-3 mr-1" />

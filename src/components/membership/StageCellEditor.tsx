@@ -60,8 +60,8 @@ export function StageCellEditor({
     // Validate
     if (selectedState === 'skipped' && isRequired) {
       toast({
-        title: 'Cannot skip required phase',
-        description: 'This phase is required and cannot be skipped.',
+        title: 'Cannot skip required stage',
+        description: 'This stage is required and cannot be skipped.',
         variant: 'destructive',
       });
       return;
@@ -135,7 +135,7 @@ export function StageCellEditor({
       }
 
       toast({
-        title: 'Phase updated',
+        title: 'Stage updated',
         description: `${stageName} marked as ${STATE_OPTIONS.find(o => o.value === selectedState)?.label}.`,
       });
 
@@ -144,7 +144,7 @@ export function StageCellEditor({
       onUpdate?.();
     } catch (error: any) {
       toast({
-        title: 'Error updating phase',
+        title: 'Error updating stage',
         description: error.message,
         variant: 'destructive',
       });

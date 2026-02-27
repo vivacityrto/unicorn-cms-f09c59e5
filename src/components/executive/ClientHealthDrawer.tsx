@@ -54,7 +54,7 @@ function getActions(row: ExecutiveHealthRow): ActionSuggestion[] {
     actions.push({ icon: Clock, label: 'Review consult allocation', description: `${row.hours_remaining}h remaining of ${row.hours_included}h.`, href: `/manage-tenants/${row.tenant_id}` });
   }
   if (flags.phase_drift) {
-    actions.push({ icon: ListChecks, label: 'Complete next phase actions', description: `${row.total_actions_remaining} actions remaining${row.current_phase ? ` in ${row.current_phase}` : ''}.`, href: `/manage-tenants/${row.tenant_id}` });
+    actions.push({ icon: ListChecks, label: 'Complete next stage actions', description: `${row.total_actions_remaining} actions remaining${row.current_phase ? ` in ${row.current_phase}` : ''}.`, href: `/manage-tenants/${row.tenant_id}` });
   }
   return actions;
 }
@@ -138,7 +138,7 @@ export function ClientHealthDrawer({ row, open, onOpenChange, anomalies = [] }: 
                 </Badge>
               </div>
               <div className="space-y-2">
-                <ScoreBar label="Phase Completion" value={row.phase_completion} />
+                <ScoreBar label="Stage Completion" value={row.phase_completion} />
                 <ScoreBar label="Documentation Coverage" value={row.documentation_coverage} />
                 <ScoreBar label="Risk Health" value={row.risk_health} />
                 <ScoreBar label="Consult Health" value={row.consult_health} />
@@ -205,7 +205,7 @@ export function ClientHealthDrawer({ row, open, onOpenChange, anomalies = [] }: 
                 <SignalRow label="Risk Escalation" active={row.predictive_flags.risk_escalation} />
                 <SignalRow label="Backlog Growth" active={row.predictive_flags.backlog_growth} />
                 <SignalRow label="Burn Rate Risk" active={row.predictive_flags.burn_rate_risk} />
-                <SignalRow label="Phase Drift" active={row.predictive_flags.phase_drift} />
+                <SignalRow label="Stage Drift" active={row.predictive_flags.phase_drift} />
               </div>
               <p className="text-xs text-muted-foreground mt-2">
                 Operational Risk Score: {row.operational_risk_score}/100

@@ -101,7 +101,7 @@ export function getInterventionSuggestion(snapshot: PredictiveRiskSnapshot): {
     return {
       label: 'Complete next checklist item',
       href: `/manage-tenants/${snapshot.tenant_id}`,
-      signal: `Phase stagnant for ${snapshot.inputs.days_in_current_phase ?? 0} days with ${snapshot.inputs.actions_remaining ?? 0} actions remaining.`,
+      signal: `Stage stagnant for ${snapshot.inputs.days_in_current_phase ?? 0} days with ${snapshot.inputs.actions_remaining ?? 0} actions remaining.`,
     };
   }
   return null;

@@ -57,7 +57,7 @@ export function StageStaffTasks({ stageInstanceId, tenantId, packageId }: StageS
   if (tasks.length === 0) {
     return (
       <div className="p-4 border-t bg-muted/30 text-center text-muted-foreground text-sm">
-        No staff tasks configured for this phase.
+        No staff tasks configured for this stage.
       </div>
     );
   }

@@ -61,7 +61,7 @@ export function StageDocumentsSection({ stageInstanceId, tenantId, packageId, de
   if (totalCount === 0) {
     return (
       <div className="px-4 py-3 border-t bg-muted/20 text-center text-muted-foreground text-sm">
-        No documents linked to this phase.
+        No documents linked to this stage.
       </div>
     );
   }
@@ -96,7 +96,7 @@ export function StageDocumentsSection({ stageInstanceId, tenantId, packageId, de
                 <AlertDialogHeader>
                   <AlertDialogTitle>Generate All Documents</AlertDialogTitle>
                   <AlertDialogDescription>
-                    Generate all eligible auto-generated documents for this phase?
+                    Generate all eligible auto-generated documents for this stage?
                     Up to {totalCount} documents will be processed. Already-generated documents will be skipped.
                   </AlertDialogDescription>
                 </AlertDialogHeader>

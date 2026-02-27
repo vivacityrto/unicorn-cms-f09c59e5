@@ -25,7 +25,7 @@ interface CompletenessResult {
   confidence: number | null;
 }
 
-interface PhaseCompletenessWidgetProps {
+interface StageCompletenessWidgetProps {
   packageId: number;
   phaseId: number;
   phaseKey: string;
@@ -54,13 +54,13 @@ const STATUS_CONFIG = {
   },
 };
 
-export function PhaseCompletenessWidget({
+export function StageCompletenessWidget({
   packageId,
   phaseId,
   phaseKey,
   tenantId,
   framework,
-}: PhaseCompletenessWidgetProps) {
+}: StageCompletenessWidgetProps) {
   const [result, setResult] = useState<CompletenessResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -109,7 +109,7 @@ export function PhaseCompletenessWidget({
     <div className="rounded-lg border border-border bg-card p-4 space-y-4">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <h3 className="text-sm font-semibold text-foreground">Phase Completeness</h3>
+        <h3 className="text-sm font-semibold text-foreground">Stage Completeness</h3>
         <Button
           size="sm"
           variant="outline"
@@ -133,7 +133,7 @@ export function PhaseCompletenessWidget({
       {/* No result yet */}
       {!result && !loading && !error && (
         <p className="text-xs text-muted-foreground">
-          Click "Run Check" to evaluate phase completeness against configured requirements.
+          Click "Run Check" to evaluate stage completeness against configured requirements.
         </p>
       )}
 
@@ -148,7 +148,6 @@ export function PhaseCompletenessWidget({
       {/* Result */}
       {result && !loading && (
         <div className="space-y-3">
-          {/* Status badge + percentage */}
           <div className="flex items-center gap-3">
             <Badge variant="outline" className={`gap-1 ${config?.badgeClass}`}>
               {StatusIcon && <StatusIcon className="h-3 w-3" />}
@@ -159,20 +158,17 @@ export function PhaseCompletenessWidget({
             </span>
           </div>
 
-          {/* Progress bar */}
           <Progress
             value={result.completeness_percent}
             indicatorClassName={config?.progressClass}
           />
 
-          {/* Explanation */}
           {result.explanation_text && (
             <p className="text-xs text-muted-foreground leading-relaxed">
               {result.explanation_text}
             </p>
           )}
 
-          {/* Missing items */}
           {hasMissingItems && (
             <div className="space-y-2 pt-1">
               {result.missing_docs.length > 0 && (
@@ -212,7 +208,6 @@ export function PhaseCompletenessWidget({
             </div>
           )}
 
-          {/* Confidence indicator */}
           {result.confidence !== null && result.confidence > 0 && (
             <div className="text-[10px] text-muted-foreground pt-1">
               AI confidence: {Math.round(result.confidence * 100)}%

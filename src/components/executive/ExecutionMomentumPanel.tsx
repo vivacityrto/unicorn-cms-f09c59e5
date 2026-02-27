@@ -72,7 +72,7 @@ export function ExecutionMomentumPanel({ data, systemHealth, isLoading, weeklyMo
   );
 
   const metrics: MetricRow[] = [
-    { label: 'Phases Completed', current: agg.phases_completed_7d, previous: agg.phases_completed_prev_7d },
+    { label: 'Stages Completed', current: agg.phases_completed_7d, previous: agg.phases_completed_prev_7d },
     { label: 'Documents Generated', current: agg.documents_generated_7d, previous: agg.documents_generated_prev_7d },
     { label: 'Document Events', current: agg.document_events_7d, previous: agg.document_events_prev_7d },
     { label: 'Risks Resolved', current: agg.risks_resolved_7d, previous: agg.risks_resolved_prev_7d },

@@ -24,7 +24,7 @@ export function StageEmailsSection({ stageInstanceId }: StageEmailsSectionProps)
   if (totalCount === 0) {
     return (
       <div className="px-4 py-3 border-t bg-muted/20 text-center text-muted-foreground text-sm">
-        No emails linked to this phase.
+        No emails linked to this stage.
       </div>
     );
   }
