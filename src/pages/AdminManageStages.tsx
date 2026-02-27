@@ -451,44 +451,21 @@ export default function AdminManageStages() {
 
   const handleToggleRecurring = async (stage: StageWithUsage, checked: boolean) => {
     try {
-      // Update the registry (documents_stages)
-      const { error: stageError } = await supabase
-        .from('documents_stages')
-        .update({ is_recurring: checked } as any)
-        .eq('id', stage.id);
-
-      if (stageError) throw stageError;
-
-      // Cascade to package_stages
-      const { error: psError } = await (supabase as any)
-        .from('package_stages')
-        .update({ is_recurring: checked })
-        .eq('stage_id', stage.id);
-
-      if (psError) throw psError;
-
-      // Cascade to stage_instances
-      const { error: siError } = await (supabase as any)
-        .from('stage_instances')
-        .update({ is_recurring: checked })
-        .eq('stage_id', stage.id);
-
-      if (siError) throw siError;
-
-      // Update local state optimistically
-      setStages(prev => prev.map(s => s.id === stage.id ? { ...s, is_recurring: checked } : s));
-
-      // Audit log
-      await supabase.from('audit_events').insert({
-        entity: 'stage',
-        entity_id: stage.id.toString(),
-        action: 'stage.recurring_updated',
-        details: { stage_title: stage.title, is_recurring: checked },
+      const { data, error } = await supabase.rpc('cascade_stage_recurring', {
+        p_stage_id: stage.id,
+        p_is_recurring: checked,
       });
+
+      if (error) throw error;
+
+      const result = data as any;
+
+      // Update local state
+      setStages(prev => prev.map(s => s.id === stage.id ? { ...s, is_recurring: checked } : s));
 
       toast({
         title: 'Recurring updated',
-        description: `${stage.title} is now ${checked ? 'recurring' : 'non-recurring'}. Updated across all package stages and instances.`,
+        description: `${stage.title} is now ${checked ? 'recurring' : 'non-recurring'}. Updated ${result?.package_stages_updated ?? 0} package stages and ${result?.stage_instances_updated ?? 0} instances.`,
       });
     } catch (error: any) {
       toast({
@@ -496,7 +473,7 @@ export default function AdminManageStages() {
         description: error.message,
         variant: 'destructive',
       });
-      fetchStages(); // Revert on error
+      fetchStages();
     }
   };
 

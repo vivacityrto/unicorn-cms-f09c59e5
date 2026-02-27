@@ -46056,6 +46056,10 @@ export type Database = {
         }
         Returns: string[]
       }
+      cascade_stage_recurring: {
+        Args: { p_is_recurring: boolean; p_stage_id: number }
+        Returns: Json
+      }
       change_meeting_facilitator: {
         Args: { p_meeting_id: string; p_new_facilitator_id: string }
         Returns: boolean
