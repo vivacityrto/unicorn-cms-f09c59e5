@@ -348,52 +348,44 @@ export function EditTimeDialog({ open, onOpenChange, entry, onSuccess }: EditTim
             )}
           </div>
 
-          {/* Duration */}
-          <div className="space-y-2">
-            <Label>Duration</Label>
-            <div className="flex gap-2">
-              <div className="flex-1">
-                <div className="flex items-center gap-2">
-                  <Input
-                    type="number"
-                    min="0"
-                    max="24"
-                    value={hours}
-                    onChange={(e) => setHours(e.target.value)}
-                    className="text-center"
-                  />
-                  <span className="text-sm text-muted-foreground">hours</span>
-                </div>
-              </div>
-              <div className="flex-1">
-                <div className="flex items-center gap-2">
-                  <Input
-                    type="number"
-                    min="0"
-                    max="59"
-                    step="1"
-                    value={minutes}
-                    onChange={(e) => {
-                      const val = parseInt(e.target.value);
-                      setMinutes(String(Math.max(0, Math.min(59, isNaN(val) ? 0 : val))));
-                    }}
-                    className="text-center"
-                  />
-                  <span className="text-sm text-muted-foreground">min</span>
-                </div>
+          {/* Duration + Date side by side */}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>Duration</Label>
+              <div className="flex items-center gap-2">
+                <Input
+                  type="number"
+                  min="0"
+                  max="24"
+                  value={hours}
+                  onChange={(e) => setHours(e.target.value)}
+                  className="text-center"
+                />
+                <span className="text-sm text-muted-foreground">hours</span>
+                <Input
+                  type="number"
+                  min="0"
+                  max="59"
+                  step="1"
+                  value={minutes}
+                  onChange={(e) => {
+                    const val = parseInt(e.target.value);
+                    setMinutes(String(Math.max(0, Math.min(59, isNaN(val) ? 0 : val))));
+                  }}
+                  className="text-center"
+                />
+                <span className="text-sm text-muted-foreground">min</span>
               </div>
             </div>
-          </div>
-
-          {/* Date */}
-          <div className="space-y-2">
-            <Label htmlFor="edit-date">Date</Label>
-            <Input
-              id="edit-date"
-              type="date"
-              value={date}
-              onChange={(e) => setDate(e.target.value)}
-            />
+            <div className="space-y-2">
+              <Label htmlFor="edit-date">Date</Label>
+              <Input
+                id="edit-date"
+                type="date"
+                value={date}
+                onChange={(e) => setDate(e.target.value)}
+              />
+            </div>
           </div>
 
           {/* Work Type */}
@@ -443,7 +435,7 @@ export function EditTimeDialog({ open, onOpenChange, entry, onSuccess }: EditTim
               placeholder="What did you work on?"
               value={isRecording && interimTranscript ? (notes ? notes + ' ' + interimTranscript : interimTranscript) : notes}
               onChange={(e) => setNotes(e.target.value)}
-              rows={2}
+              rows={4}
             />
           </div>
 
