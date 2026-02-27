@@ -31033,6 +31033,7 @@ export type Database = {
           dateimported: string
           description: string | null
           id: number
+          is_recurring: boolean
           name: string
           shortname: string | null
           videourl: string | null
@@ -31041,6 +31042,7 @@ export type Database = {
           dateimported?: string
           description?: string | null
           id: number
+          is_recurring?: boolean
           name: string
           shortname?: string | null
           videourl?: string | null
@@ -31049,6 +31051,7 @@ export type Database = {
           dateimported?: string
           description?: string | null
           id?: number
+          is_recurring?: boolean
           name?: string
           shortname?: string | null
           videourl?: string | null
