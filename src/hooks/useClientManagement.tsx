@@ -282,7 +282,7 @@ export function useClientProfile(tenantId: number | null) {
           .maybeSingle(),
         supabase
           .from('tenant_profile')
-          .select('phone1')
+          .select('phone1, org_type')
           .eq('tenant_id', tenantId)
           .maybeSingle()
       ]);
@@ -315,7 +315,7 @@ export function useClientProfile(tenantId: number | null) {
         trading_name: tga?.trading_name || tenant.rto_name,
         abn: tga?.abn || tenant.abn,
         acn: tga?.acn || tenant.acn,
-        org_type: tgaOrgType,
+        org_type: tgaOrgType || tpResult.data?.org_type || null,
         website: tga?.web_address || tenant.website,
         state: tenant.state,
         rto_number: tenant.rto_id,
@@ -359,7 +359,6 @@ export function useClientProfile(tenantId: number | null) {
       if ('trading_name' in updates) tenantUpdates.rto_name = updates.trading_name;
       if ('abn' in updates) tenantUpdates.abn = updates.abn;
       if ('acn' in updates) tenantUpdates.acn = updates.acn;
-      // org_type is derived from TGA data, not stored on tenants table
       if ('website' in updates) tenantUpdates.website = updates.website;
       if ('state' in updates) tenantUpdates.state = updates.state;
       if ('rto_number' in updates) tenantUpdates.rto_id = updates.rto_number;
@@ -370,12 +369,15 @@ export function useClientProfile(tenantId: number | null) {
       if ('risk_level' in updates) tenantUpdates.risk_level = updates.risk_level;
       tenantUpdates.updated_at = new Date().toISOString();
 
-      // Handle phone1 separately (stored in tenant_profile)
-      if ('phone1' in updates) {
-        const { error: phoneError } = await supabase
+      // Handle phone1 and org_type separately (stored in tenant_profile)
+      const profileUpdates: Record<string, any> = {};
+      if ('phone1' in updates) profileUpdates.phone1 = updates.phone1;
+      if ('org_type' in updates) profileUpdates.org_type = updates.org_type;
+      if (Object.keys(profileUpdates).length > 0) {
+        const { error: profileError } = await supabase
           .from('tenant_profile')
-          .upsert({ tenant_id: tenantId, phone1: updates.phone1 }, { onConflict: 'tenant_id' });
-        if (phoneError) throw phoneError;
+          .upsert({ tenant_id: tenantId, ...profileUpdates }, { onConflict: 'tenant_id' });
+        if (profileError) throw profileError;
       }
 
       const { error } = await supabase
