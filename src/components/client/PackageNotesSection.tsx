@@ -324,7 +324,7 @@ export function PackageNotesSection({ tenantId, packageInstanceId, packageId }: 
 
       {/* Create/Edit Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-7xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="w-[90vw] max-w-[1400px] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{editingNote ? 'Edit Note' : 'Add Note'}</DialogTitle>
           </DialogHeader>
