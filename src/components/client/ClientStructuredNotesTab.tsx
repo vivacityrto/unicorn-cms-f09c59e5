@@ -1294,7 +1294,7 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
 
       {/* Add/Edit Note Dialog */}
       <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-        <DialogContent className="max-w-3xl">
+        <DialogContent className="w-[90vw] max-w-[1400px] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
               {selectedNote ? 'Edit Note' : 'Add Note'}
@@ -1464,7 +1464,7 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
                   : content}
                 onChange={e => setContent(e.target.value)}
                 placeholder="Write your note..."
-                rows={4}
+                rows={20}
                 className={speech.isRecording ? 'border-destructive' : ''}
               />
             </div>
