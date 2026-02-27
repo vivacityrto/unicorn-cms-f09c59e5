@@ -1470,7 +1470,8 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
             </div>
             
             
-            {/* Notify team members */}
+            {/* Notify team members - only show when adding, not editing */}
+            {!selectedNote && (
             <div className="space-y-2">
               <Label className="flex items-center gap-1.5">
                 <Mail className="h-3.5 w-3.5" />
@@ -1504,6 +1505,7 @@ export function ClientStructuredNotesTab({ tenantId, clientId }: ClientStructure
                 )}
               </div>
             </div>
+            )}
 
             <div className="flex items-center gap-2">
               <Switch 
