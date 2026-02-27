@@ -243,8 +243,8 @@ export function PackageNotesSection({ tenantId, packageInstanceId, packageId }: 
                           ? `${note.creator.first_name} ${note.creator.last_name}`
                           : '—'}
                       </TableCell>
-                      <TableCell className="max-w-[250px] truncate text-sm text-muted-foreground">
-                        {note.note_details}
+                      <TableCell className="max-w-[250px] text-xs text-muted-foreground">
+                        <p className="line-clamp-2">{note.note_details}</p>
                       </TableCell>
                       <TableCell className="text-right">
                         <DropdownMenu>
@@ -283,7 +283,7 @@ export function PackageNotesSection({ tenantId, packageInstanceId, packageId }: 
 
       {/* Create/Edit Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent>
+        <DialogContent className="max-w-3xl">
           <DialogHeader>
             <DialogTitle>{editingNote ? 'Edit Note' : 'Add Note'}</DialogTitle>
           </DialogHeader>
@@ -337,7 +337,7 @@ export function PackageNotesSection({ tenantId, packageInstanceId, packageId }: 
                 placeholder="Write your note..."
                 value={formDetails}
                 onChange={(e) => setFormDetails(e.target.value)}
-                rows={4}
+                rows={12}
               />
             </div>
           </div>
