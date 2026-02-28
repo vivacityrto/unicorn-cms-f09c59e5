@@ -1,6 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { usePackageDetail, usePackageBuilder, Stage } from '@/hooks/usePackageBuilder';
+import { useCheckpointPhasesEnabled } from '@/hooks/useCheckpointPhasesEnabled';
+import { PackagePhasesTab } from './PackagePhasesTab';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -138,6 +141,105 @@ function SortableStageItem({
   );
 }
 
+interface PackageDetailsCardProps {
+  formData: {
+    name: string;
+    full_text: string;
+    details: string;
+    package_type: string;
+    duration_months: number;
+    total_hours: number;
+    status: string;
+  };
+  setFormData: React.Dispatch<React.SetStateAction<PackageDetailsCardProps['formData']>>;
+}
+
+function PackageDetailsCard({ formData, setFormData }: PackageDetailsCardProps) {
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Package Details</CardTitle>
+        <CardDescription>Configure the basic information for this package.</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label>Package Code</Label>
+            <Input
+              value={formData.name}
+              onChange={(e) => setFormData(f => ({ ...f, name: e.target.value }))}
+              placeholder="e.g., KS-RTO"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label>Package Type</Label>
+            <Select
+              value={formData.package_type}
+              onValueChange={(value) => setFormData(f => ({ ...f, package_type: value }))}
+            >
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="project">Project</SelectItem>
+                <SelectItem value="membership">Membership</SelectItem>
+                <SelectItem value="regulatory_submission">Regulatory Submission</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+        <div className="space-y-2">
+          <Label>Full Name</Label>
+          <Input
+            value={formData.full_text}
+            onChange={(e) => setFormData(f => ({ ...f, full_text: e.target.value }))}
+            placeholder="e.g., Kickstart RTO Package"
+          />
+        </div>
+        <div className="space-y-2">
+          <Label>Description</Label>
+          <Textarea
+            value={formData.details}
+            onChange={(e) => setFormData(f => ({ ...f, details: e.target.value }))}
+            placeholder="Describe what this package includes..."
+            rows={3}
+          />
+        </div>
+        <div className="grid grid-cols-3 gap-4">
+          <div className="space-y-2">
+            <Label>Duration (months)</Label>
+            <Input
+              type="number"
+              min={1}
+              value={formData.duration_months}
+              onChange={(e) => setFormData(f => ({ ...f, duration_months: parseInt(e.target.value) || 12 }))}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label>Total Hours</Label>
+            <Input
+              type="number"
+              min={0}
+              value={formData.total_hours}
+              onChange={(e) => setFormData(f => ({ ...f, total_hours: parseInt(e.target.value) || 0 }))}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label>Status</Label>
+            <div className="flex items-center gap-3 h-10">
+              <Switch
+                checked={formData.status === 'active'}
+                onCheckedChange={(checked) => setFormData(f => ({ ...f, status: checked ? 'active' : 'inactive' }))}
+              />
+              <span className={formData.status === 'active' ? 'text-primary font-medium' : 'text-muted-foreground'}>
+                {formData.status === 'active' ? 'Active' : 'Draft'}
+              </span>
+            </div>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 export function PackageBuilderEditor() {
   const { id } = useParams<{ id: string }>();
   const packageId = id ? parseInt(id) : null;
@@ -192,6 +294,7 @@ export function PackageBuilderEditor() {
 
   // Standards coverage analysis - MUST be called before any early returns (React hooks rule)
   const standardsCoverage = usePackageStandardsCoverage(packageStages, formData.package_type);
+  const { enabled: checkpointPhasesEnabled } = useCheckpointPhasesEnabled();
 
   useEffect(() => {
     if (packageData) {
@@ -622,93 +725,32 @@ export function PackageBuilderEditor() {
                   />
                 ) : (
                   <div className="space-y-6">
-                    {/* Package Details */}
-                    <Card>
-                      <CardHeader>
-                        <CardTitle>Package Details</CardTitle>
-                        <CardDescription>Configure the basic information for this package.</CardDescription>
-                      </CardHeader>
-                      <CardContent className="space-y-4">
-                        <div className="grid grid-cols-2 gap-4">
-                          <div className="space-y-2">
-                            <Label>Package Code</Label>
-                            <Input
-                              value={formData.name}
-                              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                              placeholder="e.g., KS-RTO"
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label>Package Type</Label>
-                            <Select 
-                              value={formData.package_type} 
-                              onValueChange={(value) => setFormData({ ...formData, package_type: value })}
-                            >
-                              <SelectTrigger>
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="project">Project</SelectItem>
-                                <SelectItem value="membership">Membership</SelectItem>
-                                <SelectItem value="regulatory_submission">Regulatory Submission</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </div>
-                        </div>
-
-                        <div className="space-y-2">
-                          <Label>Full Name</Label>
-                          <Input
-                            value={formData.full_text}
-                            onChange={(e) => setFormData({ ...formData, full_text: e.target.value })}
-                            placeholder="e.g., Kickstart RTO Package"
+                    {checkpointPhasesEnabled ? (
+                      <Tabs defaultValue="details">
+                        <TabsList>
+                          <TabsTrigger value="details">Package Details</TabsTrigger>
+                          <TabsTrigger value="phases">Phases</TabsTrigger>
+                        </TabsList>
+                        <TabsContent value="details" className="mt-4">
+                          <PackageDetailsCard
+                            formData={formData}
+                            setFormData={setFormData}
                           />
-                        </div>
-
-                        <div className="space-y-2">
-                          <Label>Description</Label>
-                          <Textarea
-                            value={formData.details}
-                            onChange={(e) => setFormData({ ...formData, details: e.target.value })}
-                            placeholder="Describe what this package includes..."
-                            rows={3}
+                        </TabsContent>
+                        <TabsContent value="phases" className="mt-4">
+                          <PackagePhasesTab
+                            packageId={packageId!}
+                            packageStageIds={packageStages.map(ps => ps.stage_id)}
+                            stageMap={new Map(allStages.map(s => [s.id, { id: s.id, title: s.title, stage_type: s.stage_type || undefined }]))}
                           />
-                        </div>
-
-                        <div className="grid grid-cols-3 gap-4">
-                          <div className="space-y-2">
-                            <Label>Duration (months)</Label>
-                            <Input
-                              type="number"
-                              min={1}
-                              value={formData.duration_months}
-                              onChange={(e) => setFormData({ ...formData, duration_months: parseInt(e.target.value) || 12 })}
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label>Total Hours</Label>
-                            <Input
-                              type="number"
-                              min={0}
-                              value={formData.total_hours}
-                              onChange={(e) => setFormData({ ...formData, total_hours: parseInt(e.target.value) || 0 })}
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label>Status</Label>
-                            <div className="flex items-center gap-3 h-10">
-                              <Switch
-                                checked={formData.status === 'active'}
-                                onCheckedChange={(checked) => setFormData({ ...formData, status: checked ? 'active' : 'inactive' })}
-                              />
-                              <span className={formData.status === 'active' ? 'text-emerald-600 font-medium' : 'text-muted-foreground'}>
-                                {formData.status === 'active' ? 'Active' : 'Draft'}
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
+                        </TabsContent>
+                      </Tabs>
+                    ) : (
+                      <PackageDetailsCard
+                        formData={formData}
+                        setFormData={setFormData}
+                      />
+                    )}
 
                     {/* Select a Stage Prompt */}
                     <Card className="border-dashed">
@@ -801,8 +843,8 @@ export function PackageBuilderEditor() {
             await addStageToPackage(stageId);
           }
           toast({
-            title: 'Phases Added',
-            description: `${stageIds.length} recommended phase${stageIds.length !== 1 ? 's' : ''} added to package.`
+            title: 'Stages Added',
+            description: `${stageIds.length} recommended stage${stageIds.length !== 1 ? 's' : ''} added to package.`
           });
         }}
       />

@@ -24,6 +24,9 @@ import { StageDocumentsSection } from './StageDocumentsSection';
 import { StageEmailsSection } from './StageEmailsSection';
 import { StageNotesSection } from './StageNotesSection';
 import { LegacyDataDiagnostics } from './LegacyDataDiagnostics';
+import { PhaseGroupHeader } from './PhaseGroupHeader';
+import { useCheckpointPhasesEnabled } from '@/hooks/useCheckpointPhasesEnabled';
+import { usePhaseProgress } from '@/hooks/usePhaseProgress';
 import { 
   CheckCircle2, 
   Circle, 
@@ -82,6 +85,9 @@ export function PackageStagesManager({ tenantId, packageId, packageName }: Packa
   const [packageInstanceId, setPackageInstanceId] = useState<number | null>(null);
   const [expandedStages, setExpandedStages] = useState<Set<number>>(new Set());
   const [recurringConfirm, setRecurringConfirm] = useState<StageInstance | null>(null);
+
+  const { enabled: phasesEnabled } = useCheckpointPhasesEnabled();
+  const { phases: phaseProgress } = usePhaseProgress(packageInstanceId);
 
   const toggleRecurring = async (stage: StageInstance) => {
     const newValue = !stage.is_recurring;
@@ -275,136 +281,173 @@ export function PackageStagesManager({ tenantId, packageId, packageName }: Packa
     );
   }
 
+  const renderStageRow = (stage: StageInstance) => {
+    const statusOption = STATUS_OPTIONS.find(s => s.value === stage.status) || STATUS_OPTIONS[0];
+    const StatusIcon = statusOption.icon;
+    const isExpanded = expandedStages.has(stage.id);
+
+    return (
+      <Collapsible
+        key={stage.id}
+        open={isExpanded}
+        onOpenChange={() => toggleStageExpanded(stage.id)}
+      >
+        <div 
+          className={cn(
+            "rounded-lg border bg-card overflow-hidden",
+            stage.status === 2 && "border-destructive/50 bg-destructive/5",
+            stage.status === 3 && "border-primary/50 bg-primary/5"
+          )}
+        >
+          <div className="flex items-center justify-between gap-4 p-3">
+            <div className="flex items-center gap-3 flex-1 min-w-0">
+              <CollapsibleTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0">
+                  {isExpanded ? (
+                    <ChevronDown className="h-4 w-4" />
+                  ) : (
+                    <ChevronRight className="h-4 w-4" />
+                  )}
+                </Button>
+              </CollapsibleTrigger>
+              <StatusIcon className={cn("h-5 w-5 shrink-0", statusOption.color)} />
+              <div className="min-w-0">
+                <p className="font-medium truncate">{stage.stage_name}</p>
+                {stage.shortname && (
+                  <p className="text-xs text-muted-foreground">{stage.shortname}</p>
+                )}
+              </div>
+            </div>
+            
+            <div className="flex items-center gap-3 shrink-0">
+              {stage.comment && (
+                <MessageSquare className="h-4 w-4 text-muted-foreground" />
+              )}
+              <Badge variant="outline" className="text-xs gap-1">
+                <ListTodo className="h-3 w-3" />
+                Tasks
+              </Badge>
+              <Badge 
+                variant="outline" 
+                className={cn(
+                  "text-xs gap-1 cursor-pointer hover:bg-accent transition-colors",
+                  stage.is_recurring 
+                    ? "text-primary border-primary/30" 
+                    : "text-muted-foreground border-border"
+                )}
+                onClick={(e) => { e.stopPropagation(); setRecurringConfirm(stage); }}
+              >
+                <RefreshCw className="h-3 w-3" />
+                {stage.is_recurring ? 'Recurring' : 'Once'}
+              </Badge>
+              {stage.released_client_tasks && (
+                <Badge variant="outline" className="text-xs">Tasks Released</Badge>
+              )}
+              {stage.status_date && (
+                <span className="text-xs text-muted-foreground hidden sm:inline">
+                  {format(new Date(stage.status_date), 'd MMM HH:mm')}
+                </span>
+              )}
+              
+              <Select
+                value={stage.status.toString()}
+                onValueChange={(value) => updateStageStatus(stage.id, parseInt(value))}
+                disabled={updating === stage.id}
+              >
+                <SelectTrigger className="w-[140px]">
+                  {updating === stage.id ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <SelectValue />
+                  )}
+                </SelectTrigger>
+                <SelectContent>
+                  {STATUS_OPTIONS.map((option) => (
+                    <SelectItem key={option.value} value={option.value.toString()}>
+                      <div className="flex items-center gap-2">
+                        <option.icon className={cn("h-4 w-4", option.color)} />
+                        {option.label}
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          
+          <CollapsibleContent>
+            <StageDetailSection
+              stageInstanceId={stage.id}
+              tenantId={tenantId}
+              packageId={packageId}
+              stageId={stage.stage_id}
+              completionDate={stage.completion_date}
+              comment={stage.comment}
+              onUpdate={fetchStages}
+            />
+            <StageStaffTasks 
+              stageInstanceId={stage.id}
+              tenantId={tenantId}
+              packageId={packageId}
+            />
+            <StageDocumentsSection
+              stageInstanceId={stage.id}
+              tenantId={tenantId}
+              packageId={packageId}
+              debug={profile?.unicorn_role === 'Super Admin' || profile?.global_role === 'SuperAdmin'}
+              isVivacityStaff={profile?.unicorn_role === 'Super Admin' || profile?.unicorn_role === 'Team Leader' || profile?.unicorn_role === 'Team Member'}
+            />
+            <StageEmailsSection
+              stageInstanceId={stage.id}
+            />
+            <StageNotesSection
+              tenantId={tenantId}
+              packageId={packageId}
+            />
+          </CollapsibleContent>
+        </div>
+      </Collapsible>
+    );
+  };
+
+  // Determine if we should show phase grouping
+  const hasPhases = phasesEnabled && phaseProgress.length > 0;
+
+  // Build a set of stage_ids that belong to phases (for identifying ungrouped)
+  const phasedStageIds = new Set<number>();
+  if (hasPhases) {
+    // We need to fetch which stages belong to which phase for this package instance
+    // The phase progress summary gives us phase info, but stage mapping comes from phase_stages
+    // For now, we'll group stages by checking if their stage_id appears in any phase_stages row
+  }
+
   return (
     <div className="space-y-2">
-      {stages.map((stage) => {
-        const statusOption = STATUS_OPTIONS.find(s => s.value === stage.status) || STATUS_OPTIONS[0];
-        const StatusIcon = statusOption.icon;
-        const isExpanded = expandedStages.has(stage.id);
+      {hasPhases ? (
+        <>
+          {phaseProgress.map(phase => {
+            // Show all stages under each phase — in a real implementation, 
+            // we'd filter stages by their phase_stages mapping.
+            // For now, show the phase headers with all stages listed flat underneath.
+            return (
+              <PhaseGroupHeader key={phase.phase_instance_id} phase={phase}>
+                <div className="space-y-2">
+                  {/* Stages will be grouped here once phase_stages mapping is loaded */}
+                  <p className="text-xs text-muted-foreground">
+                    {phase.total_stages} stage{phase.total_stages !== 1 ? 's' : ''} in this phase
+                    {' · '}{phase.completed_stages} completed
+                  </p>
+                </div>
+              </PhaseGroupHeader>
+            );
+          })}
+          {/* All stages (flat list below phases for now) */}
+          {stages.map(renderStageRow)}
+        </>
+      ) : (
+        stages.map(renderStageRow)
+      )}
 
-        return (
-          <Collapsible
-            key={stage.id}
-            open={isExpanded}
-            onOpenChange={() => toggleStageExpanded(stage.id)}
-          >
-            <div 
-              className={cn(
-                "rounded-lg border bg-card overflow-hidden",
-                stage.status === 2 && "border-destructive/50 bg-destructive/5",
-                stage.status === 3 && "border-primary/50 bg-primary/5"
-              )}
-            >
-              <div className="flex items-center justify-between gap-4 p-3">
-                <div className="flex items-center gap-3 flex-1 min-w-0">
-                  <CollapsibleTrigger asChild>
-                    <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0">
-                      {isExpanded ? (
-                        <ChevronDown className="h-4 w-4" />
-                      ) : (
-                        <ChevronRight className="h-4 w-4" />
-                      )}
-                    </Button>
-                  </CollapsibleTrigger>
-                  <StatusIcon className={cn("h-5 w-5 shrink-0", statusOption.color)} />
-                  <div className="min-w-0">
-                    <p className="font-medium truncate">{stage.stage_name}</p>
-                    {stage.shortname && (
-                      <p className="text-xs text-muted-foreground">{stage.shortname}</p>
-                    )}
-                  </div>
-                </div>
-                
-                <div className="flex items-center gap-3 shrink-0">
-                  {stage.comment && (
-                    <MessageSquare className="h-4 w-4 text-muted-foreground" />
-                  )}
-                  <Badge variant="outline" className="text-xs gap-1">
-                    <ListTodo className="h-3 w-3" />
-                    Tasks
-                  </Badge>
-                  <Badge 
-                    variant="outline" 
-                    className={cn(
-                      "text-xs gap-1 cursor-pointer hover:bg-accent transition-colors",
-                      stage.is_recurring 
-                        ? "text-primary border-primary/30" 
-                        : "text-muted-foreground border-border"
-                    )}
-                    onClick={(e) => { e.stopPropagation(); setRecurringConfirm(stage); }}
-                  >
-                    <RefreshCw className="h-3 w-3" />
-                    {stage.is_recurring ? 'Recurring' : 'Once'}
-                  </Badge>
-                  {stage.released_client_tasks && (
-                    <Badge variant="outline" className="text-xs">Tasks Released</Badge>
-                  )}
-                  {stage.status_date && (
-                    <span className="text-xs text-muted-foreground hidden sm:inline">
-                      {format(new Date(stage.status_date), 'd MMM HH:mm')}
-                    </span>
-                  )}
-                  
-                  <Select
-                    value={stage.status.toString()}
-                    onValueChange={(value) => updateStageStatus(stage.id, parseInt(value))}
-                    disabled={updating === stage.id}
-                  >
-                    <SelectTrigger className="w-[140px]">
-                      {updating === stage.id ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : (
-                        <SelectValue />
-                      )}
-                    </SelectTrigger>
-                    <SelectContent>
-                      {STATUS_OPTIONS.map((option) => (
-                        <SelectItem key={option.value} value={option.value.toString()}>
-                          <div className="flex items-center gap-2">
-                            <option.icon className={cn("h-4 w-4", option.color)} />
-                            {option.label}
-                          </div>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              
-              <CollapsibleContent>
-                <StageDetailSection
-                  stageInstanceId={stage.id}
-                  tenantId={tenantId}
-                  packageId={packageId}
-                  stageId={stage.stage_id}
-                  completionDate={stage.completion_date}
-                  comment={stage.comment}
-                  onUpdate={fetchStages}
-                />
-                <StageStaffTasks 
-                  stageInstanceId={stage.id}
-                  tenantId={tenantId}
-                  packageId={packageId}
-                />
-                <StageDocumentsSection
-                  stageInstanceId={stage.id}
-                  tenantId={tenantId}
-                  packageId={packageId}
-                  debug={profile?.unicorn_role === 'Super Admin' || profile?.global_role === 'SuperAdmin'}
-                  isVivacityStaff={profile?.unicorn_role === 'Super Admin' || profile?.unicorn_role === 'Team Leader' || profile?.unicorn_role === 'Team Member'}
-                />
-                <StageEmailsSection
-                  stageInstanceId={stage.id}
-                />
-                <StageNotesSection
-                  tenantId={tenantId}
-                  packageId={packageId}
-                />
-              </CollapsibleContent>
-            </div>
-          </Collapsible>
-        );
-      })}
       <LegacyDataDiagnostics
         tenantId={tenantId}
         packageId={packageId}
