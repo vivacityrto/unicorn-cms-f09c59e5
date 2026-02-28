@@ -725,32 +725,25 @@ export function PackageBuilderEditor() {
                   />
                 ) : (
                   <div className="space-y-6">
-                    {checkpointPhasesEnabled ? (
-                      <Tabs defaultValue="details">
-                        <TabsList>
-                          <TabsTrigger value="details">Package Details</TabsTrigger>
-                          <TabsTrigger value="phases">Phases</TabsTrigger>
-                        </TabsList>
-                        <TabsContent value="details" className="mt-4">
-                          <PackageDetailsCard
-                            formData={formData}
-                            setFormData={setFormData}
-                          />
-                        </TabsContent>
-                        <TabsContent value="phases" className="mt-4">
-                          <PackagePhasesTab
-                            packageId={packageId!}
-                            packageStageIds={packageStages.map(ps => ps.stage_id)}
-                            stageMap={new Map(allStages.map(s => [s.id, { id: s.id, title: s.title, stage_type: s.stage_type || undefined }]))}
-                          />
-                        </TabsContent>
-                      </Tabs>
-                    ) : (
-                      <PackageDetailsCard
-                        formData={formData}
-                        setFormData={setFormData}
-                      />
-                    )}
+                    <Tabs defaultValue="details">
+                      <TabsList>
+                        <TabsTrigger value="details">Package Details</TabsTrigger>
+                        <TabsTrigger value="phases">Phases</TabsTrigger>
+                      </TabsList>
+                      <TabsContent value="details" className="mt-4">
+                        <PackageDetailsCard
+                          formData={formData}
+                          setFormData={setFormData}
+                        />
+                      </TabsContent>
+                      <TabsContent value="phases" className="mt-4">
+                        <PackagePhasesTab
+                          packageId={packageId!}
+                          packageStageIds={packageStages.map(ps => ps.stage_id)}
+                          stageMap={new Map(allStages.map(s => [s.id, { id: s.id, title: s.title, stage_type: s.stage_type || undefined }]))}
+                        />
+                      </TabsContent>
+                    </Tabs>
 
                     {/* Select a Stage Prompt */}
                     <Card className="border-dashed">
