@@ -259,3 +259,15 @@ verify_jwt = false
 
 [functions.sync-clickup-time]
 verify_jwt = false
+
+[functions.resolve-tenant-folder]
+verify_jwt = false
+
+[functions.verify-compliance-folder]
+verify_jwt = false
+
+[functions.import-sharepoint-template]
+verify_jwt = false
+
+[functions.run-document-job]
+verify_jwt = false
