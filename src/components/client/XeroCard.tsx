@@ -120,21 +120,47 @@ export function XeroCard({ tenantId }: XeroCardProps) {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-2">
             <Label htmlFor="xero-contact-url">Xero Contact URL</Label>
-            <Input
-              id="xero-contact-url"
-              placeholder="https://go.xero.com/Contacts/..."
-              value={contactUrl}
-              onChange={(e) => setContactUrl(e.target.value)}
-            />
+            <div className="flex gap-2">
+              <Input
+                id="xero-contact-url"
+                placeholder="https://go.xero.com/Contacts/..."
+                value={contactUrl}
+                onChange={(e) => setContactUrl(e.target.value)}
+                className="flex-1"
+              />
+              {hasContactUrl && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => window.open(contactUrl, '_blank', 'noopener,noreferrer')}
+                  title="Open in Xero"
+                >
+                  <ExternalLink className="h-4 w-4" />
+                </Button>
+              )}
+            </div>
           </div>
           <div className="space-y-2">
             <Label htmlFor="xero-invoice-url">Repeating Invoice URL</Label>
-            <Input
-              id="xero-invoice-url"
-              placeholder="https://go.xero.com/RepeatTransactions/..."
-              value={invoiceUrl}
-              onChange={(e) => setInvoiceUrl(e.target.value)}
-            />
+            <div className="flex gap-2">
+              <Input
+                id="xero-invoice-url"
+                placeholder="https://go.xero.com/RepeatTransactions/..."
+                value={invoiceUrl}
+                onChange={(e) => setInvoiceUrl(e.target.value)}
+                className="flex-1"
+              />
+              {hasInvoiceUrl && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => window.open(invoiceUrl, '_blank', 'noopener,noreferrer')}
+                  title="Open in Xero"
+                >
+                  <ExternalLink className="h-4 w-4" />
+                </Button>
+              )}
+            </div>
           </div>
         </div>
         <div className="flex justify-end">
