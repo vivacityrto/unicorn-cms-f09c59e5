@@ -1910,6 +1910,7 @@ export type Database = {
           ask_viv_floating_launcher_enabled: boolean
           clickup_enabled: boolean
           email_sending_enabled: boolean | null
+          enable_checkpoint_phases: boolean
           generation_enabled: boolean | null
           generation_rate_limit_per_hour: number | null
           id: number
@@ -1935,6 +1936,7 @@ export type Database = {
           ask_viv_floating_launcher_enabled?: boolean
           clickup_enabled?: boolean
           email_sending_enabled?: boolean | null
+          enable_checkpoint_phases?: boolean
           generation_enabled?: boolean | null
           generation_rate_limit_per_hour?: number | null
           id?: never
@@ -1960,6 +1962,7 @@ export type Database = {
           ask_viv_floating_launcher_enabled?: boolean
           clickup_enabled?: boolean
           email_sending_enabled?: boolean | null
+          enable_checkpoint_phases?: boolean
           generation_enabled?: boolean | null
           generation_rate_limit_per_hour?: number | null
           id?: never
@@ -12470,6 +12473,27 @@ export type Database = {
           is_active?: boolean
           label?: string
           sort_order?: number
+          value?: string
+        }
+        Relationships: []
+      }
+      dd_phase_status: {
+        Row: {
+          code: number
+          description: string
+          seq: number
+          value: string
+        }
+        Insert: {
+          code: number
+          description: string
+          seq: number
+          value: string
+        }
+        Update: {
+          code?: number
+          description?: string
+          seq?: number
           value?: string
         }
         Relationships: []
@@ -25424,6 +25448,65 @@ export type Database = {
           },
         ]
       }
+      phase_instances: {
+        Row: {
+          closed_by: string | null
+          completed_at: string | null
+          created_at: string | null
+          exception_reason: string | null
+          gate_type: string
+          id: string
+          notes: string | null
+          package_instance_id: number
+          phase_id: string
+          proceed_reason: string | null
+          sort_order: number | null
+          started_at: string | null
+          status: string
+          updated_at: string | null
+        }
+        Insert: {
+          closed_by?: string | null
+          completed_at?: string | null
+          created_at?: string | null
+          exception_reason?: string | null
+          gate_type: string
+          id?: string
+          notes?: string | null
+          package_instance_id: number
+          phase_id: string
+          proceed_reason?: string | null
+          sort_order?: number | null
+          started_at?: string | null
+          status?: string
+          updated_at?: string | null
+        }
+        Update: {
+          closed_by?: string | null
+          completed_at?: string | null
+          created_at?: string | null
+          exception_reason?: string | null
+          gate_type?: string
+          id?: string
+          notes?: string | null
+          package_instance_id?: number
+          phase_id?: string
+          proceed_reason?: string | null
+          sort_order?: number | null
+          started_at?: string | null
+          status?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "phase_instances_phase_id_fkey"
+            columns: ["phase_id"]
+            isOneToOne: false
+            referencedRelation: "phases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       phase_requirements: {
         Row: {
           created_at: string
@@ -25451,6 +25534,86 @@ export type Database = {
           required_doc_types?: string[]
           required_fields?: Json
           tenant_id?: string | null
+        }
+        Relationships: []
+      }
+      phase_stages: {
+        Row: {
+          created_at: string | null
+          id: string
+          is_required: boolean | null
+          package_id: number
+          phase_id: string
+          sort_order: number | null
+          stage_id: number
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          is_required?: boolean | null
+          package_id: number
+          phase_id: string
+          sort_order?: number | null
+          stage_id: number
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          is_required?: boolean | null
+          package_id?: number
+          phase_id?: string
+          sort_order?: number | null
+          stage_id?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "phase_stages_phase_id_fkey"
+            columns: ["phase_id"]
+            isOneToOne: false
+            referencedRelation: "phases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      phases: {
+        Row: {
+          allow_parallel: boolean | null
+          created_at: string | null
+          created_by: string | null
+          description: string | null
+          gate_type: string
+          id: string
+          is_archived: boolean | null
+          phase_key: string
+          sort_order_default: number | null
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          allow_parallel?: boolean | null
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          gate_type?: string
+          id?: string
+          is_archived?: boolean | null
+          phase_key: string
+          sort_order_default?: number | null
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          allow_parallel?: boolean | null
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          gate_type?: string
+          id?: string
+          is_archived?: boolean | null
+          phase_key?: string
+          sort_order_default?: number | null
+          title?: string
+          updated_at?: string | null
         }
         Relationships: []
       }
@@ -44360,6 +44523,14 @@ export type Database = {
         }
         Relationships: []
       }
+      v_package_has_phases: {
+        Row: {
+          has_phases: boolean | null
+          package_id: number | null
+          phase_count: number | null
+        }
+        Relationships: []
+      }
       v_package_instances: {
         Row: {
           end_date: string | null
@@ -44414,6 +44585,31 @@ export type Database = {
           total_actions_remaining: number | null
         }
         Relationships: []
+      }
+      v_phase_progress_summary: {
+        Row: {
+          completed_required: number | null
+          completed_stages: number | null
+          gate_type: string | null
+          is_passable: boolean | null
+          package_instance_id: number | null
+          phase_id: string | null
+          phase_instance_id: string | null
+          phase_title: string | null
+          required_stages: number | null
+          sort_order: number | null
+          status: string | null
+          total_stages: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "phase_instances_phase_id_fkey"
+            columns: ["phase_id"]
+            isOneToOne: false
+            referencedRelation: "phases"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       v_playbook_effectiveness: {
         Row: {
@@ -46352,6 +46548,27 @@ export type Database = {
         Returns: undefined
       }
       fn_auth_user_id_by_email: { Args: { p_email: string }; Returns: string }
+      fn_check_phase_gate: {
+        Args: { p_phase_instance_id: string }
+        Returns: {
+          gate_type: string
+          is_passable: boolean
+          missing_stages: string[]
+        }[]
+      }
+      fn_close_phase_instance: {
+        Args: {
+          p_exception_reason?: string
+          p_note?: string
+          p_phase_instance_id: string
+          p_status: string
+        }
+        Returns: undefined
+      }
+      fn_instantiate_phases_for_package_instance: {
+        Args: { p_package_instance_id: number }
+        Returns: undefined
+      }
       fn_match_client_for_event: {
         Args: {
           p_attendee_emails: string[]
