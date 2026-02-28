@@ -93,7 +93,7 @@ export function XeroCard({ tenantId }: XeroCardProps) {
             </CardDescription>
           </div>
           <div className="flex gap-2">
-            {hasContactUrl && (
+            {hasContactUrl ? (
               <Button
                 variant="outline"
                 size="sm"
@@ -101,6 +101,15 @@ export function XeroCard({ tenantId }: XeroCardProps) {
               >
                 <ExternalLink className="h-4 w-4 mr-1" />
                 Contact
+              </Button>
+            ) : (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => window.open('https://go.xero.com/app/!6hi6G/contacts', '_blank', 'noopener,noreferrer')}
+              >
+                <ExternalLink className="h-4 w-4 mr-1" />
+                Contacts
               </Button>
             )}
             {hasInvoiceUrl && (
