@@ -728,7 +728,7 @@ export function PackageBuilderEditor() {
                     <Tabs defaultValue="details">
                       <TabsList>
                         <TabsTrigger value="details">Package Details</TabsTrigger>
-                        <TabsTrigger value="phases">Stages</TabsTrigger>
+                        <TabsTrigger value="phases">Phases</TabsTrigger>
                       </TabsList>
                       <TabsContent value="details" className="mt-4">
                         <PackageDetailsCard
