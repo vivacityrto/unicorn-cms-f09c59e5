@@ -650,9 +650,9 @@ export function PackageBuilderEditor() {
             <div className="h-full flex flex-col bg-muted/20">
               <div className="p-4 border-b bg-background">
                 <div className="flex items-center justify-between mb-2">
-                  <h2 className="font-semibold flex items-center gap-2">
+                   <h2 className="font-semibold flex items-center gap-2">
                     <Layers className="h-4 w-4" />
-                    Phases
+                    Stages
                   </h2>
                   <Button size="sm" variant="outline" onClick={() => setIsStageLibraryOpen(true)}>
                     <Plus className="h-3 w-3 mr-1" />
