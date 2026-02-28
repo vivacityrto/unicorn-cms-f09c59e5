@@ -1,230 +1,201 @@
 
-
-# Step 1: UI Rename -- All User-Facing "Phase" to "Stage"
-
-## What This Step Does
-
-Renames every user-facing string that says "Phase" to "Stage" across the application. No logic changes. No database changes. No route changes. Internal variable names and database columns stay as-is.
-
-## Scope Summary
-
-- ~40 files need string changes
-- 2 files need renaming (phase-steps.tsx, PhaseCompletenessWidget.tsx)
-- 1 type file needs renaming (phase.ts to stage-registry.ts)
-- 2 doc files need updating
-- No imports of the renamed type/component files exist elsewhere, so no import chain to fix
-
-## Detailed Changes by Area
-
-### 1. Navigation (1 file)
-
-**src/components/DashboardLayout.tsx**
-- "Manage Phases" -> "Manage Stages"
-- "Phase Builder" -> "Stage Builder"
-- "Phase Analytics" -> "Stage Analytics"
-
-### 2. Pages (8 files)
-
-**src/pages/StageBuilder.tsx**
-- All toast messages and labels: "Phase name is required" -> "Stage name is required", "Phase Created!" -> "Stage Created!", "Phase Builder" -> "Stage Builder", "Phase Basics" -> "Stage Basics", "Phase Content" -> "Stage Content", "Phase Name" -> "Stage Name", "Phase Type" -> "Stage Type"
-
-**src/pages/AdminStageDetail.tsx**
-- "EDIT LIVE PHASE" -> "EDIT LIVE STAGE", all toast messages, "Back to Phases" -> "Back to Stages", "Simulate Phase" -> "Simulate Stage", "Phase not found" -> "Stage not found", "Duplicate Phase" -> "Duplicate Stage", "Phase Settings" -> "Stage Settings", field labels
-
-**src/pages/AdminManageStages.tsx**
-- "Phase Archived" -> "Stage Archived", "Phase Restored" -> "Stage Restored", "Phase has been archived and hidden from phase selection" -> "...stage selection", "Phase Type" placeholder -> "Stage Type", archive dialog text, import dialog text
-
-**src/pages/PackageDetail.tsx**
-- "Phase order updated" -> "Stage order updated", "Phase deleted" -> "Stage deleted"
-
-**src/pages/CalendarTimeCapture.tsx**
-- "Phase" label -> "Stage", "Select phase" -> "Select stage"
-
-**src/pages/TimeInbox.tsx**
-- "Select phase" -> "Select stage"
-
-**src/pages/AdminAiFeatureFlags.tsx**
-- "Phase Completeness Check" -> "Stage Completeness Check", "AI-assisted phase completeness evaluation" -> "AI-assisted stage completeness evaluation"
-
-**src/pages/AdminAssistant.tsx**
-- "Phase Progression Timeline" -> "Stage Progression Timeline"
-
-### 3. Admin Components (1 file)
-
-**src/components/admin/AllStagesTable.tsx**
-- All toast messages and labels: "Phase deleted/updated/created" -> "Stage ...", "Search phases..." -> "Search stages...", "No phases found" -> "No stages found", column headers
-
-### 4. Package Builder Components (2 files)
-
-**src/components/package-builder/StageLibraryDialog.tsx**
-- "Phase name is required" -> "Stage name is required", "Phase Created" -> "Stage Created", "Phase Library" -> "Stage Library", "Search phases..." -> "Search stages...", "Phase Type" -> "Stage Type", "Phases are reusable..." -> "Stages are reusable..."
-
-**src/components/package-builder/FrameworkMismatchDialog.tsx**
-- "This phase is not marked..." -> "This stage is not marked...", "Phase:" -> "Stage:", "Phase Frameworks:" -> "Stage Frameworks:"
-
-**src/components/package-builder/StageDocumentsTab.tsx**
-- "Select documents from the library to link to this phase" -> "...this stage"
-
-### 5. Client Components (8 files)
-
-**src/components/client/ClientProgressSummary.tsx**
-- "Phase Progress" -> "Stage Progress"
-
-**src/components/client/ClientPackagesTab.tsx**
-- "Phase Progress" -> "Stage Progress", "X/Y phases" -> "X/Y stages", "No phases configured" -> "No stages configured"
-
-**src/components/client/PackageStagesManager.tsx**
-- "Failed to load phases" -> "Failed to load stages", "Phase Updated" -> "Stage Updated", "No phases configured..." -> "No stages configured..."
-
-**src/components/client/ClientPackageBadges.tsx**
-- "Phase: {stage}" -> "Stage: {stage}", "Has blocked phases" -> "Has blocked stages"
-
-**src/components/client/StageDocumentsSection.tsx**
-- "No documents linked to this phase" -> "...this stage", generation dialog text
-
-**src/components/client/StageStaffTasks.tsx**
-- "No staff tasks configured for this phase" -> "...this stage"
-
-**src/components/client/StageEmailsSection.tsx**
-- "No emails linked to this phase" -> "...this stage"
-
-**src/components/client/StageDetailSection.tsx**
-- "Phase details saved" -> "Stage details saved", "Add notes about this phase..." -> "...this stage..."
-
-### 6. Dialog Components (2 files)
-
-**src/components/AddExistingStageDialog.tsx**
-- All instances: "Phase Already Added" -> "Stage Already Added", "Add Existing Phase" -> "Add Existing Stage", "Search phase..." -> "Search stage...", etc.
-
-**src/components/AddStaffTaskDialog.tsx**
-- "Package and phase must be selected" -> "Package and stage must be selected"
-
-### 7. Stage Components (2 files)
-
-**src/components/stage/StageDependencySelector.tsx**
-- "Search phases..." -> "Search stages...", "No phases found" -> "No stages found"
-
-**src/components/stage/StageDocumentsPanel.tsx**
-- "Document unlinked from phase" -> "...from stage"
-
-### 8. Membership Components (2 files)
-
-**src/components/membership/StageStatusControl.tsx**
-- "Cannot skip required phase" -> "...required stage", "Phase updated" -> "Stage updated", "Error updating phase" -> "Error updating stage", dialog titles "Block Stage" (already correct), descriptions mentioning "stage" (check and fix any remaining "phase")
-
-**src/components/membership/StageCellEditor.tsx**
-- Same pattern: "Cannot skip required phase" -> "...required stage", toast messages
-
-### 9. Ask Viv Components (5 files)
-
-**src/components/ask-viv/AskVivScopeSelectorModal.tsx**
-- "Phase" label -> "Stage", "No phases available" -> "No stages available", "All phases" -> "All stages", "Loading phases..." -> "Loading stages..."
-
-**src/components/ask-viv/AskVivExplainPanel.tsx**
-- "Phase" chip label -> "Stage"
-
-**src/components/ask-viv/AskVivScopeBanner.tsx**
-- "Inferred from active phases" -> "Inferred from active stages"
-
-**src/components/ask-viv/AskVivMicroExplain.tsx**
-- Help text: "phases" -> "stages", "phase progression" -> "stage progression", "blocking this phase" -> "blocking this stage"
-
-**src/components/ask-viv/AskVivPanel.tsx**
-- "Query clients, phases, tasks..." -> "Query clients, stages, tasks..."
-
-### 10. Executive Dashboard Components (3 files)
-
-**src/components/executive/ExecutionMomentumPanel.tsx**
-- "Phases Completed" metric label -> "Stages Completed"
-
-**src/components/executive/ClientHealthDrawer.tsx**
-- "Complete next phase actions" -> "Complete next stage actions", "Phase Completion" -> "Stage Completion", "Phase Drift" -> "Stage Drift"
-
-**src/components/executive/AlignmentSignalsPanel.tsx**
-- Comment update only (if filtering by 'phase_completed' -- internal value stays)
-
-### 11. Dashboard Components (1 file)
-
-**src/components/dashboard/WeeklyWinTracker.tsx**
-- "Phases Completed" -> "Stages Completed"
-
-### 12. Hooks (2 files)
-
-**src/hooks/usePackageStageOverrides.tsx**
-- "Failed to sync phase to packages" -> "Failed to sync stage to packages"
-
-**src/hooks/usePredictiveRisk.ts**
-- "Phase stagnant for..." -> "Stage stagnant for..."
-
-### 13. File Renames (3 files)
-
-**src/components/ui/phase-steps.tsx -> src/components/ui/stage-steps.tsx**
-- Rename `PhaseSteps` -> `StageSteps`, `PhaseStepsProps` -> `StageStepsProps`
-- Update doc comments: "Phase Step Indicator" -> "Stage Step Indicator", "compliance phases" -> "compliance stages"
-- No external imports exist -- safe rename
-
-**src/components/phase/PhaseCompletenessWidget.tsx -> src/components/stage/StageCompletenessWidget.tsx**
-- Rename component and props interface
-- "Phase Completeness" heading -> "Stage Completeness"
-- "evaluate phase completeness" -> "evaluate stage completeness"
-- No external imports exist -- safe rename
-
-**src/types/phase.ts -> src/types/stage-registry.ts**
-- Rename all exported types per conflict resolution table:
-  - `PhaseRegistry` -> `StageRegistry`
-  - `PhaseRegistryInsert` -> `StageRegistryInsert`
-  - `PhaseRegistryUpdate` -> `StageRegistryUpdate`
-  - `PhaseType` -> `StageClassification` (avoids conflict with `StageType` in membership.ts)
-  - `PhaseStatus` -> `StageLifecycleStatus` (avoids conflict with `StageStatus` in membership.ts)
-  - `PhaseWithMetadata` -> `StageWithMetadata`
-  - `PhaseSummary` -> `StageSummary`
-  - `PhaseDependencyNode` -> `StageDependencyNode`
-- Update all doc comments
-- No external imports exist -- safe rename
-
-### 14. Edge Function Display Strings (1 file)
-
-**supabase/functions/_shared/ask-viv-fact-builder/scope-lock.ts**
-- `formatScopeForDisplay`: "Phase" -> "Stage" in output string
-- Test file assertions updated to match
-
-### 15. Documentation (2 files)
-
-**docs/phase-registry.md -> docs/stage-registry.md**
-- Rewrite all "Phase" references to "Stage"
-
-**docs/phase-naming-conventions.md**
-- Rewrite to reflect new terminology (Stage = workflow step, Phase = checkpoint group coming in Step 2)
-
-### 16. Celebration Event Type (1 file, internal but informational)
-
-**src/lib/emit-celebration.ts**
-- `'phase_complete'` event type -- keep as-is (internal event key, not user-facing)
+# Part 2: Checkpoint Phases -- Implementation Plan
+
+## Overview
+
+Introduces an optional Phase grouping layer above Stages within packages. Phases provide checkpoint-based workflow progression with configurable gating (hard/soft/none). All changes are behind a feature flag -- zero impact when disabled.
+
+## Step 2A: Database Migration (Single Migration)
+
+### New Tables
+
+**1. `dd_phase_status`** (lookup table, matches `dd_status` pattern)
+
+| Column | Type | Notes |
+|--------|------|-------|
+| code | bigint PK | Numeric code |
+| value | text NOT NULL UNIQUE | Status key |
+| description | text NOT NULL | Display label |
+| seq | integer NOT NULL | Sort order |
+
+Seed: 0/open, 1/in_progress, 2/completed, 3/on_hold, 4/completed_with_exceptions
+
+**2. `phases`** (reusable templates, UUID PK)
+
+| Column | Type | Notes |
+|--------|------|-------|
+| id | uuid PK DEFAULT gen_random_uuid() | |
+| phase_key | text NOT NULL UNIQUE | e.g. "KS-ONBOARD" |
+| title | text NOT NULL | Display name |
+| description | text | Purpose |
+| gate_type | text NOT NULL DEFAULT 'none' | 'hard', 'soft', 'none' |
+| is_archived | boolean DEFAULT false | Soft delete |
+| allow_parallel | boolean DEFAULT false | Can run alongside other phases |
+| sort_order_default | integer DEFAULT 0 | Default ordering hint |
+| created_by | uuid | References auth user |
+| created_at | timestamptz DEFAULT now() | |
+| updated_at | timestamptz DEFAULT now() | |
+
+**3. `phase_stages`** (template-level mapping: which stages belong to which phase per package)
+
+| Column | Type | Notes |
+|--------|------|-------|
+| id | uuid PK DEFAULT gen_random_uuid() | |
+| phase_id | uuid NOT NULL REFERENCES phases(id) | |
+| package_id | bigint NOT NULL | References packages.import_id |
+| stage_id | integer NOT NULL | References documents_stages.id |
+| sort_order | integer DEFAULT 0 | Order within phase |
+| is_required | boolean DEFAULT true | Must complete for phase completion |
+| created_at | timestamptz DEFAULT now() | |
+| UNIQUE(phase_id, package_id, stage_id) | | Prevents duplicates |
+
+**4. `phase_instances`** (runtime per tenant package instance, UUID PK)
+
+| Column | Type | Notes |
+|--------|------|-------|
+| id | uuid PK DEFAULT gen_random_uuid() | |
+| phase_id | uuid NOT NULL REFERENCES phases(id) | |
+| package_instance_id | bigint NOT NULL | References package_instances.id |
+| status | text NOT NULL DEFAULT 'open' | Matches dd_phase_status.value |
+| gate_type | text NOT NULL | Copied from phases at instantiation |
+| sort_order | integer DEFAULT 0 | Order for this instance |
+| notes | text | General notes |
+| exception_reason | text | Required when completed_with_exceptions |
+| proceed_reason | text | Required when soft-gate bypassed |
+| started_at | timestamptz | When first stage begins |
+| completed_at | timestamptz | When phase is closed |
+| closed_by | uuid | Staff who closed it |
+| created_at | timestamptz DEFAULT now() | |
+| updated_at | timestamptz DEFAULT now() | |
+| UNIQUE(phase_id, package_instance_id) | | One instance per phase per package instance |
+
+### Feature Flag
+
+Add column `enable_checkpoint_phases boolean NOT NULL DEFAULT false` to the `app_settings` table (single-row config, row id=1).
+
+### Views (both with `security_invoker = true`)
+
+**`v_package_has_phases`**: Returns package_id, has_phases (boolean), phase_count -- determined by checking `phase_stages` rows.
+
+**`v_phase_progress_summary`**: Returns package_instance_id, phase_id, phase_title, sort_order, gate_type, total_stages, completed_stages, required_stages, completed_required, status, is_passable (computed from stage_instances with status_id IN (2,3) for completed/skipped).
+
+### RPCs (all SECURITY DEFINER with `SET search_path = public`)
+
+**`fn_instantiate_phases_for_package_instance(p_package_instance_id bigint)`**
+- Looks up package_id from package_instances
+- Finds all distinct phases in phase_stages for that package
+- Creates one phase_instance per phase (idempotent -- skips existing via ON CONFLICT DO NOTHING)
+- Copies gate_type and sort_order_default from phases
+- Logs audit event
+- Only callable by Vivacity staff
+
+**`fn_close_phase_instance(p_phase_instance_id uuid, p_status text, p_note text DEFAULT NULL, p_exception_reason text DEFAULT NULL)`**
+- Validates p_status exists in dd_phase_status
+- If 'completed': verifies all required stages are done (cross-referencing phase_stages.is_required with stage_instances)
+- If 'completed_with_exceptions': requires p_exception_reason
+- Sets completed_at, closed_by = auth.uid()
+- Only Vivacity staff can call
+- Logs audit event
+
+**`fn_check_phase_gate(p_phase_instance_id uuid)`**
+- Returns: is_passable boolean, gate_type text, missing_stages text[]
+- Used by UI to determine lock/warning state
+
+### RLS Policies
+
+| Table | SELECT | INSERT/UPDATE/DELETE |
+|-------|--------|---------------------|
+| dd_phase_status | All authenticated | Vivacity staff only |
+| phases | All authenticated | Vivacity staff only |
+| phase_stages | All authenticated | Vivacity staff only |
+| phase_instances | Vivacity staff OR tenant member (via package_instances.tenant_id joined to tenant_users.user_id) | Vivacity staff only |
+
+### Audit Triggers
+
+Attach `fn_log_audit` trigger to `phases`, `phase_stages`, and `phase_instances` tables (same pattern as existing tables). Since all new tables use UUID PKs, they match the `audit_events.entity_id` UUID type cleanly.
+
+### Rollback SQL (included as comment in migration)
+
+```text
+DROP VIEW IF EXISTS v_phase_progress_summary;
+DROP VIEW IF EXISTS v_package_has_phases;
+DROP FUNCTION IF EXISTS fn_check_phase_gate;
+DROP FUNCTION IF EXISTS fn_close_phase_instance;
+DROP FUNCTION IF EXISTS fn_instantiate_phases_for_package_instance;
+DROP TABLE IF EXISTS phase_instances;
+DROP TABLE IF EXISTS phase_stages;
+DROP TABLE IF EXISTS phases;
+DROP TABLE IF EXISTS dd_phase_status;
+ALTER TABLE app_settings DROP COLUMN IF EXISTS enable_checkpoint_phases;
+```
+
+## Step 2B: Frontend -- Feature Flag Hook + Types
+
+### New hook: `src/hooks/useCheckpointPhasesEnabled.ts`
+- Queries `app_settings` for `enable_checkpoint_phases`
+- Returns `{ enabled: boolean, isLoading: boolean }`
+- Follows the `useAddinFeatureFlags` query pattern with appropriate stale time
+
+### New types: `src/types/checkpoint-phase.ts`
+- TypeScript interfaces for Phase, PhaseStage, PhaseInstance, PhaseProgressSummary
+- Mapped from Supabase generated types after migration
+
+## Step 2C: Frontend -- Admin Phase Management
+
+### Package Builder integration (feature-flagged)
+- New "Phases" tab in `PackageBuilderEditor.tsx` (only visible when flag ON)
+- Create/select phase definitions and assign stages to them
+- Set gate_type per phase (hard/soft/none)
+- Drag stages into phases with sort ordering
+- Stages not assigned to any phase remain ungrouped (backward compatible)
+
+### Phase definition management
+- New component for creating/editing phase templates (title, phase_key, gate_type, allow_parallel)
+- Reachable from Package Builder's Phases tab
+
+## Step 2D: Frontend -- Runtime Phase Display
+
+### PackageStagesManager (admin view)
+- When package has phases (check `v_package_has_phases`): group stages under collapsible phase headers with progress bars
+- Show phase status badge from phase_instances
+- Hard-gated phases show lock icon; soft-gated show warning icon
+- Phase closure actions (Vivacity staff only)
+- When package has no phases: existing flat stage list, unchanged
+
+### Client Portal
+- When phases exist: stages grouped by phase with read-only status indicators
+- When no phases: flat stage list, unchanged
+- Clients cannot close phases
 
 ## What Does NOT Change
 
-- Database table/column names
-- Route paths (/admin/stages, /admin/stage-builder, etc.)
-- Internal variable names (phaseId, phase_completion, etc.)
-- Database view column names (phase_completion, phases_completed, current_phase_name)
-- Edge function names (calculate-phase-completeness)
-- EOS docs (docs/eos/phase-2.md etc. -- project build phases, not the Stage/Phase concept)
-- Code comments referencing "Unicorn 2.0 Phase 10/15/16" (project milestones)
-- ProgressMode value 'phase_based' in membership.ts (database value)
-- PackagePhase type in membership.ts (leave for now, maps to data fields)
-- Internal scope field names (phase_id, phase_name in Ask Viv interfaces)
-- Print component "Package/Phase:" label (will become relevant again in Step 2)
+- Stage creation, editing, certification, versioning
+- Stage dependencies (requires_stage_keys)
+- Task management (staff tasks, client tasks)
+- Document and email management
+- Time tracking / consultation hours
+- Executive dashboard views
+- All existing API contracts and RPC signatures
+- The `documents_stages`, `stage_instances`, `package_stages` table schemas
+- Any existing RLS policies
+- `dashboard_group` column on `package_stages` (left in place)
+- Existing `phase_requirements` / `package_phase_requirements` tables (different purpose, coexist)
 
-## Build Order
+## Build Sequence
 
-All files are independent string replacements. Will be done in parallel batches:
-1. Navigation + Pages (9 files)
-2. Admin + Package Builder + Client components (13 files)
-3. Dialogs + Stage + Membership components (6 files)
-4. Ask Viv + Executive + Dashboard components (9 files)
-5. Hooks + File renames + Edge functions + Docs (8 files)
+1. **Step 2A** -- Database migration (tables, views, RPCs, RLS, feature flag, audit triggers)
+2. **Step 2B** -- Feature flag hook and TypeScript types
+3. **Step 2C** -- Admin phase management UI (Package Builder Phases tab)
+4. **Step 2D** -- Runtime phase display (PackageStagesManager grouping, client portal)
 
-## Risk
+Each step will be presented for approval before execution. When flag is OFF, zero visual or behavioural changes anywhere.
 
-Zero logic changes. All existing functionality preserved. The only risk is a missed string -- visual review after deployment recommended.
+## Technical Notes
 
+- `audit_events.entity_id` is UUID -- all new tables use UUID PKs, so audit triggers work without casting
+- `is_vivacity_team_safe(auth.uid())` is the established pattern for Vivacity staff checks in RLS and RPCs
+- `tenant_users.user_id` (uuid) is the join column for tenant membership checks
+- `package_instances.id` is bigint -- `phase_instances.package_instance_id` matches this type
+- `documents_stages.id` is integer -- `phase_stages.stage_id` matches this type
+- `package_stages.package_id` is bigint -- `phase_stages.package_id` matches this type
+- The `app_settings` table has a single row (id=1) -- the feature flag is a new column on it
