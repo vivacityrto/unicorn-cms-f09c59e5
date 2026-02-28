@@ -1,6 +1,13 @@
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { emitTimelineEvent } from "../_shared/emit-timeline-event.ts";
+import {
+  getAppToken,
+  graphGet,
+  graphPost,
+  ensureFolder as sharedEnsureFolder,
+  type DriveItem,
+} from "../_shared/graph-app-client.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -8,14 +15,11 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const MICROSOFT_CLIENT_ID = Deno.env.get("MICROSOFT_CLIENT_ID")!;
-const MICROSOFT_CLIENT_SECRET = Deno.env.get("MICROSOFT_CLIENT_SECRET")!;
-const MICROSOFT_TENANT_ID = Deno.env.get("MICROSOFT_TENANT_ID")!;
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
 const SP_BASE_PATH = "/Unicorn Clients";
-const GRAPH_BASE = "https://graph.microsoft.com/v1.0";
+const GRAPH_BASE = "https://graph.microsoft.com/v1.0";  // kept for direct fetch calls below
 
 // ── Helpers ──
 
@@ -27,27 +31,7 @@ function sanitiseFolderName(name: string): string {
     .substring(0, 120);
 }
 
-async function getAppToken(): Promise<string> {
-  const resp = await fetch(
-    `https://login.microsoftonline.com/${MICROSOFT_TENANT_ID}/oauth2/v2.0/token`,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: new URLSearchParams({
-        client_id: MICROSOFT_CLIENT_ID,
-        client_secret: MICROSOFT_CLIENT_SECRET,
-        scope: "https://graph.microsoft.com/.default",
-        grant_type: "client_credentials",
-      }),
-    },
-  );
-  if (!resp.ok) {
-    const errText = await resp.text();
-    console.error("[provision-sp] Token request failed:", resp.status, errText);
-    throw new Error(`Failed to obtain app token: ${resp.status}`);
-  }
-  return (await resp.json()).access_token;
-}
+// getAppToken is now imported from ../_shared/graph-app-client.ts
 
 async function resolveSiteAndDrive(
   supabaseAdmin: ReturnType<typeof createClient>,
@@ -89,50 +73,13 @@ async function resolveSiteAndDrive(
 }
 
 async function ensureFolder(
-  accessToken: string,
+  _accessToken: string,
   driveId: string,
   parentPath: string,
   folderName: string,
 ): Promise<{ itemId: string; webUrl: string }> {
-  const encodedParent = parentPath.replace(/^\//, "");
-  const createUrl = `${GRAPH_BASE}/drives/${driveId}/root:/${encodeURIComponent(encodedParent)}:/children`;
-
-  const createResp = await fetch(createUrl, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      name: folderName,
-      folder: {},
-      "@microsoft.graph.conflictBehavior": "fail",
-    }),
-  });
-
-  if (createResp.status === 409) {
-    await createResp.text();
-    // Already exists — fetch it
-    const getUrl = `${GRAPH_BASE}/drives/${driveId}/root:/${encodeURIComponent(encodedParent)}/${encodeURIComponent(folderName)}`;
-    const getResp = await fetch(getUrl, {
-      headers: { Authorization: `Bearer ${accessToken}` },
-    });
-    if (!getResp.ok) {
-      await getResp.text();
-      throw new Error(`Folder exists but could not retrieve: ${folderName}`);
-    }
-    const existing = await getResp.json();
-    return { itemId: existing.id, webUrl: existing.webUrl };
-  }
-
-  if (!createResp.ok) {
-    const errText = await createResp.text();
-    console.error("[provision-sp] Failed to create folder:", createResp.status, errText);
-    throw new Error(`Failed to create folder "${folderName}": ${createResp.status}`);
-  }
-
-  const item = await createResp.json();
-  return { itemId: item.id, webUrl: item.webUrl };
+  // Delegate to shared module (token is managed internally)
+  return sharedEnsureFolder(driveId, parentPath, folderName);
 }
 
 /**

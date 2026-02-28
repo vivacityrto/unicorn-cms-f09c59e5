@@ -12291,17 +12291,26 @@ export type Database = {
       dd_document_categories: {
         Row: {
           id: number
+          is_active: boolean
           label: string
+          sharepoint_folder_name: string | null
+          sort_order: number | null
           value: string
         }
         Insert: {
           id: number
+          is_active?: boolean
           label: string
+          sharepoint_folder_name?: string | null
+          sort_order?: number | null
           value: string
         }
         Update: {
           id?: number
+          is_active?: boolean
           label?: string
+          sharepoint_folder_name?: string | null
+          sort_order?: number | null
           value?: string
         }
         Relationships: []
@@ -30302,6 +30311,42 @@ export type Database = {
         }
         Relationships: []
       }
+      sharepoint_sites: {
+        Row: {
+          created_at: string
+          drive_id: string | null
+          graph_site_id: string | null
+          id: string
+          is_active: boolean
+          purpose: string
+          site_name: string
+          site_url: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          drive_id?: string | null
+          graph_site_id?: string | null
+          id?: string
+          is_active?: boolean
+          purpose?: string
+          site_name: string
+          site_url: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          drive_id?: string | null
+          graph_site_id?: string | null
+          id?: string
+          is_active?: boolean
+          purpose?: string
+          site_name?: string
+          site_url?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       skillset_cache: {
         Row: {
           data: Json
@@ -35779,6 +35824,8 @@ export type Database = {
         Row: {
           base_path: string | null
           client_access_enabled: boolean
+          compliance_docs_folder_item_id: string | null
+          compliance_docs_folder_name: string | null
           created_at: string
           created_by: string
           drive_id: string | null
@@ -35788,6 +35835,7 @@ export type Database = {
           is_enabled: boolean
           last_validated_at: string | null
           manual_folder_url: string | null
+          match_method: string
           provisioning_error: string | null
           provisioning_status: string
           root_folder_url: string | null
@@ -35801,10 +35849,14 @@ export type Database = {
           updated_by: string | null
           validation_error: string | null
           validation_status: string
+          verified_at: string | null
+          verified_by: string | null
         }
         Insert: {
           base_path?: string | null
           client_access_enabled?: boolean
+          compliance_docs_folder_item_id?: string | null
+          compliance_docs_folder_name?: string | null
           created_at?: string
           created_by: string
           drive_id?: string | null
@@ -35814,6 +35866,7 @@ export type Database = {
           is_enabled?: boolean
           last_validated_at?: string | null
           manual_folder_url?: string | null
+          match_method?: string
           provisioning_error?: string | null
           provisioning_status?: string
           root_folder_url?: string | null
@@ -35827,10 +35880,14 @@ export type Database = {
           updated_by?: string | null
           validation_error?: string | null
           validation_status?: string
+          verified_at?: string | null
+          verified_by?: string | null
         }
         Update: {
           base_path?: string | null
           client_access_enabled?: boolean
+          compliance_docs_folder_item_id?: string | null
+          compliance_docs_folder_name?: string | null
           created_at?: string
           created_by?: string
           drive_id?: string | null
@@ -35840,6 +35897,7 @@ export type Database = {
           is_enabled?: boolean
           last_validated_at?: string | null
           manual_folder_url?: string | null
+          match_method?: string
           provisioning_error?: string | null
           provisioning_status?: string
           root_folder_url?: string | null
@@ -35853,6 +35911,8 @@ export type Database = {
           updated_by?: string | null
           validation_error?: string | null
           validation_status?: string
+          verified_at?: string | null
+          verified_by?: string | null
         }
         Relationships: [
           {
@@ -35959,6 +36019,48 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "vw_client_membership_usage"
             referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "tenant_sharepoint_settings_verified_by_fkey"
+            columns: ["verified_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "tenant_sharepoint_settings_verified_by_fkey"
+            columns: ["verified_by"]
+            isOneToOne: false
+            referencedRelation: "v_dashboard_labour_efficiency"
+            referencedColumns: ["csc_user_id"]
+          },
+          {
+            foreignKeyName: "tenant_sharepoint_settings_verified_by_fkey"
+            columns: ["verified_by"]
+            isOneToOne: false
+            referencedRelation: "v_dashboard_weekly_wins"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "tenant_sharepoint_settings_verified_by_fkey"
+            columns: ["verified_by"]
+            isOneToOne: false
+            referencedRelation: "v_executive_consultant_distribution"
+            referencedColumns: ["consultant_uuid"]
+          },
+          {
+            foreignKeyName: "tenant_sharepoint_settings_verified_by_fkey"
+            columns: ["verified_by"]
+            isOneToOne: false
+            referencedRelation: "vw_consultant_capacity"
+            referencedColumns: ["user_uuid"]
+          },
+          {
+            foreignKeyName: "tenant_sharepoint_settings_verified_by_fkey"
+            columns: ["verified_by"]
+            isOneToOne: false
+            referencedRelation: "vw_consultant_load"
+            referencedColumns: ["user_uuid"]
           },
         ]
       }
