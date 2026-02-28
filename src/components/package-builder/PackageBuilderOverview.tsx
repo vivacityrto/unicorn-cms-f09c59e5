@@ -48,6 +48,7 @@ export function PackageBuilderOverview() {
   const [packageStagesMap, setPackageStagesMap] = useState<Map<number, PackageStage[]>>(new Map());
 
   const [stageDocumentCounts, setStageDocumentCounts] = useState<Map<number, number>>(new Map());
+  const [phaseCountsMap, setPhaseCountsMap] = useState<Map<number, number>>(new Map());
 
   // Fetch stages for all packages to compute readiness
   useEffect(() => {
@@ -98,6 +99,28 @@ export function PackageBuilderOverview() {
     };
 
     fetchAllPackageStages();
+  }, [packages]);
+
+  // Fetch phase counts per package from phase_stages
+  useEffect(() => {
+    const fetchPhaseCounts = async () => {
+      if (packages.length === 0) return;
+      const { data, error } = await (supabase as any)
+        .from('phase_stages')
+        .select('package_id, phase_id')
+        .in('package_id', packages.map(p => p.id));
+      if (!error && data) {
+        const map = new Map<number, Set<string>>();
+        (data as any[]).forEach((row: any) => {
+          if (!map.has(row.package_id)) map.set(row.package_id, new Set());
+          map.get(row.package_id)!.add(row.phase_id);
+        });
+        const counts = new Map<number, number>();
+        map.forEach((phases, pkgId) => counts.set(pkgId, phases.size));
+        setPhaseCountsMap(counts);
+      }
+    };
+    fetchPhaseCounts();
   }, [packages]);
 
   // Compute readiness for each package
@@ -314,13 +337,14 @@ export function PackageBuilderOverview() {
                 <TableHead>Readiness</TableHead>
                 <TableHead className="text-center">Duration</TableHead>
                 <TableHead className="text-center">Phases</TableHead>
+                <TableHead className="text-center">Stages</TableHead>
                 <TableHead className="w-[100px]">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {filteredPackages.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="h-32 text-center text-muted-foreground">
+                  <TableCell colSpan={8} className="h-32 text-center text-muted-foreground">
                     {searchQuery || statusFilter !== 'all' || typeFilter !== 'all' 
                       ? 'No packages match your filters.'
                       : 'No packages yet. Create your first package to get started.'}
@@ -363,6 +387,12 @@ export function PackageBuilderOverview() {
                       <div className="flex items-center justify-center gap-1 text-muted-foreground">
                         <Clock className="h-3.5 w-3.5" />
                         <span>{pkg.duration_months || 12} mo</span>
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-center">
+                      <div className="flex items-center justify-center gap-1 text-muted-foreground">
+                        <Layers className="h-3.5 w-3.5" />
+                        <span>{phaseCountsMap.get(pkg.id) || 0}</span>
                       </div>
                     </TableCell>
                     <TableCell className="text-center">
