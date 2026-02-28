@@ -36546,6 +36546,8 @@ export type Database = {
           tier: string | null
           updated_at: string
           website: string | null
+          xero_contact_url: string | null
+          xero_repeating_invoice_url: string | null
         }
         Insert: {
           abn?: string | null
@@ -36604,6 +36606,8 @@ export type Database = {
           tier?: string | null
           updated_at?: string
           website?: string | null
+          xero_contact_url?: string | null
+          xero_repeating_invoice_url?: string | null
         }
         Update: {
           abn?: string | null
@@ -36662,6 +36666,8 @@ export type Database = {
           tier?: string | null
           updated_at?: string
           website?: string | null
+          xero_contact_url?: string | null
+          xero_repeating_invoice_url?: string | null
         }
         Relationships: [
           {
