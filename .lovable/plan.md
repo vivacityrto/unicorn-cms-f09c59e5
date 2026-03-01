@@ -1,86 +1,40 @@
 
 
-## Problem
+## Cleanup: Drop Legacy Field Tables
 
-The `documents.category` column currently stores **labels** from `dd_document_categories` (e.g., `"Q1-Training & Assessment"`) instead of the standardised **values** (e.g., `"q1-training_assessment"`). Some records also contain stale numeric IDs (`"20"`, `"1017"`) or comma-separated values (`"20,15,16"`). This needs to be corrected across both the database data and all code that reads/writes/displays categories.
+### Tables to Drop
 
-## What Changes
+| Table | Rows | Verdict | Reason |
+|-------|------|---------|--------|
+| `document_fields` | 2,377 | **KEEP** | Active join table linking documents to `dd_fields`. Used by governance delivery, tailoring, import scanner, merge field editor, and multiple UI components. |
+| `client_fields` | 9,392 | **DROP** | Legacy. No foreign keys, no active code references. Superseded by `dd_fields` + `v_tenant_merge_fields`. |
+| `clientfields` | 8,184 | **DROP** | Legacy duplicate of `client_fields`. Only referenced in an old RLS migration. |
+| `documents_fields` | 24 | **DROP** | Legacy field definitions table. Only used by the old `ManageFields.tsx` and `ManageDocuments.tsx` pages. Superseded by `dd_fields`. |
+| `merge_field_definitions` | 22 | **DROP** | Legacy table created early in development. Superseded entirely by `dd_fields` + `v_tenant_merge_fields`. No active code references. |
 
-### 1. Data Migration -- Fix existing `documents.category` values
+### Code to Remove or Update
 
-A SQL update will map every current label to its correct `dd_document_categories.value`. The mapping covers all 25 distinct values currently in the table:
+**Files to delete:**
+- `src/pages/ManageFields.tsx` — legacy page that CRUDs `documents_fields`. Replaced by the Merge Field Tags admin page (`/admin/merge-field-tags`).
+- `src/pages/ManageFieldsWrapper.tsx` — wrapper for the above.
 
-- Labels like `"Q1-Training & Assessment"` become `"q1-training_assessment"`
-- Mixed-case duplicates like `"CRICOS-Documents"` and `"cricos-documents"` both become `"cricos-documents"`
-- Orphan numeric values (`"20"`, `"1017"`, `"20,15,16"`) and the anomaly `"Q2-Learner Support,8"` will be set to `"uncategorised"`
-
-### 2. Frontend -- Select/filter by `value`, display `label`
-
-All UI components that show or filter by document category need to:
-- **Store/filter** using the `value` field
-- **Display** the human-readable `label` to users
-
-This requires fetching both `label` and `value` from `dd_document_categories` and building a lookup map.
-
-**Files affected:**
+**Files to update:**
 
 | File | Change |
 |------|--------|
-| `src/pages/admin/GovernanceDocuments.tsx` | Fetch `label, value` from categories. Use `value` for filter matching and saving. Display `label` in the table and filter dropdown. |
-| `src/components/governance/GovernanceDocumentDetail.tsx` | Fetch `label, value`. Save `value` on category change. Display `label` in the dropdown and header subtitle. |
-| `src/pages/TenantDocuments.tsx` | Build a value-to-label map from `dd_document_categories`. Display `label` in badges instead of raw `value`. |
-| `src/components/documents/tabs/GeneratedDocumentsTab.tsx` | Same pattern -- display `label` from lookup. |
-| `src/components/client/ClientDocumentsTab.tsx` | Filter by `value`, display `label` in badges and filter dropdown. |
-| `src/components/client/ClientGovernanceRegister.tsx` | The `category_subfolder` field comes from deliveries; display using a label lookup. |
-| `src/components/AddExistingDocumentDialog.tsx` | Filter uses `doc.category` (now a `value`); display `label` in UI. |
+| `src/App.tsx` | Remove the `/manage-fields` route and its lazy import. |
+| `src/pages/ManageDocuments.tsx` | Remove the `fetchFields` function that queries `documents_fields`, remove the fields count display, and remove the navigation link to `/manage-fields`. |
 
-### 3. Edge Functions -- Look up by `value` instead of `label`
+### Database Migration
 
-| Function | Change |
-|----------|--------|
-| `supabase/functions/deliver-governance-document/index.ts` | Line ~431: change `.eq("label", doc.document_category)` to `.eq("value", doc.category)` to find the SharePoint folder name. |
-| `supabase/functions/verify-compliance-folder/index.ts` | No change needed -- it already selects `label, sharepoint_folder_name` for folder creation and doesn't match against document data. |
+A single migration will:
+1. Drop all RLS policies on the four legacy tables.
+2. Drop the four tables: `client_fields`, `clientfields`, `documents_fields`, `merge_field_definitions`.
 
-### 4. Shared Category Lookup Hook (new file)
+### What is NOT Affected
 
-Create a small reusable hook `src/hooks/useDocumentCategories.ts` that:
-- Fetches `dd_document_categories` (label, value, is_active, sort_order)
-- Returns the list plus a `valueLabelMap` for easy display lookups
-- Shared across all the UI files above to avoid duplicating queries
-
-## Technical Details
-
-**Data migration SQL (summary):**
-```sql
-UPDATE documents SET category = cat.value
-FROM dd_document_categories cat
-WHERE documents.category IS NOT NULL
-  AND LOWER(documents.category) = LOWER(cat.label);
-
--- Orphans to 'uncategorised'
-UPDATE documents SET category = 'uncategorised'
-WHERE category IS NOT NULL
-  AND category NOT IN (SELECT value FROM dd_document_categories);
-```
-
-**Hook pattern:**
-```typescript
-export function useDocumentCategories() {
-  const query = useQuery({
-    queryKey: ['dd-document-categories'],
-    queryFn: async () => { /* fetch label, value */ },
-  });
-  const valueLabelMap = useMemo(() => new Map(
-    query.data?.map(c => [c.value, c.label])
-  ), [query.data]);
-  return { categories: query.data, valueLabelMap };
-}
-```
-
-**Display pattern in all UI files:**
-```typescript
-const { valueLabelMap } = useDocumentCategories();
-// In JSX:
-{valueLabelMap.get(doc.category) || doc.category || '—'}
-```
+- The active `document_fields` table (note: no "s" before "fields") remains untouched.
+- The `dd_fields` table and `/admin/merge-field-tags` page remain the authoritative source for merge field management.
+- The `v_tenant_merge_fields` view continues to work as before.
+- No edge functions reference any of the four legacy tables.
 
