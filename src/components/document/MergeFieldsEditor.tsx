@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { useDocumentMergeFields } from '@/hooks/useExcelDataSources';
+import { useState, useEffect, useCallback } from 'react';
+import { supabase } from '@/integrations/supabase/client';
 import { useMergeFields } from '@/hooks/useMergeFields';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -7,58 +7,87 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { X, Plus, Save, FileText, Search } from 'lucide-react';
+import { X, Plus, Save, FileText, Search, Loader2 } from 'lucide-react';
+import { toast } from 'sonner';
 
 interface MergeFieldsEditorProps {
   documentId: number;
 }
 
 export function MergeFieldsEditor({ documentId }: MergeFieldsEditorProps) {
-  const { mergeFields, loading, updateMergeFields } = useDocumentMergeFields(documentId);
   const { mergeFields: availableFields, loading: fieldsLoading } = useMergeFields();
-  const [localFields, setLocalFields] = useState<string[]>([]);
+  const [linkedFieldIds, setLinkedFieldIds] = useState<number[]>([]);
+  const [localFieldIds, setLocalFieldIds] = useState<number[]>([]);
+  const [loading, setLoading] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [popoverOpen, setPopoverOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
 
-  // Initialize local fields when data loads
-  useState(() => {
-    if (!loading && mergeFields.length > 0) {
-      setLocalFields(mergeFields);
+  const fetchLinkedFields = useCallback(async () => {
+    if (!documentId) return;
+    setLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('document_fields')
+        .select('field_id')
+        .eq('document_id', documentId);
+      if (error) throw error;
+      const ids = (data || []).map((r) => r.field_id);
+      setLinkedFieldIds(ids);
+      setLocalFieldIds(ids);
+    } catch (err: any) {
+      console.error('Error fetching document fields:', err);
+    } finally {
+      setLoading(false);
     }
-  });
+  }, [documentId]);
 
-  // Sync when mergeFields changes
-  if (!hasChanges && JSON.stringify(localFields) !== JSON.stringify(mergeFields)) {
-    setLocalFields(mergeFields);
-  }
+  useEffect(() => {
+    fetchLinkedFields();
+  }, [fetchLinkedFields]);
 
-  const addField = (fieldTag: string) => {
-    const code = `{{${fieldTag}}}`;
-    if (!localFields.includes(code)) {
-      setLocalFields([...localFields, code]);
+  const addField = (fieldId: number) => {
+    if (!localFieldIds.includes(fieldId)) {
+      setLocalFieldIds((prev) => [...prev, fieldId]);
       setHasChanges(true);
     }
     setPopoverOpen(false);
     setSearchTerm('');
   };
 
-  const removeField = (fieldCode: string) => {
-    setLocalFields(localFields.filter(f => f !== fieldCode));
+  const removeField = (fieldId: number) => {
+    setLocalFieldIds((prev) => prev.filter((id) => id !== fieldId));
     setHasChanges(true);
   };
 
   const handleSave = async () => {
-    await updateMergeFields(localFields);
-    setHasChanges(false);
+    setSaving(true);
+    try {
+      // Delete existing links
+      await supabase.from('document_fields').delete().eq('document_id', documentId);
+      // Insert new links
+      if (localFieldIds.length > 0) {
+        const rows = localFieldIds.map((field_id) => ({ document_id: documentId, field_id }));
+        const { error } = await supabase.from('document_fields').insert(rows);
+        if (error) throw error;
+      }
+      setLinkedFieldIds(localFieldIds);
+      setHasChanges(false);
+      toast.success('Required merge fields updated');
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to save');
+    } finally {
+      setSaving(false);
+    }
   };
 
-  const activeAvailableFields = availableFields.filter(f => f.is_active);
-  const filteredAvailableFields = activeAvailableFields.filter(f => {
-    const code = `{{${f.tag}}}`;
-    return !localFields.includes(code) && (
-      f.tag.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      f.name.toLowerCase().includes(searchTerm.toLowerCase())
+  const activeAvailableFields = availableFields.filter((f) => f.is_active);
+  const filteredAvailableFields = activeAvailableFields.filter((f) => {
+    return (
+      !localFieldIds.includes(f.id) &&
+      (f.tag.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        f.name.toLowerCase().includes(searchTerm.toLowerCase()))
     );
   });
 
@@ -97,9 +126,7 @@ export function MergeFieldsEditor({ documentId }: MergeFieldsEditorProps) {
               <ScrollArea className="h-[250px]">
                 <div className="p-2">
                   {fieldsLoading ? (
-                    <p className="text-sm text-muted-foreground text-center py-4">
-                      Loading fields...
-                    </p>
+                    <p className="text-sm text-muted-foreground text-center py-4">Loading fields...</p>
                   ) : filteredAvailableFields.length === 0 ? (
                     <p className="text-sm text-muted-foreground text-center py-4">
                       {searchTerm ? 'No matching fields' : 'All fields added'}
@@ -108,16 +135,12 @@ export function MergeFieldsEditor({ documentId }: MergeFieldsEditorProps) {
                     filteredAvailableFields.map((field) => (
                       <button
                         key={field.id}
-                        onClick={() => addField(field.tag)}
+                        onClick={() => addField(field.id)}
                         className="w-full text-left p-2 rounded hover:bg-muted transition-colors"
                       >
                         <div className="flex items-center gap-2">
-                          <code className="text-xs bg-muted px-1.5 py-0.5 rounded">
-                            {`{{${field.tag}}}`}
-                          </code>
-                          <span className="text-sm text-muted-foreground truncate">
-                            {field.name}
-                          </span>
+                          <code className="text-xs bg-muted px-1.5 py-0.5 rounded">{`{{${field.tag}}}`}</code>
+                          <span className="text-sm text-muted-foreground truncate">{field.name}</span>
                         </div>
                       </button>
                     ))
@@ -126,10 +149,10 @@ export function MergeFieldsEditor({ documentId }: MergeFieldsEditorProps) {
               </ScrollArea>
             </PopoverContent>
           </Popover>
-          
+
           {hasChanges && (
-            <Button size="sm" onClick={handleSave}>
-              <Save className="h-4 w-4 mr-2" />
+            <Button size="sm" onClick={handleSave} disabled={saving}>
+              {saving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
               Save
             </Button>
           )}
@@ -138,35 +161,24 @@ export function MergeFieldsEditor({ documentId }: MergeFieldsEditorProps) {
       <CardContent>
         {loading ? (
           <p className="text-sm text-muted-foreground">Loading...</p>
-        ) : localFields.length === 0 ? (
+        ) : localFieldIds.length === 0 ? (
           <div className="text-center py-6 text-muted-foreground">
             <FileText className="h-10 w-10 mx-auto mb-2 opacity-30" />
             <p>No required merge fields defined</p>
-            <p className="text-sm mt-1">
-              Add fields that must be populated for this document
-            </p>
+            <p className="text-sm mt-1">Add fields that must be populated for this document</p>
           </div>
         ) : (
           <div className="flex flex-wrap gap-2">
-            {localFields.map((fieldCode) => {
-              // Extract tag from {{Tag}} format
-              const tagMatch = fieldCode.match(/\{\{(.+?)\}\}/);
-              const tag = tagMatch ? tagMatch[1] : fieldCode;
-              const fieldDef = availableFields.find(f => f.tag === tag);
+            {localFieldIds.map((fieldId) => {
+              const fieldDef = availableFields.find((f) => f.id === fieldId);
               return (
-                <Badge 
-                  key={fieldCode} 
-                  variant="secondary"
-                  className="gap-1.5 pl-2 pr-1 py-1"
-                >
-                  <code className="text-xs">{fieldCode}</code>
+                <Badge key={fieldId} variant="secondary" className="gap-1.5 pl-2 pr-1 py-1">
+                  <code className="text-xs">{`{{${fieldDef?.tag || fieldId}}}`}</code>
                   {fieldDef && (
-                    <span className="text-xs text-muted-foreground">
-                      ({fieldDef.name})
-                    </span>
+                    <span className="text-xs text-muted-foreground">({fieldDef.name})</span>
                   )}
                   <button
-                    onClick={() => removeField(fieldCode)}
+                    onClick={() => removeField(fieldId)}
                     className="ml-1 hover:bg-destructive/20 rounded p-0.5 transition-colors"
                   >
                     <X className="h-3 w-3" />

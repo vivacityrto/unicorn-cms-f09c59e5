@@ -201,7 +201,7 @@ export function useStageReleases(tenantId?: number) {
         // Fetch document info separately
         const { data: docData } = await supabase
           .from('documents')
-          .select('id, title, format, merge_fields, dropdown_sources')
+          .select('id, title, format, dropdown_sources')
           .eq('id', item.document_id)
           .single();
 
@@ -228,15 +228,8 @@ export function useStageReleases(tenantId?: number) {
           }
         }
 
-        // Check merge fields
-        const mergeFields = docData?.merge_fields as { required?: string[] } | null;
-        if (mergeFields?.required && mergeFields.required.length > 0) {
-          // This is a warning - merge fields exist but we can't verify all values
-          if (status !== 'fail') {
-            issues.push(`Has ${mergeFields.required.length} merge field(s) - verify values are correct`);
-            if (status === 'pass') status = 'warn';
-          }
-        }
+        // Merge field check removed — documents.merge_fields column dropped.
+        // Validation now uses document_fields table via tailoring pipeline.
 
         // Check data sources for Excel
         const dropdownSources = docData?.dropdown_sources as { required?: string[] } | null;
@@ -265,8 +258,8 @@ export function useStageReleases(tenantId?: number) {
         });
 
         if (status === 'pass') results.summary.pass++;
-        else if (status === 'warn') results.summary.warn++;
-        else results.summary.fail++;
+        else if (status === 'fail') results.summary.fail++;
+        else results.summary.warn++;
       }
 
       results.can_release = results.summary.fail === 0;

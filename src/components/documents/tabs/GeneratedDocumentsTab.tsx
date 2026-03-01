@@ -27,7 +27,6 @@ interface GeneratedDocument {
   createdat: string | null;
   isclientdoc: boolean | null;
   package_name?: string | null;
-  merge_fields?: any;
   is_auto_generated?: boolean | null;
   format?: string | null;
   is_client_visible?: boolean | null;
@@ -100,10 +99,16 @@ export function GeneratedDocumentsTab({ tenantId, isClientView = false, tenantNa
     const missingByDoc: Record<number, MissingField[]> = {};
     
     for (const doc of docs) {
-      if (doc.is_auto_generated && doc.merge_fields) {
-        const docFieldCodes = Array.isArray(doc.merge_fields) 
-          ? doc.merge_fields 
-          : Object.keys(doc.merge_fields);
+      if (doc.is_auto_generated) {
+        // Query required tags from document_fields
+        const { data: fieldRows } = await supabase
+          .from('document_fields')
+          .select('field:dd_fields(tag)')
+          .eq('document_id', doc.id);
+        
+        const docFieldCodes = (fieldRows || [])
+          .map((r: any) => r.field?.tag)
+          .filter(Boolean);
         
         if (docFieldCodes.length > 0) {
           const missing = await detectMissingFields(docFieldCodes);

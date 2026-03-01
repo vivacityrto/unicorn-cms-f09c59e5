@@ -16,10 +16,9 @@ interface MappingEntry {
 
 interface GovernanceMappingEditorProps {
   versionId: string;
-  mergeFields: Record<string, unknown> | null;
 }
 
-export function GovernanceMappingEditor({ versionId, mergeFields }: GovernanceMappingEditorProps) {
+export function GovernanceMappingEditor({ versionId }: GovernanceMappingEditorProps) {
   const queryClient = useQueryClient();
   const [mappings, setMappings] = useState<MappingEntry[]>([]);
   const [saving, setSaving] = useState(false);
@@ -40,7 +39,7 @@ export function GovernanceMappingEditor({ versionId, mergeFields }: GovernanceMa
     },
   });
 
-  // Initialise from existing mapping or merge_fields
+  // Initialise from existing mapping
   useEffect(() => {
     if (existingMapping?.mapping_json) {
       const json = existingMapping.mapping_json as Record<string, { label?: string; defaultValue?: string }>;
@@ -51,16 +50,8 @@ export function GovernanceMappingEditor({ versionId, mergeFields }: GovernanceMa
           defaultValue: val?.defaultValue || '',
         }))
       );
-    } else if (mergeFields && Object.keys(mergeFields).length > 0) {
-      setMappings(
-        Object.keys(mergeFields).map((key) => ({
-          key,
-          label: key,
-          defaultValue: '',
-        }))
-      );
     }
-  }, [existingMapping, mergeFields]);
+  }, [existingMapping]);
 
   const addField = () => {
     setMappings(prev => [...prev, { key: '', label: '', defaultValue: '' }]);

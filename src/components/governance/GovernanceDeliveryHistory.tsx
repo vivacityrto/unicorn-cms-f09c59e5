@@ -4,7 +4,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
-import { ExternalLink, Send } from 'lucide-react';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { ExternalLink, Send, AlertTriangle } from 'lucide-react';
 import { format } from 'date-fns';
 
 interface GovernanceDeliveryHistoryProps {
@@ -69,6 +70,60 @@ export function GovernanceDeliveryHistory({ documentId }: GovernanceDeliveryHist
     }
   };
 
+  const tailoringBadge = (riskLevel: string | null) => {
+    if (!riskLevel) return <span className="text-xs text-muted-foreground">—</span>;
+    switch (riskLevel) {
+      case 'complete':
+        return <Badge className="bg-emerald-600 text-primary-foreground text-xs">Complete</Badge>;
+      case 'partial':
+        return <Badge className="bg-amber-500 text-primary-foreground text-xs">Partial</Badge>;
+      case 'incomplete':
+        return <Badge variant="destructive" className="text-xs">Incomplete</Badge>;
+      default:
+        return <Badge variant="outline" className="text-xs">{riskLevel}</Badge>;
+    }
+  };
+
+  const issuesPopover = (d: any) => {
+    const missing = (d.missing_merge_fields as string[] | null) || [];
+    const invalid = (d.invalid_merge_fields as string[] | null) || [];
+    const total = missing.length + invalid.length;
+    if (total === 0) return <span className="text-xs text-muted-foreground">—</span>;
+
+    return (
+      <Popover>
+        <PopoverTrigger asChild>
+          <Button variant="ghost" size="sm" className="h-6 px-2 text-xs gap-1">
+            <AlertTriangle className="h-3 w-3 text-amber-500" />
+            {total}
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-64">
+          {missing.length > 0 && (
+            <div className="mb-2">
+              <p className="text-xs font-medium mb-1">Missing Fields ({missing.length})</p>
+              <div className="flex flex-wrap gap-1">
+                {missing.map((f) => (
+                  <Badge key={f} variant="outline" className="text-xs font-mono">{`{{${f}}}`}</Badge>
+                ))}
+              </div>
+            </div>
+          )}
+          {invalid.length > 0 && (
+            <div>
+              <p className="text-xs font-medium mb-1">Invalid Tags ({invalid.length})</p>
+              <div className="flex flex-wrap gap-1">
+                {invalid.map((f) => (
+                  <Badge key={f} variant="destructive" className="text-xs font-mono">{`{{${f}}}`}</Badge>
+                ))}
+              </div>
+            </div>
+          )}
+        </PopoverContent>
+      </Popover>
+    );
+  };
+
   if (isLoading) return null;
   if (!deliveries?.length) return null;
 
@@ -86,6 +141,8 @@ export function GovernanceDeliveryHistory({ documentId }: GovernanceDeliveryHist
               <TableHead>Tenant</TableHead>
               <TableHead>Version</TableHead>
               <TableHead>Status</TableHead>
+              <TableHead>Tailoring</TableHead>
+              <TableHead>Issues</TableHead>
               <TableHead>Delivered By</TableHead>
               <TableHead>Delivered At</TableHead>
               <TableHead>SharePoint</TableHead>
@@ -97,6 +154,8 @@ export function GovernanceDeliveryHistory({ documentId }: GovernanceDeliveryHist
                 <TableCell className="font-medium text-sm">{d.tenant_name}</TableCell>
                 <TableCell className="text-sm">v{String(d.version_number)}</TableCell>
                 <TableCell>{statusBadge(d.status)}</TableCell>
+                <TableCell>{tailoringBadge(d.tailoring_risk_level)}</TableCell>
+                <TableCell>{issuesPopover(d)}</TableCell>
                 <TableCell className="text-sm text-muted-foreground">{d.delivered_by_name}</TableCell>
                 <TableCell className="text-sm text-muted-foreground">
                   {d.delivered_at ? format(new Date(d.delivered_at), 'dd MMM yyyy HH:mm') : '—'}

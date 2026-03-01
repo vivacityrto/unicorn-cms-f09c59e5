@@ -1120,7 +1120,7 @@ export default function DocumentDetail() {
                 documentId={document.id}
                 scanStatus={(document as any).scan_status}
                 scannedAt={(document as any).scanned_at}
-                mergeFields={(document as any).merge_fields as string[] || []}
+                mergeFields={[]}
                 namedRanges={(document as any).named_ranges as string[] || []}
                 documentType={document.format || undefined}
                 onScanComplete={fetchDocument}
