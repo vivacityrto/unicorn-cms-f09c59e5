@@ -2,13 +2,14 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { Clock, TrendingUp, DollarSign, ExternalLink, AlertTriangle, X, TrendingDown, Calendar, Timer, PenLine } from 'lucide-react';
+import { Clock, TrendingUp, DollarSign, ExternalLink, AlertTriangle, X, TrendingDown, Calendar, Timer, PenLine, ChevronDown } from 'lucide-react';
 import { useTimeTrackingQuery, formatDuration } from '@/hooks/useTimeTrackingQuery';
 import { usePackageUsageQuery, formatHours, formatForecast } from '@/hooks/usePackageUsageQuery';
 import { useState } from 'react';
 import { TimeLogDrawer } from './TimeLogDrawer';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 
 interface ClientTimeSummaryCardProps {
   clientId: number;
@@ -17,9 +18,11 @@ interface ClientTimeSummaryCardProps {
 export function ClientTimeSummaryCard({ clientId }: ClientTimeSummaryCardProps) {
   const { summary, loading: timeLoading } = useTimeTrackingQuery(clientId);
   const { 
+    packages,
     usage, 
     alerts, 
-    selectedPackage, 
+    selectedPackage,
+    setSelectedPackageId,
     dismissAlert, 
     loading: usageLoading 
   } = usePackageUsageQuery(clientId);
@@ -135,14 +138,34 @@ export function ClientTimeSummaryCard({ clientId }: ClientTimeSummaryCardProps) 
         {/* Package Usage Card */}
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-base flex items-center gap-2">
+             <CardTitle className="text-base flex items-center gap-2">
               <TrendingDown className="h-4 w-4" />
               Package Burn-down
-              {selectedPackage && (
+              {selectedPackage && packages.length > 1 ? (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Badge variant="outline" className="ml-auto text-xs font-normal cursor-pointer hover:bg-muted gap-1">
+                      {selectedPackage.package_name}
+                      <ChevronDown className="h-3 w-3" />
+                    </Badge>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    {packages.map((pkg) => (
+                      <DropdownMenuItem
+                        key={pkg.id}
+                        onClick={() => setSelectedPackageId(pkg.id)}
+                        className={pkg.id === selectedPackage.id ? 'bg-muted font-medium' : ''}
+                      >
+                        {pkg.package_name}
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              ) : selectedPackage ? (
                 <Badge variant="outline" className="ml-auto text-xs font-normal">
                   {selectedPackage.package_name}
                 </Badge>
-              )}
+              ) : null}
             </CardTitle>
           </CardHeader>
           <CardContent>
