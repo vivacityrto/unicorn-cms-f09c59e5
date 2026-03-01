@@ -1,122 +1,94 @@
 
-# Stage 6: TGA Snapshot Linkage -- Final Verified Plan
 
-## Verification Summary
+# Stage 7: Client Document Register -- Final Verified Plan
 
-All claims in this plan have been verified against the live database schema and current source code:
+## Pre-Implementation Audit
 
-- **Bug confirmed**: Line 233 of `deliver-governance-document/index.ts` uses `.order("fetched_at", ...)` but `tga_rto_snapshots` has no `fetched_at` column -- only `created_at`. This causes unpredictable snapshot selection.
-- **Schema confirmed**: `governance_document_deliveries` already has a `snapshot_id` (uuid) column -- no migration needed.
-- **Schema confirmed**: `tga_rto_snapshots` columns are: `id`, `tenant_id`, `rto_id`, `source_url`, `raw_sha256`, `payload`, `created_at`.
-- **Audit log fix from Stage 5 confirmed**: Lines 489-505 now correctly use the `metadata` column.
-- **Delivery dialog confirmed**: `runDeliveryLoop` currently does not pass `snapshot_id` to the edge function (lines 244-248).
-- **Delivery history confirmed**: Currently enriches with tenant names, version numbers, and user names, but does not include snapshot data.
+### Schema Confirmed (Live Database)
 
-No conflicts with existing functionality. No database migrations required.
+`governance_document_deliveries` columns available:
+
+| Column | Type | Nullable | Purpose |
+|--------|------|----------|---------|
+| `id` | uuid | NO | Row key |
+| `tenant_id` | bigint | NO | Tenant filter (FK to `tenants`) |
+| `document_id` | bigint | NO | Fallback grouping key |
+| `document_version_id` | uuid | NO | Version enrichment (FK to `document_versions`) |
+| `status` | text | NO | Filter to `'success'` |
+| `delivered_file_name` | text | YES | Document title |
+| `category_subfolder` | text | YES | Category filter |
+| `delivered_at` | timestamptz | NO | Date column |
+| `tailoring_risk_level` | text | YES | Badge (complete/partial/incomplete) |
+| `sharepoint_web_url` | text | YES | External link |
+| `snapshot_id` | uuid | YES | Available for future use |
+
+### RLS Verified (Zero Changes Needed)
+
+| Table | Client Access | Policy |
+|-------|--------------|--------|
+| `governance_document_deliveries` | Own tenant only | `EXISTS (SELECT 1 FROM tenant_users tu WHERE tu.tenant_id = ... AND tu.user_id = auth.uid())` |
+| `document_versions` | All authenticated | `qual: true` permissive SELECT |
+| `documents` | **NOT QUERIED** | RLS blocks client access when `tenant_id = NULL` |
+
+### Critical Design Decision
+
+Governance documents in the `documents` table have `tenant_id = NULL` (master templates). The RLS policy `has_tenant_access_safe(tenant_id, auth.uid())` returns `false` for client users when `tenant_id` is `NULL`. The plan avoids `documents` entirely, using `delivered_file_name` and `category_subfolder` already captured on delivery records.
+
+### Integration Points Verified
+
+- `ClientDocumentsPage.tsx`: Uses `useSearchParams` for tab routing (line 124: `const tab = searchParams.get("tab") || "shared"`). Adding `"governance"` requires zero routing changes.
+- `ClientHomePage.tsx`: Quick Links section ends at line 159. New button slots in naturally at line 153.
+- `EmptyState` component (line 35-42 of `ClientDocumentsPage.tsx`): Local to the file. The new component will define its own consistent empty state.
+- Styling: Client portal uses inline `hsl()` values (purple `hsl(270 55% 41%)`, cyan `hsl(189 74% 50%)`, light purple `hsl(270 20% 88%)`). The new component will match exactly.
 
 ---
 
 ## Implementation Plan
 
-### Step 1: Fix `fetched_at` to `created_at` in Edge Function
+### Step 1: Create the Client Governance Register Component
 
-**File**: `supabase/functions/deliver-governance-document/index.ts`
-**Line**: 233
+**New file**: `src/components/client/ClientGovernanceRegister.tsx`
 
-Change `.order("fetched_at", { ascending: false })` to `.order("created_at", { ascending: false })`.
+A React component that:
+- Gets `activeTenantId` from `useClientTenant()`
+- Uses `useQuery` to fetch `governance_document_deliveries` filtered by `tenant_id = activeTenantId` and `status = 'success'`, ordered by `delivered_at DESC`
+- Enriches with version numbers from `document_versions` using the Map-based pattern (same as `GovernanceDeliveryHistory.tsx`)
+- Does **NOT** query the `documents` table (blocked by RLS for client users)
+- Derives document title from `delivered_file_name` (strips `.docx` extension for display), falling back to `"Document #" + document_id` when null
+- Uses `category_subfolder` as category, falling back to `"Uncategorised"` when null
+- Renders a table with columns:
+  - **Document** (from `delivered_file_name`, cleaned)
+  - **Category** (from `category_subfolder`)
+  - **Version** (from `document_versions.version_number`)
+  - **Delivered** (formatted date, e.g. "15 Feb 2026")
+  - **Tailoring** (badge: Complete/Partial/Incomplete)
+  - **View** (external link icon to `sharepoint_web_url`, opens in new tab)
+- Includes a search input for filtering by document name (client-side)
+- Includes a category dropdown filter populated from distinct `category_subfolder` values
+- Shows an empty state ("No governance documents have been delivered yet.") matching the existing `EmptyState` pattern in `ClientDocumentsPage`
+- Follows Client Portal styling (purple/pink `hsl()` inline styles)
+- Is fully read-only -- zero mutations
 
-Single-line fix. Restores correct "latest snapshot" ordering for idempotency checks.
+### Step 2: Add Governance Register Tab to Client Documents Page
 
-### Step 2: Accept Optional `snapshot_id` Parameter in Edge Function
+**File**: `src/components/client/ClientDocumentsPage.tsx`
 
-**File**: `supabase/functions/deliver-governance-document/index.ts`
+- Import `ClientGovernanceRegister` and `ShieldCheck` from lucide-react
+- Add a fourth `TabsTrigger` after the "Requests" tab (line 308):
+  - Value: `"governance"`
+  - Icon: `ShieldCheck`
+  - Label: "Governance Register"
+- Add corresponding `TabsContent` rendering `<ClientGovernanceRegister />`
+- Existing tab routing via `useSearchParams` already supports any string value, so `?tab=governance` works with zero routing changes
+- No changes to existing "Shared", "Uploaded", or "Requests" tabs
 
-At line 196, add `snapshot_id` to the destructured body:
-```
-const { tenant_id, document_version_id, allow_incomplete, snapshot_id: pinned_snapshot_id } = body;
-```
+### Step 3: Add Governance Quick Link to Client Home Page
 
-At lines 228-237, if `pinned_snapshot_id` is provided, skip the snapshot query and use it directly:
-```
-let snapshotId: string | null;
-if (pinned_snapshot_id) {
-  snapshotId = pinned_snapshot_id;
-} else {
-  const { data: latestSnapshot } = await supabase
-    .from("tga_rto_snapshots")
-    .select("id")
-    .eq("tenant_id", tenant_id)
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-  snapshotId = latestSnapshot?.id || null;
-}
-```
+**File**: `src/components/client/ClientHomePage.tsx`
 
-Backward-compatible -- omitting the parameter preserves current behaviour. This affects the idempotency check (line 248) and the delivery record's `snapshot_id` column, but does NOT change merge field resolution (which uses `v_tenant_merge_fields`).
-
-### Step 3: Pre-Fetch and Pin Snapshot IDs in Delivery Dialog
-
-**File**: `src/components/governance/GovernanceDeliveryDialog.tsx`
-
-At the start of `runDeliveryLoop` (after line 218, before the for-loop):
-
-```typescript
-// Pre-fetch latest snapshot per tenant for batch consistency
-const { data: snapshots } = await supabase
-  .from('tga_rto_snapshots')
-  .select('id, tenant_id, created_at')
-  .in('tenant_id', tenantIds)
-  .order('created_at', { ascending: false });
-
-const snapshotMap = new Map<number, { id: string; created_at: string }>();
-for (const s of snapshots || []) {
-  if (!snapshotMap.has(s.tenant_id)) {
-    snapshotMap.set(s.tenant_id, { id: s.id, created_at: s.created_at });
-  }
-}
-```
-
-Then in the edge function invocation body (line 244-248), add:
-```
-snapshot_id: snapshotMap.get(tenantId)?.id,
-```
-
-Tenants without a snapshot naturally get `undefined` (omitted from body), preserving fallback behaviour in the edge function.
-
-### Step 4: Add Snapshot Staleness Indicators to Dialog
-
-**File**: `src/components/governance/GovernanceDeliveryDialog.tsx`
-
-Add a query alongside existing tenant data fetching that retrieves the latest snapshot `created_at` per eligible tenant. In the tenant list UI:
-
-- No indicator if snapshot exists and is less than 90 days old
-- Amber clock icon with tooltip "Snapshot is X days old" if 90-180 days old
-- Red alert icon with tooltip "No TGA snapshot available" if no snapshot exists
-- Summary line near the top: "X tenants missing TGA snapshot" (only shown if X > 0)
-
-These are informational only -- they do not block delivery.
-
-### Step 5: Include Snapshot IDs in Batch Audit Metadata
-
-**File**: `src/components/governance/GovernanceDeliveryDialog.tsx`
-
-In the batch audit record (lines 281-295), add two fields to the `metadata` object:
-- `snapshot_ids`: Object mapping tenant_id to snapshot_id (from the `snapshotMap`)
-- `tenants_without_snapshot`: Array of tenant IDs that had no snapshot
-
-This provides full audit traceability for each batch.
-
-### Step 6: Show Snapshot Date in Delivery History
-
-**File**: `src/components/governance/GovernanceDeliveryHistory.tsx`
-
-The existing query already follows an enrichment pattern (tenantMap, versionMap, userMap). Add one more:
-
-- Collect unique non-null `snapshot_id` values from delivery records
-- Fetch their `created_at` from `tga_rto_snapshots`
-- Build a `snapshotDateMap` using the same Map pattern
-- Add a "Snapshot" column to the table showing the formatted date (e.g., "15 Feb 2026"), or "N/A" if null
+- Add a "Governance Register" button in the Quick Links section (after the "Resource Hub" link at line 153) linking to `/client/documents?tab=governance` with a `ShieldCheck` icon
+- Consistent with the existing outline button pattern
+- No count query -- avoids extra database call on every home page load
 
 ---
 
@@ -124,33 +96,71 @@ The existing query already follows an enrichment pattern (tenantMap, versionMap,
 
 | Item | Reason |
 |------|--------|
-| `v_tenant_merge_fields` view | No changes needed. The view correctly resolves the latest snapshot for merge field data. Snapshot pinning is for idempotency and audit records only. |
-| Database schema | No new tables or columns. Existing `snapshot_id` on deliveries and `metadata` on audit log are sufficient. |
-| `GovernanceTailoringHealth` | Unchanged -- reads from `v_tenant_merge_fields`. |
-| Edge function merge/DOCX logic | Untouched. Only snapshot lookup and parameter parsing change. |
-| RLS policies | No changes. `tga_rto_snapshots` already has read access for authenticated users. |
-| Stage 5 features | Throttling, cancellation, retry, and batch audit all remain intact. Snapshot pinning slots in alongside them. |
+| Database schema | Zero new tables, columns, or migrations |
+| RLS policies | Zero changes; existing policies sufficient |
+| `documents` table | Not queried; avoids RLS gap entirely |
+| Governance delivery pipeline | Untouched; register is read-only |
+| SuperAdmin views | `GovernanceDeliveryHistory` and `GovernanceDeliveryDialog` unchanged |
+| Existing Documents tabs | Shared, Uploaded, Requests remain identical |
+| Client sidebar | No new navigation items |
+| Stages 1-6 | All intact and unaffected |
+| Foreign keys | No new FKs; existing FKs on `tenant_id` and `document_version_id` are read-only references |
+
+---
+
+## Compliance with Project Guardrails
+
+| Guardrail | Status |
+|-----------|--------|
+| Compliance first | Read-only register surfaces delivered compliance documents to clients |
+| Audit readiness | No mutations to audit; delivery records already audited by Stages 1-6 |
+| Tenancy separation | RLS + `activeTenantId` filter; no cross-tenant data possible |
+| Fixed roles | No new roles; all client users see same read-only tab |
+| No scope creep | Single tab addition; no new routes or database objects |
+| Atomic changes | 1 new file, 2 small edits |
+| Explicit actions | Tab click to view; external link click to open SharePoint |
+| Self-service | Clients can independently verify which governance documents were delivered, their version, date, and tailoring status without contacting Vivacity |
+| Preview mode safe | Read-only by nature; `isReadOnly` irrelevant (no mutations) |
 
 ---
 
 ## Implementation Sequence
 
-| Order | Task | Scope |
-|-------|------|-------|
-| 1 | Fix `fetched_at` to `created_at` | Edge function (1 line) |
-| 2 | Accept optional `snapshot_id` parameter | Edge function |
-| 3 | Pre-fetch and pin snapshot IDs before delivery loop | Frontend |
-| 4 | Add snapshot staleness indicators to dialog | Frontend |
-| 5 | Include snapshot IDs in batch audit metadata | Frontend |
-| 6 | Show snapshot date in delivery history table | Frontend |
+| Order | Task | Files | Risk |
+|-------|------|-------|------|
+| 1 | Create `ClientGovernanceRegister` component | New file | None |
+| 2 | Add "Governance Register" tab to Documents page | 1 edit (~10 lines) | None |
+| 3 | Add quick link to Client Home | 1 edit (~3 lines) | None |
 
 ---
 
-## Risk Assessment
+## Summary of Changes and Impact
 
-- **Zero database migrations** -- no risk to existing data
-- **Zero RLS changes** -- existing policies are sufficient
-- **Backward-compatible** -- `snapshot_id` parameter is optional; all existing flows work if omitted
-- **Column fix is corrective** -- restores intended behaviour with no side effects
-- **Staleness indicators are advisory only** -- inform but never block
-- **JS deduplication is safe** -- even with 200 tenants, snapshot query returns a manageable number of rows
+### Changes
+
+1. **One new component** (`ClientGovernanceRegister.tsx`) -- read-only table with search and category filter showing delivered governance documents
+2. **One tab addition** to `ClientDocumentsPage.tsx` -- "Governance Register" with ShieldCheck icon
+3. **One quick link** added to `ClientHomePage.tsx` -- direct link to the new tab
+
+### Benefits
+
+- **Client self-service**: Tenants independently verify which governance documents were delivered, when, at what version, and tailoring status -- no need to contact Vivacity
+- **SharePoint access**: Direct links to delivered documents in the client's SharePoint folder
+- **Audit transparency**: Clients can verify tailoring completeness of their delivered documents
+- **Zero friction**: No new pages, routes, or sidebar items; appears naturally as a tab
+- **Reduced support load**: Eliminates common client queries about "which documents have been delivered"
+
+### Risk Assessment
+
+| Risk | Level | Mitigation |
+|------|-------|------------|
+| RLS blocks `documents` table for clients | **Eliminated** | Uses `delivered_file_name` and `category_subfolder` from delivery records |
+| Cross-tenant data leak | **None** | RLS restricts to own `tenant_id` via `tenant_users`; `useClientTenant()` defence-in-depth |
+| Null `delivered_file_name` | **Handled** | Falls back to "Document #document_id" |
+| Null `category_subfolder` | **Handled** | Falls back to "Uncategorised" |
+| Impact on existing tabs | **None** | Purely additive; existing tab values unchanged |
+| Database impact | **None** | Zero migrations, schema changes, or RLS changes |
+| Backward compatibility | **Full** | No existing URLs, components, or data flows modified |
+| Audit compliance | **Met** | Read-only view; no material actions requiring logging |
+| Performance | **Low** | Query is tenant-scoped with `idx_gov_delivery_tenant` index; typical tenants have dozens of deliveries |
+
