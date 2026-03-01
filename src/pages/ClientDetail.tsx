@@ -56,6 +56,7 @@ import { ViewAsClientButton } from '@/components/client/ViewAsClientButton';
 import { ClientQuickNav } from '@/components/client/ClientQuickNav';
 import { AssignPackageDialog } from '@/components/client/AssignPackageDialog';
 import { TenantStatusDropdown } from '@/components/tenant/TenantStatusDropdown';
+import { TenantLogoUpload } from '@/components/tenant/TenantLogoUpload';
 
 interface TenantBasic {
   id: number;
@@ -80,6 +81,7 @@ export default function ClientDetail() {
   const [triggerProfileSave, setTriggerProfileSave] = useState<(() => void) | null>(null);
   const [userCount, setUserCount] = useState<number | null>(null);
   const [tenantPhone, setTenantPhone] = useState<string | null>(null);
+  const [logoPath, setLogoPath] = useState<string | null>(null);
 
   const tenantIdNum = tenantId ? parseInt(tenantId) : null;
   
@@ -128,12 +130,13 @@ export default function ClientDetail() {
       setLoading(true);
       const { data, error } = await supabase
         .from('tenants')
-        .select('id, name, slug, status, complyhub_membership_tier')
+        .select('id, name, slug, status, complyhub_membership_tier, logo_path')
         .eq('id', tenantIdNum)
         .single();
 
       if (error) throw error;
       setTenant(data);
+      setLogoPath((data as any).logo_path || null);
 
       // Fetch phone from tenant_profile
       const { data: tp } = await supabase
@@ -218,11 +221,11 @@ export default function ClientDetail() {
           {/* Client Header */}
           <div className="flex items-start justify-between">
             <div className="flex items-center gap-4">
-              <Avatar className="h-16 w-16">
-                <AvatarFallback className="bg-primary/10 text-primary text-xl">
-                  {tenant.name.substring(0, 2).toUpperCase()}
-                </AvatarFallback>
-              </Avatar>
+              <TenantLogoUpload
+                tenantId={tenantIdNum!}
+                currentLogoPath={logoPath}
+                onLogoChange={setLogoPath}
+              />
               <div>
                 <div className="flex items-center gap-3">
                   <h1 className="text-2xl font-bold">{tenant.name}</h1>
