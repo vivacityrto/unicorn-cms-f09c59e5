@@ -13,6 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ExternalLink, Inbox, Loader2, Search, ShieldCheck } from "lucide-react";
 import { format } from "date-fns";
+import { useDocumentCategories } from "@/hooks/useDocumentCategories";
 
 function cleanFileName(name: string | null, documentId: number): string {
   if (!name) return `Document #${documentId}`;
@@ -35,6 +36,7 @@ function tailoringBadge(riskLevel: string | null) {
 
 export function ClientGovernanceRegister() {
   const { activeTenantId } = useClientTenant();
+  const { valueLabelMap } = useDocumentCategories();
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
 
@@ -160,7 +162,7 @@ export function ClientGovernanceRegister() {
                     </div>
                   </TableCell>
                   <TableCell className="hidden sm:table-cell text-muted-foreground text-xs">
-                    {d.category}
+                    {valueLabelMap.get(d.category) || d.category}
                   </TableCell>
                   <TableCell className="text-sm">
                     {d.version_number != null ? `v${d.version_number}` : "—"}
