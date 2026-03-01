@@ -78,6 +78,15 @@ async function processDocxTemplate(
         return match;
       });
 
+      // Inject image relationship entries into document.xml.rels
+      if (entry.filename === 'word/_rels/document.xml.rels' && imageInjections.length > 0) {
+        const relEntries = imageInjections.map(
+          (img) =>
+            `<Relationship Id="${img.rId}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/${img.fileName}"/>`
+        ).join('');
+        content = content.replace('</Relationships>', relEntries + '</Relationships>');
+      }
+
       const encoder = new TextEncoder();
       await writer.add(
         entry.filename,
@@ -328,12 +337,13 @@ serve(async (req) => {
           const parentInfo = await graphGet<DriveItem>(
             `/drives/${driveId}/items/${parentItemId}`,
           );
-          if (parentInfo.ok && parentInfo.data.webUrl) {
-            const sub = await ensureFolder(
-              driveId,
-              parentInfo.data.name || "",
-              catRow.sharepoint_folder_name,
-            );
+          if (parentInfo.ok) {
+            const parentRef = parentInfo.data.parentReference as { path?: string } | undefined;
+            const fullPath = parentRef?.path
+              ? `${parentRef.path.replace(/^\/drives\/[^/]+\/root:/, '')}/${parentInfo.data.name}`
+              : parentInfo.data.name;
+            const cleanPath = fullPath.replace(/^\//, '');
+            const sub = await ensureFolder(driveId, cleanPath, catRow.sharepoint_folder_name);
             parentItemId = sub.itemId;
           }
         } catch (e) {
