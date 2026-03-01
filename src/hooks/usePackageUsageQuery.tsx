@@ -75,7 +75,7 @@ export function useClientPackagesQuery(clientId: number | null) {
       const packageIds = [...new Set(instances.map(i => i.package_id))];
       const { data: packagesData } = await supabase
         .from('packages')
-        .select('id, name, total_hours')
+        .select('id, name, full_text, total_hours')
         .in('id', packageIds);
 
       const packageMap = new Map((packagesData || []).map(p => [Number(p.id), p]));
@@ -87,7 +87,7 @@ export function useClientPackagesQuery(clientId: number | null) {
         return {
           id: instId,
           package_id: pkgId,
-          package_name: pkg?.name || 'Unknown Package',
+          package_name: (pkg as any)?.full_text || pkg?.name || 'Unknown Package',
           status: inst.is_complete ? 'closed' : 'active',
           start_date: inst.start_date || '',
           end_date: inst.end_date,
