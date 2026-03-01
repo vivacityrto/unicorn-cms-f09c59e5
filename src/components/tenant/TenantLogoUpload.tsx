@@ -116,51 +116,59 @@ export function TenantLogoUpload({ tenantId, currentLogoPath, onLogoChange }: Te
   };
 
   return (
-    <div className="flex items-center gap-3">
-      <Avatar className={`h-16 w-16 border-2 border-border shadow-md ${!currentLogoPath ? 'border-dashed' : ''}`}>
+    <div className="flex flex-col items-center gap-1">
+      <Avatar className={`h-16 w-16 border-2 shadow-md ${!currentLogoPath ? 'border-dashed border-border' : 'border-border'}`}>
         {currentLogoPath ? (
           <AvatarImage src={getPublicUrl(currentLogoPath)} alt="Tenant logo" />
         ) : null}
-        <AvatarFallback className="bg-muted">
-          <Building2 className="h-7 w-7 text-muted-foreground" />
+        <AvatarFallback className="bg-primary/10 text-primary text-xl">
+          <Building2 className="h-7 w-7" />
         </AvatarFallback>
       </Avatar>
 
-      <div className="flex flex-col gap-1">
-        <span className="text-xs font-medium text-muted-foreground">Logo</span>
-        {isStaff && (
-          <div className="flex items-center gap-1">
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/png,image/jpeg,image/svg+xml,image/webp"
-              className="hidden"
-              onChange={handleUpload}
-            />
+      {!currentLogoPath && (
+        <div className="text-center">
+          <p className="text-[10px] text-muted-foreground leading-tight">
+            Supported: jpeg, bmp, png
+          </p>
+          <p className="text-[10px] text-muted-foreground leading-tight">
+            Max: 600px longest side
+          </p>
+        </div>
+      )}
+
+      {isStaff && (
+        <div className="flex items-center gap-1">
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/png,image/jpeg,image/svg+xml,image/webp,image/bmp"
+            className="hidden"
+            onChange={handleUpload}
+          />
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-7 text-xs"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={uploading}
+          >
+            <Upload className="h-3 w-3 mr-1" />
+            {currentLogoPath ? 'Replace' : 'Upload'}
+          </Button>
+          {currentLogoPath && (
             <Button
               variant="ghost"
               size="sm"
-              className="h-7 text-xs"
-              onClick={() => fileInputRef.current?.click()}
+              className="h-7 text-xs text-destructive"
+              onClick={handleDelete}
               disabled={uploading}
             >
-              <Upload className="h-3 w-3 mr-1" />
-              {currentLogoPath ? 'Replace' : 'Upload'}
+              <Trash2 className="h-3 w-3" />
             </Button>
-            {currentLogoPath && (
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-7 text-xs text-destructive"
-                onClick={handleDelete}
-                disabled={uploading}
-              >
-                <Trash2 className="h-3 w-3" />
-              </Button>
-            )}
-          </div>
-        )}
-      </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
