@@ -171,7 +171,7 @@ export function ClientTimeSummaryCard({ clientId }: ClientTimeSummaryCardProps) 
               </div>
           </CardHeader>
           <CardContent>
-            {usage && usage.included_minutes > 0 ? (
+            {usage ? (
               <div className="space-y-4">
                 {/* Source filter toggle */}
                 <ToggleGroup type="single" value={sourceFilter} onValueChange={(v) => v && setSourceFilter(v as typeof sourceFilter)} className="justify-start">
@@ -199,7 +199,8 @@ export function ClientTimeSummaryCard({ clientId }: ClientTimeSummaryCardProps) 
                       : sourceFilter === 'timer' 
                         ? (usage.timer_minutes_total || 0)
                         : (usage.manual_minutes_total || 0);
-                  const displayPercent = usage.included_minutes > 0 
+                  const hasIncluded = usage.included_minutes > 0;
+                  const displayPercent = hasIncluded
                     ? Math.round((displayMinutes / usage.included_minutes) * 100) 
                     : 0;
                   
@@ -210,13 +211,18 @@ export function ClientTimeSummaryCard({ clientId }: ClientTimeSummaryCardProps) 
                           {sourceFilter === 'all' ? 'Used' : `${sourceFilter.charAt(0).toUpperCase() + sourceFilter.slice(1)} time`}
                         </span>
                         <span className={`font-medium ${isOverBudget && sourceFilter === 'all' ? 'text-destructive' : isNearLimit && sourceFilter === 'all' ? 'text-yellow-600' : ''}`}>
-                          {formatHours(displayMinutes)} / {formatHours(usage.included_minutes)}
+                          {hasIncluded 
+                            ? `${formatHours(displayMinutes)} / ${formatHours(usage.included_minutes)}`
+                            : formatHours(displayMinutes)
+                          }
                         </span>
                       </div>
-                      <Progress 
-                        value={Math.min(displayPercent, 100)} 
-                        className={`h-2 ${isOverBudget && sourceFilter === 'all' ? '[&>div]:bg-destructive' : isNearLimit && sourceFilter === 'all' ? '[&>div]:bg-yellow-500' : ''}`}
-                      />
+                      {hasIncluded && (
+                        <Progress 
+                          value={Math.min(displayPercent, 100)} 
+                          className={`h-2 ${isOverBudget && sourceFilter === 'all' ? '[&>div]:bg-destructive' : isNearLimit && sourceFilter === 'all' ? '[&>div]:bg-yellow-500' : ''}`}
+                        />
+                      )}
                       {sourceFilter === 'all' && (
                         <div className="text-[10px] text-muted-foreground flex gap-3 mt-1">
                           <span className="flex items-center gap-1"><Calendar className="h-2.5 w-2.5" /> Calendar {formatHours(usage.calendar_minutes_total || 0)}</span>
@@ -231,10 +237,14 @@ export function ClientTimeSummaryCard({ clientId }: ClientTimeSummaryCardProps) 
                 {/* Stats grid */}
                 <div className="grid grid-cols-2 gap-4 pt-2">
                   <div className="space-y-1">
-                    <p className="text-xs text-muted-foreground">Remaining</p>
-                    <p className={`text-lg font-semibold ${isOverBudget ? 'text-destructive' : ''}`}>
-                      {formatHours(usage.remaining_minutes)}
+                    <p className="text-xs text-muted-foreground">
+                      {usage.included_minutes > 0 ? 'Remaining' : 'No included hours'}
                     </p>
+                    {usage.included_minutes > 0 && (
+                      <p className={`text-lg font-semibold ${isOverBudget ? 'text-destructive' : ''}`}>
+                        {formatHours(usage.remaining_minutes)}
+                      </p>
+                    )}
                   </div>
                   <div className="space-y-1">
                     <p className="text-xs text-muted-foreground">Last 30 Days</p>
@@ -294,7 +304,7 @@ export function ClientTimeSummaryCard({ clientId }: ClientTimeSummaryCardProps) 
               </div>
             ) : (
               <div className="flex items-center justify-center h-24 text-muted-foreground text-sm">
-                No active package with included hours
+                No active packages
               </div>
             )}
           </CardContent>
