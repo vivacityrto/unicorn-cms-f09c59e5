@@ -197,10 +197,12 @@ function PackageBurndownCards({ tenantId }: { tenantId: number }) {
         return (
           <Card key={row.package_instance_id}>
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium">{row.package_name}</CardTitle>
-              <p className="text-xs text-muted-foreground">
-                {formatLifecycle(row.lifecycle.start_date, row.lifecycle.end_date)}
-              </p>
+              <div className="flex items-baseline justify-between gap-2">
+                <CardTitle className="text-sm font-medium">{row.package_name}</CardTitle>
+                <span className="text-xs text-muted-foreground whitespace-nowrap">
+                  {formatLifecycle(row.lifecycle.start_date, row.lifecycle.end_date)}
+                </span>
+              </div>
             </CardHeader>
             <CardContent className="space-y-4">
               {/* Burndown summary */}
