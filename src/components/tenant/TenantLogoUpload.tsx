@@ -58,6 +58,20 @@ export function TenantLogoUpload({ tenantId, currentLogoPath, onLogoChange }: Te
 
       if (updateError) throw updateError;
 
+      // Non-blocking audit log
+      if (user) {
+        supabase.from('client_audit_log').insert({
+          tenant_id: tenantId,
+          actor_user_id: user.id,
+          action: 'logo.uploaded',
+          entity_type: 'tenant',
+          entity_id: String(tenantId),
+          details: { file_path: filePath, file_name: file.name }
+        } as any).then(({ error: auditErr }) => {
+          if (auditErr) console.warn('Audit log (logo upload) failed:', auditErr.message);
+        });
+      }
+
       onLogoChange(filePath);
       toast({ title: 'Logo uploaded successfully' });
     } catch (error: any) {
@@ -81,6 +95,20 @@ export function TenantLogoUpload({ tenantId, currentLogoPath, onLogoChange }: Te
         .eq('id', tenantId);
 
       if (error) throw error;
+
+      // Non-blocking audit log
+      if (user) {
+        supabase.from('client_audit_log').insert({
+          tenant_id: tenantId,
+          actor_user_id: user.id,
+          action: 'logo.deleted',
+          entity_type: 'tenant',
+          entity_id: String(tenantId),
+          details: { removed_path: currentLogoPath }
+        } as any).then(({ error: auditErr }) => {
+          if (auditErr) console.warn('Audit log (logo delete) failed:', auditErr.message);
+        });
+      }
 
       onLogoChange(null);
       toast({ title: 'Logo removed' });
