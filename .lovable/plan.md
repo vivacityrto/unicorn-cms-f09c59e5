@@ -1,121 +1,131 @@
 
 
-# Stage 4: Tailoring Validation & Risk Flags + Remove `documents.merge_fields`
+# Stage 5: Bulk Generation Engine with Throttling -- Final Reviewed Plan
 
-## Overview
+## Audit of Current State
 
-Two related workstreams in one implementation:
-1. Add tailoring validation and risk flags to the governance delivery pipeline
-2. Remove the unused `documents.merge_fields` JSONB column and all code references to it
+After thorough code review, here is the actual state of the system and issues found:
 
 ---
 
-## Part A: Remove `documents.merge_fields`
+## Issues Found in Existing Implementation (Pre-Stage 5)
 
-The column is confirmed empty across all 730+ documents. However, 11 frontend files still reference it. All references need cleanup.
+### Bug 1: Audit Log Column Mismatch (Critical)
+The `deliver-governance-document` edge function (lines 489-505) inserts into `document_activity_log` using column names that **do not exist**:
+- Uses `details` -- actual column is `metadata`
+- Uses `document_version_id` -- column does not exist on this table
 
-### Database Migration
+This means **zero audit records** are being written for governance deliveries (confirmed: 0 rows with `activity_type = 'governance_document_delivered'`). The insert silently fails because Supabase returns a non-error response for inserts with unknown columns.
 
-```sql
-ALTER TABLE documents DROP COLUMN merge_fields;
-```
+**Fix**: Change `details` to `metadata` and remove `document_version_id` (move it inside the `metadata` JSONB).
 
-### Code Cleanup (files referencing `documents.merge_fields` or `doc.merge_fields`)
+### Bug 2: `mergeFieldDefs` Undefined Reference (Low, Separate System)
+`bulk-generate-phase-documents` line 236 references `mergeFieldDefs` which is undefined in its fallback path. This is in the package-builder system, not governance, but worth fixing.
 
-| File | Change |
+### Bug 3: No 429 Retry in Graph Client (Risk at Scale)
+`graph-app-client.ts` has zero retry or rate-limit handling. All `fetch()` calls are fire-once. At 20+ tenants, SharePoint API will return HTTP 429 and deliveries will fail.
+
+---
+
+## Stage 5 Implementation Plan
+
+### Step 1: Fix Audit Log Bug in `deliver-governance-document`
+
+**File**: `supabase/functions/deliver-governance-document/index.ts`
+
+Change the audit log insert (lines 489-505):
+- Rename `details` to `metadata`
+- Move `document_version_id` inside the `metadata` JSONB object
+- This restores the compliance audit trail that Stage 4 intended
+
+### Step 2: Add 429 Retry Logic to Graph App Client
+
+**File**: `supabase/functions/_shared/graph-app-client.ts`
+
+Modify the `graphRequest()` function (lines 77-114):
+- After `const resp = await fetch(url, init)`, check for HTTP 429
+- Read `Retry-After` header (default to 5 seconds if absent)
+- Wait and retry up to 3 times with exponential backoff
+- Log each retry with `console.warn`
+- Also add retry for HTTP 503 (service unavailable) and 504 (gateway timeout)
+- Apply the same retry logic to `graphUploadSmall` and `graphUploadSession` which make their own direct `fetch()` calls
+
+This is foundational -- it benefits all SharePoint operations platform-wide.
+
+### Step 3: Add Inter-Request Throttling to Delivery Dialog
+
+**File**: `src/components/governance/GovernanceDeliveryDialog.tsx`
+
+In the `handleDeliver` function (line 217 loop):
+- Add `await new Promise(r => setTimeout(r, 1500))` between each tenant delivery (after each completes, before starting the next)
+- Skip delay before the first tenant and after the last
+- This prevents burst patterns that trigger Graph API rate limiting
+
+### Step 4: Add Cancellation Support
+
+**File**: `src/components/governance/GovernanceDeliveryDialog.tsx`
+
+- Add a `useRef` (`cancelledRef`) flag
+- Show a "Stop" button during delivery that sets `cancelledRef.current = true`
+- Check the flag at the top of each loop iteration; break if set
+- Show "Stopped -- X of Y delivered" in the toast
+- Already-delivered tenants remain recorded (idempotent)
+
+### Step 5: Add "Retry Failed" Capability
+
+**File**: `src/components/governance/GovernanceDeliveryDialog.tsx`
+
+After all deliveries complete:
+- If any failed, show a "Retry Failed" button alongside the Close button
+- Clicking it collects failed tenant IDs, resets their status to `pending`, and re-runs the delivery loop with only those IDs
+- Includes the same throttle delay and cancellation support
+
+### Step 6: Add Batch-Level Audit Record
+
+**File**: `src/components/governance/GovernanceDeliveryDialog.tsx`
+
+After the delivery loop completes (including after retry):
+- Insert a summary record into `document_activity_log` with:
+  - `activity_type: 'governance_bulk_delivery_complete'`
+  - `document_id`
+  - `metadata`: total count, success count, fail count, list of failed tenant IDs, cancelled flag
+  - `actor_user_id`: current user
+
+This provides a single audit trail entry per batch operation.
+
+---
+
+## What This Plan Intentionally Excludes
+
+| Item | Reason |
 |------|--------|
-| `src/components/governance/GovernanceDocumentDetail.tsx` | Remove the "Merge Fields" card (lines 174-190) that renders `doc.merge_fields`. Remove `merge_fields` from the `.select()` query (line 35). Stop passing `mergeFields` prop to `GovernanceMappingEditor`. |
-| `src/components/governance/GovernanceMappingEditor.tsx` | Remove the `mergeFields` prop from the interface and any usage of it inside the component. |
-| `src/pages/TenantDocuments.tsx` | Remove `merge_fields` from the `Document` interface (line 30) and the `checkAllMissingFields` logic that reads `doc.merge_fields` (lines 74-78). Instead, query `document_fields` joined to `dd_fields` to get required tags per document. |
-| `src/pages/DocumentDetail.tsx` | Remove pass of `merge_fields` to `DocumentScanStatus` (line 1123). |
-| `src/components/document/DocumentScanStatus.tsx` | Remove `mergeFields` prop if it came from `documents.merge_fields`. Keep any scan-result-based merge field display. |
-| `src/hooks/useExcelDataSources.tsx` | Remove the line reading `data?.merge_fields` (line 313). Source from `document_fields` instead if needed. |
-| `src/hooks/useStageReleases.tsx` | Remove the merge field check at lines 232-234 that reads `docData?.merge_fields`. |
-| `src/components/documents/tabs/GeneratedDocumentsTab.tsx` | Remove `merge_fields` from the interface (line 30) and logic referencing it (lines 103-108). |
-
-Note: Files in the `analyze-document` edge function and `AIAnalysisReviewDialog` use a separate `merge_fields` property on the analysis result object (not the database column). Those are unaffected.
-
----
-
-## Part B: Tailoring Validation & Risk Flags
-
-### Step 1: Database Migration
-
-Add 4 columns to `governance_document_deliveries`:
-
-| Column | Type | Purpose |
-|--------|------|---------|
-| `tailoring_completeness_pct` | `smallint` | 0-100 score at delivery time |
-| `missing_merge_fields` | `jsonb` | Array of tag names the tenant was missing |
-| `invalid_merge_fields` | `jsonb` | Array of raw `{{...}}` patterns not matching any `dd_fields.tag` |
-| `tailoring_risk_level` | `text` | `complete`, `partial`, or `incomplete` |
-
-### Step 2: Edge Function -- Validation in `deliver-governance-document`
-
-Add validation logic before DOCX processing:
-
-1. **Query required fields**: `SELECT dd.tag FROM document_fields df JOIN dd_fields dd ON dd.id = df.field_id WHERE df.document_id = X`
-2. **Compare against tenant data**: Check which required tags have non-empty values in the already-fetched `v_tenant_merge_fields` data
-3. **Detect invalid tags during DOCX XML processing**: While scanning XML for `{{...}}` patterns, cross-reference each cleaned tag against all `dd_fields.tag` values. Unmatched patterns are flagged as invalid (catches typos like `{{RTO name}}`, `{{ RTOname }}`, `{{ERROR}}`)
-4. **Calculate risk level**:
-   - `complete`: 100% required fields populated AND no invalid tags
-   - `partial`: 75-99% populated, OR has invalid tags but coverage >= 75%
-   - `incomplete`: below 75% populated
-5. **Block if incomplete**: Return error unless `allow_incomplete: true` is in the request body
-6. **Persist**: Store all 4 new columns in the delivery insert statement and include in audit log details
-
-### Step 3: UI -- Pre-Delivery Validation in `GovernanceDeliveryDialog`
-
-When the dialog opens:
-
-1. Fetch the document's required tags from `document_fields` joined with `dd_fields`
-2. For each eligible tenant, query `v_tenant_merge_fields` and compare against required tags
-3. Show per-tenant completeness indicators next to each checkbox:
-   - Green check: all required fields populated
-   - Amber warning (75-99%): tooltip shows missing fields
-   - Red flag (below 75%): inline list of missing fields
-4. Summary banner: "X of Y tenants fully tailored. Z have missing data."
-5. For selected tenants flagged `incomplete`: require "Acknowledge incomplete tailoring" checkbox before enabling Deliver button. This passes `allow_incomplete: true` to the edge function.
-
-### Step 4: UI -- Tailoring Columns in `GovernanceDeliveryHistory`
-
-Add to the delivery history table:
-
-1. **Tailoring** column: colour-coded badge (`complete` green / `partial` amber / `incomplete` red)
-2. **Issues** column: count with hover popover listing missing field names and invalid tags (if any)
-3. Older records without tailoring data show a dash (null-safe)
-
-### Step 5: UI -- Tailoring Health Card in `GovernanceDocumentDetail`
-
-Add a summary card (replacing the removed merge_fields card) showing aggregate delivery stats grouped by `tailoring_risk_level`:
-
-```text
-Tailoring Health
-  Fully Tailored: 12  |  Partially: 5  |  Incomplete: 3
-```
-
-Only rendered when deliveries exist for this document. Also show a "Required Fields" section sourced from `document_fields` instead of the old `merge_fields` column.
+| Server-side batch orchestration | Browser-side sequential loop is correct. Each edge function call gets its own timeout budget. Moving to a queue adds complexity without benefit at current scale (<200 tenants). |
+| Parallel/concurrent delivery | Would trigger Graph API rate limits faster. Sequential with throttle is safer. |
+| WebSocket/Realtime progress | In-memory progress bar works because user stays on the dialog. |
+| New database tables | Existing `governance_document_deliveries` and `document_activity_log` are sufficient. |
+| Changes to `GovernanceDeliveryHistory` or `GovernanceTailoringHealth` | These are already complete from Stage 4 and working correctly. |
 
 ---
 
 ## Implementation Sequence
 
-| Order | Task | Files |
+| Order | Task | Scope |
 |-------|------|-------|
-| 1 | Database migration: drop `merge_fields` column, add 4 columns to deliveries table | Migration SQL |
-| 2 | Clean up all frontend references to `documents.merge_fields` | 8 files listed in Part A |
-| 3 | Add validation logic to `deliver-governance-document` edge function | `supabase/functions/deliver-governance-document/index.ts` |
-| 4 | Update `GovernanceDeliveryDialog` with pre-flight validation | `src/components/governance/GovernanceDeliveryDialog.tsx` |
-| 5 | Update `GovernanceDeliveryHistory` with tailoring columns | `src/components/governance/GovernanceDeliveryHistory.tsx` |
-| 6 | Replace merge fields card with tailoring health card in `GovernanceDocumentDetail` | `src/components/governance/GovernanceDocumentDetail.tsx` |
+| 1 | Fix audit log column mismatch in `deliver-governance-document` | Edge function bug fix |
+| 2 | Add 429/503/504 retry logic to `graph-app-client.ts` | Shared edge function helper |
+| 3 | Add 1.5s throttle delay between deliveries in `GovernanceDeliveryDialog` | Frontend |
+| 4 | Add cancellation (Stop button) | Frontend |
+| 5 | Add "Retry Failed" button | Frontend |
+| 6 | Add batch audit event after loop completes | Frontend |
+| 7 | Fix `mergeFieldDefs` in `bulk-generate-phase-documents` (bonus) | Edge function |
 
 ---
 
-## Technical Notes
+## Risk Assessment
 
-- `document_fields` (join table with FK to `dd_fields`) is the authoritative source for required merge fields per document
-- The `analyze-document` edge function's `merge_fields` property is on the analysis result object, not the database column -- it is unaffected by the column removal
-- `useDocumentScan` and `useExcelBindings` reference `merge_fields` on scan results (API response), not the database column -- verify during implementation but likely unaffected
-- All validation results are snapshotted at delivery time (immutable audit record)
-- The `allow_incomplete` override preserves flexibility while maintaining compliance audit trail
+- **No database schema changes required** -- no migration needed, no risk to existing data
+- **No changes to existing delivery logic** -- only additions (throttle, retry, cancel) around the existing loop
+- **Graph retry is additive** -- existing behaviour is preserved; retry only activates on 429/503/504
+- **Audit fix is corrective** -- restores intended Stage 4 behaviour, no new side effects
+- **All changes are backward-compatible** -- existing delivery records, tailoring data, and UI remain untouched
 
