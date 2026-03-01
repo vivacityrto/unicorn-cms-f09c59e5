@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { ArrowLeft, ExternalLink, Upload, FileText, Clock, Shield, Send, Tag } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
+import { useDocumentCategories } from '@/hooks/useDocumentCategories';
 import { GovernanceVersionHistory } from './GovernanceVersionHistory';
 import { GovernancePublishDialog } from './GovernancePublishDialog';
 import { GovernanceImportDialog } from './GovernanceImportDialog';
@@ -70,17 +71,7 @@ export function GovernanceDocumentDetail({ documentId, onBack }: GovernanceDocum
     }
   };
 
-  const { data: categories } = useQuery({
-    queryKey: ['governance-doc-categories'],
-    queryFn: async () => {
-      const { data } = await supabase
-        .from('dd_document_categories')
-        .select('label')
-        .eq('is_active', true)
-        .order('sort_order');
-      return data || [];
-    },
-  });
+  const { categories, valueLabelMap } = useDocumentCategories();
 
   const updateCategory = useMutation({
     mutationFn: async (newCategory: string) => {
@@ -130,7 +121,7 @@ export function GovernanceDocumentDetail({ documentId, onBack }: GovernanceDocum
           <div>
             <h1 className="text-xl font-bold">{doc.title}</h1>
             <p className="text-sm text-muted-foreground">
-              {doc.category || doc.document_category || 'Uncategorised'} • {doc.format || 'Unknown format'}
+              {valueLabelMap.get(doc.category) || doc.category || 'Uncategorised'} • {doc.format || 'Unknown format'}
             </p>
           </div>
         </div>
@@ -170,8 +161,8 @@ export function GovernanceDocumentDetail({ documentId, onBack }: GovernanceDocum
                 <SelectValue placeholder="Select category" />
               </SelectTrigger>
               <SelectContent>
-                {categories?.map((cat) => (
-                  <SelectItem key={cat.label} value={cat.label}>{cat.label}</SelectItem>
+                {categories.map((cat) => (
+                  <SelectItem key={cat.value} value={cat.value}>{cat.label}</SelectItem>
                 ))}
               </SelectContent>
             </Select>

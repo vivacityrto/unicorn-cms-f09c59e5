@@ -25,6 +25,7 @@ import {
   Filter
 } from 'lucide-react';
 import { ClientPackage } from '@/hooks/useClientManagement';
+import { useDocumentCategories } from '@/hooks/useDocumentCategories';
 
 interface Document {
   id: number;
@@ -67,6 +68,7 @@ export function ClientDocumentsTab({ tenantId, packages }: ClientDocumentsTabPro
   const [selectedFiles, setSelectedFiles] = useState<string[]>([]);
 
   const packageIds = packages.map(p => p.package_id);
+  const { valueLabelMap } = useDocumentCategories();
 
   const fetchDocuments = useCallback(async () => {
     if (!tenantId || packageIds.length === 0) {
@@ -295,7 +297,7 @@ export function ClientDocumentsTab({ tenantId, packages }: ClientDocumentsTabPro
             <SelectContent>
               <SelectItem value="all">All Categories</SelectItem>
               {uniqueCategories.map(cat => (
-                <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                <SelectItem key={cat} value={cat}>{valueLabelMap.get(cat) || cat}</SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -395,7 +397,7 @@ export function ClientDocumentsTab({ tenantId, packages }: ClientDocumentsTabPro
                     {doc.category ? (
                       <Badge variant="secondary" className="gap-1">
                         <Tag className="h-3 w-3" />
-                        {doc.category}
+                        {valueLabelMap.get(doc.category!) || doc.category}
                       </Badge>
                     ) : (
                       <span className="text-muted-foreground">—</span>

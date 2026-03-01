@@ -14,6 +14,7 @@ import { useMissingMergeFields, MissingField } from '@/hooks/useMissingMergeFiel
 import { MissingMergeFieldsDialog } from '@/components/tenant/MissingMergeFieldsDialog';
 import { useExcelGeneration, isExcelDocument } from '@/hooks/useExcelGeneration';
 import { useDocumentActivity } from '@/hooks/useDocumentActivity';
+import { useDocumentCategories } from '@/hooks/useDocumentCategories';
 
 interface GeneratedDocument {
   id: number;
@@ -52,6 +53,7 @@ export function GeneratedDocumentsTab({ tenantId, isClientView = false, tenantNa
   const { detectMissingFields } = useMissingMergeFields(tenantId);
   const { generateAndDownload, isDocumentGenerating } = useExcelGeneration();
   const { logDownload } = useDocumentActivity();
+  const { valueLabelMap } = useDocumentCategories();
 
   // Fetch generated documents (from documents table with is_auto_generated = true)
   const { data: documents = [], isLoading, refetch } = useQuery({
@@ -300,8 +302,8 @@ export function GeneratedDocumentsTab({ tenantId, isClientView = false, tenantNa
                   <TableCell className="hidden md:table-cell">
                     {doc.category ? (
                       <Badge variant="secondary" className="gap-1">
-                        <Tag className="h-3 w-3" />
-                        {doc.category}
+                      <Tag className="h-3 w-3" />
+                        {valueLabelMap.get(doc.category!) || doc.category}
                       </Badge>
                     ) : (
                       <span className="text-muted-foreground">—</span>

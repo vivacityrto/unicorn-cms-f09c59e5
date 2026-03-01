@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Search, FileCheck, ExternalLink, Upload, Eye } from 'lucide-react';
 import { format } from 'date-fns';
 import { GovernanceDocumentDetail } from '@/components/governance/GovernanceDocumentDetail';
+import { useDocumentCategories } from '@/hooks/useDocumentCategories';
 
 function GovernanceDocuments() {
   const [search, setSearch] = useState('');
@@ -48,17 +49,7 @@ function GovernanceDocuments() {
   });
 
   // Fetch categories for filter
-  const { data: categories } = useQuery({
-    queryKey: ['governance-doc-categories'],
-    queryFn: async () => {
-      const { data } = await supabase
-        .from('dd_document_categories')
-        .select('label')
-        .eq('is_active', true)
-        .order('sort_order');
-      return data || [];
-    },
-  });
+  const { categories, valueLabelMap } = useDocumentCategories();
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -122,8 +113,8 @@ function GovernanceDocuments() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Categories</SelectItem>
-              {categories?.map((cat) => (
-                <SelectItem key={cat.label} value={cat.label}>{cat.label}</SelectItem>
+              {categories.map((cat) => (
+                <SelectItem key={cat.value} value={cat.value}>{cat.label}</SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -178,7 +169,7 @@ function GovernanceDocuments() {
                   >
                     <TableCell className="font-medium">{doc.title}</TableCell>
                     <TableCell>
-                      <span className="text-xs text-muted-foreground">{doc.category || doc.document_category || '—'}</span>
+                      <span className="text-xs text-muted-foreground">{valueLabelMap.get(doc.category) || doc.category || '—'}</span>
                     </TableCell>
                     <TableCell>
                       <span className="text-xs font-mono">{doc.format || '—'}</span>

@@ -424,11 +424,11 @@ serve(async (req) => {
     let parentItemId = spSettings.governance_folder_item_id;
     let categorySubfolder: string | null = null;
 
-    if (doc.document_category) {
+    if (doc.category) {
       const { data: catRow } = await supabase
         .from("dd_document_categories")
         .select("sharepoint_folder_name")
-        .eq("label", doc.document_category)
+        .eq("value", doc.category)
         .maybeSingle();
 
       if (catRow?.sharepoint_folder_name) {

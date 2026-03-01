@@ -14,6 +14,7 @@ import { MissingMergeFieldsDialog } from "@/components/tenant/MissingMergeFields
 import { useMissingMergeFields, MissingField } from "@/hooks/useMissingMergeFields";
 import { useExcelGeneration, isExcelDocument } from "@/hooks/useExcelGeneration";
 import { useDocumentActivity } from "@/hooks/useDocumentActivity";
+import { useDocumentCategories } from "@/hooks/useDocumentCategories";
 
 interface Document {
   id: number;
@@ -58,6 +59,7 @@ export default function TenantDocuments() {
   const { detectMissingFields } = useMissingMergeFields(parsedTenantId);
   const { generateAndDownload, isDocumentGenerating, generating } = useExcelGeneration();
   const { logDownload } = useDocumentActivity();
+  const { valueLabelMap } = useDocumentCategories();
 
   // Get packageId from URL params if provided
   const urlPackageId = searchParams.get('packageId');
@@ -365,7 +367,7 @@ export default function TenantDocuments() {
                     {doc.category ? (
                       <Badge variant="default" className="bg-blue-500/10 text-blue-600 hover:bg-blue-500/20 border border-blue-600 text-[0.75rem] py-[2px] px-[0.625rem] rounded-[11px]">
                         <Tag className="mr-1 h-3 w-3" />
-                        {doc.category}
+                        {valueLabelMap.get(doc.category!) || doc.category}
                       </Badge>
                     ) : (
                       <span className="text-muted-foreground text-sm">—</span>

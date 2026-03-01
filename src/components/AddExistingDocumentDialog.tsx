@@ -12,6 +12,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Search, Loader2, FileText, AlertCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { useDocumentCategories } from "@/hooks/useDocumentCategories";
 interface AddExistingDocumentDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -45,16 +46,12 @@ export function AddExistingDocumentDialog({
   const [filteredDocuments, setFilteredDocuments] = useState<Document[]>([]);
   const [selectedDocuments, setSelectedDocuments] = useState<Document[]>([]);
   const [loadingDocuments, setLoadingDocuments] = useState(false);
-  const [categories, setCategories] = useState<Array<{
-    id: number;
-    name: string;
-  }>>([]);
+  const { categories: ddCategories, valueLabelMap } = useDocumentCategories();
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [isConfirmDialogOpen, setIsConfirmDialogOpen] = useState(false);
   useEffect(() => {
     if (open) {
       fetchDocuments();
-      fetchCategories();
     }
   }, [open]);
   useEffect(() => {
@@ -76,19 +73,6 @@ export function AddExistingDocumentDialog({
     
     setFilteredDocuments(filtered);
   }, [searchQuery, documents, selectedCategory]);
-  const fetchCategories = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('documents_categories')
-        .select('id, name')
-        .order('name');
-      
-      if (error) throw error;
-      setCategories(data || []);
-    } catch (error: any) {
-      console.error('Error fetching categories:', error);
-    }
-  };
   const fetchDocuments = async () => {
     try {
       setLoadingDocuments(true);
@@ -277,16 +261,16 @@ export function AddExistingDocumentDialog({
                     All Categories
                   </SelectItem>
                   <Separator className="my-1" />
-                  {categories.map((category, index) => (
+                  {ddCategories.map((category, index) => (
                     <>
                       <SelectItem 
-                        key={category.id} 
-                        value={category.id.toString()}
+                        key={category.value} 
+                        value={category.value}
                         className="hover:!bg-[hsl(196deg_100%_93.53%)] hover:!text-black data-[state=checked]:bg-[hsl(196deg_100%_93.53%)] data-[state=checked]:text-black cursor-pointer py-3"
                       >
-                        {category.name}
+                        {category.label}
                       </SelectItem>
-                      {index < categories.length - 1 && <Separator className="my-1" />}
+                      {index < ddCategories.length - 1 && <Separator className="my-1" />}
                     </>
                   ))}
                 </SelectContent>
@@ -305,7 +289,7 @@ export function AddExistingDocumentDialog({
                   htmlFor="select-all-category"
                   className="text-sm text-muted-foreground cursor-pointer"
                 >
-                  Select all in {categories.find(c => c.id.toString() === selectedCategory)?.name}
+                  Select all in {ddCategories.find(c => c.value === selectedCategory)?.label}
                 </label>
               </div>
             )}
@@ -331,7 +315,7 @@ export function AddExistingDocumentDialog({
                             <div className="font-medium text-sm truncate">{doc.title}</div>
                             <div className="text-xs text-muted-foreground mt-1 flex items-center gap-2 flex-wrap">
                               {doc.category && <>
-                                <span>{doc.category}</span>
+                                <span>{valueLabelMap.get(doc.category) || doc.category}</span>
                                 <span>•</span>
                               </>}
                               <span>Status: {doc.package_id ? 'in package' : 'available'}</span>
@@ -398,7 +382,7 @@ export function AddExistingDocumentDialog({
                         <div className="flex-1 min-w-0">
                           <div className="font-semibold text-sm text-foreground truncate">{doc.title}</div>
                           {doc.category && (
-                            <div className="text-xs text-muted-foreground mt-1">{doc.category}</div>
+                            <div className="text-xs text-muted-foreground mt-1">{valueLabelMap.get(doc.category) || doc.category}</div>
                           )}
                         </div>
                         <Badge variant="outline" className="shrink-0 text-xs">
