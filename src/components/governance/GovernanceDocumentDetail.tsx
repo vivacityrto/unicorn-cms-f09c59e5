@@ -16,6 +16,7 @@ import { GovernanceMappingEditor } from './GovernanceMappingEditor';
 import { GovernanceDeliveryDialog } from './GovernanceDeliveryDialog';
 import { GovernanceDeliveryHistory } from './GovernanceDeliveryHistory';
 import { GovernanceTailoringHealth } from './GovernanceTailoringHealth';
+import { GovernancePackageAssignments } from './GovernancePackageAssignments';
 
 interface GovernanceDocumentDetailProps {
   documentId: number;
@@ -243,6 +244,9 @@ export function GovernanceDocumentDetail({ documentId, onBack }: GovernanceDocum
 
       {/* Delivery History */}
       <GovernanceDeliveryHistory documentId={documentId} />
+
+      {/* Package Assignments */}
+      <GovernancePackageAssignments documentId={documentId} />
 
       {publishVersionId && (
         <GovernancePublishDialog
