@@ -12270,6 +12270,39 @@ export type Database = {
         }
         Relationships: []
       }
+      dd_eos_roles: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: number
+          is_active: boolean
+          label: string
+          sort_order: number
+          updated_at: string
+          value: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: number
+          is_active?: boolean
+          label: string
+          sort_order?: number
+          updated_at?: string
+          value: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: number
+          is_active?: boolean
+          label?: string
+          sort_order?: number
+          updated_at?: string
+          value?: string
+        }
+        Relationships: []
+      }
       dd_fields: {
         Row: {
           created_at: string
@@ -18863,7 +18896,7 @@ export type Database = {
           assigned_at: string
           assigned_by: string | null
           id: string
-          role: Database["public"]["Enums"]["eos_role"]
+          role: string
           tenant_id: number
           user_id: string
         }
@@ -18871,7 +18904,7 @@ export type Database = {
           assigned_at?: string
           assigned_by?: string | null
           id?: string
-          role?: Database["public"]["Enums"]["eos_role"]
+          role?: string
           tenant_id: number
           user_id: string
         }
@@ -18879,7 +18912,7 @@ export type Database = {
           assigned_at?: string
           assigned_by?: string | null
           id?: string
-          role?: Database["public"]["Enums"]["eos_role"]
+          role?: string
           tenant_id?: number
           user_id?: string
         }
