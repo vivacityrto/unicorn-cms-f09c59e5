@@ -98,117 +98,32 @@ function formatLifecycle(start: string | null, end: string | null) {
   return `${s} – ${e}`;
 }
 
-// ── Burndown Summary per package ────────────────────────────────────
+// ── Combined Burndown + Monthly Summary per package ─────────────────
 function PackageBurndownCards({ tenantId }: { tenantId: number }) {
-  const { data: burndown, isLoading } = useQuery({
-    queryKey: ['package-burndown', tenantId],
+  const { data: combined, isLoading } = useQuery({
+    queryKey: ['package-burndown-combined', tenantId],
     queryFn: async () => {
-      const { data, error } = await supabase
+      // 1. Fetch burndown data
+      const { data: burndownData, error: bdErr } = await supabase
         .from('v_package_burndown')
         .select('*')
         .eq('tenant_id', tenantId);
-      if (error) throw error;
+      if (bdErr) throw bdErr;
 
-      const instanceIds = (data || []).map(r => r.package_instance_id).filter(Boolean) as number[];
-      const { nameMap, lifecycleMap } = await resolvePackageNames(instanceIds);
-
-      return (data || []).map(row => ({
-        ...row,
-        package_name: nameMap[row.package_instance_id!] || 'Unknown',
-        lifecycle: lifecycleMap[row.package_instance_id!] || { start_date: null, end_date: null },
-      }));
-    },
-  });
-
-  if (isLoading) {
-    return (
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {[1, 2].map(i => <Skeleton key={i} className="h-32" />)}
-      </div>
-    );
-  }
-
-  if (!burndown || burndown.length === 0) {
-    return (
-      <Card>
-        <CardContent className="p-6 text-center text-muted-foreground">
-          <Clock className="h-8 w-8 mx-auto mb-2 opacity-50" />
-          No package burndown data available
-        </CardContent>
-      </Card>
-    );
-  }
-
-  return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-      {burndown.map(row => {
-        const pct = row.percent_used ?? 0;
-        const isOver = pct > 100;
-        return (
-          <Card key={row.package_instance_id}>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium">{row.package_name}</CardTitle>
-              <p className="text-xs text-muted-foreground">
-                {formatLifecycle(row.lifecycle.start_date, row.lifecycle.end_date)}
-              </p>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="flex items-baseline justify-between">
-                <span className="text-2xl font-bold">
-                  {formatDuration(row.used_minutes ?? 0)}
-                </span>
-                <span className="text-sm text-muted-foreground">
-                  / {formatDuration(row.included_minutes ?? 0)}
-                </span>
-              </div>
-              <Progress
-                value={Math.min(pct, 100)}
-                className={cn('h-2', isOver && '[&>div]:bg-destructive')}
-              />
-              <div className="flex justify-between text-xs text-muted-foreground">
-                <span>{Math.round(pct)}% used</span>
-                <span className={cn(isOver ? 'text-destructive font-medium' : 'text-primary')}>
-                  {isOver
-                    ? `${formatDuration(Math.abs(row.remaining_minutes ?? 0))} over`
-                    : `${formatDuration(row.remaining_minutes ?? 0)} remaining`}
-                </span>
-              </div>
-            </CardContent>
-          </Card>
-        );
-      })}
-    </div>
-  );
-}
-
-// ── Monthly summary per package ─────────────────────────────────────
-function PackageTimeSummaryCards({ tenantId }: { tenantId: number }) {
-  const { data, isLoading } = useQuery({
-    queryKey: ['package-time-summary', tenantId],
-    queryFn: async () => {
-      // 1. Get aggregate summary from view
-      const { data: summaryData, error } = await supabase
-        .from('v_package_time_summary')
-        .select('*')
-        .eq('tenant_id', tenantId);
-      if (error) throw error;
-
-      const instanceIds = (summaryData || []).map(r => r.package_instance_id).filter(Boolean) as number[];
+      const instanceIds = (burndownData || []).map(r => r.package_instance_id).filter(Boolean) as number[];
       if (instanceIds.length === 0) return [];
 
-      // 2. Resolve names and lifecycle
       const { nameMap, lifecycleMap } = await resolvePackageNames(instanceIds);
 
-      // 3. Fetch per-month breakdown from time_entries (include is_billable)
-      // Fetch ALL entries for tenant - use coalesce logic to match the view
+      // 2. Fetch per-month breakdown from time_entries
       const { data: monthlyRows } = await (supabase as any)
         .from('time_entries')
         .select('package_id, package_instance_id, start_at, duration_minutes, is_billable')
         .eq('tenant_id', tenantId);
 
-      // Group by coalesce(package_instance_id, package_id) + month, tracking billable/non-billable
+      // Group by instance + month
       const monthlyMap: Record<number, { month: string; minutes: number; billable: number; nonBillable: number }[]> = {};
-      const instanceTotals: Record<number, { billable: number; nonBillable: number }> = {};
+      const instanceTotals: Record<number, { billable: number; nonBillable: number; total: number; lastEntry: string | null }> = {};
       (monthlyRows || []).forEach((row: any) => {
         if (!row.start_at) return;
         const instId = row.package_instance_id ?? row.package_id;
@@ -216,11 +131,15 @@ function PackageTimeSummaryCards({ tenantId }: { tenantId: number }) {
         const monthKey = format(new Date(row.start_at), 'yyyy-MM');
         const mins = row.duration_minutes || 0;
         if (!monthlyMap[instId]) monthlyMap[instId] = [];
-        if (!instanceTotals[instId]) instanceTotals[instId] = { billable: 0, nonBillable: 0 };
+        if (!instanceTotals[instId]) instanceTotals[instId] = { billable: 0, nonBillable: 0, total: 0, lastEntry: null };
+        instanceTotals[instId].total += mins;
         if (row.is_billable) {
           instanceTotals[instId].billable += mins;
         } else {
           instanceTotals[instId].nonBillable += mins;
+        }
+        if (!instanceTotals[instId].lastEntry || row.start_at > instanceTotals[instId].lastEntry!) {
+          instanceTotals[instId].lastEntry = row.start_at;
         }
         const existing = monthlyMap[instId].find(m => m.month === monthKey);
         if (existing) {
@@ -235,73 +154,126 @@ function PackageTimeSummaryCards({ tenantId }: { tenantId: number }) {
           });
         }
       });
-      // Sort each instance's months
       Object.values(monthlyMap).forEach(arr => arr.sort((a, b) => a.month.localeCompare(b.month)));
 
-      return (summaryData || []).map(row => ({
-        ...row,
+      return (burndownData || []).map(row => ({
+        package_instance_id: row.package_instance_id,
         package_name: nameMap[row.package_instance_id!] || 'Unknown',
         lifecycle: lifecycleMap[row.package_instance_id!] || { start_date: null, end_date: null },
+        used_minutes: row.used_minutes ?? 0,
+        included_minutes: row.included_minutes ?? 0,
+        remaining_minutes: row.remaining_minutes ?? 0,
+        percent_used: row.percent_used ?? 0,
         monthly: monthlyMap[row.package_instance_id!] || [],
-        billableTotals: instanceTotals[row.package_instance_id!] || { billable: 0, nonBillable: 0 },
+        totals: instanceTotals[row.package_instance_id!] || { billable: 0, nonBillable: 0, total: 0, lastEntry: null },
       }));
     },
   });
 
-  if (isLoading || !data || data.length === 0) return null;
+  if (isLoading) {
+    return (
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {[1, 2].map(i => <Skeleton key={i} className="h-48" />)}
+      </div>
+    );
+  }
+
+  if (!combined || combined.length === 0) {
+    return (
+      <Card>
+        <CardContent className="p-6 text-center text-muted-foreground">
+          <Clock className="h-8 w-8 mx-auto mb-2 opacity-50" />
+          No package burndown data available
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-      {data.map(row => (
-        <Card key={row.package_instance_id}>
-          <CardContent className="p-4 space-y-3">
-            <div>
-              <p className="text-sm font-medium">{row.package_name}</p>
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      {combined.map(row => {
+        const pct = row.percent_used;
+        const isOver = pct > 100;
+        return (
+          <Card key={row.package_instance_id}>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium">{row.package_name}</CardTitle>
               <p className="text-xs text-muted-foreground">
                 {formatLifecycle(row.lifecycle.start_date, row.lifecycle.end_date)}
               </p>
-            </div>
-
-            {row.monthly.length > 0 && (
-              <div className="space-y-1">
-                <div className="flex justify-between text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                  <span>Monthly</span>
-                  <span className="flex gap-2"><span>Total</span><span className="text-green-600">Bill</span><span>Non-bill</span></span>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {/* Burndown summary */}
+              <div className="space-y-2">
+                <div className="flex items-baseline justify-between">
+                  <span className="text-2xl font-bold">
+                    {formatDuration(row.used_minutes)}
+                  </span>
+                  <span className="text-sm text-muted-foreground">
+                    / {formatDuration(row.included_minutes)}
+                  </span>
                 </div>
-                <div className="space-y-0.5 max-h-40 overflow-y-auto">
-                  {row.monthly.map((m: { month: string; minutes: number; billable: number; nonBillable: number }) => (
-                    <div key={m.month} className="flex justify-between text-xs gap-2">
-                      <span className="text-muted-foreground">
-                        {format(new Date(m.month + '-01'), 'MMM yyyy')}
-                      </span>
-                      <span className="flex gap-2">
-                        <span className="font-medium">{formatDuration(m.minutes)}</span>
-                        <span className="text-green-600">{formatDuration(m.billable)}</span>
-                        <span className="text-muted-foreground">{formatDuration(m.nonBillable)}</span>
-                      </span>
-                    </div>
-                  ))}
+                <Progress
+                  value={Math.min(pct, 100)}
+                  className={cn('h-2', isOver && '[&>div]:bg-destructive')}
+                />
+                <div className="flex justify-between text-xs text-muted-foreground">
+                  <span>{Math.round(pct)}% used</span>
+                  <span className={cn(isOver ? 'text-destructive font-medium' : 'text-primary')}>
+                    {isOver
+                      ? `${formatDuration(Math.abs(row.remaining_minutes))} over`
+                      : `${formatDuration(row.remaining_minutes)} remaining`}
+                  </span>
                 </div>
               </div>
-            )}
 
-            <div className="flex justify-between items-center pt-2 border-t border-border">
-              <span className="text-xs text-muted-foreground">Total</span>
-              <span className="flex gap-2 text-xs">
-                <span className="font-semibold text-sm">{formatDuration(row.minutes_total ?? 0)}</span>
-                <span className="text-green-600 font-medium">{formatDuration(row.billableTotals.billable)}</span>
-                <span className="text-muted-foreground">{formatDuration(row.billableTotals.nonBillable)}</span>
-              </span>
-            </div>
+              {/* Monthly breakdown */}
+              {row.monthly.length > 0 && (
+                <div className="space-y-1 pt-2 border-t border-border">
+                  <div className="flex justify-between text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                    <span>Monthly</span>
+                    <span className="flex gap-3">
+                      <span className="w-12 text-right">Total</span>
+                      <span className="w-12 text-right text-green-600">Bill</span>
+                      <span className="w-12 text-right">Non-bill</span>
+                    </span>
+                  </div>
+                  <div className="space-y-0.5 max-h-40 overflow-y-auto">
+                    {row.monthly.map((m) => (
+                      <div key={m.month} className="flex justify-between text-xs gap-2">
+                        <span className="text-muted-foreground">
+                          {format(new Date(m.month + '-01'), 'MMM yyyy')}
+                        </span>
+                        <span className="flex gap-3">
+                          <span className="w-12 text-right font-medium">{formatDuration(m.minutes)}</span>
+                          <span className="w-12 text-right text-green-600">{formatDuration(m.billable)}</span>
+                          <span className="w-12 text-right text-muted-foreground">{formatDuration(m.nonBillable)}</span>
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
 
-            {row.last_entry_at && (
-              <p className="text-xs text-muted-foreground">
-                Last entry: {format(new Date(row.last_entry_at), 'd MMM yyyy')}
-              </p>
-            )}
-          </CardContent>
-        </Card>
-      ))}
+              {/* Totals footer */}
+              <div className="flex justify-between items-center pt-2 border-t border-border">
+                <span className="text-xs text-muted-foreground">Total</span>
+                <span className="flex gap-3 text-xs">
+                  <span className="w-12 text-right font-semibold text-sm">{formatDuration(row.totals.total)}</span>
+                  <span className="w-12 text-right text-green-600 font-medium">{formatDuration(row.totals.billable)}</span>
+                  <span className="w-12 text-right text-muted-foreground">{formatDuration(row.totals.nonBillable)}</span>
+                </span>
+              </div>
+
+              {row.totals.lastEntry && (
+                <p className="text-xs text-muted-foreground">
+                  Last entry: {format(new Date(row.totals.lastEntry), 'd MMM yyyy')}
+                </p>
+              )}
+            </CardContent>
+          </Card>
+        );
+      })}
     </div>
   );
 }
@@ -967,13 +939,6 @@ export function ClientTimeTab({ tenantId, tenantName }: ClientTimeTabProps) {
         <MembershipWeightsPanel tenantId={tenantId} />
       </div>
 
-      {/* Time Summary */}
-      <div>
-        <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">
-          Monthly Summary
-        </h3>
-        <PackageTimeSummaryCards tenantId={tenantId} />
-      </div>
 
       {/* Entries Table */}
       <Card>
