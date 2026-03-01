@@ -58,12 +58,14 @@ Deno.serve(async (req: Request) => {
     const body = await req.json();
     const { action } = body as { action: string };
 
-    if (action === 'import') {
+    if (action === 'browse') {
+      return await handleBrowse(supabase, body);
+    } else if (action === 'import') {
       return await handleImport(supabase, body, user.id);
     } else if (action === 'publish') {
       return await handlePublish(supabase, body, user.id);
     } else {
-      return new Response(JSON.stringify({ error: `Unknown action: ${action}. Use "import" or "publish".` }), {
+      return new Response(JSON.stringify({ error: `Unknown action: ${action}. Use "browse", "import" or "publish".` }), {
         status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
@@ -335,6 +337,111 @@ async function handlePublish(
     version_id,
     version_number: version.version_number,
     published_at: new Date().toISOString(),
+  }), {
+    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+  });
+}
+
+/**
+ * Browse folders/files on the Master Documents SharePoint site.
+ * Used by the governance import dialog to pick template files.
+ *
+ * body.folder_id — driveItem id to list children of (omit for root)
+ */
+async function handleBrowse(
+  supabase: ReturnType<typeof createClient>,
+  body: Record<string, unknown>,
+): Promise<Response> {
+  const { folder_id } = body as { folder_id?: string };
+
+  // Look up the master documents site
+  const { data: masterSite } = await supabase
+    .from('sharepoint_sites')
+    .select('graph_site_id, drive_id, site_url')
+    .eq('purpose', 'master_documents')
+    .eq('is_active', true)
+    .limit(1)
+    .maybeSingle();
+
+  if (!masterSite) {
+    return new Response(JSON.stringify({ error: 'Master Documents site not configured' }), {
+      status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+  }
+
+  // If we don't have the graph_site_id yet, resolve it from the site URL
+  let graphSiteId = masterSite.graph_site_id;
+  let driveId = masterSite.drive_id;
+
+  if (!graphSiteId && masterSite.site_url) {
+    // Extract hostname and path from URL
+    const url = new URL(masterSite.site_url);
+    const sitePath = url.pathname.replace(/\/$/, '');
+    const siteResp = await graphGet<{ id: string }>(`/sites/${url.hostname}:${sitePath}`);
+    if (!siteResp.ok) {
+      return new Response(JSON.stringify({ error: 'Could not resolve SharePoint site from Graph API' }), {
+        status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+    graphSiteId = siteResp.data.id;
+
+    // Persist for future calls
+    await supabase
+      .from('sharepoint_sites')
+      .update({ graph_site_id: graphSiteId })
+      .eq('purpose', 'master_documents')
+      .eq('is_active', true);
+  }
+
+  if (!driveId) {
+    // Get the default document library drive
+    const drivesResp = await graphGet<{ value: Array<{ id: string; name: string }> }>(
+      `/sites/${graphSiteId}/drives`
+    );
+    if (!drivesResp.ok || !drivesResp.data.value?.length) {
+      return new Response(JSON.stringify({ error: 'Could not find document library drives' }), {
+        status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+    // Prefer "Documents" or "Shared Documents", else first
+    const docDrive = drivesResp.data.value.find(d =>
+      d.name === 'Documents' || d.name === 'Shared Documents'
+    ) || drivesResp.data.value[0];
+    driveId = docDrive.id;
+
+    await supabase
+      .from('sharepoint_sites')
+      .update({ drive_id: driveId })
+      .eq('purpose', 'master_documents')
+      .eq('is_active', true);
+  }
+
+  // List children of the specified folder (or root)
+  const listPath = folder_id
+    ? `/drives/${driveId}/items/${folder_id}/children?$top=200&$orderby=name`
+    : `/drives/${driveId}/root/children?$top=200&$orderby=name`;
+
+  const listResp = await graphGet<{ value: DriveItem[] }>(listPath);
+  if (!listResp.ok) {
+    return new Response(JSON.stringify({ error: 'Failed to list SharePoint folder contents' }), {
+      status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+  }
+
+  const items = (listResp.data.value || []).map((item) => ({
+    id: item.id,
+    name: item.name,
+    webUrl: item.webUrl,
+    isFolder: !!item.folder,
+    childCount: item.folder?.childCount || 0,
+    size: item.size || 0,
+    mimeType: item.file?.mimeType || null,
+  }));
+
+  return new Response(JSON.stringify({
+    success: true,
+    drive_id: driveId,
+    items,
   }), {
     headers: { ...corsHeaders, 'Content-Type': 'application/json' },
   });
