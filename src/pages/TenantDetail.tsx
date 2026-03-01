@@ -23,6 +23,7 @@ import { ViewAsClientButton } from "@/components/client/ViewAsClientButton";
 import { ClientQuickNav } from "@/components/client/ClientQuickNav";
 import { EnrichTenantButton } from "@/components/tenant/EnrichTenantButton";
 import { TenantStatusDropdown } from '@/components/tenant/TenantStatusDropdown';
+import { TenantLogoUpload } from '@/components/tenant/TenantLogoUpload';
 import type { TenantType } from "@/contexts/TenantTypeContext";
 interface ClientData {
   id: string;
@@ -101,6 +102,7 @@ export default function TenantDetail() {
   const [primaryContactEmail, setPrimaryContactEmail] = useState<string>("");
   const [primaryContactAvatar, setPrimaryContactAvatar] = useState<string>("");
   const [tenantStatus, setTenantStatus] = useState<string>("active");
+  const [logoPath, setLogoPath] = useState<string | null>(null);
   const [tenantTypeValue, setTenantTypeValue] = useState<TenantType>("compliance_system");
   const [loading, setLoading] = useState(false);
   const parsedTenantIdForReview = tenantId ? parseInt(tenantId) : null;
@@ -229,7 +231,8 @@ export default function TenantDetail() {
           package_id,
           package_ids,
           package_added_at,
-          tenant_type
+          tenant_type,
+          logo_path
         `).eq("id", parseInt(tenantId)).single();
       if (tenantError) throw tenantError;
       if (!tenantData) {
@@ -262,6 +265,7 @@ export default function TenantDetail() {
       }
       setTenantStatus(tenantData.status || "active");
       setTenantTypeValue((tenantData.tenant_type as TenantType) || "compliance_system");
+      setLogoPath((tenantData as any).logo_path || null);
       const {
         count: memberCountData
       } = await supabase.from("users").select("*", {
@@ -563,45 +567,55 @@ export default function TenantDetail() {
                   </div>
                 </div>
               </div>
-              <div className="flex items-center gap-2.5">
-                {/* Status Dropdown */}
-                <TenantStatusDropdown
-                  tenantId={parseInt(tenantId!)}
-                  currentStatus={tenantStatus}
-                  onStatusChange={setTenantStatus}
-                  onNonActiveChange={(statusDescription) => {
-                    const title = `** CLIENT ${statusDescription.toUpperCase()} **`;
-                    navigate(`/tenant/${tenantId}/notes?initNote=true&noteTitle=${encodeURIComponent(title)}`);
-                  }}
-                />
-                {/* Enrich Tenant — SuperAdmin only */}
+              <div className="flex flex-col items-end gap-3">
+                <div className="flex items-center gap-2.5">
+                  {/* Status Dropdown */}
+                  <TenantStatusDropdown
+                    tenantId={parseInt(tenantId!)}
+                    currentStatus={tenantStatus}
+                    onStatusChange={setTenantStatus}
+                    onNonActiveChange={(statusDescription) => {
+                      const title = `** CLIENT ${statusDescription.toUpperCase()} **`;
+                      navigate(`/tenant/${tenantId}/notes?initNote=true&noteTitle=${encodeURIComponent(title)}`);
+                    }}
+                  />
+                  {/* Enrich Tenant — SuperAdmin only */}
+                  {tenantId && (
+                    <EnrichTenantButton
+                      tenantId={parseInt(tenantId)}
+                      website={clientData.website}
+                      abn={clientData.abn}
+                      rtoCode={clientData.rtoid}
+                    />
+                  )}
+                  {/* View as Client Button - Only for Super Admin and Team Leader */}
+                  {tenantId && (
+                    <ViewAsClientButton
+                      tenantId={parseInt(tenantId)}
+                      tenantName={clientData.companyname}
+                      tenantType={tenantTypeValue}
+                      compact
+                    />
+                  )}
+                  {tenantId && <ClientQuickNav currentTenantId={parseInt(tenantId)} />}
+                  <a href="#" className="group relative p-2.5 rounded-full bg-gradient-to-br from-background to-muted border border-border/40 transition-all duration-300 hover:shadow-lg hover:scale-110 hover:border-[#1877F2]/30 cursor-not-allowed" title="Facebook" onClick={e => e.preventDefault()}>
+                    <Facebook className="h-4 w-4 text-[#1877F2] group-hover:scale-110 transition-transform" />
+                  </a>
+                  <a href="#" className="group relative p-2.5 rounded-full bg-gradient-to-br from-background to-muted border border-border/40 transition-all duration-300 hover:shadow-lg hover:scale-110 hover:border-[#E4405F]/30 cursor-not-allowed" title="Instagram" onClick={e => e.preventDefault()}>
+                    <Instagram className="h-4 w-4 text-[#E4405F] group-hover:scale-110 transition-transform" />
+                  </a>
+                  <a href="#" className="group relative p-2.5 rounded-full bg-gradient-to-br from-background to-muted border border-border/40 transition-all duration-300 hover:shadow-lg hover:scale-110 hover:border-[#0A66C2]/30 cursor-not-allowed" title="LinkedIn" onClick={e => e.preventDefault()}>
+                    <Linkedin className="h-4 w-4 text-[#0A66C2] group-hover:scale-110 transition-transform" />
+                  </a>
+                </div>
+                {/* Tenant Logo Upload */}
                 {tenantId && (
-                  <EnrichTenantButton
+                  <TenantLogoUpload
                     tenantId={parseInt(tenantId)}
-                    website={clientData.website}
-                    abn={clientData.abn}
-                    rtoCode={clientData.rtoid}
+                    currentLogoPath={logoPath}
+                    onLogoChange={setLogoPath}
                   />
                 )}
-                {/* View as Client Button - Only for Super Admin and Team Leader */}
-                {tenantId && (
-                  <ViewAsClientButton
-                    tenantId={parseInt(tenantId)}
-                    tenantName={clientData.companyname}
-                    tenantType={tenantTypeValue}
-                    compact
-                  />
-                )}
-                {tenantId && <ClientQuickNav currentTenantId={parseInt(tenantId)} />}
-                <a href="#" className="group relative p-2.5 rounded-full bg-gradient-to-br from-background to-muted border border-border/40 transition-all duration-300 hover:shadow-lg hover:scale-110 hover:border-[#1877F2]/30 cursor-not-allowed" title="Facebook" onClick={e => e.preventDefault()}>
-                  <Facebook className="h-4 w-4 text-[#1877F2] group-hover:scale-110 transition-transform" />
-                </a>
-                <a href="#" className="group relative p-2.5 rounded-full bg-gradient-to-br from-background to-muted border border-border/40 transition-all duration-300 hover:shadow-lg hover:scale-110 hover:border-[#E4405F]/30 cursor-not-allowed" title="Instagram" onClick={e => e.preventDefault()}>
-                  <Instagram className="h-4 w-4 text-[#E4405F] group-hover:scale-110 transition-transform" />
-                </a>
-                <a href="#" className="group relative p-2.5 rounded-full bg-gradient-to-br from-background to-muted border border-border/40 transition-all duration-300 hover:shadow-lg hover:scale-110 hover:border-[#0A66C2]/30 cursor-not-allowed" title="LinkedIn" onClick={e => e.preventDefault()}>
-                  <Linkedin className="h-4 w-4 text-[#0A66C2] group-hover:scale-110 transition-transform" />
-                </a>
               </div>
             </div>
           </div>
