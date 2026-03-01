@@ -44,6 +44,12 @@ async function processDocxTemplate(
   const imageInjections: Array<{ rId: string; fileName: string }> = [];
   let imageCounter = 100;
 
+  // We must defer writing document.xml.rels until after document.xml is
+  // processed, because image rId references are discovered in document.xml
+  // but the .rels file typically appears earlier in the zip.
+  let relsContent: string | null = null;
+  let relsFilename: string | null = null;
+
   for (const entry of entries) {
     if (!entry.getData) continue;
     const data = await entry.getData(new zip.BlobWriter());
@@ -67,37 +73,50 @@ async function processDocxTemplate(
         if (mergeData[cleanField] !== undefined) {
           return escapeXml(mergeData[cleanField] || "");
         }
-        // Remove image placeholders if no image data
+        // Replace image placeholders with inline drawing reference
         if (imageData[cleanField]) {
           const rId = `rIdImg${imageCounter++}`;
           const imgFileName = `image_${cleanField}.png`;
           imageInjections.push({ rId, fileName: imgFileName });
-          // Replace with inline drawing reference
           return `</w:t></w:r><w:r><w:drawing><wp:inline distT="0" distB="0" distL="0" distR="0"><wp:extent cx="1800000" cy="900000"/><wp:docPr id="${imageCounter}" name="${cleanField}"/><a:graphic xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:pic xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:nvPicPr><pic:cNvPr id="${imageCounter}" name="${imgFileName}"/><pic:cNvPicPr/></pic:nvPicPr><pic:blipFill><a:blip r:embed="${rId}"/><a:stretch><a:fillRect/></a:stretch></pic:blipFill><pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="1800000" cy="900000"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr></pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing></w:r><w:r><w:t>`;
         }
         return match;
       });
 
-      // Inject image relationship entries into document.xml.rels
-      if (entry.filename === 'word/_rels/document.xml.rels' && imageInjections.length > 0) {
-        const relEntries = imageInjections.map(
-          (img) =>
-            `<Relationship Id="${img.rId}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/${img.fileName}"/>`
-        ).join('');
-        content = content.replace('</Relationships>', relEntries + '</Relationships>');
+      // Defer document.xml.rels — we'll write it after all XML is processed
+      // so that imageInjections is fully populated
+      if (entry.filename === 'word/_rels/document.xml.rels') {
+        relsContent = content;
+        relsFilename = entry.filename;
+      } else {
+        const encoder = new TextEncoder();
+        await writer.add(
+          entry.filename,
+          new zip.BlobReader(new Blob([encoder.encode(content)])),
+        );
       }
-
-      const encoder = new TextEncoder();
-      await writer.add(
-        entry.filename,
-        new zip.BlobReader(new Blob([encoder.encode(content)])),
-      );
     } else {
       await writer.add(
         entry.filename,
         new zip.BlobReader(new Blob([arrayBuffer])),
       );
     }
+  }
+
+  // Now write document.xml.rels with image relationships injected
+  if (relsContent !== null && relsFilename !== null) {
+    if (imageInjections.length > 0) {
+      const relEntries = imageInjections.map(
+        (img) =>
+          `<Relationship Id="${img.rId}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/${img.fileName}"/>`
+      ).join('');
+      relsContent = relsContent.replace('</Relationships>', relEntries + '</Relationships>');
+    }
+    const encoder = new TextEncoder();
+    await writer.add(
+      relsFilename,
+      new zip.BlobReader(new Blob([encoder.encode(relsContent)])),
+    );
   }
 
   // Inject image files into word/media/
@@ -322,6 +341,7 @@ serve(async (req) => {
 
     const driveId = spSettings.governance_drive_id;
     let parentItemId = spSettings.governance_folder_item_id;
+    let categorySubfolder: string | null = null;
 
     // Resolve category subfolder if applicable
     if (doc.document_category) {
@@ -345,6 +365,7 @@ serve(async (req) => {
             const cleanPath = fullPath.replace(/^\//, '');
             const sub = await ensureFolder(driveId, cleanPath, catRow.sharepoint_folder_name);
             parentItemId = sub.itemId;
+            categorySubfolder = catRow.sharepoint_folder_name;
           }
         } catch (e) {
           console.warn(`[deliver] Could not resolve category subfolder: ${e}`);
@@ -376,6 +397,7 @@ serve(async (req) => {
         sharepoint_item_id: driveItem.id,
         sharepoint_web_url: driveItem.webUrl,
         delivered_file_name: deliveredFileName,
+        category_subfolder: categorySubfolder,
         delivered_by: user.id,
       })
       .select()
