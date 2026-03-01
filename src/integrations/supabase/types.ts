@@ -34962,8 +34962,10 @@ export type Database = {
           acn: string | null
           address_line_1: string | null
           address_line_2: string | null
+          country: string | null
           created_at: string | null
           cricos_number: string | null
+          gto_name: string | null
           legal_name: string | null
           notes: string | null
           org_type: string | null
@@ -34973,6 +34975,7 @@ export type Database = {
           primary_contact_email: string | null
           primary_contact_name: string | null
           primary_contact_phone: string | null
+          rto_email: string | null
           rto_number: string | null
           state: string | null
           suburb: string | null
@@ -34987,8 +34990,10 @@ export type Database = {
           acn?: string | null
           address_line_1?: string | null
           address_line_2?: string | null
+          country?: string | null
           created_at?: string | null
           cricos_number?: string | null
+          gto_name?: string | null
           legal_name?: string | null
           notes?: string | null
           org_type?: string | null
@@ -34998,6 +35003,7 @@ export type Database = {
           primary_contact_email?: string | null
           primary_contact_name?: string | null
           primary_contact_phone?: string | null
+          rto_email?: string | null
           rto_number?: string | null
           state?: string | null
           suburb?: string | null
@@ -35012,8 +35018,10 @@ export type Database = {
           acn?: string | null
           address_line_1?: string | null
           address_line_2?: string | null
+          country?: string | null
           created_at?: string | null
           cricos_number?: string | null
+          gto_name?: string | null
           legal_name?: string | null
           notes?: string | null
           org_type?: string | null
@@ -35023,6 +35031,7 @@ export type Database = {
           primary_contact_email?: string | null
           primary_contact_name?: string | null
           primary_contact_phone?: string | null
+          rto_email?: string | null
           rto_number?: string | null
           state?: string | null
           suburb?: string | null
