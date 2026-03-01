@@ -219,6 +219,7 @@ export function GovernanceDeliveryDialog({
 
     let successCount = 0;
     let failCount = 0;
+    const failedTenantIds: number[] = [];
 
     for (let i = 0; i < tenantIds.length; i++) {
       const tenantId = tenantIds[i];
@@ -262,6 +263,7 @@ export function GovernanceDeliveryDialog({
           [tenantId]: { status: 'failed', error: err.message },
         }));
         failCount++;
+        failedTenantIds.push(tenantId);
       }
 
       // Throttle delay between requests (skip after last)
@@ -276,9 +278,6 @@ export function GovernanceDeliveryDialog({
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
-        const failedIds = tenantIds.filter(
-          (id) => deliveryState[id]?.status === 'failed'
-        );
         await supabase.from('document_activity_log').insert({
           tenant_id: tenantIds[0],
           document_id: documentId,
@@ -290,7 +289,7 @@ export function GovernanceDeliveryDialog({
             success: successCount,
             failed: failCount,
             cancelled: wasCancelled,
-            failed_tenant_ids: failedIds,
+            failed_tenant_ids: failedTenantIds,
             all_tenant_ids: tenantIds,
           },
         });
