@@ -138,35 +138,37 @@ export function ClientTimeSummaryCard({ clientId }: ClientTimeSummaryCardProps) 
         {/* Package Usage Card */}
         <Card>
           <CardHeader className="pb-2">
-             <CardTitle className="text-base flex items-center gap-2">
-              <TrendingDown className="h-4 w-4" />
-              Package Burn-down
-              {selectedPackage && packages.length > 1 ? (
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Badge variant="outline" className="ml-auto text-xs font-normal cursor-pointer hover:bg-muted gap-1">
-                      {selectedPackage.package_name}
-                      <ChevronDown className="h-3 w-3" />
-                    </Badge>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    {packages.map((pkg) => (
-                      <DropdownMenuItem
-                        key={pkg.id}
-                        onClick={() => setSelectedPackageId(pkg.id)}
-                        className={pkg.id === selectedPackage.id ? 'bg-muted font-medium' : ''}
-                      >
-                        {pkg.package_name}
-                      </DropdownMenuItem>
-                    ))}
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              ) : selectedPackage ? (
-                <Badge variant="outline" className="ml-auto text-xs font-normal">
-                  {selectedPackage.package_name}
-                </Badge>
-              ) : null}
-            </CardTitle>
+              <div className="flex items-center gap-2 w-full">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <TrendingDown className="h-4 w-4" />
+                  Package Burn-down
+                </CardTitle>
+                {selectedPackage && packages.length > 1 ? (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <button type="button" className="ml-auto inline-flex items-center gap-1 rounded-full border border-border px-2.5 py-0.5 text-xs font-normal cursor-pointer hover:bg-muted transition-colors">
+                        {selectedPackage.package_name}
+                        <ChevronDown className="h-3 w-3" />
+                      </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      {packages.map((pkg) => (
+                        <DropdownMenuItem
+                          key={pkg.id}
+                          onClick={() => setSelectedPackageId(pkg.id)}
+                          className={pkg.id === selectedPackage.id ? 'bg-muted font-medium' : ''}
+                        >
+                          {pkg.package_name}
+                        </DropdownMenuItem>
+                      ))}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                ) : selectedPackage ? (
+                  <Badge variant="outline" className="ml-auto text-xs font-normal">
+                    {selectedPackage.package_name}
+                  </Badge>
+                ) : null}
+              </div>
           </CardHeader>
           <CardContent>
             {usage && usage.included_minutes > 0 ? (
