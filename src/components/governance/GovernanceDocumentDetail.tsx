@@ -4,12 +4,14 @@ import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { ArrowLeft, ExternalLink, Upload, FileText, Clock, Shield } from 'lucide-react';
+import { ArrowLeft, ExternalLink, Upload, FileText, Clock, Shield, Send } from 'lucide-react';
 import { format } from 'date-fns';
 import { GovernanceVersionHistory } from './GovernanceVersionHistory';
 import { GovernancePublishDialog } from './GovernancePublishDialog';
 import { GovernanceImportDialog } from './GovernanceImportDialog';
 import { GovernanceMappingEditor } from './GovernanceMappingEditor';
+import { GovernanceDeliveryDialog } from './GovernanceDeliveryDialog';
+import { GovernanceDeliveryHistory } from './GovernanceDeliveryHistory';
 
 interface GovernanceDocumentDetailProps {
   documentId: number;
@@ -21,6 +23,7 @@ export function GovernanceDocumentDetail({ documentId, onBack }: GovernanceDocum
   const [publishVersionId, setPublishVersionId] = useState<string | null>(null);
   const [showImport, setShowImport] = useState(false);
   const [mappingVersionId, setMappingVersionId] = useState<string | null>(null);
+  const [showDelivery, setShowDelivery] = useState(false);
 
   const { data: doc, isLoading } = useQuery({
     queryKey: ['governance-doc-detail', documentId],
@@ -54,7 +57,7 @@ export function GovernanceDocumentDetail({ documentId, onBack }: GovernanceDocum
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'published':
-        return <Badge variant="default" className="bg-emerald-600">Published</Badge>;
+        return <Badge className="bg-emerald-600 text-primary-foreground">Published</Badge>;
       case 'draft':
         return <Badge variant="secondary">Draft</Badge>;
       case 'archived':
@@ -66,6 +69,8 @@ export function GovernanceDocumentDetail({ documentId, onBack }: GovernanceDocum
 
   // Find latest draft version for mapping editor
   const latestDraft = versions?.find(v => v.status === 'draft');
+  // Find published version for delivery
+  const publishedVersion = versions?.find(v => v.id === doc?.current_published_version_id);
 
   if (isLoading || !doc) {
     return (
@@ -81,6 +86,7 @@ export function GovernanceDocumentDetail({ documentId, onBack }: GovernanceDocum
   const invalidateAll = () => {
     queryClient.invalidateQueries({ queryKey: ['governance-doc-detail', documentId] });
     queryClient.invalidateQueries({ queryKey: ['governance-doc-versions', documentId] });
+    queryClient.invalidateQueries({ queryKey: ['governance-delivery-history', documentId] });
   };
 
   return (
@@ -98,6 +104,11 @@ export function GovernanceDocumentDetail({ documentId, onBack }: GovernanceDocum
           </div>
         </div>
         <div className="flex items-center gap-2">
+          {publishedVersion && (
+            <Button variant="default" size="sm" onClick={() => setShowDelivery(true)}>
+              <Send className="h-4 w-4 mr-2" /> Deliver to Clients
+            </Button>
+          )}
           <Button variant="outline" size="sm" onClick={() => setShowImport(true)}>
             <Upload className="h-4 w-4 mr-2" /> Import from SharePoint
           </Button>
@@ -192,6 +203,9 @@ export function GovernanceDocumentDetail({ documentId, onBack }: GovernanceDocum
         onPublish={(id) => setPublishVersionId(id)}
       />
 
+      {/* Delivery History */}
+      <GovernanceDeliveryHistory documentId={documentId} />
+
       {publishVersionId && (
         <GovernancePublishDialog
           versionId={publishVersionId}
@@ -210,6 +224,17 @@ export function GovernanceDocumentDetail({ documentId, onBack }: GovernanceDocum
           documentTitle={doc.title}
           open={showImport}
           onOpenChange={setShowImport}
+          onSuccess={invalidateAll}
+        />
+      )}
+
+      {showDelivery && publishedVersion && (
+        <GovernanceDeliveryDialog
+          documentId={documentId}
+          documentVersionId={publishedVersion.id}
+          versionNumber={publishedVersion.version_number}
+          open={showDelivery}
+          onOpenChange={setShowDelivery}
           onSuccess={invalidateAll}
         />
       )}

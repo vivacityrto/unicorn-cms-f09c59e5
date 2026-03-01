@@ -271,3 +271,6 @@ verify_jwt = false
 
 [functions.run-document-job]
 verify_jwt = false
+
+[functions.deliver-governance-document]
+verify_jwt = false
