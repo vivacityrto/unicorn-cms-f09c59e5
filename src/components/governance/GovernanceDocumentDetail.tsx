@@ -4,11 +4,12 @@ import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { ArrowLeft, ExternalLink, Upload, Send, FileText, Clock, Shield } from 'lucide-react';
+import { ArrowLeft, ExternalLink, Upload, FileText, Clock, Shield } from 'lucide-react';
 import { format } from 'date-fns';
-import { toast } from 'sonner';
+import { GovernanceVersionHistory } from './GovernanceVersionHistory';
 import { GovernancePublishDialog } from './GovernancePublishDialog';
+import { GovernanceImportDialog } from './GovernanceImportDialog';
+import { GovernanceMappingEditor } from './GovernanceMappingEditor';
 
 interface GovernanceDocumentDetailProps {
   documentId: number;
@@ -18,6 +19,8 @@ interface GovernanceDocumentDetailProps {
 export function GovernanceDocumentDetail({ documentId, onBack }: GovernanceDocumentDetailProps) {
   const queryClient = useQueryClient();
   const [publishVersionId, setPublishVersionId] = useState<string | null>(null);
+  const [showImport, setShowImport] = useState(false);
+  const [mappingVersionId, setMappingVersionId] = useState<string | null>(null);
 
   const { data: doc, isLoading } = useQuery({
     queryKey: ['governance-doc-detail', documentId],
@@ -61,6 +64,9 @@ export function GovernanceDocumentDetail({ documentId, onBack }: GovernanceDocum
     }
   };
 
+  // Find latest draft version for mapping editor
+  const latestDraft = versions?.find(v => v.status === 'draft');
+
   if (isLoading || !doc) {
     return (
       <div className="p-6">
@@ -71,6 +77,11 @@ export function GovernanceDocumentDetail({ documentId, onBack }: GovernanceDocum
       </div>
     );
   }
+
+  const invalidateAll = () => {
+    queryClient.invalidateQueries({ queryKey: ['governance-doc-detail', documentId] });
+    queryClient.invalidateQueries({ queryKey: ['governance-doc-versions', documentId] });
+  };
 
   return (
     <div className="space-y-6 p-6">
@@ -87,6 +98,9 @@ export function GovernanceDocumentDetail({ documentId, onBack }: GovernanceDocum
           </div>
         </div>
         <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" onClick={() => setShowImport(true)}>
+            <Upload className="h-4 w-4 mr-2" /> Import from SharePoint
+          </Button>
           {doc.source_template_url && (
             <Button variant="outline" size="sm" asChild>
               <a href={doc.source_template_url} target="_blank" rel="noopener noreferrer">
@@ -164,68 +178,19 @@ export function GovernanceDocumentDetail({ documentId, onBack }: GovernanceDocum
         </Card>
       )}
 
+      {/* Mapping Editor for latest draft */}
+      {latestDraft && (
+        <GovernanceMappingEditor
+          versionId={latestDraft.id}
+          mergeFields={doc.merge_fields as Record<string, unknown> | null}
+        />
+      )}
+
       {/* Version History */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-sm font-medium">Version History</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Version</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>File</TableHead>
-                <TableHead>Checksum</TableHead>
-                <TableHead>Created</TableHead>
-                <TableHead>Published</TableHead>
-                <TableHead></TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {!versions?.length ? (
-                <TableRow>
-                  <TableCell colSpan={7} className="text-center py-4 text-muted-foreground">
-                    No versions yet
-                  </TableCell>
-                </TableRow>
-              ) : (
-                versions.map((v: any) => (
-                  <TableRow key={v.id}>
-                    <TableCell className="font-mono">v{v.version_number}</TableCell>
-                    <TableCell>{getStatusBadge(v.status)}</TableCell>
-                    <TableCell className="text-sm">{v.file_name}</TableCell>
-                    <TableCell>
-                      {v.checksum_sha256 ? (
-                        <span className="text-xs font-mono text-muted-foreground" title={v.checksum_sha256}>
-                          {v.checksum_sha256.slice(0, 12)}…
-                        </span>
-                      ) : '—'}
-                    </TableCell>
-                    <TableCell className="text-xs text-muted-foreground">
-                      {format(new Date(v.created_at), 'dd MMM yyyy')}
-                    </TableCell>
-                    <TableCell className="text-xs text-muted-foreground">
-                      {v.published_at ? format(new Date(v.published_at), 'dd MMM yyyy') : '—'}
-                    </TableCell>
-                    <TableCell>
-                      {v.status === 'draft' && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setPublishVersionId(v.id)}
-                        >
-                          <Send className="h-3 w-3 mr-1" /> Publish
-                        </Button>
-                      )}
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+      <GovernanceVersionHistory
+        versions={versions}
+        onPublish={(id) => setPublishVersionId(id)}
+      />
 
       {publishVersionId && (
         <GovernancePublishDialog
@@ -234,9 +199,18 @@ export function GovernanceDocumentDetail({ documentId, onBack }: GovernanceDocum
           onOpenChange={(open) => { if (!open) setPublishVersionId(null); }}
           onSuccess={() => {
             setPublishVersionId(null);
-            queryClient.invalidateQueries({ queryKey: ['governance-doc-detail', documentId] });
-            queryClient.invalidateQueries({ queryKey: ['governance-doc-versions', documentId] });
+            invalidateAll();
           }}
+        />
+      )}
+
+      {showImport && (
+        <GovernanceImportDialog
+          documentId={documentId}
+          documentTitle={doc.title}
+          open={showImport}
+          onOpenChange={setShowImport}
+          onSuccess={invalidateAll}
         />
       )}
     </div>
