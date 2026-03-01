@@ -32,6 +32,7 @@ interface Tenant {
   risk_level: string;
   created_at: string;
   member_count: number;
+  rto_id?: string | null;
   csc_name?: string | null;
   csc_avatar?: string | null;
   csc_user_id?: string | null;
@@ -762,7 +763,10 @@ export default function ManageTenants() {
                   >
                     <TableCell className="py-6 border-r border-border/50 min-w-[280px] pr-8">
                       <div>
-                        <div className="font-semibold text-foreground pb-[10px] whitespace-nowrap">{tenant.name}</div>
+                        <div className="font-semibold text-foreground pb-[10px] whitespace-nowrap">
+                          {tenant.rto_id && <span className="text-primary font-bold mr-1.5">{tenant.rto_id}</span>}
+                          {tenant.name}
+                        </div>
                         <div className="flex items-center justify-between text-xs text-muted-foreground mt-1 whitespace-nowrap">
                           <span className="flex items-center gap-1">
                             <Calendar className="w-3 h-3" />
@@ -893,42 +897,7 @@ export default function ManageTenants() {
                       )}
                     </TableCell>
                     <TableCell className="py-6 px-4 text-center whitespace-nowrap">
-                      <div className="flex items-center justify-center gap-1" onClick={(e) => e.stopPropagation()}>
-                        {/* Connect button */}
-                        {connectedTenantIds.includes(tenant.id) ? (
-                          <Button
-                            size="sm"
-                            className="border-green-500 bg-green-500/10 text-green-600 hover:bg-green-500/20 hover:text-green-700 border px-4"
-                            variant="outline"
-                            onClick={() => handleConnect(tenant)}
-                          >
-                            <CheckCircle2 className="h-4 w-4 mr-1" />
-                            Connected
-                          </Button>
-                        ) : assignedTenants[tenant.id] ? (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="px-4 border-[rgb(37,99,235)] bg-[rgb(37,99,235)]/10 text-[rgb(37,99,235)] hover:bg-[rgb(37,99,235)]/20 cursor-not-allowed"
-                            disabled
-                            title={`Assigned to ${assignedTenants[tenant.id].userName}`}
-                          >
-                            <LinkIcon className="h-4 w-4 mr-1" />
-                            Assigned
-                          </Button>
-                        ) : (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="px-4 hover:bg-[#00c4ff0f] hover:text-black"
-                            onClick={() => handleConnect(tenant)}
-                            disabled={!isSuperAdmin && !isTeamLeader}
-                          >
-                            <LinkIcon className="h-4 w-4 mr-1" />
-                            Connect
-                          </Button>
-                        )}
-                        {/* Lifecycle actions dropdown */}
+                      <div className="flex items-center justify-center" onClick={(e) => e.stopPropagation()}>
                         <TenantLifecycleActions
                           tenantId={tenant.id}
                           tenantName={tenant.name}
