@@ -50,7 +50,7 @@ import { TenantTimeTrackerBar } from '@/components/client/TenantTimeTrackerBar';
 import { ClientTimeSummaryCard } from '@/components/client/ClientTimeSummaryCard';
 import { RiskLevelBadge } from '@/components/client/RiskLevelBadge';
 import { CSCAssignmentSelector } from '@/components/client/CSCAssignmentSelector';
-import { ConsultantAssignmentCard } from '@/components/client/ConsultantAssignmentCard';
+import { TenantUsersPreviewCard } from '@/components/client/TenantUsersPreviewCard';
 import { MembershipUsageCard } from '@/components/capacity/MembershipUsageCard';
 import { ViewAsClientButton } from '@/components/client/ViewAsClientButton';
 import { ClientQuickNav } from '@/components/client/ClientQuickNav';
@@ -407,10 +407,10 @@ export default function ClientDetail() {
       <div className="p-6">
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsContent value="overview" className="mt-0 space-y-6">
-            {/* Time Summary & Consultant Assignment */}
+            {/* Time Summary & Users Preview */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <ClientTimeSummaryCard clientId={tenantIdNum!} />
-              <ConsultantAssignmentCard tenantId={tenantIdNum!} canEdit={canEdit} />
+              <TenantUsersPreviewCard tenantId={tenantIdNum!} onViewAll={() => setActiveTab('users')} />
             </div>
 
             {/* Membership Usage */}
