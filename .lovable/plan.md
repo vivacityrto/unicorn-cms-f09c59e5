@@ -1,66 +1,91 @@
 
+# Stage 4 Enhancement: Auto-Scan Merge Fields on Template Import
 
-# Fix: Subfolder Resolution and DOCX Image Relationship Injection
+## Problem
 
-Two bugs in `supabase/functions/deliver-governance-document/index.ts`.
+When a governance template is imported from SharePoint, the `document_fields` table is not populated. Staff must manually associate merge fields with the document. This means:
+- Tailoring validation has no baseline to validate against
+- Typos and invalid tags in templates go undetected until delivery time
+- There's no feedback loop at import time about what the template actually contains
 
----
+## Solution
 
-## Bug 1: Subfolder Resolution Path
-
-**Problem**: At line 332, `ensureFolder` is called with `parentInfo.data.name` (just the folder name, e.g. `"41234 - Acme Corp"`) instead of the full root-relative path. The `ensureFolder` function constructs its Graph URL as `/drives/{driveId}/root:/{parentPath}:/children`, so it needs the complete path from the drive root.
-
-**Fix**: Reconstruct the full root-relative path from `parentInfo.data.parentReference.path` + folder name, stripping the `/drives/{id}/root:` prefix. This matches the pattern used in `verify-compliance-folder/index.ts` (lines 196-202).
-
-**Changed lines**: ~328-336 in `deliver-governance-document/index.ts`
-
-Replace:
-```typescript
-if (parentInfo.ok && parentInfo.data.webUrl) {
-  const sub = await ensureFolder(
-    driveId,
-    parentInfo.data.name || "",
-    catRow.sharepoint_folder_name,
-  );
-  parentItemId = sub.itemId;
-}
-```
-
-With:
-```typescript
-if (parentInfo.ok) {
-  const parentRef = parentInfo.data.parentReference as { path?: string } | undefined;
-  const fullPath = parentRef?.path
-    ? `${parentRef.path.replace(/^\/drives\/[^/]+\/root:/, '')}/${parentInfo.data.name}`
-    : parentInfo.data.name;
-  const cleanPath = fullPath.replace(/^\//, '');
-  const sub = await ensureFolder(driveId, cleanPath, catRow.sharepoint_folder_name);
-  parentItemId = sub.itemId;
-}
-```
+After importing a DOCX template, automatically scan its XML content for `{{...}}` patterns, match them against known `dd_fields` tags, and insert valid matches into the `document_fields` table. Flag invalid/unrecognised patterns back to the user.
 
 ---
 
-## Bug 2: Missing Image Relationship Entries in DOCX
+## Implementation
 
-**Problem**: The `processDocxTemplate` function injects images into `word/media/` and replaces placeholders with `<w:drawing>` blocks that reference `r:embed="rIdImg100"`, but it never adds the corresponding `<Relationship>` entry into `word/_rels/document.xml.rels`. Without this, Word cannot find the embedded image and the document will be corrupt or show a broken image.
+### 1. Add merge field scanning to `import-sharepoint-template` Edge Function
 
-**Fix**: After processing all XML entries, when we encounter `word/_rels/document.xml.rels`, inject the `<Relationship>` elements for each image before closing the `</Relationships>` tag.
+After the file is downloaded and before the response is returned, the `handleImport` function will:
 
-**Changes in `processDocxTemplate` function** (~lines 47-92):
+1. **Check if the file is a DOCX** (by mime type or extension)
+2. **Unzip and scan all XML entries** for `{{...}}` patterns using regex `/\{\{\s*([^}]+?)\s*\}\}/g`
+3. **Clean each match** -- strip internal whitespace, strip any XML tag fragments (e.g., `</w:t><w:t>` splits)
+4. **Look up each cleaned tag** against the `dd_fields` table (already have 23 tags)
+5. **Insert matched tags** into `document_fields` using upsert (composite PK `document_id, field_id` prevents duplicates)
+6. **Collect unrecognised patterns** and return them in the response as `invalid_tags[]` so the UI can warn the user
 
-When processing `word/_rels/document.xml.rels`, append relationship entries for each image injection before the closing `</Relationships>` tag:
+### 2. Update the response payload
 
-```typescript
-// Inside the XML processing block, after merge field replacement:
-if (entry.filename === 'word/_rels/document.xml.rels' && imageInjections.length > 0) {
-  const relEntries = imageInjections.map(
-    (img) =>
-      `<Relationship Id="${img.rId}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/${img.fileName}"/>`
-  ).join('');
-  content = content.replace('</Relationships>', relEntries + '</Relationships>');
+The `handleImport` response will include two new fields:
+
+```text
+{
+  ...existing fields...,
+  detected_fields: [{ tag: "RTOName", field_id: 2 }, ...],   // successfully linked
+  invalid_tags: ["RTO name", "ERROR", " RTOname "],           // unrecognised patterns
+  fields_linked: 8,                                            // count added to document_fields
 }
 ```
+
+### 3. Update `GovernanceImportDialog` UI
+
+After a successful import, show a summary:
+- "8 merge fields detected and linked" (green)
+- "3 unrecognised tags found: {{RTO name}}, {{ERROR}}, {{ RTOname }}" (amber warning)
+- This gives immediate feedback without requiring a separate scan step
+
+### 4. Handle re-imports gracefully
+
+Since `document_fields` has a composite PK `(document_id, field_id)`, upserts naturally handle re-imports. On re-import:
+- Clear existing `document_fields` rows for this `document_id` first (the new template version may have different fields)
+- Re-insert based on the fresh scan
+- This ensures the field list always reflects the current template content
+
+---
+
+## Technical Detail
+
+### Scanning logic (added to `handleImport` in `import-sharepoint-template/index.ts`)
+
+```text
+1. Check file extension is .docx
+2. Use zip.js (already available in the project) to read the DOCX
+3. For each XML entry (word/document.xml, word/header*.xml, word/footer*.xml):
+   a. Read as text
+   b. Strip XML tags from within merge field patterns (handles Word's split-run issue)
+   c. Match all {{...}} patterns
+   d. Clean: trim whitespace inside braces
+4. Query dd_fields for all tags (one query, ~23 rows)
+5. Build map: cleaned_tag -> field_id
+6. For each detected pattern:
+   - If cleaned tag matches dd_fields: add to valid_fields set
+   - If not: add to invalid_tags set
+7. DELETE FROM document_fields WHERE document_id = X (clear old links)
+8. INSERT into document_fields for each valid match
+9. Return results in response
+```
+
+### XML split-run handling
+
+Word often splits `{{RTOName}}` across multiple XML runs like:
+```xml
+<w:r><w:t>{{RTO</w:t></w:r><w:r><w:t>Name}}</w:t></w:r>
+```
+
+The scanner must first strip all XML tags from the text content, concatenate, then regex match. This is the same approach already used in `deliver-governance-document`'s `processDocxTemplate`.
 
 ---
 
@@ -68,8 +93,13 @@ if (entry.filename === 'word/_rels/document.xml.rels' && imageInjections.length 
 
 | File | Change |
 |------|--------|
-| `supabase/functions/deliver-governance-document/index.ts` | Fix subfolder path resolution; add image relationship injection to `.rels` file |
+| `supabase/functions/import-sharepoint-template/index.ts` | Add DOCX scan logic after file download in `handleImport`, insert into `document_fields`, return detected/invalid fields |
+| `src/components/governance/GovernanceImportDialog.tsx` | Show post-import field detection summary (count of linked fields + any invalid tag warnings) |
 
-## Deployment
-The edge function will be redeployed automatically after the fix.
+## What This Enables for Stage 4
 
+With `document_fields` auto-populated at import time:
+- The tailoring validator has an accurate baseline of what each template requires
+- Invalid tags are surfaced immediately (not discovered during delivery)
+- The pre-delivery completeness check in `GovernanceDeliveryDialog` works out of the box
+- No manual step needed to associate merge fields with documents
