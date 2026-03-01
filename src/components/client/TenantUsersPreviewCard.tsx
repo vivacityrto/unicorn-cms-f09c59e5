@@ -122,7 +122,10 @@ export function TenantUsersPreviewCard({ tenantId, onViewAll }: TenantUsersPrevi
                   {getInitials(u)}
                 </AvatarFallback>
               </Avatar>
-              <p className="text-sm font-medium truncate flex-1 min-w-0">{getName(u)}</p>
+              <div className="flex items-baseline gap-2 flex-1 min-w-0">
+                <p className="text-sm font-medium truncate">{getName(u)}</p>
+                {u.job_title && <span className="text-xs text-muted-foreground truncate">{u.job_title}</span>}
+              </div>
               {u.phone && (
                 <a
                   href={`tel:${u.phone}`}
