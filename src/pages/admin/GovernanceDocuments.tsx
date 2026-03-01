@@ -24,7 +24,7 @@ function GovernanceDocuments() {
       let query = supabase
         .from('documents')
         .select(`
-          id, title, format, document_category, document_status,
+          id, title, format, category, document_category, document_status,
           source_template_url, updated_at, current_published_version_id,
           document_versions!document_versions_document_id_fkey(id, version_number, status, created_at, published_at, checksum_sha256)
         `)
@@ -178,7 +178,7 @@ function GovernanceDocuments() {
                   >
                     <TableCell className="font-medium">{doc.title}</TableCell>
                     <TableCell>
-                      <span className="text-xs text-muted-foreground">{doc.document_category || '—'}</span>
+                      <span className="text-xs text-muted-foreground">{doc.category || doc.document_category || '—'}</span>
                     </TableCell>
                     <TableCell>
                       <span className="text-xs font-mono">{doc.format || '—'}</span>
