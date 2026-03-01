@@ -214,33 +214,15 @@ serve(async (req) => {
       );
     }
 
-    // Fetch tenant data for merge fields
-    const { data: tenant } = await supabase
-      .from("tenants")
-      .select("*")
-      .eq("id", release.tenant_id)
-      .single();
+    // Fetch merge field values from unified view
+    const { data: mergeFieldRows } = await supabase
+      .from("v_tenant_merge_fields")
+      .select("field_tag, field_type, value")
+      .eq("tenant_id", release.tenant_id);
 
-    // Fetch merge field definitions
-    const { data: mergeFieldDefs } = await supabase
-      .from("merge_field_definitions")
-      .select("code, source_column")
-      .eq("is_active", true);
-
-    // Fetch tenant merge data
-    const { data: tenantMergeData } = await supabase
-      .from("tenant_merge_data")
-      .select("data")
-      .eq("tenant_id", release.tenant_id)
-      .single();
-
-    // Build merge data object
-    const combinedData = { ...tenant, ...(tenantMergeData?.data || {}) };
     const mergeData: Record<string, string> = {};
-    
-    for (const field of mergeFieldDefs || []) {
-      const value = combinedData[field.source_column];
-      mergeData[field.code] = value !== null && value !== undefined ? String(value) : '';
+    for (const row of mergeFieldRows || []) {
+      mergeData[`{{${row.field_tag}}}`] = row.value !== null && row.value !== undefined ? String(row.value) : '';
     }
 
     console.log(`Processing ${items?.length || 0} documents with ${Object.keys(mergeData).length} merge fields`);

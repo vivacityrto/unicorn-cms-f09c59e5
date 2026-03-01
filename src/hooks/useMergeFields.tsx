@@ -3,16 +3,17 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
 export interface MergeFieldDefinition {
-  id: string;
-  code: string;
+  id: number;
+  tag: string;
   name: string;
-  source_table: string;
-  source_column: string;
-  description: string | null;
-  is_system: boolean;
+  source_table: string | null;
+  source_column: string | null;
+  source_address_type: string | null;
   is_active: boolean;
+  description: string | null;
+  field_type: string;
   created_at: string;
-  created_by: string | null;
+  updated_at: string;
 }
 
 export function useMergeFields() {
@@ -23,12 +24,12 @@ export function useMergeFields() {
   const fetchMergeFields = useCallback(async () => {
     try {
       const { data, error } = await supabase
-        .from('merge_field_definitions' as any)
+        .from('dd_fields')
         .select('*')
-        .order('name', { ascending: true }) as any;
+        .order('name', { ascending: true });
 
       if (error) throw error;
-      setMergeFields(data || []);
+      setMergeFields((data || []) as unknown as MergeFieldDefinition[]);
     } catch (error: any) {
       toast({
         title: 'Error',
@@ -45,40 +46,41 @@ export function useMergeFields() {
   }, [fetchMergeFields]);
 
   const addMergeField = async (data: Partial<MergeFieldDefinition>) => {
-    const { data: newField, error } = await (supabase
-      .from('merge_field_definitions' as any)
+    const { data: newField, error } = await supabase
+      .from('dd_fields')
       .insert({
-        code: data.code,
+        tag: data.tag,
         name: data.name,
-        source_table: data.source_table || 'clients_legacy',
+        source_table: data.source_table,
         source_column: data.source_column,
+        source_address_type: data.source_address_type,
+        field_type: data.field_type || 'text',
         description: data.description,
-        is_system: false,
-        is_active: true
-      })
+        is_active: data.is_active ?? true
+      } as any)
       .select()
-      .single() as any);
+      .single();
 
     if (error) throw error;
     await fetchMergeFields();
     return newField;
   };
 
-  const updateMergeField = async (id: string, data: Partial<MergeFieldDefinition>) => {
-    const { error } = await (supabase
-      .from('merge_field_definitions' as any)
-      .update(data)
-      .eq('id', id) as any);
+  const updateMergeField = async (id: number | string, data: Partial<MergeFieldDefinition>) => {
+    const { error } = await supabase
+      .from('dd_fields')
+      .update(data as any)
+      .eq('id', Number(id));
 
     if (error) throw error;
     await fetchMergeFields();
   };
 
-  const deleteMergeField = async (id: string) => {
-    const { error } = await (supabase
-      .from('merge_field_definitions' as any)
+  const deleteMergeField = async (id: number | string) => {
+    const { error } = await supabase
+      .from('dd_fields')
       .delete()
-      .eq('id', id) as any);
+      .eq('id', Number(id));
 
     if (error) throw error;
     await fetchMergeFields();
@@ -97,28 +99,20 @@ export function useMergeFields() {
   };
 }
 
-// Get merge data for a tenant from clients_legacy
-export async function getTenantMergeData(clientLegacyId: string): Promise<Record<string, string>> {
-  const { data: client, error } = await supabase
-    .from('clients_legacy')
-    .select('*')
-    .eq('id', clientLegacyId)
-    .single();
+// Get merge data for a tenant from the v_tenant_merge_fields view
+export async function getTenantMergeData(tenantId: number): Promise<Record<string, string>> {
+  const { data, error } = await supabase
+    .from('v_tenant_merge_fields' as any)
+    .select('field_tag, value')
+    .eq('tenant_id', tenantId) as any;
 
-  if (error || !client) {
-    throw new Error('Failed to fetch tenant data for merge');
+  if (error) {
+    throw new Error('Failed to fetch tenant merge data');
   }
 
-  const { data: mergeFields } = await supabase
-    .from('merge_field_definitions' as any)
-    .select('code, source_column')
-    .eq('is_active', true) as any;
-
   const mergeData: Record<string, string> = {};
-  
-  (mergeFields || []).forEach((field: { code: string; source_column: string }) => {
-    const value = (client as any)[field.source_column];
-    mergeData[field.code] = value || '';
+  (data || []).forEach((row: { field_tag: string; value: string }) => {
+    mergeData[`{{${row.field_tag}}}`] = row.value || '';
   });
 
   return mergeData;

@@ -33,9 +33,10 @@ export function MergeFieldsEditor({ documentId }: MergeFieldsEditorProps) {
     setLocalFields(mergeFields);
   }
 
-  const addField = (fieldCode: string) => {
-    if (!localFields.includes(fieldCode)) {
-      setLocalFields([...localFields, fieldCode]);
+  const addField = (fieldTag: string) => {
+    const code = `{{${fieldTag}}}`;
+    if (!localFields.includes(code)) {
+      setLocalFields([...localFields, code]);
       setHasChanges(true);
     }
     setPopoverOpen(false);
@@ -53,12 +54,13 @@ export function MergeFieldsEditor({ documentId }: MergeFieldsEditorProps) {
   };
 
   const activeAvailableFields = availableFields.filter(f => f.is_active);
-  const filteredAvailableFields = activeAvailableFields.filter(f => 
-    !localFields.includes(f.code) && (
-      f.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
+  const filteredAvailableFields = activeAvailableFields.filter(f => {
+    const code = `{{${f.tag}}}`;
+    return !localFields.includes(code) && (
+      f.tag.toLowerCase().includes(searchTerm.toLowerCase()) ||
       f.name.toLowerCase().includes(searchTerm.toLowerCase())
-    )
-  );
+    );
+  });
 
   return (
     <Card>
@@ -106,12 +108,12 @@ export function MergeFieldsEditor({ documentId }: MergeFieldsEditorProps) {
                     filteredAvailableFields.map((field) => (
                       <button
                         key={field.id}
-                        onClick={() => addField(field.code)}
+                        onClick={() => addField(field.tag)}
                         className="w-full text-left p-2 rounded hover:bg-muted transition-colors"
                       >
                         <div className="flex items-center gap-2">
                           <code className="text-xs bg-muted px-1.5 py-0.5 rounded">
-                            {field.code}
+                            {`{{${field.tag}}}`}
                           </code>
                           <span className="text-sm text-muted-foreground truncate">
                             {field.name}
@@ -147,7 +149,10 @@ export function MergeFieldsEditor({ documentId }: MergeFieldsEditorProps) {
         ) : (
           <div className="flex flex-wrap gap-2">
             {localFields.map((fieldCode) => {
-              const fieldDef = availableFields.find(f => f.code === fieldCode);
+              // Extract tag from {{Tag}} format
+              const tagMatch = fieldCode.match(/\{\{(.+?)\}\}/);
+              const tag = tagMatch ? tagMatch[1] : fieldCode;
+              const fieldDef = availableFields.find(f => f.tag === tag);
               return (
                 <Badge 
                   key={fieldCode} 

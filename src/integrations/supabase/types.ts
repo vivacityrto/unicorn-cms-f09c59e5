@@ -12317,19 +12317,43 @@ export type Database = {
       }
       dd_fields: {
         Row: {
+          created_at: string
+          description: string | null
+          field_type: string
           id: number
+          is_active: boolean
           name: string | null
+          source_address_type: string | null
+          source_column: string | null
+          source_table: string | null
           tag: string | null
+          updated_at: string
         }
         Insert: {
+          created_at?: string
+          description?: string | null
+          field_type?: string
           id?: number
+          is_active?: boolean
           name?: string | null
+          source_address_type?: string | null
+          source_column?: string | null
+          source_table?: string | null
           tag?: string | null
+          updated_at?: string
         }
         Update: {
+          created_at?: string
+          description?: string | null
+          field_type?: string
           id?: number
+          is_active?: boolean
           name?: string | null
+          source_address_type?: string | null
+          source_column?: string | null
+          source_table?: string | null
           tag?: string | null
+          updated_at?: string
         }
         Relationships: []
       }
@@ -36705,6 +36729,7 @@ export type Database = {
           legal_name: string | null
           lifecycle_status: string
           lms: string | null
+          logo_path: string | null
           metadata: Json | null
           name: string
           package_added_at: string | null
@@ -36765,6 +36790,7 @@ export type Database = {
           legal_name?: string | null
           lifecycle_status?: string
           lms?: string | null
+          logo_path?: string | null
           metadata?: Json | null
           name: string
           package_added_at?: string | null
@@ -36825,6 +36851,7 @@ export type Database = {
           legal_name?: string | null
           lifecycle_status?: string
           lms?: string | null
+          logo_path?: string | null
           metadata?: Json | null
           name?: string
           package_added_at?: string | null
@@ -46022,6 +46049,18 @@ export type Database = {
             referencedColumns: ["value"]
           },
         ]
+      }
+      v_tenant_merge_fields: {
+        Row: {
+          field_id: number | null
+          field_name: string | null
+          field_tag: string | null
+          field_type: string | null
+          source: string | null
+          tenant_id: number | null
+          value: string | null
+        }
+        Relationships: []
       }
       v_tenant_stage_instances: {
         Row: {
