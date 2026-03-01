@@ -23,6 +23,32 @@ const SOURCE_TABLES = [
   { value: "tga_rto_snapshots", label: "TGA RTO Snapshots" },
 ];
 
+// Columns per source table (excludes internal/system columns)
+const SOURCE_TABLE_COLUMNS: Record<string, string[]> = {
+  tenants: [
+    "name", "rto_name", "legal_name", "rto_id", "cricos_id", "abn", "acn",
+    "website", "lms", "sms", "accounting_system", "state", "tenant_type",
+    "status", "slug",
+  ],
+  tenant_profile: [
+    "trading_name", "legal_name", "abn", "acn", "org_type",
+    "primary_contact_name", "primary_contact_email", "primary_contact_phone",
+    "address_line_1", "address_line_2", "suburb", "state", "postcode", "country",
+    "rto_number", "cricos_number", "website", "phone1", "phone2", "rto_email",
+    "gto_name",
+  ],
+  tenant_addresses: [
+    "address1", "address2", "address3", "suburb", "state", "postcode",
+    "country", "country_code", "full_address",
+  ],
+  tga_rto_snapshots: [
+    "payload->registrations->0->endDate",
+    "payload->registrations->0->startDate",
+    "payload->organisationName",
+    "payload->abn",
+  ],
+};
+
 const ADDRESS_TYPES = [
   { value: "HO", label: "Head Office" },
   { value: "DS", label: "Delivery Site" },
@@ -312,7 +338,7 @@ export default function MergeFieldTagsAdmin() {
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Source Table</Label>
-                  <Select value={formData.source_table} onValueChange={(v) => setFormData({ ...formData, source_table: v })}>
+                  <Select value={formData.source_table} onValueChange={(v) => setFormData({ ...formData, source_table: v, source_column: "" })}>
                     <SelectTrigger>
                       <SelectValue placeholder="Select table..." />
                     </SelectTrigger>
@@ -325,11 +351,57 @@ export default function MergeFieldTagsAdmin() {
                 </div>
                 <div className="space-y-2">
                   <Label>Source Column</Label>
-                  <Input
-                    value={formData.source_column}
-                    onChange={(e) => setFormData({ ...formData, source_column: e.target.value })}
-                    placeholder="column_name"
-                  />
+                  {formData.source_table && SOURCE_TABLE_COLUMNS[formData.source_table] ? (
+                    <Select value={formData.source_column} onValueChange={(v) => setFormData({ ...formData, source_column: v })}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select column..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {SOURCE_TABLE_COLUMNS[formData.source_table].map((col) => {
+                          const usedBy = mergeFields.find(
+                            (f) =>
+                              f.source_table === formData.source_table &&
+                              f.source_column === col &&
+                              f.source_address_type === (formData.source_address_type || null) &&
+                              f.id !== editingField?.id
+                          );
+                          return (
+                            <SelectItem key={col} value={col}>
+                              <span className="flex items-center gap-2">
+                                {col}
+                                {usedBy && (
+                                  <span className="text-xs text-amber-600 ml-1">
+                                    (used by {`{{${usedBy.tag}}}`})
+                                  </span>
+                                )}
+                              </span>
+                            </SelectItem>
+                          );
+                        })}
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <Input
+                      value={formData.source_column}
+                      onChange={(e) => setFormData({ ...formData, source_column: e.target.value })}
+                      placeholder="Select a table first..."
+                      disabled={!formData.source_table}
+                    />
+                  )}
+                  {formData.source_column && (() => {
+                    const conflict = mergeFields.find(
+                      (f) =>
+                        f.source_table === formData.source_table &&
+                        f.source_column === formData.source_column &&
+                        f.source_address_type === (formData.source_address_type || null) &&
+                        f.id !== editingField?.id
+                    );
+                    return conflict ? (
+                      <p className="text-xs text-amber-600 flex items-center gap-1">
+                        ⚠️ Already mapped to {`{{${conflict.tag}}}`}
+                      </p>
+                    ) : null;
+                  })()}
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
