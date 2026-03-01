@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { DashboardLayout } from '@/components/DashboardLayout';
@@ -7,16 +7,21 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Search, FileCheck, ExternalLink, Upload, Eye } from 'lucide-react';
+import { Search, FileCheck, ExternalLink, Upload, Eye, ArrowUpDown } from 'lucide-react';
 import { format } from 'date-fns';
 import { GovernanceDocumentDetail } from '@/components/governance/GovernanceDocumentDetail';
 import { useDocumentCategories } from '@/hooks/useDocumentCategories';
+
+type SortField = 'title' | 'category' | null;
+type SortOrder = 'asc' | 'desc';
 
 function GovernanceDocuments() {
   const [search, setSearch] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [selectedDocId, setSelectedDocId] = useState<number | null>(null);
+  const [sortField, setSortField] = useState<SortField>(null);
+  const [sortOrder, setSortOrder] = useState<SortOrder>('asc');
 
   // Fetch documents that are team-only (governance templates)
   const { data: documents, isLoading } = useQuery({
@@ -69,6 +74,31 @@ function GovernanceDocuments() {
     const sorted = [...doc.document_versions].sort((a: any, b: any) => b.version_number - a.version_number);
     return sorted[0];
   };
+
+  const toggleSort = (field: SortField) => {
+    if (sortField === field) {
+      setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortOrder('asc');
+    }
+  };
+
+  const sortedDocuments = useMemo(() => {
+    if (!documents || !sortField) return documents;
+    return [...documents].sort((a: any, b: any) => {
+      let valA: string, valB: string;
+      if (sortField === 'category') {
+        valA = valueLabelMap.get(a.category) || a.category || '';
+        valB = valueLabelMap.get(b.category) || b.category || '';
+      } else {
+        valA = a.title || '';
+        valB = b.title || '';
+      }
+      const cmp = valA.localeCompare(valB);
+      return sortOrder === 'asc' ? cmp : -cmp;
+    });
+  }, [documents, sortField, sortOrder, valueLabelMap]);
 
   if (selectedDocId) {
     return (
@@ -135,8 +165,16 @@ function GovernanceDocuments() {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Title</TableHead>
-              <TableHead>Category</TableHead>
+              <TableHead>
+                <Button variant="ghost" size="sm" onClick={() => toggleSort('title')} className="gap-1 -ml-3">
+                  Title <ArrowUpDown className="h-3 w-3" />
+                </Button>
+              </TableHead>
+              <TableHead>
+                <Button variant="ghost" size="sm" onClick={() => toggleSort('category')} className="gap-1 -ml-3">
+                  Category <ArrowUpDown className="h-3 w-3" />
+                </Button>
+              </TableHead>
               <TableHead>Format</TableHead>
               <TableHead>Version</TableHead>
               <TableHead>Status</TableHead>
@@ -159,7 +197,7 @@ function GovernanceDocuments() {
                 </TableCell>
               </TableRow>
             ) : (
-              documents.map((doc: any) => {
+              (sortedDocuments || []).map((doc: any) => {
                 const currentVersion = getCurrentVersion(doc);
                 return (
                   <TableRow
