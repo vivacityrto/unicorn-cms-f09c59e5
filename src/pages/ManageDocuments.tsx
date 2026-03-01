@@ -79,15 +79,6 @@ export default function ManageDocuments() {
     id: number;
     title: string;
   }>>([]);
-  const [fieldsCount, setFieldsCount] = useState<number>(0);
-  const [fields, setFields] = useState<Array<{
-    id: number;
-    label: string;
-    type: string;
-  }>>([]);
-  const [selectedFields, setSelectedFields] = useState<number[]>([]);
-  const [isFieldsSheetOpen, setIsFieldsSheetOpen] = useState(false);
-  const [fieldSearchQuery, setFieldSearchQuery] = useState("");
   const [selectedDocuments, setSelectedDocuments] = useState<number[]>([]);
   const [isBulkDeleteDialogOpen, setIsBulkDeleteDialogOpen] = useState(false);
   const [isBulkSendDialogOpen, setIsBulkSendDialogOpen] = useState(false);
@@ -176,7 +167,7 @@ export default function ManageDocuments() {
     fetchCurrentUser();
     fetchCategories();
     fetchStages();
-    fetchFields();
+    
     fetchBulkSendUsers();
     fetchBulkTenants();
     fetchDocumentsCount();
@@ -245,21 +236,6 @@ export default function ManageDocuments() {
       setStagesCount((data || []).length);
     } catch (error: any) {
       console.error("Error fetching stages:", error);
-    }
-  };
-  const fetchFields = async () => {
-    try {
-      const {
-        data,
-        error
-      } = await supabase.from("documents_fields").select("id, label, type").order("label", {
-        ascending: true
-      });
-      if (error) throw error;
-      setFields(data || []);
-      setFieldsCount((data || []).length);
-    } catch (error: any) {
-      console.error("Error fetching fields:", error);
     }
   };
   const fetchBulkSendUsers = async () => {
@@ -956,8 +932,6 @@ export default function ManageDocuments() {
   // Filtered categories based on search
   const filteredCategoriesForDropdown = categories.filter(cat => cat.name.toLowerCase().includes(categorySearchQuery.toLowerCase()));
 
-  // Filtered fields based on search
-  const filteredFieldsForSheet = fields.filter(field => field.label.toLowerCase().includes(fieldSearchQuery.toLowerCase()));
   if (loading) {
     return <div className="space-y-4 p-6">
         <div className="flex items-center gap-2">
@@ -1176,74 +1150,9 @@ export default function ManageDocuments() {
                       </div>}
                   </div>
 
+
                   <div className="grid gap-2">
                     <Label htmlFor="files">Files</Label>
-                    <Sheet open={isFieldsSheetOpen} onOpenChange={setIsFieldsSheetOpen}>
-                      <SheetContent side="right" className="w-[560px] sm:max-w-[540px] data-[state=open]:duration-500">
-                        <SheetHeader>
-                          <SheetTitle>Document Fields</SheetTitle>
-                          <SheetDescription>Select fields to add to your document</SheetDescription>
-                        </SheetHeader>
-                        <div className="space-y-4 mt-4">
-                          <div className="relative">
-                            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                            <Input placeholder="Search fields..." value={fieldSearchQuery} onChange={e => setFieldSearchQuery(e.target.value)} className="pl-10" />
-                          </div>
-                          {filteredFieldsForSheet.length === 0 ? <p className="text-sm text-muted-foreground text-center py-8">
-                              {fieldSearchQuery ? "No fields found matching your search" : "No fields available. Create fields in the Fields management page."}
-                            </p> : <div className="max-h-[calc(100vh-300px)] overflow-y-auto scrollbar-hide">
-                              <Table>
-                                <TableHeader>
-                                  <TableRow>
-                                    <TableHead className="w-12"></TableHead>
-                                    <TableHead>Label</TableHead>
-                                    <TableHead>Type</TableHead>
-                                  </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                  {filteredFieldsForSheet.map(field => {
-                                const isSelected = selectedFields.includes(field.id);
-                                return <TableRow key={field.id} className="cursor-pointer" onClick={() => {
-                                  setSelectedFields(prev => prev.includes(field.id) ? prev.filter(f => f !== field.id) : [...prev, field.id]);
-                                }}>
-                                        <TableCell>
-                                          <Checkbox checked={isSelected} onCheckedChange={() => {
-                                      setSelectedFields(prev => prev.includes(field.id) ? prev.filter(f => f !== field.id) : [...prev, field.id]);
-                                    }} />
-                                        </TableCell>
-                                        <TableCell className="font-medium">{field.label}</TableCell>
-                                        <TableCell>
-                                          <Badge variant="secondary" style={{
-                                      backgroundColor: "hsl(275deg 54% 41% / 8%)",
-                                      border: "1px solid hsl(275 54% 41%)",
-                                      fontSize: "12px",
-                                      color: "hsl(275 54% 41%)"
-                                    }}>
-                                            {field.type}
-                                          </Badge>
-                                        </TableCell>
-                                      </TableRow>;
-                              })}
-                                </TableBody>
-                              </Table>
-                            </div>}
-                          <div className="flex justify-end gap-2 pt-4 border-t">
-                            <Button variant="outline" onClick={() => setIsFieldsSheetOpen(false)}>
-                              Cancel
-                            </Button>
-                            <Button onClick={() => {
-                            setIsFieldsSheetOpen(false);
-                            toast({
-                              title: "Fields Added",
-                              description: `${selectedFields.length} field(s) added to the document`
-                            });
-                          }}>
-                              Apply
-                            </Button>
-                          </div>
-                        </div>
-                      </SheetContent>
-                    </Sheet>
                     <Input id="files" type="file" multiple onChange={handleFileUpload} className="cursor-pointer" />
                     
                     {/* Display existing files (edit mode) */}
@@ -1304,125 +1213,9 @@ export default function ManageDocuments() {
                           </div>)}
                       </div>}
 
-                    {/* Display Selected Fields */}
-                    {selectedFields.length > 0 && <div className="space-y-3 mt-4 pt-4 border-t">
-                        <Label className="text-sm font-medium">Document Fields</Label>
-                        {selectedFields.map(fieldId => {
-                      const field = fields.find(f => f.id === fieldId);
-                      if (!field) return null;
-                      return <div key={field.id} className="grid gap-2">
-                              <Label htmlFor={`field-${field.id}`}>{field.label}</Label>
-                              {field.type === "text" && <Input id={`field-${field.id}`} placeholder={`Enter ${field.label.toLowerCase()}`} />}
-                              {field.type === "number" && <Input id={`field-${field.id}`} type="number" placeholder={`Enter ${field.label.toLowerCase()}`} />}
-                              {field.type === "email" && <Input id={`field-${field.id}`} type="email" placeholder={`Enter ${field.label.toLowerCase()}`} />}
-                              {field.type === "date" && <Popover>
-                                  <PopoverTrigger asChild>
-                                    <Button variant="outline" className="justify-start text-left font-normal">
-                                      <CalendarIcon className="mr-2 h-4 w-4" />
-                                      Pick a date
-                                    </Button>
-                                  </PopoverTrigger>
-                                  <PopoverContent className="w-auto p-0" align="start">
-                                    <Calendar mode="single" initialFocus className="pointer-events-auto" />
-                                  </PopoverContent>
-                                </Popover>}
-                              {field.type === "datetime-local" && <Input id={`field-${field.id}`} type="datetime-local" />}
-                              {field.type === "time" && <Input id={`field-${field.id}`} type="time" />}
-                              {field.type === "tel" && <Input id={`field-${field.id}`} type="tel" placeholder={`Enter ${field.label.toLowerCase()}`} />}
-                              {field.type === "url" && <Input id={`field-${field.id}`} type="url" placeholder={`Enter ${field.label.toLowerCase()}`} />}
-                              {field.type === "checkbox" && <div className="flex items-center gap-2">
-                                  <Checkbox id={`field-${field.id}`} />
-                                  <Label htmlFor={`field-${field.id}`} className="text-sm font-normal">
-                                    {field.label}
-                                  </Label>
-                                </div>}
-                              {field.type === "select" && <Select>
-                                  <SelectTrigger>
-                                    <SelectValue placeholder="Select option" />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    <SelectItem value="option1">Option 1</SelectItem>
-                                    <SelectItem value="option2">Option 2</SelectItem>
-                                  </SelectContent>
-                                </Select>}
-                              {field.type === "textarea" && <Textarea id={`field-${field.id}`} placeholder={`Enter ${field.label.toLowerCase()}`} />}
-                              {field.type === "file" && <Input id={`field-${field.id}`} type="file" />}
-                              {field.type === "color" && <Input id={`field-${field.id}`} type="color" className="h-10 w-20" />}
-                              {field.type === "range" && <Input id={`field-${field.id}`} type="range" />}
-                            </div>;
-                    })}
-                      </div>}
                   </div>
                   </div>
                 </div>
-
-                {/* Sheet for Document Fields */}
-                <Sheet open={isFieldsSheetOpen} onOpenChange={setIsFieldsSheetOpen}>
-                  <SheetContent side="right" className="w-[560px] sm:max-w-[540px] data-[state=open]:duration-500">
-                    <SheetHeader>
-                      <SheetTitle>Document Fields</SheetTitle>
-                      <SheetDescription>Select fields to add to your document</SheetDescription>
-                    </SheetHeader>
-                    <div className="space-y-4 mt-4">
-                      <div className="relative">
-                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                        <Input placeholder="Search fields..." value={fieldSearchQuery} onChange={e => setFieldSearchQuery(e.target.value)} className="pl-10" />
-                      </div>
-                      {filteredFieldsForSheet.length === 0 ? <p className="text-sm text-muted-foreground text-center py-8">
-                          {fieldSearchQuery ? "No fields found matching your search" : "No fields available. Create fields in the Fields management page."}
-                        </p> : <div className="max-h-[calc(100vh-300px)] overflow-y-auto scrollbar-hide">
-                          <Table>
-                            <TableHeader>
-                              <TableRow>
-                                <TableHead className="w-12"></TableHead>
-                                <TableHead>Label</TableHead>
-                                <TableHead>Type</TableHead>
-                              </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                              {filteredFieldsForSheet.map(field => {
-                          const isSelected = selectedFields.includes(field.id);
-                          return <TableRow key={field.id} className="cursor-pointer" onClick={() => {
-                            setSelectedFields(prev => prev.includes(field.id) ? prev.filter(f => f !== field.id) : [...prev, field.id]);
-                          }}>
-                                    <TableCell>
-                                      <Checkbox checked={isSelected} onCheckedChange={() => {
-                                setSelectedFields(prev => prev.includes(field.id) ? prev.filter(f => f !== field.id) : [...prev, field.id]);
-                              }} />
-                                    </TableCell>
-                                    <TableCell className="font-medium">{field.label}</TableCell>
-                                    <TableCell>
-                                      <Badge variant="secondary" style={{
-                                backgroundColor: "hsl(275deg 54% 41% / 8%)",
-                                border: "1px solid hsl(275 54% 41%)",
-                                fontSize: "12px",
-                                color: "hsl(275 54% 41%)"
-                              }}>
-                                        {field.type}
-                                      </Badge>
-                                    </TableCell>
-                                  </TableRow>;
-                        })}
-                            </TableBody>
-                          </Table>
-                        </div>}
-                      <div className="flex justify-end gap-2 pt-4 border-t">
-                        <Button variant="outline" onClick={() => setIsFieldsSheetOpen(false)}>
-                          Cancel
-                        </Button>
-                        <Button onClick={() => {
-                      setIsFieldsSheetOpen(false);
-                      toast({
-                        title: "Fields Added",
-                        description: `${selectedFields.length} field(s) added to the document`
-                      });
-                    }}>
-                          Apply
-                        </Button>
-                      </div>
-                    </div>
-                  </SheetContent>
-                </Sheet>
 
                 <DialogFooter className="flex-shrink-0 pt-4 mt-4 border-t">
                   <Button variant="outline" size="default" type="button" onClick={() => setIsCreateDialogOpen(false)} className="hover:bg-[#40c6e524] hover:text-black">
@@ -1483,20 +1276,6 @@ export default function ManageDocuments() {
             <p className="text-xs text-muted-foreground">Click to manage</p>
           </div>
 
-          <div 
-            onClick={() => navigate("/manage-fields")}
-            className="p-4 rounded-lg border bg-card hover:shadow-md transition-all cursor-pointer group animate-scale-in"
-            style={{ animationDelay: "150ms" }}
-          >
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-sm font-medium text-muted-foreground">Fields</span>
-              <div className="p-2 bg-amber-500/10 rounded-lg group-hover:bg-amber-500/20 transition-colors">
-                <FileStack className="h-5 w-5 text-amber-500" />
-              </div>
-            </div>
-            <p className="text-2xl font-bold mb-1">{fieldsCount}</p>
-            <p className="text-xs text-muted-foreground">Click to manage</p>
-          </div>
         </div>}
 
       {/* Search and Filters */}
