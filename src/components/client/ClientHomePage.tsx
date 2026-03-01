@@ -1,4 +1,4 @@
-import { Bot, MessageCircle, Headphones, FileText, Calendar, Library, ArrowRight } from "lucide-react";
+import { Bot, MessageCircle, Headphones, FileText, Calendar, Library, ArrowRight, ShieldCheck } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useHelpCenter } from "@/components/help-center";
@@ -149,6 +149,11 @@ export function ClientHomePage() {
           <Button variant="outline" size="sm" asChild>
             <Link to="/client/resource-hub">
               <Library className="h-3.5 w-3.5 mr-1" /> Resource Hub
+            </Link>
+          </Button>
+          <Button variant="outline" size="sm" asChild>
+            <Link to="/client/documents?tab=governance">
+              <ShieldCheck className="h-3.5 w-3.5 mr-1" /> Governance Register
             </Link>
           </Button>
           <Button variant="outline" size="sm" onClick={() => openDocumentRequest()}>

@@ -25,10 +25,11 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Upload, Download, Eye, FileText, Loader2, MessageCircle, Inbox, ClipboardList } from "lucide-react";
+import { Upload, Download, Eye, FileText, Loader2, MessageCircle, Inbox, ClipboardList, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { ClientDocumentRequests } from "./ClientDocumentRequests";
+import { ClientGovernanceRegister } from "./ClientGovernanceRegister";
 
 const CATEGORIES = ["Compliance", "Evidence", "Admin", "Other"];
 
@@ -306,6 +307,10 @@ export function ClientDocumentsPage() {
             <ClipboardList className="h-3.5 w-3.5 mr-1.5" />
             Requests
           </TabsTrigger>
+          <TabsTrigger value="governance">
+            <ShieldCheck className="h-3.5 w-3.5 mr-1.5" />
+            Governance Register
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="shared" className="mt-4">
@@ -334,6 +339,10 @@ export function ClientDocumentsPage() {
 
         <TabsContent value="requests" className="mt-4">
           <ClientDocumentRequests />
+        </TabsContent>
+
+        <TabsContent value="governance" className="mt-4">
+          <ClientGovernanceRegister />
         </TabsContent>
       </Tabs>
 
