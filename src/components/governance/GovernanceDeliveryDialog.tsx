@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { AppModal, AppModalContent, AppModalHeader, AppModalTitle, AppModalBody, AppModalFooter } from '@/components/ui/modals';
@@ -7,7 +7,8 @@ import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Progress } from '@/components/ui/progress';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Send, CheckCircle, XCircle, Loader2, SkipForward } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Send, CheckCircle, XCircle, Loader2, SkipForward, AlertTriangle, ShieldCheck, ShieldAlert } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface GovernanceDeliveryDialogProps {
@@ -24,6 +25,12 @@ interface TenantRow {
   name: string;
   hasGovernanceFolder: boolean;
   alreadyDelivered: boolean;
+}
+
+interface TenantTailoring {
+  completeness: number;
+  missingFields: string[];
+  riskLevel: 'complete' | 'partial' | 'incomplete';
 }
 
 type DeliveryStatus = 'pending' | 'delivering' | 'success' | 'skipped' | 'failed';
@@ -43,13 +50,26 @@ export function GovernanceDeliveryDialog({
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const [delivering, setDelivering] = useState(false);
   const [deliveryState, setDeliveryState] = useState<DeliveryState>({});
+  const [acknowledgeIncomplete, setAcknowledgeIncomplete] = useState(false);
+
+  // Fetch required tags for this document
+  const { data: requiredTags } = useQuery({
+    queryKey: ['delivery-required-tags', documentId],
+    enabled: open,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('document_fields')
+        .select('field:dd_fields(tag)')
+        .eq('document_id', documentId);
+      return (data || []).map((r: any) => r.field?.tag).filter(Boolean) as string[];
+    },
+  });
 
   // Fetch active tenants with governance folder status
   const { data: tenants, isLoading } = useQuery({
     queryKey: ['delivery-tenants', documentId, documentVersionId],
     enabled: open,
     queryFn: async () => {
-      // Get active tenants
       const { data: allTenants } = await supabase
         .from('tenants')
         .select('id, name')
@@ -58,7 +78,6 @@ export function GovernanceDeliveryDialog({
 
       if (!allTenants) return [];
 
-      // Get tenants with governance folders
       const { data: spSettings } = await supabase
         .from('tenant_sharepoint_settings')
         .select('tenant_id, governance_folder_item_id')
@@ -66,7 +85,6 @@ export function GovernanceDeliveryDialog({
 
       const folderSet = new Set(spSettings?.map((s) => s.tenant_id) || []);
 
-      // Get existing deliveries for this version
       const { data: deliveries } = await supabase
         .from('governance_document_deliveries')
         .select('tenant_id')
@@ -84,6 +102,58 @@ export function GovernanceDeliveryDialog({
     },
   });
 
+  // Fetch merge field data for all eligible tenants
+  const eligibleTenantIds = useMemo(
+    () => (tenants || []).filter((t) => t.hasGovernanceFolder && !t.alreadyDelivered).map((t) => t.id),
+    [tenants]
+  );
+
+  const { data: tenantMergeData } = useQuery({
+    queryKey: ['delivery-tenant-merge-data', eligibleTenantIds],
+    enabled: open && eligibleTenantIds.length > 0 && (requiredTags || []).length > 0,
+    queryFn: async () => {
+      if (eligibleTenantIds.length === 0) return {};
+      const { data } = await supabase
+        .from('v_tenant_merge_fields')
+        .select('tenant_id, field_tag, value')
+        .in('tenant_id', eligibleTenantIds);
+
+      // Group by tenant
+      const byTenant: Record<number, Record<string, string>> = {};
+      for (const row of data || []) {
+        if (!byTenant[row.tenant_id]) byTenant[row.tenant_id] = {};
+        byTenant[row.tenant_id][row.field_tag] = row.value ?? '';
+      }
+      return byTenant;
+    },
+  });
+
+  // Calculate per-tenant tailoring
+  const tenantTailoring = useMemo(() => {
+    const result: Record<number, TenantTailoring> = {};
+    const tags = requiredTags || [];
+    if (tags.length === 0) {
+      // No required tags = all complete
+      for (const id of eligibleTenantIds) {
+        result[id] = { completeness: 100, missingFields: [], riskLevel: 'complete' };
+      }
+      return result;
+    }
+
+    for (const tenantId of eligibleTenantIds) {
+      const data = tenantMergeData?.[tenantId] || {};
+      const missing = tags.filter((tag) => !data[tag] || data[tag].trim() === '');
+      const populated = tags.length - missing.length;
+      const pct = Math.round((populated / tags.length) * 100);
+      let risk: 'complete' | 'partial' | 'incomplete';
+      if (pct === 100) risk = 'complete';
+      else if (pct >= 75) risk = 'partial';
+      else risk = 'incomplete';
+      result[tenantId] = { completeness: pct, missingFields: missing, riskLevel: risk };
+    }
+    return result;
+  }, [requiredTags, tenantMergeData, eligibleTenantIds]);
+
   // Auto-select eligible tenants on load
   useEffect(() => {
     if (tenants && !delivering) {
@@ -95,6 +165,7 @@ export function GovernanceDeliveryDialog({
   }, [tenants, delivering]);
 
   const eligibleTenants = tenants?.filter((t) => t.hasGovernanceFolder && !t.alreadyDelivered) || [];
+
   const toggleTenant = (id: number) => {
     setSelected((prev) => {
       const next = new Set(prev);
@@ -112,8 +183,27 @@ export function GovernanceDeliveryDialog({
     }
   };
 
+  // Check if any selected tenant is incomplete
+  const hasIncompleteSelected = useMemo(() => {
+    return Array.from(selected).some((id) => tenantTailoring[id]?.riskLevel === 'incomplete');
+  }, [selected, tenantTailoring]);
+
+  // Summary counts
+  const summary = useMemo(() => {
+    let complete = 0, partial = 0, incomplete = 0;
+    for (const id of eligibleTenantIds) {
+      const t = tenantTailoring[id];
+      if (t?.riskLevel === 'complete') complete++;
+      else if (t?.riskLevel === 'partial') partial++;
+      else incomplete++;
+    }
+    return { complete, partial, incomplete };
+  }, [eligibleTenantIds, tenantTailoring]);
+
+  const canDeliver = selected.size > 0 && (!hasIncompleteSelected || acknowledgeIncomplete);
+
   const handleDeliver = async () => {
-    if (selected.size === 0) return;
+    if (!canDeliver) return;
     setDelivering(true);
 
     const ids = Array.from(selected);
@@ -130,10 +220,18 @@ export function GovernanceDeliveryDialog({
         [tenantId]: { status: 'delivering' },
       }));
 
+      const isIncomplete = tenantTailoring[tenantId]?.riskLevel === 'incomplete';
+
       try {
         const { data, error } = await supabase.functions.invoke(
           'deliver-governance-document',
-          { body: { tenant_id: tenantId, document_version_id: documentVersionId } },
+          {
+            body: {
+              tenant_id: tenantId,
+              document_version_id: documentVersionId,
+              ...(isIncomplete ? { allow_incomplete: true } : {}),
+            },
+          },
         );
 
         if (error) throw error;
@@ -178,6 +276,54 @@ export function GovernanceDeliveryDialog({
     }
   };
 
+  const tailoringIndicator = (tenantId: number) => {
+    const t = tenantTailoring[tenantId];
+    if (!t) return null;
+
+    if (t.riskLevel === 'complete') {
+      return (
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <ShieldCheck className="h-4 w-4 text-emerald-600 flex-shrink-0" />
+            </TooltipTrigger>
+            <TooltipContent><p>All required fields populated</p></TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      );
+    }
+
+    if (t.riskLevel === 'partial') {
+      return (
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <AlertTriangle className="h-4 w-4 text-amber-500 flex-shrink-0" />
+            </TooltipTrigger>
+            <TooltipContent>
+              <p className="font-medium">{t.completeness}% complete</p>
+              <p className="text-xs">Missing: {t.missingFields.join(', ')}</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      );
+    }
+
+    return (
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <ShieldAlert className="h-4 w-4 text-destructive flex-shrink-0" />
+          </TooltipTrigger>
+          <TooltipContent>
+            <p className="font-medium">{t.completeness}% complete</p>
+            <p className="text-xs">Missing: {t.missingFields.join(', ')}</p>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+    );
+  };
+
   return (
     <AppModal open={open} onOpenChange={delivering ? undefined : onOpenChange}>
       <AppModalContent size="lg">
@@ -215,6 +361,15 @@ export function GovernanceDeliveryDialog({
             </div>
           ) : (
             <div className="space-y-3">
+              {/* Summary banner */}
+              {(requiredTags || []).length > 0 && (
+                <div className="flex items-center gap-3 text-xs p-2 rounded bg-muted/50 border">
+                  <span className="text-emerald-600 font-medium">{summary.complete} fully tailored</span>
+                  {summary.partial > 0 && <span className="text-amber-500 font-medium">{summary.partial} partial</span>}
+                  {summary.incomplete > 0 && <span className="text-destructive font-medium">{summary.incomplete} incomplete</span>}
+                </div>
+              )}
+
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium">
                   {selected.size} of {eligibleTenants.length} selected
@@ -223,7 +378,7 @@ export function GovernanceDeliveryDialog({
                   {selected.size === eligibleTenants.length ? 'Deselect All' : 'Select All'}
                 </Button>
               </div>
-              <ScrollArea className="h-[320px]">
+              <ScrollArea className="h-[280px]">
                 <div className="space-y-1">
                   {tenants?.map((t) => {
                     const disabled = !t.hasGovernanceFolder || t.alreadyDelivered;
@@ -240,6 +395,7 @@ export function GovernanceDeliveryDialog({
                           onCheckedChange={() => toggleTenant(t.id)}
                         />
                         <span className="text-sm flex-1">{t.name}</span>
+                        {!disabled && tailoringIndicator(t.id)}
                         {t.alreadyDelivered && (
                           <Badge variant="outline" className="text-xs">Already delivered</Badge>
                         )}
@@ -251,6 +407,19 @@ export function GovernanceDeliveryDialog({
                   })}
                 </div>
               </ScrollArea>
+
+              {/* Incomplete acknowledgement */}
+              {hasIncompleteSelected && (
+                <label className="flex items-center gap-2 p-2 rounded border border-destructive/30 bg-destructive/5 cursor-pointer">
+                  <Checkbox
+                    checked={acknowledgeIncomplete}
+                    onCheckedChange={(v) => setAcknowledgeIncomplete(!!v)}
+                  />
+                  <span className="text-xs text-destructive">
+                    I acknowledge that some selected tenants have incomplete tailoring (&lt;75% fields populated)
+                  </span>
+                </label>
+              )}
             </div>
           )}
         </AppModalBody>
@@ -260,7 +429,7 @@ export function GovernanceDeliveryDialog({
           ) : !delivering ? (
             <>
               <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-              <Button onClick={handleDeliver} disabled={selected.size === 0}>
+              <Button onClick={handleDeliver} disabled={!canDeliver}>
                 <Send className="h-4 w-4 mr-2" />
                 Deliver to {selected.size} Client{selected.size !== 1 ? 's' : ''}
               </Button>

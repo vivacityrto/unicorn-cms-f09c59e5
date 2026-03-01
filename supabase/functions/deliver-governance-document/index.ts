@@ -24,12 +24,13 @@ function escapeXml(text: string): string {
 /**
  * Process a DOCX template by replacing {{Tag}} merge fields with resolved values.
  * Supports both text and image injection (Logo field).
+ * Returns processed bytes AND a list of all {{...}} tags found in the template.
  */
 async function processDocxTemplate(
   templateBytes: Uint8Array,
   mergeData: Record<string, string>,
   imageData: Record<string, Uint8Array>,
-): Promise<Uint8Array> {
+): Promise<{ bytes: Uint8Array; detectedTags: string[] }> {
   const blob = new Blob([templateBytes.slice().buffer]);
   const reader = new zip.ZipReader(new zip.BlobReader(blob));
   const entries = await reader.getEntries();
@@ -40,15 +41,13 @@ async function processDocxTemplate(
     ),
   );
 
-  // Track image injections for relationship entries
   const imageInjections: Array<{ rId: string; fileName: string }> = [];
   let imageCounter = 100;
-
-  // We must defer writing document.xml.rels until after document.xml is
-  // processed, because image rId references are discovered in document.xml
-  // but the .rels file typically appears earlier in the zip.
   let relsContent: string | null = null;
   let relsFilename: string | null = null;
+
+  // Collect all detected {{...}} tags across all XML entries
+  const detectedTagsSet = new Set<string>();
 
   for (const entry of entries) {
     if (!entry.getData) continue;
@@ -58,6 +57,19 @@ async function processDocxTemplate(
     if (entry.filename.endsWith(".xml") || entry.filename.endsWith(".rels")) {
       const decoder = new TextDecoder();
       let content = decoder.decode(arrayBuffer);
+
+      // First strip XML tags within potential merge field tokens to handle Word split-runs
+      // e.g. {{RTO</w:t></w:r><w:r><w:t>Name}} → {{RTOName}}
+      // We do this by extracting text content, scanning, then doing replacements on original
+      const textOnly = content.replace(/<[^>]+>/g, "");
+      const tagPattern = /\{\{\s*([^}]+?)\s*\}\}/g;
+      let match;
+      while ((match = tagPattern.exec(textOnly)) !== null) {
+        const cleanedTag = match[1].replace(/<[^>]+>/g, "").trim();
+        if (cleanedTag) {
+          detectedTagsSet.add(cleanedTag);
+        }
+      }
 
       // Replace text merge fields
       for (const [field, value] of Object.entries(mergeData)) {
@@ -73,7 +85,6 @@ async function processDocxTemplate(
         if (mergeData[cleanField] !== undefined) {
           return escapeXml(mergeData[cleanField] || "");
         }
-        // Replace image placeholders with inline drawing reference
         if (imageData[cleanField]) {
           const rId = `rIdImg${imageCounter++}`;
           const imgFileName = `image_${cleanField}.png`;
@@ -83,8 +94,6 @@ async function processDocxTemplate(
         return match;
       });
 
-      // Defer document.xml.rels — we'll write it after all XML is processed
-      // so that imageInjections is fully populated
       if (entry.filename === 'word/_rels/document.xml.rels') {
         relsContent = content;
         relsFilename = entry.filename;
@@ -103,7 +112,6 @@ async function processDocxTemplate(
     }
   }
 
-  // Now write document.xml.rels with image relationships injected
   if (relsContent !== null && relsFilename !== null) {
     if (imageInjections.length > 0) {
       const relEntries = imageInjections.map(
@@ -119,7 +127,6 @@ async function processDocxTemplate(
     );
   }
 
-  // Inject image files into word/media/
   for (const [field, imgBytes] of Object.entries(imageData)) {
     const imgFileName = `image_${field}.png`;
     await writer.add(
@@ -130,7 +137,10 @@ async function processDocxTemplate(
 
   await reader.close();
   const result = await writer.close();
-  return new Uint8Array(await result.arrayBuffer());
+  return {
+    bytes: new Uint8Array(await result.arrayBuffer()),
+    detectedTags: Array.from(detectedTagsSet),
+  };
 }
 
 function sanitiseFileName(name: string): string {
@@ -182,7 +192,8 @@ serve(async (req) => {
     }
 
     // Parse request
-    const { tenant_id, document_version_id } = await req.json();
+    const body = await req.json();
+    const { tenant_id, document_version_id, allow_incomplete } = body;
     if (!tenant_id || !document_version_id) {
       return new Response(
         JSON.stringify({ error: "tenant_id and document_version_id are required" }),
@@ -300,8 +311,71 @@ serve(async (req) => {
       }
     }
 
-    // ── Process DOCX ───────────────────────────────────────────────────────
-    const processedBytes = await processDocxTemplate(templateBytes, mergeData, imageData);
+    // ── Tailoring Validation ───────────────────────────────────────────────
+
+    // 1. Query required fields from document_fields
+    const { data: requiredFieldRows } = await supabase
+      .from("document_fields")
+      .select("field:dd_fields(tag)")
+      .eq("document_id", doc.id);
+
+    const requiredTags = (requiredFieldRows || [])
+      .map((r: any) => r.field?.tag)
+      .filter(Boolean) as string[];
+
+    // 2. Check which required tags have non-empty values
+    const mergeValueMap = new Map(
+      (mergeFieldRows || []).map((r) => [r.field_tag, r.value])
+    );
+
+    const missingTags = requiredTags.filter((tag) => {
+      const val = mergeValueMap.get(tag);
+      return !val || val.trim() === "";
+    });
+
+    // 3. Get all known dd_fields tags for invalid tag detection
+    const { data: allDdFields } = await supabase
+      .from("dd_fields")
+      .select("tag");
+    const knownTags = new Set((allDdFields || []).map((f) => f.tag));
+
+    // ── Process DOCX (also detects tags) ───────────────────────────────────
+    const { bytes: processedBytes, detectedTags } = await processDocxTemplate(templateBytes, mergeData, imageData);
+
+    // 4. Detect invalid tags
+    const invalidTags = detectedTags.filter((tag) => !knownTags.has(tag));
+
+    // 5. Calculate risk level
+    const totalRequired = requiredTags.length;
+    const populatedCount = totalRequired - missingTags.length;
+    const completeness = totalRequired > 0 ? Math.round((populatedCount / totalRequired) * 100) : 100;
+
+    let riskLevel: string;
+    if (completeness === 100 && invalidTags.length === 0) {
+      riskLevel = "complete";
+    } else if (completeness >= 75) {
+      riskLevel = "partial";
+    } else {
+      riskLevel = "incomplete";
+    }
+
+    console.log(`[deliver] Tailoring: ${completeness}% complete, ${missingTags.length} missing, ${invalidTags.length} invalid, risk=${riskLevel}`);
+
+    // 6. Block if incomplete unless overridden
+    if (riskLevel === "incomplete" && !allow_incomplete) {
+      return new Response(
+        JSON.stringify({
+          error: "Tailoring incomplete — delivery blocked",
+          tailoring: {
+            completeness_pct: completeness,
+            missing_fields: missingTags,
+            invalid_fields: invalidTags,
+            risk_level: riskLevel,
+          },
+        }),
+        { status: 422, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
 
     // ── Resolve tenant info for file naming ────────────────────────────────
     const { data: tenant } = await supabase
@@ -322,7 +396,6 @@ serve(async (req) => {
       .maybeSingle();
 
     if (!spSettings?.governance_drive_id || !spSettings?.governance_folder_item_id) {
-      // Insert a failed delivery record
       await supabase.from("governance_document_deliveries").insert({
         tenant_id,
         document_id: doc.id,
@@ -332,6 +405,10 @@ serve(async (req) => {
         delivered_file_name: deliveredFileName,
         delivered_by: user.id,
         error_message: "No governance folder configured for this tenant",
+        tailoring_completeness_pct: completeness,
+        missing_merge_fields: missingTags,
+        invalid_merge_fields: invalidTags,
+        tailoring_risk_level: riskLevel,
       });
       return new Response(
         JSON.stringify({ error: "No governance folder configured for this tenant" }),
@@ -343,7 +420,6 @@ serve(async (req) => {
     let parentItemId = spSettings.governance_folder_item_id;
     let categorySubfolder: string | null = null;
 
-    // Resolve category subfolder if applicable
     if (doc.document_category) {
       const { data: catRow } = await supabase
         .from("dd_document_categories")
@@ -353,7 +429,6 @@ serve(async (req) => {
 
       if (catRow?.sharepoint_folder_name) {
         try {
-          // Get parent folder path to use ensureFolder
           const parentInfo = await graphGet<DriveItem>(
             `/drives/${driveId}/items/${parentItemId}`,
           );
@@ -369,7 +444,6 @@ serve(async (req) => {
           }
         } catch (e) {
           console.warn(`[deliver] Could not resolve category subfolder: ${e}`);
-          // Fall back to parent governance folder
         }
       }
     }
@@ -385,7 +459,7 @@ serve(async (req) => {
 
     console.log(`[deliver] Uploaded to SharePoint: ${driveItem.webUrl}`);
 
-    // ── Insert delivery record ─────────────────────────────────────────────
+    // ── Insert delivery record with tailoring data ─────────────────────────
     const { data: delivery, error: insErr } = await supabase
       .from("governance_document_deliveries")
       .insert({
@@ -399,6 +473,10 @@ serve(async (req) => {
         delivered_file_name: deliveredFileName,
         category_subfolder: categorySubfolder,
         delivered_by: user.id,
+        tailoring_completeness_pct: completeness,
+        missing_merge_fields: missingTags,
+        invalid_merge_fields: invalidTags,
+        tailoring_risk_level: riskLevel,
       })
       .select()
       .single();
@@ -419,6 +497,10 @@ serve(async (req) => {
         delivered_file_name: deliveredFileName,
         sharepoint_web_url: driveItem.webUrl,
         snapshot_id: snapshotId,
+        tailoring_completeness_pct: completeness,
+        tailoring_risk_level: riskLevel,
+        missing_merge_fields: missingTags,
+        invalid_merge_fields: invalidTags,
       },
     });
 

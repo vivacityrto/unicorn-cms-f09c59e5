@@ -296,21 +296,20 @@ export function useDocumentReadiness() {
 export function useDocumentMergeFields(documentId: number | null) {
   const [mergeFields, setMergeFields] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
-  const { toast } = useToast();
 
   const fetchMergeFields = useCallback(async () => {
     if (!documentId) return;
     
     setLoading(true);
     try {
+      // Source from document_fields joined to dd_fields
       const { data, error } = await supabase
-        .from('documents')
-        .select('merge_fields')
-        .eq('id', documentId)
-        .single();
+        .from('document_fields')
+        .select('field:dd_fields(tag)')
+        .eq('document_id', documentId);
       
       if (error) throw error;
-      setMergeFields((data?.merge_fields as string[]) || []);
+      setMergeFields((data || []).map((r: any) => r.field?.tag).filter(Boolean));
     } catch (error: any) {
       console.error('Error fetching merge fields:', error);
     } finally {
@@ -322,27 +321,8 @@ export function useDocumentMergeFields(documentId: number | null) {
     fetchMergeFields();
   }, [fetchMergeFields]);
 
-  const updateMergeFields = async (fields: string[]) => {
-    if (!documentId) return;
-    
-    try {
-      const { error } = await supabase
-        .from('documents')
-        .update({ merge_fields: fields })
-        .eq('id', documentId);
-      
-      if (error) throw error;
-      
-      setMergeFields(fields);
-      toast({ title: 'Merge fields updated' });
-    } catch (error: any) {
-      toast({ title: 'Update failed', description: error.message, variant: 'destructive' });
-    }
-  };
-
   return {
     mergeFields,
     loading,
-    updateMergeFields
   };
 }

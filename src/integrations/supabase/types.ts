@@ -13802,7 +13802,6 @@ export type Database = {
           is_team_only: boolean | null
           is_tenant_downloadable: boolean | null
           isclientdoc: boolean | null
-          merge_fields: Json | null
           named_ranges: Json | null
           package_id: number | null
           scan_status: string | null
@@ -13856,7 +13855,6 @@ export type Database = {
           is_team_only?: boolean | null
           is_tenant_downloadable?: boolean | null
           isclientdoc?: boolean | null
-          merge_fields?: Json | null
           named_ranges?: Json | null
           package_id?: number | null
           scan_status?: string | null
@@ -13910,7 +13908,6 @@ export type Database = {
           is_team_only?: boolean | null
           is_tenant_downloadable?: boolean | null
           isclientdoc?: boolean | null
-          merge_fields?: Json | null
           named_ranges?: Json | null
           package_id?: number | null
           scan_status?: string | null
@@ -20528,10 +20525,14 @@ export type Database = {
           document_version_id: string
           error_message: string | null
           id: string
+          invalid_merge_fields: Json | null
+          missing_merge_fields: Json | null
           sharepoint_item_id: string | null
           sharepoint_web_url: string | null
           snapshot_id: string | null
           status: string
+          tailoring_completeness_pct: number | null
+          tailoring_risk_level: string | null
           tenant_id: number
           updated_at: string
         }
@@ -20545,10 +20546,14 @@ export type Database = {
           document_version_id: string
           error_message?: string | null
           id?: string
+          invalid_merge_fields?: Json | null
+          missing_merge_fields?: Json | null
           sharepoint_item_id?: string | null
           sharepoint_web_url?: string | null
           snapshot_id?: string | null
           status?: string
+          tailoring_completeness_pct?: number | null
+          tailoring_risk_level?: string | null
           tenant_id: number
           updated_at?: string
         }
@@ -20562,10 +20567,14 @@ export type Database = {
           document_version_id?: string
           error_message?: string | null
           id?: string
+          invalid_merge_fields?: Json | null
+          missing_merge_fields?: Json | null
           sharepoint_item_id?: string | null
           sharepoint_web_url?: string | null
           snapshot_id?: string | null
           status?: string
+          tailoring_completeness_pct?: number | null
+          tailoring_risk_level?: string | null
           tenant_id?: number
           updated_at?: string
         }

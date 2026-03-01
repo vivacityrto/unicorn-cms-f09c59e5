@@ -12,6 +12,7 @@ import { GovernanceImportDialog } from './GovernanceImportDialog';
 import { GovernanceMappingEditor } from './GovernanceMappingEditor';
 import { GovernanceDeliveryDialog } from './GovernanceDeliveryDialog';
 import { GovernanceDeliveryHistory } from './GovernanceDeliveryHistory';
+import { GovernanceTailoringHealth } from './GovernanceTailoringHealth';
 
 interface GovernanceDocumentDetailProps {
   documentId: number;
@@ -32,7 +33,7 @@ export function GovernanceDocumentDetail({ documentId, onBack }: GovernanceDocum
         .from('documents')
         .select(`
           id, title, description, format, document_category, document_status,
-          source_template_url, merge_fields, updated_at, current_published_version_id
+          source_template_url, updated_at, current_published_version_id
         `)
         .eq('id', documentId)
         .single();
@@ -87,6 +88,7 @@ export function GovernanceDocumentDetail({ documentId, onBack }: GovernanceDocum
     queryClient.invalidateQueries({ queryKey: ['governance-doc-detail', documentId] });
     queryClient.invalidateQueries({ queryKey: ['governance-doc-versions', documentId] });
     queryClient.invalidateQueries({ queryKey: ['governance-delivery-history', documentId] });
+    queryClient.invalidateQueries({ queryKey: ['governance-tailoring-health', documentId] });
   };
 
   return (
@@ -171,29 +173,13 @@ export function GovernanceDocumentDetail({ documentId, onBack }: GovernanceDocum
         </Card>
       )}
 
-      {/* Merge Fields */}
-      {doc.merge_fields && Object.keys(doc.merge_fields as Record<string, unknown>).length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm font-medium">Merge Fields</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex flex-wrap gap-2">
-              {Object.keys(doc.merge_fields as Record<string, unknown>).map((field) => (
-                <Badge key={field} variant="outline" className="font-mono text-xs">
-                  {`{{${field}}}`}
-                </Badge>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
+      {/* Tailoring Health */}
+      <GovernanceTailoringHealth documentId={documentId} />
 
       {/* Mapping Editor for latest draft */}
       {latestDraft && (
         <GovernanceMappingEditor
           versionId={latestDraft.id}
-          mergeFields={doc.merge_fields as Record<string, unknown> | null}
         />
       )}
 
