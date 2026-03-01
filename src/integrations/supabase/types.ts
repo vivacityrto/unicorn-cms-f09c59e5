@@ -46057,6 +46057,7 @@ export type Database = {
           field_tag: string | null
           field_type: string | null
           source: string | null
+          source_reference: string | null
           tenant_id: number | null
           value: string | null
         }
