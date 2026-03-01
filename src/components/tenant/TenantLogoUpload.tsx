@@ -4,7 +4,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Upload, Trash2, Building2 } from 'lucide-react';
+import { Trash2, Building2 } from 'lucide-react';
 
 interface TenantLogoUploadProps {
   tenantId: number;
@@ -34,9 +34,9 @@ export function TenantLogoUpload({ tenantId, currentLogoPath, onLogoChange }: Te
       return;
     }
 
-    const validTypes = ['image/png', 'image/jpeg', 'image/svg+xml', 'image/webp'];
+    const validTypes = ['image/png', 'image/jpeg', 'image/svg+xml', 'image/webp', 'image/bmp'];
     if (!validTypes.includes(file.type)) {
-      toast({ title: 'Invalid file type', description: 'Use PNG, JPG, SVG, or WebP', variant: 'destructive' });
+      toast({ title: 'Invalid file type', description: 'Use PNG, JPG, SVG, WebP, or BMP', variant: 'destructive' });
       return;
     }
 
@@ -51,27 +51,12 @@ export function TenantLogoUpload({ tenantId, currentLogoPath, onLogoChange }: Te
 
       if (uploadError) throw uploadError;
 
-      // Update tenants.logo_path
       const { error: updateError } = await supabase
         .from('tenants')
         .update({ logo_path: filePath } as any)
         .eq('id', tenantId);
 
       if (updateError) throw updateError;
-
-      // Audit log (non-blocking)
-      if (user) {
-        await supabase.from('client_audit_log').insert({
-          tenant_id: tenantId,
-          actor_user_id: user.id,
-          action: 'logo.uploaded',
-          entity_type: 'tenant',
-          entity_id: String(tenantId),
-          details: { file_path: filePath, file_name: file.name }
-        }).then(({ error: auditErr }) => {
-          if (auditErr) console.warn('Audit log failed:', auditErr.message);
-        });
-      }
 
       onLogoChange(filePath);
       toast({ title: 'Logo uploaded successfully' });
@@ -97,19 +82,6 @@ export function TenantLogoUpload({ tenantId, currentLogoPath, onLogoChange }: Te
 
       if (error) throw error;
 
-      if (user) {
-        await supabase.from('client_audit_log').insert({
-          tenant_id: tenantId,
-          actor_user_id: user.id,
-          action: 'logo.deleted',
-          entity_type: 'tenant',
-          entity_id: String(tenantId),
-          details: { removed_path: currentLogoPath }
-        }).then(({ error: auditErr }) => {
-          if (auditErr) console.warn('Audit log failed:', auditErr.message);
-        });
-      }
-
       onLogoChange(null);
       toast({ title: 'Logo removed' });
     } catch (error: any) {
@@ -119,9 +91,25 @@ export function TenantLogoUpload({ tenantId, currentLogoPath, onLogoChange }: Te
     }
   };
 
+  const handleAvatarClick = () => {
+    if (isStaff && !uploading) {
+      fileInputRef.current?.click();
+    }
+  };
+
   return (
     <div className="flex flex-col items-center gap-1">
-      <Avatar className={`h-16 w-16 border-2 shadow-md ${!currentLogoPath ? 'border-dashed border-border' : 'border-border'}`}>
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/png,image/jpeg,image/svg+xml,image/webp,image/bmp"
+        className="hidden"
+        onChange={handleUpload}
+      />
+      <Avatar
+        className={`h-16 w-16 border-2 shadow-md ${isStaff ? 'cursor-pointer hover:opacity-80 transition-opacity' : ''} ${!currentLogoPath ? 'border-dashed border-border' : 'border-border'}`}
+        onClick={handleAvatarClick}
+      >
         {currentLogoPath ? (
           <AvatarImage src={getPublicUrl(currentLogoPath)} alt="Tenant logo" />
         ) : null}
@@ -141,37 +129,17 @@ export function TenantLogoUpload({ tenantId, currentLogoPath, onLogoChange }: Te
         </div>
       )}
 
-      {isStaff && (
-        <div className="flex items-center gap-1">
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/png,image/jpeg,image/svg+xml,image/webp,image/bmp"
-            className="hidden"
-            onChange={handleUpload}
-          />
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-7 text-xs"
-            onClick={() => fileInputRef.current?.click()}
-            disabled={uploading}
-          >
-            <Upload className="h-3 w-3 mr-1" />
-            {currentLogoPath ? 'Replace' : 'Upload'}
-          </Button>
-          {currentLogoPath && (
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-7 text-xs text-destructive"
-              onClick={handleDelete}
-              disabled={uploading}
-            >
-              <Trash2 className="h-3 w-3" />
-            </Button>
-          )}
-        </div>
+      {isStaff && currentLogoPath && (
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-7 text-xs text-destructive"
+          onClick={handleDelete}
+          disabled={uploading}
+        >
+          <Trash2 className="h-3 w-3 mr-1" />
+          Remove
+        </Button>
       )}
     </div>
   );
