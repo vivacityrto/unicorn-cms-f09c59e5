@@ -302,5 +302,80 @@ export async function ensureFolder(
   return { itemId: resp.data.id, webUrl: resp.data.webUrl };
 }
 
+// ── Folder naming helpers ───────────────────────────────────────────────────
+
+/** Characters illegal in SharePoint folder names */
+const SP_ILLEGAL_CHARS = /[~"#%&*:<>?/\\{|}]/g;
+
+/**
+ * Strip SharePoint-illegal characters, collapse whitespace, trim, cap at 120.
+ */
+export function sanitiseFolderName(name: string): string {
+  return name
+    .replace(SP_ILLEGAL_CHARS, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, 120);
+}
+
+/**
+ * Remove trading-as clauses and common Australian business entity suffixes.
+ * Only intended for use when the display name exceeds 60 characters.
+ */
+export function stripBusinessSuffixes(name: string): string {
+  let result = name;
+
+  // 1. Remove trading-as patterns (including parenthetical variants)
+  //    e.g. "T/as Foo", "t/a Bar", "Trading as Baz", "(Trading As Qux)"
+  result = result.replace(/\s*\(?(?:t\/as?|trading\s+as)\b.*$/i, '');
+
+  // 2. Remove entity suffixes
+  result = result.replace(
+    /\s*(?:Pty\.?\s*Ltd\.?|P\/L|Ltd\.?|Limited|Inc\.?|Incorporated)\s*$/i,
+    '',
+  );
+
+  // 3. Clean trailing punctuation
+  result = result.replace(/[\s,\-()]+$/, '').trim();
+
+  return result;
+}
+
+/**
+ * Build a deterministic client folder name from tenant data.
+ *
+ * With valid RTO ID:  "{rtoId} - {DisplayName}"
+ * Without:            "KS-{Name}"
+ *
+ * DisplayName = legal_name if present, otherwise name.
+ * If display name > 60 chars, business suffixes are stripped first.
+ */
+export function buildClientFolderName(
+  rtoId: string | null | undefined,
+  legalName: string | null | undefined,
+  name: string,
+): string {
+  const invalidRtoPatterns = ['', 'tba', 'replacing:'];
+  const hasValidRtoId =
+    !!rtoId &&
+    !invalidRtoPatterns.some((p) => rtoId.trim().toLowerCase().startsWith(p));
+
+  const displayName = (legalName?.trim() || name).trim();
+
+  let finalDisplay = displayName;
+  if (finalDisplay.length > 60) {
+    finalDisplay = stripBusinessSuffixes(finalDisplay);
+    if (finalDisplay.length > 60) {
+      finalDisplay = finalDisplay.slice(0, 60);
+    }
+  }
+
+  const raw = hasValidRtoId
+    ? `${rtoId.trim()} - ${finalDisplay}`
+    : `KS-${finalDisplay}`;
+
+  return sanitiseFolderName(raw);
+}
+
 /** Convenience re-export so consumers don't need a separate import. */
 export { GRAPH_BASE };

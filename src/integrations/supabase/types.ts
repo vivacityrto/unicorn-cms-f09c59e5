@@ -13624,42 +13624,98 @@ export type Database = {
           },
         ]
       }
+      document_template_mappings: {
+        Row: {
+          checksum_sha256: string
+          created_at: string
+          created_by: string
+          id: string
+          mapping_json: Json
+          template_version_id: string
+        }
+        Insert: {
+          checksum_sha256?: string
+          created_at?: string
+          created_by: string
+          id?: string
+          mapping_json?: Json
+          template_version_id: string
+        }
+        Update: {
+          checksum_sha256?: string
+          created_at?: string
+          created_by?: string
+          id?: string
+          mapping_json?: Json
+          template_version_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "document_template_mappings_template_version_id_fkey"
+            columns: ["template_version_id"]
+            isOneToOne: false
+            referencedRelation: "document_versions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       document_versions: {
         Row: {
+          checksum_sha256: string | null
           created_at: string
           created_by: string | null
           document_id: number
           file_name: string
           file_size: number | null
+          frozen_storage_path: string | null
           id: string
           mime_type: string | null
           notes: string | null
+          published_at: string | null
+          published_by: string | null
+          source_drive_item_id: string | null
+          source_path_display: string | null
+          source_site_id: string | null
           status: string
           storage_path: string
           version_number: number
         }
         Insert: {
+          checksum_sha256?: string | null
           created_at?: string
           created_by?: string | null
           document_id: number
           file_name: string
           file_size?: number | null
+          frozen_storage_path?: string | null
           id?: string
           mime_type?: string | null
           notes?: string | null
+          published_at?: string | null
+          published_by?: string | null
+          source_drive_item_id?: string | null
+          source_path_display?: string | null
+          source_site_id?: string | null
           status?: string
           storage_path: string
           version_number: number
         }
         Update: {
+          checksum_sha256?: string | null
           created_at?: string
           created_by?: string | null
           document_id?: number
           file_name?: string
           file_size?: number | null
+          frozen_storage_path?: string | null
           id?: string
           mime_type?: string | null
           notes?: string | null
+          published_at?: string | null
+          published_by?: string | null
+          source_drive_item_id?: string | null
+          source_path_display?: string | null
+          source_site_id?: string | null
           status?: string
           storage_path?: string
           version_number?: number
@@ -13728,6 +13784,7 @@ export type Database = {
           scan_status: string | null
           scanned_at: string | null
           source_signals: Json | null
+          source_template_url: string | null
           stage: number | null
           standard_refs: string[] | null
           standard_set: string | null
@@ -13781,6 +13838,7 @@ export type Database = {
           scan_status?: string | null
           scanned_at?: string | null
           source_signals?: Json | null
+          source_template_url?: string | null
           stage?: number | null
           standard_refs?: string[] | null
           standard_set?: string | null
@@ -13834,6 +13892,7 @@ export type Database = {
           scan_status?: string | null
           scanned_at?: string | null
           source_signals?: Json | null
+          source_template_url?: string | null
           stage?: number | null
           standard_refs?: string[] | null
           standard_set?: string | null
@@ -35831,6 +35890,11 @@ export type Database = {
           drive_id: string | null
           folder_name: string | null
           folder_path: string | null
+          governance_drive_id: string | null
+          governance_folder_item_id: string | null
+          governance_folder_name: string | null
+          governance_folder_url: string | null
+          governance_site_id: string | null
           id: string
           is_enabled: boolean
           last_validated_at: string | null
@@ -35862,6 +35926,11 @@ export type Database = {
           drive_id?: string | null
           folder_name?: string | null
           folder_path?: string | null
+          governance_drive_id?: string | null
+          governance_folder_item_id?: string | null
+          governance_folder_name?: string | null
+          governance_folder_url?: string | null
+          governance_site_id?: string | null
           id?: string
           is_enabled?: boolean
           last_validated_at?: string | null
@@ -35893,6 +35962,11 @@ export type Database = {
           drive_id?: string | null
           folder_name?: string | null
           folder_path?: string | null
+          governance_drive_id?: string | null
+          governance_folder_item_id?: string | null
+          governance_folder_name?: string | null
+          governance_folder_url?: string | null
+          governance_site_id?: string | null
           id?: string
           is_enabled?: boolean
           last_validated_at?: string | null

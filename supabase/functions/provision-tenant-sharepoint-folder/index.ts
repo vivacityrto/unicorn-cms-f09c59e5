@@ -6,6 +6,8 @@ import {
   graphGet,
   graphPost,
   ensureFolder as sharedEnsureFolder,
+  sanitiseFolderName,
+  buildClientFolderName,
   type DriveItem,
 } from "../_shared/graph-app-client.ts";
 
@@ -23,13 +25,7 @@ const GRAPH_BASE = "https://graph.microsoft.com/v1.0";  // kept for direct fetch
 
 // ── Helpers ──
 
-function sanitiseFolderName(name: string): string {
-  return name
-    .replace(/[~"#%&*:<>?/\\{|}]/g, "")
-    .replace(/\s+/g, " ")
-    .trim()
-    .substring(0, 120);
-}
+// sanitiseFolderName is now imported from ../_shared/graph-app-client.ts
 
 // getAppToken is now imported from ../_shared/graph-app-client.ts
 
@@ -328,7 +324,7 @@ serve(async (req) => {
     // Load tenant
     const { data: tenant, error: tenantError } = await supabaseAdmin
       .from("tenants")
-      .select("id, name, slug")
+      .select("id, name, slug, legal_name, rto_id, status")
       .eq("id", tenant_id)
       .single();
 
@@ -336,6 +332,14 @@ serve(async (req) => {
       return new Response(
         JSON.stringify({ success: false, error: `Tenant ${tenant_id} not found` }),
         { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
+
+    // Active tenant guard
+    if (tenant.status !== 'active') {
+      return new Response(
+        JSON.stringify({ success: false, error: `Tenant is not active (status: ${tenant.status}). Folder provisioning is only allowed for active tenants.` }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
 
@@ -373,8 +377,7 @@ serve(async (req) => {
     await ensureFolder(accessToken, driveId, "/", SP_BASE_PATH.replace(/^\//, ""));
 
     // Build folder name
-    const rawFolderName = `${tenant.name} (${tenant.id})`;
-    const folderName = sanitiseFolderName(rawFolderName);
+    const folderName = buildClientFolderName(tenant.rto_id, tenant.legal_name, tenant.name);
     const folderPath = `${SP_BASE_PATH}/${folderName}`;
 
     console.log("[provision-sp] Creating folder:", { folderName, folderPath, siteId, driveId });

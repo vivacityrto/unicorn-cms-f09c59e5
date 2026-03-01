@@ -3,6 +3,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.81.1';
 import {
   getAppToken,
   graphGet,
+  buildClientFolderName,
   type DriveItem,
   GRAPH_BASE,
 } from '../_shared/graph-app-client.ts';
@@ -58,11 +59,13 @@ Deno.serve(async (req: Request) => {
     }
 
     const body = await req.json();
-    const { tenant_id, action, folder_item_id } = body as {
+    const { tenant_id, action, folder_item_id, site_purpose } = body as {
       tenant_id: number;
       action: 'search' | 'confirm';
       folder_item_id?: string;
+      site_purpose?: 'client_files' | 'governance_client_files';
     };
+    const effectivePurpose = site_purpose || 'client_files';
 
     if (!tenant_id) {
       return new Response(JSON.stringify({ error: 'tenant_id is required' }), {
@@ -74,7 +77,7 @@ Deno.serve(async (req: Request) => {
     // Load tenant data
     const { data: tenant, error: tenantErr } = await supabase
       .from('tenants')
-      .select('id, name, slug, rto_id, abn, legal_name')
+      .select('id, name, slug, rto_id, abn, legal_name, status')
       .eq('id', tenant_id)
       .single();
 
@@ -85,16 +88,28 @@ Deno.serve(async (req: Request) => {
       });
     }
 
+    // Active tenant guard
+    if (tenant.status !== 'active') {
+      return new Response(JSON.stringify({ error: `Tenant is not active (status: ${tenant.status}). Folder resolution is only allowed for active tenants.` }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
     // Load existing SharePoint settings
     const { data: spSettings } = await supabase
       .from('tenant_sharepoint_settings')
-      .select('drive_id, site_id, root_item_id, root_name, root_folder_url')
+      .select('drive_id, site_id, root_item_id, root_name, root_folder_url, governance_drive_id, governance_site_id, governance_folder_item_id, governance_folder_url, governance_folder_name')
       .eq('tenant_id', tenant_id)
       .maybeSingle();
 
     if (action === 'confirm' && folder_item_id) {
       // ── CONFIRM a folder mapping ──
-      if (!spSettings?.drive_id) {
+      const confirmDriveId = effectivePurpose === 'governance_client_files'
+        ? (spSettings?.governance_drive_id || spSettings?.drive_id)
+        : spSettings?.drive_id;
+
+      if (!confirmDriveId) {
         return new Response(JSON.stringify({ error: 'No drive_id configured for this tenant' }), {
           status: 400,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -103,7 +118,7 @@ Deno.serve(async (req: Request) => {
 
       // Fetch the folder metadata from Graph to store canonical data
       const folderResp = await graphGet<DriveItem>(
-        `/drives/${spSettings.drive_id}/items/${folder_item_id}`
+        `/drives/${confirmDriveId}/items/${folder_item_id}`
       );
 
       if (!folderResp.ok) {
@@ -115,27 +130,36 @@ Deno.serve(async (req: Request) => {
 
       const folder = folderResp.data;
 
-      // Update tenant_sharepoint_settings
+      // Update tenant_sharepoint_settings based on purpose
+      const updateFields: Record<string, unknown> = {
+        updated_by: user.id,
+        updated_at: new Date().toISOString(),
+      };
+
+      if (effectivePurpose === 'governance_client_files') {
+        updateFields.governance_folder_item_id = folder.id;
+        updateFields.governance_folder_name = folder.name;
+        updateFields.governance_folder_url = folder.webUrl;
+      } else {
+        updateFields.root_item_id = folder.id;
+        updateFields.root_name = folder.name;
+        updateFields.root_folder_url = folder.webUrl;
+        updateFields.match_method = 'manual';
+        updateFields.verified_by = user.id;
+        updateFields.verified_at = new Date().toISOString();
+        updateFields.validation_status = 'valid';
+        updateFields.last_validated_at = new Date().toISOString();
+      }
+
       await supabase
         .from('tenant_sharepoint_settings')
-        .update({
-          root_item_id: folder.id,
-          root_name: folder.name,
-          root_folder_url: folder.webUrl,
-          match_method: 'manual',
-          verified_by: user.id,
-          verified_at: new Date().toISOString(),
-          validation_status: 'valid',
-          last_validated_at: new Date().toISOString(),
-          updated_by: user.id,
-          updated_at: new Date().toISOString(),
-        })
+        .update(updateFields)
         .eq('tenant_id', tenant_id);
 
       // Audit log
       await supabase.from('document_activity_log').insert({
         tenant_id,
-        activity_type: 'folder_mapped',
+        activity_type: effectivePurpose === 'governance_client_files' ? 'governance_folder_mapped' : 'folder_mapped',
         actor_user_id: user.id,
         actor_role: 'Vivacity Staff',
         metadata: {
@@ -143,6 +167,7 @@ Deno.serve(async (req: Request) => {
           folder_name: folder.name,
           web_url: folder.webUrl,
           match_method: 'manual',
+          site_purpose: effectivePurpose,
         },
       });
 
@@ -156,23 +181,37 @@ Deno.serve(async (req: Request) => {
 
     // ── SEARCH for candidate folders ──
     // Need a drive_id to search. Try from settings, or from sharepoint_sites registry.
-    let driveId = spSettings?.drive_id;
+    let driveId: string | undefined;
 
-    if (!driveId) {
-      const { data: clientSite } = await supabase
-        .from('sharepoint_sites')
-        .select('drive_id')
-        .eq('purpose', 'client_files')
-        .eq('is_active', true)
-        .limit(1)
-        .maybeSingle();
-
-      driveId = clientSite?.drive_id;
+    if (effectivePurpose === 'governance_client_files') {
+      driveId = spSettings?.governance_drive_id ?? undefined;
+      if (!driveId) {
+        const { data: govSite } = await supabase
+          .from('sharepoint_sites')
+          .select('drive_id')
+          .eq('purpose', 'governance_client_files')
+          .eq('is_active', true)
+          .limit(1)
+          .maybeSingle();
+        driveId = govSite?.drive_id ?? undefined;
+      }
+    } else {
+      driveId = spSettings?.drive_id ?? undefined;
+      if (!driveId) {
+        const { data: clientSite } = await supabase
+          .from('sharepoint_sites')
+          .select('drive_id')
+          .eq('purpose', 'client_files')
+          .eq('is_active', true)
+          .limit(1)
+          .maybeSingle();
+        driveId = clientSite?.drive_id ?? undefined;
+      }
     }
 
     if (!driveId) {
       return new Response(JSON.stringify({
-        error: 'No SharePoint drive configured. Please add a Client Files site to sharepoint_sites first.',
+        error: `No SharePoint drive configured for purpose '${effectivePurpose}'. Please add a site to sharepoint_sites first.`,
       }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -180,11 +219,16 @@ Deno.serve(async (req: Request) => {
     }
 
     const candidates: FolderCandidate[] = [];
+    const expectedFolderName = buildClientFolderName(tenant.rto_id, tenant.legal_name, tenant.name);
 
-    // Priority 1: Stored root_item_id
-    if (spSettings?.root_item_id) {
+    // Priority 1: Stored item_id (depends on purpose)
+    const storedItemId = effectivePurpose === 'governance_client_files'
+      ? spSettings?.governance_folder_item_id
+      : spSettings?.root_item_id;
+
+    if (storedItemId) {
       const stored = await graphGet<DriveItem>(
-        `/drives/${driveId}/items/${spSettings.root_item_id}`
+        `/drives/${driveId}/items/${storedItemId}`
       );
       if (stored.ok && stored.data.folder) {
         candidates.push({
