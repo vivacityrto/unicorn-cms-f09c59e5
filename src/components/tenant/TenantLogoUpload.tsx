@@ -59,7 +59,7 @@ export function TenantLogoUpload({ tenantId, currentLogoPath, onLogoChange }: Te
 
       if (updateError) throw updateError;
 
-      // Audit log
+      // Audit log (non-blocking)
       if (user) {
         await supabase.from('client_audit_log').insert({
           tenant_id: tenantId,
@@ -68,6 +68,8 @@ export function TenantLogoUpload({ tenantId, currentLogoPath, onLogoChange }: Te
           entity_type: 'tenant',
           entity_id: String(tenantId),
           details: { file_path: filePath, file_name: file.name }
+        }).then(({ error: auditErr }) => {
+          if (auditErr) console.warn('Audit log failed:', auditErr.message);
         });
       }
 
@@ -103,6 +105,8 @@ export function TenantLogoUpload({ tenantId, currentLogoPath, onLogoChange }: Te
           entity_type: 'tenant',
           entity_id: String(tenantId),
           details: { removed_path: currentLogoPath }
+        }).then(({ error: auditErr }) => {
+          if (auditErr) console.warn('Audit log failed:', auditErr.message);
         });
       }
 
