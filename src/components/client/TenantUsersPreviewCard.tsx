@@ -5,7 +5,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Users, ChevronRight } from 'lucide-react';
+import { Users, ChevronRight, Phone } from 'lucide-react';
 
 interface TenantUsersPreviewCardProps {
   tenantId: number;
@@ -20,6 +20,7 @@ interface PreviewUser {
   email: string;
   avatar_url: string | null;
   job_title: string | null;
+  phone: string | null;
 }
 
 export function TenantUsersPreviewCard({ tenantId, onViewAll }: TenantUsersPreviewCardProps) {
@@ -35,7 +36,7 @@ export function TenantUsersPreviewCard({ tenantId, onViewAll }: TenantUsersPrevi
       // Get first 6 users with details
       const { data: members, error } = await (supabase as any)
         .from('tenant_users')
-        .select('user_id, role, users:user_id(first_name, last_name, email, avatar_url, job_title)')
+        .select('user_id, role, users:user_id(first_name, last_name, email, avatar_url, job_title, phone)')
         .eq('tenant_id', tenantId)
         .order('created_at', { ascending: true })
         .limit(6);
@@ -50,6 +51,7 @@ export function TenantUsersPreviewCard({ tenantId, onViewAll }: TenantUsersPrevi
         email: m.users?.email ?? '',
         avatar_url: m.users?.avatar_url ?? null,
         job_title: m.users?.job_title ?? null,
+        phone: m.users?.phone ?? null,
       }));
 
       return { users, totalCount: count ?? users.length };
@@ -114,16 +116,23 @@ export function TenantUsersPreviewCard({ tenantId, onViewAll }: TenantUsersPrevi
         ) : (
           users.map((u) => (
             <div key={u.user_id} className="flex items-center gap-3 py-1">
-              <Avatar className="h-8 w-8">
+              <Avatar className="h-8 w-8 shrink-0">
                 {u.avatar_url && <AvatarImage src={u.avatar_url} alt={getName(u)} />}
                 <AvatarFallback className="text-xs bg-primary/10 text-primary">
                   {getInitials(u)}
                 </AvatarFallback>
               </Avatar>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium truncate">{getName(u)}</p>
-                {u.job_title && <p className="text-xs text-muted-foreground truncate">{u.job_title}</p>}
-              </div>
+              <p className="text-sm font-medium truncate flex-1 min-w-0">{getName(u)}</p>
+              {u.phone && (
+                <a
+                  href={`tel:${u.phone}`}
+                  className="text-xs text-muted-foreground hover:text-primary flex items-center gap-1 shrink-0"
+                  title={`Call ${u.phone}`}
+                >
+                  <Phone className="h-3 w-3" />
+                  {u.phone}
+                </a>
+              )}
               {getRoleBadge(u.role)}
             </div>
           ))
