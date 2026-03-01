@@ -161,39 +161,37 @@ export function TenantLogoUpload({ tenantId, currentLogoPath, onLogoChange }: Te
         </div>
       )}
 
-      {isStaff && currentLogoPath && (
-        <div className="flex items-center gap-1">
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-7 text-xs"
-            onClick={() => fileInputRef.current?.click()}
-            disabled={uploading}
-          >
-            <Upload className="h-3 w-3 mr-1" />
-            Replace
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-7 text-xs text-destructive"
-            onClick={handleDelete}
-            disabled={uploading}
-          >
-            <Trash2 className="h-3 w-3 mr-1" />
-            Remove
-          </Button>
-        </div>
-      )}
-
       {currentLogoPath && (
         <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
-          <DialogContent className="max-w-fit p-6">
+          <DialogContent className="max-w-[90vw] w-auto p-6">
             <img
               src={getPublicUrl(currentLogoPath)}
               alt="Tenant logo full size"
-              className="max-w-[80vw] max-h-[80vh] object-contain"
+              className="max-w-full max-h-[75vh] object-contain"
             />
+            {isStaff && (
+              <div className="flex items-center justify-center gap-2 pt-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => { setPreviewOpen(false); fileInputRef.current?.click(); }}
+                  disabled={uploading}
+                >
+                  <Upload className="h-3.5 w-3.5 mr-1.5" />
+                  Replace
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="text-destructive border-destructive/30 hover:bg-destructive/10"
+                  onClick={() => { setPreviewOpen(false); handleDelete(); }}
+                  disabled={uploading}
+                >
+                  <Trash2 className="h-3.5 w-3.5 mr-1.5" />
+                  Remove
+                </Button>
+              </div>
+            )}
           </DialogContent>
         </Dialog>
       )}
