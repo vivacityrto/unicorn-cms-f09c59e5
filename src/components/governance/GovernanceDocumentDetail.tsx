@@ -1,10 +1,12 @@
 import { useState } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { ArrowLeft, ExternalLink, Upload, FileText, Clock, Shield, Send } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { ArrowLeft, ExternalLink, Upload, FileText, Clock, Shield, Send, Tag } from 'lucide-react';
+import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { GovernanceVersionHistory } from './GovernanceVersionHistory';
 import { GovernancePublishDialog } from './GovernancePublishDialog';
@@ -32,7 +34,7 @@ export function GovernanceDocumentDetail({ documentId, onBack }: GovernanceDocum
       const { data, error } = await supabase
         .from('documents')
         .select(`
-          id, title, description, format, document_category, document_status,
+          id, title, description, format, category, document_category, document_status,
           source_template_url, updated_at, current_published_version_id
         `)
         .eq('id', documentId)
@@ -68,6 +70,33 @@ export function GovernanceDocumentDetail({ documentId, onBack }: GovernanceDocum
     }
   };
 
+  const { data: categories } = useQuery({
+    queryKey: ['governance-doc-categories'],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('dd_document_categories')
+        .select('label')
+        .eq('is_active', true)
+        .order('sort_order');
+      return data || [];
+    },
+  });
+
+  const updateCategory = useMutation({
+    mutationFn: async (newCategory: string) => {
+      const { error } = await supabase
+        .from('documents')
+        .update({ category: newCategory })
+        .eq('id', documentId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success('Category updated');
+      invalidateAll();
+    },
+    onError: () => toast.error('Failed to update category'),
+  });
+
   // Find latest draft version for mapping editor
   const latestDraft = versions?.find(v => v.status === 'draft');
   // Find published version for delivery
@@ -101,7 +130,7 @@ export function GovernanceDocumentDetail({ documentId, onBack }: GovernanceDocum
           <div>
             <h1 className="text-xl font-bold">{doc.title}</h1>
             <p className="text-sm text-muted-foreground">
-              {doc.document_category || 'Uncategorised'} • {doc.format || 'Unknown format'}
+              {doc.category || doc.document_category || 'Uncategorised'} • {doc.format || 'Unknown format'}
             </p>
           </div>
         </div>
@@ -125,7 +154,29 @@ export function GovernanceDocumentDetail({ documentId, onBack }: GovernanceDocum
       </div>
 
       {/* Document Info */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium flex items-center gap-2">
+              <Tag className="h-4 w-4" /> Category
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Select
+              value={doc.category || ''}
+              onValueChange={(val) => updateCategory.mutate(val)}
+            >
+              <SelectTrigger className="h-8 text-sm">
+                <SelectValue placeholder="Select category" />
+              </SelectTrigger>
+              <SelectContent>
+                {categories?.map((cat) => (
+                  <SelectItem key={cat.label} value={cat.label}>{cat.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </CardContent>
+        </Card>
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium flex items-center gap-2">
