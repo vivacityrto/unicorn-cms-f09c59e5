@@ -1,0 +1,1 @@
+DELETE FROM public.documents WHERE category = 'z2015_documents';
