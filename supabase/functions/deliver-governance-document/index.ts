@@ -193,7 +193,7 @@ serve(async (req) => {
 
     // Parse request
     const body = await req.json();
-    const { tenant_id, document_version_id, allow_incomplete } = body;
+    const { tenant_id, document_version_id, allow_incomplete, snapshot_id: pinned_snapshot_id } = body;
     if (!tenant_id || !document_version_id) {
       return new Response(
         JSON.stringify({ error: "tenant_id and document_version_id are required" }),
@@ -225,16 +225,20 @@ serve(async (req) => {
       });
     }
 
-    // ── Get latest snapshot for idempotency ─────────────────────────────────
-    const { data: latestSnapshot } = await supabase
-      .from("tga_rto_snapshots")
-      .select("id")
-      .eq("tenant_id", tenant_id)
-      .order("fetched_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
-
-    const snapshotId = latestSnapshot?.id || null;
+    // ── Get snapshot for idempotency ───────────────────────────────────────
+    let snapshotId: string | null;
+    if (pinned_snapshot_id) {
+      snapshotId = pinned_snapshot_id;
+    } else {
+      const { data: latestSnapshot } = await supabase
+        .from("tga_rto_snapshots")
+        .select("id")
+        .eq("tenant_id", tenant_id)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      snapshotId = latestSnapshot?.id || null;
+    }
 
     // ── Idempotency check ──────────────────────────────────────────────────
     const idempotencyQuery = supabase

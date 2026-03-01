@@ -8,7 +8,8 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Progress } from '@/components/ui/progress';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { Send, CheckCircle, XCircle, Loader2, SkipForward, AlertTriangle, ShieldCheck, ShieldAlert, Square, RotateCcw } from 'lucide-react';
+import { Send, CheckCircle, XCircle, Loader2, SkipForward, AlertTriangle, ShieldCheck, ShieldAlert, Square, RotateCcw, Clock } from 'lucide-react';
+import { differenceInDays } from 'date-fns';
 import { toast } from 'sonner';
 
 interface GovernanceDeliveryDialogProps {
@@ -112,6 +113,27 @@ export function GovernanceDeliveryDialog({
     [tenants]
   );
 
+  // Fetch latest snapshot per tenant for staleness indicators
+  const { data: snapshotData } = useQuery({
+    queryKey: ['delivery-tenant-snapshots', eligibleTenantIds],
+    enabled: open && eligibleTenantIds.length > 0,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('tga_rto_snapshots')
+        .select('id, tenant_id, created_at')
+        .in('tenant_id', eligibleTenantIds)
+        .order('created_at', { ascending: false });
+
+      const map = new Map<number, { id: string; created_at: string }>();
+      for (const s of data || []) {
+        if (!map.has(s.tenant_id)) {
+          map.set(s.tenant_id, { id: s.id, created_at: s.created_at });
+        }
+      }
+      return map;
+    },
+  });
+
   const { data: tenantMergeData } = useQuery({
     queryKey: ['delivery-tenant-merge-data', eligibleTenantIds],
     enabled: open && eligibleTenantIds.length > 0 && (requiredTags || []).length > 0,
@@ -193,13 +215,15 @@ export function GovernanceDeliveryDialog({
   // Summary counts
   const summary = useMemo(() => {
     let complete = 0, partial = 0, incomplete = 0;
+    let missingSnapshot = 0;
     for (const id of eligibleTenantIds) {
       const t = tenantTailoring[id];
       if (t?.riskLevel === 'complete') complete++;
       else if (t?.riskLevel === 'partial') partial++;
       else incomplete++;
+      if (!snapshotData?.has(id)) missingSnapshot++;
     }
-    return { complete, partial, incomplete };
+    return { complete, partial, incomplete, missingSnapshot };
   }, [eligibleTenantIds, tenantTailoring]);
 
   const canDeliver = selected.size > 0 && (!hasIncompleteSelected || acknowledgeIncomplete);
@@ -220,6 +244,9 @@ export function GovernanceDeliveryDialog({
     let successCount = 0;
     let failCount = 0;
     const failedTenantIds: number[] = [];
+
+    // Pre-fetch latest snapshot per tenant for batch consistency
+    const snapshotMap = snapshotData ?? new Map<number, { id: string; created_at: string }>();
 
     for (let i = 0; i < tenantIds.length; i++) {
       const tenantId = tenantIds[i];
@@ -245,6 +272,7 @@ export function GovernanceDeliveryDialog({
               tenant_id: tenantId,
               document_version_id: documentVersionId,
               ...(isIncomplete ? { allow_incomplete: true } : {}),
+              snapshot_id: snapshotMap.get(tenantId)?.id,
             },
           },
         );
@@ -291,6 +319,10 @@ export function GovernanceDeliveryDialog({
             cancelled: wasCancelled,
             failed_tenant_ids: failedTenantIds,
             all_tenant_ids: tenantIds,
+            snapshot_ids: Object.fromEntries(
+              Array.from(snapshotMap.entries()).filter(([tid]) => tenantIds.includes(tid)).map(([tid, s]) => [tid, s.id])
+            ),
+            tenants_without_snapshot: tenantIds.filter((id) => !snapshotMap.has(id)),
           },
         });
       }
@@ -397,6 +429,36 @@ export function GovernanceDeliveryDialog({
     );
   };
 
+  const snapshotStalenessIndicator = (tenantId: number) => {
+    const snap = snapshotData?.get(tenantId);
+    if (!snap) {
+      return (
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <AlertTriangle className="h-4 w-4 text-destructive flex-shrink-0" />
+            </TooltipTrigger>
+            <TooltipContent><p>No TGA snapshot available</p></TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      );
+    }
+    const days = differenceInDays(new Date(), new Date(snap.created_at));
+    if (days >= 90) {
+      return (
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Clock className="h-4 w-4 text-amber-500 flex-shrink-0" />
+            </TooltipTrigger>
+            <TooltipContent><p>Snapshot is {days} days old</p></TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      );
+    }
+    return null;
+  };
+
   return (
     <AppModal open={open} onOpenChange={delivering ? undefined : onOpenChange}>
       <AppModalContent size="lg">
@@ -442,6 +504,12 @@ export function GovernanceDeliveryDialog({
                   {summary.incomplete > 0 && <span className="text-destructive font-medium">{summary.incomplete} incomplete</span>}
                 </div>
               )}
+              {summary.missingSnapshot > 0 && (
+                <div className="flex items-center gap-2 text-xs p-2 rounded bg-muted/50 border text-destructive">
+                  <AlertTriangle className="h-3.5 w-3.5" />
+                  <span className="font-medium">{summary.missingSnapshot} tenant{summary.missingSnapshot !== 1 ? 's' : ''} missing TGA snapshot</span>
+                </div>
+              )}
 
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium">
@@ -469,6 +537,7 @@ export function GovernanceDeliveryDialog({
                         />
                         <span className="text-sm flex-1">{t.name}</span>
                         {!disabled && tailoringIndicator(t.id)}
+                        {!disabled && snapshotStalenessIndicator(t.id)}
                         {t.alreadyDelivered && (
                           <Badge variant="outline" className="text-xs">Already delivered</Badge>
                         )}
