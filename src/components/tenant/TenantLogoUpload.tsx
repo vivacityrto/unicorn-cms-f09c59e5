@@ -4,7 +4,8 @@ import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Trash2, Building2 } from 'lucide-react';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { Trash2, Building2, Upload } from 'lucide-react';
 
 interface TenantLogoUploadProps {
   tenantId: number;
@@ -16,6 +17,7 @@ export function TenantLogoUpload({ tenantId, currentLogoPath, onLogoChange }: Te
   const { user, profile } = useAuth();
   const { toast } = useToast();
   const [uploading, setUploading] = useState(false);
+  const [previewOpen, setPreviewOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const isStaff = profile?.unicorn_role === 'Super Admin' || profile?.unicorn_role === 'Team Leader';
@@ -120,7 +122,9 @@ export function TenantLogoUpload({ tenantId, currentLogoPath, onLogoChange }: Te
   };
 
   const handleAvatarClick = () => {
-    if (isStaff && !uploading) {
+    if (currentLogoPath) {
+      setPreviewOpen(true);
+    } else if (isStaff && !uploading) {
       fileInputRef.current?.click();
     }
   };
@@ -158,16 +162,40 @@ export function TenantLogoUpload({ tenantId, currentLogoPath, onLogoChange }: Te
       )}
 
       {isStaff && currentLogoPath && (
-        <Button
-          variant="ghost"
-          size="sm"
-          className="h-7 text-xs text-destructive"
-          onClick={handleDelete}
-          disabled={uploading}
-        >
-          <Trash2 className="h-3 w-3 mr-1" />
-          Remove
-        </Button>
+        <div className="flex items-center gap-1">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-7 text-xs"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={uploading}
+          >
+            <Upload className="h-3 w-3 mr-1" />
+            Replace
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-7 text-xs text-destructive"
+            onClick={handleDelete}
+            disabled={uploading}
+          >
+            <Trash2 className="h-3 w-3 mr-1" />
+            Remove
+          </Button>
+        </div>
+      )}
+
+      {currentLogoPath && (
+        <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
+          <DialogContent className="max-w-fit p-6">
+            <img
+              src={getPublicUrl(currentLogoPath)}
+              alt="Tenant logo full size"
+              className="max-w-[80vw] max-h-[80vh] object-contain"
+            />
+          </DialogContent>
+        </Dialog>
       )}
     </div>
   );
