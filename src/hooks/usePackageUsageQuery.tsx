@@ -270,9 +270,11 @@ export function usePackageUsageQuery(clientId: number | null) {
 }
 
 export function formatHours(minutes: number): string {
-  const hours = minutes / 60;
-  if (hours < 1) return `${Math.round(minutes)}m`;
-  return `${hours.toFixed(1)}h`;
+  const absMinutes = Math.abs(minutes);
+  const hours = Math.floor(absMinutes / 60);
+  const mins = Math.round(absMinutes % 60);
+  const sign = minutes < 0 ? '-' : '';
+  return `${sign}${hours}:${mins.toString().padStart(2, '0')}`;
 }
 
 export function formatForecast(days: number | null): string {
