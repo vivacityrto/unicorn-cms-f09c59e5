@@ -171,21 +171,15 @@ Deno.serve(async (req: Request) => {
       }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 });
     }
 
-    // Fetch tenant/client merge data
-    const { data: tenant } = await supabase.from('tenants').select('*').eq('id', tenant_id).single();
-    const { data: tenantMergeData } = await supabase
-      .from('tenant_merge_data').select('data').eq('tenant_id', tenant_id).single();
+    // Fetch merge field values from unified view
+    const { data: mergeFieldRows } = await supabase
+      .from('v_tenant_merge_fields')
+      .select('field_tag, field_type, value')
+      .eq('tenant_id', tenant_id);
 
-    let tenantData: Record<string, unknown> = { ...(tenant || {}) };
-    if (tenantMergeData?.data) {
-      tenantData = { ...tenantData, ...(tenantMergeData.data as Record<string, unknown>) };
-    }
-
-    // Fetch legacy merge field definitions once
-    const { data: mergeFieldDefs } = await supabase
-      .from('merge_field_definitions')
-      .select('code, source_column')
-      .eq('is_active', true);
+    // Also fetch tenant data for naming
+    const { data: tenant } = await supabase.from('tenants').select('name').eq('id', tenant_id).single();
+    const tenantData: Record<string, unknown> = { name: tenant?.name || '' };
 
     const results: Array<{ document_instance_id: number; document_title: string; status: 'generated' | 'skipped' | 'failed'; error?: string }> = [];
     let generated = 0, skipped = 0, failed = 0;

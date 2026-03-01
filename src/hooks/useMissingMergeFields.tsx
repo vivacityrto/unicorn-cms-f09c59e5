@@ -4,12 +4,11 @@ import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 
 export interface MergeFieldDefinition {
-  id: string;
-  code: string;
+  id: number;
+  tag: string;
   name: string;
-  source_column: string;
+  source_column: string | null;
   description: string | null;
-  is_system: boolean;
   is_active: boolean;
 }
 
@@ -58,66 +57,55 @@ export function useMissingMergeFields(tenantId: number | null) {
     
     setLoading(true);
     try {
-      // Fetch all active merge field definitions
+      // Fetch all active merge field definitions from dd_fields
       const { data: definitions, error: defError } = await supabase
-        .from('merge_field_definitions')
+        .from('dd_fields')
         .select('*')
         .eq('is_active', true);
 
       if (defError) throw defError;
 
-      // Get client_legacy data linked to this tenant (use limit 1 to avoid 406 on duplicates)
-      const { data: clientData, error: clientError } = await supabase
-        .from('clients_legacy')
-        .select('*')
-        .eq('tenant_id', tenantId)
-        .order('created_at', { ascending: true })
-        .limit(1)
-        .maybeSingle();
+      // Fetch resolved values from the unified view
+      const { data: viewData, error: viewError } = await supabase
+        .from('v_tenant_merge_fields' as any)
+        .select('field_tag, value')
+        .eq('tenant_id', tenantId) as any;
 
-      if (clientError && clientError.code !== 'PGRST116') {
-        console.warn('Could not fetch client data:', clientError);
+      if (viewError) {
+        console.warn('Could not fetch merge field values:', viewError);
       }
 
-      // Get any existing tenant_merge_data
-      const { data: mergeData, error: mergeError } = await (supabase
-        .from('tenant_merge_data' as any)
-        .select('*')
-        .eq('tenant_id', tenantId)
-        .single() as any);
+      // Build a map of tag -> value
+      const valueMap: Record<string, string> = {};
+      (viewData || []).forEach((row: { field_tag: string; value: string }) => {
+        valueMap[row.field_tag] = row.value || '';
+      });
 
-      if (mergeError && mergeError.code !== 'PGRST116') {
-        console.warn('Could not fetch merge data:', mergeError);
-      }
-
-      const existingMergeData = mergeData?.data || {};
-      setTenantMergeData(existingMergeData);
-
-      // Combine data sources - merge data takes priority over client data
-      const combinedData: TenantData = { ...clientData, ...existingMergeData };
+      setTenantMergeData(valueMap);
 
       // Filter definitions to only those needed for the document(s)
-      let relevantDefinitions = definitions || [];
+      let relevantDefinitions = (definitions || []) as unknown as MergeFieldDefinition[];
       if (documentMergeFields && documentMergeFields.length > 0) {
-        relevantDefinitions = (definitions || []).filter((def: MergeFieldDefinition) =>
-          documentMergeFields.includes(def.code)
-        );
+        relevantDefinitions = relevantDefinitions.filter((def) => {
+          const code = `{{${def.tag}}}`;
+          return documentMergeFields.includes(code) || documentMergeFields.includes(def.tag);
+        });
       }
 
       // Find missing fields
       const missing: MissingField[] = [];
       
-      (relevantDefinitions as MergeFieldDefinition[]).forEach((def) => {
-        const value = combinedData[def.source_column];
-        const isEmpty = value === null || value === undefined || value === '';
+      relevantDefinitions.forEach((def) => {
+        const value = valueMap[def.tag];
+        const isEmpty = !value || value === '';
         
         if (isEmpty) {
           missing.push({
-            code: def.code,
+            code: `{{${def.tag}}}`,
             name: def.name,
-            source_column: def.source_column,
-            inputType: getInputType(def.source_column),
-            required: requiredFields.includes(def.source_column)
+            source_column: def.source_column || def.tag,
+            inputType: getInputType(def.source_column || ''),
+            required: requiredFields.includes(def.source_column || '')
           });
         }
       });
@@ -342,23 +330,16 @@ export function useMissingMergeFields(tenantId: number | null) {
     if (!tenantId) return {};
 
     try {
-      // Get client_legacy data (use limit 1 to avoid 406 on duplicates)
-      const { data: clientData } = await supabase
-        .from('clients_legacy')
-        .select('*')
-        .eq('tenant_id', tenantId)
-        .order('created_at', { ascending: true })
-        .limit(1)
-        .maybeSingle();
+      const { data } = await supabase
+        .from('v_tenant_merge_fields' as any)
+        .select('field_tag, value')
+        .eq('tenant_id', tenantId) as any;
 
-      // Get tenant_merge_data
-      const { data: mergeData } = await (supabase
-        .from('tenant_merge_data' as any)
-        .select('data')
-        .eq('tenant_id', tenantId)
-        .single() as any);
-
-      return { ...clientData, ...(mergeData?.data || {}) };
+      const values: Record<string, string> = {};
+      (data || []).forEach((row: { field_tag: string; value: string }) => {
+        values[row.field_tag] = row.value || '';
+      });
+      return values;
     } catch (error) {
       console.error('Error getting current values:', error);
       return {};

@@ -215,27 +215,24 @@ Deno.serve(async (req: Request) => {
       }
     }
 
+    // Fetch merge field values from unified view
+    const { data: mergeFieldRows } = await supabase
+      .from('v_tenant_merge_fields')
+      .select('field_tag, field_type, value')
+      .eq('tenant_id', tenant_id);
+
+    // Also get tenant name for file naming
     const { data: tenant } = await supabase
       .from('tenants')
-      .select('*')
+      .select('name')
       .eq('id', tenant_id)
       .single();
 
     if (tenant) {
-      tenantData = { ...tenantData, ...tenant };
+      tenantData = { ...tenantData, name: tenant.name };
     }
 
-    const { data: tenantMergeData } = await supabase
-      .from('tenant_merge_data')
-      .select('data')
-      .eq('tenant_id', tenant_id)
-      .single();
-
-    if (tenantMergeData?.data) {
-      tenantData = { ...tenantData, ...(tenantMergeData.data as Record<string, unknown>) };
-    }
-
-    // 4. Build merge data from bindings OR legacy merge_field_definitions
+    // 4. Build merge data from bindings OR unified view
     const mergeData: Record<string, string> = {};
     
     if (bindings && Object.keys(bindings.token_bindings || {}).length > 0) {
@@ -270,15 +267,9 @@ Deno.serve(async (req: Request) => {
         mergeData[token] = value;
       }
     } else {
-      // Fallback to legacy merge_field_definitions
-      const { data: mergeFieldDefs } = await supabase
-        .from('merge_field_definitions')
-        .select('code, source_column')
-        .eq('is_active', true);
-
-      (mergeFieldDefs || []).forEach((field: { code: string; source_column: string }) => {
-        const value = tenantData[field.source_column];
-        mergeData[field.code] = value !== null && value !== undefined ? String(value) : '';
+      // Use unified view data
+      (mergeFieldRows || []).forEach((row: { field_tag: string; field_type: string; value: string }) => {
+        mergeData[`{{${row.field_tag}}}`] = row.value !== null && row.value !== undefined ? String(row.value) : '';
       });
     }
 

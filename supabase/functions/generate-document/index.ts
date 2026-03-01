@@ -79,50 +79,30 @@ Deno.serve(async (req: Request) => {
 
     console.log('Source document:', document.title);
 
-    // 2. Fetch the tenant/client data for merge fields
-    const { data: client, error: clientError } = await supabase
-      .from('clients_legacy')
-      .select('*')
-      .eq('id', client_legacy_id)
-      .single();
+    // 2. Fetch merge field values from the unified view
+    const { data: mergeFieldRows, error: mergeError } = await supabase
+      .from('v_tenant_merge_fields')
+      .select('field_tag, field_type, value')
+      .eq('tenant_id', tenant_id);
 
-    if (clientError || !client) {
-      throw new Error(`Client not found: ${clientError?.message || 'Unknown error'}`);
+    if (mergeError) {
+      console.warn('Could not fetch merge fields from view:', mergeError.message);
     }
 
-    console.log('Client data fetched:', client.companyname);
-
-    // 2b. Fetch any supplementary merge data from tenant_merge_data
-    const { data: tenantMergeData, error: mergeDataError } = await supabase
-      .from('tenant_merge_data')
-      .select('data')
-      .eq('tenant_id', tenant_id)
-      .single();
-
-    if (mergeDataError && mergeDataError.code !== 'PGRST116') {
-      console.warn('Could not fetch tenant merge data:', mergeDataError.message);
-    }
-
-    // Combine client data with tenant-supplied merge data (tenant data takes priority)
-    const combinedClientData = { ...client, ...(tenantMergeData?.data || {}) };
-    console.log('Combined data sources for merge fields');
-
-    // 3. Fetch merge field definitions
-    const { data: mergeFields, error: fieldsError } = await supabase
-      .from('merge_field_definitions')
-      .select('code, source_column')
-      .eq('is_active', true);
-
-    if (fieldsError) {
-      console.warn('Could not fetch merge fields:', fieldsError.message);
-    }
-
-    // 4. Build merge data object
+    // Build merge data object
     const mergeData: Record<string, string> = {};
-    (mergeFields || []).forEach((field: { code: string; source_column: string }) => {
-      const value = (combinedClientData as Record<string, unknown>)[field.source_column];
-      mergeData[field.code] = value !== null && value !== undefined ? String(value) : '';
+    (mergeFieldRows || []).forEach((row: { field_tag: string; field_type: string; value: string }) => {
+      mergeData[`{{${row.field_tag}}}`] = row.value || '';
     });
+
+    // Also fetch tenant name for file naming
+    const { data: tenantRow } = await supabase
+      .from('tenants')
+      .select('name')
+      .eq('id', tenant_id)
+      .single();
+
+    const tenantName = tenantRow?.name || 'tenant';
 
     console.log('Merge data prepared with', Object.keys(mergeData).length, 'fields');
 
@@ -134,7 +114,7 @@ Deno.serve(async (req: Request) => {
     // - Upload the generated document to storage
     // - Return the file path
 
-    const generatedFileName = `${document.title}_${client.companyname || 'tenant'}_${Date.now()}.${document.format || 'docx'}`;
+    const generatedFileName = `${document.title}_${tenantName}_${Date.now()}.${document.format || 'docx'}`;
     const filePath = `generated/${tenant_id}/${package_id}/${stage_id}/${generatedFileName}`;
 
     // 6. Create the generated document record
@@ -182,7 +162,7 @@ Deno.serve(async (req: Request) => {
       JSON.stringify({
         success: true,
         generated_document: generatedDoc,
-        message: `Document "${document.title}" generated for ${client.companyname}`
+        message: `Document "${document.title}" generated for ${tenantName}`
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },

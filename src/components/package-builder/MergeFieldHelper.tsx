@@ -22,13 +22,14 @@ export function MergeFieldHelper({ onInsert }: MergeFieldHelperProps) {
   
   const filteredFields = activeFields.filter(field =>
     field.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    field.code.toLowerCase().includes(searchTerm.toLowerCase())
+    field.tag.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const handleCopy = async (code: string) => {
+  const handleCopy = async (tag: string) => {
+    const code = `{{${tag}}}`;
     try {
       await navigator.clipboard.writeText(code);
-      setCopiedCode(code);
+      setCopiedCode(tag);
       toast({ title: 'Copied to clipboard' });
       
       if (onInsert) {
@@ -74,18 +75,18 @@ export function MergeFieldHelper({ onInsert }: MergeFieldHelperProps) {
                 <TooltipTrigger asChild>
                   <div
                     className="flex items-center justify-between p-2 rounded-md hover:bg-muted/50 cursor-pointer group"
-                    onClick={() => handleCopy(field.code)}
+                    onClick={() => handleCopy(field.tag)}
                   >
                     <div className="flex items-center gap-2 min-w-0">
                       <code className="text-xs bg-muted px-2 py-0.5 rounded font-mono">
-                        {field.code}
+                        {`{{${field.tag}}}`}
                       </code>
                       <span className="text-sm text-muted-foreground truncate">
                         {field.name}
                       </span>
-                      {field.is_system && (
+                      {field.field_type === 'image' && (
                         <Badge variant="outline" className="text-[10px] h-4">
-                          System
+                          Image
                         </Badge>
                       )}
                     </div>
@@ -94,7 +95,7 @@ export function MergeFieldHelper({ onInsert }: MergeFieldHelperProps) {
                       size="icon"
                       className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
                     >
-                      {copiedCode === field.code ? (
+                      {copiedCode === field.tag ? (
                         <Check className="h-3 w-3 text-green-500" />
                       ) : (
                         <Copy className="h-3 w-3" />
@@ -108,9 +109,12 @@ export function MergeFieldHelper({ onInsert }: MergeFieldHelperProps) {
                     {field.description && (
                       <p className="text-xs text-muted-foreground">{field.description}</p>
                     )}
-                    <p className="text-xs text-muted-foreground">
-                      Source: {field.source_table}.{field.source_column}
-                    </p>
+                    {field.source_table && (
+                      <p className="text-xs text-muted-foreground">
+                        Source: {field.source_table}.{field.source_column}
+                        {field.source_address_type ? ` (${field.source_address_type})` : ''}
+                      </p>
+                    )}
                   </div>
                 </TooltipContent>
               </Tooltip>
