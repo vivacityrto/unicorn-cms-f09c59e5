@@ -1,5 +1,6 @@
 import { corsHeaders } from '../_shared/cors.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.81.1';
+import * as zip from 'https://deno.land/x/zipjs@v2.7.34/index.js';
 import {
   graphGet,
   graphDownload,
@@ -197,6 +198,23 @@ async function handleImport(
     },
   });
 
+  // ── Auto-scan DOCX for merge fields ────────────────────────────────────
+  let detected_fields: Array<{ tag: string; field_id: number }> = [];
+  let invalid_tags: string[] = [];
+  let fields_linked = 0;
+
+  const isDocx = fileName.toLowerCase().endsWith('.docx');
+  if (isDocx) {
+    try {
+      const scanResult = await scanDocxMergeFields(fileContent, document_id, supabase);
+      detected_fields = scanResult.detected_fields;
+      invalid_tags = scanResult.invalid_tags;
+      fields_linked = scanResult.fields_linked;
+    } catch (scanErr) {
+      console.warn('[import-sharepoint-template] Merge field scan failed (non-fatal):', scanErr);
+    }
+  }
+
   return new Response(JSON.stringify({
     success: true,
     version_id: newVersion.id,
@@ -204,9 +222,116 @@ async function handleImport(
     file_name: fileName,
     checksum_sha256: checksum,
     storage_path: storagePath,
+    detected_fields,
+    invalid_tags,
+    fields_linked,
   }), {
     headers: { ...corsHeaders, 'Content-Type': 'application/json' },
   });
+}
+
+/**
+ * Scan a DOCX file for {{...}} merge field patterns.
+ * Matches against dd_fields tags and syncs document_fields table.
+ */
+async function scanDocxMergeFields(
+  fileContent: Uint8Array,
+  documentId: number,
+  supabase: ReturnType<typeof createClient>,
+): Promise<{
+  detected_fields: Array<{ tag: string; field_id: number }>;
+  invalid_tags: string[];
+  fields_linked: number;
+}> {
+  // 1. Unzip and extract text from relevant XML entries
+  const blob = new Blob([fileContent.slice().buffer]);
+  const reader = new zip.ZipReader(new zip.BlobReader(blob));
+  const entries = await reader.getEntries();
+
+  const relevantFiles = ['word/document.xml'];
+  // Also include headers/footers
+  const relevantPattern = /^word\/(header|footer)\d*\.xml$/;
+
+  let allText = '';
+  for (const entry of entries) {
+    if (!entry.getData) continue;
+    const isRelevant = relevantFiles.includes(entry.filename) || relevantPattern.test(entry.filename);
+    if (!isRelevant) continue;
+
+    const data = await entry.getData(new zip.BlobWriter());
+    const arrayBuffer = await data.arrayBuffer();
+    const xmlContent = new TextDecoder().decode(arrayBuffer);
+
+    // Strip all XML tags to get plain text (handles Word split-run issue)
+    allText += xmlContent.replace(/<[^>]+>/g, '') + ' ';
+  }
+  await reader.close();
+
+  // 2. Find all {{...}} patterns in the concatenated text
+  const mergeFieldRegex = /\{\{\s*([^}]+?)\s*\}\}/g;
+  const foundTags = new Set<string>();
+  let match: RegExpExecArray | null;
+  while ((match = mergeFieldRegex.exec(allText)) !== null) {
+    const cleaned = match[1].trim();
+    if (cleaned) foundTags.add(cleaned);
+  }
+
+  if (foundTags.size === 0) {
+    return { detected_fields: [], invalid_tags: [], fields_linked: 0 };
+  }
+
+  // 3. Fetch all dd_fields tags
+  const { data: ddFields } = await supabase
+    .from('dd_fields')
+    .select('id, tag')
+    .eq('is_active', true);
+
+  const tagMap = new Map<string, number>();
+  for (const f of ddFields || []) {
+    tagMap.set(f.tag, f.id);
+  }
+
+  // 4. Classify found tags
+  const detected_fields: Array<{ tag: string; field_id: number }> = [];
+  const invalid_tags: string[] = [];
+
+  for (const tag of foundTags) {
+    const fieldId = tagMap.get(tag);
+    if (fieldId !== undefined) {
+      detected_fields.push({ tag, field_id: fieldId });
+    } else {
+      invalid_tags.push(tag);
+    }
+  }
+
+  // 5. Sync document_fields: clear old, insert new
+  if (detected_fields.length > 0) {
+    await supabase
+      .from('document_fields')
+      .delete()
+      .eq('document_id', documentId);
+
+    const rows = detected_fields.map((f) => ({
+      document_id: documentId,
+      field_id: f.field_id,
+    }));
+
+    const { error: insertErr } = await supabase
+      .from('document_fields')
+      .insert(rows);
+
+    if (insertErr) {
+      console.error('[import-sharepoint-template] document_fields insert error:', insertErr);
+    }
+  }
+
+  console.log(`[import-sharepoint-template] Scan complete: ${detected_fields.length} valid, ${invalid_tags.length} invalid for document ${documentId}`);
+
+  return {
+    detected_fields,
+    invalid_tags,
+    fields_linked: detected_fields.length,
+  };
 }
 
 /**
