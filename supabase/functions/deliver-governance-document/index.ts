@@ -490,9 +490,9 @@ serve(async (req) => {
       tenant_id,
       activity_type: "governance_document_delivered",
       document_id: doc.id,
-      document_version_id,
       actor_user_id: user.id,
-      details: {
+      metadata: {
+        document_version_id,
         delivery_id: delivery.id,
         delivered_file_name: deliveredFileName,
         sharepoint_web_url: driveItem.webUrl,

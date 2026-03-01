@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { AppModal, AppModalContent, AppModalHeader, AppModalTitle, AppModalBody, AppModalFooter } from '@/components/ui/modals';
@@ -8,7 +8,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Progress } from '@/components/ui/progress';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { Send, CheckCircle, XCircle, Loader2, SkipForward, AlertTriangle, ShieldCheck, ShieldAlert } from 'lucide-react';
+import { Send, CheckCircle, XCircle, Loader2, SkipForward, AlertTriangle, ShieldCheck, ShieldAlert, Square, RotateCcw } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface GovernanceDeliveryDialogProps {
@@ -39,6 +39,8 @@ interface DeliveryState {
   [tenantId: number]: { status: DeliveryStatus; error?: string };
 }
 
+const THROTTLE_DELAY_MS = 1500;
+
 export function GovernanceDeliveryDialog({
   documentId,
   documentVersionId,
@@ -51,6 +53,8 @@ export function GovernanceDeliveryDialog({
   const [delivering, setDelivering] = useState(false);
   const [deliveryState, setDeliveryState] = useState<DeliveryState>({});
   const [acknowledgeIncomplete, setAcknowledgeIncomplete] = useState(false);
+  const cancelledRef = useRef(false);
+  const [cancelled, setCancelled] = useState(false);
 
   // Fetch required tags for this document
   const { data: requiredTags } = useQuery({
@@ -118,7 +122,6 @@ export function GovernanceDeliveryDialog({
         .select('tenant_id, field_tag, value')
         .in('tenant_id', eligibleTenantIds);
 
-      // Group by tenant
       const byTenant: Record<number, Record<string, string>> = {};
       for (const row of data || []) {
         if (!byTenant[row.tenant_id]) byTenant[row.tenant_id] = {};
@@ -133,7 +136,6 @@ export function GovernanceDeliveryDialog({
     const result: Record<number, TenantTailoring> = {};
     const tags = requiredTags || [];
     if (tags.length === 0) {
-      // No required tags = all complete
       for (const id of eligibleTenantIds) {
         result[id] = { completeness: 100, missingFields: [], riskLevel: 'complete' };
       }
@@ -202,19 +204,31 @@ export function GovernanceDeliveryDialog({
 
   const canDeliver = selected.size > 0 && (!hasIncompleteSelected || acknowledgeIncomplete);
 
-  const handleDeliver = async () => {
-    if (!canDeliver) return;
+  /** Core delivery loop — used for initial delivery and retry */
+  const runDeliveryLoop = async (tenantIds: number[]) => {
+    cancelledRef.current = false;
+    setCancelled(false);
     setDelivering(true);
 
-    const ids = Array.from(selected);
-    const state: DeliveryState = {};
-    ids.forEach((id) => (state[id] = { status: 'pending' }));
-    setDeliveryState(state);
+    // Initialise state for these tenants
+    setDeliveryState((prev) => {
+      const next = { ...prev };
+      tenantIds.forEach((id) => (next[id] = { status: 'pending' }));
+      return next;
+    });
 
     let successCount = 0;
     let failCount = 0;
 
-    for (const tenantId of ids) {
+    for (let i = 0; i < tenantIds.length; i++) {
+      const tenantId = tenantIds[i];
+
+      // Check cancellation
+      if (cancelledRef.current) {
+        setCancelled(true);
+        break;
+      }
+
       setDeliveryState((prev) => ({
         ...prev,
         [tenantId]: { status: 'delivering' },
@@ -249,10 +263,68 @@ export function GovernanceDeliveryDialog({
         }));
         failCount++;
       }
+
+      // Throttle delay between requests (skip after last)
+      if (i < tenantIds.length - 1 && !cancelledRef.current) {
+        await new Promise((r) => setTimeout(r, THROTTLE_DELAY_MS));
+      }
     }
 
-    toast.success(`Delivery complete: ${successCount} succeeded, ${failCount} failed`);
+    const wasCancelled = cancelledRef.current;
+
+    // Insert batch audit record
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const failedIds = tenantIds.filter(
+          (id) => deliveryState[id]?.status === 'failed'
+        );
+        await supabase.from('document_activity_log').insert({
+          tenant_id: tenantIds[0],
+          document_id: documentId,
+          activity_type: 'governance_bulk_delivery_complete',
+          actor_user_id: user.id,
+          metadata: {
+            document_version_id: documentVersionId,
+            total: tenantIds.length,
+            success: successCount,
+            failed: failCount,
+            cancelled: wasCancelled,
+            failed_tenant_ids: failedIds,
+            all_tenant_ids: tenantIds,
+          },
+        });
+      }
+    } catch (auditErr) {
+      console.error('Failed to write batch audit record:', auditErr);
+    }
+
+    if (wasCancelled) {
+      toast.info(`Stopped — ${successCount} of ${tenantIds.length} delivered`);
+    } else {
+      toast.success(`Delivery complete: ${successCount} succeeded, ${failCount} failed`);
+    }
     onSuccess();
+  };
+
+  const handleDeliver = async () => {
+    if (!canDeliver) return;
+    const ids = Array.from(selected);
+    setDeliveryState({});
+    await runDeliveryLoop(ids);
+  };
+
+  const handleStop = () => {
+    cancelledRef.current = true;
+    setCancelled(true);
+  };
+
+  const handleRetryFailed = async () => {
+    const failedIds = Object.entries(deliveryState)
+      .filter(([, s]) => s.status === 'failed')
+      .map(([id]) => Number(id));
+    if (failedIds.length === 0) return;
+    await runDeliveryLoop(failedIds);
   };
 
   const completedCount = Object.values(deliveryState).filter(
@@ -260,6 +332,8 @@ export function GovernanceDeliveryDialog({
   ).length;
   const totalCount = Object.keys(deliveryState).length;
   const progress = totalCount > 0 ? (completedCount / totalCount) * 100 : 0;
+  const hasFailures = Object.values(deliveryState).some((s) => s.status === 'failed');
+  const isFinished = delivering && (completedCount === totalCount || cancelled) && totalCount > 0;
 
   const statusIcon = (status: DeliveryStatus) => {
     switch (status) {
@@ -339,7 +413,7 @@ export function GovernanceDeliveryDialog({
               <ScrollArea className="h-[320px]">
                 <div className="space-y-2">
                   {tenants
-                    ?.filter((t) => selected.has(t.id))
+                    ?.filter((t) => t.id in deliveryState)
                     .map((t) => {
                       const ds = deliveryState[t.id];
                       return (
@@ -424,9 +498,22 @@ export function GovernanceDeliveryDialog({
           )}
         </AppModalBody>
         <AppModalFooter>
-          {delivering && completedCount === totalCount && totalCount > 0 ? (
-            <Button onClick={() => onOpenChange(false)}>Close</Button>
-          ) : !delivering ? (
+          {isFinished ? (
+            <div className="flex items-center gap-2">
+              {hasFailures && (
+                <Button variant="outline" onClick={handleRetryFailed}>
+                  <RotateCcw className="h-4 w-4 mr-2" />
+                  Retry Failed
+                </Button>
+              )}
+              <Button onClick={() => onOpenChange(false)}>Close</Button>
+            </div>
+          ) : delivering ? (
+            <Button variant="destructive" onClick={handleStop}>
+              <Square className="h-4 w-4 mr-2" />
+              Stop
+            </Button>
+          ) : (
             <>
               <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
               <Button onClick={handleDeliver} disabled={!canDeliver}>
@@ -434,7 +521,7 @@ export function GovernanceDeliveryDialog({
                 Deliver to {selected.size} Client{selected.size !== 1 ? 's' : ''}
               </Button>
             </>
-          ) : null}
+          )}
         </AppModalFooter>
       </AppModalContent>
     </AppModal>

@@ -74,6 +74,24 @@ export interface GraphResponse<T = unknown> {
   raw: Response;
 }
 
+/** Retry-eligible status codes */
+const RETRYABLE_STATUSES = new Set([429, 503, 504]);
+const MAX_RETRIES = 3;
+
+/** Wait helper honouring Retry-After header with exponential backoff fallback */
+async function retryDelay(resp: Response, attempt: number): Promise<void> {
+  const retryAfter = resp.headers.get("Retry-After");
+  let delayMs: number;
+  if (retryAfter) {
+    const parsed = parseInt(retryAfter, 10);
+    delayMs = (isNaN(parsed) ? 5 : parsed) * 1000;
+  } else {
+    delayMs = Math.min(5000 * Math.pow(2, attempt), 30_000);
+  }
+  console.warn(`[graph-app-client] HTTP ${resp.status} — retrying in ${delayMs}ms (attempt ${attempt + 1}/${MAX_RETRIES})`);
+  await new Promise((r) => setTimeout(r, delayMs));
+}
+
 async function graphRequest<T = unknown>(
   method: string,
   path: string,
@@ -99,18 +117,24 @@ async function graphRequest<T = unknown>(
         : JSON.stringify(body);
   }
 
-  const resp = await fetch(url, init);
+  let resp: Response;
+  for (let attempt = 0; ; attempt++) {
+    resp = await fetch(url, init);
+    if (!RETRYABLE_STATUSES.has(resp.status) || attempt >= MAX_RETRIES) break;
+    await resp.arrayBuffer().catch(() => {}); // consume body before retry
+    await retryDelay(resp, attempt);
+  }
+
   let data: T;
-  const ct = resp.headers.get("content-type") || "";
+  const ct = resp!.headers.get("content-type") || "";
   if (ct.includes("application/json")) {
-    data = await resp.json();
+    data = await resp!.json();
   } else {
-    // For binary / empty responses, consume and return status only
-    await resp.arrayBuffer().catch(() => {});
+    await resp!.arrayBuffer().catch(() => {});
     data = {} as T;
   }
 
-  return { ok: resp.ok, status: resp.status, data, raw: resp };
+  return { ok: resp!.ok, status: resp!.status, data, raw: resp! };
 }
 
 /** GET helper */
@@ -166,21 +190,27 @@ export async function graphUploadSmall(
   const path = `/drives/${driveId}/items/${parentItemId}:/${encodeURIComponent(fileName)}:/content`;
   const token = await getAppToken();
 
-  const resp = await fetch(`${GRAPH_BASE}${path}`, {
-    method: "PUT",
-    headers: {
-      Authorization: `Bearer ${token}`,
-      "Content-Type": "application/octet-stream",
-    },
-    body: content,
-  });
-
-  if (!resp.ok) {
-    const errText = await resp.text();
-    throw new Error(`Upload failed for "${fileName}": ${resp.status} ${errText}`);
+  let resp: Response;
+  for (let attempt = 0; ; attempt++) {
+    resp = await fetch(`${GRAPH_BASE}${path}`, {
+      method: "PUT",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/octet-stream",
+      },
+      body: content,
+    });
+    if (!RETRYABLE_STATUSES.has(resp.status) || attempt >= MAX_RETRIES) break;
+    await resp.arrayBuffer().catch(() => {});
+    await retryDelay(resp, attempt);
   }
 
-  return await resp.json() as DriveItem;
+  if (!resp!.ok) {
+    const errText = await resp!.text();
+    throw new Error(`Upload failed for "${fileName}": ${resp!.status} ${errText}`);
+  }
+
+  return await resp!.json() as DriveItem;
 }
 
 /**
@@ -212,23 +242,29 @@ export async function graphUploadSession(
     const end = Math.min(offset + chunkSize, totalSize);
     const chunk = content.slice(offset, end);
 
-    const resp = await fetch(uploadUrl, {
-      method: "PUT",
-      headers: {
-        "Content-Length": String(chunk.byteLength),
-        "Content-Range": `bytes ${offset}-${end - 1}/${totalSize}`,
-      },
-      body: chunk,
-    });
+    let resp: Response;
+    for (let chunkAttempt = 0; ; chunkAttempt++) {
+      resp = await fetch(uploadUrl, {
+        method: "PUT",
+        headers: {
+          "Content-Length": String(chunk.byteLength),
+          "Content-Range": `bytes ${offset}-${end - 1}/${totalSize}`,
+        },
+        body: chunk,
+      });
+      if (!RETRYABLE_STATUSES.has(resp.status) || chunkAttempt >= MAX_RETRIES) break;
+      await resp.arrayBuffer().catch(() => {});
+      await retryDelay(resp, chunkAttempt);
+    }
 
-    if (resp.status === 200 || resp.status === 201) {
-      result = await resp.json() as DriveItem;
-    } else if (resp.status === 202) {
+    if (resp!.status === 200 || resp!.status === 201) {
+      result = await resp!.json() as DriveItem;
+    } else if (resp!.status === 202) {
       // More chunks expected
-      await resp.json();
+      await resp!.json();
     } else {
-      const errText = await resp.text();
-      throw new Error(`Upload chunk failed at ${offset}: ${resp.status} ${errText}`);
+      const errText = await resp!.text();
+      throw new Error(`Upload chunk failed at ${offset}: ${resp!.status} ${errText}`);
     }
 
     offset = end;

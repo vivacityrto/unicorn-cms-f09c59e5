@@ -233,7 +233,7 @@ Deno.serve(async (req: Request) => {
             mergeData[token] = value;
           }
         } else {
-          (mergeFieldDefs || []).forEach((field: { code: string; source_column: string }) => {
+          ([] as { code: string; source_column: string }[]).forEach((field) => {
             const v = tenantData[field.source_column];
             mergeData[field.code] = v != null ? String(v) : '';
           });
