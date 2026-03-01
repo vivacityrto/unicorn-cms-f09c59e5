@@ -117,47 +117,50 @@ export function TenantLogoUpload({ tenantId, currentLogoPath, onLogoChange }: Te
 
   return (
     <div className="flex items-center gap-3">
-      <Avatar className="h-12 w-12 border-2 border-background shadow-md">
+      <Avatar className={`h-16 w-16 border-2 border-white/40 shadow-md ${!currentLogoPath ? 'border-dashed' : ''}`}>
         {currentLogoPath ? (
           <AvatarImage src={getPublicUrl(currentLogoPath)} alt="Tenant logo" />
         ) : null}
-        <AvatarFallback className="bg-muted">
-          <Building2 className="h-6 w-6 text-muted-foreground" />
+        <AvatarFallback className="bg-white/20">
+          <Building2 className="h-7 w-7 text-white/60" />
         </AvatarFallback>
       </Avatar>
 
-      {isStaff && (
-        <div className="flex items-center gap-1">
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/png,image/jpeg,image/svg+xml,image/webp"
-            className="hidden"
-            onChange={handleUpload}
-          />
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-8 text-xs"
-            onClick={() => fileInputRef.current?.click()}
-            disabled={uploading}
-          >
-            <Upload className="h-3 w-3 mr-1" />
-            {currentLogoPath ? 'Replace' : 'Upload'}
-          </Button>
-          {currentLogoPath && (
+      <div className="flex flex-col gap-1">
+        <span className="text-xs font-medium text-white/70">Logo</span>
+        {isStaff && (
+          <div className="flex items-center gap-1">
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/png,image/jpeg,image/svg+xml,image/webp"
+              className="hidden"
+              onChange={handleUpload}
+            />
             <Button
               variant="ghost"
               size="sm"
-              className="h-8 text-xs text-destructive"
-              onClick={handleDelete}
+              className="h-7 text-xs text-white/80 hover:text-white hover:bg-white/10"
+              onClick={() => fileInputRef.current?.click()}
               disabled={uploading}
             >
-              <Trash2 className="h-3 w-3" />
+              <Upload className="h-3 w-3 mr-1" />
+              {currentLogoPath ? 'Replace' : 'Upload'}
             </Button>
-          )}
-        </div>
-      )}
+            {currentLogoPath && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 text-xs text-white/80 hover:text-white hover:bg-white/10"
+                onClick={handleDelete}
+                disabled={uploading}
+              >
+                <Trash2 className="h-3 w-3" />
+              </Button>
+            )}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
