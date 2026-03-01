@@ -8436,33 +8436,6 @@ export type Database = {
           },
         ]
       }
-      client_fields: {
-        Row: {
-          client_id: number
-          created_at: string
-          created_by: string
-          field_id: number
-          id: number
-          value: string | null
-        }
-        Insert: {
-          client_id: number
-          created_at?: string
-          created_by: string
-          field_id: number
-          id: number
-          value?: string | null
-        }
-        Update: {
-          client_id?: number
-          created_at?: string
-          created_by?: string
-          field_id?: number
-          id?: number
-          value?: string | null
-        }
-        Relationships: []
-      }
       client_impact_items: {
         Row: {
           category: string | null
@@ -9858,24 +9831,6 @@ export type Database = {
           tenant_id?: number
           title?: string
           visibility?: string
-        }
-        Relationships: []
-      }
-      clientfields: {
-        Row: {
-          client_id: number
-          field_id: number
-          value: string | null
-        }
-        Insert: {
-          client_id: number
-          field_id: number
-          value?: string | null
-        }
-        Update: {
-          client_id?: number
-          field_id?: number
-          value?: string | null
         }
         Relationships: []
       }
@@ -14001,76 +13956,6 @@ export type Database = {
           },
           {
             foreignKeyName: "documents_categories_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "vw_consultant_load"
-            referencedColumns: ["user_uuid"]
-          },
-        ]
-      }
-      documents_fields: {
-        Row: {
-          created_at: string
-          created_by: string | null
-          id: number
-          label: string
-          type: string
-          updated_at: string
-        }
-        Insert: {
-          created_at?: string
-          created_by?: string | null
-          id?: never
-          label: string
-          type: string
-          updated_at?: string
-        }
-        Update: {
-          created_at?: string
-          created_by?: string | null
-          id?: never
-          label?: string
-          type?: string
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "documents_fields_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["user_uuid"]
-          },
-          {
-            foreignKeyName: "documents_fields_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "v_dashboard_labour_efficiency"
-            referencedColumns: ["csc_user_id"]
-          },
-          {
-            foreignKeyName: "documents_fields_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "v_dashboard_weekly_wins"
-            referencedColumns: ["user_uuid"]
-          },
-          {
-            foreignKeyName: "documents_fields_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "v_executive_consultant_distribution"
-            referencedColumns: ["consultant_uuid"]
-          },
-          {
-            foreignKeyName: "documents_fields_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "vw_consultant_capacity"
-            referencedColumns: ["user_uuid"]
-          },
-          {
-            foreignKeyName: "documents_fields_created_by_fkey"
             columns: ["created_by"]
             isOneToOne: false
             referencedRelation: "vw_consultant_load"
@@ -23163,45 +23048,6 @@ export type Database = {
           tier_label?: string
           updated_at?: string
           weekly_required_hours?: number
-        }
-        Relationships: []
-      }
-      merge_field_definitions: {
-        Row: {
-          code: string
-          created_at: string | null
-          created_by: string | null
-          description: string | null
-          id: string
-          is_active: boolean | null
-          is_system: boolean | null
-          name: string
-          source_column: string
-          source_table: string
-        }
-        Insert: {
-          code: string
-          created_at?: string | null
-          created_by?: string | null
-          description?: string | null
-          id?: string
-          is_active?: boolean | null
-          is_system?: boolean | null
-          name: string
-          source_column: string
-          source_table: string
-        }
-        Update: {
-          code?: string
-          created_at?: string | null
-          created_by?: string | null
-          description?: string | null
-          id?: string
-          is_active?: boolean | null
-          is_system?: boolean | null
-          name?: string
-          source_column?: string
-          source_table?: string
         }
         Relationships: []
       }
