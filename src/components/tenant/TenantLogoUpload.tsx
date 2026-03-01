@@ -117,17 +117,17 @@ export function TenantLogoUpload({ tenantId, currentLogoPath, onLogoChange }: Te
 
   return (
     <div className="flex items-center gap-3">
-      <Avatar className={`h-16 w-16 border-2 border-white/40 shadow-md ${!currentLogoPath ? 'border-dashed' : ''}`}>
+      <Avatar className={`h-16 w-16 border-2 border-border shadow-md ${!currentLogoPath ? 'border-dashed' : ''}`}>
         {currentLogoPath ? (
           <AvatarImage src={getPublicUrl(currentLogoPath)} alt="Tenant logo" />
         ) : null}
-        <AvatarFallback className="bg-white/20">
-          <Building2 className="h-7 w-7 text-white/60" />
+        <AvatarFallback className="bg-muted">
+          <Building2 className="h-7 w-7 text-muted-foreground" />
         </AvatarFallback>
       </Avatar>
 
       <div className="flex flex-col gap-1">
-        <span className="text-xs font-medium text-white/70">Logo</span>
+        <span className="text-xs font-medium text-muted-foreground">Logo</span>
         {isStaff && (
           <div className="flex items-center gap-1">
             <input
@@ -140,7 +140,7 @@ export function TenantLogoUpload({ tenantId, currentLogoPath, onLogoChange }: Te
             <Button
               variant="ghost"
               size="sm"
-              className="h-7 text-xs text-white/80 hover:text-white hover:bg-white/10"
+              className="h-7 text-xs"
               onClick={() => fileInputRef.current?.click()}
               disabled={uploading}
             >
@@ -151,7 +151,7 @@ export function TenantLogoUpload({ tenantId, currentLogoPath, onLogoChange }: Te
               <Button
                 variant="ghost"
                 size="sm"
-                className="h-7 text-xs text-white/80 hover:text-white hover:bg-white/10"
+                className="h-7 text-xs text-destructive"
                 onClick={handleDelete}
                 disabled={uploading}
               >
