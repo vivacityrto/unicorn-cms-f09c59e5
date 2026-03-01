@@ -20,6 +20,7 @@ interface AddTenantDialogProps {
 interface PackageOption {
   id: number;
   name: string;
+  full_text: string | null;
   package_type: string;
 }
 
@@ -53,6 +54,7 @@ export function AddTenantDialog({ open, onOpenChange, onSuccess, preSelectedPack
   const [selectedPackageId, setSelectedPackageId] = useState<string>('');
   const [autoAssignConsultant, setAutoAssignConsultant] = useState(true);
   const [createSharePointFolders, setCreateSharePointFolders] = useState(true);
+  const [selectedMembershipId, setSelectedMembershipId] = useState<string>('');
 
   // Duplicate detection state
   const [duplicateResult, setDuplicateResult] = useState<DuplicateResult | null>(null);
@@ -65,6 +67,11 @@ export function AddTenantDialog({ open, onOpenChange, onSuccess, preSelectedPack
   // Package options
   const [packages, setPackages] = useState<PackageOption[]>([]);
   const [loadingPackages, setLoadingPackages] = useState(false);
+
+  // Derived state
+  const selectedPackage = packages.find(p => String(p.id) === selectedPackageId) || null;
+  const isKickStart = selectedPackage?.package_type === 'regulatory_submission';
+  const membershipOptions = packages.filter(p => p.package_type === 'membership');
 
   const generateSlug = (name: string): string => {
     return name
@@ -80,7 +87,8 @@ export function AddTenantDialog({ open, onOpenChange, onSuccess, preSelectedPack
       setLoadingPackages(true);
       const { data, error } = await supabase
         .from('packages')
-        .select('id, name, package_type')
+        .select('id, name, full_text, package_type')
+        .eq('status', 'active')
         .order('name');
       if (!error && data) {
         setPackages(data);
@@ -120,8 +128,13 @@ export function AddTenantDialog({ open, onOpenChange, onSuccess, preSelectedPack
   };
 
   const handleSaveTenant = async () => {
-    if (!legalName) {
+    const isKickStart = selectedPackage?.package_type === 'regulatory_submission';
+    if (!isKickStart && !legalName) {
       toast({ title: 'Validation Error', description: 'Legal name is required', variant: 'destructive' });
+      return;
+    }
+    if (isKickStart && !tradingName) {
+      toast({ title: 'Validation Error', description: 'Trading name is required for KickStart clients', variant: 'destructive' });
       return;
     }
 
@@ -206,7 +219,7 @@ export function AddTenantDialog({ open, onOpenChange, onSuccess, preSelectedPack
         }
       }
 
-      // Create package instance
+      // Create package instance(s)
       if (selectedPackageId && newTenantId) {
         try {
           const { error: piError } = await supabase.from('package_instances').insert({
@@ -222,6 +235,24 @@ export function AddTenantDialog({ open, onOpenChange, onSuccess, preSelectedPack
           }
         } catch (piErr) {
           console.warn('[AddTenant] Package instance error:', piErr);
+        }
+      }
+
+      // Create accompanying membership instance if selected
+      if (selectedMembershipId && newTenantId) {
+        try {
+          const { error: memError } = await supabase.from('package_instances').insert({
+            tenant_id: newTenantId,
+            package_id: parseInt(selectedMembershipId),
+            is_complete: false,
+            start_date: new Date().toISOString().split('T')[0],
+            clo_id: 0,
+          });
+          if (memError) {
+            console.warn('[AddTenant] Membership instance creation failed:', memError.message);
+          }
+        } catch (memErr) {
+          console.warn('[AddTenant] Membership instance error:', memErr);
         }
       }
 
@@ -271,6 +302,7 @@ export function AddTenantDialog({ open, onOpenChange, onSuccess, preSelectedPack
     setAbn('');
     setRtoCode('');
     setSelectedPackageId(preSelectedPackageId ? String(preSelectedPackageId) : '');
+    setSelectedMembershipId('');
     setAutoAssignConsultant(true);
     setCreateSharePointFolders(true);
     setDuplicateResult(null);
@@ -426,26 +458,87 @@ export function AddTenantDialog({ open, onOpenChange, onSuccess, preSelectedPack
 
         <div className="flex-1 overflow-y-auto space-y-4 py-4 px-1">
           <div className="space-y-4 px-1">
+            {/* Package first */}
             <div className="space-y-2">
-              <Label htmlFor="legal-name">Legal Name *</Label>
-              <Input
-                id="legal-name"
-                value={legalName}
-                onChange={(e) => { setLegalName(e.target.value); setUserAcknowledgedWarning(false); }}
-                placeholder="Registered legal entity name"
-              />
+              <Label htmlFor="package">Package *</Label>
+              <Select
+                value={selectedPackageId}
+                onValueChange={(v) => {
+                  setSelectedPackageId(v);
+                  setSelectedMembershipId('');
+                }}
+                disabled={!!preSelectedPackageId}
+              >
+                <SelectTrigger id="package">
+                  <SelectValue placeholder={loadingPackages ? "Loading packages..." : "Select a package"} />
+                </SelectTrigger>
+                <SelectContent>
+                  {packages.map((pkg) => (
+                    <SelectItem key={pkg.id} value={String(pkg.id)}>
+                      {pkg.name}{pkg.full_text ? ` — ${pkg.full_text}` : ''}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="trading-name">Trading Name</Label>
-              <Input
-                id="trading-name"
-                value={tradingName}
-                onChange={(e) => setTradingName(e.target.value)}
-                placeholder="Trading / display name (optional)"
-              />
-              <p className="text-xs text-muted-foreground">If blank, legal name is used as display name.</p>
-            </div>
+            {/* Membership upsell for KickStart */}
+            {isKickStart && (
+              <div className="space-y-2">
+                <Label htmlFor="membership">Accompanying Membership</Label>
+                <Select value={selectedMembershipId || "__none__"} onValueChange={(v) => setSelectedMembershipId(v === "__none__" ? "" : v)}>
+                  <SelectTrigger id="membership">
+                    <SelectValue placeholder="Select a membership..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none__">No membership</SelectItem>
+                    {membershipOptions.map((pkg) => (
+                      <SelectItem key={pkg.id} value={String(pkg.id)}>
+                        {pkg.name}{pkg.full_text ? ` — ${pkg.full_text}` : ''}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">Optionally add a membership package alongside the KickStart.</p>
+              </div>
+            )}
+
+            {/* For KickStart: Trading Name is primary (legal comes from TGA later) */}
+            {isKickStart ? (
+              <div className="space-y-2">
+                <Label htmlFor="trading-name">Trading Name *</Label>
+                <Input
+                  id="trading-name"
+                  value={tradingName}
+                  onChange={(e) => setTradingName(e.target.value)}
+                  placeholder="Client trading / display name"
+                />
+                <p className="text-xs text-muted-foreground">Legal name will be sourced from TGA once registered.</p>
+              </div>
+            ) : (
+              <>
+                <div className="space-y-2">
+                  <Label htmlFor="legal-name">Legal Name *</Label>
+                  <Input
+                    id="legal-name"
+                    value={legalName}
+                    onChange={(e) => { setLegalName(e.target.value); setUserAcknowledgedWarning(false); }}
+                    placeholder="Registered legal entity name"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="trading-name">Trading Name</Label>
+                  <Input
+                    id="trading-name"
+                    value={tradingName}
+                    onChange={(e) => setTradingName(e.target.value)}
+                    placeholder="Trading / display name (optional)"
+                  />
+                  <p className="text-xs text-muted-foreground">If blank, legal name is used as display name.</p>
+                </div>
+              </>
+            )}
 
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">
@@ -467,26 +560,6 @@ export function AddTenantDialog({ open, onOpenChange, onSuccess, preSelectedPack
                   placeholder="e.g. 91262"
                 />
               </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="package">Package *</Label>
-              <Select
-                value={selectedPackageId}
-                onValueChange={setSelectedPackageId}
-                disabled={!!preSelectedPackageId}
-              >
-                <SelectTrigger id="package">
-                  <SelectValue placeholder={loadingPackages ? "Loading packages..." : "Select a package"} />
-                </SelectTrigger>
-                <SelectContent>
-                  {packages.map((pkg) => (
-                    <SelectItem key={pkg.id} value={String(pkg.id)}>
-                      {pkg.name} <span className="text-muted-foreground ml-1">({pkg.package_type})</span>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
             </div>
 
             <div className="flex items-center justify-between rounded-lg border p-3">
@@ -533,7 +606,7 @@ export function AddTenantDialog({ open, onOpenChange, onSuccess, preSelectedPack
           </Button>
           <Button
             onClick={handleSaveTenant}
-            disabled={saving || checking || !legalName || !selectedPackageId}
+            disabled={saving || checking || !selectedPackageId || (isKickStart ? !tradingName : !legalName)}
           >
             {saving || checking ? (
               <>
