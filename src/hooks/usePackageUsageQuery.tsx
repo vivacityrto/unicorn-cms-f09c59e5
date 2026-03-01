@@ -78,13 +78,15 @@ export function useClientPackagesQuery(clientId: number | null) {
         .select('id, name, total_hours')
         .in('id', packageIds);
 
-      const packageMap = new Map((packagesData || []).map(p => [p.id, p]));
+      const packageMap = new Map((packagesData || []).map(p => [Number(p.id), p]));
 
       return instances.map(inst => {
-        const pkg = packageMap.get(inst.package_id);
+        const instId = Number(inst.id);
+        const pkgId = Number(inst.package_id);
+        const pkg = packageMap.get(pkgId);
         return {
-          id: inst.id,
-          package_id: inst.package_id,
+          id: instId,
+          package_id: pkgId,
           package_name: pkg?.name || 'Unknown Package',
           status: inst.is_complete ? 'closed' : 'active',
           start_date: inst.start_date || '',
