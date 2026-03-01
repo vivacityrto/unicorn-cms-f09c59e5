@@ -35,7 +35,7 @@ export function GovernanceDocumentDetail({ documentId, onBack }: GovernanceDocum
       const { data, error } = await supabase
         .from('documents')
         .select(`
-          id, title, description, format, category, document_category, document_status,
+          id, title, description, format, category, document_status,
           source_template_url, updated_at, current_published_version_id
         `)
         .eq('id', documentId)
@@ -145,8 +145,8 @@ export function GovernanceDocumentDetail({ documentId, onBack }: GovernanceDocum
       </div>
 
       {/* Document Info */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card>
+      <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
+        <Card className="md:col-span-2">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium flex items-center gap-2">
               <Tag className="h-4 w-4" /> Category
@@ -171,11 +171,21 @@ export function GovernanceDocumentDetail({ documentId, onBack }: GovernanceDocum
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium flex items-center gap-2">
-              <FileText className="h-4 w-4" /> Document Status
+              <FileText className="h-4 w-4" /> Status
             </CardTitle>
           </CardHeader>
           <CardContent>
             {getStatusBadge(doc.document_status)}
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium flex items-center gap-2">
+              <FileText className="h-4 w-4" /> Format
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <span className="text-sm font-mono">{doc.format || '—'}</span>
           </CardContent>
         </Card>
         <Card>
@@ -208,7 +218,7 @@ export function GovernanceDocumentDetail({ documentId, onBack }: GovernanceDocum
 
       {/* Description */}
       {doc.description && (
-        <Card>
+        <Card className="max-w-2xl">
           <CardContent className="pt-4">
             <p className="text-sm text-muted-foreground">{doc.description}</p>
           </CardContent>

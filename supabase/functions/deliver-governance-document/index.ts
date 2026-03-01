@@ -206,7 +206,7 @@ serve(async (req) => {
     // ── Load version + document ────────────────────────────────────────────
     const { data: version, error: vErr } = await supabase
       .from("document_versions")
-      .select("*, document:documents(id, title, document_category, format)")
+      .select("*, document:documents(id, title, category, format)")
       .eq("id", document_version_id)
       .single();
 

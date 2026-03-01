@@ -860,7 +860,7 @@ serve(async (req) => {
     if (docId) {
       const { data: existingDoc } = await supabase
         .from("documents")
-        .select("user_edited_category, user_edited_description, document_category, description")
+        .select("user_edited_category, user_edited_description, category, description")
         .eq("id", docId)
         .single();
 
@@ -885,8 +885,8 @@ serve(async (req) => {
 
       // Auto-apply if auto_approved and user hasn't edited
       if (aiStatus === 'auto_approved') {
-        if (!existingDoc?.user_edited_category && !existingDoc?.document_category) {
-          updateData.document_category = result.category;
+        if (!existingDoc?.user_edited_category && !existingDoc?.category) {
+          updateData.category = result.category;
         }
         if (!existingDoc?.user_edited_description && !existingDoc?.description) {
           updateData.description = result.description;
