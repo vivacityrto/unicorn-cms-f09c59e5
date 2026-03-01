@@ -20,7 +20,7 @@ interface DocumentWithUsage {
   description: string | null;
   format: string | null;
   category: string | null;
-  document_category: string | null;
+  
   ai_category_suggestion: string | null;
   ai_confidence: number | null;
   stage_count: number;
@@ -70,7 +70,7 @@ export function DocumentLibraryBrowser({
       const { data: docs, error: docsError } = await supabase
         .from('documents')
         .select(`
-          id, title, description, format, category, document_category,
+          id, title, description, format, category,
           ai_category_suggestion, ai_confidence, framework_type, document_status
         `)
         .order('title', { ascending: true })
@@ -118,13 +118,13 @@ export function DocumentLibraryBrowser({
         doc.title.toLowerCase().includes(query) ||
         doc.description?.toLowerCase().includes(query) ||
         doc.category?.toLowerCase().includes(query) ||
-        doc.document_category?.toLowerCase().includes(query);
+        doc.category?.toLowerCase().includes(query);
       if (!matchesSearch) return false;
     }
 
     // Category filter
     if (categoryFilter !== 'All Categories') {
-      const docCategory = doc.document_category || doc.category || doc.ai_category_suggestion;
+      const docCategory = doc.category || doc.ai_category_suggestion;
       if (docCategory?.toLowerCase() !== categoryFilter.toLowerCase()) return false;
     }
 
@@ -227,8 +227,8 @@ export function DocumentLibraryBrowser({
             <div className="divide-y">
               {filteredDocuments.map((doc) => {
                 const fileType = getFileTypeBadge(doc.format);
-                const category = doc.document_category || doc.category || doc.ai_category_suggestion;
-                const hasAISuggestion = doc.ai_category_suggestion && !doc.document_category;
+                const category = doc.category || doc.ai_category_suggestion;
+                const hasAISuggestion = doc.ai_category_suggestion && !doc.category;
 
                 return (
                   <div

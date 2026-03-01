@@ -30,7 +30,7 @@ function GovernanceDocuments() {
       let query = supabase
         .from('documents')
         .select(`
-          id, title, format, category, document_category, document_status,
+          id, title, format, category, document_status,
           source_template_url, updated_at, current_published_version_id,
           document_versions!document_versions_document_id_fkey(id, version_number, status, created_at, published_at, checksum_sha256)
         `)
@@ -41,7 +41,7 @@ function GovernanceDocuments() {
         query = query.ilike('title', `%${search}%`);
       }
       if (categoryFilter && categoryFilter !== 'all') {
-        query = query.eq('document_category', categoryFilter);
+        query = query.eq('category', categoryFilter);
       }
       if (statusFilter && statusFilter !== 'all') {
         query = query.eq('document_status', statusFilter);

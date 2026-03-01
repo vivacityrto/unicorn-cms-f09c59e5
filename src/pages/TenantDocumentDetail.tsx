@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, FileText, Download, Calendar, CheckCircle2, XCircle, ExternalLink } from "lucide-react";
+import { ArrowLeft, FileText, Download, Calendar, ExternalLink } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "@/components/ui/separator";
@@ -15,9 +15,6 @@ interface PackageDocument {
   title: string;
   description: string | null;
   uploaded_files: string[] | null;
-  package_id: number | null;
-  stage: number | null;
-  is_released: boolean | null;
   category: string | null;
   createdat: string | null;
   updated_at: string | null;
@@ -58,21 +55,15 @@ export default function TenantDocumentDetail() {
       if (tenantData) {
         setTenantName(tenantData.name);
         
-        // Use URL param packageId if provided, otherwise fall back to tenant's package_id
-        const activePackageId = urlPackageId ? parseInt(urlPackageId) : tenantData.package_id;
-        
-        // Fetch document from package_documents
-        if (activePackageId) {
-          const { data: packageDocData, error } = await supabase
-            .from("documents")
-            .select("*")
-            .eq("id", parseInt(documentId!))
-            .eq("package_id", activePackageId)
-            .maybeSingle();
+        // Fetch the document
+        const { data: packageDocData, error } = await supabase
+          .from("documents")
+          .select("*")
+          .eq("id", parseInt(documentId!))
+          .maybeSingle();
 
-          if (error) throw error;
-          setDocData(packageDocData as PackageDocument | null);
-        }
+        if (error) throw error;
+        setDocData(packageDocData as PackageDocument | null);
       }
     } catch (error: any) {
       console.error("Error fetching data:", error);
@@ -108,8 +99,6 @@ export default function TenantDocumentDetail() {
         logDownload({
           tenantId: parsedTenantId,
           clientId: parsedTenantId,
-          packageId: docData.package_id || undefined,
-          stageId: docData.stage || undefined,
           documentId: docData.id,
           fileName: docData.title || filePath.split('/').pop() || 'document',
           actorRole: 'tenant'
@@ -235,28 +224,12 @@ export default function TenantDocumentDetail() {
                   </div>
                 </div>
                 <div>
-                  <label className="text-sm font-medium text-muted-foreground">Released to Client</label>
-                  <div className="mt-1 flex items-center gap-2">
-                    {docData.is_released ? (
-                      <>
-                        <CheckCircle2 className="h-4 w-4 text-green-600" />
-                        <span className="text-green-600">Yes</span>
-                      </>
-                    ) : (
-                      <>
-                        <XCircle className="h-4 w-4 text-muted-foreground" />
-                        <span className="text-muted-foreground">No</span>
-                      </>
-                    )}
-                  </div>
+                  <label className="text-sm font-medium text-muted-foreground">Format</label>
+                  <p className="mt-1">{docData.format || "—"}</p>
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="text-sm font-medium text-muted-foreground">File Type</label>
-                  <p className="mt-1">{docData.format || "—"}</p>
-                </div>
                 <div>
                   <label className="text-sm font-medium text-muted-foreground">Created</label>
                   <div className="mt-1 flex items-center gap-2 text-muted-foreground">

@@ -36,7 +36,6 @@ interface Document {
   versionnumber: number | null;
   versionlastupdated: string | null;
   isclientdoc: boolean | null;
-  stage: number | null;
   category: string | null;
   sent_at?: string | null;
   is_sent?: boolean;
@@ -75,10 +74,6 @@ export default function ManageDocuments() {
     name: string;
   }>>([]);
   const [stagesCount, setStagesCount] = useState<number>(0);
-  const [stages, setStages] = useState<Array<{
-    id: number;
-    title: string;
-  }>>([]);
   const [selectedDocuments, setSelectedDocuments] = useState<number[]>([]);
   const [isBulkDeleteDialogOpen, setIsBulkDeleteDialogOpen] = useState(false);
   const [isBulkSendDialogOpen, setIsBulkSendDialogOpen] = useState(false);
@@ -160,7 +155,6 @@ export default function ManageDocuments() {
     versionnumber: "",
     versionlastupdated: undefined as Date | undefined,
     isclientdoc: false,
-    stage: "",
     categories: [] as string[]
   });
   useEffect(() => {
@@ -192,7 +186,6 @@ export default function ManageDocuments() {
           versionnumber: doc.versionnumber?.toString() || "",
           versionlastupdated: doc.versionlastupdated ? new Date(doc.versionlastupdated) : undefined,
           isclientdoc: doc.isclientdoc || false,
-          stage: doc.stage?.toString() || "",
           categories: doc.category ? doc.category.split(",").map(c => c.trim()) : []
         });
         // Set existing files
@@ -226,14 +219,11 @@ export default function ManageDocuments() {
   const fetchStages = async () => {
     try {
       const {
-        data,
+        count,
         error
-      } = await supabase.from("documents_stages").select("id, title").order("title", {
-        ascending: true
-      });
+      } = await supabase.from("documents_stages").select("*", { count: "exact", head: true });
       if (error) throw error;
-      setStages(data as any || []);
-      setStagesCount((data || []).length);
+      setStagesCount(count || 0);
     } catch (error: any) {
       console.error("Error fetching stages:", error);
     }
@@ -530,7 +520,6 @@ export default function ManageDocuments() {
           versionnumber: formData.versionnumber ? parseInt(formData.versionnumber) : null,
           versionlastupdated: formData.versionlastupdated ? formData.versionlastupdated.toISOString() : null,
           isclientdoc: formData.isclientdoc,
-          stage: formData.stage ? parseInt(formData.stage) : null,
           category: formData.categories.length > 0 ? formData.categories.join(',') : null,
           uploaded_files: allFileUrls.length > 0 ? allFileUrls : null,
           file_names: allFileNames.length > 0 ? allFileNames : null
@@ -553,7 +542,6 @@ export default function ManageDocuments() {
           versionnumber: formData.versionnumber ? parseInt(formData.versionnumber) : null,
           versionlastupdated: formData.versionlastupdated ? formData.versionlastupdated.toISOString() : null,
           isclientdoc: formData.isclientdoc,
-          stage: formData.stage ? parseInt(formData.stage) : null,
           category: formData.categories.length > 0 ? formData.categories.join(',') : null,
           uploaded_files: allFileUrls.length > 0 ? allFileUrls : null,
           file_names: allFileNames.length > 0 ? allFileNames : null,
@@ -580,7 +568,6 @@ export default function ManageDocuments() {
         versionnumber: "",
         versionlastupdated: undefined,
         isclientdoc: false,
-        stage: "",
         categories: []
       });
       setUploadedFiles([]);
@@ -642,7 +629,6 @@ export default function ManageDocuments() {
         versionnumber: doc.versionnumber,
         versionlastupdated: new Date().toISOString(),
         isclientdoc: doc.isclientdoc,
-        stage: doc.stage,
         category: doc.category,
         uploaded_files: newFileUrls.length > 0 ? newFileUrls : null,
         file_names: newFileNames.length > 0 ? newFileNames : null
@@ -738,18 +724,9 @@ export default function ManageDocuments() {
       } = await supabase.auth.getUser();
       if (!currentUser) throw new Error("Not authenticated");
 
-      // Release each selected document by setting is_released = true
       for (const docId of selectedDocuments) {
         const doc = documents.find(d => d.id === docId);
         if (!doc) continue;
-        
-        // Update the document to mark it as released
-        const { error } = await supabase
-          .from("documents")
-          .update({ is_released: true })
-          .eq("id", docId);
-        
-        if (error) throw error;
 
         // Create notification for the tenant
         await supabase.from("notification_tenants").insert({
@@ -798,19 +775,10 @@ export default function ManageDocuments() {
       let successCount = 0;
       let errorCount = 0;
 
-      // Release each selected document by setting is_released = true
       for (const docId of selectedDocuments) {
         const doc = documents.find(d => d.id === docId);
         if (!doc) continue;
         try {
-          // Update the document to mark it as released
-          const { error } = await supabase
-            .from("documents")
-            .update({ is_released: true })
-            .eq("id", docId);
-          
-          if (error) throw error;
-
           // Create notifications for each selected tenant
           for (const tenantId of bulkSelectedTenants) {
             const tenant = bulkTenants.find(t => t.id === tenantId);
@@ -973,7 +941,6 @@ export default function ManageDocuments() {
               versionnumber: "",
               versionlastupdated: undefined,
               isclientdoc: false,
-              stage: "",
               categories: []
             });
             setUploadedFiles([]);
@@ -1078,17 +1045,6 @@ export default function ManageDocuments() {
                   </div>
 
                   
-
-                  <div className="grid gap-2">
-                    <Label htmlFor="stage">Phase</Label>
-                    <Combobox options={stages.map(stage => ({
-                    value: stage.id.toString(),
-                    label: stage.title
-                  }))} value={formData.stage} onValueChange={value => setFormData({
-                    ...formData,
-                    stage: value
-                  })} placeholder="Select stage..." searchPlaceholder="Search stages..." emptyText="No stages found." className="w-full" showAvatar={false} autoWidth />
-                  </div>
 
                   <div className="grid gap-2">
                     <Label htmlFor="category">Category</Label>
@@ -1332,7 +1288,7 @@ export default function ManageDocuments() {
 
       {/* Documents Table */}
       <div className="rounded-lg border-0 bg-card shadow-lg overflow-x-auto">
-          <Table className="min-w-[2100px]">
+          <Table className="min-w-[1800px]">
             <TableHeader>
               <TableRow className="border-b-2 hover:bg-transparent">
                 {isSuperAdmin && (
@@ -1359,14 +1315,13 @@ export default function ManageDocuments() {
                 <TableHead className="font-semibold bg-muted/30 text-foreground w-32 h-14 whitespace-nowrap border-r">Version #</TableHead>
                 <TableHead className="font-semibold bg-muted/30 text-foreground w-40 h-14 whitespace-nowrap border-r">Version Updated</TableHead>
                 <TableHead className="font-semibold bg-muted/30 text-foreground w-32 h-14 whitespace-nowrap border-r">Client Doc</TableHead>
-                <TableHead className="font-semibold bg-muted/30 text-foreground w-24 h-14 whitespace-nowrap border-r">Stage</TableHead>
                 <TableHead className="font-semibold bg-muted/30 text-foreground w-32 h-14 whitespace-nowrap border-r">Category</TableHead>
                 <TableHead className="font-semibold bg-muted/30 text-foreground w-24 h-14 whitespace-nowrap text-center">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {filteredDocuments.length === 0 ? <TableRow>
-                  <TableCell colSpan={isSuperAdmin ? 13 : 12} className="text-center py-16 text-muted-foreground">
+                  <TableCell colSpan={isSuperAdmin ? 12 : 11} className="text-center py-16 text-muted-foreground">
                     No documents found
                   </TableCell>
                 </TableRow> : paginatedDocuments.map((doc, index) => {
@@ -1473,9 +1428,6 @@ export default function ManageDocuments() {
                 } : {}}>
                           {doc.isclientdoc ? "Yes" : "No"}
                         </Badge>
-                      </TableCell>
-                      <TableCell className="whitespace-nowrap py-6 text-muted-foreground text-sm border-r border-border/50">
-                        {stages.find(s => s.id === doc.stage)?.title || "—"}
                       </TableCell>
                       <TableCell className="whitespace-nowrap py-6 text-muted-foreground text-sm border-r border-border/50">
                         {categoryBadges.length > 0 ? categoryBadges.length > 1 ? `${categoryBadges[0]} +${categoryBadges.length - 1}` : categoryBadges[0] : "—"}

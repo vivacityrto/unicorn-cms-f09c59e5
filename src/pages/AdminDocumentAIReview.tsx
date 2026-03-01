@@ -24,7 +24,7 @@ interface DocumentForReview {
   id: number;
   title: string;
   format: string | null;
-  document_category: string | null;
+  category: string | null;
   description: string | null;
   ai_status: AIStatus;
   ai_confidence_score: number | null;
@@ -74,7 +74,7 @@ export default function AdminDocumentAIReview() {
       let query = supabase
         .from('documents')
         .select(`
-          id, title, format, document_category, description,
+          id, title, format, category, description,
           ai_status, ai_confidence_score, ai_category_confidence, ai_description_confidence,
           ai_suggested_category, ai_suggested_description, ai_reasoning, ai_last_run_at,
           framework_type, source_signals, user_edited_category, user_edited_description, createdat
@@ -572,9 +572,9 @@ export default function AdminDocumentAIReview() {
                       <h4 className="font-medium mb-2">Suggested Category</h4>
                       <div className="p-3 bg-muted rounded-lg">
                         <p>{detailDoc.ai_suggested_category || 'No suggestion'}</p>
-                        {detailDoc.document_category && detailDoc.document_category !== detailDoc.ai_suggested_category && (
+                        {detailDoc.category && detailDoc.category !== detailDoc.ai_suggested_category && (
                           <p className="text-sm text-muted-foreground mt-1">
-                            Current: {detailDoc.document_category}
+                            Current: {detailDoc.category}
                             {detailDoc.user_edited_category && <Badge variant="outline" className="ml-2 text-xs">User Edited</Badge>}
                           </p>
                         )}
