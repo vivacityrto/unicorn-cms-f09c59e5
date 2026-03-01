@@ -25,7 +25,9 @@ export const codeTablesService = {
   async getCodeTables(): Promise<CodeTable[]> {
     const { data, error } = await supabase.rpc("list_code_tables");
     if (error) throw error;
-    return (data as unknown as CodeTable[]) ?? [];
+    const tables = (data as unknown as CodeTable[]) ?? [];
+    // dd_fields is managed via the dedicated Merge Field Tags admin page
+    return tables.filter(t => t.table_name !== 'dd_fields');
   },
 
   async getTableData(tableName: string): Promise<CodeTableRow[]> {
